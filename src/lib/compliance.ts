@@ -1,0 +1,11 @@
+export const complianceDisclaimers = [
+  "No guarantee of funding or investor participation is made by the platform.",
+  "Information is provided for review purposes only and is not investment advice.",
+  "Investments in private companies are risky and may result in total loss of capital.",
+  "Investors must conduct their own due diligence before making any investment decision.",
+  "Securities offerings require appropriate legal review and compliance with applicable law.",
+];
+
+export function compactDisclaimer() {
+  return "For review only. Not investment advice. Private investments are risky, and funding is not guaranteed.";
+}

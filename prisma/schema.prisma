@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  FOUNDER
+  INVESTOR
+  ADMIN
+  ANALYST
+}
+
+enum CompanyStatus {
+  DRAFT
+  IN_REVIEW
+  NEEDS_MORE_INFO
+  APPROVED
+  REJECTED
+  PUBLISHED
+}
+
+enum DocumentType {
+  PITCH_DECK
+  FINANCIAL_STATEMENTS
+  CAP_TABLE
+  BUSINESS_PLAN
+  LEGAL_DOCUMENTS
+  CORPORATE_DOCUMENTS
+  CUSTOMER_CONTRACTS
+  MARKET_RESEARCH
+}
+
+enum ReviewDecision {
+  PENDING
+  APPROVED
+  REJECTED
+  REQUEST_MORE_DOCUMENTS
+  PUBLISHED
+}
+
+enum InterestStatus {
+  EXPRESSED
+  CALL_REQUESTED
+  REVIEWING
+  DECLINED
+}
+
+model User {
+  id                String             @id @default(cuid())
+  email             String             @unique
+  name              String?
+  role              UserRole           @default(INVESTOR)
+  isApproved        Boolean            @default(false)
+  encryptedProfile  String?
+  companies         Company[]          @relation("FounderCompanies")
+  reviews           AdminReview[]      @relation("ReviewerReviews")
+  interests         InvestorInterest[]
+  auditLogs         AuditLog[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+model Company {
+  id              String            @id @default(cuid())
+  founderId       String
+  founder         User              @relation("FounderCompanies", fields: [founderId], references: [id])
+  name            String
+  industry        String
+  country         String
+  state           String?
+  description     String
+  fundingAmount   Decimal
+  useOfFunds      String
+  revenueStage    String
+  teamInfo        String
+  capTableSummary String
+  status          CompanyStatus     @default(DRAFT)
+  documents       Document[]
+  reports         DiligenceReport[]
+  campaign        Campaign?
+  reviews         AdminReview[]
+  auditLogs       AuditLog[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model Document {
+  id             String       @id @default(cuid())
+  companyId      String
+  company        Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type           DocumentType
+  fileName       String
+  mimeType       String
+  sizeBytes      Int
+  storageKey     String
+  checksumSha256 String?
+  extractedText  String?
+  summary        String?
+  uploadedById   String
+  isApproved     Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([companyId, type])
+}
+
+model DiligenceReport {
+  id                     String   @id @default(cuid())
+  companyId              String
+  company                Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  executiveSummary       String
+  businessOverview       String
+  financialReview        String
+  marketReview           String
+  legalComplianceReview  String
+  teamReview             String
+  riskFlags              Json
+  missingDocuments       Json
+  readinessScore         Int
+  recommendedNextSteps   Json
+  generatedBy            String   @default("AI")
+  model                  String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([companyId, createdAt])
+}
+
+model Campaign {
+  id                 String             @id @default(cuid())
+  companyId          String             @unique
+  company            Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  slug               String             @unique
+  problem            String
+  solution           String
+  marketOpportunity  String
+  traction           String
+  fundingTarget      Decimal
+  minimumInvestment  Decimal
+  useOfFunds         String
+  riskDisclosures    String
+  isPublished        Boolean            @default(false)
+  publishedAt        DateTime?
+  interests          InvestorInterest[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+model InvestorInterest {
+  id             String         @id @default(cuid())
+  investorId     String
+  investor       User           @relation(fields: [investorId], references: [id])
+  campaignId     String
+  campaign       Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  status         InterestStatus @default(EXPRESSED)
+  message        String?
+  requestedCall  Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([investorId, campaignId])
+}
+
+model AdminReview {
+  id              String         @id @default(cuid())
+  companyId       String
+  company         Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  reviewerId      String
+  reviewer        User           @relation("ReviewerReviews", fields: [reviewerId], references: [id])
+  decision        ReviewDecision @default(PENDING)
+  notes           String?
+  requestedItems  Json?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id])
+  action      String
+  targetType  String
+  targetId    String?
+  ipAddress   String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([companyId, createdAt])
+  @@index([userId, createdAt])
+}
