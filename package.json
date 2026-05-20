@@ -14,7 +14,7 @@
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@supabase/ssr": "^0.10.3",
-    "@supabase/supabase-js": "^2.106.0",
+    "@supabase/supabase-js": "^2.106.1",
     "next": "16.2.6",
     "openai": "^6.38.0",
     "pg": "^8.21.0",
