@@ -30,7 +30,7 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
     const supabase = createClient();
 
     if (mode === "sign-up") {
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -39,17 +39,48 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
         },
       });
 
-      setIsLoading(false);
-
       if (signUpError) {
+        setIsLoading(false);
         setError(signUpError.message);
         return;
       }
 
-      // Profile will be auto-created by the Supabase trigger
-      // Wait a moment for the trigger to execute and session to be established
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (!data.user) {
+        setIsLoading(false);
+        setError("Failed to create user account");
+        return;
+      }
 
+      // Wait for the trigger to create the profile
+      // The trigger should execute within 1-2 seconds
+      let profileFound = false;
+      let attempts = 0;
+      const maxAttempts = 5;
+
+      while (!profileFound && attempts < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", data.user.id)
+          .single();
+
+        if (profile) {
+          profileFound = true;
+          break;
+        }
+
+        attempts++;
+      }
+
+      if (!profileFound) {
+        setIsLoading(false);
+        setError("Profile creation failed. Please try signing in.");
+        return;
+      }
+
+      setIsLoading(false);
       router.push(dashboardByRole[role]);
       router.refresh();
       return;
