@@ -30,7 +30,7 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
     const supabase = createClient();
 
     if (mode === "sign-up") {
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -39,13 +39,33 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
         },
       });
 
-      setIsLoading(false);
-
       if (signUpError) {
+        setIsLoading(false);
         setError(signUpError.message);
         return;
       }
 
+      // After signup, create the profile manually since the auth user is created
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .insert({
+            id: data.user.id,
+            full_name: fullName,
+            email,
+            role,
+          });
+
+        if (profileError) {
+          setIsLoading(false);
+          setError(`Profile creation failed: ${profileError.message}`);
+          // Optionally sign out the user if profile creation fails
+          await supabase.auth.signOut();
+          return;
+        }
+      }
+
+      setIsLoading(false);
       router.push(dashboardByRole[role]);
       router.refresh();
       return;
