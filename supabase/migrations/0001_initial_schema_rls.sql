@@ -3,7 +3,7 @@ create extension if not exists "pgcrypto";
 create table profiles (
   id uuid primary key,
   full_name text,
-  email text unique,
+  email text,
   role text default 'founder',
   created_at timestamp default now()
 );
