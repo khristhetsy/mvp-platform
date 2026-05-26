@@ -24,5 +24,12 @@ export async function GET(request: Request) {
     }
   }
 
+  // Handle password recovery and other token types
+  const hash = requestUrl.hash;
+  if (hash.includes("type=recovery") || hash.includes("access_token")) {
+    // Redirect to password reset page so the client can handle the token
+    return NextResponse.redirect(new URL(`/auth/reset-password${requestUrl.search}${requestUrl.hash}`, requestUrl.origin));
+  }
+
   return NextResponse.redirect(new URL(next || "/", requestUrl.origin));
 }
