@@ -13,14 +13,32 @@ export default function ResetPasswordPage() {
   const [isTokenValid, setIsTokenValid] = useState(false);
 
   useEffect(() => {
-    // Check if there's a recovery token
-    const hash = window.location.hash;
-    if (hash.includes("type=recovery") || hash.includes("access_token")) {
+    const initializeRecovery = async () => {
+      const hash = window.location.hash;
+      
+      // Check if there's a recovery token
+      if (!hash.includes("type=recovery") || !hash.includes("access_token")) {
+        setError("Invalid or expired recovery link");
+        setTimeout(() => router.push("/auth/sign-in"), 3000);
+        return;
+      }
+
+      // The Supabase client will automatically parse the hash and set up the session
+      const supabase = createClient();
+      
+      // Verify we have a valid session from the recovery token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        setError("Failed to authenticate recovery link. Please request a new password reset.");
+        setTimeout(() => router.push("/auth/sign-in"), 3000);
+        return;
+      }
+
       setIsTokenValid(true);
-    } else {
-      setError("Invalid or expired recovery link");
-      setTimeout(() => router.push("/auth/sign-in"), 3000);
-    }
+    };
+
+    initializeRecovery();
   }, [router]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -50,14 +68,15 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    // Success - redirect to dashboard or sign-in
+    // Success - sign out and redirect to sign-in
+    await supabase.auth.signOut();
     router.push("/auth/sign-in?message=Password%20updated%20successfully");
   }
 
   if (!isTokenValid) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-red-500">{error}</p>
+        <p className="text-red-500">{error || "Validating recovery link..."}</p>
       </div>
     );
   }
