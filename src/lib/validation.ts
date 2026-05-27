@@ -41,7 +41,7 @@ export const documentUploadSchema = z.object({
 });
 
 export const investorInterestSchema = z.object({
-  campaignId: z.string().min(1),
+  campaignSlug: z.string().min(1, "Campaign slug is required."),
   interestAmount: z.coerce.number().positive().optional(),
   message: z.string().max(1000).optional(),
   requestedCall: z.coerce.boolean().optional(),

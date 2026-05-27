@@ -73,7 +73,7 @@ export default async function DealDetailPage({
             of returns.
           </p>
           <form action="/api/investor/interests" method="post" className="mt-5 grid gap-4">
-            <input type="hidden" name="campaignId" value={deal.slug} />
+            <input type="hidden" name="campaignSlug" value={deal.slug} />
             <input
               name="interestAmount"
               className="rounded-2xl border border-slate-300 px-4 py-3 text-sm"
