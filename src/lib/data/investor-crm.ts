@@ -99,6 +99,59 @@ export async function recordInvestorCrmActivity(
   return { data: { activityId: activity.id } };
 }
 
+export type InvestorActivityRow = {
+  id: string;
+  activity_type: string;
+  created_at: string;
+  company_name: string | null;
+};
+
+export async function listInvestorOwnCrmActivity(
+  supabase: SupabaseClient<Database>,
+  investorId: string,
+  limit = 20,
+): Promise<InvestorActivityRow[]> {
+  const { data, error } = await supabase
+    .from("investor_activity")
+    .select(
+      `
+      id,
+      activity_type,
+      created_at,
+      companies:company_id ( company_name )
+    `,
+    )
+    .eq("investor_id", investorId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !data?.length) {
+    return [];
+  }
+
+  type ActivityRow = {
+    id: string;
+    activity_type: string;
+    created_at: string;
+    companies: { company_name?: string | null } | { company_name?: string | null }[] | null;
+  };
+
+  return (data as ActivityRow[]).map((row) => {
+    const companyRaw = row.companies;
+    const company = (Array.isArray(companyRaw) ? companyRaw[0] : companyRaw) as
+      | { company_name?: string | null }
+      | null
+      | undefined;
+
+    return {
+      id: row.id,
+      activity_type: row.activity_type,
+      created_at: row.created_at,
+      company_name: company?.company_name ?? null,
+    };
+  });
+}
+
 export type AdminCrmActivityRow = {
   id: string;
   activity_type: string;
