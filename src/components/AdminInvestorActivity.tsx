@@ -1,3 +1,5 @@
+"use client";
+
 function formatActivityRow(row: {
   id: string;
   status?: string | null;
@@ -9,7 +11,9 @@ function formatActivityRow(row: {
 }) {
   const investor = row.profiles?.full_name ?? row.profiles?.email ?? "Unknown investor";
   const company = row.companies?.company_name ?? "Unknown company";
-  const date = row.created_at ? new Date(row.created_at).toLocaleDateString() : "—";
+  const date = row.created_at
+    ? new Date(row.created_at).toLocaleDateString("en-US", { timeZone: "UTC" })
+    : "—";
 
   return { id: row.id, investor, company, status: row.status ?? "—", date, message: row.message ?? null };
 }

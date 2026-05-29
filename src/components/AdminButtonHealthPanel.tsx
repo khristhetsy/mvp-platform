@@ -1,6 +1,6 @@
 "use client";
 
-import { useAdminActionHealth } from "@/components/AdminActionHealthProvider";
+import { useAdminActionHealthSafe } from "@/components/AdminActionHealthProvider";
 
 function HealthRow({ label, value }: { label: string; value: string | number | null | undefined }) {
   return (
@@ -12,7 +12,7 @@ function HealthRow({ label, value }: { label: string; value: string | number | n
 }
 
 export function AdminButtonHealthPanel() {
-  const health = useAdminActionHealth();
+  const health = useAdminActionHealthSafe();
 
   return (
     <section className="mt-8 rounded-3xl border border-slate-300 bg-slate-50 p-6 shadow-sm">
