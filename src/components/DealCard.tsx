@@ -1,32 +1,29 @@
 import Link from "next/link";
-import type { deals } from "@/lib/mock-data";
+import type { MarketplaceListing } from "@/lib/data/marketplace";
 
-type Deal = (typeof deals)[number];
-
-export function DealCard({ deal }: Readonly<{ deal: Deal }>) {
+export function DealCard({ deal }: Readonly<{ deal: MarketplaceListing }>) {
   return (
     <article className="flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-300 hover:shadow-md">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-slate-500">{deal.industry}</p>
+          <p className="text-sm font-medium text-slate-500">{deal.industry ?? "Private company"}</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{deal.companyName}</h2>
           <p className="mt-1 text-sm text-slate-500">
-            {deal.stage} · {deal.location}
+            {[deal.stage, deal.location].filter(Boolean).join(" · ") || "—"}
           </p>
         </div>
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-          {deal.readinessScore}/100
-        </span>
       </div>
-      <p className="mt-5 flex-1 text-sm leading-6 text-slate-600">{deal.shortSummary}</p>
+      <p className="mt-5 flex-1 text-sm leading-6 text-slate-600">
+        {deal.shortSummary ?? deal.overview ?? "—"}
+      </p>
       <div className="mt-6 grid grid-cols-2 gap-3 text-sm">
         <div className="rounded-2xl bg-slate-50 p-4">
           <p className="text-slate-500">Funding target</p>
-          <p className="mt-1 font-semibold text-slate-950">{deal.fundingTarget}</p>
+          <p className="mt-1 font-semibold text-slate-950">{deal.fundingTarget ?? "—"}</p>
         </div>
         <div className="rounded-2xl bg-slate-50 p-4">
           <p className="text-slate-500">Minimum</p>
-          <p className="mt-1 font-semibold text-slate-950">{deal.minimumInvestment}</p>
+          <p className="mt-1 font-semibold text-slate-950">{deal.minimumInvestment ?? "—"}</p>
         </div>
       </div>
       <Link

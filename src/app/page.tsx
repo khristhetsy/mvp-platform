@@ -3,7 +3,10 @@ import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { OpportunityCard } from "@/components/OpportunityCard";
-import { deals } from "@/lib/mock-data";
+import { listMarketplaceListings } from "@/lib/data/marketplace";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+
+export const dynamic = "force-dynamic";
 
 const readinessSteps = [
   "Company profile and funding strategy intake",
@@ -30,7 +33,17 @@ const capabilities = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const supabase = createServiceRoleClient();
+  let featuredListings: Awaited<ReturnType<typeof listMarketplaceListings>> = [];
+
+  try {
+    const listings = await listMarketplaceListings(supabase);
+    featuredListings = listings.slice(0, 3);
+  } catch {
+    featuredListings = [];
+  }
+
   return (
     <main className="min-h-screen bg-white text-slate-950">
       <MarketingNav />
@@ -170,9 +183,13 @@ export default function Home() {
         </div>
 
         <div className="mt-8 grid gap-5 lg:grid-cols-3">
-          {deals.map((deal) => (
-            <OpportunityCard key={deal.slug} deal={deal} />
-          ))}
+          {featuredListings.length === 0 ? (
+            <p className="col-span-full text-sm text-slate-600">
+              Published marketplace listings will appear here once companies are approved and published.
+            </p>
+          ) : (
+            featuredListings.map((deal) => <OpportunityCard key={deal.id} deal={deal} />)
+          )}
         </div>
       </section>
 

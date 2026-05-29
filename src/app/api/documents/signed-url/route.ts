@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireApiProfile } from "@/lib/api/auth";
+import { requireStaffApi } from "@/lib/api/admin";
 import { writeAuditLog } from "@/lib/data/audit";
-import { createSignedDocumentUrl } from "@/lib/data/documents";
-import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { createSignedDocumentUrl, getStorageBucket, PITCH_DECKS_BUCKET } from "@/lib/data/documents";
+import { userHasCompanyAccess } from "@/lib/onboarding/ensure-founder-setup";
 import { signedDocumentUrlSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
-  const auth = await requireApiProfile(["founder", "admin", "analyst", "investor"]);
+  const auth = await requireStaffApi(["founder", "admin", "analyst", "investor"]);
 
   if ("error" in auth) {
     return auth.error;
@@ -28,11 +28,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Document not found or inaccessible." }, { status: 404 });
   }
 
-  const serviceSupabase = createServiceRoleClient();
-  const { data, error } = await createSignedDocumentUrl(serviceSupabase, document.file_path);
+  if (auth.profile.role === "founder") {
+    const hasAccess = await userHasCompanyAccess(auth.profile.id, document.company_id);
+
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Document not found or inaccessible." }, { status: 404 });
+    }
+  }
+
+  if (auth.profile.role === "investor") {
+    const { data: company } = await auth.supabase
+      .from("companies")
+      .select("review_status")
+      .eq("id", document.company_id)
+      .single();
+
+    if (company?.review_status !== "approved") {
+      return NextResponse.json({ error: "Document not found or inaccessible." }, { status: 404 });
+    }
+  }
+
+  const canonicalBucket = getStorageBucket(document.document_type ?? "");
+  let { data, error } = await createSignedDocumentUrl(auth.supabase, canonicalBucket, document.file_path);
+
+  if (error && (document.document_type === "PITCH_DECK" || document.document_type === "pitch_deck")) {
+    const fallback = await createSignedDocumentUrl(auth.supabase, PITCH_DECKS_BUCKET, document.file_path);
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  if (!data?.signedUrl) {
+    return NextResponse.json({ error: "Unable to create a signed URL for this document." }, { status: 500 });
   }
 
   await writeAuditLog(auth.supabase, {

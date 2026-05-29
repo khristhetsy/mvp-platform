@@ -1,81 +1,70 @@
 import { NextResponse } from "next/server";
-import { requireApiProfile } from "@/lib/api/auth";
+import { requireInvestorApi } from "@/lib/api/investor";
 import { writeAuditLog } from "@/lib/data/audit";
-import { createInvestorInterest } from "@/lib/data/investor-interests";
+import { upsertInvestorInterest } from "@/lib/data/investor-interests";
 import { investorInterestSchema } from "@/lib/validation";
 
-function readCampaignSlug(formData: FormData) {
-  return (
-    formData.get("campaignSlug")?.toString().trim() ||
-    formData.get("campaignId")?.toString().trim() ||
-    ""
-  );
+async function parseBody(request: Request) {
+  const contentType = request.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    return request.json().catch(() => null);
+  }
+
+  const formData = await request.formData();
+  return {
+    companyId: formData.get("companyId")?.toString().trim() || undefined,
+    companySlug:
+      formData.get("companySlug")?.toString().trim() ||
+      formData.get("campaignSlug")?.toString().trim() ||
+      undefined,
+    interestAmount: formData.get("interestAmount") || undefined,
+    message: formData.get("message")?.toString() || undefined,
+  };
 }
 
 export async function POST(request: Request) {
-  const auth = await requireApiProfile(["investor"]);
+  const auth = await requireInvestorApi();
 
   if ("error" in auth) {
     return auth.error;
   }
 
-  const formData = await request.formData();
-  const campaignSlug = readCampaignSlug(formData);
-
-  const parsed = investorInterestSchema.safeParse({
-    campaignSlug,
-    interestAmount: formData.get("interestAmount") || undefined,
-    message: formData.get("message")?.toString() || undefined,
-    requestedCall: formData.get("requestedCall") === "true",
-  });
+  const parsed = investorInterestSchema.safeParse(await parseBody(request));
 
   if (!parsed.success) {
     const message = parsed.error.issues[0]?.message ?? "Invalid investor interest request.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
-  const slug = parsed.data.campaignSlug;
+  const result = await upsertInvestorInterest(
+    { supabase: auth.supabase, serviceSupabase: auth.serviceSupabase },
+    {
+      investorId: auth.profile.id,
+      companyId: parsed.data.companyId,
+      companySlug: parsed.data.companySlug,
+      interestAmount: parsed.data.interestAmount,
+      message: parsed.data.message,
+    },
+  );
 
-  const { data, error } = await createInvestorInterest(auth.supabase, {
-    investor_id: auth.profile.id,
-    campaignSlug: slug,
-    interest_amount: parsed.data.interestAmount,
-    message: parsed.data.message,
-    status: parsed.data.requestedCall ? "call_requested" : "new",
-  });
+  if ("error" in result && result.error) {
+    const message = "message" in result.error ? result.error.message : "Unable to save investor interest.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 
-  if (error) {
-    if ("code" in error && error.code === "campaign_not_found") {
-      return NextResponse.json(
-        {
-          error: `No campaign found for slug "${slug}". The opportunity may not exist or is not listed yet.`,
-        },
-        { status: 404 },
-      );
-    }
-
-    const message = error.message ?? "Unable to save intro request.";
-    const isUuidSyntaxError = message.includes("invalid input syntax for type uuid");
-
-    return NextResponse.json(
-      {
-        error: isUuidSyntaxError
-          ? `Could not save intro request for "${slug}". A slug was sent where a campaign UUID is required.`
-          : message,
-      },
-      { status: 400 },
-    );
+  const data = "data" in result ? result.data : null;
+  if (!data) {
+    return NextResponse.json({ error: "Unable to save investor interest." }, { status: 400 });
   }
 
   await writeAuditLog(auth.supabase, {
     userId: auth.profile.id,
-    action: "investor_interest.created",
+    action: "investor_interest.upserted",
     entityType: "investor_interest",
     entityId: data.id,
-    metadata: { campaignId: data.campaign_id, campaignSlug: slug },
+    metadata: { companyId: data.company_id, status: data.status },
   });
 
-  return NextResponse.json({
-    interest: data,
-  });
+  return NextResponse.json({ interest: data });
 }

@@ -1,31 +1,54 @@
 import { NextResponse } from "next/server";
-import { requireApiProfile } from "@/lib/api/auth";
+import { apiErrorMessage } from "@/lib/api/errors";
+import { requireStaffApi } from "@/lib/api/admin";
+import { adminDebug } from "@/lib/debug/admin-debug";
+import { applyCompanyReview } from "@/lib/data/admin-reviews";
 import { writeAuditLog } from "@/lib/data/audit";
-import { updateCompanyStatus } from "@/lib/data/companies";
 
 export async function POST(
   _request: Request,
   { params }: Readonly<{ params: Promise<{ id: string }> }>,
 ) {
-  const auth = await requireApiProfile(["admin"]);
+  const { id } = await params;
+
+  adminDebug({
+    scope: "api.admin.approve",
+    action: "request_received",
+    companyId: id,
+    path: `/api/admin/companies/${id}/approve`,
+  });
+
+  const auth = await requireStaffApi(["admin", "analyst"]);
 
   if ("error" in auth) {
-    return auth.error;
+    adminDebug({
+      scope: "api.admin.approve",
+      companyId: id,
+      error: { message: "Staff auth failed." },
+    });
+    return auth.error as NextResponse;
   }
 
-  const { id } = await params;
-  const { data, error } = await updateCompanyStatus(auth.supabase, id, "approved");
+  const { data, error } = await applyCompanyReview(auth.supabase, {
+    companyId: id,
+    adminId: auth.profile.id,
+    action: "approve",
+  });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    const message = apiErrorMessage(error);
+    adminDebug({
+      scope: "api.admin.approve",
+      userId: auth.profile.id,
+      userRole: auth.profile.role,
+      companyId: id,
+      usingServiceRole: true,
+      error,
+      status: 400,
+      response: { error: message },
+    });
+    return NextResponse.json({ error: message }, { status: 400 });
   }
-
-  await auth.supabase.from("admin_reviews").insert({
-    company_id: id,
-    reviewed_by: auth.profile.id,
-    status: "approved",
-    notes: "Approved for campaign preparation.",
-  });
 
   await writeAuditLog(auth.supabase, {
     userId: auth.profile.id,
@@ -34,5 +57,15 @@ export async function POST(
     entityId: id,
   });
 
-  return NextResponse.json({ company: data });
+  adminDebug({
+    scope: "api.admin.approve",
+    userId: auth.profile.id,
+    userRole: auth.profile.role,
+    companyId: id,
+    slug: data?.company?.slug ?? null,
+    status: 200,
+    response: data,
+  });
+
+  return NextResponse.json(data);
 }

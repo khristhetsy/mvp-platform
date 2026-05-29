@@ -3,9 +3,21 @@ import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { OpportunityCard } from "@/components/OpportunityCard";
-import { deals } from "@/lib/mock-data";
+import { listMarketplaceListings } from "@/lib/data/marketplace";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 
-export default function InvestorsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function InvestorsPage() {
+  const supabase = createServiceRoleClient();
+  let listings: Awaited<ReturnType<typeof listMarketplaceListings>> = [];
+
+  try {
+    listings = await listMarketplaceListings(supabase);
+  } catch {
+    listings = [];
+  }
+
   return (
     <main className="min-h-screen bg-white text-slate-950">
       <MarketingNav />
@@ -30,9 +42,11 @@ export default function InvestorsPage() {
         </div>
       </section>
       <section className="mx-auto grid max-w-7xl gap-5 px-6 pb-16 lg:grid-cols-3">
-        {deals.map((deal) => (
-          <OpportunityCard key={deal.slug} deal={deal} />
-        ))}
+        {listings.length === 0 ? (
+          <p className="col-span-full text-sm text-slate-600">No published listings yet.</p>
+        ) : (
+          listings.map((deal) => <OpportunityCard key={deal.id} deal={deal} />)
+        )}
       </section>
       <ComplianceBlock />
       <MarketingFooter />

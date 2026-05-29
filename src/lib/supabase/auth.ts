@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { normalizeUserRole } from "@/lib/api/admin";
 import { createServerSupabaseClient } from "./server";
 import type { Profile, UserRole } from "./types";
 
@@ -49,10 +50,11 @@ export async function requireUserProfile() {
 
 export async function requireRole(allowedRoles: UserRole[]) {
   const profile = await requireUserProfile();
+  const role = normalizeUserRole(profile.role);
 
-  if (!allowedRoles.includes(profile.role)) {
-    redirect(dashboardForRole(profile.role));
+  if (!role || !allowedRoles.includes(role)) {
+    redirect(dashboardForRole(role ?? profile.role));
   }
 
-  return profile;
+  return { ...profile, role };
 }

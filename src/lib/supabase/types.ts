@@ -8,6 +8,8 @@ export type Profile = {
   created_at: string;
 };
 
+export type ReviewStatus = "pending" | "approved" | "rejected" | "changes_requested";
+
 export type Company = {
   id: string;
   founder_id: string;
@@ -16,12 +18,21 @@ export type Company = {
   country: string | null;
   state: string | null;
   business_description: string | null;
+  website?: string | null;
+  logo_url?: string | null;
   funding_amount: number | null;
   use_of_funds: string | null;
   revenue_stage: string | null;
   team_summary: string | null;
   cap_table_summary: string | null;
   status: string | null;
+  review_status: ReviewStatus | string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  is_published: boolean;
+  marketplace_visible: boolean;
+  published_at: string | null;
+  slug: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -37,7 +48,16 @@ export type DocumentRecord = {
   mime_type: string | null;
   size_bytes: number | null;
   ai_summary: string | null;
+  status: string | null;
   is_approved: boolean;
+  created_at: string;
+};
+
+export type CompanyMember = {
+  id: string;
+  company_id: string;
+  user_id: string;
+  role: "owner" | "admin" | "member";
   created_at: string;
 };
 
@@ -74,9 +94,16 @@ export type Database = {
         Update: Partial<Company>;
         Relationships: [];
       };
+      company_members: {
+        Row: CompanyMember;
+        Insert: Pick<CompanyMember, "company_id" | "user_id"> & Partial<Pick<CompanyMember, "role">>;
+        Update: Partial<Pick<CompanyMember, "role">>;
+        Relationships: [];
+      };
       documents: {
         Row: DocumentRecord;
-        Insert: Omit<Partial<DocumentRecord>, "id" | "created_at"> & Pick<DocumentRecord, "company_id" | "uploaded_by">;
+        Insert: Omit<Partial<DocumentRecord>, "id" | "created_at"> &
+          Pick<DocumentRecord, "company_id" | "uploaded_by">;
         Update: Partial<DocumentRecord>;
         Relationships: [];
       };
@@ -110,40 +137,110 @@ export type Database = {
         Row: {
           id: string;
           investor_id: string;
+          company_id: string | null;
           campaign_id: string;
           interest_amount: number | null;
           message: string | null;
           status: string | null;
           created_at: string;
+          updated_at: string | null;
         };
         Insert: {
           investor_id: string;
+          company_id?: string | null;
           campaign_id: string;
           interest_amount?: number | null;
           message?: string | null;
           status?: string | null;
         };
-        Update: Record<string, unknown>;
+        Update: {
+          company_id?: string | null;
+          campaign_id?: string | null;
+          interest_amount?: number | null;
+          message?: string | null;
+          status?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
+      intro_requests: {
+        Row: {
+          id: string;
+          investor_id: string;
+          company_id: string;
+          campaign_id: string | null;
+          message: string | null;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          investor_id: string;
+          company_id: string;
+          campaign_id?: string | null;
+          message?: string | null;
+          status?: string;
+        };
+        Update: {
+          status?: string;
+          message?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      saved_deals: {
+        Row: {
+          id: string;
+          investor_id: string;
+          company_id: string;
+          campaign_id: string | null;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          investor_id: string;
+          company_id: string;
+          campaign_id?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          status?: string;
+          updated_at?: string;
+        };
         Relationships: [];
       };
       admin_reviews: {
         Row: {
           id: string;
           company_id: string;
-          reviewed_by: string;
+          founder_id: string | null;
+          reviewed_by: string | null;
           status: string | null;
           notes: string | null;
+          feedback: string | null;
+          requested_changes: string | null;
           created_at: string;
+          updated_at: string | null;
         };
         Insert: {
           company_id: string;
-          reviewed_by: string;
+          founder_id?: string | null;
+          reviewed_by?: string | null;
           status?: string | null;
           notes?: string | null;
+          feedback?: string | null;
+          requested_changes?: string | null;
         };
         Update: {
           status?: string | null;
           notes?: string | null;
+          feedback?: string | null;
+          requested_changes?: string | null;
+          reviewed_by?: string | null;
+          founder_id?: string | null;
+          updated_at?: string | null;
         };
         Relationships: [];
       };

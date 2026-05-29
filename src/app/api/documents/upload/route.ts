@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { writeAuditLog } from "@/lib/data/audit";
-import { buildDocumentPath, createDocumentRecord } from "@/lib/data/documents";
+import {
+  buildStoragePath,
+  createDocumentRecord,
+  getStorageBucket,
+} from "@/lib/data/documents";
+import {
+  ensureFounderCompanyForUser,
+  userHasCompanyAccess,
+} from "@/lib/onboarding/ensure-founder-setup";
 import { documentUploadSchema } from "@/lib/validation";
 
 const maxUploadBytes = 25 * 1024 * 1024;
@@ -14,6 +22,14 @@ const allowedMimeTypes = new Set([
   "text/csv",
 ]);
 
+const uploadErrorMessages: Record<number, string> = {
+  400: "Upload failed due to invalid input. Please check the file and try again.",
+  401: "Authentication required. Please sign in and try again.",
+  403: "No company profile is linked to your account. Please create a company profile first.",
+  409: "A pitch deck is already uploaded for this company.",
+  500: "Upload failed due to a server error. Please try again.",
+};
+
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);
 
@@ -21,15 +37,37 @@ export async function POST(request: Request) {
     return auth.error;
   }
 
+  let company = await ensureFounderCompanyForUser(auth.profile);
+
   const formData = await request.formData();
   const parsed = documentUploadSchema.safeParse({
-    companyId: formData.get("companyId"),
+    companyId: formData.get("companyId") || company?.id,
     documentType: formData.get("documentType"),
   });
   const file = formData.get("file");
 
   if (!parsed.success || !(file instanceof File)) {
     return NextResponse.json({ error: "Invalid upload request." }, { status: 400 });
+  }
+
+  if (!company) {
+    return NextResponse.json(
+      {
+        error: "No company profile is linked to your account. Please create a company profile first.",
+      },
+      { status: 403 },
+    );
+  }
+
+  const hasAccess = await userHasCompanyAccess(auth.profile.id, parsed.data.companyId);
+
+  if (!hasAccess) {
+    return NextResponse.json(
+      {
+        error: "No company profile is linked to your account. Please create a company profile first.",
+      },
+      { status: 403 },
+    );
   }
 
   if (file.size > maxUploadBytes) {
@@ -40,24 +78,53 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unsupported file type." }, { status: 400 });
   }
 
-  const { data: company } = await auth.supabase
-    .from("companies")
-    .select("id")
-    .eq("id", parsed.data.companyId)
-    .eq("founder_id", auth.profile.id)
-    .single();
-
-  if (!company) {
-    return NextResponse.json({ error: "Company not found or inaccessible." }, { status: 403 });
+  if (parsed.data.documentType === "PITCH_DECK" && file.type !== "application/pdf") {
+    return NextResponse.json({ error: "Pitch decks must be uploaded as a PDF." }, { status: 400 });
   }
 
-  const filePath = buildDocumentPath(parsed.data.companyId, parsed.data.documentType, file.name);
-  const { error: uploadError } = await auth.supabase.storage.from("company-documents").upload(filePath, file, {
+  // Prevent duplicate pitch deck uploads for a company.
+  if (parsed.data.documentType === "PITCH_DECK") {
+    const { data: existingPitchDeck, error: existingError } = await auth.supabase
+      .from("documents")
+      .select("id")
+      .eq("company_id", parsed.data.companyId)
+      .eq("document_type", "PITCH_DECK")
+      .limit(1)
+      .maybeSingle();
+
+    if (existingError) {
+      return NextResponse.json({ error: existingError.message }, { status: 400 });
+    }
+
+    if (existingPitchDeck) {
+      return NextResponse.json({ error: uploadErrorMessages[409] }, { status: 409 });
+    }
+  }
+
+  const bucket = getStorageBucket(parsed.data.documentType);
+  const filePath = buildStoragePath(
+    parsed.data.documentType,
+    parsed.data.companyId,
+    auth.profile.id,
+    file.name,
+  );
+
+  const { error: uploadError } = await auth.supabase.storage.from(bucket).upload(filePath, file, {
     contentType: file.type,
     upsert: false,
   });
 
   if (uploadError) {
+    if (uploadError.message.toLowerCase().includes("bucket not found")) {
+      return NextResponse.json(
+        {
+          error:
+            `Storage bucket "${bucket}" was not found in Supabase. ` +
+            "Run the latest Supabase migration (0003_company_members_rls_storage.sql) or create the bucket and policies, then retry.",
+        },
+        { status: 500 },
+      );
+    }
     return NextResponse.json({ error: uploadError.message }, { status: 400 });
   }
 
@@ -70,9 +137,14 @@ export async function POST(request: Request) {
     file_url: null,
     mime_type: file.type,
     size_bytes: file.size,
+    status: "uploaded",
   });
 
   if (documentError) {
+    // In case a unique constraint is added later (e.g., one pitch deck per company), return a clearer message.
+    if (documentError.code === "23505") {
+      return NextResponse.json({ error: uploadErrorMessages[409] }, { status: 409 });
+    }
     return NextResponse.json({ error: documentError.message }, { status: 400 });
   }
 
@@ -81,7 +153,12 @@ export async function POST(request: Request) {
     action: "document.uploaded",
     entityType: "document",
     entityId: document.id,
-    metadata: { companyId: parsed.data.companyId, documentType: parsed.data.documentType },
+    metadata: {
+      companyId: parsed.data.companyId,
+      documentType: parsed.data.documentType,
+      bucket,
+      filePath,
+    },
   });
 
   return NextResponse.json({

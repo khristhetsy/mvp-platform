@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev"
+    "db:migrate": "prisma migrate dev",
+    "test:investor-express-interest": "node scripts/test-investor-express-interest.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",

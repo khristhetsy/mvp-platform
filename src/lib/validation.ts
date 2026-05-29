@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const companyOnboardingSchema = z.object({
-  name: z.string().min(2),
+  company_name: z.string().min(2),
   industry: z.string().min(2),
   country: z.string().min(2),
   state: z.string().optional(),
@@ -19,11 +19,21 @@ export const companyCreateSchema = z.object({
   country: z.string().min(2).optional(),
   state: z.string().optional(),
   business_description: z.string().min(20).optional(),
+  website: z.string().url().optional(),
+  logo_url: z.string().url().optional(),
   funding_amount: z.coerce.number().positive().optional(),
   use_of_funds: z.string().min(10).optional(),
   revenue_stage: z.string().min(2).optional(),
   team_summary: z.string().min(10).optional(),
   cap_table_summary: z.string().min(10).optional(),
+});
+
+export const companyUpdateSchema = z.object({
+  company_name: z.string().min(2).optional(),
+  business_description: z.string().min(20).optional(),
+  website: z.string().url().optional(),
+  industry: z.string().min(2).optional(),
+  logo_url: z.string().url().optional(),
 });
 
 export const documentUploadSchema = z.object({
@@ -40,12 +50,29 @@ export const documentUploadSchema = z.object({
   ]),
 });
 
-export const investorInterestSchema = z.object({
-  campaignSlug: z.string().min(1, "Campaign slug is required."),
-  interestAmount: z.coerce.number().positive().optional(),
-  message: z.string().max(1000).optional(),
-  requestedCall: z.coerce.boolean().optional(),
-});
+export const investorDealTargetSchema = z
+  .object({
+    companyId: z.string().uuid().optional(),
+    companySlug: z.string().min(1).optional(),
+    interestAmount: z.coerce.number().positive().optional(),
+    message: z.string().max(1000).optional(),
+  })
+  .refine((value) => Boolean(value.companyId || value.companySlug), {
+    message: "companyId or companySlug is required.",
+  });
+
+export const investorInterestSchema = investorDealTargetSchema;
+
+export const investorIntroRequestSchema = investorDealTargetSchema;
+
+export const investorSaveDealSchema = z
+  .object({
+    companyId: z.string().uuid().optional(),
+    companySlug: z.string().min(1).optional(),
+  })
+  .refine((value) => Boolean(value.companyId || value.companySlug), {
+    message: "companyId or companySlug is required.",
+  });
 
 export const signedDocumentUrlSchema = z.object({
   documentId: z.string().uuid(),
@@ -54,4 +81,9 @@ export const signedDocumentUrlSchema = z.object({
 export const diligenceReportCreateSchema = z.object({
   companyId: z.string().uuid(),
   executiveSummary: z.string().min(10).optional(),
+});
+
+export const adminReviewActionSchema = z.object({
+  action: z.enum(["approve", "reject", "changes_requested"]),
+  feedback: z.string().max(5000).optional(),
 });

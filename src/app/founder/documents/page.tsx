@@ -1,8 +1,19 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
-import { requiredDocumentTypes, sampleDocuments } from "@/lib/mock-data";
+import { DocumentUploadForm } from "@/components/DocumentUploadForm";
+import { listCompanyDocuments } from "@/lib/data/documents";
+import { requiredDocumentTypes } from "@/lib/mock-data";
+import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/supabase/auth";
 
-export default function DocumentUploadPage() {
+export default async function DocumentUploadPage() {
+  const profile = await requireRole(["founder"]);
+  const company = await ensureFounderCompanyForUser(profile);
+  const supabase = await createServerSupabaseClient();
+  const { data: documents } = company ? await listCompanyDocuments(supabase, company.id) : { data: [] };
+  const maxUploadBytes = 25 * 1024 * 1024;
+
   return (
     <AppShell role="FOUNDER">
       <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
@@ -10,38 +21,43 @@ export default function DocumentUploadPage() {
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Secure upload</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Upload diligence documents</h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Files should be stored in a private bucket and served through signed, role-checked URLs only.
+            Files are stored in a private Supabase bucket and served through signed, role-checked URLs only.
           </p>
-          <form action="/api/documents/upload" method="post" encType="multipart/form-data" className="mt-8 grid gap-4">
-            <input type="hidden" name="companyId" value="company-nova-analytics" />
-            <select name="documentType" className="rounded-xl border border-slate-300 px-4 py-3">
-              {requiredDocumentTypes.map((documentType) => (
-                <option key={documentType} value={documentType.toUpperCase().replaceAll(" ", "_")}>
-                  {documentType}
-                </option>
-              ))}
-            </select>
-            <input
-              name="file"
-              type="file"
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.csv"
-              className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-sm"
+
+          {!company ? (
+            <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950">
+              <p className="font-semibold">No company profile is linked to your account.</p>
+              <p className="mt-2">Please create a company profile first, then return here to upload your pitch deck.</p>
+              <Link
+                href="/founder/onboarding"
+                className="mt-4 inline-flex rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
+              >
+                Create company profile
+              </Link>
+            </div>
+          ) : (
+            <DocumentUploadForm
+              companyId={company.id}
+              companyName={company.company_name}
+              documentTypes={requiredDocumentTypes}
+              maxUploadBytes={maxUploadBytes}
             />
-            <button className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white" type="submit">
-              Upload document
-            </button>
-          </form>
+          )}
         </div>
 
         <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-950">Checklist</h2>
+          <h2 className="text-lg font-semibold text-slate-950">Uploaded files</h2>
           <div className="mt-5 divide-y divide-slate-100">
-            {sampleDocuments.map((document) => (
-              <div key={document.type} className="flex items-center justify-between py-4 text-sm">
-                <span className="font-medium text-slate-800">{document.name}</span>
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">{document.status}</span>
-              </div>
-            ))}
+            {(documents ?? []).length > 0 ? (
+              documents?.map((document) => (
+                <div key={document.id} className="flex items-center justify-between py-4 text-sm">
+                  <span className="font-medium text-slate-800">{document.file_name ?? document.document_type}</span>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">{document.status ?? "uploaded"}</span>
+                </div>
+              ))
+            ) : (
+              <p className="py-4 text-sm text-slate-600">No documents uploaded yet.</p>
+            )}
           </div>
           <Link href="/founder/report" className="mt-6 inline-flex rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700">
             Generate diligence report

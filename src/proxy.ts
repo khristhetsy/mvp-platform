@@ -63,7 +63,7 @@ export async function proxy(request: NextRequest) {
   }
 
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  const role = profile?.role;
+  const role = profile?.role?.toLowerCase();
 
   if (!isKnownRole(role)) {
     const url = request.nextUrl.clone();

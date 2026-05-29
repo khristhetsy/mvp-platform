@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { dashboardForRole } from "@/lib/supabase/auth";
+import { ensureUserOnboarding } from "@/lib/onboarding/ensure-founder-setup";
+import type { UserRole } from "@/lib/supabase/types";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -16,20 +18,39 @@ export async function GET(request: Request) {
     } = await supabase.auth.getUser();
 
     if (user) {
-      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("role, full_name")
+        .eq("id", user.id)
+        .maybeSingle();
 
-      if (profile?.role) {
-        return NextResponse.redirect(new URL(next || dashboardForRole(profile.role), requestUrl.origin));
-      }
+      const role = existingProfile?.role ?? profileRoleFromMetadata(user.user_metadata?.role) ?? "founder";
+      const fullName =
+        existingProfile?.full_name ?? (user.user_metadata?.full_name as string | undefined) ?? null;
+
+      const { profile } = await ensureUserOnboarding({
+        userId: user.id,
+        email: user.email ?? null,
+        fullName,
+        role,
+      });
+
+      return NextResponse.redirect(new URL(next || dashboardForRole(profile.role), requestUrl.origin));
     }
   }
 
-  // Handle password recovery and other token types
   const hash = requestUrl.hash;
   if (hash.includes("type=recovery") || hash.includes("access_token")) {
-    // Redirect to password reset page so the client can handle the token
     return NextResponse.redirect(new URL(`/auth/reset-password${requestUrl.search}${requestUrl.hash}`, requestUrl.origin));
   }
 
   return NextResponse.redirect(new URL(next || "/", requestUrl.origin));
+}
+
+function profileRoleFromMetadata(value: unknown): UserRole | null {
+  if (value === "founder" || value === "investor" || value === "admin" || value === "analyst") {
+    return value;
+  }
+
+  return null;
 }
