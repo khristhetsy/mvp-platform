@@ -256,6 +256,68 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      investor_activity: {
+        Row: {
+          id: string;
+          investor_id: string;
+          company_id: string;
+          campaign_id: string | null;
+          activity_type: string;
+          metadata: Record<string, unknown>;
+          created_at: string;
+        };
+        Insert: {
+          investor_id: string;
+          company_id: string;
+          campaign_id?: string | null;
+          activity_type: string;
+          metadata?: Record<string, unknown>;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      investor_pipeline: {
+        Row: {
+          id: string;
+          investor_id: string;
+          company_id: string;
+          campaign_id: string | null;
+          stage: string;
+          probability: number;
+          owner_admin_id: string | null;
+          last_activity_at: string;
+          last_contacted_at: string | null;
+          next_follow_up_at: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          investor_id: string;
+          company_id: string;
+          campaign_id?: string | null;
+          stage?: string;
+          probability?: number;
+          owner_admin_id?: string | null;
+          last_activity_at?: string;
+          last_contacted_at?: string | null;
+          next_follow_up_at?: string | null;
+          notes?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          campaign_id?: string | null;
+          stage?: string;
+          probability?: number;
+          owner_admin_id?: string | null;
+          last_activity_at?: string;
+          last_contacted_at?: string | null;
+          next_follow_up_at?: string | null;
+          notes?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

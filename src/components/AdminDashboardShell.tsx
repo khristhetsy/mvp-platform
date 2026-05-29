@@ -3,9 +3,12 @@
 import { AdminActionHealthProvider } from "@/components/AdminActionHealthProvider";
 import { AdminButtonHealthPanel } from "@/components/AdminButtonHealthPanel";
 import { AdminCompanyCard, type AdminCompanyCardData } from "@/components/AdminCompanyCard";
+import { AdminInvestorCrmTimeline } from "@/components/AdminInvestorCrmTimeline";
 import { AdminInvestorActivity } from "@/components/AdminInvestorActivity";
 import { MetricCard } from "@/components/MetricCard";
 import { SectionHeader } from "@/components/SectionHeader";
+
+import type { AdminCrmActivityRow } from "@/lib/data/investor-crm";
 
 type Props = {
   userId: string;
@@ -26,6 +29,7 @@ type Props = {
     introRequests: Parameters<typeof AdminInvestorActivity>[0]["introRequests"];
     savedDeals: Parameters<typeof AdminInvestorActivity>[0]["savedDeals"];
   };
+  crmActivity: AdminCrmActivityRow[];
 };
 
 export function AdminDashboardShell({
@@ -36,6 +40,7 @@ export function AdminDashboardShell({
   pendingCount,
   companyCards,
   investorActivity,
+  crmActivity,
 }: Props) {
   return (
     <AdminActionHealthProvider
@@ -82,6 +87,8 @@ export function AdminDashboardShell({
           introRequests={investorActivity.introRequests}
           savedDeals={investorActivity.savedDeals}
         />
+
+        <AdminInvestorCrmTimeline activities={crmActivity} />
 
         <section className="mt-8 grid gap-5">
           {companyCards.length === 0 ? (

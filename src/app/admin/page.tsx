@@ -2,6 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { AdminDashboardShell } from "@/components/AdminDashboardShell";
 import type { AdminCompanyCardData } from "@/components/AdminCompanyCard";
 import { getAdminDashboardMetrics, listAdminCompanies } from "@/lib/data/admin";
+import { listRecentInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
@@ -10,10 +11,11 @@ export default async function AdminDashboardPage() {
   const profile = await requireRole(["admin", "analyst"]);
   const supabase = createServiceRoleClient();
 
-  const [metrics, companies, investorActivity] = await Promise.all([
+  const [metrics, companies, investorActivity, crmActivity] = await Promise.all([
     getAdminDashboardMetrics(supabase),
     listAdminCompanies(supabase),
     listAdminInvestorActivity(supabase),
+    listRecentInvestorCrmActivity(supabase),
   ]);
 
   const pendingCompanies = companies.filter((company) => company.review_status === "pending");
@@ -53,6 +55,7 @@ export default async function AdminDashboardPage() {
         pendingCount={pendingCompanies.length}
         companyCards={companyCards}
         investorActivity={investorActivity}
+        crmActivity={crmActivity}
       />
     </AppShell>
   );

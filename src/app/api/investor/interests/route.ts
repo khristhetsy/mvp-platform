@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireInvestorApi } from "@/lib/api/investor";
 import { writeAuditLog } from "@/lib/data/audit";
+import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { upsertInvestorInterest } from "@/lib/data/investor-interests";
 import { investorInterestSchema } from "@/lib/validation";
 
@@ -64,6 +65,18 @@ export async function POST(request: Request) {
     entityType: "investor_interest",
     entityId: data.id,
     metadata: { companyId: data.company_id, status: data.status },
+  });
+
+  await recordInvestorCrmActivity(auth.serviceSupabase, {
+    investorId: auth.profile.id,
+    companyId: data.company_id!,
+    campaignId: data.campaign_id,
+    activityType: "expressed_interest",
+    metadata: {
+      entityId: data.id,
+      interestAmount: data.interest_amount,
+      message: data.message,
+    },
   });
 
   return NextResponse.json({ interest: data });
