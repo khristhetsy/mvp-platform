@@ -4,17 +4,33 @@ import { MetricCard } from "@/components/MetricCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { founderPipeline } from "@/lib/mock-data";
+import { CompanyPledgeSummaryBlock } from "@/components/CompanyPledgeSummary";
+import {
+  emptyCompanyPledgeSummary,
+  getCompanyPledgeSummary,
+  getFounderPledgeCompanyId,
+} from "@/lib/data/investor-pledges";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
+
+export const dynamic = "force-dynamic";
 
 export default async function FounderDashboardPage() {
   const profile = await requireRole(["founder"]);
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
+  const serviceSupabase = createServiceRoleClient();
   const { data: documents } = company ? await listCompanyDocuments(supabase, company.id) : { data: [] };
   const investorActivity = company ? await listFounderInvestorActivity(supabase, company.id) : null;
+
+  let pledgeSummary = emptyCompanyPledgeSummary();
+  if (company) {
+    const pledgeCompanyId = await getFounderPledgeCompanyId(serviceSupabase, profile.id, company.id);
+    pledgeSummary = await getCompanyPledgeSummary(serviceSupabase, pledgeCompanyId);
+  }
 
   const pitchDeck = documents?.find((document) => document.document_type === "PITCH_DECK");
   const companyName = company?.company_name ?? "Your company";
@@ -85,6 +101,15 @@ export default async function FounderDashboardPage() {
           </div>
         </div>
       </section>
+
+      {company ? (
+        <section className="mt-8">
+          <p className="mb-3 text-sm text-slate-600">
+            Non-binding pledge totals from marketplace investors. Pledges are not legally committed investment.
+          </p>
+          <CompanyPledgeSummaryBlock summary={pledgeSummary} />
+        </section>
+      ) : null}
 
       {company && investorActivity ? (
         <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

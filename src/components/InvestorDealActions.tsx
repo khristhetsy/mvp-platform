@@ -30,7 +30,7 @@ export function InvestorDealActions({
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [interestAmount, setInterestAmount] = useState("");
+  const [indicativeInterestAmount, setIndicativeInterestAmount] = useState("");
   const [message, setMessage] = useState("");
 
   async function callApi(path: string, body: Record<string, unknown>) {
@@ -66,11 +66,25 @@ export function InvestorDealActions({
   }
 
   async function expressInterest() {
+    const amount = indicativeInterestAmount.trim();
+    if (amount && Number(amount) <= 0) {
+      setError("Enter an indicative interest amount greater than zero.");
+      return;
+    }
+
     await runAction("interest", async () => {
+      if (amount) {
+        await callApi("/api/investor/pledge", {
+          companyId,
+          companySlug,
+          pledgeAmount: Number(amount),
+          pledgeCurrency: "USD",
+        });
+      }
+
       await callApi("/api/investor/interests", {
         companyId,
         companySlug,
-        interestAmount: interestAmount ? Number(interestAmount) : undefined,
         message: message.trim() || undefined,
       });
     });
@@ -97,7 +111,7 @@ export function InvestorDealActions({
       await callApi("/api/investor/follow-up", {
         companyId,
         companySlug,
-        message: message.trim() || `ICFO follow-up requested for ${companyName}.`,
+        message: message.trim() || `CapitalOS follow-up requested for ${companyName}.`,
       });
     });
   }
@@ -170,13 +184,16 @@ export function InvestorDealActions({
       {success ? <p className="mt-3 text-sm text-emerald-700">{success}</p> : null}
 
       <div className="mt-5 grid gap-4">
-        <input
-          value={interestAmount}
-          onChange={(event) => setInterestAmount(event.target.value)}
-          className="rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-          placeholder="Indicative interest amount"
-          inputMode="decimal"
-        />
+        <label className="grid gap-2 text-sm">
+          <span className="font-medium text-slate-800">Indicative interest amount</span>
+          <input
+            value={indicativeInterestAmount}
+            onChange={(event) => setIndicativeInterestAmount(event.target.value)}
+            className="rounded-2xl border border-slate-300 px-4 py-3 text-sm"
+            placeholder="Enter indicative interest amount (USD)"
+            inputMode="decimal"
+          />
+        </label>
         <textarea
           value={message}
           onChange={(event) => setMessage(event.target.value)}
@@ -223,7 +240,7 @@ export function InvestorDealActions({
           onClick={() => requestFollowUp()}
           className="rounded-full border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm font-semibold text-indigo-900 disabled:opacity-50"
         >
-          {loading === "follow_up" ? "Submitting..." : "Contact Platform / Request ICFO Follow-up"}
+          {loading === "follow_up" ? "Submitting..." : "Contact Platform / Request CapitalOS Follow-up"}
         </button>
       </div>
     </aside>

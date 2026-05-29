@@ -2,6 +2,7 @@ import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { OpportunityCard } from "@/components/OpportunityCard";
+import { getCompanyPledgeSummaries, emptyCompanyPledgeSummary } from "@/lib/data/investor-pledges";
 import { listMarketplaceListings } from "@/lib/data/marketplace";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
@@ -16,6 +17,14 @@ export default async function DealsPage() {
   } catch {
     listings = [];
   }
+
+  const pledgeSummaries =
+    listings.length > 0
+      ? await getCompanyPledgeSummaries(
+          supabase,
+          listings.map((deal) => deal.id),
+        )
+      : {};
 
   return (
     <main className="min-h-screen bg-white text-slate-950">
@@ -42,7 +51,13 @@ export default async function DealsPage() {
             No published opportunities yet. Approved companies will appear here once published to the marketplace.
           </div>
         ) : (
-          listings.map((deal) => <OpportunityCard key={deal.id} deal={deal} />)
+          listings.map((deal) => (
+            <OpportunityCard
+              key={deal.id}
+              deal={deal}
+              pledgeSummary={pledgeSummaries[deal.id] ?? emptyCompanyPledgeSummary()}
+            />
+          ))
         )}
       </section>
 

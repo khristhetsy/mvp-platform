@@ -54,8 +54,18 @@ export const investorDealTargetSchema = z
   .object({
     companyId: z.string().uuid().optional(),
     companySlug: z.string().min(1).optional(),
-    interestAmount: z.coerce.number().positive().optional(),
     message: z.string().max(1000).optional(),
+  })
+  .refine((value) => Boolean(value.companyId || value.companySlug), {
+    message: "companyId or companySlug is required.",
+  });
+
+export const investorPledgeSchema = z
+  .object({
+    companyId: z.string().uuid().optional(),
+    companySlug: z.string().min(1).optional(),
+    pledgeAmount: z.coerce.number().positive("Pledge amount must be greater than zero."),
+    pledgeCurrency: z.string().length(3).optional().default("USD"),
   })
   .refine((value) => Boolean(value.companyId || value.companySlug), {
     message: "companyId or companySlug is required.",

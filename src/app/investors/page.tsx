@@ -3,6 +3,7 @@ import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { OpportunityCard } from "@/components/OpportunityCard";
+import { getCompanyPledgeSummaries, emptyCompanyPledgeSummary } from "@/lib/data/investor-pledges";
 import { listMarketplaceListings } from "@/lib/data/marketplace";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
@@ -17,6 +18,14 @@ export default async function InvestorsPage() {
   } catch {
     listings = [];
   }
+
+  const pledgeSummaries =
+    listings.length > 0
+      ? await getCompanyPledgeSummaries(
+          supabase,
+          listings.map((deal) => deal.id),
+        )
+      : {};
 
   return (
     <main className="min-h-screen bg-white text-slate-950">
@@ -45,7 +54,13 @@ export default async function InvestorsPage() {
         {listings.length === 0 ? (
           <p className="col-span-full text-sm text-slate-600">No published listings yet.</p>
         ) : (
-          listings.map((deal) => <OpportunityCard key={deal.id} deal={deal} />)
+          listings.map((deal) => (
+            <OpportunityCard
+              key={deal.id}
+              deal={deal}
+              pledgeSummary={pledgeSummaries[deal.id] ?? emptyCompanyPledgeSummary()}
+            />
+          ))
         )}
       </section>
       <ComplianceBlock />

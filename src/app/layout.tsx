@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DiligenceVault | AI Due Diligence Platform",
-  description: "AI due diligence and campaign review portal for founders, admins, analysts, and approved investors.",
+  title: "CapitalOS | AI Due Diligence Platform",
+  description: "CapitalOS — AI due diligence and campaign review portal for founders, admins, analysts, and approved investors.",
 };
 
 export default function RootLayout({

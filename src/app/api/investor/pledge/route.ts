@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { requireInvestorApi } from "@/lib/api/investor";
 import { writeAuditLog } from "@/lib/data/audit";
 import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
-import { createIcfoFollowUpRequest } from "@/lib/data/investor-interests";
-import { investorIntroRequestSchema } from "@/lib/validation";
+import { submitInvestorPledge } from "@/lib/data/investor-pledges";
+import { investorPledgeSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
   const auth = await requireInvestorApi();
@@ -13,48 +13,57 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => null);
-  const parsed = investorIntroRequestSchema.safeParse(body);
+  const parsed = investorPledgeSchema.safeParse(body);
 
   if (!parsed.success) {
-    const message = parsed.error.issues[0]?.message ?? "Invalid follow-up request.";
+    const message = parsed.error.issues[0]?.message ?? "Invalid pledge request.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
-  const result = await createIcfoFollowUpRequest(
+  const result = await submitInvestorPledge(
     { supabase: auth.supabase, serviceSupabase: auth.serviceSupabase },
     {
       investorId: auth.profile.id,
       companyId: parsed.data.companyId,
       companySlug: parsed.data.companySlug,
-      message: parsed.data.message ?? "Investor requested CapitalOS platform follow-up.",
+      pledgeAmount: parsed.data.pledgeAmount,
+      pledgeCurrency: parsed.data.pledgeCurrency,
     },
   );
 
   if ("error" in result && result.error) {
-    const message = "message" in result.error ? result.error.message : "Unable to submit follow-up request.";
+    const message = "message" in result.error ? result.error.message : "Unable to submit pledge amount.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
   const data = "data" in result ? result.data : null;
   if (!data) {
-    return NextResponse.json({ error: "Unable to submit follow-up request." }, { status: 400 });
+    return NextResponse.json({ error: "Unable to submit pledge amount." }, { status: 400 });
   }
 
   await writeAuditLog(auth.supabase, {
     userId: auth.profile.id,
-    action: "icfo_follow_up.requested",
-    entityType: "intro_request",
+    action: "investor_pledge.submitted",
+    entityType: "investor_interest",
     entityId: data.id,
-    metadata: { companyId: data.company_id },
+    metadata: {
+      companyId: data.company_id,
+      pledgeAmount: data.pledge_amount,
+      pledgeCurrency: data.pledge_currency,
+    },
   });
 
   await recordInvestorCrmActivity(auth.serviceSupabase, {
     investorId: auth.profile.id,
-    companyId: data.company_id,
+    companyId: data.company_id!,
     campaignId: data.campaign_id,
-    activityType: "follow_up_requested",
-    metadata: { entityId: data.id, message: data.message },
+    activityType: "pledge_amount_submitted",
+    metadata: {
+      entityId: data.id,
+      pledgeAmount: data.pledge_amount,
+      pledgeCurrency: data.pledge_currency,
+    },
   });
 
-  return NextResponse.json({ followUp: data });
+  return NextResponse.json({ pledge: data });
 }

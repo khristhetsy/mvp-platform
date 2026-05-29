@@ -3,6 +3,7 @@ import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { OpportunityCard } from "@/components/OpportunityCard";
+import { getCompanyPledgeSummaries, emptyCompanyPledgeSummary } from "@/lib/data/investor-pledges";
 import { listMarketplaceListings } from "@/lib/data/marketplace";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
@@ -44,6 +45,14 @@ export default async function Home() {
     featuredListings = [];
   }
 
+  const pledgeSummaries =
+    featuredListings.length > 0
+      ? await getCompanyPledgeSummaries(
+          supabase,
+          featuredListings.map((deal) => deal.id),
+        )
+      : {};
+
   return (
     <main className="min-h-screen bg-white text-slate-950">
       <MarketingNav />
@@ -55,7 +64,7 @@ export default async function Home() {
             AI-powered capital readiness for private offerings.
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600 md:text-xl">
-            IFUNDCROWD helps companies organize diligence, validate traction, prepare investor materials, and become
+            CapitalOS helps companies organize diligence, validate traction, prepare investor materials, and become
             marketplace-ready without implying guaranteed funding.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
@@ -188,7 +197,13 @@ export default async function Home() {
               Published marketplace listings will appear here once companies are approved and published.
             </p>
           ) : (
-            featuredListings.map((deal) => <OpportunityCard key={deal.id} deal={deal} />)
+            featuredListings.map((deal) => (
+              <OpportunityCard
+                key={deal.id}
+                deal={deal}
+                pledgeSummary={pledgeSummaries[deal.id] ?? emptyCompanyPledgeSummary()}
+              />
+            ))
           )}
         </div>
       </section>

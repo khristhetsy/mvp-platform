@@ -140,6 +140,9 @@ export type Database = {
           company_id: string | null;
           campaign_id: string;
           interest_amount: number | null;
+          pledge_amount: number | null;
+          pledge_currency: string;
+          pledge_amount_updated_at: string | null;
           message: string | null;
           status: string | null;
           created_at: string;
@@ -150,6 +153,9 @@ export type Database = {
           company_id?: string | null;
           campaign_id: string;
           interest_amount?: number | null;
+          pledge_amount?: number | null;
+          pledge_currency?: string;
+          pledge_amount_updated_at?: string | null;
           message?: string | null;
           status?: string | null;
         };
@@ -157,6 +163,9 @@ export type Database = {
           company_id?: string | null;
           campaign_id?: string | null;
           interest_amount?: number | null;
+          pledge_amount?: number | null;
+          pledge_currency?: string;
+          pledge_amount_updated_at?: string | null;
           message?: string | null;
           status?: string | null;
           updated_at?: string | null;
@@ -320,7 +329,17 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      get_companies_pledge_summaries: {
+        Args: { p_company_ids: string[] };
+        Returns: {
+          company_id: string;
+          total_pledged: number;
+          investor_count: number;
+          currency: string;
+        }[];
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

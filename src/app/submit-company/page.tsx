@@ -13,7 +13,7 @@ export default function SubmitCompanyPage() {
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-500">Submit company</p>
           <h1 className="mt-4 text-5xl font-semibold tracking-[-0.04em] md:text-6xl">
-            Start your IFUNDCROWD readiness review.
+            Start your CapitalOS readiness review.
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
             Share company basics, funding goals, traction context, and diligence materials. This does not guarantee

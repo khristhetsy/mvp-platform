@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { CompanyPledgeSummaryBlock } from "@/components/CompanyPledgeSummary";
 import { ComplianceNotice } from "@/components/ComplianceNotice";
 import { InvestorDealActions } from "@/components/InvestorDealActions";
 import { getPitchDeckDocumentId } from "@/lib/data/investor-actions";
+import { getCompanyPledgeSummary } from "@/lib/data/investor-pledges";
 import { getMarketplaceListingBySlug } from "@/lib/data/marketplace";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
@@ -27,7 +29,10 @@ export default async function DealDetailPage({
   const viewerRole = viewerRoleFromProfile(profile?.role ?? null);
   const shellRole = toShellRole(profile?.role);
   const isOwnCompany = profile?.id === deal.founderId;
-  const pitchDeckDocumentId = await getPitchDeckDocumentId(supabase, deal.id);
+  const [pitchDeckDocumentId, pledgeSummary] = await Promise.all([
+    getPitchDeckDocumentId(supabase, deal.id),
+    getCompanyPledgeSummary(supabase, deal.id),
+  ]);
 
   const sections = [
     ["Company overview", deal.overview],
@@ -77,6 +82,10 @@ export default async function DealDetailPage({
             <p className="mt-2 text-2xl font-semibold text-slate-950">{deal.minimumInvestment ?? "TBD"}</p>
           </div>
         </div>
+      </section>
+
+      <section className="mt-6">
+        <CompanyPledgeSummaryBlock summary={pledgeSummary} />
       </section>
 
       <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.42fr]">

@@ -40,7 +40,7 @@ export async function listFounderCompanies(supabase: SupabaseClient<Database>, f
     return { data: null, error: membershipError };
   }
 
-  const memberships = (membershipsRaw as CompanyMemberWithCompany[] | null) ?? [];
+  const memberships = (membershipsRaw as unknown as CompanyMemberWithCompany[] | null) ?? [];
   const companies = memberships
     .map((row) => row.companies)
     .filter((company): company is NonNullable<typeof company> => Boolean(company));

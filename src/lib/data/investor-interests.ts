@@ -34,7 +34,6 @@ export async function upsertInvestorInterest(
   clients: InvestorActionClients,
   input: InvestorActionTarget & {
     investorId: string;
-    interestAmount?: number | null;
     message?: string | null;
   },
 ) {
@@ -65,7 +64,6 @@ export async function upsertInvestorInterest(
   const updatePayload = {
     company_id: resolved.data.companyId,
     campaign_id: resolved.data.campaignId,
-    interest_amount: input.interestAmount ?? null,
     message: input.message ?? null,
     status: "interested",
     updated_at: now,
@@ -88,7 +86,6 @@ export async function upsertInvestorInterest(
       investor_id: input.investorId,
       company_id: resolved.data.companyId,
       campaign_id: resolved.data.campaignId,
-      interest_amount: input.interestAmount ?? null,
       message: input.message ?? null,
       status: "interested",
     })
@@ -177,7 +174,7 @@ export async function createIcfoFollowUpRequest(
 ) {
   return createIntroRequest(clients, {
     ...input,
-    message: input.message ?? "Investor requested ICFO platform follow-up.",
+    message: input.message ?? "Investor requested CapitalOS platform follow-up.",
   });
 }
 
@@ -238,7 +235,7 @@ export async function listAdminInvestorActivity(supabase: SupabaseClient<Databas
   const [interests, intros, saved] = await Promise.all([
     supabase
       .from("investor_interests")
-      .select("id, status, interest_amount, message, created_at, profiles:investor_id(full_name, email), companies(company_name, slug)")
+      .select("id, status, pledge_amount, pledge_currency, message, created_at, profiles:investor_id(full_name, email), companies(company_name, slug)")
       .order("created_at", { ascending: false })
       .limit(20),
     supabase

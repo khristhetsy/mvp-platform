@@ -19,7 +19,6 @@ async function parseBody(request: Request) {
       formData.get("companySlug")?.toString().trim() ||
       formData.get("campaignSlug")?.toString().trim() ||
       undefined,
-    interestAmount: formData.get("interestAmount") || undefined,
     message: formData.get("message")?.toString() || undefined,
   };
 }
@@ -44,7 +43,6 @@ export async function POST(request: Request) {
       investorId: auth.profile.id,
       companyId: parsed.data.companyId,
       companySlug: parsed.data.companySlug,
-      interestAmount: parsed.data.interestAmount,
       message: parsed.data.message,
     },
   );
@@ -74,7 +72,6 @@ export async function POST(request: Request) {
     activityType: "expressed_interest",
     metadata: {
       entityId: data.id,
-      interestAmount: data.interest_amount,
       message: data.message,
     },
   });

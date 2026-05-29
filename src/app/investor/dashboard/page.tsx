@@ -3,6 +3,10 @@ import { Suspense } from "react";
 import { AppShell } from "@/components/AppShell";
 import { DealCard } from "@/components/DealCard";
 import {
+  getCompanyPledgeSummaries,
+  emptyCompanyPledgeSummary,
+} from "@/lib/data/investor-pledges";
+import {
   InvestorActivityTimelineSection,
   InvestorActivityTimelineSkeleton,
 } from "@/components/InvestorActivityTimeline";
@@ -14,18 +18,21 @@ import {
   listInvestorSavedDeals,
 } from "@/lib/data/investor-interests";
 import { listMarketplaceListings } from "@/lib/data/marketplace";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
-function labelForRow(row: { companies?: { company_name?: string | null; slug?: string | null } | null }) {
-  return row.companies?.company_name ?? "Unknown company";
+function labelForRow(row: unknown) {
+  const companies = (row as { companies?: { company_name?: string | null } | null }).companies;
+  return companies?.company_name ?? "Unknown company";
 }
 
 export default async function InvestorDashboardPage() {
   const profile = await requireRole(["investor"]);
   const supabase = await createServerSupabaseClient();
+  const serviceSupabase = createServiceRoleClient();
 
   const [{ data: interests }, { data: intros }, { data: saved }, listings] = await Promise.all([
     listInvestorInterests(supabase, profile.id),
@@ -33,6 +40,15 @@ export default async function InvestorDashboardPage() {
     listInvestorSavedDeals(supabase, profile.id),
     listMarketplaceListings(supabase).catch(() => []),
   ]);
+
+  const featuredListings = listings.slice(0, 3);
+  const pledgeSummaries =
+    featuredListings.length > 0
+      ? await getCompanyPledgeSummaries(
+          serviceSupabase,
+          featuredListings.map((deal) => deal.id),
+        )
+      : {};
 
   return (
     <AppShell role="INVESTOR">
@@ -75,7 +91,13 @@ export default async function InvestorDashboardPage() {
           {listings.length === 0 ? (
             <p className="text-sm text-slate-600">No published listings yet.</p>
           ) : (
-            listings.slice(0, 3).map((deal) => <DealCard key={deal.id} deal={deal} />)
+            featuredListings.map((deal) => (
+              <DealCard
+                key={deal.id}
+                deal={deal}
+                pledgeSummary={pledgeSummaries[deal.id] ?? emptyCompanyPledgeSummary()}
+              />
+            ))
           )}
         </div>
       </section>

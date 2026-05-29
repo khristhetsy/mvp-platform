@@ -6,7 +6,8 @@ function formatActivityRow(row: {
   created_at?: string;
   profiles?: { full_name?: string | null; email?: string | null } | null;
   companies?: { company_name?: string | null; slug?: string | null } | null;
-  interest_amount?: number | null;
+  pledge_amount?: number | null;
+  pledge_currency?: string | null;
   message?: string | null;
 }) {
   const investor = row.profiles?.full_name ?? row.profiles?.email ?? "Unknown investor";

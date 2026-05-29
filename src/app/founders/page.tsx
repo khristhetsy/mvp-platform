@@ -21,7 +21,7 @@ export default function FoundersPage() {
             Become capital-ready before entering the market.
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-            IFUNDCROWD helps founders organize diligence, validate traction, structure campaign materials, and prepare
+            CapitalOS helps founders organize diligence, validate traction, structure campaign materials, and prepare
             for investor review.
           </p>
           <Link href="/submit-company" className="mt-8 inline-flex rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white">

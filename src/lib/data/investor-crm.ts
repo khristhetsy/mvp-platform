@@ -5,7 +5,8 @@ export type InvestorCrmActivityType =
   | "saved_deal"
   | "expressed_interest"
   | "requested_intro"
-  | "follow_up_requested";
+  | "follow_up_requested"
+  | "pledge_amount_submitted";
 
 export type InvestorPipelineStage = "interested" | "meeting_requested" | "follow_up";
 
@@ -14,6 +15,7 @@ const ACTIVITY_PIPELINE_STAGE: Record<InvestorCrmActivityType, InvestorPipelineS
   expressed_interest: "interested",
   requested_intro: "meeting_requested",
   follow_up_requested: "follow_up",
+  pledge_amount_submitted: "interested",
 };
 
 const PIPELINE_ACTIVITY_TYPES = new Set<InvestorCrmActivityType>([
@@ -21,6 +23,7 @@ const PIPELINE_ACTIVITY_TYPES = new Set<InvestorCrmActivityType>([
   "expressed_interest",
   "requested_intro",
   "follow_up_requested",
+  "pledge_amount_submitted",
 ]);
 
 export type RecordInvestorCrmActivityInput = {
