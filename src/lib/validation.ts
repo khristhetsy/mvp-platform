@@ -284,7 +284,41 @@ export const outreachCampaignSchema = z.object({
   name: z.string().min(2).max(120),
   dailyLimit: z.coerce.number().int().min(1).max(25).optional(),
   contactIds: z.array(z.string().uuid()).max(25).optional(),
+  targetIds: z.array(z.string().uuid()).max(25).optional(),
   draftKind: z.enum(["intro", "follow_up", "meeting_request", "investor_update"]).optional(),
+});
+
+export const founderOutreachTargetSchema = z
+  .object({
+    action: z.enum(["select", "move_to_pipeline"]),
+    contactId: z.string().uuid().optional(),
+    platformInvestorId: z.string().uuid().optional(),
+    matchScore: z.coerce.number().int().min(0).max(100).optional(),
+    notes: z.string().max(2000).optional(),
+  })
+  .refine((value) => Boolean(value.contactId) !== Boolean(value.platformInvestorId), {
+    message: "Provide either contactId or platformInvestorId.",
+  });
+
+export const founderOutreachTargetUpdateSchema = z.object({
+  status: z
+    .enum([
+      "recommended",
+      "selected",
+      "intro_requested",
+      "contacted",
+      "responded",
+      "meeting_scheduled",
+      "declined",
+      "archived",
+    ])
+    .optional(),
+  notes: z.string().max(2000).optional(),
+  action: z.enum(["archive"]).optional(),
+});
+
+export const founderPipelineIntroSchema = z.object({
+  message: z.string().max(2000).optional(),
 });
 
 export const outreachCampaignQueueSchema = z.object({

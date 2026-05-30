@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FounderOutreachPipelinePanel } from "@/components/FounderOutreachPipelinePanel";
 import { FounderSocialDraftsPanel } from "@/components/FounderSocialDraftsPanel";
+import type { EnrichedOutreachTarget } from "@/lib/founder-crm/outreach";
 import type { OutreachReadinessResult } from "@/lib/founder-crm/outreach-readiness";
 import type { SocialOutreachReadinessResult } from "@/lib/founder-crm/social-outreach-readiness";
 import type {
@@ -21,13 +23,7 @@ type PlatformMatch = {
 type Props = {
   companyName: string;
   contacts: FounderInvestorContactRecord[];
-  targets: Array<{
-    id: string;
-    status: string;
-    source: string;
-    match_score: number | null;
-    next_follow_up_at: string | null;
-  }>;
+  targets: EnrichedOutreachTarget[];
   campaigns: OutreachCampaignRecord[];
   readiness: OutreachReadinessResult;
   platformMatches: PlatformMatch[];
@@ -49,7 +45,7 @@ const CONTACT_STATUSES = [
 export function FounderInvestorHubPanels({
   companyName,
   contacts: initialContacts,
-  targets,
+  targets: initialTargets,
   campaigns: initialCampaigns,
   readiness,
   platformMatches,
@@ -58,9 +54,14 @@ export function FounderInvestorHubPanels({
   socialReadiness,
 }: Readonly<Props>) {
   const router = useRouter();
-  const [hubTab, setHubTab] = useState<"crm" | "social">("crm");
+  const [hubTab, setHubTab] = useState<"crm" | "pipeline" | "social">("crm");
   const [contacts, setContacts] = useState(initialContacts);
+  const [targets, setTargets] = useState(initialTargets);
   const [campaigns] = useState(initialCampaigns);
+
+  useEffect(() => {
+    setTargets(initialTargets);
+  }, [initialTargets]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -84,6 +85,44 @@ export function FounderInvestorHubPanels({
       );
     });
   }, [contacts, search, statusFilter]);
+
+  const contactInPipeline = useMemo(() => {
+    const map = new Map<string, EnrichedOutreachTarget>();
+    for (const row of targets) {
+      if (row.contact_id) {
+        map.set(row.contact_id, row);
+      }
+    }
+    return map;
+  }, [targets]);
+
+  const platformInPipeline = useMemo(() => {
+    const map = new Map<string, EnrichedOutreachTarget>();
+    for (const row of targets) {
+      if (row.platform_investor_id) {
+        map.set(row.platform_investor_id, row);
+      }
+    }
+    return map;
+  }, [targets]);
+
+  async function postOutreachTarget(body: Record<string, unknown>) {
+    setLoading(true);
+    setMessage(null);
+    const response = await fetch("/api/founder/outreach/targets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    setLoading(false);
+    if (!response.ok) {
+      setMessage(payload?.error ?? "Unable to update outreach target.");
+      return false;
+    }
+    router.refresh();
+    return true;
+  }
 
   async function addContact(formData: FormData) {
     setLoading(true);
@@ -193,9 +232,13 @@ export function FounderInvestorHubPanels({
       setMessage("Complete outreach readiness requirements first.");
       return;
     }
-    const selected = contacts.filter((row) => row.status === "selected").slice(0, 25);
-    if (selected.length === 0) {
-      setMessage("Mark contacts as selected to include in a campaign.");
+    const pipelineTargetIds = targets
+      .filter((row) => row.contact_id && row.status === "selected")
+      .map((row) => row.id)
+      .slice(0, 25);
+
+    if (pipelineTargetIds.length === 0) {
+      setMessage("Add private contacts to the pipeline (selected status) first.");
       return;
     }
 
@@ -205,7 +248,7 @@ export function FounderInvestorHubPanels({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: `${companyName} outreach ${new Date().toLocaleDateString("en-US")}`,
-        contactIds: selected.map((row) => row.id),
+        targetIds: pipelineTargetIds,
         draftKind: "intro",
       }),
     });
@@ -231,12 +274,30 @@ export function FounderInvestorHubPanels({
         </button>
         <button
           type="button"
+          onClick={() => setHubTab("pipeline")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium ${hubTab === "pipeline" ? "bg-indigo-600 text-white" : "text-slate-600"}`}
+        >
+          Outreach pipeline ({targets.length})
+        </button>
+        <button
+          type="button"
           onClick={() => setHubTab("social")}
           className={`rounded-lg px-4 py-2 text-sm font-medium ${hubTab === "social" ? "bg-indigo-600 text-white" : "text-slate-600"}`}
         >
           Social drafts
         </button>
       </div>
+
+      {hubTab === "pipeline" ? (
+        <FounderOutreachPipelinePanel
+          targets={targets}
+          campaigns={campaigns}
+          readiness={readiness}
+          companyName={companyName}
+          onTargetsChange={setTargets}
+          onMessage={setMessage}
+        />
+      ) : null}
 
       {hubTab === "social" ? (
         <FounderSocialDraftsPanel
@@ -363,7 +424,23 @@ export function FounderInvestorHubPanels({
               <ContactRow
                 key={row.id}
                 row={row}
+                pipelineTarget={contactInPipeline.get(row.id)}
                 disabled={loading}
+                onSelectForOutreach={() =>
+                  void postOutreachTarget({ action: "select", contactId: row.id }).then((ok) => {
+                    if (ok) {
+                      setMessage("Selected for outreach.");
+                    }
+                  })
+                }
+                onMoveToPipeline={() =>
+                  void postOutreachTarget({ action: "move_to_pipeline", contactId: row.id }).then((ok) => {
+                    if (ok) {
+                      setMessage("Moved to outreach pipeline.");
+                      setHubTab("pipeline");
+                    }
+                  })
+                }
                 onUpdated={(contact) =>
                   setContacts((rows) => rows.map((item) => (item.id === contact.id ? contact : item)))
                 }
@@ -379,43 +456,65 @@ export function FounderInvestorHubPanels({
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Outreach pipeline ({targets.length})</h2>
-        <p className="mt-1 text-sm text-slate-600">Tracked outreach targets — separate from platform messaging threads.</p>
-        <div className="mt-4 divide-y divide-slate-100">
-          {targets.length === 0 ? (
-            <p className="py-3 text-sm text-slate-500">No pipeline targets yet. Select contacts or platform matches to track outreach.</p>
-          ) : (
-            targets.slice(0, 12).map((row) => (
-              <div key={row.id} className="py-3 text-sm">
-                <p className="font-medium text-slate-900">{row.status}</p>
-                <p className="text-xs text-slate-500">
-                  {row.source}
-                  {row.match_score != null ? ` · ${row.match_score}% match` : ""}
-                  {row.next_follow_up_at
-                    ? ` · follow-up ${new Date(row.next_follow_up_at).toLocaleDateString("en-US")}`
-                    : ""}
-                </p>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-950">Platform matched investors</h2>
         <p className="mt-1 text-sm text-slate-600">CapitalOS registered investors — separate from your private CRM.</p>
         <div className="mt-4 divide-y divide-slate-100">
           {platformMatches.length === 0 ? (
             <p className="py-3 text-sm text-slate-500">No platform matches available yet.</p>
           ) : (
-            platformMatches.map((row) => (
-              <div key={row.platformInvestorId} className="py-3 text-sm">
-                <p className="font-medium text-slate-900">
-                  {row.label} · {row.matchScore}% match
-                </p>
-                <p className="mt-1 text-xs text-slate-600">{row.matchReasons.slice(0, 2).join(" · ")}</p>
-              </div>
-            ))
+            platformMatches.map((row) => {
+              const pipelineTarget = platformInPipeline.get(row.platformInvestorId);
+              return (
+                <div key={row.platformInvestorId} className="py-3 text-sm">
+                  <p className="font-medium text-slate-900">
+                    {row.label} · {row.matchScore}% match
+                  </p>
+                  <p className="mt-1 text-xs text-slate-600">{row.matchReasons.slice(0, 2).join(" · ")}</p>
+                  {pipelineTarget ? (
+                    <p className="mt-1 text-xs text-indigo-600">In pipeline · {pipelineTarget.status}</p>
+                  ) : null}
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() =>
+                        void postOutreachTarget({
+                          action: "select",
+                          platformInvestorId: row.platformInvestorId,
+                          matchScore: row.matchScore,
+                        }).then((ok) => {
+                          if (ok) {
+                            setMessage("Platform investor selected for outreach.");
+                          }
+                        })
+                      }
+                      className="rounded border px-2 py-0.5 text-xs"
+                    >
+                      Select for outreach
+                    </button>
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() =>
+                        void postOutreachTarget({
+                          action: "move_to_pipeline",
+                          platformInvestorId: row.platformInvestorId,
+                          matchScore: row.matchScore,
+                        }).then((ok) => {
+                          if (ok) {
+                            setMessage("Moved to outreach pipeline.");
+                            setHubTab("pipeline");
+                          }
+                        })
+                      }
+                      className="rounded border px-2 py-0.5 text-xs"
+                    >
+                      Move to pipeline
+                    </button>
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       </section>
@@ -431,7 +530,7 @@ export function FounderInvestorHubPanels({
           onClick={() => void createCampaign()}
           className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
-          Draft campaign from selected contacts
+          Draft campaign from pipeline contacts
         </button>
         <div className="mt-4 divide-y divide-slate-100">
           {campaigns.length === 0 ? (
@@ -461,14 +560,20 @@ export function FounderInvestorHubPanels({
 
 function ContactRow({
   row,
+  pipelineTarget,
   disabled,
+  onSelectForOutreach,
+  onMoveToPipeline,
   onUpdated,
   onArchived,
   onMessage,
   onLoading,
 }: Readonly<{
   row: FounderInvestorContactRecord;
+  pipelineTarget?: EnrichedOutreachTarget;
   disabled: boolean;
+  onSelectForOutreach: () => void;
+  onMoveToPipeline: () => void;
   onUpdated: (contact: FounderInvestorContactRecord) => void;
   onArchived: (contactId: string) => void;
   onMessage: (message: string | null) => void;
@@ -594,8 +699,15 @@ function ContactRow({
       <p className="mt-1 text-xs text-slate-500">
         {row.status} · {row.source}
         {row.preferred_sectors ? ` · ${row.preferred_sectors}` : ""}
+        {pipelineTarget ? ` · pipeline: ${pipelineTarget.status}` : ""}
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
+        <button type="button" disabled={disabled} onClick={onSelectForOutreach} className="rounded border px-2 py-0.5 text-xs">
+          Select for outreach
+        </button>
+        <button type="button" disabled={disabled} onClick={onMoveToPipeline} className="rounded border px-2 py-0.5 text-xs">
+          Move to pipeline
+        </button>
         <button type="button" disabled={disabled} onClick={() => setEditing(true)} className="rounded border px-2 py-0.5 text-xs">
           Edit
         </button>

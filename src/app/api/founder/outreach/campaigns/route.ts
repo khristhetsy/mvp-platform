@@ -4,6 +4,7 @@ import {
   addOutreachMessage,
   createOutreachCampaign,
   listOutreachCampaigns,
+  resolveCampaignContactIdsFromTargets,
 } from "@/lib/founder-crm/outreach";
 import { generateOutreachDraft } from "@/lib/founder-crm/outreach-drafts";
 import { evaluateFounderOutreachReadiness } from "@/lib/founder-crm/outreach-readiness";
@@ -57,7 +58,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message, readiness }, { status: 400 });
   }
 
-  const contactIds = parsed.data.contactIds ?? [];
+  let contactIds = [...(parsed.data.contactIds ?? [])];
+
+  if (parsed.data.targetIds?.length) {
+    const fromTargets = await resolveCampaignContactIdsFromTargets(
+      auth.supabase,
+      auth.profile.id,
+      auth.company.id,
+      parsed.data.targetIds,
+    );
+    if (fromTargets.error) {
+      return NextResponse.json({ error: "Unable to resolve pipeline targets." }, { status: 400 });
+    }
+    contactIds = [...new Set([...contactIds, ...(fromTargets.data ?? [])])];
+  }
+
+  if (contactIds.length > 25) {
+    return NextResponse.json({ error: "Campaign audience cannot exceed 25 contacts." }, { status: 400 });
+  }
+
   const draftKind = parsed.data.draftKind ?? "intro";
   const messages = [];
 

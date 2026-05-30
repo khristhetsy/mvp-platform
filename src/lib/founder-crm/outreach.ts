@@ -191,6 +191,38 @@ export async function listOutreachTargets(
   return { data: data ?? [] };
 }
 
+export async function findOutreachTargetByRef(
+  supabase: SupabaseClient<Database>,
+  input: {
+    founderId: string;
+    companyId: string;
+    contactId?: string | null;
+    platformInvestorId?: string | null;
+  },
+) {
+  let query = supabase
+    .from("founder_outreach_targets")
+    .select("*")
+    .eq("founder_id", input.founderId)
+    .eq("company_id", input.companyId)
+    .neq("status", "archived");
+
+  if (input.contactId) {
+    query = query.eq("contact_id", input.contactId);
+  } else if (input.platformInvestorId) {
+    query = query.eq("platform_investor_id", input.platformInvestorId);
+  } else {
+    return { data: null };
+  }
+
+  const { data, error } = await query.maybeSingle();
+  if (error) {
+    return { error };
+  }
+
+  return { data };
+}
+
 export async function upsertOutreachTarget(
   supabase: SupabaseClient<Database>,
   input: {
@@ -205,6 +237,39 @@ export async function upsertOutreachTarget(
   },
 ) {
   const now = new Date().toISOString();
+  const existing = await findOutreachTargetByRef(supabase, {
+    founderId: input.founderId,
+    companyId: input.companyId,
+    contactId: input.contactId,
+    platformInvestorId: input.platformInvestorId,
+  });
+
+  if (existing.error) {
+    return { error: existing.error };
+  }
+
+  if (existing.data) {
+    const { data, error } = await supabase
+      .from("founder_outreach_targets")
+      .update({
+        match_score: input.matchScore ?? existing.data.match_score,
+        status: input.status ?? existing.data.status,
+        source: input.source ?? existing.data.source,
+        notes: input.notes ?? existing.data.notes,
+        updated_at: now,
+      })
+      .eq("id", existing.data.id)
+      .eq("founder_id", input.founderId)
+      .select("*")
+      .single();
+
+    if (error) {
+      return { error };
+    }
+
+    return { data, created: false };
+  }
+
   const { data, error } = await supabase
     .from("founder_outreach_targets")
     .insert({
@@ -225,7 +290,150 @@ export async function upsertOutreachTarget(
     return { error };
   }
 
+  return { data, created: true };
+}
+
+export async function updateOutreachTarget(
+  supabase: SupabaseClient<Database>,
+  input: {
+    targetId: string;
+    founderId: string;
+    patch: Partial<{
+      status: string;
+      notes: string | null;
+      last_contacted_at: string | null;
+      next_follow_up_at: string | null;
+    }>;
+  },
+) {
+  const { data, error } = await supabase
+    .from("founder_outreach_targets")
+    .update({ ...input.patch, updated_at: new Date().toISOString() })
+    .eq("id", input.targetId)
+    .eq("founder_id", input.founderId)
+    .select("*")
+    .single();
+
+  if (error) {
+    return { error };
+  }
+
   return { data };
+}
+
+export async function archiveOutreachTarget(
+  supabase: SupabaseClient<Database>,
+  founderId: string,
+  targetId: string,
+) {
+  return updateOutreachTarget(supabase, {
+    targetId,
+    founderId,
+    patch: { status: "archived" },
+  });
+}
+
+export type EnrichedOutreachTarget = {
+  id: string;
+  company_id: string;
+  founder_id: string;
+  contact_id: string | null;
+  platform_investor_id: string | null;
+  match_score: number | null;
+  status: string;
+  source: string;
+  notes: string | null;
+  last_contacted_at: string | null;
+  next_follow_up_at: string | null;
+  created_at: string;
+  updated_at: string;
+  displayName: string;
+  displaySubtitle: string | null;
+  targetKind: "contact" | "platform" | "unknown";
+};
+
+export async function listOutreachTargetsEnriched(
+  supabase: SupabaseClient<Database>,
+  founderId: string,
+  companyId: string,
+  platformLabels: Map<string, { label: string; matchScore: number }>,
+) {
+  const result = await listOutreachTargets(supabase, founderId, companyId);
+  if (result.error) {
+    return { error: result.error };
+  }
+
+  const rows = result.data ?? [];
+  const contactIds = rows.map((row) => row.contact_id).filter(Boolean) as string[];
+
+  let contactMap = new Map<string, { investor_name: string; firm_name: string | null }>();
+  if (contactIds.length > 0) {
+    const { data: contacts } = await supabase
+      .from("founder_investor_contacts")
+      .select("id, investor_name, firm_name")
+      .in("id", contactIds)
+      .eq("founder_id", founderId);
+
+    contactMap = new Map((contacts ?? []).map((row) => [row.id, row]));
+  }
+
+  const enriched: EnrichedOutreachTarget[] = rows.map((row) => {
+    if (row.contact_id) {
+      const contact = contactMap.get(row.contact_id);
+      return {
+        ...row,
+        displayName: contact?.investor_name ?? "Private contact",
+        displaySubtitle: contact?.firm_name ?? null,
+        targetKind: "contact" as const,
+      };
+    }
+
+    if (row.platform_investor_id) {
+      const match = platformLabels.get(row.platform_investor_id);
+      return {
+        ...row,
+        displayName: match?.label ?? "Platform investor",
+        displaySubtitle: match ? `${match.matchScore}% match` : null,
+        targetKind: "platform" as const,
+      };
+    }
+
+    return {
+      ...row,
+      displayName: "Outreach target",
+      displaySubtitle: null,
+      targetKind: "unknown" as const,
+    };
+  });
+
+  return { data: enriched };
+}
+
+export async function resolveCampaignContactIdsFromTargets(
+  supabase: SupabaseClient<Database>,
+  founderId: string,
+  companyId: string,
+  targetIds: string[],
+) {
+  if (targetIds.length === 0) {
+    return { data: [] as string[] };
+  }
+
+  const { data, error } = await supabase
+    .from("founder_outreach_targets")
+    .select("contact_id")
+    .eq("founder_id", founderId)
+    .eq("company_id", companyId)
+    .in("id", targetIds)
+    .not("contact_id", "is", null)
+    .neq("status", "archived");
+
+  if (error) {
+    return { error };
+  }
+
+  const ids = [...new Set((data ?? []).map((row) => row.contact_id).filter(Boolean) as string[])];
+  return { data: ids };
 }
 
 export async function listFollowUpDueContacts(

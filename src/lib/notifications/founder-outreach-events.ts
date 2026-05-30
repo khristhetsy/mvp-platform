@@ -93,6 +93,54 @@ export async function notifyFounderSocialDraftCopied(input: {
   });
 }
 
+export async function notifyFounderOutreachTargetSelected(input: {
+  founderId: string;
+  targetId: string;
+  displayName: string;
+}) {
+  return createNotification({
+    recipientUserId: input.founderId,
+    actorUserId: input.founderId,
+    type: "founder_outreach_target_selected",
+    title: "Investor selected for outreach",
+    message: `${input.displayName} was added to your outreach selections.`,
+    entityType: "founder_outreach_targets",
+    entityId: input.targetId,
+  });
+}
+
+export async function notifyFounderOutreachTargetPipelined(input: {
+  founderId: string;
+  targetId: string;
+  displayName: string;
+}) {
+  return createNotification({
+    recipientUserId: input.founderId,
+    actorUserId: input.founderId,
+    type: "founder_outreach_target_pipelined",
+    title: "Moved to outreach pipeline",
+    message: `${input.displayName} is now in your outreach pipeline.`,
+    entityType: "founder_outreach_targets",
+    entityId: input.targetId,
+  });
+}
+
+export async function notifyFounderPipelineIntroRequested(input: {
+  founderId: string;
+  targetId: string;
+  threadId: string;
+}) {
+  return createNotification({
+    recipientUserId: input.founderId,
+    actorUserId: input.founderId,
+    type: "founder_pipeline_intro_requested",
+    title: "Intro requested",
+    message: "Your intro request was sent via the platform messaging workflow.",
+    entityType: "message_thread",
+    entityId: input.threadId,
+  });
+}
+
 export async function notifyFounderFollowUpDue(input: {
   founderId: string;
   count: number;
