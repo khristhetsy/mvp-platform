@@ -25,6 +25,19 @@ pitch-decks/{company_id}/{user_id}/{timestamp}-{filename}.pdf
 
 5. Never expose `SUPABASE_SERVICE_ROLE_KEY` in browser code. It is used only in server routes such as onboarding repair and signed URL generation.
 
+## Google Calendar connection (Phase A)
+
+Run migration `0023_connected_accounts.sql` before using Google connect in settings.
+
+Set in `.env.local` (see `.env.example`):
+
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REDIRECT_URI` (must match Google Cloud OAuth redirect URI)
+- `TOKEN_ENCRYPTION_SECRET` (server-only; encrypts stored OAuth tokens)
+
+Founders and investors connect at `/founder/settings` or `/investor/settings`. OAuth tokens are encrypted at rest; Calendar event creation is not enabled until a later phase.
+
 ## Data model
 
 ```text

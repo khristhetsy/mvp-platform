@@ -29,6 +29,7 @@ export const investorWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/investor/portfolio", label: "Portfolio" },
   { href: "/investor/messages", label: "Messages" },
   { href: "/investor/analytics", label: "Analytics" },
+  { href: "/investor/settings", label: "Settings" },
 ];
 
 export const adminWorkspaceNav: WorkspaceNavItem[] = [

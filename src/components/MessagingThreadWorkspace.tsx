@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { GoogleCalendarMeetingReadiness } from "@/components/GoogleCalendarMeetingReadiness";
 import type { MessageThreadDetail, MessageThreadListItem } from "@/lib/messaging/types";
 
 type WorkspaceRole = "founder" | "investor";
@@ -49,6 +50,7 @@ export function MessagingThreadWorkspace({
   selectedThreadId,
   detail,
   currentUserId,
+  googleCalendarReady,
 }: Readonly<{
   role: WorkspaceRole;
   basePath: string;
@@ -56,6 +58,7 @@ export function MessagingThreadWorkspace({
   selectedThreadId: string | null;
   detail: MessageThreadDetail | null;
   currentUserId: string;
+  googleCalendarReady: boolean;
 }>) {
   const router = useRouter();
   const [messageBody, setMessageBody] = useState("");
@@ -307,9 +310,7 @@ export function MessagingThreadWorkspace({
 
             <div className="border-t border-slate-100 px-6 py-4">
               <p className="text-sm font-semibold text-slate-950">Meeting</p>
-              <p className="mt-1 text-xs text-slate-500">
-                Google Calendar/Meet integration coming soon. Times are stored in CapitalOS until connected.
-              </p>
+              <GoogleCalendarMeetingReadiness googleCalendarReady={googleCalendarReady} />
 
               {latestMeeting &&
               (latestMeeting.status === "accepted" || latestMeeting.status === "scheduled") ? (

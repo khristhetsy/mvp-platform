@@ -1,6 +1,7 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { MessagingThreadWorkspace } from "@/components/MessagingThreadWorkspace";
+import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { listFounderMessageThreads } from "@/lib/messaging/threads";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -13,9 +14,10 @@ export default async function FounderMessagesPage() {
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
 
-  const threadsResult = company
-    ? await listFounderMessageThreads(supabase, profile.id, company.id)
-    : { data: [] };
+  const [threadsResult, googleStatus] = await Promise.all([
+    company ? listFounderMessageThreads(supabase, profile.id, company.id) : Promise.resolve({ data: [] }),
+    getGoogleConnectionStatus(supabase, profile.id),
+  ]);
 
   const threads = threadsResult.data ?? [];
 
@@ -44,6 +46,7 @@ export default async function FounderMessagesPage() {
             selectedThreadId={null}
             detail={null}
             currentUserId={profile.id}
+            googleCalendarReady={googleStatus.connected}
           />
         )}
       </FounderFeatureGate>

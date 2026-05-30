@@ -1,6 +1,7 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { MessagingThreadWorkspace } from "@/components/MessagingThreadWorkspace";
+import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import {
   getMessageThreadDetail,
   listFounderMessageThreads,
@@ -25,9 +26,10 @@ export default async function FounderMessageThreadPage({ params }: PageProps) {
     notFound();
   }
 
-  const [threadsResult, detailResult] = await Promise.all([
+  const [threadsResult, detailResult, googleStatus] = await Promise.all([
     listFounderMessageThreads(supabase, profile.id, company.id),
     getMessageThreadDetail(supabase, threadId),
+    getGoogleConnectionStatus(supabase, profile.id),
   ]);
 
   const detail = detailResult.data;
@@ -57,6 +59,7 @@ export default async function FounderMessageThreadPage({ params }: PageProps) {
           selectedThreadId={threadId}
           detail={detail}
           currentUserId={profile.id}
+          googleCalendarReady={googleStatus.connected}
         />
       </FounderFeatureGate>
     </FounderAppShell>

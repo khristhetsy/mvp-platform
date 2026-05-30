@@ -1,5 +1,9 @@
+import { Suspense } from "react";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { GoogleCalendarConnectionCard } from "@/components/GoogleCalendarConnectionCard";
 import { FounderSubscriptionSettingsCard } from "@/components/SubscriptionPanel";
+import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getRequestedPlanForProfile } from "@/lib/billing/requested-plan";
 import { requireRole } from "@/lib/supabase/auth";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
@@ -13,6 +17,8 @@ export default async function FounderSettingsPage() {
     (await getSubscriptionForProfile(profile.id)) ??
     (await ensureSubscriptionForProfile({ profileId: profile.id, role: profile.role }));
   const requestedPlan = await getRequestedPlanForProfile(profile.id);
+  const supabase = await createServerSupabaseClient();
+  const googleStatus = await getGoogleConnectionStatus(supabase, profile.id);
 
   return (
     <FounderAppShell
@@ -25,6 +31,9 @@ export default async function FounderSettingsPage() {
 
         <CompanySettingsForm company={company} />
         <FounderSubscriptionSettingsCard subscription={subscription} requestedPlan={requestedPlan} />
+        <Suspense fallback={<p className="mt-8 text-sm text-slate-500">Loading Google connection…</p>}>
+          <GoogleCalendarConnectionCard status={googleStatus} returnPath="/founder/settings" />
+        </Suspense>
       </section>
     </FounderAppShell>
   );

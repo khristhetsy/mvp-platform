@@ -241,6 +241,46 @@ export type Database = {
         };
         Relationships: [];
       };
+      connected_accounts: {
+        Row: {
+          id: string;
+          user_id: string;
+          provider: string;
+          provider_user_id: string;
+          access_token_encrypted: string;
+          refresh_token_encrypted: string | null;
+          token_expires_at: string | null;
+          scopes: string[];
+          email: string | null;
+          connected_at: string;
+          updated_at: string;
+          last_refresh_at: string | null;
+        };
+        Insert: {
+          user_id: string;
+          provider: string;
+          provider_user_id: string;
+          access_token_encrypted: string;
+          refresh_token_encrypted?: string | null;
+          token_expires_at?: string | null;
+          scopes?: string[];
+          email?: string | null;
+          connected_at?: string;
+          updated_at?: string;
+          last_refresh_at?: string | null;
+        };
+        Update: {
+          provider_user_id?: string;
+          access_token_encrypted?: string;
+          refresh_token_encrypted?: string | null;
+          token_expires_at?: string | null;
+          scopes?: string[];
+          email?: string | null;
+          updated_at?: string;
+          last_refresh_at?: string | null;
+        };
+        Relationships: [];
+      };
       message_threads: {
         Row: {
           id: string;

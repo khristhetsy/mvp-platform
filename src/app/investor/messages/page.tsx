@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { MessagingThreadWorkspace } from "@/components/MessagingThreadWorkspace";
+import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { listInvestorMessageThreads } from "@/lib/messaging/threads";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 
@@ -8,7 +9,10 @@ export const dynamic = "force-dynamic";
 
 export default async function InvestorMessagesPage() {
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
-  const threadsResult = await listInvestorMessageThreads(supabase, investorId);
+  const [threadsResult, googleStatus] = await Promise.all([
+    listInvestorMessageThreads(supabase, investorId),
+    getGoogleConnectionStatus(supabase, investorId),
+  ]);
   const threads = threadsResult.data ?? [];
 
   return (
@@ -34,6 +38,7 @@ export default async function InvestorMessagesPage() {
           selectedThreadId={null}
           detail={null}
           currentUserId={profile.id}
+          googleCalendarReady={googleStatus.connected}
         />
       </InvestorFeatureGate>
     </AppShell>

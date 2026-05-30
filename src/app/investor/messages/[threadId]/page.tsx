@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { MessagingThreadWorkspace } from "@/components/MessagingThreadWorkspace";
+import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import {
   getMessageThreadDetail,
   listInvestorMessageThreads,
@@ -17,9 +18,10 @@ export default async function InvestorMessageThreadPage({ params }: PageProps) {
   const { threadId } = await params;
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
 
-  const [threadsResult, detailResult] = await Promise.all([
+  const [threadsResult, detailResult, googleStatus] = await Promise.all([
     listInvestorMessageThreads(supabase, investorId),
     getMessageThreadDetail(supabase, threadId),
+    getGoogleConnectionStatus(supabase, investorId),
   ]);
 
   const detail = detailResult.data;
@@ -47,6 +49,7 @@ export default async function InvestorMessageThreadPage({ params }: PageProps) {
           selectedThreadId={threadId}
           detail={detail}
           currentUserId={profile.id}
+          googleCalendarReady={googleStatus.connected}
         />
       </InvestorFeatureGate>
     </AppShell>

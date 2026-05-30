@@ -43,6 +43,7 @@ export async function cancelCalendarEvent(_eventId: string): Promise<void> {
   throw new Error(NOT_CONFIGURED);
 }
 
+/** Live Calendar API calls are Phase B+; connection storage is Phase A. */
 export function isGoogleCalendarConfigured() {
   return false;
 }
