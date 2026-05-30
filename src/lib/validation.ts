@@ -335,6 +335,7 @@ export const adminReportGenerateSchema = z.object({
     "outreach_activity",
     "messaging_meetings",
     "subscription_upgrade",
+    "due_diligence",
   ]),
   format: z.enum(["json", "csv"]).default("json"),
   preview: z.boolean().optional(),
@@ -346,6 +347,9 @@ export const adminReportGenerateSchema = z.object({
       founderId: z.string().uuid().optional(),
       investorId: z.string().uuid().optional(),
       severity: z.enum(["low", "medium", "high", "critical"]).optional(),
+      reviewStatus: z
+        .enum(["pending", "approved", "rejected", "changes_requested"])
+        .optional(),
     })
     .optional(),
 });

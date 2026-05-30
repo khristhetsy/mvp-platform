@@ -60,7 +60,7 @@ This adds the `compliance_events` table (staff-only RLS) for internal risk flags
 
 ## Admin audit export & reporting (Phase 1)
 
-Use `/admin/reports` (staff-only) to generate JSON or CSV internal summaries from existing tables. Each export writes an `audit_logs` row (`admin.report_generated`). OAuth tokens and private founder contact PII are excluded from exports.
+Use `/admin/reports` (staff-only) to generate JSON or CSV internal summaries from existing tables, including **Due Diligence** (`due_diligence`) per-company readiness packs. Each export writes an `audit_logs` row (`admin.report_generated`). OAuth tokens, message bodies, and private founder contact PII are excluded from exports.
 
 ## Data model
 

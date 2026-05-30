@@ -39,6 +39,12 @@ const REPORT_SECTIONS = [
     description: "Subscription plans, billing status, and upgrade requests.",
     reportType: "subscription_upgrade",
   },
+  {
+    title: "Due Diligence Report",
+    description:
+      "Review company readiness, diligence findings, document status, remediation tasks, admin reviews, and investor-readiness indicators.",
+    reportType: "due_diligence",
+  },
 ] as const;
 
 function toFilterOption(row: {
