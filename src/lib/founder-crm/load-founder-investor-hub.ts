@@ -6,20 +6,25 @@ import {
   listOutreachTargets,
 } from "@/lib/founder-crm/outreach";
 import { loadFounderPlatformInvestorMatches } from "@/lib/founder-crm/platform-matches";
+import { evaluateSocialOutreachReadiness } from "@/lib/founder-crm/social-outreach-readiness";
+import { listSocialOutreachDrafts } from "@/lib/founder-crm/social-outreach-drafts";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Company } from "@/lib/supabase/types";
 
 export async function loadFounderInvestorHub(company: Company, founderId: string) {
   const supabase = await createServerSupabaseClient();
 
-  const [contacts, targets, campaigns, readiness, platformMatches, followUps] = await Promise.all([
-    listFounderInvestorContacts(supabase, founderId, company.id),
-    listOutreachTargets(supabase, founderId, company.id),
-    listOutreachCampaigns(supabase, founderId, company.id),
-    evaluateFounderOutreachReadiness(company, founderId),
-    loadFounderPlatformInvestorMatches(company, 6),
-    listFollowUpDueContacts(supabase, founderId, company.id),
-  ]);
+  const [contacts, targets, campaigns, readiness, platformMatches, followUps, socialDrafts, socialReadiness] =
+    await Promise.all([
+      listFounderInvestorContacts(supabase, founderId, company.id),
+      listOutreachTargets(supabase, founderId, company.id),
+      listOutreachCampaigns(supabase, founderId, company.id),
+      evaluateFounderOutreachReadiness(company, founderId),
+      loadFounderPlatformInvestorMatches(company, 6),
+      listFollowUpDueContacts(supabase, founderId, company.id),
+      listSocialOutreachDrafts(supabase, founderId, company.id),
+      evaluateSocialOutreachReadiness(company),
+    ]);
 
   return {
     contacts: contacts.data ?? [],
@@ -28,5 +33,7 @@ export async function loadFounderInvestorHub(company: Company, founderId: string
     readiness,
     platformMatches,
     followUpCount: followUps.data?.length ?? 0,
+    socialDrafts: socialDrafts.data ?? [],
+    socialReadiness,
   };
 }

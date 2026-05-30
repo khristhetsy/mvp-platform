@@ -31,6 +31,11 @@ export type FounderInvestorContactRecord = {
   email: string | null;
   phone: string | null;
   website: string | null;
+  linkedin_url: string | null;
+  twitter_url: string | null;
+  crunchbase_url: string | null;
+  personal_website_url: string | null;
+  other_social_url: string | null;
   investor_type: string | null;
   preferred_sectors: string | null;
   preferred_stages: string | null;
@@ -88,3 +93,34 @@ export type OutreachMessageRecord = {
 };
 
 export const OUTREACH_DAILY_LIMIT_MAX = 25;
+
+export type SocialDraftType =
+  | "linkedin_campaign_announcement"
+  | "investor_update"
+  | "readiness_milestone"
+  | "traction_update"
+  | "fundraising_update"
+  | "thought_leadership"
+  | "follow_up_post";
+
+export type SocialDraftPlatform = "linkedin" | "x_twitter" | "general";
+
+export type SocialDraftStatus = "draft" | "reviewed" | "copied" | "archived";
+
+export type SocialDraftComplianceStatus = "needs_review" | "approved" | "flagged";
+
+export type SocialOutreachDraftRecord = {
+  id: string;
+  founder_id: string;
+  company_id: string;
+  campaign_id: string | null;
+  draft_type: SocialDraftType;
+  platform: SocialDraftPlatform;
+  title: string;
+  body: string;
+  status: SocialDraftStatus;
+  compliance_status: SocialDraftComplianceStatus;
+  copied_at: string | null;
+  created_at: string;
+  updated_at: string;
+};

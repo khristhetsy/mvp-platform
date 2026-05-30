@@ -147,6 +147,8 @@ export default async function FounderInvestorsPage() {
                 readiness={hub.readiness}
                 platformMatches={hub.platformMatches}
                 followUpCount={hub.followUpCount}
+                socialDrafts={hub.socialDrafts}
+                socialReadiness={hub.socialReadiness}
               />
             </section>
           ) : null}

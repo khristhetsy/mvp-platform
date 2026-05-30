@@ -46,6 +46,12 @@ Run migration `0025_founder_investor_crm.sql` before using `/founder/investors` 
 
 This adds founder-private tables (`founder_investor_contacts`, `founder_outreach_targets`, `outreach_campaigns`, `outreach_messages`) with RLS scoped to the owning founder and company. Outreach queues messages internally only — no external email sending in this phase.
 
+## Founder social outreach drafts
+
+Run migration `0026_founder_social_outreach.sql` for investor social URL fields on `founder_investor_contacts` and the `social_outreach_drafts` table.
+
+Social drafts are generated and copied inside CapitalOS only — no LinkedIn API, OAuth, auto-posting, scraping, or external social providers.
+
 ## Data model
 
 ```text

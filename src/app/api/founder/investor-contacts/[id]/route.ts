@@ -32,6 +32,12 @@ export async function PATCH(request: Request, context: RouteContext) {
           email: parsed.data.email === "" ? null : parsed.data.email,
           phone: parsed.data.phone,
           website: parsed.data.website === "" ? null : parsed.data.website,
+          linkedin_url: parsed.data.linkedin_url === "" ? null : parsed.data.linkedin_url,
+          twitter_url: parsed.data.twitter_url === "" ? null : parsed.data.twitter_url,
+          crunchbase_url: parsed.data.crunchbase_url === "" ? null : parsed.data.crunchbase_url,
+          personal_website_url:
+            parsed.data.personal_website_url === "" ? null : parsed.data.personal_website_url,
+          other_social_url: parsed.data.other_social_url === "" ? null : parsed.data.other_social_url,
           investor_type: parsed.data.investor_type,
           preferred_sectors: parsed.data.preferred_sectors,
           preferred_stages: parsed.data.preferred_stages,

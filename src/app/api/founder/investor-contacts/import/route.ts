@@ -51,6 +51,11 @@ export async function POST(request: Request) {
       checkSizeMax: row.data.check_size_max,
       geography: row.data.geography,
       website: row.data.website,
+      linkedinUrl: row.data.linkedin_url,
+      twitterUrl: row.data.twitter_url,
+      crunchbaseUrl: row.data.crunchbase_url,
+      personalWebsiteUrl: row.data.personal_website_url,
+      otherSocialUrl: row.data.other_social_url,
       notes: row.data.notes,
       source: "csv_import",
     });

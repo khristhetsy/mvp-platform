@@ -47,6 +47,52 @@ export async function notifyFounderOutreachBlocked(input: {
   });
 }
 
+export async function notifyFounderSocialDraftGenerated(input: {
+  founderId: string;
+  draftId: string;
+  draftType: string;
+}) {
+  return createNotification({
+    recipientUserId: input.founderId,
+    actorUserId: input.founderId,
+    type: "founder_social_draft_generated",
+    title: "Social draft generated",
+    message: `Your ${input.draftType.replace(/_/g, " ")} draft is ready for review. No posts were sent.`,
+    entityType: "social_outreach_draft",
+    entityId: input.draftId,
+  });
+}
+
+export async function notifyFounderSocialDraftFlagged(input: {
+  founderId: string;
+  draftId: string;
+}) {
+  return createNotification({
+    recipientUserId: input.founderId,
+    actorUserId: input.founderId,
+    type: "founder_social_draft_flagged",
+    title: "Social draft flagged for compliance",
+    message: "Risky phrases were detected. Review and edit before copying or posting externally.",
+    entityType: "social_outreach_draft",
+    entityId: input.draftId,
+  });
+}
+
+export async function notifyFounderSocialDraftCopied(input: {
+  founderId: string;
+  draftId: string;
+}) {
+  return createNotification({
+    recipientUserId: input.founderId,
+    actorUserId: input.founderId,
+    type: "founder_social_draft_copied",
+    title: "Social draft copied",
+    message: "Draft marked as copied. Post manually on your social platform after final review.",
+    entityType: "social_outreach_draft",
+    entityId: input.draftId,
+  });
+}
+
 export async function notifyFounderFollowUpDue(input: {
   founderId: string;
   count: number;

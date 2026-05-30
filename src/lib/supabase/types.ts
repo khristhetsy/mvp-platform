@@ -251,6 +251,11 @@ export type Database = {
           email: string | null;
           phone: string | null;
           website: string | null;
+          linkedin_url: string | null;
+          twitter_url: string | null;
+          crunchbase_url: string | null;
+          personal_website_url: string | null;
+          other_social_url: string | null;
           investor_type: string | null;
           preferred_sectors: string | null;
           preferred_stages: string | null;
@@ -272,6 +277,11 @@ export type Database = {
           email?: string | null;
           phone?: string | null;
           website?: string | null;
+          linkedin_url?: string | null;
+          twitter_url?: string | null;
+          crunchbase_url?: string | null;
+          personal_website_url?: string | null;
+          other_social_url?: string | null;
           investor_type?: string | null;
           preferred_sectors?: string | null;
           preferred_stages?: string | null;
@@ -290,6 +300,11 @@ export type Database = {
           email?: string | null;
           phone?: string | null;
           website?: string | null;
+          linkedin_url?: string | null;
+          twitter_url?: string | null;
+          crunchbase_url?: string | null;
+          personal_website_url?: string | null;
+          other_social_url?: string | null;
           investor_type?: string | null;
           preferred_sectors?: string | null;
           preferred_stages?: string | null;
@@ -300,6 +315,48 @@ export type Database = {
           tags?: string[];
           notes?: string | null;
           status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      social_outreach_drafts: {
+        Row: {
+          id: string;
+          founder_id: string;
+          company_id: string;
+          campaign_id: string | null;
+          draft_type: string;
+          platform: string;
+          title: string;
+          body: string;
+          status: string;
+          compliance_status: string;
+          copied_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          founder_id: string;
+          company_id: string;
+          campaign_id?: string | null;
+          draft_type: string;
+          platform?: string;
+          title: string;
+          body: string;
+          status?: string;
+          compliance_status?: string;
+          copied_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          campaign_id?: string | null;
+          draft_type?: string;
+          platform?: string;
+          title?: string;
+          body?: string;
+          status?: string;
+          compliance_status?: string;
+          copied_at?: string | null;
           updated_at?: string;
         };
         Relationships: [];

@@ -26,6 +26,9 @@ export default async function AdminCrmPage() {
     queuedMessageCount: 0,
     draftCampaignCount: 0,
     outreachTargetCount: 0,
+    socialDraftCount: 0,
+    socialDraftFlaggedCount: 0,
+    socialDraftCopiedCount: 0,
   };
   let rawCrmError: string | null = null;
   let rawInterestsError: string | null = null;

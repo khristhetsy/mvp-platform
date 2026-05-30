@@ -10,6 +10,11 @@ export type CsvImportRow = {
   check_size?: string;
   geography?: string;
   website?: string;
+  linkedin_url?: string;
+  twitter_url?: string;
+  crunchbase_url?: string;
+  personal_website_url?: string;
+  other_social_url?: string;
   notes?: string;
 };
 
@@ -28,6 +33,11 @@ export type ParsedCsvRow = {
     check_size_max: number | null;
     geography: string | null;
     website: string | null;
+    linkedin_url: string | null;
+    twitter_url: string | null;
+    crunchbase_url: string | null;
+    personal_website_url: string | null;
+    other_social_url: string | null;
     notes: string | null;
   } | null;
 };
@@ -85,6 +95,11 @@ export function parseCsvImportRows(rows: CsvImportRow[]): ParsedCsvRow[] {
               check_size_max: check.max,
               geography: row.geography?.trim() || null,
               website: row.website?.trim() || null,
+              linkedin_url: row.linkedin_url?.trim() || null,
+              twitter_url: row.twitter_url?.trim() || null,
+              crunchbase_url: row.crunchbase_url?.trim() || null,
+              personal_website_url: row.personal_website_url?.trim() || null,
+              other_social_url: row.other_social_url?.trim() || null,
               notes: row.notes?.trim() || null,
             }
           : null,

@@ -33,7 +33,10 @@ export type NotificationType =
   | "founder_contacts_imported"
   | "founder_outreach_campaign_drafted"
   | "founder_outreach_blocked"
-  | "founder_follow_up_due";
+  | "founder_follow_up_due"
+  | "founder_social_draft_generated"
+  | "founder_social_draft_flagged"
+  | "founder_social_draft_copied";
 
 export type NotificationRecord = {
   id: string;

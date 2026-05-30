@@ -9,7 +9,7 @@ export function AdminFounderOutreachSummary({
       <p className="mt-1 text-sm text-slate-500">
         Compliance-safe metadata only — private contact details are not shown to admins.
       </p>
-      <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
         <div>
           <dt className="text-xs font-medium uppercase text-slate-500">Private contacts</dt>
           <dd className="mt-1 text-2xl font-semibold text-slate-950">{summary.privateContactCount}</dd>
@@ -29,6 +29,18 @@ export function AdminFounderOutreachSummary({
         <div>
           <dt className="text-xs font-medium uppercase text-slate-500">Queued messages</dt>
           <dd className="mt-1 text-2xl font-semibold text-slate-950">{summary.queuedMessageCount}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-medium uppercase text-slate-500">Social drafts</dt>
+          <dd className="mt-1 text-2xl font-semibold text-slate-950">{summary.socialDraftCount}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-medium uppercase text-slate-500">Flagged social</dt>
+          <dd className="mt-1 text-2xl font-semibold text-slate-950">{summary.socialDraftFlaggedCount}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-medium uppercase text-slate-500">Copied social</dt>
+          <dd className="mt-1 text-2xl font-semibold text-slate-950">{summary.socialDraftCopiedCount}</dd>
         </div>
       </dl>
       <p className="mt-4 text-xs text-amber-800">

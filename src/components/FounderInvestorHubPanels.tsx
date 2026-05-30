@@ -2,10 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FounderSocialDraftsPanel } from "@/components/FounderSocialDraftsPanel";
 import type { OutreachReadinessResult } from "@/lib/founder-crm/outreach-readiness";
+import type { SocialOutreachReadinessResult } from "@/lib/founder-crm/social-outreach-readiness";
 import type {
   FounderInvestorContactRecord,
   OutreachCampaignRecord,
+  SocialOutreachDraftRecord,
 } from "@/lib/founder-crm/types";
 
 type PlatformMatch = {
@@ -29,6 +32,8 @@ type Props = {
   readiness: OutreachReadinessResult;
   platformMatches: PlatformMatch[];
   followUpCount: number;
+  socialDrafts: SocialOutreachDraftRecord[];
+  socialReadiness: SocialOutreachReadinessResult;
 };
 
 const CONTACT_STATUSES = [
@@ -49,8 +54,11 @@ export function FounderInvestorHubPanels({
   readiness,
   platformMatches,
   followUpCount,
+  socialDrafts,
+  socialReadiness,
 }: Readonly<Props>) {
   const router = useRouter();
+  const [hubTab, setHubTab] = useState<"crm" | "social">("crm");
   const [contacts, setContacts] = useState(initialContacts);
   const [campaigns] = useState(initialCampaigns);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -91,6 +99,10 @@ export function FounderInvestorHubPanels({
         preferred_sectors: formData.get("preferred_sectors") || undefined,
         preferred_stages: formData.get("preferred_stages") || undefined,
         geography: formData.get("geography") || undefined,
+        linkedin_url: formData.get("linkedin_url") || undefined,
+        twitter_url: formData.get("twitter_url") || undefined,
+        crunchbase_url: formData.get("crunchbase_url") || undefined,
+        personal_website_url: formData.get("personal_website_url") || undefined,
         notes: formData.get("notes") || undefined,
       }),
     });
@@ -130,6 +142,10 @@ export function FounderInvestorHubPanels({
         check_size: row.check_size,
         geography: row.geography,
         website: row.website,
+        linkedin_url: row.linkedin_url,
+        twitter_url: row.twitter_url,
+        crunchbase_url: row.crunchbase_url,
+        personal_website_url: row.personal_website_url,
         notes: row.notes,
       };
     });
@@ -205,6 +221,33 @@ export function FounderInvestorHubPanels({
 
   return (
     <div className="space-y-8">
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+        <button
+          type="button"
+          onClick={() => setHubTab("crm")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium ${hubTab === "crm" ? "bg-indigo-600 text-white" : "text-slate-600"}`}
+        >
+          CRM &amp; email outreach
+        </button>
+        <button
+          type="button"
+          onClick={() => setHubTab("social")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium ${hubTab === "social" ? "bg-indigo-600 text-white" : "text-slate-600"}`}
+        >
+          Social drafts
+        </button>
+      </div>
+
+      {hubTab === "social" ? (
+        <FounderSocialDraftsPanel
+          initialDrafts={socialDrafts}
+          socialReadiness={socialReadiness}
+          campaigns={campaigns}
+        />
+      ) : null}
+
+      {hubTab === "crm" ? (
+        <>
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-950">Outreach readiness</h2>
         <p className="mt-1 text-sm text-slate-600">
@@ -249,6 +292,10 @@ export function FounderInvestorHubPanels({
             <input name="preferred_sectors" placeholder="Sectors" className="rounded-lg border px-3 py-2 text-sm" />
             <input name="preferred_stages" placeholder="Stages" className="rounded-lg border px-3 py-2 text-sm" />
             <input name="geography" placeholder="Geography" className="rounded-lg border px-3 py-2 text-sm" />
+            <input name="linkedin_url" type="url" placeholder="LinkedIn URL" className="rounded-lg border px-3 py-2 text-sm" />
+            <input name="twitter_url" type="url" placeholder="X / Twitter URL" className="rounded-lg border px-3 py-2 text-sm" />
+            <input name="crunchbase_url" type="url" placeholder="Crunchbase URL" className="rounded-lg border px-3 py-2 text-sm" />
+            <input name="personal_website_url" type="url" placeholder="Personal website" className="rounded-lg border px-3 py-2 text-sm" />
             <textarea name="notes" placeholder="Notes" rows={2} className="rounded-lg border px-3 py-2 text-sm" />
             <button type="submit" disabled={loading} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
               Add contact
@@ -259,7 +306,7 @@ export function FounderInvestorHubPanels({
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-950">Import CSV</h2>
           <p className="mt-1 text-xs text-slate-500">
-            Columns: investor_name, firm_name, email, investor_type, sector, stage, check_size, geography, website, notes
+            Columns: investor_name, firm_name, email, investor_type, sector, stage, check_size, geography, website, linkedin_url, twitter_url, crunchbase_url, personal_website_url, notes
           </p>
           <textarea
             value={csvText}
@@ -406,6 +453,8 @@ export function FounderInvestorHubPanels({
       </section>
 
       {message ? <p className="text-sm text-slate-700">{message}</p> : null}
+        </>
+      ) : null}
     </div>
   );
 }
@@ -458,6 +507,10 @@ function ContactRow({
         investor_name: formData.get("investor_name"),
         firm_name: formData.get("firm_name") || undefined,
         email: formData.get("email") || undefined,
+        linkedin_url: formData.get("linkedin_url") || undefined,
+        twitter_url: formData.get("twitter_url") || undefined,
+        crunchbase_url: formData.get("crunchbase_url") || undefined,
+        personal_website_url: formData.get("personal_website_url") || undefined,
         notes: formData.get("notes") || undefined,
         status: formData.get("status") || row.status,
       }),
@@ -509,6 +562,8 @@ function ContactRow({
           ))}
           <option value="archived">archived</option>
         </select>
+        <input name="linkedin_url" type="url" defaultValue={row.linkedin_url ?? ""} placeholder="LinkedIn" className="mb-2 w-full rounded border px-2 py-1" />
+        <input name="twitter_url" type="url" defaultValue={row.twitter_url ?? ""} placeholder="X / Twitter" className="mb-2 w-full rounded border px-2 py-1" />
         <textarea name="notes" defaultValue={row.notes ?? ""} rows={2} className="mb-2 w-full rounded border px-2 py-1" />
         <div className="flex gap-2">
           <button type="submit" disabled={disabled} className="rounded border px-2 py-1 text-xs">
@@ -529,6 +584,13 @@ function ContactRow({
         {row.firm_name ? ` · ${row.firm_name}` : ""}
       </p>
       {row.email ? <p className="text-xs text-slate-500">{row.email}</p> : null}
+      {row.linkedin_url ? (
+        <p className="text-xs text-indigo-600">
+          <a href={row.linkedin_url} target="_blank" rel="noreferrer">
+            LinkedIn
+          </a>
+        </p>
+      ) : null}
       <p className="mt-1 text-xs text-slate-500">
         {row.status} · {row.source}
         {row.preferred_sectors ? ` · ${row.preferred_sectors}` : ""}

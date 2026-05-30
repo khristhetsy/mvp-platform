@@ -50,6 +50,11 @@ export async function createFounderInvestorContact(
     email?: string | null;
     phone?: string | null;
     website?: string | null;
+    linkedinUrl?: string | null;
+    twitterUrl?: string | null;
+    crunchbaseUrl?: string | null;
+    personalWebsiteUrl?: string | null;
+    otherSocialUrl?: string | null;
     investorType?: string | null;
     preferredSectors?: string | null;
     preferredStages?: string | null;
@@ -73,6 +78,11 @@ export async function createFounderInvestorContact(
       email: input.email?.trim().toLowerCase() || null,
       phone: input.phone?.trim() || null,
       website: input.website?.trim() || null,
+      linkedin_url: input.linkedinUrl?.trim() || null,
+      twitter_url: input.twitterUrl?.trim() || null,
+      crunchbase_url: input.crunchbaseUrl?.trim() || null,
+      personal_website_url: input.personalWebsiteUrl?.trim() || null,
+      other_social_url: input.otherSocialUrl?.trim() || null,
       investor_type: input.investorType?.trim() || null,
       preferred_sectors: input.preferredSectors?.trim() || null,
       preferred_stages: input.preferredStages?.trim() || null,
@@ -106,6 +116,11 @@ export async function updateFounderInvestorContact(
       email: string | null;
       phone: string | null;
       website: string | null;
+      linkedin_url: string | null;
+      twitter_url: string | null;
+      crunchbase_url: string | null;
+      personal_website_url: string | null;
+      other_social_url: string | null;
       investor_type: string | null;
       preferred_sectors: string | null;
       preferred_stages: string | null;

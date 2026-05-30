@@ -179,12 +179,19 @@ export const threadMeetingUpdateSchema = z.object({
   meetingNotes: z.string().max(5000).optional(),
 });
 
+const optionalUrlField = z.string().url().optional().or(z.literal(""));
+
 export const founderInvestorContactSchema = z.object({
   investor_name: z.string().min(1).max(200),
   firm_name: z.string().max(200).optional(),
   email: z.string().email().optional().or(z.literal("")),
   phone: z.string().max(50).optional(),
-  website: z.string().url().optional().or(z.literal("")),
+  website: optionalUrlField,
+  linkedin_url: optionalUrlField,
+  twitter_url: optionalUrlField,
+  crunchbase_url: optionalUrlField,
+  personal_website_url: optionalUrlField,
+  other_social_url: optionalUrlField,
   investor_type: z.string().max(100).optional(),
   preferred_sectors: z.string().max(500).optional(),
   preferred_stages: z.string().max(500).optional(),
@@ -221,9 +228,51 @@ export const founderInvestorContactImportSchema = z.object({
       check_size: z.string().optional(),
       geography: z.string().optional(),
       website: z.string().optional(),
+      linkedin_url: z.string().optional(),
+      twitter_url: z.string().optional(),
+      crunchbase_url: z.string().optional(),
+      personal_website_url: z.string().optional(),
+      other_social_url: z.string().optional(),
       notes: z.string().optional(),
     }),
   ),
+});
+
+export const socialOutreachDraftGenerateSchema = z.object({
+  draftType: z.enum([
+    "linkedin_campaign_announcement",
+    "investor_update",
+    "readiness_milestone",
+    "traction_update",
+    "fundraising_update",
+    "thought_leadership",
+    "follow_up_post",
+  ]),
+  platform: z.enum(["linkedin", "x_twitter", "general"]).default("linkedin"),
+  campaignId: z.string().uuid().optional(),
+  save: z.boolean().optional(),
+});
+
+export const socialOutreachDraftCreateSchema = z.object({
+  draftType: z.enum([
+    "linkedin_campaign_announcement",
+    "investor_update",
+    "readiness_milestone",
+    "traction_update",
+    "fundraising_update",
+    "thought_leadership",
+    "follow_up_post",
+  ]),
+  platform: z.enum(["linkedin", "x_twitter", "general"]),
+  title: z.string().min(1).max(200),
+  body: z.string().min(1).max(15000),
+  campaignId: z.string().uuid().optional(),
+});
+
+export const socialOutreachDraftUpdateSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  body: z.string().min(1).max(15000).optional(),
+  action: z.enum(["review", "copy", "archive", "approve_compliance"]).optional(),
 });
 
 export const outreachDraftSchema = z.object({
