@@ -178,3 +178,66 @@ export const threadMeetingUpdateSchema = z.object({
   timezone: z.string().max(64).optional(),
   meetingNotes: z.string().max(5000).optional(),
 });
+
+export const founderInvestorContactSchema = z.object({
+  investor_name: z.string().min(1).max(200),
+  firm_name: z.string().max(200).optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  phone: z.string().max(50).optional(),
+  website: z.string().url().optional().or(z.literal("")),
+  investor_type: z.string().max(100).optional(),
+  preferred_sectors: z.string().max(500).optional(),
+  preferred_stages: z.string().max(500).optional(),
+  check_size_min: z.coerce.number().nonnegative().optional(),
+  check_size_max: z.coerce.number().nonnegative().optional(),
+  geography: z.string().max(200).optional(),
+  source: z.string().max(100).optional(),
+  tags: z.array(z.string().max(50)).max(20).optional(),
+  notes: z.string().max(5000).optional(),
+  status: z
+    .enum([
+      "new",
+      "researching",
+      "selected",
+      "contacted",
+      "responded",
+      "meeting_scheduled",
+      "not_interested",
+      "archived",
+    ])
+    .optional(),
+});
+
+export const founderInvestorContactImportSchema = z.object({
+  confirm: z.boolean().optional(),
+  rows: z.array(
+    z.object({
+      investor_name: z.string().optional(),
+      firm_name: z.string().optional(),
+      email: z.string().optional(),
+      investor_type: z.string().optional(),
+      sector: z.string().optional(),
+      stage: z.string().optional(),
+      check_size: z.string().optional(),
+      geography: z.string().optional(),
+      website: z.string().optional(),
+      notes: z.string().optional(),
+    }),
+  ),
+});
+
+export const outreachDraftSchema = z.object({
+  kind: z.enum(["intro", "follow_up", "meeting_request", "investor_update"]),
+  contactId: z.string().uuid(),
+});
+
+export const outreachCampaignSchema = z.object({
+  name: z.string().min(2).max(120),
+  dailyLimit: z.coerce.number().int().min(1).max(25).optional(),
+  contactIds: z.array(z.string().uuid()).max(25).optional(),
+  draftKind: z.enum(["intro", "follow_up", "meeting_request", "investor_update"]).optional(),
+});
+
+export const outreachCampaignQueueSchema = z.object({
+  action: z.literal("queue"),
+});

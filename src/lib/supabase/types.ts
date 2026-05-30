@@ -241,6 +241,177 @@ export type Database = {
         };
         Relationships: [];
       };
+      founder_investor_contacts: {
+        Row: {
+          id: string;
+          founder_id: string;
+          company_id: string;
+          investor_name: string;
+          firm_name: string | null;
+          email: string | null;
+          phone: string | null;
+          website: string | null;
+          investor_type: string | null;
+          preferred_sectors: string | null;
+          preferred_stages: string | null;
+          check_size_min: number | null;
+          check_size_max: number | null;
+          geography: string | null;
+          source: string;
+          tags: string[];
+          notes: string | null;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          founder_id: string;
+          company_id: string;
+          investor_name: string;
+          firm_name?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          website?: string | null;
+          investor_type?: string | null;
+          preferred_sectors?: string | null;
+          preferred_stages?: string | null;
+          check_size_min?: number | null;
+          check_size_max?: number | null;
+          geography?: string | null;
+          source?: string;
+          tags?: string[];
+          notes?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          investor_name?: string;
+          firm_name?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          website?: string | null;
+          investor_type?: string | null;
+          preferred_sectors?: string | null;
+          preferred_stages?: string | null;
+          check_size_min?: number | null;
+          check_size_max?: number | null;
+          geography?: string | null;
+          source?: string;
+          tags?: string[];
+          notes?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      founder_outreach_targets: {
+        Row: {
+          id: string;
+          company_id: string;
+          founder_id: string;
+          contact_id: string | null;
+          platform_investor_id: string | null;
+          match_score: number | null;
+          status: string;
+          source: string;
+          notes: string | null;
+          last_contacted_at: string | null;
+          next_follow_up_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          company_id: string;
+          founder_id: string;
+          contact_id?: string | null;
+          platform_investor_id?: string | null;
+          match_score?: number | null;
+          status?: string;
+          source?: string;
+          notes?: string | null;
+          last_contacted_at?: string | null;
+          next_follow_up_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          contact_id?: string | null;
+          platform_investor_id?: string | null;
+          match_score?: number | null;
+          status?: string;
+          source?: string;
+          notes?: string | null;
+          last_contacted_at?: string | null;
+          next_follow_up_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      outreach_campaigns: {
+        Row: {
+          id: string;
+          founder_id: string;
+          company_id: string;
+          name: string;
+          status: string;
+          audience_count: number;
+          daily_limit: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          founder_id: string;
+          company_id: string;
+          name: string;
+          status?: string;
+          audience_count?: number;
+          daily_limit?: number;
+          updated_at?: string;
+        };
+        Update: {
+          name?: string;
+          status?: string;
+          audience_count?: number;
+          daily_limit?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      outreach_messages: {
+        Row: {
+          id: string;
+          campaign_id: string;
+          contact_id: string;
+          subject: string;
+          body: string;
+          status: string;
+          scheduled_at: string | null;
+          sent_at: string | null;
+          opened_at: string | null;
+          replied_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          campaign_id: string;
+          contact_id: string;
+          subject: string;
+          body: string;
+          status?: string;
+          scheduled_at?: string | null;
+          sent_at?: string | null;
+          opened_at?: string | null;
+          replied_at?: string | null;
+        };
+        Update: {
+          subject?: string;
+          body?: string;
+          status?: string;
+          scheduled_at?: string | null;
+          sent_at?: string | null;
+          opened_at?: string | null;
+          replied_at?: string | null;
+        };
+        Relationships: [];
+      };
       connected_accounts: {
         Row: {
           id: string;

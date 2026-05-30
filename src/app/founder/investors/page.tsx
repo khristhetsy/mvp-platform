@@ -2,7 +2,9 @@ import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { FounderInvestorHubPanels } from "@/components/FounderInvestorHubPanels";
 import { buildFounderInvestorCrmView, type FounderInvestorRelationRow } from "@/lib/data/investor-crm";
+import { loadFounderInvestorHub } from "@/lib/founder-crm/load-founder-investor-hub";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
 import { formatPledgeTotal, getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
@@ -97,17 +99,20 @@ export default async function FounderInvestorsPage() {
   const company = await ensureFounderCompanyForUser(profile);
 
   let crmView: ReturnType<typeof buildFounderInvestorCrmView> | null = null;
+  let hub: Awaited<ReturnType<typeof loadFounderInvestorHub>> | null = null;
 
   if (company) {
     const supabase = await createServerSupabaseClient();
     const serviceSupabase = createServiceRoleClient();
     const pledgeCompanyId = await getFounderPledgeCompanyId(serviceSupabase, profile.id, company.id);
-    const [activity, pledgeSummary] = await Promise.all([
+    const [activity, pledgeSummary, hubData] = await Promise.all([
       listFounderInvestorActivity(supabase, company.id),
       getCompanyPledgeSummary(serviceSupabase, pledgeCompanyId),
+      loadFounderInvestorHub(company, profile.id),
     ]);
 
     crmView = buildFounderInvestorCrmView(activity, pledgeSummary);
+    hub = hubData;
   }
 
   return (
@@ -120,7 +125,7 @@ export default async function FounderInvestorsPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Founder Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Investors</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Track inbound investor interest, pledges, intro requests, and follow-ups for your company.
+          Private investor CRM, controlled outreach, and platform investor activity for your company.
         </p>
       </div>
 
@@ -130,14 +135,30 @@ export default async function FounderInvestorsPage() {
             Complete your company setup to see investor relationship activity here.
           </p>
         </WorkspacePanel>
-      ) : !crmView || crmView.isEmpty ? (
-        <WorkspacePanel title="Investor CRM" subtitle={company.company_name}>
-          <p className="text-sm leading-6 text-slate-600">
-            No investor activity yet. Investor activity will appear here when investors save, express interest,
-            pledge, or request an intro for your company.
-          </p>
-        </WorkspacePanel>
       ) : (
+        <>
+          {hub ? (
+            <section className="mb-8">
+              <FounderInvestorHubPanels
+                companyName={company.company_name}
+                contacts={hub.contacts}
+                targets={hub.targets}
+                campaigns={hub.campaigns}
+                readiness={hub.readiness}
+                platformMatches={hub.platformMatches}
+                followUpCount={hub.followUpCount}
+              />
+            </section>
+          ) : null}
+
+          {!crmView || crmView.isEmpty ? (
+            <WorkspacePanel title="Platform investor activity" subtitle={company.company_name}>
+              <p className="text-sm leading-6 text-slate-600">
+                No platform investor activity yet. Inbound interest will appear here when registered investors
+                engage with your listing.
+              </p>
+            </WorkspacePanel>
+          ) : (
         <>
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
@@ -200,6 +221,8 @@ export default async function FounderInvestorsPage() {
               rows={crmView.sections.recentActivity}
             />
           </section>
+        </>
+          )}
         </>
       )}
       </FounderFeatureGate>

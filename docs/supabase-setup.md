@@ -40,6 +40,12 @@ Founders and investors connect at `/founder/settings` or `/investor/settings`. O
 
 Also run `0024_thread_meetings_calendar_host.sql` so accepted meetings store the Google Calendar host user for update/cancel sync.
 
+## Founder investor CRM & controlled outreach (Phase 1)
+
+Run migration `0025_founder_investor_crm.sql` before using `/founder/investors` private CRM and outreach drafts.
+
+This adds founder-private tables (`founder_investor_contacts`, `founder_outreach_targets`, `outreach_campaigns`, `outreach_messages`) with RLS scoped to the owning founder and company. Outreach queues messages internally only — no external email sending in this phase.
+
 ## Data model
 
 ```text

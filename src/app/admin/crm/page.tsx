@@ -2,7 +2,9 @@ import { AppShell } from "@/components/AppShell";
 import { AdminInvestorActivity } from "@/components/AdminInvestorActivity";
 import { AdminInvestorCrmTimeline } from "@/components/AdminInvestorCrmTimeline";
 import { formatError, RouteDataDiagnostics } from "@/components/RouteDataDiagnostics";
+import { AdminFounderOutreachSummary } from "@/components/AdminFounderOutreachSummary";
 import { AdminMessageThreadsPanel } from "@/components/AdminMessageThreadsPanel";
+import { getFounderOutreachAdminSummary } from "@/lib/founder-crm/admin-outreach-summary";
 import { listRecentInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { listAdminMessageThreads } from "@/lib/messaging/threads";
 import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
@@ -18,6 +20,13 @@ export default async function AdminCrmPage() {
   let investorActivity = { interests: [] as Array<Record<string, unknown>>, introRequests: [] as Array<Record<string, unknown>>, savedDeals: [] as Array<Record<string, unknown>> };
   let crmActivity: Awaited<ReturnType<typeof listRecentInvestorCrmActivity>> = [];
   let messageThreads: Awaited<ReturnType<typeof listAdminMessageThreads>>["data"] = [];
+  let outreachSummary = {
+    privateContactCount: 0,
+    activeCampaignCount: 0,
+    queuedMessageCount: 0,
+    draftCampaignCount: 0,
+    outreachTargetCount: 0,
+  };
   let rawCrmError: string | null = null;
   let rawInterestsError: string | null = null;
 
@@ -30,14 +39,16 @@ export default async function AdminCrmPage() {
     const interestsProbe = await supabase.from("investor_interests").select("id", { count: "exact", head: true });
     rawInterestsError = interestsProbe.error?.message ?? null;
 
-    const [activity, crm, threads] = await Promise.all([
+    const [activity, crm, threads, outreach] = await Promise.all([
       listAdminInvestorActivity(supabase),
       listRecentInvestorCrmActivity(supabase),
       listAdminMessageThreads(supabase, 30),
+      getFounderOutreachAdminSummary(),
     ]);
     investorActivity = activity;
     crmActivity = crm;
     messageThreads = threads.data ?? [];
+    outreachSummary = outreach;
   } catch (error) {
     setupError = formatError(error);
   }
@@ -96,6 +107,10 @@ export default async function AdminCrmPage() {
       ) : null}
 
       <AdminInvestorCrmTimeline activities={crmActivity} />
+
+      <div className="mb-8">
+        <AdminFounderOutreachSummary summary={outreachSummary} />
+      </div>
 
       <div className="mb-8">
         <AdminMessageThreadsPanel threads={messageThreads} />
