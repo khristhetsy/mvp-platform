@@ -6,6 +6,7 @@ import {
   generateAdminReport,
 } from "@/lib/reports/admin-reports";
 import { reportFilename, rowsToCsv } from "@/lib/reports/export";
+import { buildDueDiligencePdf } from "@/lib/reports/pdf-export";
 import { adminReportGenerateSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -22,6 +23,21 @@ export async function POST(request: Request) {
   }
 
   const { reportType, format, preview, filters } = parsed.data;
+
+  if (format === "pdf") {
+    if (reportType !== "due_diligence") {
+      return NextResponse.json(
+        { error: "PDF export is only available for Due Diligence reports." },
+        { status: 400 },
+      );
+    }
+    if (preview) {
+      return NextResponse.json(
+        { error: "PDF preview is not supported. Download the PDF export instead." },
+        { status: 400 },
+      );
+    }
+  }
 
   const payload = await generateAdminReport(auth.supabase, {
     reportType,
@@ -43,6 +59,22 @@ export async function POST(request: Request) {
       generatedBy: auth.profile.id,
     },
   });
+
+  if (format === "pdf") {
+    const pdfBuffer = await buildDueDiligencePdf(payload, {
+      generatedBy:
+        auth.profile.full_name ?? auth.profile.email ?? auth.profile.id,
+    });
+    const filename = reportFilename(reportType, "pdf");
+
+    return new NextResponse(new Uint8Array(pdfBuffer), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+      },
+    });
+  }
 
   if (format === "csv") {
     const rows = flattenReportForCsv(payload);

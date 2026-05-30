@@ -337,7 +337,7 @@ export const adminReportGenerateSchema = z.object({
     "subscription_upgrade",
     "due_diligence",
   ]),
-  format: z.enum(["json", "csv"]).default("json"),
+  format: z.enum(["json", "csv", "pdf"]).default("json"),
   preview: z.boolean().optional(),
   filters: z
     .object({

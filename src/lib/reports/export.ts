@@ -23,7 +23,7 @@ export function rowsToCsv(rows: Record<string, unknown>[]): string {
   return lines.join("\n");
 }
 
-export function reportFilename(reportType: string, format: "json" | "csv") {
+export function reportFilename(reportType: string, format: "json" | "csv" | "pdf") {
   const stamp = new Date().toISOString().slice(0, 10);
   return `capitalos-${reportType}-${stamp}.${format}`;
 }
