@@ -5,6 +5,12 @@ import { MarketingNav } from "@/components/MarketingNav";
 import { OpportunityCard } from "@/components/OpportunityCard";
 import { getCompanyPledgeSummaries, emptyCompanyPledgeSummary } from "@/lib/data/investor-pledges";
 import { listMarketplaceListings } from "@/lib/data/marketplace";
+import {
+  formatPublicCommittedTotal,
+  formatPublicInterestCount,
+  formatPublicReadinessImprovement,
+  getPublicPlatformMetrics,
+} from "@/lib/data/public-platform-metrics";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -52,6 +58,42 @@ export default async function Home() {
           featuredListings.map((deal) => deal.id),
         )
       : {};
+
+  let platformMetrics = {
+    totalCommittedAmount: 0,
+    totalCommittedCurrency: "USD",
+    expressedInterestCount: 0,
+    readinessImprovementPercent: null as number | null,
+  };
+
+  try {
+    platformMetrics = await getPublicPlatformMetrics(supabase);
+  } catch {
+    platformMetrics = {
+      totalCommittedAmount: 0,
+      totalCommittedCurrency: "USD",
+      expressedInterestCount: 0,
+      readinessImprovementPercent: null,
+    };
+  }
+
+  const tractionMetrics = [
+    {
+      value: formatPublicCommittedTotal(
+        platformMetrics.totalCommittedAmount,
+        platformMetrics.totalCommittedCurrency,
+      ),
+      label: "Total amount committed from investors",
+    },
+    {
+      value: formatPublicReadinessImprovement(platformMetrics.readinessImprovementPercent),
+      label: "Companies improved their Readiness Scores for Funding",
+    },
+    {
+      value: formatPublicInterestCount(platformMetrics.expressedInterestCount),
+      label: "Expressed interests by investors",
+    },
+  ];
 
   return (
     <main className="min-h-screen bg-white text-slate-950">
@@ -126,18 +168,23 @@ export default async function Home() {
       </section>
 
       <section className="border-y border-slate-200 bg-slate-50">
-        <div className="mx-auto grid max-w-7xl gap-4 px-6 py-8 md:grid-cols-4">
-          {[
-            ["8", "Diligence categories"],
-            ["82", "Sample readiness score"],
-            ["3", "Role-based portals"],
-            ["0", "Funding guarantees"],
-          ].map(([value, label]) => (
-            <div key={label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-3xl font-semibold tracking-tight text-slate-950">{value}</p>
-              <p className="mt-2 text-sm text-slate-500">{label}</p>
-            </div>
-          ))}
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="max-w-3xl">
+            <h2 className="text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">
+              Building the future of venture readiness
+            </h2>
+            <p className="mt-4 text-lg leading-8 text-slate-600">
+              Real traction. Real founders. Real investor signals.
+            </p>
+          </div>
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {tractionMetrics.map((metric) => (
+              <div key={metric.label} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <p className="text-3xl font-semibold tracking-tight text-slate-950">{metric.value}</p>
+                <p className="mt-3 text-sm leading-6 text-slate-600">{metric.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
