@@ -3,11 +3,29 @@
 :root {
   --background: #ffffff;
   --foreground: #0f172a;
+  --workspace-shell: #f4f4f5;
+  --workspace-main: #f4f4f5;
+  --workspace-sidebar: #0a0a0a;
+  --workspace-sidebar-muted: #71717a;
+  --workspace-sidebar-active: #18181b;
+  --workspace-accent: #09090b;
+  --workspace-panel: #ffffff;
+  --workspace-panel-border: #e4e4e7;
+  --workspace-kpi-from: #18181b;
+  --workspace-kpi-to: #09090b;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-workspace-shell: var(--workspace-shell);
+  --color-workspace-main: var(--workspace-main);
+  --color-workspace-sidebar: var(--workspace-sidebar);
+  --color-workspace-sidebar-muted: var(--workspace-sidebar-muted);
+  --color-workspace-sidebar-active: var(--workspace-sidebar-active);
+  --color-workspace-accent: var(--workspace-accent);
+  --color-workspace-panel: var(--workspace-panel);
+  --color-workspace-panel-border: var(--workspace-panel-border);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -22,4 +40,34 @@ input,
 textarea,
 select {
   color: #0f172a;
+}
+
+@layer components {
+  .workspace-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500;
+  }
+
+  .workspace-link {
+    @apply text-sm font-semibold text-zinc-900 transition hover:text-zinc-600;
+  }
+
+  .workspace-list-item {
+    @apply rounded-xl border border-zinc-200/80 bg-white px-4 py-3 transition hover:border-zinc-300 hover:shadow-sm;
+  }
+
+  .workspace-badge {
+    @apply rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-semibold text-zinc-800;
+  }
+
+  .workspace-btn-primary {
+    @apply rounded-xl bg-zinc-950 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800;
+  }
+
+  .workspace-highlight-panel {
+    @apply rounded-xl bg-zinc-50 p-4 ring-1 ring-zinc-200;
+  }
+
+  .workspace-accent-text {
+    @apply font-medium text-zinc-800;
+  }
 }

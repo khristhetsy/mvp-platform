@@ -19,7 +19,7 @@ export function WorkspaceChrome({
 }>) {
   return (
     <WorkspaceChromeContext.Provider value={true}>
-      <div className="flex min-h-screen w-full bg-slate-100 text-slate-950">
+      <div className="flex min-h-screen w-full bg-workspace-shell text-zinc-950">
         <WorkspaceSidebar workspace={workspace} />
         <div className="flex min-w-0 flex-1 flex-col">{children}</div>
       </div>

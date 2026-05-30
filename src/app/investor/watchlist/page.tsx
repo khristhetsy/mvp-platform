@@ -19,7 +19,7 @@ export default async function InvestorWatchlistPage() {
       profileSubtitle="Investor account"
     >
       <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
+        <p className="workspace-eyebrow">Investor Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Watchlist</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Saved deals and companies you are tracking across the CapitalOS marketplace.
@@ -30,7 +30,7 @@ export default async function InvestorWatchlistPage() {
         title="Saved deals"
         subtitle={`${savedDeals.length} ${savedDeals.length === 1 ? "company" : "companies"} on your watchlist`}
         action={
-          <Link href="/deals" className="text-sm font-semibold text-indigo-700 hover:text-indigo-900">
+          <Link href="/deals" className="workspace-link">
             Browse marketplace
           </Link>
         }
@@ -56,7 +56,7 @@ export default async function InvestorWatchlistPage() {
               <Link
                 key={row.id}
                 href={`/deals/${slug}`}
-                className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-3 transition hover:border-indigo-200 hover:bg-indigo-50/50 hover:shadow-sm"
+                className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-3 transition hover:border-zinc-300 hover:bg-zinc-50 hover:shadow-sm"
               >
                 {content}
               </Link>

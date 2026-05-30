@@ -15,7 +15,7 @@ export default async function InvestorSpvsPage() {
       profileSubtitle="Investor account"
     >
       <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
+        <p className="workspace-eyebrow">Investor Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">SPVs</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Co-investment vehicles and SPV participation tied to your investor account.

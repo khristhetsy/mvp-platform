@@ -15,7 +15,7 @@ export function WorkspaceModulePlaceholder({
 }>) {
   return (
     <section className="rounded-2xl border border-slate-200/80 bg-white p-8 shadow-sm">
-      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-600">CapitalOS workspace</p>
+      <p className="workspace-eyebrow">CapitalOS workspace</p>
       <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{title}</h1>
       <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">{description}</p>
       <div className="mt-8 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6">

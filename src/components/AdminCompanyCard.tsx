@@ -440,7 +440,7 @@ export function AdminCompanyCard({ company }: Props) {
               type="button"
               disabled={isBusy}
               onClick={() => void toggleMarketplace("publish")}
-              className="rounded-full bg-indigo-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              className="rounded-full bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:opacity-50"
             >
               {loading === "publish" ? "Publishing..." : "Publish to Marketplace"}
             </button>

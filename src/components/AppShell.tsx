@@ -41,7 +41,7 @@ export function AppShell({
     return (
       <>
         <WorkspaceHeader profileName={profileName} profileSubtitle={profileSubtitle} />
-        <main className="flex-1 overflow-y-auto bg-slate-50/80 p-6 lg:p-8">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-workspace-main p-6 lg:p-8">{children}</main>
       </>
     );
   }
@@ -49,7 +49,7 @@ export function AppShell({
   if (activeWorkspace) {
     return (
       <AppShellContext.Provider value={true}>
-        <div className="flex min-h-screen w-full flex-1 bg-slate-100 text-slate-950">
+        <div className="flex min-h-screen w-full flex-1 bg-workspace-shell text-zinc-950">
           <WorkspaceSidebar workspace={activeWorkspace} />
           <div className="flex min-w-0 flex-1 flex-col">{children}</div>
         </div>

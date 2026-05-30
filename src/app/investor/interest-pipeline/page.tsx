@@ -47,7 +47,7 @@ export default async function InvestorInterestPipelinePage() {
       profileSubtitle="Investor account"
     >
       <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
+        <p className="workspace-eyebrow">Investor Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Interest Pipeline</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Track expressed interest, pledge amounts, intro requests, and follow-ups across marketplace listings.
@@ -68,7 +68,7 @@ export default async function InvestorInterestPipelinePage() {
                     {row.status ?? "interested"}
                     {date ? ` · ${formatDate(date)}` : ""}
                   </p>
-                  {amount ? <p className="mt-1 text-xs font-medium text-indigo-700">{amount}</p> : null}
+                  {amount ? <p className="mt-1 workspace-accent-text text-xs">{amount}</p> : null}
                   {row.message ? <p className="mt-2 text-slate-600">{row.message}</p> : null}
                 </div>
               );
