@@ -35,6 +35,7 @@ export const investorWorkspaceNav: WorkspaceNavItem[] = [
 export const adminWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/companies", label: "Companies" },
+  { href: "/admin/spvs", label: "SPVs" },
   { href: "/admin/investors", label: "Investors" },
   { href: "/admin/crm", label: "CRM" },
   { href: "/admin/billing", label: "Billing" },

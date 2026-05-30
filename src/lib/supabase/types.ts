@@ -241,6 +241,71 @@ export type Database = {
         };
         Relationships: [];
       };
+      spv_opportunities: {
+        Row: {
+          id: string;
+          company_id: string;
+          created_by: string;
+          name: string;
+          target_amount: number | null;
+          minimum_commitment: number | null;
+          status: string;
+          description: string | null;
+          terms_summary: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          company_id: string;
+          created_by: string;
+          name: string;
+          target_amount?: number | null;
+          minimum_commitment?: number | null;
+          status?: string;
+          description?: string | null;
+          terms_summary?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          name?: string;
+          target_amount?: number | null;
+          minimum_commitment?: number | null;
+          status?: string;
+          description?: string | null;
+          terms_summary?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      spv_participations: {
+        Row: {
+          id: string;
+          spv_opportunity_id: string;
+          investor_id: string;
+          company_id: string;
+          indicative_amount: number | null;
+          status: string;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          spv_opportunity_id: string;
+          investor_id: string;
+          company_id: string;
+          indicative_amount?: number | null;
+          status?: string;
+          notes?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          indicative_amount?: number | null;
+          status?: string;
+          notes?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       company_updates: {
         Row: {
           id: string;

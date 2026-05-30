@@ -1,35 +1,47 @@
 import { AppShell } from "@/components/AppShell";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
-import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { InvestorSpvWorkspace } from "@/components/InvestorSpvWorkspace";
+import { canInvestorPerformSensitiveActions } from "@/lib/investor/access";
+import { loadInvestorSpvWorkspace } from "@/lib/spv/spv-workflow";
+import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function InvestorSpvsPage() {
-  const { profile } = await requireInvestorWorkspaceSession();
+  const { profile, investorId } = await requireInvestorWorkspaceSession();
+  const { investorProfile } = await loadInvestorWorkspaceContext(profile);
+
+  if (!canInvestorPerformSensitiveActions(investorProfile?.approval_status)) {
+    redirect("/investor/dashboard");
+  }
+
+  const supabase = await createServerSupabaseClient();
+  const workspace = await loadInvestorSpvWorkspace(supabase, investorId);
 
   return (
     <AppShell
       role="INVESTOR"
       workspace="investor"
       profileName={profile.full_name ?? profile.email ?? "Investor"}
-      profileSubtitle="Investor account"
+      profileSubtitle="SPV participation"
     >
       <div className="mb-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">SPVs</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Co-investment vehicles and SPV participation tied to your investor account.
+          Review admin-managed SPV opportunities and express non-binding indicative interest. Legal documents
+          and eligibility checks are required before any investment.
         </p>
       </div>
 
       <InvestorFeatureGate>
-      <WorkspacePanel title="SPV participation" subtitle="No SPV records available yet">
-        <p className="text-sm leading-6 text-slate-600">
-          SPV participation will appear here when you join or are invited to an SPV.
-        </p>
-        <p className="mt-3 text-sm text-slate-500">Coming soon — SPV subscription and allocation tracking is not yet available.</p>
-      </WorkspacePanel>
+        <InvestorSpvWorkspace
+          openOpportunities={workspace.openOpportunities}
+          participations={workspace.participations}
+        />
       </InvestorFeatureGate>
     </AppShell>
   );

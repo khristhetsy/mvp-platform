@@ -5,6 +5,8 @@ import { formatError, RouteDataDiagnostics } from "@/components/RouteDataDiagnos
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listFounderCompanyUpdates } from "@/lib/company-updates/company-updates";
 import { FounderCompanyUpdatesPanel } from "@/components/FounderCompanyUpdatesPanel";
+import { FounderSpvStatusPanel } from "@/components/FounderSpvStatusPanel";
+import { listFounderSpvSummary } from "@/lib/spv/spv-workflow";
 import { formatPledgeTotal, getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
@@ -25,6 +27,8 @@ export default async function FounderCapitalRaisePage() {
   let pledgeSummary = { totalPledged: 0, investorCount: 0, currency: "USD" };
   let investorActivity: Awaited<ReturnType<typeof listFounderInvestorActivity>> | null = null;
   let companyUpdates: Awaited<ReturnType<typeof listFounderCompanyUpdates>>["data"] = [];
+  let spvOpportunities: Awaited<ReturnType<typeof listFounderSpvSummary>>["opportunities"] = [];
+  let spvParticipations: Awaited<ReturnType<typeof listFounderSpvSummary>>["participations"] = [];
 
   try {
     company = await ensureFounderCompanyForUser(profile);
@@ -54,6 +58,16 @@ export default async function FounderCapitalRaisePage() {
       companyUpdates = updatesResult.data ?? [];
     } catch {
       companyUpdates = [];
+    }
+
+    try {
+      const supabase = await createServerSupabaseClient();
+      const spvSummary = await listFounderSpvSummary(supabase, company.id);
+      spvOpportunities = spvSummary.opportunities;
+      spvParticipations = spvSummary.participations;
+    } catch {
+      spvOpportunities = [];
+      spvParticipations = [];
     }
   }
 
@@ -194,6 +208,10 @@ export default async function FounderCapitalRaisePage() {
                 </div>
               )}
             </WorkspacePanel>
+          </section>
+
+          <section className="mt-8">
+            <FounderSpvStatusPanel opportunities={spvOpportunities} participations={spvParticipations} />
           </section>
 
           <section className="mt-8">

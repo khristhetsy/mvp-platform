@@ -64,6 +64,12 @@ Approved investors can open investor-facing company reports at `/investor/opport
 
 Run migration `0029_company_updates.sql` for founder `company_updates` and investor portfolio update feeds at `/investor/portfolio`. Founders publish updates from `/founder/capital-raise`.
 
+## SPV workflow foundation (Phase 1)
+
+Run migration `0030_spv_workflow.sql` before using SPV admin, founder, or investor surfaces.
+
+This adds `spv_opportunities` and `spv_participations` with RLS (staff full access, founders read their company SPVs, investors read/write their own participations and open opportunities). Admin manages opportunities at `/admin/spvs`; founders see status on `/founder/capital-raise`; approved investors participate at `/investor/spvs`. Indications of interest are non-binding — no legal formation, banking, or securities execution in this phase.
+
 Use `/admin/reports` (staff-only) to generate JSON, CSV, or **PDF** internal summaries from existing tables, including **Due Diligence** (`due_diligence`) per-company readiness packs. PDF export uses server-side [PDFKit](https://pdfkit.org/) (`pdfkit` dependency) via `src/lib/reports/pdf-export.ts` — no external PDF API. Each export writes an `audit_logs` row (`admin.report_generated`) with `format` (`json`, `csv`, or `pdf`). OAuth tokens, message bodies, and private founder contact PII are excluded from exports.
 
 ## Data model

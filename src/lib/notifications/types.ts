@@ -41,7 +41,11 @@ export type NotificationType =
   | "founder_outreach_target_pipelined"
   | "founder_pipeline_intro_requested"
   | "compliance_event_created"
-  | "company_update_published";
+  | "company_update_published"
+  | "spv_opportunity_opened"
+  | "spv_investor_invited"
+  | "spv_interest_expressed"
+  | "spv_participation_status_changed";
 
 export type NotificationRecord = {
   id: string;

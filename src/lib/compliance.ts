@@ -9,3 +9,9 @@ export const complianceDisclaimers = [
 export function compactDisclaimer() {
   return "For review only. Not investment advice. Private investments are risky, and funding is not guaranteed.";
 }
+
+export const spvComplianceDisclaimers = [
+  "Indications of interest are non-binding.",
+  "This does not constitute an offer to sell securities.",
+  "Legal documents and eligibility checks are required before participation.",
+];

@@ -24,7 +24,8 @@ export type InvestorCrmActivityType =
   | "meeting_requested"
   | "meeting_accepted"
   | "meeting_declined"
-  | "report_viewed";
+  | "report_viewed"
+  | "spv_interest_expressed";
 
 export type InvestorPipelineStage = "interested" | "meeting_requested" | "follow_up";
 
@@ -40,6 +41,7 @@ const ACTIVITY_PIPELINE_STAGE: Record<InvestorCrmActivityType, InvestorPipelineS
   meeting_accepted: "meeting_requested",
   meeting_declined: "follow_up",
   report_viewed: "interested",
+  spv_interest_expressed: "interested",
 };
 
 const PIPELINE_ACTIVITY_TYPES = new Set<InvestorCrmActivityType>([
@@ -53,6 +55,7 @@ const PIPELINE_ACTIVITY_TYPES = new Set<InvestorCrmActivityType>([
   "meeting_requested",
   "meeting_accepted",
   "meeting_declined",
+  "spv_interest_expressed",
 ]);
 
 export type RecordInvestorCrmActivityInput = {

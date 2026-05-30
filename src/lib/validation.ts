@@ -354,6 +354,42 @@ export const adminReportGenerateSchema = z.object({
     .optional(),
 });
 
+export const adminSpvOpportunityCreateSchema = z.object({
+  companyId: z.string().uuid(),
+  name: z.string().min(3).max(200),
+  targetAmount: z.coerce.number().positive().optional(),
+  minimumCommitment: z.coerce.number().positive().optional(),
+  description: z.string().max(5000).optional(),
+  termsSummary: z.string().max(5000).optional(),
+  status: z.enum(["draft", "under_review", "open", "closed", "canceled"]).optional(),
+});
+
+export const adminSpvOpportunityUpdateSchema = z.object({
+  status: z.enum(["draft", "under_review", "open", "closed", "canceled"]).optional(),
+  name: z.string().min(3).max(200).optional(),
+  targetAmount: z.coerce.number().positive().optional(),
+  minimumCommitment: z.coerce.number().positive().optional(),
+  description: z.string().max(5000).optional(),
+  termsSummary: z.string().max(5000).optional(),
+});
+
+export const investorSpvParticipationSchema = z.object({
+  spvOpportunityId: z.string().uuid(),
+  indicativeAmount: z.coerce.number().nonnegative().optional(),
+  status: z
+    .enum([
+      "invited",
+      "interested",
+      "soft_committed",
+      "documents_pending",
+      "completed",
+      "declined",
+      "canceled",
+    ])
+    .optional(),
+  notes: z.string().max(2000).optional(),
+});
+
 export const companyUpdateCreateSchema = z.object({
   title: z.string().min(3).max(200),
   body: z.string().min(10).max(8000),
