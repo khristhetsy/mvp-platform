@@ -58,3 +58,54 @@ export async function requireRole(allowedRoles: UserRole[]) {
 
   return { ...profile, role };
 }
+
+/** Canonical investor filter: auth user id (same value written to investor_id by API routes). */
+export async function resolveInvestorIdFromSession(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+) {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return null;
+  }
+
+  return user.id;
+}
+
+export async function requireInvestorWorkspaceSession() {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect("/auth/sign-in");
+  }
+
+  const { data: profileRaw, error: profileError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || !profileRaw) {
+    redirect("/auth/sign-in");
+  }
+
+  const role = normalizeUserRole(profileRaw.role);
+  const profile = { ...(profileRaw as Profile), role: role ?? (profileRaw.role as UserRole) };
+
+  if (!role || role !== "investor") {
+    redirect(dashboardForRole(role ?? profile.role));
+  }
+
+  return {
+    supabase,
+    profile,
+    investorId: user.id,
+  };
+}

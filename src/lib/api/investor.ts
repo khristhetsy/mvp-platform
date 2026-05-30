@@ -41,5 +41,6 @@ export async function requireInvestorApi() {
     supabase,
     serviceSupabase: createServiceRoleClient(),
     profile,
+    investorId: user.id,
   };
 }

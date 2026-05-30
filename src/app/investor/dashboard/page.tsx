@@ -1,39 +1,31 @@
 import Link from "next/link";
-import { Suspense } from "react";
 import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
+import { InvestorActivityTimeline } from "@/components/InvestorActivityTimeline";
+import {
+  InvestorWorkspaceDebugBox,
+  InvestorWorkspaceRawDiagnosticLists,
+  loadInvestorWorkspacePageDataForDebug,
+} from "@/components/InvestorWorkspaceDebugBox";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
-import {
-  InvestorActivityTimelineSection,
-  InvestorActivityTimelineSkeleton,
-} from "@/components/InvestorActivityTimeline";
-import {
-  listInvestorInterests,
-  listInvestorIntroRequests,
-  listInvestorSavedDeals,
-} from "@/lib/data/investor-interests";
+import { investorCompanyLabel } from "@/lib/data/investor-workspace-page";
 import { listMarketplaceListings } from "@/lib/data/marketplace";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { requireRole } from "@/lib/supabase/auth";
+import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
-function labelForRow(row: unknown) {
-  const companies = (row as { companies?: { company_name?: string | null } | null }).companies;
-  return companies?.company_name ?? "Unknown company";
-}
-
 export default async function InvestorDashboardPage() {
-  const profile = await requireRole(["investor"]);
-  const supabase = await createServerSupabaseClient();
+  const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
 
-  const [{ data: interests }, { data: intros }, { data: saved }, listings] = await Promise.all([
-    listInvestorInterests(supabase, profile.id),
-    listInvestorIntroRequests(supabase, profile.id),
-    listInvestorSavedDeals(supabase, profile.id),
+  const [{ data, loadError }, listings] = await Promise.all([
+    loadInvestorWorkspacePageDataForDebug(investorId),
     listMarketplaceListings(supabase).catch(() => []),
   ]);
 
+  const { workspace, crmActivity } = data;
+  const savedDeals = workspace.savedDeals;
+  const interests = workspace.interests;
+  const introRequests = workspace.introRequests;
   const featuredListings = listings.slice(0, 3);
 
   return (
@@ -43,6 +35,16 @@ export default async function InvestorDashboardPage() {
       profileName={profile.full_name ?? profile.email ?? "Investor"}
       profileSubtitle="Investor account"
     >
+      <InvestorWorkspaceDebugBox
+        route="/investor/dashboard"
+        authUserId={investorId}
+        profileId={profile.id}
+        profileRole={String(profile.role)}
+        workspace={workspace}
+        crmActivity={crmActivity}
+        error={loadError}
+      />
+      <InvestorWorkspaceRawDiagnosticLists workspace={workspace} crmActivity={crmActivity} />
       <div className="mb-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Dashboard</h1>
@@ -60,14 +62,14 @@ export default async function InvestorDashboardPage() {
         />
         <MetricCard
           label="Watchlist"
-          value={String(saved?.length ?? 0)}
-          detail={saved?.slice(0, 2).map(labelForRow).join(", ") || "No saved deals yet"}
+          value={String(savedDeals.length)}
+          detail={savedDeals.slice(0, 2).map(investorCompanyLabel).join(", ") || "No saved deals yet"}
           accent="violet"
         />
         <MetricCard
           label="Expressed Interest"
-          value={String(interests?.length ?? 0)}
-          detail={interests?.slice(0, 2).map(labelForRow).join(", ") || "None yet"}
+          value={String(interests.length)}
+          detail={interests.slice(0, 2).map(investorCompanyLabel).join(", ") || "None yet"}
           accent="blue"
         />
         <MetricCard
@@ -82,7 +84,7 @@ export default async function InvestorDashboardPage() {
         <WorkspacePanel title="Portfolio / Future Investments" subtitle="Committed and pipeline investments">
           <p className="text-sm text-slate-600">Portfolio tracking and future investment pipeline coming soon.</p>
           <p className="mt-3 rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-            {intros?.length ?? 0} intro {intros?.length === 1 ? "request" : "requests"} pending follow-up.
+            {introRequests.length} intro {introRequests.length === 1 ? "request" : "requests"} pending follow-up.
           </p>
         </WorkspacePanel>
 
@@ -115,9 +117,7 @@ export default async function InvestorDashboardPage() {
       </section>
 
       <section className="mt-8">
-        <Suspense fallback={<InvestorActivityTimelineSkeleton />}>
-          <InvestorActivityTimelineSection investorId={profile.id} />
-        </Suspense>
+        <InvestorActivityTimeline activities={crmActivity.rows} error={crmActivity.error} />
       </section>
     </AppShell>
   );

@@ -1,4 +1,5 @@
-import { listInvestorOwnCrmActivity, type InvestorActivityRow } from "@/lib/data/investor-crm";
+import { listInvestorOwnCrmActivityForAuthenticatedInvestor, type InvestorActivityRow } from "@/lib/data/investor-crm";
+import { resolveInvestorIdFromSession } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 function formatActivityLabel(type: string) {
@@ -39,7 +40,13 @@ export function InvestorActivityTimelineSkeleton() {
   );
 }
 
-export function InvestorActivityTimeline({ activities }: { activities: InvestorActivityRow[] }) {
+export function InvestorActivityTimeline({
+  activities,
+  error,
+}: {
+  activities: InvestorActivityRow[];
+  error?: string | null;
+}) {
   return (
     <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
       <div className="mb-5 border-b border-slate-100 pb-4">
@@ -47,32 +54,42 @@ export function InvestorActivityTimeline({ activities }: { activities: InvestorA
         <p className="mt-1 text-sm text-slate-500">A timeline of your marketplace actions.</p>
       </div>
 
-      <div className="divide-y divide-slate-100">
-        {activities.length === 0 ? (
-          <p className="py-3 text-sm text-slate-500">
-            No activity yet. Save a deal or express interest to see your timeline here.
-          </p>
-        ) : (
-          activities.map((row) => (
-            <div key={row.id} className="py-3 text-sm">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-800">
-                  {formatActivityLabel(row.activity_type)}
-                </span>
+      {error ? (
+        <p className="py-3 text-sm text-red-700">Unable to load CRM activity: {error}</p>
+      ) : (
+        <div className="divide-y divide-slate-100">
+          {activities.length === 0 ? (
+            <p className="py-3 text-sm text-slate-500">
+              No activity yet. Save a deal or express interest to see your timeline here.
+            </p>
+          ) : (
+            activities.map((row) => (
+              <div key={row.id} className="py-3 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-800">
+                    {formatActivityLabel(row.activity_type)}
+                  </span>
+                </div>
+                <p className="mt-1 font-medium text-slate-900">{row.company_name ?? "Unknown company"}</p>
+                <p className="mt-1 text-xs text-slate-500">{formatDate(row.created_at)}</p>
               </div>
-              <p className="mt-1 font-medium text-slate-900">{row.company_name ?? "Unknown company"}</p>
-              <p className="mt-1 text-xs text-slate-500">{formatDate(row.created_at)}</p>
-            </div>
-          ))
-        )}
-      </div>
+            ))
+          )}
+        </div>
+      )}
     </section>
   );
 }
 
-export async function InvestorActivityTimelineSection({ investorId }: { investorId: string }) {
+export async function InvestorActivityTimelineSection() {
   const supabase = await createServerSupabaseClient();
-  const activities = await listInvestorOwnCrmActivity(supabase, investorId);
+  const investorId = await resolveInvestorIdFromSession(supabase);
 
-  return <InvestorActivityTimeline activities={activities} />;
+  if (!investorId) {
+    return <InvestorActivityTimeline activities={[]} error="Authentication required." />;
+  }
+
+  const { rows, error } = await listInvestorOwnCrmActivityForAuthenticatedInvestor(investorId);
+
+  return <InvestorActivityTimeline activities={rows} error={error} />;
 }
