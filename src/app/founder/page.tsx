@@ -4,8 +4,10 @@ import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingProgressCard";
+import { FounderRemediationActionPlan } from "@/components/FounderRemediationActionPlan";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
+import { loadFounderRemediationPlan } from "@/lib/remediation/load-founder-remediation";
 import { computeFounderOnboardingProgress } from "@/lib/onboarding/progress";
 import { founderPipeline } from "@/lib/mock-data";
 import { formatPledgeTotal, getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
@@ -33,6 +35,7 @@ export default async function FounderDashboardPage() {
       })
     : null;
   const investorActivity = company ? await listFounderInvestorActivity(supabase, company.id) : null;
+  const remediation = await loadFounderRemediationPlan(profile);
 
   let pledgeSummary = { totalPledged: 0, investorCount: 0, currency: "USD" };
   if (company) {
@@ -80,6 +83,17 @@ export default async function FounderDashboardPage() {
       </div>
 
       {onboardingProgress ? <FounderOnboardingProgressCard progress={onboardingProgress} /> : null}
+
+      {remediation.tasks.length > 0 ? (
+        <div className="mb-8">
+          <FounderRemediationActionPlan
+            tasks={remediation.tasks}
+            summary={remediation.summary}
+            compact
+            title="Priority remediation tasks"
+          />
+        </div>
+      ) : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard

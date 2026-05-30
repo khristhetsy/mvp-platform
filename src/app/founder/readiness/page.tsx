@@ -13,7 +13,9 @@ import {
   getLatestAdminReview,
   getLatestDiligenceReport,
 } from "@/lib/data/founder-readiness";
+import { FounderRemediationActionPlan } from "@/components/FounderRemediationActionPlan";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { loadFounderRemediationPlan } from "@/lib/remediation/load-founder-remediation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -76,6 +78,7 @@ export default async function FounderReadinessPage() {
   });
 
   const companyName = company?.company_name ?? "Your company";
+  const remediation = await loadFounderRemediationPlan(profile);
 
   return (
     <FounderAppShell
@@ -131,6 +134,14 @@ export default async function FounderReadinessPage() {
               value={formatReviewStatus(reviewStatus ? String(reviewStatus) : null)}
               detail={company.is_published ? "Published to marketplace" : "Admin review and publication pending"}
               accent="slate"
+            />
+          </section>
+
+          <section className="mt-6">
+            <FounderRemediationActionPlan
+              tasks={remediation.tasks}
+              summary={remediation.summary}
+              title="Readiness remediation action plan"
             />
           </section>
 

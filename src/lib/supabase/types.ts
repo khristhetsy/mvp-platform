@@ -162,6 +162,51 @@ export type Database = {
         Update: Partial<DocumentRecord>;
         Relationships: [];
       };
+      founder_remediation_tasks: {
+        Row: {
+          id: string;
+          company_id: string;
+          founder_id: string;
+          source_type: string;
+          source_key: string;
+          category: string;
+          title: string;
+          description: string;
+          priority: string;
+          status: string;
+          recommended_action: string;
+          related_feature: string | null;
+          created_at: string;
+          updated_at: string;
+          completed_at: string | null;
+        };
+        Insert: {
+          company_id: string;
+          founder_id: string;
+          source_type: string;
+          source_key: string;
+          category: string;
+          title: string;
+          description: string;
+          priority: string;
+          status?: string;
+          recommended_action: string;
+          related_feature?: string | null;
+          updated_at?: string;
+          completed_at?: string | null;
+        };
+        Update: {
+          title?: string;
+          description?: string;
+          priority?: string;
+          status?: string;
+          recommended_action?: string;
+          related_feature?: string | null;
+          updated_at?: string;
+          completed_at?: string | null;
+        };
+        Relationships: [];
+      };
       diligence_reports: {
         Row: {
           id: string;

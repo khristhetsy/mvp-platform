@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { AdminDashboardShell } from "@/components/AdminDashboardShell";
 import { getAdminDashboardMetrics, listAdminCompanies, mapAdminCompaniesToCardData } from "@/lib/data/admin";
+import { getRemediationSummaryForCompanies } from "@/lib/remediation/tasks";
 import { getRequestedPlansByProfileIds } from "@/lib/billing/requested-plan";
 import { listSubscriptionsByProfileIds } from "@/lib/subscriptions/get-subscription";
 import { listRecentInvestorCrmActivity } from "@/lib/data/investor-crm";
@@ -22,11 +23,24 @@ export default async function AdminDashboardPage() {
   const pendingCompanies = companies.filter((company) => company.review_status === "pending");
 
   const founderIds = companies.map((company) => company.founder_id).filter(Boolean);
-  const [subscriptionsByProfileId, requestedPlansByProfileId] = await Promise.all([
+  const companyIds = companies.map((company) => company.id);
+  const [subscriptionsByProfileId, requestedPlansByProfileId, remediationSummaries] = await Promise.all([
     listSubscriptionsByProfileIds(founderIds),
     getRequestedPlansByProfileIds(founderIds),
+    getRemediationSummaryForCompanies(companyIds),
   ]);
-  const companyCards = mapAdminCompaniesToCardData(companies, subscriptionsByProfileId, requestedPlansByProfileId);
+  const remediationByCompanyId = new Map(
+    [...remediationSummaries.entries()].map(([id, summary]) => [
+      id,
+      { active: summary.active, total: summary.total },
+    ]),
+  );
+  const companyCards = mapAdminCompaniesToCardData(
+    companies,
+    subscriptionsByProfileId,
+    requestedPlansByProfileId,
+    remediationByCompanyId,
+  );
 
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role}>

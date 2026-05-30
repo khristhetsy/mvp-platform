@@ -3,6 +3,7 @@ import { listCompanyDocuments } from "@/lib/data/documents";
 import { writeAuditLog } from "@/lib/data/audit";
 import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { buildCompanyOnboardingSyncUpdate } from "@/lib/onboarding/sync-progress";
+import { syncFounderRemediationTasks } from "@/lib/remediation/tasks";
 import { ONBOARDING_STEP_IDS, type OnboardingStepId } from "@/lib/onboarding/progress";
 import { requireApiProfile } from "@/lib/api/auth";
 import { founderOnboardingStepSchema } from "@/lib/validation";
@@ -163,6 +164,18 @@ export async function PATCH(request: Request) {
       progress_percent: sync.onboarding_progress_percent,
     },
   });
+
+  try {
+    await syncFounderRemediationTasks({
+      company: finalCompany as Company,
+      founderId: auth.profile.id,
+      documents: documents ?? [],
+      diligenceReport: diligenceReport ?? null,
+      onboardingPercent: sync.onboarding_progress_percent,
+    });
+  } catch {
+    // Remediation sync is best-effort; onboarding save must still succeed.
+  }
 
   return NextResponse.json({
     company: finalCompany,

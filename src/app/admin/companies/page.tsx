@@ -4,6 +4,7 @@ import { AdminCompanyCard } from "@/components/AdminCompanyCard";
 import { formatError, RouteDataDiagnostics } from "@/components/RouteDataDiagnostics";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listAdminCompanies, mapAdminCompaniesToCardData } from "@/lib/data/admin";
+import { getRemediationSummaryForCompanies } from "@/lib/remediation/tasks";
 import { getRequestedPlansByProfileIds } from "@/lib/billing/requested-plan";
 import { listSubscriptionsByProfileIds } from "@/lib/subscriptions/get-subscription";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -24,11 +25,24 @@ export default async function AdminCompaniesPage() {
     const companies = await listAdminCompanies(supabase);
     rawCompanyCount = companies.length;
     const founderIds = companies.map((company) => company.founder_id).filter(Boolean);
-    const [subscriptionsByProfileId, requestedPlansByProfileId] = await Promise.all([
+    const companyIds = companies.map((company) => company.id);
+    const [subscriptionsByProfileId, requestedPlansByProfileId, remediationSummaries] = await Promise.all([
       listSubscriptionsByProfileIds(founderIds),
       getRequestedPlansByProfileIds(founderIds),
+      getRemediationSummaryForCompanies(companyIds),
     ]);
-    companyCards = mapAdminCompaniesToCardData(companies, subscriptionsByProfileId, requestedPlansByProfileId);
+    const remediationByCompanyId = new Map(
+      [...remediationSummaries.entries()].map(([id, summary]) => [
+        id,
+        { active: summary.active, total: summary.total },
+      ]),
+    );
+    companyCards = mapAdminCompaniesToCardData(
+      companies,
+      subscriptionsByProfileId,
+      requestedPlansByProfileId,
+      remediationByCompanyId,
+    );
   } catch (error) {
     loadError = formatError(error);
   }

@@ -35,6 +35,8 @@ export type AdminCompanyCardData = {
   founder_requested_plan: PlanType | null;
   founder_onboarding_percent: number;
   founder_onboarding_completed_at: string | null;
+  founder_remediation_active: number;
+  founder_remediation_total: number;
 };
 
 type Props = {
@@ -367,6 +369,19 @@ export function AdminCompanyCard({ company }: Props) {
               {company.founder_onboarding_completed_at
                 ? ` · Completed ${formatDate(company.founder_onboarding_completed_at)}`
                 : " · In progress"}
+            </p>
+          </div>
+          <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Remediation action plan</p>
+            <p className="mt-2 text-xs text-slate-600">
+              {company.founder_remediation_active > 0 ? (
+                <>
+                  <strong className="text-amber-800">{company.founder_remediation_active} active</strong> remediation
+                  tasks · {company.founder_remediation_total} total tracked
+                </>
+              ) : (
+                <>No active remediation tasks · {company.founder_remediation_total} total tracked</>
+              )}
             </p>
           </div>
           <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">

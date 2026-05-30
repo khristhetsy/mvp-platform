@@ -214,14 +214,18 @@ export type AdminCompanyCardPayload = {
   founder_requested_plan: PlanType | null;
   founder_onboarding_percent: number;
   founder_onboarding_completed_at: string | null;
+  founder_remediation_active: number;
+  founder_remediation_total: number;
 };
 
 export function mapAdminCompaniesToCardData(
   companies: AdminCompanyRow[],
   subscriptionsByProfileId: Map<string, SubscriptionRecord> = new Map(),
   requestedPlansByProfileId: Map<string, PlanType | null> = new Map(),
+  remediationByCompanyId: Map<string, { active: number; total: number }> = new Map(),
 ): AdminCompanyCardPayload[] {
   return companies.map((company) => {
+    const remediation = remediationByCompanyId.get(company.id);
     const latestReview = company.admin_reviews[0];
     const pitchDeck = company.documents.find((doc) => doc.document_type?.toUpperCase() === "PITCH_DECK");
 
@@ -247,6 +251,8 @@ export function mapAdminCompaniesToCardData(
       founder_requested_plan: requestedPlansByProfileId.get(company.founder_id) ?? null,
       founder_onboarding_percent: company.onboarding_progress_percent ?? 0,
       founder_onboarding_completed_at: company.onboarding_completed_at ?? null,
+      founder_remediation_active: remediation?.active ?? 0,
+      founder_remediation_total: remediation?.total ?? 0,
     };
   });
 }

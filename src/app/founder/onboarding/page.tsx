@@ -2,14 +2,19 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderOnboardingWizard } from "@/components/FounderOnboardingWizard";
+import { FounderRemediationActionPlan } from "@/components/FounderRemediationActionPlan";
 import { loadFounderOnboardingPageData } from "@/lib/onboarding/load-founder-onboarding";
+import { loadFounderRemediationPlan } from "@/lib/remediation/load-founder-remediation";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function FounderOnboardingPage() {
   const profile = await requireRole(["founder"]);
-  const data = await loadFounderOnboardingPageData(profile);
+  const [data, remediation] = await Promise.all([
+    loadFounderOnboardingPageData(profile),
+    loadFounderRemediationPlan(profile),
+  ]);
 
   if (!data) {
     redirect("/auth/sign-in");
@@ -48,6 +53,17 @@ export default async function FounderOnboardingPage() {
             initialProgress={data.progress}
           />
         </div>
+
+        {remediation.summary.active > 0 ? (
+          <div className="mt-8">
+            <FounderRemediationActionPlan
+              tasks={remediation.tasks}
+              summary={remediation.summary}
+              compact
+              title="Gaps to close while onboarding"
+            />
+          </div>
+        ) : null}
       </section>
     </FounderAppShell>
   );
