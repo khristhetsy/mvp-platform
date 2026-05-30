@@ -7,7 +7,10 @@ import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingPro
 import { FounderRemediationActionPlan } from "@/components/FounderRemediationActionPlan";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
+import { FounderLearningPreviewCard } from "@/components/FounderLearningPreviewCard";
+import { loadFounderLearningWorkspace } from "@/lib/learning/load-founder-learning";
 import { loadFounderRemediationPlan } from "@/lib/remediation/load-founder-remediation";
+import { getFounderFeatureAccess } from "@/lib/subscriptions/founder-access";
 import { computeFounderOnboardingProgress } from "@/lib/onboarding/progress";
 import { founderPipeline } from "@/lib/mock-data";
 import { formatPledgeTotal, getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
@@ -35,7 +38,11 @@ export default async function FounderDashboardPage() {
       })
     : null;
   const investorActivity = company ? await listFounderInvestorActivity(supabase, company.id) : null;
-  const remediation = await loadFounderRemediationPlan(profile);
+  const [remediation, learningAccess] = await Promise.all([
+    loadFounderRemediationPlan(profile),
+    getFounderFeatureAccess("elearning"),
+  ]);
+  const learning = learningAccess.allowed ? await loadFounderLearningWorkspace(profile) : null;
 
   let pledgeSummary = { totalPledged: 0, investorCount: 0, currency: "USD" };
   if (company) {
@@ -89,8 +96,21 @@ export default async function FounderDashboardPage() {
           <FounderRemediationActionPlan
             tasks={remediation.tasks}
             summary={remediation.summary}
+            learningLinks={remediation.learningLinks}
             compact
             title="Priority remediation tasks"
+          />
+        </div>
+      ) : null}
+
+      {learning ? (
+        <div className="mb-8">
+          <FounderLearningPreviewCard
+            overallPercent={learning.overallPercent}
+            currentMilestone={learning.currentMilestone}
+            nextMilestone={learning.nextMilestone}
+            continueModules={learning.continueModules}
+            recommendations={learning.recommendations}
           />
         </div>
       ) : null}

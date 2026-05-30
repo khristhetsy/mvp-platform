@@ -4,6 +4,8 @@ import type { Database } from "@/lib/supabase/types";
 import { getStorageBucket, createSignedDocumentUrl } from "@/lib/data/documents";
 import type { SubscriptionRecord } from "@/lib/subscriptions/plans";
 import type { PlanType } from "@/lib/subscriptions/plans";
+import { computeReadinessMilestones, milestoneLabelForAdmin } from "@/lib/learning/milestones";
+import type { Company, DocumentRecord } from "@/lib/supabase/types";
 
 export type AdminCompanyRow = {
   id: string;
@@ -216,6 +218,9 @@ export type AdminCompanyCardPayload = {
   founder_onboarding_completed_at: string | null;
   founder_remediation_active: number;
   founder_remediation_total: number;
+  founder_learning_percent: number;
+  founder_learning_milestone: string;
+  founder_learning_modules_engaged: number;
 };
 
 export function mapAdminCompaniesToCardData(
@@ -223,9 +228,25 @@ export function mapAdminCompaniesToCardData(
   subscriptionsByProfileId: Map<string, SubscriptionRecord> = new Map(),
   requestedPlansByProfileId: Map<string, PlanType | null> = new Map(),
   remediationByCompanyId: Map<string, { active: number; total: number }> = new Map(),
+  learningByCompanyId: Map<
+    string,
+    { percentComplete: number; modulesEngaged: number; modulesCompleted: number }
+  > = new Map(),
 ): AdminCompanyCardPayload[] {
   return companies.map((company) => {
     const remediation = remediationByCompanyId.get(company.id);
+    const learning = learningByCompanyId.get(company.id);
+    const learningMilestones = computeReadinessMilestones({
+      company: company as unknown as Company,
+      documents: company.documents as DocumentRecord[],
+      onboardingPercent: company.onboarding_progress_percent ?? 0,
+      readinessScore: null,
+      hasDiligenceReport: false,
+      remediationActive: remediation?.active ?? 0,
+      remediationHighPriorityOpen: 0,
+      learningPercentComplete: learning?.percentComplete ?? 0,
+      learningModulesCompleted: learning?.modulesCompleted ?? 0,
+    });
     const latestReview = company.admin_reviews[0];
     const pitchDeck = company.documents.find((doc) => doc.document_type?.toUpperCase() === "PITCH_DECK");
 
@@ -253,6 +274,9 @@ export function mapAdminCompaniesToCardData(
       founder_onboarding_completed_at: company.onboarding_completed_at ?? null,
       founder_remediation_active: remediation?.active ?? 0,
       founder_remediation_total: remediation?.total ?? 0,
+      founder_learning_percent: learning?.percentComplete ?? 0,
+      founder_learning_milestone: milestoneLabelForAdmin(learningMilestones),
+      founder_learning_modules_engaged: learning?.modulesEngaged ?? 0,
     };
   });
 }

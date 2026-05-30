@@ -6,6 +6,7 @@ import type { RemediationTaskRecord } from "@/lib/remediation/types";
 export function FounderRemediationActionPlan({
   tasks,
   summary,
+  learningLinks = {},
   compact = false,
   title = "Readiness action plan",
 }: Readonly<{
@@ -15,6 +16,7 @@ export function FounderRemediationActionPlan({
     active: number;
     completed: number;
   };
+  learningLinks?: Record<string, { slug: string; title: string }>;
   compact?: boolean;
   title?: string;
 }>) {
@@ -44,7 +46,7 @@ export function FounderRemediationActionPlan({
           automatically as your onboarding and readiness data changes.
         </p>
       ) : null}
-      <FounderRemediationTaskList tasks={tasks} compact={compact} />
+      <FounderRemediationTaskList tasks={tasks} learningLinks={learningLinks} compact={compact} />
     </WorkspacePanel>
   );
 }

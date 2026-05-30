@@ -162,6 +162,57 @@ export type Database = {
         Update: Partial<DocumentRecord>;
         Relationships: [];
       };
+      learning_modules: {
+        Row: {
+          id: string;
+          slug: string;
+          title: string;
+          category: string;
+          description: string;
+          estimated_time_minutes: number;
+          difficulty: string;
+          related_remediation_category: string | null;
+          required_plan: string;
+          readiness_stage: string;
+          order_index: number;
+          is_published: boolean;
+          created_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      learning_progress: {
+        Row: {
+          id: string;
+          founder_id: string;
+          company_id: string;
+          module_id: string;
+          status: string;
+          percent_complete: number;
+          started_at: string | null;
+          completed_at: string | null;
+          last_viewed_at: string | null;
+        };
+        Insert: {
+          founder_id: string;
+          company_id: string;
+          module_id: string;
+          status?: string;
+          percent_complete?: number;
+          started_at?: string | null;
+          completed_at?: string | null;
+          last_viewed_at?: string | null;
+        };
+        Update: {
+          status?: string;
+          percent_complete?: number;
+          started_at?: string | null;
+          completed_at?: string | null;
+          last_viewed_at?: string | null;
+        };
+        Relationships: [];
+      };
       founder_remediation_tasks: {
         Row: {
           id: string;

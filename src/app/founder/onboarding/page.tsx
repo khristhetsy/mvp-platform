@@ -59,6 +59,7 @@ export default async function FounderOnboardingPage() {
             <FounderRemediationActionPlan
               tasks={remediation.tasks}
               summary={remediation.summary}
+              learningLinks={remediation.learningLinks}
               compact
               title="Gaps to close while onboarding"
             />

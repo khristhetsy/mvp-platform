@@ -37,6 +37,9 @@ export type AdminCompanyCardData = {
   founder_onboarding_completed_at: string | null;
   founder_remediation_active: number;
   founder_remediation_total: number;
+  founder_learning_percent: number;
+  founder_learning_milestone: string;
+  founder_learning_modules_engaged: number;
 };
 
 type Props = {
@@ -369,6 +372,16 @@ export function AdminCompanyCard({ company }: Props) {
               {company.founder_onboarding_completed_at
                 ? ` · Completed ${formatDate(company.founder_onboarding_completed_at)}`
                 : " · In progress"}
+            </p>
+          </div>
+          <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Learning progression</p>
+            <p className="mt-2 text-xs text-slate-600">
+              Completion: <strong>{company.founder_learning_percent}%</strong> ·{" "}
+              <strong>{company.founder_learning_modules_engaged}</strong> modules engaged
+            </p>
+            <p className="mt-1 text-xs text-slate-600">
+              Milestone: <strong>{company.founder_learning_milestone}</strong>
             </p>
           </div>
           <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">

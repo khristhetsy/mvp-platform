@@ -26,9 +26,11 @@ function categoryLabel(category: string) {
 
 export function FounderRemediationTaskList({
   tasks,
+  learningLinks = {},
   compact = false,
 }: Readonly<{
   tasks: RemediationTaskRecord[];
+  learningLinks?: Record<string, { slug: string; title: string }>;
   compact?: boolean;
 }>) {
   const router = useRouter();
@@ -99,11 +101,25 @@ export function FounderRemediationTaskList({
                 <p className="mt-2 text-xs text-slate-500">
                   <span className="font-medium text-slate-700">Recommended:</span> {task.recommended_action}
                 </p>
+                {learningLinks[task.source_key] ? (
+                  <p className="mt-2 text-xs text-indigo-700">
+                    <span className="font-medium text-indigo-900">Recommended learning:</span>{" "}
+                    {learningLinks[task.source_key].title}
+                  </p>
+                ) : null}
               </div>
             </div>
 
             {task.status !== "completed" && task.status !== "dismissed" ? (
               <div className="mt-4 flex flex-wrap gap-2">
+                {learningLinks[task.source_key] ? (
+                  <Link
+                    href={`/founder/learning/${learningLinks[task.source_key].slug}`}
+                    className="rounded-full border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-semibold text-indigo-900 hover:bg-indigo-100"
+                  >
+                    Start learning
+                  </Link>
+                ) : null}
                 {task.related_feature ? (
                   <Link
                     href={task.related_feature}

@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { AdminDashboardShell } from "@/components/AdminDashboardShell";
 import { getAdminDashboardMetrics, listAdminCompanies, mapAdminCompaniesToCardData } from "@/lib/data/admin";
+import { getLearningAdminSummaryForCompanies } from "@/lib/learning/progress";
 import { getRemediationSummaryForCompanies } from "@/lib/remediation/tasks";
 import { getRequestedPlansByProfileIds } from "@/lib/billing/requested-plan";
 import { listSubscriptionsByProfileIds } from "@/lib/subscriptions/get-subscription";
@@ -24,11 +25,13 @@ export default async function AdminDashboardPage() {
 
   const founderIds = companies.map((company) => company.founder_id).filter(Boolean);
   const companyIds = companies.map((company) => company.id);
-  const [subscriptionsByProfileId, requestedPlansByProfileId, remediationSummaries] = await Promise.all([
-    listSubscriptionsByProfileIds(founderIds),
-    getRequestedPlansByProfileIds(founderIds),
-    getRemediationSummaryForCompanies(companyIds),
-  ]);
+  const [subscriptionsByProfileId, requestedPlansByProfileId, remediationSummaries, learningSummaries] =
+    await Promise.all([
+      listSubscriptionsByProfileIds(founderIds),
+      getRequestedPlansByProfileIds(founderIds),
+      getRemediationSummaryForCompanies(companyIds),
+      getLearningAdminSummaryForCompanies(companyIds),
+    ]);
   const remediationByCompanyId = new Map(
     [...remediationSummaries.entries()].map(([id, summary]) => [
       id,
@@ -40,6 +43,7 @@ export default async function AdminDashboardPage() {
     subscriptionsByProfileId,
     requestedPlansByProfileId,
     remediationByCompanyId,
+    learningSummaries,
   );
 
   return (

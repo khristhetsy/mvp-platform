@@ -141,6 +141,7 @@ export default async function FounderReadinessPage() {
             <FounderRemediationActionPlan
               tasks={remediation.tasks}
               summary={remediation.summary}
+              learningLinks={remediation.learningLinks}
               title="Readiness remediation action plan"
             />
           </section>
