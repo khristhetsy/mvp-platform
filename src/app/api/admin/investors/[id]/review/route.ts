@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireStaffApi } from "@/lib/api/admin";
 import { writeAuditLog } from "@/lib/data/audit";
 import { applyInvestorReview } from "@/lib/investor/profile";
+import { notifyInvestorReview } from "@/lib/notifications/investor-events";
 import { adminInvestorReviewActionSchema } from "@/lib/validation";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -39,6 +40,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       entityType: "investor_profile",
       entityId: id,
       metadata: { feedback: feedback?.trim() ?? null, profile_id: investorProfile.profile_id },
+    });
+
+    void notifyInvestorReview({
+      profileId: investorProfile.profile_id,
+      action,
+      adminId: auth.profile.id,
+      entityId: id,
+      feedback: feedback?.trim(),
     });
 
     return NextResponse.json({ investorProfile });

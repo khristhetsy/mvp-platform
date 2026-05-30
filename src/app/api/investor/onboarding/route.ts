@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { writeAuditLog } from "@/lib/data/audit";
 import { ensureInvestorProfileForUser, isInvestorProfileComplete, parseCommaList } from "@/lib/investor/profile";
+import { notifyStaff } from "@/lib/notifications/notifications";
 import type { InvestorApprovalStatus } from "@/lib/investor/types";
 import { investorOnboardingSchema } from "@/lib/validation";
 
@@ -94,6 +95,17 @@ export async function PATCH(request: Request) {
     entityId: data.id,
     metadata: { approval_status: data.approval_status },
   });
+
+  if (shouldSubmit) {
+    void notifyStaff({
+      actorUserId: auth.profile.id,
+      type: "investor_onboarding_submitted",
+      title: "Investor onboarding submitted",
+      message: "A new investor profile was submitted and is awaiting admin approval.",
+      entityType: "investor_profile",
+      entityId: data.id,
+    });
+  }
 
   return NextResponse.json({ investorProfile: data });
 }

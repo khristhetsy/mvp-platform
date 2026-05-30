@@ -2,6 +2,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { buildRemediationTaskDrafts } from "@/lib/remediation/rules";
 import { sortRemediationTasks } from "@/lib/remediation/rules";
 import type { RemediationTaskDraft, RemediationTaskRecord, RemediationStatus } from "@/lib/remediation/types";
+import { createNotification } from "@/lib/notifications/notifications";
 import type { Company, DocumentRecord } from "@/lib/supabase/types";
 
 type DiligenceReportLike = {
@@ -66,6 +67,17 @@ export async function syncFounderRemediationTasks(input: {
 
       if (error && !error.message.includes("duplicate")) {
         throw new Error(`Failed to create remediation task: ${error.message}`);
+      }
+
+      if (!error) {
+        void createNotification({
+          recipientUserId: input.founderId,
+          type: "remediation_task_created",
+          title: "New remediation task",
+          message: draft.title,
+          entityType: "founder_remediation_task",
+          entityId: draft.source_key,
+        });
       }
 
       continue;
@@ -145,6 +157,17 @@ export async function updateRemediationTaskStatus(input: {
 
   if (error || !data) {
     throw new Error(`Failed to update remediation task: ${error?.message ?? "unknown error"}`);
+  }
+
+  if (input.status === "completed") {
+    void createNotification({
+      recipientUserId: input.founderId,
+      type: "remediation_task_completed",
+      title: "Remediation task completed",
+      message: data.title,
+      entityType: "founder_remediation_task",
+      entityId: data.id,
+    });
   }
 
   return data as RemediationTaskRecord;

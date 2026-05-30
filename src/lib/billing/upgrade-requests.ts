@@ -1,5 +1,6 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { writeAuditLog } from "@/lib/data/audit";
+import { notifyStaff } from "@/lib/notifications/notifications";
 import type { UpgradeRequestType } from "@/lib/billing/upgrade";
 import type { FeatureKey, PlanType } from "@/lib/subscriptions/plans";
 
@@ -52,6 +53,15 @@ export async function createUpgradeRequest(input: {
       requested_plan: input.requestedPlan ?? null,
       feature_key: input.featureKey ?? null,
     },
+  });
+
+  void notifyStaff({
+    actorUserId: input.profileId,
+    type: "upgrade_request_submitted",
+    title: "Upgrade request submitted",
+    message: `A founder submitted an upgrade request (${input.requestType}).`,
+    entityType: "upgrade_request",
+    entityId: data.id,
   });
 
   return data as UpgradeRequestRecord;

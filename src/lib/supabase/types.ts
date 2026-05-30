@@ -213,6 +213,34 @@ export type Database = {
         };
         Relationships: [];
       };
+      notifications: {
+        Row: {
+          id: string;
+          recipient_user_id: string;
+          actor_user_id: string | null;
+          type: string;
+          title: string;
+          message: string;
+          entity_type: string | null;
+          entity_id: string | null;
+          is_read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          recipient_user_id: string;
+          actor_user_id?: string | null;
+          type: string;
+          title: string;
+          message: string;
+          entity_type?: string | null;
+          entity_id?: string | null;
+          is_read?: boolean;
+        };
+        Update: {
+          is_read?: boolean;
+        };
+        Relationships: [];
+      };
       investor_profiles: {
         Row: {
           id: string;

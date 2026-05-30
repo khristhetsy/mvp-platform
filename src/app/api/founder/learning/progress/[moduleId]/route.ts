@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { recordModuleView, updateLearningProgress } from "@/lib/learning/progress";
 import type { LearningProgressStatus } from "@/lib/learning/types";
+import { createNotification } from "@/lib/notifications/notifications";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 
 function parseStatus(value: unknown): LearningProgressStatus | null {
@@ -33,6 +34,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ mo
         moduleSlug: body.moduleSlug,
         completedLessonIds: body.completedLessonIds.map(String),
       });
+
+      if (progress.status === "completed") {
+        void createNotification({
+          recipientUserId: auth.profile.id,
+          type: "learning_module_completed",
+          title: "Learning module completed",
+          message: `You completed the ${body.moduleSlug.replaceAll("-", " ")} module.`,
+          entityType: "learning_module",
+          entityId: moduleId,
+        });
+      }
 
       return NextResponse.json({ progress });
     }

@@ -3,6 +3,7 @@ import { requireInvestorApprovedApi } from "@/lib/api/investor";
 import { writeAuditLog } from "@/lib/data/audit";
 import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { createIntroRequest } from "@/lib/data/investor-interests";
+import { notifyFounderInvestorIntro } from "@/lib/notifications/investor-events";
 import { investorIntroRequestSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -47,6 +48,14 @@ export async function POST(request: Request) {
     entityId: data.id,
     metadata: { companyId: data.company_id, status: data.status },
   });
+
+  if (data.company_id) {
+    void notifyFounderInvestorIntro({
+      companyId: data.company_id,
+      investorId: auth.profile.id,
+      entityId: data.id,
+    });
+  }
 
   await recordInvestorCrmActivity(auth.serviceSupabase, {
     investorId: auth.profile.id,

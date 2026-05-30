@@ -3,6 +3,7 @@ import { requireInvestorApprovedApi } from "@/lib/api/investor";
 import { writeAuditLog } from "@/lib/data/audit";
 import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { submitInvestorPledge } from "@/lib/data/investor-pledges";
+import { notifyFounderInvestorPledge } from "@/lib/notifications/investor-events";
 import { investorPledgeSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -64,6 +65,16 @@ export async function POST(request: Request) {
       pledgeCurrency: data.pledge_currency,
     },
   });
+
+  if (data.company_id && data.pledge_amount != null) {
+    void notifyFounderInvestorPledge({
+      companyId: data.company_id,
+      investorId: auth.profile.id,
+      entityId: data.id,
+      pledgeAmount: Number(data.pledge_amount),
+      pledgeCurrency: data.pledge_currency ?? "USD",
+    });
+  }
 
   return NextResponse.json({ pledge: data });
 }

@@ -3,6 +3,7 @@ import { requireInvestorApprovedApi } from "@/lib/api/investor";
 import { writeAuditLog } from "@/lib/data/audit";
 import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { upsertInvestorInterest } from "@/lib/data/investor-interests";
+import { notifyFounderInvestorInterest } from "@/lib/notifications/investor-events";
 import { investorInterestSchema } from "@/lib/validation";
 
 async function parseBody(request: Request) {
@@ -75,6 +76,14 @@ export async function POST(request: Request) {
       message: data.message,
     },
   });
+
+  if (data.company_id) {
+    void notifyFounderInvestorInterest({
+      companyId: data.company_id,
+      investorId: auth.profile.id,
+      entityId: data.id,
+    });
+  }
 
   return NextResponse.json({ interest: data });
 }

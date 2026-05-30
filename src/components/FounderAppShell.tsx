@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { SubscriptionPlanBadge } from "@/components/SubscriptionPanel";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
+import { maybeNotifyTrialStatus } from "@/lib/notifications/trial-alerts";
 import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
 
 type FounderAppShellProps = Readonly<{
@@ -18,6 +19,7 @@ export async function FounderAppShell({ children, profileName, profileSubtitle }
       (await getSubscriptionForProfile(profile.id)) ??
       (await ensureSubscriptionForProfile({ profileId: profile.id, role: profile.role }));
     planBadge = <SubscriptionPlanBadge subscription={subscription} />;
+    void maybeNotifyTrialStatus(profile.id, subscription);
   }
 
   return (

@@ -4,6 +4,7 @@ import { requireStaffApi } from "@/lib/api/admin";
 import { adminDebug } from "@/lib/debug/admin-debug";
 import { setCompanyMarketplaceVisibility } from "@/lib/data/marketplace";
 import { writeAuditLog } from "@/lib/data/audit";
+import { notifyCompanyFounder } from "@/lib/notifications/notifications";
 import { z } from "zod";
 
 const marketplaceActionSchema = z.object({
@@ -84,6 +85,17 @@ export async function POST(
     entityType: "company",
     entityId: id,
   });
+
+  if (parsed.data.action === "publish") {
+    void notifyCompanyFounder(id, {
+      actorUserId: auth.profile.id,
+      type: "company_published",
+      title: "Company published to marketplace",
+      message: "Your company is now published and visible on the CapitalOS marketplace.",
+      entityType: "company",
+      entityId: id,
+    });
+  }
 
   adminDebug({
     scope: "api.admin.marketplace",

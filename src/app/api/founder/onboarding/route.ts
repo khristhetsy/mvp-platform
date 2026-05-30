@@ -3,6 +3,7 @@ import { listCompanyDocuments } from "@/lib/data/documents";
 import { writeAuditLog } from "@/lib/data/audit";
 import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { buildCompanyOnboardingSyncUpdate } from "@/lib/onboarding/sync-progress";
+import { createNotification } from "@/lib/notifications/notifications";
 import { syncFounderRemediationTasks } from "@/lib/remediation/tasks";
 import { ONBOARDING_STEP_IDS, type OnboardingStepId } from "@/lib/onboarding/progress";
 import { requireApiProfile } from "@/lib/api/auth";
@@ -138,6 +139,8 @@ export async function PATCH(request: Request) {
       : undefined,
   });
 
+  const wasOnboardingComplete = Boolean(company.onboarding_completed_at);
+
   const { data: finalCompany, error: syncError } = await auth.supabase
     .from("companies")
     .update({
@@ -164,6 +167,17 @@ export async function PATCH(request: Request) {
       progress_percent: sync.onboarding_progress_percent,
     },
   });
+
+  if (!wasOnboardingComplete && finalCompany.onboarding_completed_at) {
+    void createNotification({
+      recipientUserId: auth.profile.id,
+      type: "founder_onboarding_completed",
+      title: "Founder onboarding completed",
+      message: "Your onboarding is complete. Continue strengthening readiness and submit for admin review.",
+      entityType: "company",
+      entityId: company.id,
+    });
+  }
 
   try {
     await syncFounderRemediationTasks({
