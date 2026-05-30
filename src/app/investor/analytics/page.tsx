@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { AnalyticsBreakdownPanel } from "@/components/AnalyticsBreakdownPanel";
 import { AppShell } from "@/components/AppShell";
+import { InvestorActivityTimeline } from "@/components/InvestorActivityTimeline";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { MetricCard } from "@/components/MetricCard";
-import { InvestorActivityTimeline } from "@/components/InvestorActivityTimeline";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
-import { formatPledgeTotal } from "@/lib/data/investor-pledges";
+import { loadInvestorAnalytics } from "@/lib/analytics/investor-analytics";
 import { loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 
@@ -12,24 +13,10 @@ export const dynamic = "force-dynamic";
 
 export default async function InvestorAnalyticsPage() {
   const { profile, investorId } = await requireInvestorWorkspaceSession();
-  const { workspace, crmActivity } = await loadInvestorWorkspacePageData(investorId, 30);
-
-  const pledgeCurrency =
-    workspace.interests.find((row) => row.pledge_currency)?.pledge_currency ?? "USD";
-  const pledgeTotal = workspace.interests.reduce((total, row) => {
-    if (row.pledge_amount == null || Number(row.pledge_amount) <= 0) {
-      return total;
-    }
-
-    return total + Number(row.pledge_amount);
-  }, 0);
-  const indicativeTotal = workspace.interests.reduce((total, row) => {
-    if (row.interest_amount == null || Number(row.interest_amount) <= 0) {
-      return total;
-    }
-
-    return total + Number(row.interest_amount);
-  }, 0);
+  const [analytics, { crmActivity }] = await Promise.all([
+    loadInvestorAnalytics(investorId, 30),
+    loadInvestorWorkspacePageData(investorId, 30),
+  ]);
 
   return (
     <AppShell
@@ -42,84 +29,100 @@ export default async function InvestorAnalyticsPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Analytics</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Engagement summaries calculated from your saved deals, interests, intro requests, and CRM activity.
+          Your engagement command center — saved deals, interests, messaging, and match signals from CapitalOS data only.
         </p>
       </div>
 
       <InvestorFeatureGate>
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <MetricCard
-          label="Saved deals"
-          value={String(workspace.savedDeals.length)}
-          detail="Companies on your watchlist"
-          accent="indigo"
-        />
-        <MetricCard
-          label="Expressed interests"
-          value={String(workspace.interests.length)}
-          detail="Interest records across listings"
-          accent="violet"
-        />
-        <MetricCard
-          label="Intro requests"
-          value={String(workspace.introRequests.length)}
-          detail="Warm intro and follow-up requests"
-          accent="blue"
-        />
-        <MetricCard
-          label="Pledged total"
-          value={formatPledgeTotal(pledgeTotal, pledgeCurrency)}
-          detail={
-            indicativeTotal > 0
-              ? `${formatPledgeTotal(indicativeTotal, pledgeCurrency)} indicative interest`
-              : "From your interest records"
-          }
-          accent="slate"
-        />
-        <MetricCard
-          label="Recent activity"
-          value={String(crmActivity.rows.length)}
-          detail="CRM events in your timeline"
-          accent="slate"
-        />
-      </section>
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <MetricCard label="Saved deals" value={String(analytics.savedDeals)} detail="Companies on your watchlist" accent="indigo" />
+          <MetricCard
+            label="Expressed interests"
+            value={String(analytics.expressedInterests)}
+            detail="Interest records across listings"
+            accent="violet"
+          />
+          <MetricCard
+            label="Intro requests"
+            value={String(analytics.introRequests)}
+            detail="Warm intro and follow-up requests"
+            accent="blue"
+          />
+          <MetricCard
+            label="Recommended deals"
+            value={String(analytics.recommendedOpportunities)}
+            detail={
+              analytics.averageMatchScore != null
+                ? `${analytics.averageMatchScore}% average match score`
+                : "Match scores from marketplace listings"
+            }
+            accent="indigo"
+          />
+          <MetricCard
+            label="Message threads"
+            value={String(analytics.messageThreadCount)}
+            detail={`${analytics.meetingsScheduled} meetings scheduled`}
+            accent="slate"
+          />
+        </section>
 
-      <section className="mt-8 grid gap-6 xl:grid-cols-2">
-        <WorkspacePanel title="Engagement summary" subtitle="Calculated from your investor records">
-          <div className="space-y-3 text-sm text-slate-700">
-            <p>
-              <span className="font-medium text-slate-900">{workspace.savedDeals.length}</span> saved deals
+        <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <MetricCard
+            label="Pledged total"
+            value={analytics.pledgeTotalDisplay}
+            detail={`${analytics.indicativeTotalDisplay} indicative interest`}
+            accent="slate"
+          />
+          <MetricCard
+            label="Pending / indicative"
+            value={String(analytics.pendingInterestCount)}
+            detail={`${analytics.portfolioInterestCount} portfolio interest rows`}
+            accent="violet"
+          />
+          <MetricCard
+            label="Recent CRM activity"
+            value={String(analytics.recentActivityCount)}
+            detail="Events in your timeline"
+            accent="blue"
+          />
+        </section>
+
+        <section className="mt-8 grid gap-6 xl:grid-cols-2">
+          <AnalyticsBreakdownPanel
+            title="Engagement summary"
+            subtitle="Current snapshot from your records"
+            rows={[
+              { label: "Saved deals", value: String(analytics.savedDeals) },
+              { label: "Expressed interests", value: String(analytics.expressedInterests) },
+              { label: "Intro requests", value: String(analytics.introRequests) },
+              { label: "Message threads", value: String(analytics.messageThreadCount) },
+              { label: "Meetings scheduled", value: String(analytics.meetingsScheduled) },
+              { label: "Avg match score", value: analytics.averageMatchScore != null ? `${analytics.averageMatchScore}%` : "—" },
+            ]}
+          />
+          <WorkspacePanel title="Portfolio / pending interest" subtitle="From your interest records">
+            <p className="text-sm text-slate-700">
+              <span className="font-medium text-slate-900">{analytics.portfolioInterestCount}</span> companies with
+              interest, pledge, or indicative amounts tracked.
             </p>
-            <p>
-              <span className="font-medium text-slate-900">{workspace.interests.length}</span> expressed interests
+            <p className="mt-2 text-sm text-slate-600">
+              Pledged: {analytics.pledgeTotalDisplay} · Indicative: {analytics.indicativeTotalDisplay}
             </p>
-            <p>
-              <span className="font-medium text-slate-900">{workspace.introRequests.length}</span> intro requests
-            </p>
-            <p>
-              <span className="font-medium text-slate-900">
-                {formatPledgeTotal(pledgeTotal, pledgeCurrency)}
-              </span>{" "}
-              pledged ·{" "}
-              <span className="font-medium text-slate-900">
-                {formatPledgeTotal(indicativeTotal, pledgeCurrency)}
-              </span>{" "}
-              indicative
-            </p>
-            <p>
-              <span className="font-medium text-slate-900">{crmActivity.rows.length}</span> recent CRM activity events
-            </p>
-          </div>
-          <Link
-            href="/investor/dashboard"
-            className="mt-4 inline-block text-sm font-semibold text-indigo-700 hover:text-indigo-900"
-          >
-            Open investor dashboard
+            <Link href="/investor/portfolio" className="mt-4 inline-block text-sm font-semibold text-indigo-700">
+              View portfolio
+            </Link>
+          </WorkspacePanel>
+        </section>
+
+        <section className="mt-8">
+          <InvestorActivityTimeline activities={crmActivity.rows} error={crmActivity.error} />
+        </section>
+
+        <p className="mt-6 text-sm text-slate-600">
+          <Link href="/investor/opportunities" className="font-semibold text-indigo-700">
+            Browse recommended opportunities
           </Link>
-        </WorkspacePanel>
-
-        <InvestorActivityTimeline activities={crmActivity.rows} error={crmActivity.error} />
-      </section>
+        </p>
       </InvestorFeatureGate>
     </AppShell>
   );
