@@ -42,6 +42,8 @@ export type AdminCompanyCardData = {
   founder_learning_modules_engaged: number;
   investor_match_high_count: number;
   investor_match_top_score: number;
+  company_updates_published_count: number;
+  company_updates_latest_published_at: string | null;
 };
 
 type Props = {
@@ -397,6 +399,12 @@ export function AdminCompanyCard({ company }: Props) {
             </p>
             <p className="mt-1 text-xs text-slate-600">
               Milestone: <strong>{company.founder_learning_milestone}</strong>
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              Company updates: <strong>{company.company_updates_published_count}</strong> published
+              {company.company_updates_latest_published_at
+                ? ` · latest ${new Date(company.company_updates_latest_published_at).toLocaleDateString()}`
+                : ""}
             </p>
           </div>
           <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">

@@ -223,6 +223,8 @@ export type AdminCompanyCardPayload = {
   founder_learning_modules_engaged: number;
   investor_match_high_count: number;
   investor_match_top_score: number;
+  company_updates_published_count: number;
+  company_updates_latest_published_at: string | null;
 };
 
 export function mapAdminCompaniesToCardData(
@@ -235,11 +237,16 @@ export function mapAdminCompaniesToCardData(
     { percentComplete: number; modulesEngaged: number; modulesCompleted: number }
   > = new Map(),
   matchingByCompanyId: Map<string, { highMatchInvestorCount: number; topMatchScore: number }> = new Map(),
+  updateSummariesByCompanyId: Map<
+    string,
+    { publishedCount: number; latestPublishedAt: string | null }
+  > = new Map(),
 ): AdminCompanyCardPayload[] {
   return companies.map((company) => {
     const remediation = remediationByCompanyId.get(company.id);
     const learning = learningByCompanyId.get(company.id);
     const matching = matchingByCompanyId.get(company.id);
+    const updates = updateSummariesByCompanyId.get(company.id);
     const learningMilestones = computeReadinessMilestones({
       company: company as unknown as Company,
       documents: company.documents as DocumentRecord[],
@@ -283,6 +290,8 @@ export function mapAdminCompaniesToCardData(
       founder_learning_modules_engaged: learning?.modulesEngaged ?? 0,
       investor_match_high_count: matching?.highMatchInvestorCount ?? 0,
       investor_match_top_score: matching?.topMatchScore ?? 0,
+      company_updates_published_count: updates?.publishedCount ?? 0,
+      company_updates_latest_published_at: updates?.latestPublishedAt ?? null,
     };
   });
 }

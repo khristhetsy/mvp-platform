@@ -354,6 +354,21 @@ export const adminReportGenerateSchema = z.object({
     .optional(),
 });
 
+export const companyUpdateCreateSchema = z.object({
+  title: z.string().min(3).max(200),
+  body: z.string().min(10).max(8000),
+  updateType: z.enum([
+    "milestone",
+    "fundraising",
+    "product",
+    "financial",
+    "operational",
+    "investor_update",
+  ]),
+  visibility: z.enum(["draft", "interested_investors", "marketplace", "private"]),
+  publish: z.boolean().optional(),
+});
+
 export const outreachCampaignQueueSchema = z.object({
   action: z.literal("queue"),
 });

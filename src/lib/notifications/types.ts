@@ -40,7 +40,8 @@ export type NotificationType =
   | "founder_outreach_target_selected"
   | "founder_outreach_target_pipelined"
   | "founder_pipeline_intro_requested"
-  | "compliance_event_created";
+  | "compliance_event_created"
+  | "company_update_published";
 
 export type NotificationRecord = {
   id: string;

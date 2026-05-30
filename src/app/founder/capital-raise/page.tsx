@@ -3,6 +3,8 @@ import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { MetricCard } from "@/components/MetricCard";
 import { formatError, RouteDataDiagnostics } from "@/components/RouteDataDiagnostics";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { listFounderCompanyUpdates } from "@/lib/company-updates/company-updates";
+import { FounderCompanyUpdatesPanel } from "@/components/FounderCompanyUpdatesPanel";
 import { formatPledgeTotal, getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
@@ -22,6 +24,7 @@ export default async function FounderCapitalRaisePage() {
   let activityError: string | null = null;
   let pledgeSummary = { totalPledged: 0, investorCount: 0, currency: "USD" };
   let investorActivity: Awaited<ReturnType<typeof listFounderInvestorActivity>> | null = null;
+  let companyUpdates: Awaited<ReturnType<typeof listFounderCompanyUpdates>>["data"] = [];
 
   try {
     company = await ensureFounderCompanyForUser(profile);
@@ -43,6 +46,14 @@ export default async function FounderCapitalRaisePage() {
       investorActivity = await listFounderInvestorActivity(supabase, company.id);
     } catch (error) {
       activityError = formatError(error);
+    }
+
+    try {
+      const supabase = await createServerSupabaseClient();
+      const updatesResult = await listFounderCompanyUpdates(supabase, company.id);
+      companyUpdates = updatesResult.data ?? [];
+    } catch {
+      companyUpdates = [];
     }
   }
 
@@ -183,6 +194,10 @@ export default async function FounderCapitalRaisePage() {
                 </div>
               )}
             </WorkspacePanel>
+          </section>
+
+          <section className="mt-8">
+            <FounderCompanyUpdatesPanel initialUpdates={companyUpdates} />
           </section>
         </>
       )}

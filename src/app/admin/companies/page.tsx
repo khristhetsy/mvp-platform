@@ -6,6 +6,7 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listAdminCompanies, mapAdminCompaniesToCardData } from "@/lib/data/admin";
 import { getCompanyMatchingSummaries } from "@/lib/matching/admin-matching-summaries";
 import { getLearningAdminSummaryForCompanies } from "@/lib/learning/progress";
+import { getCompanyUpdateAdminSummaries } from "@/lib/company-updates/company-updates";
 import { getRemediationSummaryForCompanies } from "@/lib/remediation/tasks";
 import { getRequestedPlansByProfileIds } from "@/lib/billing/requested-plan";
 import { listSubscriptionsByProfileIds } from "@/lib/subscriptions/get-subscription";
@@ -28,13 +29,14 @@ export default async function AdminCompaniesPage() {
     rawCompanyCount = companies.length;
     const founderIds = companies.map((company) => company.founder_id).filter(Boolean);
     const companyIds = companies.map((company) => company.id);
-    const [subscriptionsByProfileId, requestedPlansByProfileId, remediationSummaries, learningSummaries, matchingSummaries] =
+    const [subscriptionsByProfileId, requestedPlansByProfileId, remediationSummaries, learningSummaries, matchingSummaries, updateSummaries] =
       await Promise.all([
         listSubscriptionsByProfileIds(founderIds),
         getRequestedPlansByProfileIds(founderIds),
         getRemediationSummaryForCompanies(companyIds),
         getLearningAdminSummaryForCompanies(companyIds),
         getCompanyMatchingSummaries(companyIds),
+        getCompanyUpdateAdminSummaries(companyIds),
       ]);
     const remediationByCompanyId = new Map(
       [...remediationSummaries.entries()].map(([id, summary]) => [
@@ -49,6 +51,7 @@ export default async function AdminCompaniesPage() {
       remediationByCompanyId,
       learningSummaries,
       matchingSummaries,
+      updateSummaries,
     );
   } catch (error) {
     loadError = formatError(error);

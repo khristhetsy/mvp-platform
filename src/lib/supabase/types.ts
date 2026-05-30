@@ -241,6 +241,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      company_updates: {
+        Row: {
+          id: string;
+          company_id: string;
+          founder_id: string;
+          title: string;
+          body: string;
+          update_type: string;
+          visibility: string;
+          created_at: string;
+          published_at: string | null;
+        };
+        Insert: {
+          company_id: string;
+          founder_id: string;
+          title: string;
+          body: string;
+          update_type?: string;
+          visibility?: string;
+          published_at?: string | null;
+        };
+        Update: {
+          title?: string;
+          body?: string;
+          update_type?: string;
+          visibility?: string;
+          published_at?: string | null;
+        };
+        Relationships: [];
+      };
       compliance_events: {
         Row: {
           id: string;
