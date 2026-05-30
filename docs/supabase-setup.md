@@ -60,6 +60,8 @@ This adds the `compliance_events` table (staff-only RLS) for internal risk flags
 
 ## Admin audit export & reporting (Phase 1)
 
+Approved investors can open investor-facing company reports at `/investor/opportunities/[companyId]/report` for marketplace-published companies. Views are logged as `report_viewed` in `investor_activity` (run migration `0028_investor_report_viewed_activity.sql`).
+
 Use `/admin/reports` (staff-only) to generate JSON, CSV, or **PDF** internal summaries from existing tables, including **Due Diligence** (`due_diligence`) per-company readiness packs. PDF export uses server-side [PDFKit](https://pdfkit.org/) (`pdfkit` dependency) via `src/lib/reports/pdf-export.ts` — no external PDF API. Each export writes an `audit_logs` row (`admin.report_generated`) with `format` (`json`, `csv`, or `pdf`). OAuth tokens, message bodies, and private founder contact PII are excluded from exports.
 
 ## Data model

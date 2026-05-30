@@ -23,7 +23,8 @@ export type InvestorCrmActivityType =
   | "message_sent"
   | "meeting_requested"
   | "meeting_accepted"
-  | "meeting_declined";
+  | "meeting_declined"
+  | "report_viewed";
 
 export type InvestorPipelineStage = "interested" | "meeting_requested" | "follow_up";
 
@@ -38,6 +39,7 @@ const ACTIVITY_PIPELINE_STAGE: Record<InvestorCrmActivityType, InvestorPipelineS
   meeting_requested: "meeting_requested",
   meeting_accepted: "meeting_requested",
   meeting_declined: "follow_up",
+  report_viewed: "interested",
 };
 
 const PIPELINE_ACTIVITY_TYPES = new Set<InvestorCrmActivityType>([

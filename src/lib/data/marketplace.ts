@@ -247,6 +247,30 @@ export async function getMarketplaceListingBySlug(supabase: SupabaseClient<Datab
   return mapCompanyToListing(company, resolvedSlug, campaign);
 }
 
+export async function getMarketplaceListingByCompanyId(
+  supabase: SupabaseClient<Database>,
+  companyId: string,
+) {
+  const { data: company, error } = await supabase
+    .from("companies")
+    .select("*")
+    .eq("id", companyId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!company || !isCompanyMarketplaceListed(company as Company)) {
+    return null;
+  }
+
+  const resolvedSlug = company.slug ?? (await ensureCompanySlug(supabase, company as Company));
+  const campaign = await fetchLatestCampaign(supabase, company.id);
+
+  return mapCompanyToListing(company as Company, resolvedSlug, campaign);
+}
+
 export async function setCompanyMarketplaceVisibility(
   supabase: SupabaseClient<Database>,
   input: {

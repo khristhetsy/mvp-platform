@@ -93,6 +93,7 @@ export default async function InvestorDashboardPage() {
               {topMatches.map((row) => (
                 <InvestorMatchOpportunityCard
                   key={row.company.id}
+                  companyId={row.company.id}
                   companyName={row.company.companyName}
                   slug={row.company.slug}
                   industry={row.company.industry}
