@@ -1,6 +1,11 @@
 import type { SubscriptionRecord } from "@/lib/subscriptions/plans";
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
+import type { PlanType } from "@/lib/subscriptions/plans";
 import { subscriptionStatusLabel } from "@/lib/subscriptions/access";
+import {
+  getBillingLifecycleLabel,
+  getBillingLifecycleStatus,
+} from "@/lib/billing/billing-status";
 
 function formatDate(value: string | null) {
   if (!value) {
@@ -17,12 +22,16 @@ function formatDate(value: string | null) {
 
 export function AdminSubscriptionSummary({
   subscription,
+  requestedPlan,
 }: Readonly<{
   subscription: SubscriptionRecord | null | undefined;
+  requestedPlan?: PlanType | null;
 }>) {
   if (!subscription) {
     return <p className="text-xs text-slate-500">No subscription record</p>;
   }
+
+  const lifecycle = getBillingLifecycleStatus(subscription, requestedPlan ?? null);
 
   return (
     <dl className="grid gap-1 text-xs text-slate-600 sm:grid-cols-2">
@@ -33,6 +42,14 @@ export function AdminSubscriptionSummary({
       <div>
         <dt className="font-medium text-slate-700">Status</dt>
         <dd>{subscriptionStatusLabel(subscription.subscription_status)}</dd>
+      </div>
+      <div>
+        <dt className="font-medium text-slate-700">Lifecycle</dt>
+        <dd>{getBillingLifecycleLabel(lifecycle)}</dd>
+      </div>
+      <div>
+        <dt className="font-medium text-slate-700">Signup selection</dt>
+        <dd>{requestedPlan ? PLAN_LABELS[requestedPlan] : "—"}</dd>
       </div>
       <div>
         <dt className="font-medium text-slate-700">Role</dt>

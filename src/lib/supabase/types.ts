@@ -123,6 +123,34 @@ export type Database = {
         Update: Partial<Omit<Subscription, "id" | "profile_id" | "created_at">>;
         Relationships: [];
       };
+      upgrade_requests: {
+        Row: {
+          id: string;
+          profile_id: string;
+          request_type: string;
+          requested_plan: string | null;
+          feature_key: string | null;
+          status: string;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          request_type: string;
+          requested_plan?: string | null;
+          feature_key?: string | null;
+          status?: string;
+          notes?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          status?: string;
+          notes?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       documents: {
         Row: DocumentRecord;
         Insert: Omit<Partial<DocumentRecord>, "id" | "created_at"> &

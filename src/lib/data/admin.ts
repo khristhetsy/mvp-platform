@@ -3,6 +3,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/types";
 import { getStorageBucket, createSignedDocumentUrl } from "@/lib/data/documents";
 import type { SubscriptionRecord } from "@/lib/subscriptions/plans";
+import type { PlanType } from "@/lib/subscriptions/plans";
 
 export type AdminCompanyRow = {
   id: string;
@@ -202,11 +203,13 @@ export type AdminCompanyCardPayload = {
   }>;
   initial_feedback: string;
   founder_subscription: SubscriptionRecord | null;
+  founder_requested_plan: PlanType | null;
 };
 
 export function mapAdminCompaniesToCardData(
   companies: AdminCompanyRow[],
   subscriptionsByProfileId: Map<string, SubscriptionRecord> = new Map(),
+  requestedPlansByProfileId: Map<string, PlanType | null> = new Map(),
 ): AdminCompanyCardPayload[] {
   return companies.map((company) => {
     const latestReview = company.admin_reviews[0];
@@ -231,6 +234,7 @@ export function mapAdminCompaniesToCardData(
       initial_feedback:
         latestReview?.feedback ?? latestReview?.requested_changes ?? latestReview?.notes ?? "",
       founder_subscription: subscriptionsByProfileId.get(company.founder_id) ?? null,
+      founder_requested_plan: requestedPlansByProfileId.get(company.founder_id) ?? null,
     };
   });
 }

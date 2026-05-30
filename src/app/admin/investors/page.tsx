@@ -5,6 +5,7 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
+import { getRequestedPlansByProfileIds } from "@/lib/billing/requested-plan";
 import { listSubscriptionsByProfileIds } from "@/lib/subscriptions/get-subscription";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +56,9 @@ export default async function AdminInvestorsPage() {
   const subscriptionMap = await listSubscriptionsByProfileIds(
     (investorProfiles ?? []).map((row) => row.id),
   );
+  const requestedPlansMap = await getRequestedPlansByProfileIds(
+    (investorProfiles ?? []).map((row) => row.id),
+  );
 
   return (
     <AppShell
@@ -86,7 +90,10 @@ export default async function AdminInvestorsPage() {
                   {investor.email ? <p className="text-slate-500">{investor.email}</p> : null}
                   <p className="mt-1 text-xs capitalize text-slate-500">Role: {investor.role}</p>
                 </div>
-                <AdminSubscriptionSummary subscription={subscriptionMap.get(investor.id) ?? null} />
+                <AdminSubscriptionSummary
+                  subscription={subscriptionMap.get(investor.id) ?? null}
+                  requestedPlan={requestedPlansMap.get(investor.id) ?? null}
+                />
               </div>
             ))}
           </div>

@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { AdminDashboardShell } from "@/components/AdminDashboardShell";
 import { getAdminDashboardMetrics, listAdminCompanies, mapAdminCompaniesToCardData } from "@/lib/data/admin";
+import { getRequestedPlansByProfileIds } from "@/lib/billing/requested-plan";
 import { listSubscriptionsByProfileIds } from "@/lib/subscriptions/get-subscription";
 import { listRecentInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
@@ -21,8 +22,11 @@ export default async function AdminDashboardPage() {
   const pendingCompanies = companies.filter((company) => company.review_status === "pending");
 
   const founderIds = companies.map((company) => company.founder_id).filter(Boolean);
-  const subscriptionsByProfileId = await listSubscriptionsByProfileIds(founderIds);
-  const companyCards = mapAdminCompaniesToCardData(companies, subscriptionsByProfileId);
+  const [subscriptionsByProfileId, requestedPlansByProfileId] = await Promise.all([
+    listSubscriptionsByProfileIds(founderIds),
+    getRequestedPlansByProfileIds(founderIds),
+  ]);
+  const companyCards = mapAdminCompaniesToCardData(companies, subscriptionsByProfileId, requestedPlansByProfileId);
 
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role}>

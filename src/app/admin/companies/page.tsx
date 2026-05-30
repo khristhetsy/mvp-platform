@@ -4,6 +4,7 @@ import { AdminCompanyCard } from "@/components/AdminCompanyCard";
 import { formatError, RouteDataDiagnostics } from "@/components/RouteDataDiagnostics";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listAdminCompanies, mapAdminCompaniesToCardData } from "@/lib/data/admin";
+import { getRequestedPlansByProfileIds } from "@/lib/billing/requested-plan";
 import { listSubscriptionsByProfileIds } from "@/lib/subscriptions/get-subscription";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
@@ -23,8 +24,11 @@ export default async function AdminCompaniesPage() {
     const companies = await listAdminCompanies(supabase);
     rawCompanyCount = companies.length;
     const founderIds = companies.map((company) => company.founder_id).filter(Boolean);
-    const subscriptionsByProfileId = await listSubscriptionsByProfileIds(founderIds);
-    companyCards = mapAdminCompaniesToCardData(companies, subscriptionsByProfileId);
+    const [subscriptionsByProfileId, requestedPlansByProfileId] = await Promise.all([
+      listSubscriptionsByProfileIds(founderIds),
+      getRequestedPlansByProfileIds(founderIds),
+    ]);
+    companyCards = mapAdminCompaniesToCardData(companies, subscriptionsByProfileId, requestedPlansByProfileId);
   } catch (error) {
     loadError = formatError(error);
   }

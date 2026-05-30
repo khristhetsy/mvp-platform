@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { AdminSubscriptionSummary } from "@/components/AdminSubscriptionSummary";
 import { useAdminActionHealthSafe } from "@/components/AdminActionHealthProvider";
 import { CompanyStatusBadge } from "@/components/CompanyStatusBadge";
-import type { SubscriptionRecord } from "@/lib/subscriptions/plans";
+import type { PlanType, SubscriptionRecord } from "@/lib/subscriptions/plans";
 import { formatApiError } from "@/lib/api/errors";
 import { adminDebug } from "@/lib/debug/admin-debug";
 
@@ -32,6 +32,7 @@ export type AdminCompanyCardData = {
   }>;
   initial_feedback: string;
   founder_subscription: SubscriptionRecord | null;
+  founder_requested_plan: PlanType | null;
 };
 
 type Props = {
@@ -360,7 +361,10 @@ export function AdminCompanyCard({ company }: Props) {
           <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Founder subscription</p>
             <div className="mt-2">
-              <AdminSubscriptionSummary subscription={company.founder_subscription} />
+              <AdminSubscriptionSummary
+                subscription={company.founder_subscription}
+                requestedPlan={company.founder_requested_plan}
+              />
             </div>
           </div>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">

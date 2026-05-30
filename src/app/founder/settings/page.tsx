@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderSubscriptionSettingsCard } from "@/components/SubscriptionPanel";
+import { getRequestedPlanForProfile } from "@/lib/billing/requested-plan";
 import { requireRole } from "@/lib/supabase/auth";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
@@ -11,6 +12,7 @@ export default async function FounderSettingsPage() {
   const subscription =
     (await getSubscriptionForProfile(profile.id)) ??
     (await ensureSubscriptionForProfile({ profileId: profile.id, role: profile.role }));
+  const requestedPlan = await getRequestedPlanForProfile(profile.id);
 
   return (
     <FounderAppShell
@@ -22,7 +24,7 @@ export default async function FounderSettingsPage() {
         <p className="mt-3 text-sm leading-6 text-slate-600">Update your company profile details used across the platform.</p>
 
         <CompanySettingsForm company={company} />
-        <FounderSubscriptionSettingsCard subscription={subscription} />
+        <FounderSubscriptionSettingsCard subscription={subscription} requestedPlan={requestedPlan} />
       </section>
     </FounderAppShell>
   );
