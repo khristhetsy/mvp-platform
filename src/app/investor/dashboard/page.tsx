@@ -1,13 +1,8 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { AppShell } from "@/components/AppShell";
-import { DealCard } from "@/components/DealCard";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
-import {
-  getCompanyPledgeSummaries,
-  emptyCompanyPledgeSummary,
-} from "@/lib/data/investor-pledges";
 import {
   InvestorActivityTimelineSection,
   InvestorActivityTimelineSkeleton,
@@ -18,7 +13,6 @@ import {
   listInvestorSavedDeals,
 } from "@/lib/data/investor-interests";
 import { listMarketplaceListings } from "@/lib/data/marketplace";
-import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -32,7 +26,6 @@ function labelForRow(row: unknown) {
 export default async function InvestorDashboardPage() {
   const profile = await requireRole(["investor"]);
   const supabase = await createServerSupabaseClient();
-  const serviceSupabase = createServiceRoleClient();
 
   const [{ data: interests }, { data: intros }, { data: saved }, listings] = await Promise.all([
     listInvestorInterests(supabase, profile.id),
@@ -42,13 +35,6 @@ export default async function InvestorDashboardPage() {
   ]);
 
   const featuredListings = listings.slice(0, 3);
-  const pledgeSummaries =
-    featuredListings.length > 0
-      ? await getCompanyPledgeSummaries(
-          serviceSupabase,
-          featuredListings.map((deal) => deal.id),
-        )
-      : {};
 
   return (
     <AppShell
@@ -57,8 +43,8 @@ export default async function InvestorDashboardPage() {
       profileName={profile.full_name ?? profile.email ?? "Investor"}
       profileSubtitle="Investor account"
     >
-      <div className="mb-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-600">Investor Workspace</p>
+      <div className="mb-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Dashboard</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Track opportunities, watchlist, expressed interest, and marketplace activity.
@@ -85,17 +71,17 @@ export default async function InvestorDashboardPage() {
           accent="blue"
         />
         <MetricCard
-          label="Investments / Future"
+          label="Portfolio / Future Investments"
           value="—"
           detail="Portfolio tracking coming soon"
           accent="slate"
         />
       </section>
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-2">
-        <WorkspacePanel title="Messages" subtitle="Founder and platform communication">
-          <p className="text-sm text-slate-600">Secure messaging workspace coming soon.</p>
-          <p className="mt-3 text-sm text-slate-500">
+      <section className="mt-8 grid gap-6 xl:grid-cols-2">
+        <WorkspacePanel title="Portfolio / Future Investments" subtitle="Committed and pipeline investments">
+          <p className="text-sm text-slate-600">Portfolio tracking and future investment pipeline coming soon.</p>
+          <p className="mt-3 rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-3 text-sm text-slate-500">
             {intros?.length ?? 0} intro {intros?.length === 1 ? "request" : "requests"} pending follow-up.
           </p>
         </WorkspacePanel>
@@ -112,12 +98,12 @@ export default async function InvestorDashboardPage() {
           {featuredListings.length === 0 ? (
             <p className="text-sm text-slate-600">No published listings yet.</p>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-3">
               {featuredListings.map((deal) => (
                 <Link
                   key={deal.id}
                   href={`/deals/${deal.slug}`}
-                  className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 transition hover:border-indigo-200 hover:bg-indigo-50/40"
+                  className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-3 transition hover:border-indigo-200 hover:bg-indigo-50/50 hover:shadow-sm"
                 >
                   <p className="font-semibold text-slate-950">{deal.companyName}</p>
                   <p className="mt-1 text-xs text-slate-500">{deal.industry ?? "Private company"}</p>
@@ -128,28 +114,10 @@ export default async function InvestorDashboardPage() {
         </WorkspacePanel>
       </section>
 
-      <section className="mt-6">
+      <section className="mt-8">
         <Suspense fallback={<InvestorActivityTimelineSkeleton />}>
           <InvestorActivityTimelineSection investorId={profile.id} />
         </Suspense>
-      </section>
-
-      <section className="mt-6">
-        <WorkspacePanel title="Marketplace preview" subtitle="Featured deal cards">
-          <div className="grid gap-5 lg:grid-cols-3">
-            {featuredListings.length === 0 ? (
-              <p className="text-sm text-slate-600">No published listings yet.</p>
-            ) : (
-              featuredListings.map((deal) => (
-                <DealCard
-                  key={deal.id}
-                  deal={deal}
-                  pledgeSummary={pledgeSummaries[deal.id] ?? emptyCompanyPledgeSummary()}
-                />
-              ))
-            )}
-          </div>
-        </WorkspacePanel>
       </section>
     </AppShell>
   );

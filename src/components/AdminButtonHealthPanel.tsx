@@ -15,26 +15,26 @@ export function AdminButtonHealthPanel() {
   const health = useAdminActionHealthSafe();
 
   return (
-    <section className="mt-8 rounded-3xl border border-slate-300 bg-slate-50 p-6 shadow-sm">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
+      <div className="mb-5 flex flex-col justify-between gap-4 border-b border-slate-100 pb-4 md:flex-row md:items-start">
         <div>
-          <h2 className="text-lg font-semibold text-slate-950">Admin Button Health Check</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Permanent diagnostics for admin API actions. Use this before guessing why a button failed.
+          <h2 className="text-base font-semibold text-slate-950">System Health</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Admin API diagnostics and configuration status.
           </p>
         </div>
         <button
           type="button"
           disabled={health.healthCheckLoading}
           onClick={() => void health.runHealthCheck()}
-          className="shrink-0 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          className="shrink-0 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-50"
         >
           {health.healthCheckLoading ? "Testing..." : "Test Admin API"}
         </button>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-4">
           <HealthRow label="Current user id" value={health.userId} />
           <HealthRow label="Current role" value={health.userRole} />
           <HealthRow
@@ -46,7 +46,7 @@ export function AdminButtonHealthPanel() {
           <HealthRow label="Last HTTP status" value={health.lastHttpStatus} />
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-4">
           {health.lastErrorMessage ? (
             <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
               <p className="font-semibold">Last error</p>

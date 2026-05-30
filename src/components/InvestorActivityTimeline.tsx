@@ -21,9 +21,12 @@ function formatDate(value: string) {
 
 export function InvestorActivityTimelineSkeleton() {
   return (
-    <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="h-6 w-48 animate-pulse rounded bg-slate-200" />
-      <div className="mt-4 space-y-4">
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
+      <div className="mb-5 border-b border-slate-100 pb-4">
+        <div className="h-5 w-36 animate-pulse rounded bg-slate-200" />
+        <div className="mt-2 h-4 w-56 animate-pulse rounded bg-slate-100" />
+      </div>
+      <div className="space-y-4">
         {[0, 1, 2].map((key) => (
           <div key={key} className="space-y-2 border-b border-slate-100 pb-4 last:border-b-0">
             <div className="h-4 w-32 animate-pulse rounded bg-slate-100" />
@@ -38,11 +41,13 @@ export function InvestorActivityTimelineSkeleton() {
 
 export function InvestorActivityTimeline({ activities }: { activities: InvestorActivityRow[] }) {
   return (
-    <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-950">Your activity</h2>
-      <p className="mt-1 text-sm text-slate-600">A timeline of your marketplace actions.</p>
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
+      <div className="mb-5 border-b border-slate-100 pb-4">
+        <h2 className="text-base font-semibold text-slate-950">Recent Activity</h2>
+        <p className="mt-1 text-sm text-slate-500">A timeline of your marketplace actions.</p>
+      </div>
 
-      <div className="mt-4 divide-y divide-slate-100">
+      <div className="divide-y divide-slate-100">
         {activities.length === 0 ? (
           <p className="py-3 text-sm text-slate-500">
             No activity yet. Save a deal or express interest to see your timeline here.
@@ -51,7 +56,7 @@ export function InvestorActivityTimeline({ activities }: { activities: InvestorA
           activities.map((row) => (
             <div key={row.id} className="py-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-800">
                   {formatActivityLabel(row.activity_type)}
                 </span>
               </div>

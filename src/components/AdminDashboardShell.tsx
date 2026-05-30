@@ -49,20 +49,15 @@ export function AdminDashboardShell({
       serviceRoleConfigured={serviceRoleConfigured}
     >
       <div>
-        <div className="mb-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-600">Admin Workspace</p>
+        <div className="mb-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Admin Workspace</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Dashboard</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Manage submitted companies, pending diligence reviews, document uploads, and approval decisions.
           </p>
         </div>
 
-        <section className="mb-6">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Platform Health</h2>
-          <AdminButtonHealthPanel />
-        </section>
-
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <MetricCard label="Total Companies" value={String(metrics.companies)} detail="Total company submissions" accent="indigo" />
           <MetricCard label="Total Investors" value="—" detail="Investor directory metrics coming soon" accent="violet" />
           <MetricCard
@@ -71,23 +66,30 @@ export function AdminDashboardShell({
             detail="Live on marketplace"
             accent="blue"
           />
-          <MetricCard label="Total Capital Target" value="—" detail="Aggregate raise targets coming soon" accent="slate" />
           <MetricCard
             label="Platform Health"
             value={serviceRoleConfigured ? "Online" : "Check config"}
             detail={`${metrics.documents} documents · ${metrics.pitchDecks} pitch decks`}
-            accent="indigo"
+            accent="slate"
           />
         </section>
 
         {pendingCount > 0 ? (
-          <section className="mt-8 rounded-3xl border border-amber-200 bg-amber-50 p-6">
-            <h2 className="text-lg font-semibold text-amber-950">Pending review queue</h2>
+          <section className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
+            <h2 className="text-base font-semibold text-amber-950">Pending review queue</h2>
             <p className="mt-1 text-sm text-amber-900">
               {pendingCount} {pendingCount === 1 ? "company needs" : "companies need"} a decision.
             </p>
           </section>
         ) : null}
+
+        <section className="mt-8">
+          <AdminButtonHealthPanel />
+        </section>
+
+        <section className="mt-8">
+          <AdminInvestorCrmTimeline activities={crmActivity} />
+        </section>
 
         <AdminInvestorActivity
           interests={investorActivity.interests}
@@ -95,16 +97,14 @@ export function AdminDashboardShell({
           savedDeals={investorActivity.savedDeals}
         />
 
-        <AdminInvestorCrmTimeline activities={crmActivity} />
-
-        <section className="mt-6">
+        <section className="mt-8">
           <WorkspacePanel
             title="Platform Overview"
             subtitle={`${metrics.pendingReviews} pending reviews · ${companyCards.length} companies loaded`}
           >
             <div className="grid gap-5">
               {companyCards.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-600">
+                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-600">
                   No companies submitted yet.
                 </div>
               ) : (

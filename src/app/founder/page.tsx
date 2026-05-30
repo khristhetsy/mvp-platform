@@ -43,9 +43,9 @@ export default async function FounderDashboardPage() {
       profileName={profile.full_name ?? profile.email ?? "Founder"}
       profileSubtitle={companyName}
     >
-      <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+      <div className="mb-8 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-600">Founder Workspace</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Founder Workspace</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{companyName}</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Track readiness, capital raise progress, investor engagement, and marketplace publication.
@@ -54,13 +54,13 @@ export default async function FounderDashboardPage() {
         <div className="flex flex-wrap gap-2">
           <Link
             href="/founder/settings"
-            className="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm"
+            className="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:from-indigo-700 hover:to-violet-700"
           >
             Company settings
           </Link>
           <Link
             href="/founder/onboarding"
-            className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800"
+            className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-slate-300"
           >
             Update profile
           </Link>
@@ -94,23 +94,7 @@ export default async function FounderDashboardPage() {
         />
       </section>
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-2">
-        <WorkspacePanel title="Tasks Due" subtitle="Priority actions to improve readiness">
-          <div className="grid gap-3">
-            {founderPipeline.nextSteps.map((step) => (
-              <div key={step} className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800">
-                {step}
-              </div>
-            ))}
-          </div>
-          <Link
-            href="/founder/documents"
-            className="mt-4 inline-flex rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-900"
-          >
-            Upload pitch deck
-          </Link>
-        </WorkspacePanel>
-
+      <section className="mt-8 grid gap-6 xl:grid-cols-2">
         <WorkspacePanel title="Capital Raise Overview" subtitle="Non-binding marketplace interest">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 p-4 ring-1 ring-indigo-100">
@@ -130,9 +114,7 @@ export default async function FounderDashboardPage() {
             Pledges are indicative and not legally committed investment.
           </p>
         </WorkspacePanel>
-      </section>
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-2">
         <WorkspacePanel title="Investor Pipeline" subtitle="Read-only activity on your listing">
           {investorActivity ? (
             <div className="grid gap-4 sm:grid-cols-3">
@@ -141,8 +123,8 @@ export default async function FounderDashboardPage() {
                 ["Intro requests", investorActivity.introRequests.length],
                 ["Saved deals", investorActivity.savedDeals.length],
               ].map(([title, count]) => (
-                <div key={title as string} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                  <p className="text-sm font-medium text-slate-600">{title as string}</p>
+                <div key={title as string} className="rounded-xl border border-slate-200/80 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{title as string}</p>
                   <p className="mt-2 text-2xl font-semibold text-slate-950">{count as number}</p>
                 </div>
               ))}
