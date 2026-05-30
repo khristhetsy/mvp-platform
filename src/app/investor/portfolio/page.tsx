@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/AppShell";
+import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
 import { investorCompanyLabel, loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
@@ -55,6 +56,7 @@ export default async function InvestorPortfolioPage() {
         </p>
       </div>
 
+      <InvestorFeatureGate>
       <WorkspacePanel title="Completed investments" subtitle="Portfolio holdings">
         <p className="text-sm leading-6 text-slate-600">
           Portfolio holdings will appear here after completed investments.
@@ -83,6 +85,7 @@ export default async function InvestorPortfolioPage() {
           </div>
         </WorkspacePanel>
       </section>
+      </InvestorFeatureGate>
     </AppShell>
   );
 }

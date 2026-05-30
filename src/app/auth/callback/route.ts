@@ -43,7 +43,9 @@ export async function GET(request: Request) {
         next ||
         (isNewProfile && profile.role === "founder"
           ? "/founder/onboarding"
-          : dashboardForRole(profile.role));
+          : isNewProfile && profile.role === "investor"
+            ? "/investor/onboarding"
+            : dashboardForRole(profile.role));
 
       return NextResponse.redirect(new URL(redirectPath, requestUrl.origin));
     }

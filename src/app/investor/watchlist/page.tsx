@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
+import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { investorCompanyLabel, loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
@@ -26,6 +27,7 @@ export default async function InvestorWatchlistPage() {
         </p>
       </div>
 
+      <InvestorFeatureGate>
       <WorkspacePanel
         title="Saved deals"
         subtitle={`${savedDeals.length} ${savedDeals.length === 1 ? "company" : "companies"} on your watchlist`}
@@ -68,6 +70,7 @@ export default async function InvestorWatchlistPage() {
           })}
         </div>
       </WorkspacePanel>
+      </InvestorFeatureGate>
     </AppShell>
   );
 }

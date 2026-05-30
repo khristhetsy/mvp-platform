@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { canInvestorPerformSensitiveActions } from "@/lib/investor/access";
+import { getInvestorProfileByProfileId } from "@/lib/investor/profile";
 import type { Profile, UserRole } from "@/lib/supabase/types";
 import { normalizeUserRole } from "@/lib/api/admin";
 
-export async function requireInvestorApi() {
+export async function requireInvestorApi(options?: { requireApproved?: boolean }) {
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
@@ -37,10 +39,31 @@ export async function requireInvestorApi() {
     };
   }
 
+  const investorProfile = await getInvestorProfileByProfileId(profile.id);
+
+  if (options?.requireApproved && !canInvestorPerformSensitiveActions(investorProfile?.approval_status)) {
+    return {
+      error: NextResponse.json(
+        {
+          error:
+            "Your investor account is pending admin approval. Complete onboarding and wait for approval before performing this action.",
+          code: "investor_pending_approval",
+          approvalStatus: investorProfile?.approval_status ?? "draft",
+        },
+        { status: 403 },
+      ),
+    };
+  }
+
   return {
     supabase,
     serviceSupabase: createServiceRoleClient(),
     profile,
     investorId: user.id,
+    investorProfile,
   };
+}
+
+export async function requireInvestorApprovedApi() {
+  return requireInvestorApi({ requireApproved: true });
 }

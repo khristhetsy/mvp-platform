@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
+import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { MetricCard } from "@/components/MetricCard";
 import { InvestorActivityTimeline } from "@/components/InvestorActivityTimeline";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
@@ -45,6 +46,7 @@ export default async function InvestorAnalyticsPage() {
         </p>
       </div>
 
+      <InvestorFeatureGate>
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <MetricCard
           label="Saved deals"
@@ -118,6 +120,7 @@ export default async function InvestorAnalyticsPage() {
 
         <InvestorActivityTimeline activities={crmActivity.rows} error={crmActivity.error} />
       </section>
+      </InvestorFeatureGate>
     </AppShell>
   );
 }

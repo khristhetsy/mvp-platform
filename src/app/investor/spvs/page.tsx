@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/AppShell";
+import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 
@@ -22,12 +23,14 @@ export default async function InvestorSpvsPage() {
         </p>
       </div>
 
+      <InvestorFeatureGate>
       <WorkspacePanel title="SPV participation" subtitle="No SPV records available yet">
         <p className="text-sm leading-6 text-slate-600">
           SPV participation will appear here when you join or are invited to an SPV.
         </p>
         <p className="mt-3 text-sm text-slate-500">Coming soon — SPV subscription and allocation tracking is not yet available.</p>
       </WorkspacePanel>
+      </InvestorFeatureGate>
     </AppShell>
   );
 }

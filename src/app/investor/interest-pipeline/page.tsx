@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/AppShell";
+import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { InvestorActivityTimeline } from "@/components/InvestorActivityTimeline";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
@@ -54,6 +55,7 @@ export default async function InvestorInterestPipelinePage() {
         </p>
       </div>
 
+      <InvestorFeatureGate>
       <section className="grid gap-6 xl:grid-cols-2">
         <WorkspacePanel title="Expressed interest" subtitle={`${interests.length} interest records`}>
           <div className="divide-y divide-slate-100">
@@ -95,6 +97,7 @@ export default async function InvestorInterestPipelinePage() {
       <section className="mt-8">
         <InvestorActivityTimeline activities={crmActivity.rows} error={crmActivity.error} />
       </section>
+      </InvestorFeatureGate>
     </AppShell>
   );
 }

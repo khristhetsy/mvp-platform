@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { ensureInvestorProfileForUser } from "@/lib/investor/profile";
 import { ensureSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
 import type { PlanType } from "@/lib/subscriptions/plans";
 import type { Company, Profile, UserRole } from "@/lib/supabase/types";
@@ -172,8 +173,10 @@ export async function ensureUserOnboarding(input: {
     requestedPlan: input.requestedPlan,
   });
   const company = await ensureFounderCompanyForUser(profile);
+  const investorProfile =
+    profile.role === "investor" ? await ensureInvestorProfileForUser(profile.id) : null;
 
-  return { profile, company, subscription };
+  return { profile, company, subscription, investorProfile };
 }
 
 export async function userHasCompanyAccess(userId: string, companyId: string) {

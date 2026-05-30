@@ -132,3 +132,29 @@ export const adminReviewActionSchema = z.object({
   action: z.enum(["approve", "reject", "changes_requested"]),
   feedback: z.string().max(5000).optional(),
 });
+
+export const investorOnboardingSchema = z
+  .object({
+    investor_type: z.enum(["individual", "angel_group", "family_office", "venture_fund", "corporate", "other"]),
+    firm_name: z.string().max(200).optional(),
+    check_size_min: z.coerce.number().nonnegative().optional(),
+    check_size_max: z.coerce.number().positive().optional(),
+    preferred_sectors: z.string().min(2),
+    preferred_geographies: z.string().min(2),
+    preferred_stages: z.string().min(2),
+    accredited_status: z.boolean(),
+    investment_thesis: z.string().min(20).max(5000),
+    contact_preference: z.enum(["platform", "email", "phone"]),
+    submit: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.submit && !data.accredited_status) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Accredited investor self-attestation is required to submit.",
+        path: ["accredited_status"],
+      });
+    }
+  });
+
+export const adminInvestorReviewActionSchema = adminReviewActionSchema;

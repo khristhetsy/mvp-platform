@@ -213,6 +213,67 @@ export type Database = {
         };
         Relationships: [];
       };
+      investor_profiles: {
+        Row: {
+          id: string;
+          profile_id: string;
+          investor_type: string | null;
+          firm_name: string | null;
+          check_size_min: number | null;
+          check_size_max: number | null;
+          preferred_sectors: string[];
+          preferred_geographies: string[];
+          preferred_stages: string[];
+          accredited_status: boolean;
+          investment_thesis: string | null;
+          contact_preference: string | null;
+          approval_status: string;
+          admin_feedback: string | null;
+          submitted_at: string | null;
+          approved_at: string | null;
+          approved_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          investor_type?: string | null;
+          firm_name?: string | null;
+          check_size_min?: number | null;
+          check_size_max?: number | null;
+          preferred_sectors?: string[];
+          preferred_geographies?: string[];
+          preferred_stages?: string[];
+          accredited_status?: boolean;
+          investment_thesis?: string | null;
+          contact_preference?: string | null;
+          approval_status?: string;
+          admin_feedback?: string | null;
+          submitted_at?: string | null;
+          approved_at?: string | null;
+          approved_by?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          investor_type?: string | null;
+          firm_name?: string | null;
+          check_size_min?: number | null;
+          check_size_max?: number | null;
+          preferred_sectors?: string[];
+          preferred_geographies?: string[];
+          preferred_stages?: string[];
+          accredited_status?: boolean;
+          investment_thesis?: string | null;
+          contact_preference?: string | null;
+          approval_status?: string;
+          admin_feedback?: string | null;
+          submitted_at?: string | null;
+          approved_at?: string | null;
+          approved_by?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       founder_remediation_tasks: {
         Row: {
           id: string;

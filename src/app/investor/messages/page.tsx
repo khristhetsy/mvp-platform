@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/AppShell";
+import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { investorCompanyLabel, loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
@@ -42,6 +43,7 @@ export default async function InvestorMessagesPage() {
         </p>
       </div>
 
+      <InvestorFeatureGate>
       <section className="grid gap-6 xl:grid-cols-2">
         <WorkspacePanel title="Intro requests" subtitle={`${workspace.introRequests.length} records`}>
           <div className="divide-y divide-slate-100">
@@ -77,6 +79,7 @@ export default async function InvestorMessagesPage() {
           </div>
         </WorkspacePanel>
       </section>
+      </InvestorFeatureGate>
     </AppShell>
   );
 }

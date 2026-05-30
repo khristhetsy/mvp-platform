@@ -3,14 +3,17 @@ import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
 import { InvestorActivityTimeline } from "@/components/InvestorActivityTimeline";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { InvestorApprovalBanner } from "@/components/InvestorApprovalBanner";
 import { investorCompanyLabel, loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
 import { listMarketplaceListings } from "@/lib/data/marketplace";
+import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function InvestorDashboardPage() {
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
+  const { investorProfile } = await loadInvestorWorkspaceContext(profile);
 
   const [{ workspace, crmActivity }, listings] = await Promise.all([
     loadInvestorWorkspacePageData(investorId),
@@ -35,6 +38,8 @@ export default async function InvestorDashboardPage() {
           Track opportunities, watchlist, expressed interest, and marketplace activity.
         </p>
       </div>
+
+      <InvestorApprovalBanner investorProfile={investorProfile} />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard

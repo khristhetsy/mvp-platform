@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireInvestorApi } from "@/lib/api/investor";
+import { requireInvestorApprovedApi } from "@/lib/api/investor";
 import { writeAuditLog } from "@/lib/data/audit";
 import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { submitInvestorPledge } from "@/lib/data/investor-pledges";
 import { investorPledgeSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
-  const auth = await requireInvestorApi();
+  const auth = await requireInvestorApprovedApi();
 
   if ("error" in auth) {
     return auth.error;
