@@ -1,4 +1,5 @@
-import { AppShell } from "@/components/AppShell";
+import { FounderAppShell } from "@/components/FounderAppShell";
+import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { MetricCard } from "@/components/MetricCard";
 import { formatError, RouteDataDiagnostics } from "@/components/RouteDataDiagnostics";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
@@ -48,12 +49,11 @@ export default async function FounderCapitalRaisePage() {
   const raiseStatus = company?.is_published ? "Published" : (company?.review_status ?? company?.status ?? "Draft");
 
   return (
-    <AppShell
-      role="FOUNDER"
-      workspace="founder"
+    <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
       profileSubtitle={company?.company_name ?? "Your company"}
     >
+      <FounderFeatureGate featureKey="capital_raise">
       <RouteDataDiagnostics
         route="/founder/capital-raise"
         userId={profile.id}
@@ -186,6 +186,7 @@ export default async function FounderCapitalRaisePage() {
           </section>
         </>
       )}
-    </AppShell>
+      </FounderFeatureGate>
+    </FounderAppShell>
   );
 }

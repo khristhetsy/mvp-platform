@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { AppShell } from "@/components/AppShell";
+import { FounderAppShell } from "@/components/FounderAppShell";
+import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { DocumentUploadForm } from "@/components/DocumentUploadForm";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { requiredDocumentTypes } from "@/lib/mock-data";
@@ -15,12 +16,11 @@ export default async function DocumentUploadPage() {
   const maxUploadBytes = 25 * 1024 * 1024;
 
   return (
-    <AppShell
-      role="FOUNDER"
-      workspace="founder"
+    <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
       profileSubtitle={company?.company_name ?? "Your company"}
     >
+      <FounderFeatureGate featureKey="documents">
       <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Secure upload</p>
@@ -69,6 +69,7 @@ export default async function DocumentUploadPage() {
           </Link>
         </div>
       </section>
-    </AppShell>
+      </FounderFeatureGate>
+    </FounderAppShell>
   );
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AppShell } from "@/components/AppShell";
+import { FounderAppShell } from "@/components/FounderAppShell";
 
 const fields = [
   ["Company name", "name"],
@@ -10,9 +10,9 @@ const fields = [
   ["Revenue stage", "revenueStage"],
 ];
 
-export default function FounderOnboardingPage() {
+export default async function FounderOnboardingPage() {
   return (
-    <AppShell role="FOUNDER">
+    <FounderAppShell>
       <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
         <div className="max-w-3xl">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Company onboarding</p>
@@ -55,6 +55,6 @@ export default function FounderOnboardingPage() {
           </div>
         </form>
       </section>
-    </AppShell>
+    </FounderAppShell>
   );
 }

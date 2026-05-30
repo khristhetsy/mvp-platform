@@ -5,7 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { UserRole } from "@/lib/supabase/types";
 
-const dashboardByRole: Record<UserRole, string> = {
+const signUpDestinationByRole: Record<UserRole, string> = {
+  founder: "/founder/onboarding",
+  investor: "/investor/dashboard",
+  admin: "/admin/dashboard",
+  analyst: "/admin/dashboard",
+};
+
+const signInDestinationByRole: Record<UserRole, string> = {
   founder: "/founder/dashboard",
   investor: "/investor/dashboard",
   admin: "/admin/dashboard",
@@ -46,7 +53,7 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
         return;
       }
 
-      router.push(dashboardByRole[role]);
+      router.push(signUpDestinationByRole[role]);
       router.refresh();
       return;
     }
@@ -87,7 +94,7 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
     const safeNext = next?.startsWith("/") && !next.startsWith("//") ? next : null;
 
     setIsLoading(false);
-    router.push(safeNext || dashboardByRole[profile.role]);
+    router.push(safeNext || signInDestinationByRole[profile.role]);
     router.refresh();
   }
 

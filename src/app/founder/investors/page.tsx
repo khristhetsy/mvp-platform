@@ -1,4 +1,5 @@
-import { AppShell } from "@/components/AppShell";
+import { FounderAppShell } from "@/components/FounderAppShell";
+import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { buildFounderInvestorCrmView, type FounderInvestorRelationRow } from "@/lib/data/investor-crm";
@@ -110,12 +111,11 @@ export default async function FounderInvestorsPage() {
   }
 
   return (
-    <AppShell
-      role="FOUNDER"
-      workspace="founder"
+    <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
       profileSubtitle={company?.company_name ?? "Your company"}
     >
+      <FounderFeatureGate featureKey="investor_access">
       <div className="mb-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Founder Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Investors</h1>
@@ -202,6 +202,7 @@ export default async function FounderInvestorsPage() {
           </section>
         </>
       )}
-    </AppShell>
+      </FounderFeatureGate>
+    </FounderAppShell>
   );
 }

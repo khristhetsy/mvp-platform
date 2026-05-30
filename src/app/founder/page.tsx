@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { AppShell } from "@/components/AppShell";
+import { FounderAppShell } from "@/components/FounderAppShell";
+import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listCompanyDocuments } from "@/lib/data/documents";
@@ -37,12 +38,11 @@ export default async function FounderDashboardPage() {
   const raiseProgress = company?.is_published ? "Published" : founderPipeline.campaignStatus;
 
   return (
-    <AppShell
-      role="FOUNDER"
-      workspace="founder"
+    <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
       profileSubtitle={companyName}
     >
+      <FounderFeatureGate featureKey="dashboard">
       <div className="mb-8 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Founder Workspace</p>
@@ -157,6 +157,7 @@ export default async function FounderDashboardPage() {
           </div>
         </WorkspacePanel>
       </section>
-    </AppShell>
+      </FounderFeatureGate>
+    </FounderAppShell>
   );
 }

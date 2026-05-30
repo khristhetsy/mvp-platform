@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { dashboardForRole } from "@/lib/supabase/auth";
 import { ensureUserOnboarding } from "@/lib/onboarding/ensure-founder-setup";
+import { parseRequestedPlan } from "@/lib/subscriptions/plans";
 import type { UserRole } from "@/lib/supabase/types";
 
 export async function GET(request: Request) {
@@ -28,14 +29,23 @@ export async function GET(request: Request) {
       const fullName =
         existingProfile?.full_name ?? (user.user_metadata?.full_name as string | undefined) ?? null;
 
+      const isNewProfile = !existingProfile;
+
       const { profile } = await ensureUserOnboarding({
         userId: user.id,
         email: user.email ?? null,
         fullName,
         role,
+        requestedPlan: parseRequestedPlan(user.user_metadata?.requested_plan),
       });
 
-      return NextResponse.redirect(new URL(next || dashboardForRole(profile.role), requestUrl.origin));
+      const redirectPath =
+        next ||
+        (isNewProfile && profile.role === "founder"
+          ? "/founder/onboarding"
+          : dashboardForRole(profile.role));
+
+      return NextResponse.redirect(new URL(redirectPath, requestUrl.origin));
     }
   }
 

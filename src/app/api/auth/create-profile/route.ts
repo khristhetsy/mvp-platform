@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ensureUserOnboarding } from "@/lib/onboarding/ensure-founder-setup";
+import { parseRequestedPlan } from "@/lib/subscriptions/plans";
 import type { UserRole } from "@/lib/supabase/types";
 
 export async function POST(request: Request) {
@@ -17,12 +18,16 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
     const role = (body.role as UserRole | undefined) ?? "founder";
+    const requestedPlan =
+      parseRequestedPlan(body.requestedPlan) ??
+      parseRequestedPlan(user.user_metadata?.requested_plan);
 
     const { profile, company } = await ensureUserOnboarding({
       userId: user.id,
       email: user.email ?? null,
       fullName: (body.fullName as string | undefined) ?? (user.user_metadata?.full_name as string | undefined) ?? null,
       role,
+      requestedPlan,
     });
 
     return NextResponse.json({ profile, company }, { status: 201 });

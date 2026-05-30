@@ -61,6 +61,22 @@ export type CompanyMember = {
   created_at: string;
 };
 
+export type Subscription = {
+  id: string;
+  profile_id: string;
+  role: string;
+  plan_type: string;
+  subscription_status: string;
+  trial_started_at: string | null;
+  trial_ends_at: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  monthly_price_cents: number;
+  currency: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Campaign = {
   id: string;
   company_id: string;
@@ -98,6 +114,13 @@ export type Database = {
         Row: CompanyMember;
         Insert: Pick<CompanyMember, "company_id" | "user_id"> & Partial<Pick<CompanyMember, "role">>;
         Update: Partial<Pick<CompanyMember, "role">>;
+        Relationships: [];
+      };
+      subscriptions: {
+        Row: Subscription;
+        Insert: Omit<Partial<Subscription>, "id" | "created_at" | "updated_at"> &
+          Pick<Subscription, "profile_id" | "role" | "plan_type" | "subscription_status">;
+        Update: Partial<Omit<Subscription, "id" | "profile_id" | "created_at">>;
         Relationships: [];
       };
       documents: {

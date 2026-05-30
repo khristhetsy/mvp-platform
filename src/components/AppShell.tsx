@@ -25,12 +25,14 @@ export function AppShell({
   workspace,
   profileName = "CapitalOS User",
   profileSubtitle,
+  planBadge,
 }: Readonly<{
   children: React.ReactNode;
   role?: Role;
   workspace?: WorkspaceId;
   profileName?: string;
   profileSubtitle?: string;
+  planBadge?: React.ReactNode;
 }>) {
   const insideAppShell = useContext(AppShellContext);
   const pathname = usePathname();
@@ -50,7 +52,7 @@ export function AppShell({
     return (
       <AppShellContext.Provider value={true}>
         <div className="flex min-h-screen w-full flex-1 bg-slate-100 text-slate-950">
-          <WorkspaceSidebar workspace={activeWorkspace} />
+          <WorkspaceSidebar workspace={activeWorkspace} planBadge={planBadge} />
           <div className="flex min-w-0 flex-1 flex-col">{children}</div>
         </div>
       </AppShellContext.Provider>

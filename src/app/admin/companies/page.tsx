@@ -4,6 +4,7 @@ import { AdminCompanyCard } from "@/components/AdminCompanyCard";
 import { formatError, RouteDataDiagnostics } from "@/components/RouteDataDiagnostics";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listAdminCompanies, mapAdminCompaniesToCardData } from "@/lib/data/admin";
+import { listSubscriptionsByProfileIds } from "@/lib/subscriptions/get-subscription";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -21,7 +22,9 @@ export default async function AdminCompaniesPage() {
     const supabase = createServiceRoleClient();
     const companies = await listAdminCompanies(supabase);
     rawCompanyCount = companies.length;
-    companyCards = mapAdminCompaniesToCardData(companies);
+    const founderIds = companies.map((company) => company.founder_id).filter(Boolean);
+    const subscriptionsByProfileId = await listSubscriptionsByProfileIds(founderIds);
+    companyCards = mapAdminCompaniesToCardData(companies, subscriptionsByProfileId);
   } catch (error) {
     loadError = formatError(error);
   }

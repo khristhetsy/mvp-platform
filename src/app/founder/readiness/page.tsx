@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { AppShell } from "@/components/AppShell";
+import { FounderAppShell } from "@/components/FounderAppShell";
+import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listCompanyDocuments } from "@/lib/data/documents";
@@ -77,12 +78,11 @@ export default async function FounderReadinessPage() {
   const companyName = company?.company_name ?? "Your company";
 
   return (
-    <AppShell
-      role="FOUNDER"
-      workspace="founder"
+    <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
       profileSubtitle={companyName}
     >
+      <FounderFeatureGate featureKey="readiness">
       <div className="mb-6">
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-600">Founder Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Readiness</h1>
@@ -268,6 +268,7 @@ export default async function FounderReadinessPage() {
           </section>
         </>
       )}
-    </AppShell>
+      </FounderFeatureGate>
+    </FounderAppShell>
   );
 }

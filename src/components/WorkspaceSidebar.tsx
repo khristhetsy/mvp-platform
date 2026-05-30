@@ -1,11 +1,15 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { WorkspaceId } from "@/lib/workspace-nav";
 import { getWorkspaceNav, workspaceLabel } from "@/lib/workspace-nav";
 
-export function WorkspaceSidebar({ workspace }: Readonly<{ workspace: WorkspaceId }>) {
+export function WorkspaceSidebar({
+  workspace,
+  planBadge,
+}: Readonly<{ workspace: WorkspaceId; planBadge?: ReactNode }>) {
   const pathname = usePathname();
   const items = getWorkspaceNav(workspace);
   const label = workspaceLabel(workspace);
@@ -40,6 +44,7 @@ export function WorkspaceSidebar({ workspace }: Readonly<{ workspace: WorkspaceI
         })}
       </nav>
       <div className="border-t border-slate-200/80 bg-white px-5 py-4">
+        {planBadge ? <div className="mb-3">{planBadge}</div> : null}
         <p className="text-xs leading-5 text-slate-500">One platform. Specialized workspaces.</p>
       </div>
     </aside>

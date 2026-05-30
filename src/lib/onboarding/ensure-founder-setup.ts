@@ -1,4 +1,6 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { ensureSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
+import type { PlanType } from "@/lib/subscriptions/plans";
 import type { Company, Profile, UserRole } from "@/lib/supabase/types";
 
 function defaultCompanyName(fullName: string | null, email: string | null) {
@@ -161,11 +163,17 @@ export async function ensureUserOnboarding(input: {
   email: string | null;
   fullName: string | null;
   role: UserRole;
+  requestedPlan?: PlanType | null;
 }) {
   const profile = await ensureProfileForUser(input);
+  const subscription = await ensureSubscriptionForProfile({
+    profileId: profile.id,
+    role: profile.role,
+    requestedPlan: input.requestedPlan,
+  });
   const company = await ensureFounderCompanyForUser(profile);
 
-  return { profile, company };
+  return { profile, company, subscription };
 }
 
 export async function userHasCompanyAccess(userId: string, companyId: string) {
