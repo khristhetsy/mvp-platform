@@ -40,6 +40,7 @@ export const adminWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/admin/billing", label: "Billing" },
   { href: "/admin/diligence", label: "Diligence" },
   { href: "/admin/compliance", label: "Compliance" },
+  { href: "/admin/reports", label: "Reports" },
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/system-health", label: "System Health" },
 ];

@@ -327,6 +327,29 @@ export const complianceEventUpdateSchema = z.object({
   severity: z.enum(["low", "medium", "high", "critical"]).optional(),
 });
 
+export const adminReportGenerateSchema = z.object({
+  reportType: z.enum([
+    "compliance",
+    "founder_readiness",
+    "investor_activity",
+    "outreach_activity",
+    "messaging_meetings",
+    "subscription_upgrade",
+  ]),
+  format: z.enum(["json", "csv"]).default("json"),
+  preview: z.boolean().optional(),
+  filters: z
+    .object({
+      dateFrom: z.string().optional(),
+      dateTo: z.string().optional(),
+      companyId: z.string().uuid().optional(),
+      founderId: z.string().uuid().optional(),
+      investorId: z.string().uuid().optional(),
+      severity: z.enum(["low", "medium", "high", "critical"]).optional(),
+    })
+    .optional(),
+});
+
 export const outreachCampaignQueueSchema = z.object({
   action: z.literal("queue"),
 });

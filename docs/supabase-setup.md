@@ -58,6 +58,10 @@ Run migration `0027_compliance_events.sql` before using `/admin/compliance`.
 
 This adds the `compliance_events` table (staff-only RLS) for internal risk flags, outreach/messaging/social compliance alerts, and admin review actions. Events are created by deterministic scanners on page load and by key API paths (social draft flag, outreach without readiness, investor rejection). Founders do not see `internal_notes`.
 
+## Admin audit export & reporting (Phase 1)
+
+Use `/admin/reports` (staff-only) to generate JSON or CSV internal summaries from existing tables. Each export writes an `audit_logs` row (`admin.report_generated`). OAuth tokens and private founder contact PII are excluded from exports.
+
 ## Data model
 
 ```text
