@@ -1,15 +1,31 @@
 import { AppShell } from "@/components/AppShell";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { MessagingThreadWorkspace } from "@/components/MessagingThreadWorkspace";
-import { listInvestorMessageThreads } from "@/lib/messaging/threads";
+import {
+  getMessageThreadDetail,
+  listInvestorMessageThreads,
+  userCanAccessThread,
+} from "@/lib/messaging/threads";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
+import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default async function InvestorMessagesPage() {
+type PageProps = { params: Promise<{ threadId: string }> };
+
+export default async function InvestorMessageThreadPage({ params }: PageProps) {
+  const { threadId } = await params;
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
-  const threadsResult = await listInvestorMessageThreads(supabase, investorId);
-  const threads = threadsResult.data ?? [];
+
+  const [threadsResult, detailResult] = await Promise.all([
+    listInvestorMessageThreads(supabase, investorId),
+    getMessageThreadDetail(supabase, threadId),
+  ]);
+
+  const detail = detailResult.data;
+  if (!detail || !userCanAccessThread(detail.thread, profile.id, profile.role)) {
+    notFound();
+  }
 
   return (
     <AppShell
@@ -21,18 +37,15 @@ export default async function InvestorMessagesPage() {
       <div className="mb-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Messages</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Controlled conversations with founders after intro requests, follow-ups, and meeting scheduling.
-        </p>
       </div>
 
       <InvestorFeatureGate>
         <MessagingThreadWorkspace
           role="investor"
           basePath="/investor/messages"
-          threads={threads}
-          selectedThreadId={null}
-          detail={null}
+          threads={threadsResult.data ?? []}
+          selectedThreadId={threadId}
+          detail={detail}
           currentUserId={profile.id}
         />
       </InvestorFeatureGate>

@@ -204,7 +204,7 @@ export function getFounderPathFeature(pathname: string): FeatureKey | null {
     return "documents";
   }
 
-  if (pathname.startsWith("/founder/investors")) {
+  if (pathname.startsWith("/founder/investors") || pathname.startsWith("/founder/messages")) {
     return "investor_access";
   }
 

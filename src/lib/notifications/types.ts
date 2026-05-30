@@ -17,7 +17,13 @@ export type NotificationType =
   | "company_published"
   | "trial_ending_soon"
   | "trial_expired"
-  | "upgrade_request_submitted";
+  | "upgrade_request_submitted"
+  | "message_thread_created"
+  | "message_received"
+  | "meeting_requested"
+  | "meeting_accepted"
+  | "meeting_declined"
+  | "meeting_canceled";
 
 export type NotificationRecord = {
   id: string;

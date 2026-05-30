@@ -3,6 +3,7 @@ import { requireInvestorApprovedApi } from "@/lib/api/investor";
 import { writeAuditLog } from "@/lib/data/audit";
 import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { createIcfoFollowUpRequest } from "@/lib/data/investor-interests";
+import { openMessageThreadFromSignal } from "@/lib/messaging/open-thread-from-signal";
 import { notifyFounderInvestorFollowUp } from "@/lib/notifications/investor-events";
 import { investorIntroRequestSchema } from "@/lib/validation";
 
@@ -64,6 +65,17 @@ export async function POST(request: Request) {
     activityType: "follow_up_requested",
     metadata: { entityId: data.id, message: data.message },
   });
+
+  if (data.company_id) {
+    void openMessageThreadFromSignal(auth.serviceSupabase, {
+      companyId: data.company_id,
+      investorId: auth.profile.id,
+      createdBy: auth.profile.id,
+      introRequestId: data.id,
+      messageType: "follow_up",
+      body: data.message?.trim() || "Investor requested CapitalOS platform follow-up.",
+    });
+  }
 
   return NextResponse.json({ followUp: data });
 }

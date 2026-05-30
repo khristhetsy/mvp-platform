@@ -2,7 +2,9 @@ import { AppShell } from "@/components/AppShell";
 import { AdminInvestorActivity } from "@/components/AdminInvestorActivity";
 import { AdminInvestorCrmTimeline } from "@/components/AdminInvestorCrmTimeline";
 import { formatError, RouteDataDiagnostics } from "@/components/RouteDataDiagnostics";
+import { AdminMessageThreadsPanel } from "@/components/AdminMessageThreadsPanel";
 import { listRecentInvestorCrmActivity } from "@/lib/data/investor-crm";
+import { listAdminMessageThreads } from "@/lib/messaging/threads";
 import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
@@ -15,6 +17,7 @@ export default async function AdminCrmPage() {
   let setupError: string | null = null;
   let investorActivity = { interests: [] as Array<Record<string, unknown>>, introRequests: [] as Array<Record<string, unknown>>, savedDeals: [] as Array<Record<string, unknown>> };
   let crmActivity: Awaited<ReturnType<typeof listRecentInvestorCrmActivity>> = [];
+  let messageThreads: Awaited<ReturnType<typeof listAdminMessageThreads>>["data"] = [];
   let rawCrmError: string | null = null;
   let rawInterestsError: string | null = null;
 
@@ -27,10 +30,14 @@ export default async function AdminCrmPage() {
     const interestsProbe = await supabase.from("investor_interests").select("id", { count: "exact", head: true });
     rawInterestsError = interestsProbe.error?.message ?? null;
 
-    [investorActivity, crmActivity] = await Promise.all([
+    const [activity, crm, threads] = await Promise.all([
       listAdminInvestorActivity(supabase),
       listRecentInvestorCrmActivity(supabase),
+      listAdminMessageThreads(supabase, 30),
     ]);
+    investorActivity = activity;
+    crmActivity = crm;
+    messageThreads = threads.data ?? [];
   } catch (error) {
     setupError = formatError(error);
   }
@@ -89,6 +96,10 @@ export default async function AdminCrmPage() {
       ) : null}
 
       <AdminInvestorCrmTimeline activities={crmActivity} />
+
+      <div className="mb-8">
+        <AdminMessageThreadsPanel threads={messageThreads} />
+      </div>
 
       <AdminInvestorActivity
         interests={investorActivity.interests}

@@ -158,3 +158,23 @@ export const investorOnboardingSchema = z
   });
 
 export const adminInvestorReviewActionSchema = adminReviewActionSchema;
+
+export const threadMessageSchema = z.object({
+  body: z.string().min(1).max(10000),
+});
+
+export const threadMeetingCreateSchema = z.object({
+  proposedStartTime: z.string().datetime().optional(),
+  proposedEndTime: z.string().datetime().optional(),
+  timezone: z.string().max(64).optional(),
+  meetingTitle: z.string().max(200).optional(),
+  meetingNotes: z.string().max(5000).optional(),
+});
+
+export const threadMeetingUpdateSchema = z.object({
+  action: z.enum(["accept", "decline", "cancel", "propose"]),
+  proposedStartTime: z.string().datetime().optional(),
+  proposedEndTime: z.string().datetime().optional(),
+  timezone: z.string().max(64).optional(),
+  meetingNotes: z.string().max(5000).optional(),
+});

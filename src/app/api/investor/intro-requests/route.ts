@@ -3,6 +3,7 @@ import { requireInvestorApprovedApi } from "@/lib/api/investor";
 import { writeAuditLog } from "@/lib/data/audit";
 import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { createIntroRequest } from "@/lib/data/investor-interests";
+import { openMessageThreadFromSignal } from "@/lib/messaging/open-thread-from-signal";
 import { notifyFounderInvestorIntro } from "@/lib/notifications/investor-events";
 import { investorIntroRequestSchema } from "@/lib/validation";
 
@@ -64,6 +65,17 @@ export async function POST(request: Request) {
     activityType: "requested_intro",
     metadata: { entityId: data.id, message: data.message },
   });
+
+  if (data.company_id) {
+    void openMessageThreadFromSignal(auth.serviceSupabase, {
+      companyId: data.company_id,
+      investorId: auth.profile.id,
+      createdBy: auth.profile.id,
+      introRequestId: data.id,
+      messageType: "intro_request",
+      body: data.message?.trim() || "Investor requested an introduction.",
+    });
+  }
 
   return NextResponse.json({ introRequest: data });
 }

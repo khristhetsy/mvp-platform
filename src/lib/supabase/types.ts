@@ -241,6 +241,107 @@ export type Database = {
         };
         Relationships: [];
       };
+      message_threads: {
+        Row: {
+          id: string;
+          company_id: string;
+          founder_id: string;
+          investor_id: string;
+          intro_request_id: string | null;
+          status: string;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          company_id: string;
+          founder_id: string;
+          investor_id: string;
+          intro_request_id?: string | null;
+          status?: string;
+          created_by: string;
+          updated_at?: string;
+        };
+        Update: {
+          status?: string;
+          intro_request_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      thread_messages: {
+        Row: {
+          id: string;
+          thread_id: string;
+          sender_id: string;
+          body: string;
+          message_type: string;
+          created_at: string;
+          read_at: string | null;
+        };
+        Insert: {
+          thread_id: string;
+          sender_id: string;
+          body: string;
+          message_type?: string;
+          read_at?: string | null;
+        };
+        Update: {
+          read_at?: string | null;
+        };
+        Relationships: [];
+      };
+      thread_meetings: {
+        Row: {
+          id: string;
+          thread_id: string;
+          company_id: string;
+          founder_id: string;
+          investor_id: string;
+          requested_by: string;
+          status: string;
+          proposed_start_time: string | null;
+          proposed_end_time: string | null;
+          timezone: string | null;
+          meeting_title: string | null;
+          meeting_notes: string | null;
+          external_calendar_provider: string | null;
+          external_calendar_event_id: string | null;
+          external_meet_url: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          thread_id: string;
+          company_id: string;
+          founder_id: string;
+          investor_id: string;
+          requested_by: string;
+          status?: string;
+          proposed_start_time?: string | null;
+          proposed_end_time?: string | null;
+          timezone?: string | null;
+          meeting_title?: string | null;
+          meeting_notes?: string | null;
+          external_calendar_provider?: string | null;
+          external_calendar_event_id?: string | null;
+          external_meet_url?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          status?: string;
+          proposed_start_time?: string | null;
+          proposed_end_time?: string | null;
+          timezone?: string | null;
+          meeting_title?: string | null;
+          meeting_notes?: string | null;
+          external_calendar_provider?: string | null;
+          external_calendar_event_id?: string | null;
+          external_meet_url?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       investor_profiles: {
         Row: {
           id: string;
