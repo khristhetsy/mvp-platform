@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { dashboardForRole } from "@/lib/supabase/auth";
 import { ensureUserOnboarding } from "@/lib/onboarding/ensure-founder-setup";
+import { parseRequestedPlan } from "@/lib/subscriptions/plans";
 import type { UserRole } from "@/lib/supabase/types";
 
 export async function POST() {
@@ -27,6 +28,7 @@ export async function POST() {
       email: user.email ?? null,
       fullName,
       role,
+      requestedPlan: parseRequestedPlan(user.user_metadata?.requested_plan),
     });
 
     return NextResponse.json({
