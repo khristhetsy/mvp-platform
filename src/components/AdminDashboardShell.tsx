@@ -50,7 +50,7 @@ export function AdminDashboardShell({
     >
       <div>
         <div className="mb-8">
-          <p className="workspace-eyebrow">Admin Workspace</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Admin Workspace</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Dashboard</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Manage submitted companies, pending diligence reviews, document uploads, and approval decisions.

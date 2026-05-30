@@ -35,7 +35,7 @@ export default async function InvestorMessagesPage() {
       profileSubtitle="Investor account"
     >
       <div className="mb-8">
-        <p className="workspace-eyebrow">Investor Workspace</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Messages</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Communication activity from intro requests, follow-ups, and platform interactions.
@@ -66,7 +66,7 @@ export default async function InvestorMessagesPage() {
             {crmActivity.rows.map((row) => (
               <div key={row.id} className="py-3 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="workspace-badge">
+                  <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-800">
                     {formatActivityLabel(row.activity_type)}
                   </span>
                   <span className="text-xs text-slate-500">{formatDate(row.created_at)}</span>

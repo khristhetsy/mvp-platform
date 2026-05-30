@@ -80,7 +80,7 @@ export default async function FounderCapitalRaisePage() {
       />
 
       <div className="mb-8">
-        <p className="workspace-eyebrow">Founder Workspace</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Founder Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Capital Raise</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Track indicative interest, pledge totals, and marketplace raise status.
@@ -129,8 +129,8 @@ export default async function FounderCapitalRaisePage() {
           <section className="mt-8 grid gap-6 xl:grid-cols-2">
             <WorkspacePanel title="Capital Raise Overview" subtitle="Non-binding marketplace interest">
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="workspace-highlight-panel">
-                  <p className="workspace-accent-text text-sm">Total pledged</p>
+                <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 p-4 ring-1 ring-indigo-100">
+                  <p className="text-sm font-medium text-indigo-700">Total pledged</p>
                   <p className="mt-2 text-2xl font-semibold text-slate-950">
                     {formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
                   </p>

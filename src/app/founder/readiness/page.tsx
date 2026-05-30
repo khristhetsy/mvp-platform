@@ -84,7 +84,7 @@ export default async function FounderReadinessPage() {
       profileSubtitle={companyName}
     >
       <div className="mb-6">
-        <p className="workspace-eyebrow">Founder Workspace</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-600">Founder Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Readiness</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Track profile completion, document checklist progress, diligence review status, and recommended next actions.
@@ -96,7 +96,7 @@ export default async function FounderReadinessPage() {
           <p className="text-sm text-slate-600">Create your company profile to start tracking readiness.</p>
           <Link
             href="/founder/onboarding"
-            className="mt-4 inline-flex workspace-btn-primary"
+            className="mt-4 inline-flex rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white"
           >
             Create company profile
           </Link>
@@ -155,7 +155,7 @@ export default async function FounderReadinessPage() {
               </div>
               <Link
                 href="/founder/settings"
-                className="mt-4 inline-flex rounded-xl border border-zinc-300 bg-zinc-50 px-4 py-2.5 text-sm font-semibold text-zinc-900"
+                className="mt-4 inline-flex rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-900"
               >
                 Update company settings
               </Link>
@@ -170,8 +170,8 @@ export default async function FounderReadinessPage() {
                   </p>
                   {reviewNotes ? <p className="mt-2 text-sm leading-6 text-slate-600">{reviewNotes}</p> : null}
                 </div>
-                <div className="workspace-highlight-panel">
-                  <p className="workspace-accent-text text-sm">AI diligence report</p>
+                <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 p-4 ring-1 ring-indigo-100">
+                  <p className="text-sm font-medium text-indigo-700">AI diligence report</p>
                   {diligenceReport ? (
                     <>
                       <p className="mt-1 text-lg font-semibold text-slate-950">
@@ -200,7 +200,7 @@ export default async function FounderReadinessPage() {
               title="Document checklist"
               subtitle="Required diligence documents and upload status"
               action={
-                <Link href="/founder/documents" className="workspace-link">
+                <Link href="/founder/documents" className="text-sm font-semibold text-indigo-700 hover:text-indigo-900">
                   Manage uploads
                 </Link>
               }

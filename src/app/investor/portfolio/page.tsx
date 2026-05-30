@@ -48,7 +48,7 @@ export default async function InvestorPortfolioPage() {
       profileSubtitle="Investor account"
     >
       <div className="mb-8">
-        <p className="workspace-eyebrow">Investor Workspace</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Portfolio</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Completed investments and pending indicative interest from your marketplace activity.
@@ -74,7 +74,7 @@ export default async function InvestorPortfolioPage() {
                     {row.status ?? "interested"}
                     {date ? ` · ${new Date(date).toLocaleDateString("en-US", { timeZone: "UTC" })}` : ""}
                   </p>
-                  <p className="mt-1 workspace-accent-text text-xs">
+                  <p className="mt-1 text-xs font-medium text-indigo-700">
                     {formatPendingLabel(row.pledge_amount, row.interest_amount, row.pledge_currency)}
                   </p>
                 </div>

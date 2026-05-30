@@ -42,11 +42,11 @@ export function AdminInvestorCrmTimeline({ activities }: Props) {
               <div key={row.id} className="py-3 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-medium text-slate-900">{investor}</p>
-                  <span className="workspace-badge">
+                  <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-800">
                     {formatActivityLabel(row.activity_type)}
                   </span>
                   {row.pipeline_stage ? (
-                    <span className="rounded-full bg-zinc-200 px-2.5 py-0.5 text-xs font-semibold text-zinc-700">
+                    <span className="rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-800">
                       Pipeline: {formatActivityLabel(row.pipeline_stage)}
                     </span>
                   ) : null}

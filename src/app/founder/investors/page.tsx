@@ -117,7 +117,7 @@ export default async function FounderInvestorsPage() {
       profileSubtitle={company?.company_name ?? "Your company"}
     >
       <div className="mb-8">
-        <p className="workspace-eyebrow">Founder Workspace</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Founder Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Investors</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Track inbound investor interest, pledges, intro requests, and follow-ups for your company.

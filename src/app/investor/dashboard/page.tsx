@@ -29,7 +29,7 @@ export default async function InvestorDashboardPage() {
       profileSubtitle="Investor account"
     >
       <div className="mb-8">
-        <p className="workspace-eyebrow">Investor Workspace</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Dashboard</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Track opportunities, watchlist, expressed interest, and marketplace activity.
@@ -75,7 +75,7 @@ export default async function InvestorDashboardPage() {
           title="Recommended Opportunities"
           subtitle="Curated marketplace listings"
           action={
-            <Link href="/deals" className="workspace-link">
+            <Link href="/deals" className="text-sm font-semibold text-indigo-700 hover:text-indigo-900">
               Browse all
             </Link>
           }
@@ -88,7 +88,7 @@ export default async function InvestorDashboardPage() {
                 <Link
                   key={deal.id}
                   href={`/deals/${deal.slug}`}
-                  className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-3 transition hover:border-zinc-300 hover:bg-zinc-50 hover:shadow-sm"
+                  className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-3 transition hover:border-indigo-200 hover:bg-indigo-50/50 hover:shadow-sm"
                 >
                   <p className="font-semibold text-slate-950">{deal.companyName}</p>
                   <p className="mt-1 text-xs text-slate-500">{deal.industry ?? "Private company"}</p>

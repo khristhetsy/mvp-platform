@@ -66,7 +66,7 @@ export function InvestorActivityTimeline({
             activities.map((row) => (
               <div key={row.id} className="py-3 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="workspace-badge">
+                  <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-800">
                     {formatActivityLabel(row.activity_type)}
                   </span>
                 </div>

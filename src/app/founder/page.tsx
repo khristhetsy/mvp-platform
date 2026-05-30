@@ -45,7 +45,7 @@ export default async function FounderDashboardPage() {
     >
       <div className="mb-8 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
-          <p className="workspace-eyebrow">Founder Workspace</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Founder Workspace</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{companyName}</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Track readiness, capital raise progress, investor engagement, and marketplace publication.
@@ -54,7 +54,7 @@ export default async function FounderDashboardPage() {
         <div className="flex flex-wrap gap-2">
           <Link
             href="/founder/settings"
-            className="workspace-btn-primary"
+            className="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:from-indigo-700 hover:to-violet-700"
           >
             Company settings
           </Link>
@@ -97,8 +97,8 @@ export default async function FounderDashboardPage() {
       <section className="mt-8 grid gap-6 xl:grid-cols-2">
         <WorkspacePanel title="Capital Raise Overview" subtitle="Non-binding marketplace interest">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="workspace-highlight-panel">
-              <p className="workspace-accent-text text-sm">Total pledged</p>
+            <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 p-4 ring-1 ring-indigo-100">
+              <p className="text-sm font-medium text-indigo-700">Total pledged</p>
               <p className="mt-2 text-2xl font-semibold text-slate-950">
                 {formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
               </p>
@@ -146,7 +146,7 @@ export default async function FounderDashboardPage() {
               documents?.slice(0, 5).map((document) => (
                 <div key={document.id} className="flex items-center justify-between py-3 text-sm">
                   <span className="font-medium text-slate-800">{document.file_name ?? document.document_type}</span>
-                  <span className="workspace-badge">
+                  <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">
                     {document.status ?? "uploaded"}
                   </span>
                 </div>

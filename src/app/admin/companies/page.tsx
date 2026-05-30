@@ -57,7 +57,7 @@ export default async function AdminCompaniesPage() {
         />
 
         <div className="mb-8">
-          <p className="workspace-eyebrow">Admin Workspace</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Admin Workspace</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Companies</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Review submissions, manage publication, and control marketplace visibility.
