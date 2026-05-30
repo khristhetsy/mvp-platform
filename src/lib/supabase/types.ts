@@ -33,6 +33,10 @@ export type Company = {
   marketplace_visible: boolean;
   published_at: string | null;
   slug: string | null;
+  founder_goals?: string | null;
+  onboarding_progress_percent?: number;
+  onboarding_completed_at?: string | null;
+  onboarding_step_state?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 };

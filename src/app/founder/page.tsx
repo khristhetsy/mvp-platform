@@ -3,7 +3,10 @@ import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingProgressCard";
 import { listCompanyDocuments } from "@/lib/data/documents";
+import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
+import { computeFounderOnboardingProgress } from "@/lib/onboarding/progress";
 import { founderPipeline } from "@/lib/mock-data";
 import { formatPledgeTotal, getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
@@ -20,6 +23,15 @@ export default async function FounderDashboardPage() {
   const supabase = await createServerSupabaseClient();
   const serviceSupabase = createServiceRoleClient();
   const { data: documents } = company ? await listCompanyDocuments(supabase, company.id) : { data: [] };
+  const { data: diligenceReport } = company ? await getLatestDiligenceReport(supabase, company.id) : { data: null };
+  const onboardingProgress = company
+    ? computeFounderOnboardingProgress({
+        company,
+        documents: documents ?? [],
+        diligenceReportExists: Boolean(diligenceReport),
+        storedStepState: company.onboarding_step_state,
+      })
+    : null;
   const investorActivity = company ? await listFounderInvestorActivity(supabase, company.id) : null;
 
   let pledgeSummary = { totalPledged: 0, investorCount: 0, currency: "USD" };
@@ -62,10 +74,12 @@ export default async function FounderDashboardPage() {
             href="/founder/onboarding"
             className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-slate-300"
           >
-            Update profile
+            Continue onboarding
           </Link>
         </div>
       </div>
+
+      {onboardingProgress ? <FounderOnboardingProgressCard progress={onboardingProgress} /> : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard

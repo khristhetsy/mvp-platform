@@ -31,9 +31,44 @@ export const companyCreateSchema = z.object({
 export const companyUpdateSchema = z.object({
   company_name: z.string().min(2).optional(),
   business_description: z.string().min(20).optional(),
-  website: z.string().url().optional(),
+  website: z.string().url().optional().or(z.literal("")),
   industry: z.string().min(2).optional(),
-  logo_url: z.string().url().optional(),
+  logo_url: z.string().url().optional().or(z.literal("")),
+  country: z.string().min(2).optional(),
+  state: z.string().optional(),
+  funding_amount: z.coerce.number().positive().optional(),
+  use_of_funds: z.string().min(10).optional(),
+  revenue_stage: z.string().min(2).optional(),
+  founder_goals: z.string().min(10).optional(),
+});
+
+export const founderOnboardingStepSchema = z.object({
+  step: z.enum([
+    "company_profile",
+    "funding_information",
+    "documents_uploaded",
+    "readiness_generated",
+    "investor_readiness_review",
+  ]),
+  advanceToStep: z
+    .enum([
+      "company_profile",
+      "funding_information",
+      "documents_uploaded",
+      "readiness_generated",
+      "investor_readiness_review",
+    ])
+    .optional(),
+  company_name: z.string().min(2).optional(),
+  website: z.string().url().optional().or(z.literal("")),
+  industry: z.string().min(2).optional(),
+  country: z.string().min(2).optional(),
+  state: z.string().optional(),
+  business_description: z.string().min(20).optional(),
+  founder_goals: z.string().min(10).optional(),
+  funding_amount: z.coerce.number().positive().optional(),
+  revenue_stage: z.string().min(2).optional(),
+  use_of_funds: z.string().min(10).optional(),
 });
 
 export const documentUploadSchema = z.object({

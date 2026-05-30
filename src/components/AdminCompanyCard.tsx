@@ -33,6 +33,8 @@ export type AdminCompanyCardData = {
   initial_feedback: string;
   founder_subscription: SubscriptionRecord | null;
   founder_requested_plan: PlanType | null;
+  founder_onboarding_percent: number;
+  founder_onboarding_completed_at: string | null;
 };
 
 type Props = {
@@ -358,6 +360,15 @@ export function AdminCompanyCard({ company }: Props) {
           <p className="mt-2 text-sm text-slate-600">
             {company.founder_name} · {company.founder_email}
           </p>
+          <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Founder onboarding</p>
+            <p className="mt-2 text-xs text-slate-600">
+              Progress: <strong>{company.founder_onboarding_percent}%</strong>
+              {company.founder_onboarding_completed_at
+                ? ` · Completed ${formatDate(company.founder_onboarding_completed_at)}`
+                : " · In progress"}
+            </p>
+          </div>
           <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Founder subscription</p>
             <div className="mt-2">

@@ -19,6 +19,8 @@ export type AdminCompanyRow = {
   published_at: string | null;
   slug: string | null;
   founder_id: string;
+  onboarding_progress_percent: number | null;
+  onboarding_completed_at: string | null;
   founder: { id: string; full_name: string | null; email: string | null; role: string | null } | null;
   documents: Array<{
     id: string;
@@ -54,6 +56,8 @@ type CompanyWithRelations = {
   published_at: string | null;
   slug: string | null;
   founder_id: string;
+  onboarding_progress_percent?: number | null;
+  onboarding_completed_at?: string | null;
   profiles: { id: string; full_name: string | null; email: string | null; role: string | null } | null;
   documents: AdminCompanyRow["documents"];
   admin_reviews: AdminCompanyRow["admin_reviews"];
@@ -111,6 +115,8 @@ export async function listAdminCompanies(supabase: SupabaseClient<Database>): Pr
       published_at,
       slug,
       founder_id,
+      onboarding_progress_percent,
+      onboarding_completed_at,
       profiles:founder_id ( id, full_name, email, role ),
       documents ( id, document_type, file_name, file_path, status, created_at ),
       admin_reviews ( id, status, notes, feedback, requested_changes, reviewed_by, created_at )
@@ -169,6 +175,8 @@ export async function listAdminCompanies(supabase: SupabaseClient<Database>): Pr
         published_at: row.published_at ?? null,
         slug: row.slug ?? null,
         founder_id: row.founder_id,
+        onboarding_progress_percent: row.onboarding_progress_percent ?? 0,
+        onboarding_completed_at: row.onboarding_completed_at ?? null,
         founder: row.profiles,
         documents: row.documents ?? [],
         admin_reviews: (row.admin_reviews ?? []).sort(
@@ -204,6 +212,8 @@ export type AdminCompanyCardPayload = {
   initial_feedback: string;
   founder_subscription: SubscriptionRecord | null;
   founder_requested_plan: PlanType | null;
+  founder_onboarding_percent: number;
+  founder_onboarding_completed_at: string | null;
 };
 
 export function mapAdminCompaniesToCardData(
@@ -235,6 +245,8 @@ export function mapAdminCompaniesToCardData(
         latestReview?.feedback ?? latestReview?.requested_changes ?? latestReview?.notes ?? "",
       founder_subscription: subscriptionsByProfileId.get(company.founder_id) ?? null,
       founder_requested_plan: requestedPlansByProfileId.get(company.founder_id) ?? null,
+      founder_onboarding_percent: company.onboarding_progress_percent ?? 0,
+      founder_onboarding_completed_at: company.onboarding_completed_at ?? null,
     };
   });
 }
