@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { AppShell } from "@/components/AppShell";
 import { DealCard } from "@/components/DealCard";
+import { MetricCard } from "@/components/MetricCard";
+import { WorkspacePanel } from "@/components/WorkspacePanel";
 import {
   getCompanyPledgeSummaries,
   emptyCompanyPledgeSummary,
@@ -10,8 +12,6 @@ import {
   InvestorActivityTimelineSection,
   InvestorActivityTimelineSkeleton,
 } from "@/components/InvestorActivityTimeline";
-import { MetricCard } from "@/components/MetricCard";
-import { SectionHeader } from "@/components/SectionHeader";
 import {
   listInvestorInterests,
   listInvestorIntroRequests,
@@ -51,79 +51,105 @@ export default async function InvestorDashboardPage() {
       : {};
 
   return (
-    <AppShell role="INVESTOR">
-      <SectionHeader
-        eyebrow="Investor dashboard"
-        title="Your private deal workflow"
-        description="Track saved deals, expressed interest, intro requests, and marketplace opportunities."
-      />
+    <AppShell
+      role="INVESTOR"
+      workspace="investor"
+      profileName={profile.full_name ?? profile.email ?? "Investor"}
+      profileSubtitle="Investor account"
+    >
+      <div className="mb-6">
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-600">Investor Workspace</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Dashboard</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+          Track opportunities, watchlist, expressed interest, and marketplace activity.
+        </p>
+      </div>
 
-      <section className="mt-8 grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Saved deals"
-          value={String(saved?.length ?? 0)}
-          detail={saved?.slice(0, 2).map(labelForRow).join(", ") || "None yet"}
+          label="Active Opportunities"
+          value={String(listings.length)}
+          detail="Published marketplace listings"
+          accent="indigo"
         />
         <MetricCard
-          label="Expressed interest"
+          label="Watchlist"
+          value={String(saved?.length ?? 0)}
+          detail={saved?.slice(0, 2).map(labelForRow).join(", ") || "No saved deals yet"}
+          accent="violet"
+        />
+        <MetricCard
+          label="Expressed Interest"
           value={String(interests?.length ?? 0)}
           detail={interests?.slice(0, 2).map(labelForRow).join(", ") || "None yet"}
+          accent="blue"
         />
         <MetricCard
-          label="Intro requests"
-          value={String(intros?.length ?? 0)}
-          detail={intros?.slice(0, 2).map(labelForRow).join(", ") || "None yet"}
+          label="Investments / Future"
+          value="—"
+          detail="Portfolio tracking coming soon"
+          accent="slate"
         />
       </section>
 
-      <Suspense fallback={<InvestorActivityTimelineSkeleton />}>
-        <InvestorActivityTimelineSection investorId={profile.id} />
-      </Suspense>
+      <section className="mt-6 grid gap-6 xl:grid-cols-2">
+        <WorkspacePanel title="Messages" subtitle="Founder and platform communication">
+          <p className="text-sm text-slate-600">Secure messaging workspace coming soon.</p>
+          <p className="mt-3 text-sm text-slate-500">
+            {intros?.length ?? 0} intro {intros?.length === 1 ? "request" : "requests"} pending follow-up.
+          </p>
+        </WorkspacePanel>
 
-      <section className="mt-8">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-xl font-semibold text-slate-950">Marketplace opportunities</h2>
-          <Link href="/deals" className="text-sm font-semibold text-slate-700">
-            Browse all deals
-          </Link>
-        </div>
-        <div className="mt-5 grid gap-5 lg:grid-cols-3">
-          {listings.length === 0 ? (
+        <WorkspacePanel
+          title="Recommended Opportunities"
+          subtitle="Curated marketplace listings"
+          action={
+            <Link href="/deals" className="text-sm font-semibold text-indigo-700 hover:text-indigo-900">
+              Browse all
+            </Link>
+          }
+        >
+          {featuredListings.length === 0 ? (
             <p className="text-sm text-slate-600">No published listings yet.</p>
           ) : (
-            featuredListings.map((deal) => (
-              <DealCard
-                key={deal.id}
-                deal={deal}
-                pledgeSummary={pledgeSummaries[deal.id] ?? emptyCompanyPledgeSummary()}
-              />
-            ))
+            <div className="grid gap-4">
+              {featuredListings.map((deal) => (
+                <Link
+                  key={deal.id}
+                  href={`/deals/${deal.slug}`}
+                  className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 transition hover:border-indigo-200 hover:bg-indigo-50/40"
+                >
+                  <p className="font-semibold text-slate-950">{deal.companyName}</p>
+                  <p className="mt-1 text-xs text-slate-500">{deal.industry ?? "Private company"}</p>
+                </Link>
+              ))}
+            </div>
           )}
-        </div>
+        </WorkspacePanel>
       </section>
 
-      <section className="mt-8 grid gap-5 lg:grid-cols-3">
-        {[
-          ["Saved deals", saved ?? []],
-          ["Expressed interest", interests ?? []],
-          ["Intro requests", intros ?? []],
-        ].map(([title, items]) => (
-          <div key={title as string} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="font-semibold text-slate-950">{title as string}</h2>
-            <div className="mt-4 grid gap-3">
-              {(items as Array<{ id: string; status?: string | null; companies?: { company_name?: string | null } | null }>).length === 0 ? (
-                <p className="text-sm text-slate-500">No activity yet.</p>
-              ) : (
-                (items as Array<{ id: string; status?: string | null; companies?: { company_name?: string | null } | null }>).map((item) => (
-                  <div key={item.id} className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-                    <p className="font-medium">{labelForRow(item)}</p>
-                    {item.status ? <p className="mt-1 text-xs text-slate-500">{item.status}</p> : null}
-                  </div>
-                ))
-              )}
-            </div>
+      <section className="mt-6">
+        <Suspense fallback={<InvestorActivityTimelineSkeleton />}>
+          <InvestorActivityTimelineSection investorId={profile.id} />
+        </Suspense>
+      </section>
+
+      <section className="mt-6">
+        <WorkspacePanel title="Marketplace preview" subtitle="Featured deal cards">
+          <div className="grid gap-5 lg:grid-cols-3">
+            {featuredListings.length === 0 ? (
+              <p className="text-sm text-slate-600">No published listings yet.</p>
+            ) : (
+              featuredListings.map((deal) => (
+                <DealCard
+                  key={deal.id}
+                  deal={deal}
+                  pledgeSummary={pledgeSummaries[deal.id] ?? emptyCompanyPledgeSummary()}
+                />
+              ))
+            )}
           </div>
-        ))}
+        </WorkspacePanel>
       </section>
     </AppShell>
   );

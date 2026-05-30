@@ -1,10 +1,20 @@
+"use client";
+
+import { createContext, useContext } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { WorkspaceHeader } from "@/components/WorkspaceHeader";
+import { WorkspaceSidebar } from "@/components/WorkspaceSidebar";
 import { compactDisclaimer } from "@/lib/compliance";
 import type { Role } from "@/lib/auth";
+import type { WorkspaceId } from "@/lib/workspace-nav";
+import { resolveWorkspaceFromPath, workspaceShellRole } from "@/lib/workspace-nav";
 
-const navItems: { href: string; label: string; roles: Role[] }[] = [
+const AppShellContext = createContext(false);
+
+const platformNavItems: { href: string; label: string; roles: Role[] }[] = [
   { href: "/founder/dashboard", label: "Founder", roles: ["FOUNDER", "ADMIN", "ANALYST"] },
-  { href: "/deals", label: "Deals", roles: ["INVESTOR", "ADMIN", "ANALYST"] },
+  { href: "/deals", label: "Marketplace", roles: ["INVESTOR", "ADMIN", "ANALYST"] },
   { href: "/investor/dashboard", label: "Investor", roles: ["INVESTOR", "ADMIN", "ANALYST"] },
   { href: "/admin/dashboard", label: "Admin", roles: ["ADMIN", "ANALYST"] },
 ];
@@ -12,10 +22,41 @@ const navItems: { href: string; label: string; roles: Role[] }[] = [
 export function AppShell({
   children,
   role = "FOUNDER",
+  workspace,
+  profileName = "CapitalOS User",
+  profileSubtitle,
 }: Readonly<{
   children: React.ReactNode;
   role?: Role;
+  workspace?: WorkspaceId;
+  profileName?: string;
+  profileSubtitle?: string;
 }>) {
+  const insideAppShell = useContext(AppShellContext);
+  const pathname = usePathname();
+  const activeWorkspace = workspace ?? resolveWorkspaceFromPath(pathname ?? "");
+  const shellRole = activeWorkspace ? workspaceShellRole(activeWorkspace) : role;
+
+  if (insideAppShell && activeWorkspace) {
+    return (
+      <>
+        <WorkspaceHeader profileName={profileName} profileSubtitle={profileSubtitle} />
+        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+      </>
+    );
+  }
+
+  if (activeWorkspace) {
+    return (
+      <AppShellContext.Provider value={true}>
+        <div className="flex min-h-screen w-full flex-1 bg-slate-100 text-slate-950">
+          <WorkspaceSidebar workspace={activeWorkspace} />
+          <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+        </div>
+      </AppShellContext.Provider>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
       <header className="border-b border-slate-200 bg-white">
@@ -24,8 +65,8 @@ export function AppShell({
             CapitalOS
           </Link>
           <nav className="hidden items-center gap-5 text-sm text-slate-600 md:flex">
-            {navItems
-              .filter((item) => item.roles.includes(role))
+            {platformNavItems
+              .filter((item) => item.roles.includes(shellRole))
               .map((item) => (
                 <Link key={item.href} href={item.href} className="hover:text-slate-950">
                   {item.label}

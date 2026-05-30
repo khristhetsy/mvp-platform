@@ -46,7 +46,7 @@ export default async function AdminDashboardPage() {
   });
 
   return (
-    <AppShell role="ADMIN">
+    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role}>
       <AdminDashboardShell
         userId={profile.id}
         userRole={profile.role}

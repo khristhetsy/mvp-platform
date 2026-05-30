@@ -1,0 +1,87 @@
+import type { Role } from "@/lib/auth";
+
+export type WorkspaceId = "founder" | "investor" | "admin";
+
+export type WorkspaceNavItem = {
+  href: string;
+  label: string;
+};
+
+export const founderWorkspaceNav: WorkspaceNavItem[] = [
+  { href: "/founder/dashboard", label: "Dashboard" },
+  { href: "/founder/readiness", label: "Readiness" },
+  { href: "/founder/documents", label: "Documents" },
+  { href: "/founder/investors", label: "Investors" },
+  { href: "/founder/capital-raise", label: "Capital Raise" },
+  { href: "/founder/learning", label: "Learning" },
+  { href: "/founder/analytics", label: "Analytics" },
+  { href: "/founder/settings", label: "Settings" },
+];
+
+export const investorWorkspaceNav: WorkspaceNavItem[] = [
+  { href: "/investor/dashboard", label: "Dashboard" },
+  { href: "/investor/opportunities", label: "Opportunities" },
+  { href: "/investor/watchlist", label: "Watchlist" },
+  { href: "/investor/interest-pipeline", label: "Interest Pipeline" },
+  { href: "/investor/spvs", label: "SPVs" },
+  { href: "/investor/portfolio", label: "Portfolio" },
+  { href: "/investor/messages", label: "Messages" },
+  { href: "/investor/analytics", label: "Analytics" },
+];
+
+export const adminWorkspaceNav: WorkspaceNavItem[] = [
+  { href: "/admin/dashboard", label: "Dashboard" },
+  { href: "/admin/companies", label: "Companies" },
+  { href: "/admin/investors", label: "Investors" },
+  { href: "/admin/crm", label: "CRM" },
+  { href: "/admin/diligence", label: "Diligence" },
+  { href: "/admin/compliance", label: "Compliance" },
+  { href: "/admin/analytics", label: "Analytics" },
+  { href: "/admin/system-health", label: "System Health" },
+];
+
+export function getWorkspaceNav(workspace: WorkspaceId): WorkspaceNavItem[] {
+  switch (workspace) {
+    case "founder":
+      return founderWorkspaceNav;
+    case "investor":
+      return investorWorkspaceNav;
+    case "admin":
+      return adminWorkspaceNav;
+  }
+}
+
+export function workspaceShellRole(workspace: WorkspaceId): Role {
+  switch (workspace) {
+    case "founder":
+      return "FOUNDER";
+    case "investor":
+      return "INVESTOR";
+    case "admin":
+      return "ADMIN";
+  }
+}
+
+export function workspaceLabel(workspace: WorkspaceId): string {
+  switch (workspace) {
+    case "founder":
+      return "Founder Workspace";
+    case "investor":
+      return "Investor Workspace";
+    case "admin":
+      return "Admin Workspace";
+  }
+}
+
+export function resolveWorkspaceFromPath(pathname: string): WorkspaceId | null {
+  if (pathname === "/founder" || pathname.startsWith("/founder/")) {
+    return "founder";
+  }
+  if (pathname === "/investor" || pathname.startsWith("/investor/")) {
+    return "investor";
+  }
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    return "admin";
+  }
+  return null;
+}
