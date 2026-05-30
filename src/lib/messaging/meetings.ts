@@ -1,12 +1,18 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { scheduleAcceptedMeetingOnGoogle } from "@/lib/integrations/schedule-google-meeting";
+import {
+  meetingHasGoogleCalendarEvent,
+  syncGoogleCalendarMeeting,
+  type GoogleCalendarSyncResult,
+} from "@/lib/integrations/sync-google-calendar-meeting";
 import { appendThreadMessage } from "@/lib/messaging/threads";
 import {
   notifyMeetingAccepted,
-  notifyMeetingCanceled,
-  notifyMeetingDeclined,
+  notifyMeetingCanceledOnGoogle,
+  notifyMeetingGoogleSyncFailed,
   notifyMeetingRequested,
+  notifyMeetingRescheduledOnGoogle,
   notifyMeetingScheduledOnGoogle,
 } from "@/lib/notifications/messaging-events";
 import type { MessageThreadRecord, ThreadMeetingRecord, ThreadMeetingStatus } from "@/lib/messaging/types";
@@ -130,6 +136,7 @@ export async function updateThreadMeeting(
       patch.external_calendar_provider = "google";
       patch.external_calendar_event_id = googleSchedule.eventId;
       patch.external_meet_url = googleSchedule.meetUrl;
+      patch.calendar_host_user_id = input.actorUserId;
     } else {
       status = "accepted";
       patch.status = status;
@@ -166,6 +173,22 @@ export async function updateThreadMeeting(
 
   if (error || !updated) {
     return { error: error ?? new Error("Unable to update meeting.") };
+  }
+
+  const updatedMeeting = updated as ThreadMeetingRecord;
+  const hostUserId = input.meeting.calendar_host_user_id ?? updatedMeeting.calendar_host_user_id;
+
+  let googleSync: GoogleCalendarSyncResult | null = null;
+  if (
+    (input.action === "propose" || input.action === "decline" || input.action === "cancel") &&
+    meetingHasGoogleCalendarEvent(input.meeting)
+  ) {
+    googleSync = await syncGoogleCalendarMeeting({
+      meeting: input.action === "propose" ? updatedMeeting : input.meeting,
+      thread: input.thread,
+      hostUserId,
+      action: input.action === "propose" ? "update" : "cancel",
+    });
   }
 
   let systemBody = "";
@@ -224,72 +247,138 @@ export async function updateThreadMeeting(
       });
     }
   } else if (input.action === "decline") {
-    systemBody = "Meeting declined.";
-    await appendThreadMessage(supabase, {
-      threadId: input.thread.id,
-      senderId: input.actorUserId,
-      body: systemBody,
-      messageType: "system_note",
-      bumpThreadActive: true,
-    });
-    await recordInvestorCrmActivity(supabase, {
-      investorId: input.thread.investor_id,
-      companyId: input.thread.company_id,
-      activityType: "meeting_declined",
-      metadata: { meetingId: input.meeting.id },
-    });
-    void notifyMeetingDeclined({
-      threadId: input.thread.id,
-      meetingId: input.meeting.id,
-      recipientUserId:
-        input.actorUserId === input.thread.founder_id
-          ? input.thread.investor_id
-          : input.thread.founder_id,
+    await handleMeetingLifecycleWithGoogleSync(supabase, {
+      thread: input.thread,
       actorUserId: input.actorUserId,
-      companyId: input.thread.company_id,
+      meetingId: input.meeting.id,
+      baseMessage: "Meeting declined.",
+      googleSync,
+      onCrm: async () => {
+        await recordInvestorCrmActivity(supabase, {
+          investorId: input.thread.investor_id,
+          companyId: input.thread.company_id,
+          activityType: "meeting_declined",
+          metadata: { meetingId: input.meeting.id, googleSync: googleSync?.synced ?? false },
+        });
+      },
+      notifyRescheduled: false,
+      notifyCanceled: true,
+      declined: true,
     });
   } else if (input.action === "cancel") {
-    systemBody = "Meeting canceled.";
+    await handleMeetingLifecycleWithGoogleSync(supabase, {
+      thread: input.thread,
+      actorUserId: input.actorUserId,
+      meetingId: input.meeting.id,
+      baseMessage: "Meeting canceled.",
+      googleSync,
+      onCrm: async () => {},
+      notifyRescheduled: false,
+      notifyCanceled: true,
+      declined: false,
+    });
+  } else if (input.action === "propose") {
+    const hadGoogleEvent = meetingHasGoogleCalendarEvent(input.meeting);
+    const timeLabel = formatMeetingTime(updatedMeeting);
+    const baseMessage = hadGoogleEvent
+      ? `Meeting rescheduled${timeLabel ? `: ${timeLabel}` : ""}.`
+      : `Meeting time proposed${timeLabel ? `: ${timeLabel}` : ""}.`;
+
+    await handleMeetingLifecycleWithGoogleSync(supabase, {
+      thread: input.thread,
+      actorUserId: input.actorUserId,
+      meetingId: input.meeting.id,
+      baseMessage,
+      googleSync: hadGoogleEvent ? googleSync : null,
+      messageType: hadGoogleEvent ? "system_note" : "meeting_request",
+      onCrm: async () => {},
+      notifyRescheduled: hadGoogleEvent,
+      notifyCanceled: false,
+      declined: false,
+    });
+
+    if (!hadGoogleEvent) {
+      void notifyMeetingRequested({
+        threadId: input.thread.id,
+        meetingId: input.meeting.id,
+        recipientUserId:
+          input.actorUserId === input.thread.founder_id
+            ? input.thread.investor_id
+            : input.thread.founder_id,
+        actorUserId: input.actorUserId,
+        companyId: input.thread.company_id,
+      });
+    }
+  }
+
+  return { data: updatedMeeting };
+}
+
+async function handleMeetingLifecycleWithGoogleSync(
+  supabase: SupabaseClient<Database>,
+  input: {
+    thread: MessageThreadRecord;
+    actorUserId: string;
+    meetingId: string;
+    baseMessage: string;
+    googleSync: GoogleCalendarSyncResult | null;
+    messageType?: "system_note" | "meeting_request";
+    onCrm: () => Promise<void>;
+    notifyRescheduled: boolean;
+    notifyCanceled: boolean;
+    declined: boolean;
+  },
+) {
+  await appendThreadMessage(supabase, {
+    threadId: input.thread.id,
+    senderId: input.actorUserId,
+    body: input.baseMessage,
+    messageType: input.messageType ?? "system_note",
+    bumpThreadActive: true,
+  });
+
+  if (input.googleSync?.synced) {
     await appendThreadMessage(supabase, {
       threadId: input.thread.id,
       senderId: input.actorUserId,
-      body: systemBody,
+      body: "Google Calendar updated.",
       messageType: "system_note",
       bumpThreadActive: true,
     });
-    void notifyMeetingCanceled({
-      threadId: input.thread.id,
-      meetingId: input.meeting.id,
-      recipientUserId:
-        input.actorUserId === input.thread.founder_id
-          ? input.thread.investor_id
-          : input.thread.founder_id,
-      actorUserId: input.actorUserId,
-      companyId: input.thread.company_id,
-    });
-  } else if (input.action === "propose") {
-    const timeLabel = formatMeetingTime(updated);
-    systemBody = `Meeting time proposed${timeLabel ? `: ${timeLabel}` : ""}.`;
+  } else if (input.googleSync && !input.googleSync.synced && !input.googleSync.skipped) {
     await appendThreadMessage(supabase, {
       threadId: input.thread.id,
       senderId: input.actorUserId,
-      body: systemBody,
-      messageType: "meeting_request",
+      body: `Google Calendar sync failed: ${input.googleSync.message}`,
+      messageType: "system_note",
       bumpThreadActive: true,
-    });
-    void notifyMeetingRequested({
-      threadId: input.thread.id,
-      meetingId: input.meeting.id,
-      recipientUserId:
-        input.actorUserId === input.thread.founder_id
-          ? input.thread.investor_id
-          : input.thread.founder_id,
-      actorUserId: input.actorUserId,
-      companyId: input.thread.company_id,
     });
   }
 
-  return { data: updated as ThreadMeetingRecord };
+  await input.onCrm();
+
+  const partyInput = {
+    meetingId: input.meetingId,
+    founderId: input.thread.founder_id,
+    investorId: input.thread.investor_id,
+    actorUserId: input.actorUserId,
+    companyId: input.thread.company_id,
+  };
+
+  if (input.notifyRescheduled) {
+    void notifyMeetingRescheduledOnGoogle(partyInput);
+  }
+
+  if (input.notifyCanceled) {
+    void notifyMeetingCanceledOnGoogle({ ...partyInput, declined: input.declined });
+  }
+
+  if (input.googleSync && !input.googleSync.synced && !input.googleSync.skipped) {
+    void notifyMeetingGoogleSyncFailed({
+      ...partyInput,
+      detail: input.googleSync.message,
+    });
+  }
 }
 
 function formatMeetingTime(meeting: {

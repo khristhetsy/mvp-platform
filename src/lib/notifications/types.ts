@@ -26,7 +26,10 @@ export type NotificationType =
   | "meeting_canceled"
   | "google_account_connected"
   | "google_account_disconnected"
-  | "meeting_scheduled_google";
+  | "meeting_scheduled_google"
+  | "meeting_rescheduled_google"
+  | "meeting_canceled_google"
+  | "meeting_google_sync_failed";
 
 export type NotificationRecord = {
   id: string;

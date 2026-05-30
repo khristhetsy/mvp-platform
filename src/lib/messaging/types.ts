@@ -48,6 +48,7 @@ export type ThreadMeetingRecord = {
   external_calendar_provider: string | null;
   external_calendar_event_id: string | null;
   external_meet_url: string | null;
+  calendar_host_user_id: string | null;
   created_at: string;
   updated_at: string;
 };

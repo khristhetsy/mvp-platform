@@ -99,6 +99,97 @@ export async function notifyMeetingAccepted(input: {
   });
 }
 
+async function notifyMeetingParties(input: {
+  founderId: string;
+  investorId: string;
+  actorUserId: string;
+  meetingId: string;
+  type: string;
+  title: string;
+  message: string;
+}) {
+  await Promise.all([
+    createNotification({
+      recipientUserId: input.founderId,
+      actorUserId: input.actorUserId,
+      type: input.type,
+      title: input.title,
+      message: input.message,
+      entityType: "thread_meeting",
+      entityId: input.meetingId,
+    }),
+    createNotification({
+      recipientUserId: input.investorId,
+      actorUserId: input.actorUserId,
+      type: input.type,
+      title: input.title,
+      message: input.message,
+      entityType: "thread_meeting",
+      entityId: input.meetingId,
+    }),
+  ]);
+}
+
+export async function notifyMeetingRescheduledOnGoogle(input: {
+  meetingId: string;
+  founderId: string;
+  investorId: string;
+  actorUserId: string;
+  companyId: string;
+}) {
+  const name = await companyName(input.companyId);
+  return notifyMeetingParties({
+    founderId: input.founderId,
+    investorId: input.investorId,
+    actorUserId: input.actorUserId,
+    meetingId: input.meetingId,
+    type: "meeting_rescheduled_google",
+    title: "Meeting rescheduled",
+    message: `Meeting times were updated for ${name}.`,
+  });
+}
+
+export async function notifyMeetingCanceledOnGoogle(input: {
+  meetingId: string;
+  founderId: string;
+  investorId: string;
+  actorUserId: string;
+  companyId: string;
+  declined?: boolean;
+}) {
+  const name = await companyName(input.companyId);
+  const verb = input.declined ? "declined" : "canceled";
+  return notifyMeetingParties({
+    founderId: input.founderId,
+    investorId: input.investorId,
+    actorUserId: input.actorUserId,
+    meetingId: input.meetingId,
+    type: "meeting_canceled_google",
+    title: input.declined ? "Meeting declined" : "Meeting canceled",
+    message: `The meeting for ${name} was ${verb}.`,
+  });
+}
+
+export async function notifyMeetingGoogleSyncFailed(input: {
+  meetingId: string;
+  founderId: string;
+  investorId: string;
+  actorUserId: string;
+  companyId: string;
+  detail: string;
+}) {
+  const name = await companyName(input.companyId);
+  return notifyMeetingParties({
+    founderId: input.founderId,
+    investorId: input.investorId,
+    actorUserId: input.actorUserId,
+    meetingId: input.meetingId,
+    type: "meeting_google_sync_failed",
+    title: "Google Calendar sync issue",
+    message: `${name}: ${input.detail}`,
+  });
+}
+
 export async function notifyMeetingScheduledOnGoogle(input: {
   threadId: string;
   meetingId: string;

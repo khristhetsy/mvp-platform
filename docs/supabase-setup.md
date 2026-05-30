@@ -36,7 +36,9 @@ Set in `.env.local` (see `.env.example`):
 - `GOOGLE_REDIRECT_URI` (must match Google Cloud OAuth redirect URI)
 - `TOKEN_ENCRYPTION_SECRET` (server-only; encrypts stored OAuth tokens)
 
-Founders and investors connect at `/founder/settings` or `/investor/settings`. OAuth tokens are encrypted at rest; Calendar event creation is not enabled until a later phase.
+Founders and investors connect at `/founder/settings` or `/investor/settings`. OAuth tokens are encrypted at rest.
+
+Also run `0024_thread_meetings_calendar_host.sql` so accepted meetings store the Google Calendar host user for update/cancel sync.
 
 ## Data model
 
