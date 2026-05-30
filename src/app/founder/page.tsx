@@ -9,6 +9,9 @@ import { listCompanyDocuments } from "@/lib/data/documents";
 import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { FounderLearningPreviewCard } from "@/components/FounderLearningPreviewCard";
 import { loadFounderLearningWorkspace } from "@/lib/learning/load-founder-learning";
+import { FounderInvestorFitSignals } from "@/components/FounderInvestorFitSignals";
+import { buildFounderInvestorFitSignals } from "@/lib/matching/investor-company-matching";
+import { loadFounderCompanyMatchContext } from "@/lib/matching/load-matching-data";
 import { loadFounderRemediationPlan } from "@/lib/remediation/load-founder-remediation";
 import { getFounderFeatureAccess } from "@/lib/subscriptions/founder-access";
 import { computeFounderOnboardingProgress } from "@/lib/onboarding/progress";
@@ -38,9 +41,10 @@ export default async function FounderDashboardPage() {
       })
     : null;
   const investorActivity = company ? await listFounderInvestorActivity(supabase, company.id) : null;
-  const [remediation, learningAccess] = await Promise.all([
+  const [remediation, learningAccess, investorFit] = await Promise.all([
     loadFounderRemediationPlan(profile),
     getFounderFeatureAccess("elearning"),
+    company ? loadFounderCompanyMatchContext(company) : Promise.resolve(null),
   ]);
   const learning = learningAccess.allowed ? await loadFounderLearningWorkspace(profile) : null;
 
@@ -99,6 +103,18 @@ export default async function FounderDashboardPage() {
             learningLinks={remediation.learningLinks}
             compact
             title="Priority remediation tasks"
+          />
+        </div>
+      ) : null}
+
+      {investorFit ? (
+        <div className="mb-8">
+          <FounderInvestorFitSignals
+            signals={buildFounderInvestorFitSignals({
+              company: investorFit.companyProfile,
+              approvedInvestorMatchCount: investorFit.approvedInvestorCount,
+              strongMatchCount: investorFit.strongMatchCount,
+            })}
           />
         </div>
       ) : null}

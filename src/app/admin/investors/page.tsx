@@ -4,6 +4,7 @@ import { AdminInvestorReviewCard } from "@/components/AdminInvestorReviewCard";
 import { AdminSubscriptionSummary } from "@/components/AdminSubscriptionSummary";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
+import { getInvestorMatchingSummaries } from "@/lib/matching/admin-matching-summaries";
 import { listInvestorProfilesForAdmin } from "@/lib/investor/profile";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
@@ -53,7 +54,15 @@ export default async function AdminInvestorsPage() {
     investorActivity.savedDeals,
   );
 
-  const pendingQueue = investorProfiles.filter(
+  const profileIds = investorProfiles.map((row) => row.profile_id);
+  const matchingSummaries = await getInvestorMatchingSummaries(profileIds);
+
+  const investorProfilesWithMatching = investorProfiles.map((row) => ({
+    ...row,
+    matchingSummary: matchingSummaries.get(row.profile_id),
+  }));
+
+  const pendingQueue = investorProfilesWithMatching.filter(
     (row) => row.approval_status === "submitted" || row.approval_status === "changes_requested",
   );
 
@@ -106,7 +115,7 @@ export default async function AdminInvestorsPage() {
           subtitle={`${investorProfiles.length} onboarding records`}
         >
           <div className="grid gap-5">
-            {investorProfiles
+            {investorProfilesWithMatching
               .filter((row) => !pendingQueue.some((pending) => pending.id === row.id))
               .map((row) => (
                 <AdminInvestorReviewCard key={row.id} row={row} />

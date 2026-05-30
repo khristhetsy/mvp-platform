@@ -7,6 +7,7 @@ import type { InvestorProfileRecord } from "@/lib/investor/types";
 
 type Row = InvestorProfileRecord & {
   profiles: { id: string; full_name: string | null; email: string | null; created_at: string } | null;
+  matchingSummary?: { highMatchCompanyCount: number; topMatchScore: number };
 };
 
 function formatDate(value: string | null) {
@@ -69,6 +70,13 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
           {investorApprovalStatusLabel(status)}
         </span>
       </div>
+
+      {row.matchingSummary ? (
+        <p className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs text-indigo-900">
+          Marketplace match quality: <strong>{row.matchingSummary.highMatchCompanyCount}</strong> companies ≥70% ·
+          best score <strong>{row.matchingSummary.topMatchScore}%</strong>
+        </p>
+      ) : null}
 
       <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
         <div>

@@ -221,6 +221,8 @@ export type AdminCompanyCardPayload = {
   founder_learning_percent: number;
   founder_learning_milestone: string;
   founder_learning_modules_engaged: number;
+  investor_match_high_count: number;
+  investor_match_top_score: number;
 };
 
 export function mapAdminCompaniesToCardData(
@@ -232,10 +234,12 @@ export function mapAdminCompaniesToCardData(
     string,
     { percentComplete: number; modulesEngaged: number; modulesCompleted: number }
   > = new Map(),
+  matchingByCompanyId: Map<string, { highMatchInvestorCount: number; topMatchScore: number }> = new Map(),
 ): AdminCompanyCardPayload[] {
   return companies.map((company) => {
     const remediation = remediationByCompanyId.get(company.id);
     const learning = learningByCompanyId.get(company.id);
+    const matching = matchingByCompanyId.get(company.id);
     const learningMilestones = computeReadinessMilestones({
       company: company as unknown as Company,
       documents: company.documents as DocumentRecord[],
@@ -277,6 +281,8 @@ export function mapAdminCompaniesToCardData(
       founder_learning_percent: learning?.percentComplete ?? 0,
       founder_learning_milestone: milestoneLabelForAdmin(learningMilestones),
       founder_learning_modules_engaged: learning?.modulesEngaged ?? 0,
+      investor_match_high_count: matching?.highMatchInvestorCount ?? 0,
+      investor_match_top_score: matching?.topMatchScore ?? 0,
     };
   });
 }

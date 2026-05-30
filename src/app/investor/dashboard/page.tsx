@@ -5,7 +5,8 @@ import { InvestorActivityTimeline } from "@/components/InvestorActivityTimeline"
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { InvestorApprovalBanner } from "@/components/InvestorApprovalBanner";
 import { investorCompanyLabel, loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
-import { listMarketplaceListings } from "@/lib/data/marketplace";
+import { InvestorMatchOpportunityCard } from "@/components/InvestorMatchOpportunityCard";
+import { loadInvestorRecommendedMatches } from "@/lib/matching/load-investor-recommendations";
 import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 
@@ -15,14 +16,14 @@ export default async function InvestorDashboardPage() {
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
   const { investorProfile } = await loadInvestorWorkspaceContext(profile);
 
-  const [{ workspace, crmActivity }, listings] = await Promise.all([
+  const [{ workspace, crmActivity }, { matches }] = await Promise.all([
     loadInvestorWorkspacePageData(investorId),
-    listMarketplaceListings(supabase).catch(() => []),
+    loadInvestorRecommendedMatches(supabase, investorId, 4),
   ]);
   const savedDeals = workspace.savedDeals;
   const interests = workspace.interests;
   const introRequests = workspace.introRequests;
-  const featuredListings = listings.slice(0, 3);
+  const topMatches = matches.slice(0, 4);
 
   return (
     <AppShell
@@ -44,8 +45,8 @@ export default async function InvestorDashboardPage() {
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Active Opportunities"
-          value={String(listings.length)}
-          detail="Published marketplace listings"
+          value={String(matches.length)}
+          detail="Published listings ranked for your profile"
           accent="indigo"
         />
         <MetricCard
@@ -77,27 +78,39 @@ export default async function InvestorDashboardPage() {
         </WorkspacePanel>
 
         <WorkspacePanel
-          title="Recommended Opportunities"
-          subtitle="Curated marketplace listings"
+          title="Recommended for you"
+          subtitle="Match score from your onboarding preferences"
           action={
-            <Link href="/deals" className="text-sm font-semibold text-indigo-700 hover:text-indigo-900">
-              Browse all
+            <Link href="/investor/opportunities" className="text-sm font-semibold text-indigo-700 hover:text-indigo-900">
+              View all matches
             </Link>
           }
         >
-          {featuredListings.length === 0 ? (
-            <p className="text-sm text-slate-600">No published listings yet.</p>
+          {topMatches.length === 0 ? (
+            <p className="text-sm text-slate-600">No published listings yet. Complete onboarding to improve matches.</p>
           ) : (
             <div className="grid gap-3">
-              {featuredListings.map((deal) => (
-                <Link
-                  key={deal.id}
-                  href={`/deals/${deal.slug}`}
-                  className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-3 transition hover:border-indigo-200 hover:bg-indigo-50/50 hover:shadow-sm"
-                >
-                  <p className="font-semibold text-slate-950">{deal.companyName}</p>
-                  <p className="mt-1 text-xs text-slate-500">{deal.industry ?? "Private company"}</p>
-                </Link>
+              {topMatches.map((row) => (
+                <InvestorMatchOpportunityCard
+                  key={row.company.id}
+                  companyName={row.company.companyName}
+                  slug={row.company.slug}
+                  industry={row.company.industry}
+                  stage={row.company.stage}
+                  location={row.company.geography}
+                  fundingTarget={
+                    row.company.fundingAmount != null
+                      ? new Intl.NumberFormat("en-US", {
+                          style: "currency",
+                          currency: "USD",
+                          maximumFractionDigits: 0,
+                        }).format(row.company.fundingAmount)
+                      : null
+                  }
+                  matchScore={row.matchScore}
+                  matchReasons={row.matchReasons}
+                  missingFitReasons={row.missingFitReasons}
+                />
               ))}
             </div>
           )}

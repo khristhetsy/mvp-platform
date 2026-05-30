@@ -4,6 +4,7 @@ import { AdminCompanyCard } from "@/components/AdminCompanyCard";
 import { formatError, RouteDataDiagnostics } from "@/components/RouteDataDiagnostics";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listAdminCompanies, mapAdminCompaniesToCardData } from "@/lib/data/admin";
+import { getCompanyMatchingSummaries } from "@/lib/matching/admin-matching-summaries";
 import { getLearningAdminSummaryForCompanies } from "@/lib/learning/progress";
 import { getRemediationSummaryForCompanies } from "@/lib/remediation/tasks";
 import { getRequestedPlansByProfileIds } from "@/lib/billing/requested-plan";
@@ -27,12 +28,13 @@ export default async function AdminCompaniesPage() {
     rawCompanyCount = companies.length;
     const founderIds = companies.map((company) => company.founder_id).filter(Boolean);
     const companyIds = companies.map((company) => company.id);
-    const [subscriptionsByProfileId, requestedPlansByProfileId, remediationSummaries, learningSummaries] =
+    const [subscriptionsByProfileId, requestedPlansByProfileId, remediationSummaries, learningSummaries, matchingSummaries] =
       await Promise.all([
         listSubscriptionsByProfileIds(founderIds),
         getRequestedPlansByProfileIds(founderIds),
         getRemediationSummaryForCompanies(companyIds),
         getLearningAdminSummaryForCompanies(companyIds),
+        getCompanyMatchingSummaries(companyIds),
       ]);
     const remediationByCompanyId = new Map(
       [...remediationSummaries.entries()].map(([id, summary]) => [
@@ -46,6 +48,7 @@ export default async function AdminCompaniesPage() {
       requestedPlansByProfileId,
       remediationByCompanyId,
       learningSummaries,
+      matchingSummaries,
     );
   } catch (error) {
     loadError = formatError(error);

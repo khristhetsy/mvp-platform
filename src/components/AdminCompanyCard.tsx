@@ -40,6 +40,8 @@ export type AdminCompanyCardData = {
   founder_learning_percent: number;
   founder_learning_milestone: string;
   founder_learning_modules_engaged: number;
+  investor_match_high_count: number;
+  investor_match_top_score: number;
 };
 
 type Props = {
@@ -372,6 +374,19 @@ export function AdminCompanyCard({ company }: Props) {
               {company.founder_onboarding_completed_at
                 ? ` · Completed ${formatDate(company.founder_onboarding_completed_at)}`
                 : " · In progress"}
+            </p>
+          </div>
+          <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Investor matching</p>
+            <p className="mt-2 text-xs text-slate-600">
+              {company.investor_match_high_count > 0 ? (
+                <>
+                  <strong>{company.investor_match_high_count}</strong> approved investors with strong match (≥70%) ·
+                  top score <strong>{company.investor_match_top_score}%</strong>
+                </>
+              ) : (
+                <>No strong investor matches yet · top score {company.investor_match_top_score}%</>
+              )}
             </p>
           </div>
           <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
