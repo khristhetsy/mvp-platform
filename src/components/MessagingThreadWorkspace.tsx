@@ -312,10 +312,22 @@ export function MessagingThreadWorkspace({
               <p className="text-sm font-semibold text-slate-950">Meeting</p>
               <GoogleCalendarMeetingReadiness googleCalendarReady={googleCalendarReady} />
 
-              {latestMeeting &&
-              (latestMeeting.status === "accepted" || latestMeeting.status === "scheduled") ? (
+              {latestMeeting?.status === "scheduled" && latestMeeting.external_meet_url ? (
                 <p className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-                  Meeting accepted. Calendar sync will be available after Google integration is configured.
+                  Google Meet:{" "}
+                  <a
+                    href={latestMeeting.external_meet_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold underline"
+                  >
+                    Join meeting
+                  </a>
+                </p>
+              ) : null}
+              {latestMeeting?.status === "accepted" ? (
+                <p className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                  Meeting accepted. Connect Google to create Calendar/Meet event.
                 </p>
               ) : null}
 

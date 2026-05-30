@@ -69,6 +69,31 @@ export async function exchangeGoogleAuthorizationCode(code: string) {
   return payload;
 }
 
+export async function refreshGoogleAccessToken(refreshToken: string) {
+  const { clientId, clientSecret } = assertGoogleOAuthEnv();
+
+  const body = new URLSearchParams({
+    client_id: clientId,
+    client_secret: clientSecret,
+    refresh_token: refreshToken,
+    grant_type: "refresh_token",
+  });
+
+  const response = await fetch(GOOGLE_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+  });
+
+  const payload = (await response.json().catch(() => null)) as GoogleTokenResponse & { error?: string };
+
+  if (!response.ok || !payload?.access_token) {
+    throw new Error(payload?.error ?? "Unable to refresh Google access token.");
+  }
+
+  return payload;
+}
+
 export async function fetchGoogleUserInfo(accessToken: string) {
   const response = await fetch(GOOGLE_USERINFO_URL, {
     headers: { Authorization: `Bearer ${accessToken}` },

@@ -4,8 +4,8 @@ export function GoogleCalendarMeetingReadiness({
   if (googleCalendarReady) {
     return (
       <p className="mt-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
-        Google Calendar ready — when meetings are accepted, your connected account can host scheduled events in a
-        future release.
+        Google Calendar ready — when you accept a meeting, your connected account will host the Calendar event and
+        Meet link.
       </p>
     );
   }

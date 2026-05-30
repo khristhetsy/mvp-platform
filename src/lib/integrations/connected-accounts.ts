@@ -113,7 +113,7 @@ export async function deleteGoogleConnectedAccount(userId: string) {
   return { data: true };
 }
 
-/** Server-only: for future Calendar phases — not used for event creation in Phase A. */
+/** Server-only: loads encrypted tokens for Calendar API (never expose to client). */
 export async function getGoogleConnectedAccountForUser(userId: string) {
   const supabase = createServiceRoleClient();
   const { data, error } = await supabase

@@ -1,12 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
-import { isGoogleCalendarConfigured } from "@/lib/integrations/google-calendar";
+import { scheduleAcceptedMeetingOnGoogle } from "@/lib/integrations/schedule-google-meeting";
 import { appendThreadMessage } from "@/lib/messaging/threads";
 import {
   notifyMeetingAccepted,
   notifyMeetingCanceled,
   notifyMeetingDeclined,
   notifyMeetingRequested,
+  notifyMeetingScheduledOnGoogle,
 } from "@/lib/notifications/messaging-events";
 import type { MessageThreadRecord, ThreadMeetingRecord, ThreadMeetingStatus } from "@/lib/messaging/types";
 import type { Database } from "@/lib/supabase/types";
@@ -104,11 +105,34 @@ export async function updateThreadMeeting(
   let status: ThreadMeetingStatus = input.meeting.status;
   const patch: Database["public"]["Tables"]["thread_meetings"]["Update"] = { updated_at: now };
 
+  let googleSchedule:
+    | Awaited<ReturnType<typeof scheduleAcceptedMeetingOnGoogle>>
+    | null = null;
+
   if (input.action === "accept") {
-    status = isGoogleCalendarConfigured() ? "scheduled" : "accepted";
-    patch.status = status;
-    if (status === "scheduled") {
+    const meetingForSchedule: ThreadMeetingRecord = {
+      ...input.meeting,
+      proposed_start_time: input.proposedStartTime ?? input.meeting.proposed_start_time,
+      proposed_end_time: input.proposedEndTime ?? input.meeting.proposed_end_time,
+      timezone: input.timezone ?? input.meeting.timezone,
+      meeting_notes: input.meetingNotes ?? input.meeting.meeting_notes,
+    };
+
+    googleSchedule = await scheduleAcceptedMeetingOnGoogle({
+      hostUserId: input.actorUserId,
+      meeting: meetingForSchedule,
+      thread: input.thread,
+    });
+
+    if (googleSchedule.scheduled) {
+      status = "scheduled";
+      patch.status = status;
       patch.external_calendar_provider = "google";
+      patch.external_calendar_event_id = googleSchedule.eventId;
+      patch.external_meet_url = googleSchedule.meetUrl;
+    } else {
+      status = "accepted";
+      patch.status = status;
     }
   } else if (input.action === "decline") {
     status = "declined";
@@ -146,31 +170,59 @@ export async function updateThreadMeeting(
 
   let systemBody = "";
   if (input.action === "accept") {
-    systemBody =
-      "Meeting accepted. Google Calendar/Meet integration coming soon — times are stored in CapitalOS until connected.";
+    if (googleSchedule?.scheduled) {
+      systemBody = googleSchedule.meetUrl
+        ? `Meeting accepted and scheduled on Google Calendar. Join Google Meet: ${googleSchedule.meetUrl}`
+        : "Meeting accepted and scheduled on Google Calendar.";
+    } else if (googleSchedule?.reason === "missing_times") {
+      systemBody =
+        "Meeting accepted. Add a proposed start time, then accept again to create a Google Calendar/Meet event.";
+    } else {
+      systemBody =
+        "Meeting accepted. Connect Google to create Calendar/Meet event.";
+    }
+
     await appendThreadMessage(supabase, {
       threadId: input.thread.id,
       senderId: input.actorUserId,
       body: systemBody,
-      messageType: "meeting_scheduled",
+      messageType: googleSchedule?.scheduled ? "meeting_scheduled" : "system_note",
       bumpThreadActive: true,
     });
     await recordInvestorCrmActivity(supabase, {
       investorId: input.thread.investor_id,
       companyId: input.thread.company_id,
       activityType: "meeting_accepted",
-      metadata: { meetingId: input.meeting.id },
+      metadata: {
+        meetingId: input.meeting.id,
+        googleScheduled: Boolean(googleSchedule?.scheduled),
+      },
     });
-    void notifyMeetingAccepted({
-      threadId: input.thread.id,
-      meetingId: input.meeting.id,
-      recipientUserId:
-        input.actorUserId === input.thread.founder_id
-          ? input.thread.investor_id
-          : input.thread.founder_id,
-      actorUserId: input.actorUserId,
-      companyId: input.thread.company_id,
-    });
+
+    const otherPartyId =
+      input.actorUserId === input.thread.founder_id
+        ? input.thread.investor_id
+        : input.thread.founder_id;
+
+    if (googleSchedule?.scheduled) {
+      void notifyMeetingScheduledOnGoogle({
+        threadId: input.thread.id,
+        meetingId: input.meeting.id,
+        founderId: input.thread.founder_id,
+        investorId: input.thread.investor_id,
+        actorUserId: input.actorUserId,
+        companyId: input.thread.company_id,
+        meetUrl: googleSchedule.meetUrl,
+      });
+    } else {
+      void notifyMeetingAccepted({
+        threadId: input.thread.id,
+        meetingId: input.meeting.id,
+        recipientUserId: otherPartyId,
+        actorUserId: input.actorUserId,
+        companyId: input.thread.company_id,
+      });
+    }
   } else if (input.action === "decline") {
     systemBody = "Meeting declined.";
     await appendThreadMessage(supabase, {

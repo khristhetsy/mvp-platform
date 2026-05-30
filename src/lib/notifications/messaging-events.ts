@@ -99,6 +99,41 @@ export async function notifyMeetingAccepted(input: {
   });
 }
 
+export async function notifyMeetingScheduledOnGoogle(input: {
+  threadId: string;
+  meetingId: string;
+  founderId: string;
+  investorId: string;
+  actorUserId: string;
+  companyId: string;
+  meetUrl: string | null;
+}) {
+  const name = await companyName(input.companyId);
+  const meetLine = input.meetUrl ? ` Google Meet: ${input.meetUrl}` : "";
+  const message = `A Google Calendar meeting was scheduled for ${name}.${meetLine}`;
+
+  await Promise.all([
+    createNotification({
+      recipientUserId: input.founderId,
+      actorUserId: input.actorUserId,
+      type: "meeting_scheduled_google",
+      title: "Meeting scheduled on Google Calendar",
+      message,
+      entityType: "thread_meeting",
+      entityId: input.meetingId,
+    }),
+    createNotification({
+      recipientUserId: input.investorId,
+      actorUserId: input.actorUserId,
+      type: "meeting_scheduled_google",
+      title: "Meeting scheduled on Google Calendar",
+      message,
+      entityType: "thread_meeting",
+      entityId: input.meetingId,
+    }),
+  ]);
+}
+
 export async function notifyMeetingDeclined(input: {
   threadId: string;
   meetingId: string;
