@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireStaffApi } from "@/lib/api/admin";
 import { writeAuditLog } from "@/lib/data/audit";
 import { applyInvestorReview } from "@/lib/investor/profile";
+import { recordComplianceEvent } from "@/lib/compliance/events";
 import { notifyInvestorReview } from "@/lib/notifications/investor-events";
 import { adminInvestorReviewActionSchema } from "@/lib/validation";
 
@@ -49,6 +50,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       entityId: id,
       feedback: feedback?.trim(),
     });
+
+    if (action === "reject") {
+      void recordComplianceEvent({
+        investorId: investorProfile.profile_id,
+        eventType: "investor_review_rejection",
+        severity: "medium",
+        source: "investor_review",
+        title: "Investor rejected",
+        description: feedback?.trim() || "Investor application rejected by staff review.",
+        sourceId: investorProfile.profile_id,
+        metadata: { adminId: auth.profile.id },
+      });
+    }
 
     return NextResponse.json({ investorProfile });
   } catch (error) {

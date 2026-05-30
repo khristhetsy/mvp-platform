@@ -11,6 +11,7 @@ import {
   resolveSocialDraftComplianceStatus,
   SOCIAL_COMPLIANCE_WARNINGS,
 } from "@/lib/founder-crm/social-draft-compliance";
+import { recordComplianceEvent } from "@/lib/compliance/events";
 import {
   notifyFounderSocialDraftFlagged,
   notifyFounderSocialDraftGenerated,
@@ -100,6 +101,16 @@ export async function POST(request: Request) {
     });
     if (complianceStatus === "flagged") {
       void notifyFounderSocialDraftFlagged({ founderId: auth.profile.id, draftId: saved.data.id });
+      void recordComplianceEvent({
+        companyId: auth.company.id,
+        founderId: auth.profile.id,
+        eventType: "social_draft_flagged",
+        severity: "high",
+        source: "social_outreach",
+        title: "Flagged social draft",
+        description: "Social draft contains risky compliance phrases.",
+        sourceId: saved.data.id,
+      });
     }
 
     return NextResponse.json({
@@ -137,6 +148,16 @@ export async function POST(request: Request) {
   });
   if (complianceStatus === "flagged") {
     void notifyFounderSocialDraftFlagged({ founderId: auth.profile.id, draftId: saved.data.id });
+    void recordComplianceEvent({
+      companyId: auth.company.id,
+      founderId: auth.profile.id,
+      eventType: "social_draft_flagged",
+      severity: "high",
+      source: "social_outreach",
+      title: "Flagged social draft",
+      description: "Social draft contains risky compliance phrases.",
+      sourceId: saved.data.id,
+    });
   }
 
   return NextResponse.json({ draft: saved.data });

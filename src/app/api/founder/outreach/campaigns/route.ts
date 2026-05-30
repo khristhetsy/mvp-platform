@@ -8,6 +8,7 @@ import {
 } from "@/lib/founder-crm/outreach";
 import { generateOutreachDraft } from "@/lib/founder-crm/outreach-drafts";
 import { evaluateFounderOutreachReadiness } from "@/lib/founder-crm/outreach-readiness";
+import { recordComplianceEvent } from "@/lib/compliance/events";
 import {
   notifyFounderCampaignDrafted,
   notifyFounderOutreachBlocked,
@@ -42,6 +43,19 @@ export async function POST(request: Request) {
   }
 
   const readiness = await evaluateFounderOutreachReadiness(auth.company, auth.profile.id);
+
+  if (!readiness.allowed) {
+    void recordComplianceEvent({
+      companyId: auth.company.id,
+      founderId: auth.profile.id,
+      eventType: "outreach_without_readiness",
+      severity: "high",
+      source: "outreach_campaigns",
+      title: "Outreach attempted without readiness",
+      description: "Founder attempted to create an outreach campaign before meeting readiness requirements.",
+      sourceId: auth.profile.id,
+    });
+  }
 
   const campaignResult = await createOutreachCampaign(auth.supabase, {
     founderId: auth.profile.id,

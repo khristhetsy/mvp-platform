@@ -110,6 +110,18 @@ export default async function AdminAnalyticsPage() {
             )}
           </div>
         </WorkspacePanel>
+        <AnalyticsBreakdownPanel
+          title="Compliance & risk"
+          subtitle="Open compliance events (internal)"
+          rows={[
+            { label: "Open compliance events", value: String(analytics.compliance.openEvents) },
+            { label: "Critical events", value: String(analytics.compliance.criticalEvents) },
+            { label: "Flagged social (events)", value: String(analytics.compliance.flaggedSocialEvents) },
+            { label: "Flagged outreach (events)", value: String(analytics.compliance.flaggedOutreachEvents) },
+            { label: "Outreach abuse indicators", value: String(analytics.compliance.outreachAbuseIndicators) },
+          ]}
+        />
+
         <WorkspacePanel title="Remediation volume" subtitle="All companies">
           <div className="grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
             <p>Open: {analytics.remediation.open}</p>
@@ -124,7 +136,11 @@ export default async function AdminAnalyticsPage() {
         <Link href="/admin/dashboard" className="font-semibold text-indigo-700">
           Open admin dashboard
         </Link>{" "}
-        for company review workflows.
+        for company review workflows.{" "}
+        <Link href="/admin/compliance" className="font-semibold text-indigo-700">
+          Open compliance center
+        </Link>
+        .
       </p>
     </AppShell>
   );

@@ -321,6 +321,12 @@ export const founderPipelineIntroSchema = z.object({
   message: z.string().max(2000).optional(),
 });
 
+export const complianceEventUpdateSchema = z.object({
+  action: z.enum(["review", "dismiss", "resolve", "escalate"]),
+  internalNotes: z.string().max(5000).optional(),
+  severity: z.enum(["low", "medium", "high", "critical"]).optional(),
+});
+
 export const outreachCampaignQueueSchema = z.object({
   action: z.literal("queue"),
 });

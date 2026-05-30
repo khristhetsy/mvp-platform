@@ -52,6 +52,12 @@ Run migration `0026_founder_social_outreach.sql` for investor social URL fields 
 
 Social drafts are generated and copied inside CapitalOS only — no LinkedIn API, OAuth, auto-posting, scraping, or external social providers.
 
+## Admin compliance & risk review (Phase 1)
+
+Run migration `0027_compliance_events.sql` before using `/admin/compliance`.
+
+This adds the `compliance_events` table (staff-only RLS) for internal risk flags, outreach/messaging/social compliance alerts, and admin review actions. Events are created by deterministic scanners on page load and by key API paths (social draft flag, outreach without readiness, investor rejection). Founders do not see `internal_notes`.
+
 ## Data model
 
 ```text

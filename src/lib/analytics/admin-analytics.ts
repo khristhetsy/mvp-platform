@@ -1,3 +1,4 @@
+import { getComplianceMetrics } from "@/lib/compliance/events";
 import { getAdminDashboardMetrics } from "@/lib/data/admin";
 import { getFounderOutreachAdminSummary } from "@/lib/founder-crm/admin-outreach-summary";
 import { getGlobalModuleEngagementCounts } from "@/lib/learning/progress";
@@ -23,6 +24,13 @@ export type AdminAnalyticsSnapshot = {
   planDistribution: Array<{ plan: string; count: number }>;
   platformOutreachTargets: number;
   approvedInvestors: number;
+  compliance: {
+    openEvents: number;
+    criticalEvents: number;
+    flaggedSocialEvents: number;
+    flaggedOutreachEvents: number;
+    outreachAbuseIndicators: number;
+  };
 };
 
 export async function loadAdminAnalytics(): Promise<AdminAnalyticsSnapshot> {
@@ -43,6 +51,7 @@ export async function loadAdminAnalytics(): Promise<AdminAnalyticsSnapshot> {
     subscriptions,
     platformTargets,
     approvedInvestors,
+    compliance,
   ] = await Promise.all([
     getAdminDashboardMetrics(admin),
     admin.from("profiles").select("id", { count: "exact", head: true }).ilike("role", "investor"),
@@ -61,6 +70,7 @@ export async function loadAdminAnalytics(): Promise<AdminAnalyticsSnapshot> {
       .select("id", { count: "exact", head: true })
       .not("platform_investor_id", "is", null),
     admin.from("investor_profiles").select("id", { count: "exact", head: true }).eq("approval_status", "approved"),
+    getComplianceMetrics(admin),
   ]);
 
   const onboardingValues = (companies.data ?? [])
@@ -111,5 +121,6 @@ export async function loadAdminAnalytics(): Promise<AdminAnalyticsSnapshot> {
     planDistribution,
     platformOutreachTargets: platformTargets.count ?? 0,
     approvedInvestors: approvedInvestors.count ?? 0,
+    compliance,
   };
 }

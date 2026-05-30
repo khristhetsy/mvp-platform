@@ -241,6 +241,47 @@ export type Database = {
         };
         Relationships: [];
       };
+      compliance_events: {
+        Row: {
+          id: string;
+          company_id: string | null;
+          founder_id: string | null;
+          investor_id: string | null;
+          event_type: string;
+          severity: string;
+          source: string;
+          title: string;
+          description: string;
+          metadata: Record<string, unknown>;
+          status: string;
+          internal_notes: string | null;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          event_type: string;
+          severity?: string;
+          source?: string;
+          title: string;
+          description: string;
+          metadata?: Record<string, unknown>;
+          status?: string;
+          company_id?: string | null;
+          founder_id?: string | null;
+          investor_id?: string | null;
+          internal_notes?: string | null;
+        };
+        Update: {
+          severity?: string;
+          status?: string;
+          metadata?: Record<string, unknown>;
+          internal_notes?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+        };
+        Relationships: [];
+      };
       founder_investor_contacts: {
         Row: {
           id: string;
