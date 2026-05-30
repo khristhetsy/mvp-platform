@@ -27,6 +27,16 @@ export async function loadInvestorWorkspacePageData(
 
 export function investorCompanyLabel(row: {
   companies?: { company_name?: string | null } | null;
+  company_id?: string | null;
 }) {
-  return row.companies?.company_name ?? "Unknown company";
+  const name = row.companies?.company_name?.trim();
+  if (name) {
+    return name;
+  }
+
+  if (row.company_id) {
+    return `Company ${row.company_id}`;
+  }
+
+  return "Unknown company";
 }

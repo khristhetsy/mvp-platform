@@ -1,12 +1,7 @@
 import { AppShell } from "@/components/AppShell";
-import {
-  InvestorWorkspaceDebugBox,
-  InvestorWorkspaceRawDiagnosticLists,
-  loadInvestorWorkspacePageDataForDebug,
-} from "@/components/InvestorWorkspaceDebugBox";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
-import { investorCompanyLabel } from "@/lib/data/investor-workspace-page";
+import { investorCompanyLabel, loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
@@ -24,20 +19,26 @@ function formatPendingLabel(
     return `Indicative interest · ${formatPledgeTotal(Number(interestAmount), pledgeCurrency ?? "USD")}`;
   }
 
+  return rowStatusLabel(pledgeAmount, interestAmount);
+}
+
+function rowStatusLabel(pledgeAmount: number | null, interestAmount: number | null) {
+  if (pledgeAmount != null) {
+    return `Pledge amount · ${pledgeAmount}`;
+  }
+
+  if (interestAmount != null) {
+    return `Indicative amount · ${interestAmount}`;
+  }
+
   return "Expressed interest";
 }
 
 export default async function InvestorPortfolioPage() {
   const { profile, investorId } = await requireInvestorWorkspaceSession();
-  const { data, loadError } = await loadInvestorWorkspacePageDataForDebug(investorId);
-  const { workspace, crmActivity } = data;
+  const { workspace } = await loadInvestorWorkspacePageData(investorId);
 
-  const pendingInterests = workspace.interests.filter(
-    (row) =>
-      (row.pledge_amount != null && Number(row.pledge_amount) > 0) ||
-      (row.interest_amount != null && Number(row.interest_amount) > 0) ||
-      row.status === "interested",
-  );
+  const interests = workspace.interests;
 
   return (
     <AppShell
@@ -46,16 +47,6 @@ export default async function InvestorPortfolioPage() {
       profileName={profile.full_name ?? profile.email ?? "Investor"}
       profileSubtitle="Investor account"
     >
-      <InvestorWorkspaceDebugBox
-        route="/investor/portfolio"
-        authUserId={investorId}
-        profileId={profile.id}
-        profileRole={String(profile.role)}
-        workspace={workspace}
-        crmActivity={crmActivity}
-        error={loadError}
-      />
-      <InvestorWorkspaceRawDiagnosticLists workspace={workspace} crmActivity={crmActivity} />
       <div className="mb-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Portfolio</h1>
@@ -71,33 +62,25 @@ export default async function InvestorPortfolioPage() {
       </WorkspacePanel>
 
       <section className="mt-6">
-        <WorkspacePanel
-          title="Pending / Indicative"
-          subtitle={`${pendingInterests.length} non-completed interest records`}
-        >
-          {pendingInterests.length === 0 ? (
-            <p className="text-sm text-slate-500">No pending or indicative interest records yet.</p>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {pendingInterests.map((row) => {
-                const date = row.updated_at ?? row.created_at;
+        <WorkspacePanel title="Pending / Indicative" subtitle={`${interests.length} interest records`}>
+          <div className="divide-y divide-slate-100">
+            {interests.map((row) => {
+              const date = row.updated_at ?? row.created_at;
 
-                return (
-                  <div key={row.id} className="py-3 text-sm">
-                    <p className="font-medium text-slate-900">{investorCompanyLabel(row)}</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {formatPendingLabel(row.pledge_amount, row.interest_amount, row.pledge_currency)}
-                    </p>
-                    {date ? (
-                      <p className="mt-1 text-xs text-slate-400">
-                        Updated {new Date(date).toLocaleDateString("en-US", { timeZone: "UTC" })}
-                      </p>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+              return (
+                <div key={row.id} className="py-3 text-sm">
+                  <p className="font-medium text-slate-900">{investorCompanyLabel(row)}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {row.status ?? "interested"}
+                    {date ? ` · ${new Date(date).toLocaleDateString("en-US", { timeZone: "UTC" })}` : ""}
+                  </p>
+                  <p className="mt-1 text-xs font-medium text-indigo-700">
+                    {formatPendingLabel(row.pledge_amount, row.interest_amount, row.pledge_currency)}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
         </WorkspacePanel>
       </section>
     </AppShell>

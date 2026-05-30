@@ -2,23 +2,33 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
 import { InvestorActivityTimeline } from "@/components/InvestorActivityTimeline";
-import {
-  InvestorWorkspaceDebugBox,
-  InvestorWorkspaceRawDiagnosticLists,
-  loadInvestorWorkspacePageDataForDebug,
-} from "@/components/InvestorWorkspaceDebugBox";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
-import { summarizeInvestorWorkspace } from "@/lib/data/investor-crm";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
+import { loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function InvestorAnalyticsPage() {
   const { profile, investorId } = await requireInvestorWorkspaceSession();
-  const { data, loadError } = await loadInvestorWorkspacePageDataForDebug(investorId, 30);
-  const { workspace, crmActivity } = data;
-  const summary = summarizeInvestorWorkspace(workspace, crmActivity);
+  const { workspace, crmActivity } = await loadInvestorWorkspacePageData(investorId, 30);
+
+  const pledgeCurrency =
+    workspace.interests.find((row) => row.pledge_currency)?.pledge_currency ?? "USD";
+  const pledgeTotal = workspace.interests.reduce((total, row) => {
+    if (row.pledge_amount == null || Number(row.pledge_amount) <= 0) {
+      return total;
+    }
+
+    return total + Number(row.pledge_amount);
+  }, 0);
+  const indicativeTotal = workspace.interests.reduce((total, row) => {
+    if (row.interest_amount == null || Number(row.interest_amount) <= 0) {
+      return total;
+    }
+
+    return total + Number(row.interest_amount);
+  }, 0);
 
   return (
     <AppShell
@@ -27,16 +37,6 @@ export default async function InvestorAnalyticsPage() {
       profileName={profile.full_name ?? profile.email ?? "Investor"}
       profileSubtitle="Investor account"
     >
-      <InvestorWorkspaceDebugBox
-        route="/investor/analytics"
-        authUserId={investorId}
-        profileId={profile.id}
-        profileRole={String(profile.role)}
-        workspace={workspace}
-        crmActivity={crmActivity}
-        error={loadError}
-      />
-      <InvestorWorkspaceRawDiagnosticLists workspace={workspace} crmActivity={crmActivity} />
       <div className="mb-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Analytics</h1>
@@ -48,35 +48,35 @@ export default async function InvestorAnalyticsPage() {
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <MetricCard
           label="Saved deals"
-          value={String(summary.savedCount)}
+          value={String(workspace.savedDeals.length)}
           detail="Companies on your watchlist"
           accent="indigo"
         />
         <MetricCard
           label="Expressed interests"
-          value={String(summary.interestsCount)}
+          value={String(workspace.interests.length)}
           detail="Interest records across listings"
           accent="violet"
         />
         <MetricCard
           label="Intro requests"
-          value={String(summary.introRequestsCount)}
+          value={String(workspace.introRequests.length)}
           detail="Warm intro and follow-up requests"
           accent="blue"
         />
         <MetricCard
           label="Pledged total"
-          value={formatPledgeTotal(summary.pledgeTotal, summary.pledgeCurrency)}
+          value={formatPledgeTotal(pledgeTotal, pledgeCurrency)}
           detail={
-            summary.indicativeTotal > 0
-              ? `${formatPledgeTotal(summary.indicativeTotal, summary.pledgeCurrency)} indicative interest`
+            indicativeTotal > 0
+              ? `${formatPledgeTotal(indicativeTotal, pledgeCurrency)} indicative interest`
               : "From your interest records"
           }
           accent="slate"
         />
         <MetricCard
           label="Recent activity"
-          value={String(summary.crmActivityCount)}
+          value={String(crmActivity.rows.length)}
           detail="CRM events in your timeline"
           accent="slate"
         />
@@ -86,26 +86,26 @@ export default async function InvestorAnalyticsPage() {
         <WorkspacePanel title="Engagement summary" subtitle="Calculated from your investor records">
           <div className="space-y-3 text-sm text-slate-700">
             <p>
-              <span className="font-medium text-slate-900">{summary.savedCount}</span> saved deals
+              <span className="font-medium text-slate-900">{workspace.savedDeals.length}</span> saved deals
             </p>
             <p>
-              <span className="font-medium text-slate-900">{summary.interestsCount}</span> expressed interests
+              <span className="font-medium text-slate-900">{workspace.interests.length}</span> expressed interests
             </p>
             <p>
-              <span className="font-medium text-slate-900">{summary.introRequestsCount}</span> intro requests
+              <span className="font-medium text-slate-900">{workspace.introRequests.length}</span> intro requests
             </p>
             <p>
               <span className="font-medium text-slate-900">
-                {formatPledgeTotal(summary.pledgeTotal, summary.pledgeCurrency)}
+                {formatPledgeTotal(pledgeTotal, pledgeCurrency)}
               </span>{" "}
               pledged ·{" "}
               <span className="font-medium text-slate-900">
-                {formatPledgeTotal(summary.indicativeTotal, summary.pledgeCurrency)}
+                {formatPledgeTotal(indicativeTotal, pledgeCurrency)}
               </span>{" "}
               indicative
             </p>
             <p>
-              <span className="font-medium text-slate-900">{summary.crmActivityCount}</span> recent CRM activity events
+              <span className="font-medium text-slate-900">{crmActivity.rows.length}</span> recent CRM activity events
             </p>
           </div>
           <Link

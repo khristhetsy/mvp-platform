@@ -2,13 +2,8 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
 import { InvestorActivityTimeline } from "@/components/InvestorActivityTimeline";
-import {
-  InvestorWorkspaceDebugBox,
-  InvestorWorkspaceRawDiagnosticLists,
-  loadInvestorWorkspacePageDataForDebug,
-} from "@/components/InvestorWorkspaceDebugBox";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
-import { investorCompanyLabel } from "@/lib/data/investor-workspace-page";
+import { investorCompanyLabel, loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
 import { listMarketplaceListings } from "@/lib/data/marketplace";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 
@@ -17,12 +12,10 @@ export const dynamic = "force-dynamic";
 export default async function InvestorDashboardPage() {
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
 
-  const [{ data, loadError }, listings] = await Promise.all([
-    loadInvestorWorkspacePageDataForDebug(investorId),
+  const [{ workspace, crmActivity }, listings] = await Promise.all([
+    loadInvestorWorkspacePageData(investorId),
     listMarketplaceListings(supabase).catch(() => []),
   ]);
-
-  const { workspace, crmActivity } = data;
   const savedDeals = workspace.savedDeals;
   const interests = workspace.interests;
   const introRequests = workspace.introRequests;
@@ -35,16 +28,6 @@ export default async function InvestorDashboardPage() {
       profileName={profile.full_name ?? profile.email ?? "Investor"}
       profileSubtitle="Investor account"
     >
-      <InvestorWorkspaceDebugBox
-        route="/investor/dashboard"
-        authUserId={investorId}
-        profileId={profile.id}
-        profileRole={String(profile.role)}
-        workspace={workspace}
-        crmActivity={crmActivity}
-        error={loadError}
-      />
-      <InvestorWorkspaceRawDiagnosticLists workspace={workspace} crmActivity={crmActivity} />
       <div className="mb-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Dashboard</h1>
