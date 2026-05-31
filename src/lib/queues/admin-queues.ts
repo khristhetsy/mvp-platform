@@ -175,7 +175,7 @@ async function loadInvestorApprovalItems(supabase: SupabaseClient<Database>, lim
       severity: "medium",
       status: row.approval_status,
       next_action_label: "Review investor",
-      href: `/admin/investors?status=submitted`,
+      href: `/admin/investors/${row.profile_id}`,
       created_at: row.submitted_at ?? row.created_at,
       metadata: {
         investor_type: row.investor_type,
@@ -218,11 +218,13 @@ async function loadComplianceEscalationItems(
     severity: row.severity,
     status: row.status,
     next_action_label: "Review compliance event",
-    href: row.company_id
-      ? `/admin/companies/${row.company_id}`
-      : row.severity === "critical"
-        ? `/admin/compliance?severity=critical&event=${row.id}`
-        : `/admin/compliance?status=open&event=${row.id}`,
+    href: row.investor_id
+      ? `/admin/investors/${row.investor_id}`
+      : row.company_id
+        ? `/admin/companies/${row.company_id}`
+        : row.severity === "critical"
+          ? `/admin/compliance?severity=critical&event=${row.id}`
+          : `/admin/compliance?status=open&event=${row.id}`,
     created_at: row.created_at,
     metadata: {},
   }));
@@ -329,7 +331,7 @@ async function loadInvestorDocumentItems(supabase: SupabaseClient<Database>, lim
       severity: row.status === "rejected" ? "high" : row.status === "under_review" ? "medium" : "info",
       status: row.status,
       next_action_label: "Review requirement",
-      href: spv?.company_id ? `/admin/companies/${spv.company_id}` : `/admin/spvs?queue=investor_documents&requirement=${row.id}`,
+      href: `/admin/investors/${row.investor_id}`,
       created_at: row.updated_at ?? row.created_at,
       metadata: {
         category: row.category,

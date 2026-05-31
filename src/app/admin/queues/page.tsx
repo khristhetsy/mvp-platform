@@ -9,7 +9,7 @@ import { requireRole } from "@/lib/supabase/auth";
 export const dynamic = "force-dynamic";
 
 type PageProps = {
-  searchParams: Promise<{ queue?: string }>;
+  searchParams: Promise<{ queue?: string; investor?: string }>;
 };
 
 export default async function AdminQueuesPage({ searchParams }: PageProps) {
@@ -49,7 +49,7 @@ export default async function AdminQueuesPage({ searchParams }: PageProps) {
           title="Operations Queues"
           description="Actionable admin queues across company reviews, investor approvals, compliance, SPV readiness, remediation, and imports."
         />
-        <AdminQueuesPanel snapshot={snapshot} initialQueue={params.queue} />
+        <AdminQueuesPanel snapshot={snapshot} initialQueue={params.queue} initialInvestor={params.investor} />
       </WorkspacePageContainer>
     </AppShell>
   );

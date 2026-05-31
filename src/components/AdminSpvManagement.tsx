@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { SpvComplianceNotice } from "@/components/SpvComplianceNotice";
@@ -23,6 +24,7 @@ import {
   type SpvOperationalReadinessStatus,
 } from "@/lib/spv/readiness";
 import type { ClosingReadinessSummary } from "@/lib/spv/closing-review-display";
+import { getInvestorWorkspaceHref } from "@/lib/ui/drilldown-links";
 import {
   formatClosingReviewStatusLabel,
 } from "@/lib/spv/closing-review-display";
@@ -901,8 +903,11 @@ export function AdminSpvManagement({
                           >
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <p className="font-medium text-slate-900">
-                                {profile?.full_name ?? profile?.email ?? "Investor"} · {row.status} ·{" "}
-                                {formatSpvCurrency(row.indicative_amount)}
+                                <Link href={getInvestorWorkspaceHref(row.investor_id)} className="text-indigo-700 hover:text-indigo-900">
+                                  {profile?.full_name ?? profile?.email ?? "Investor"}
+                                </Link>
+                                {" · "}
+                                {row.status} · {formatSpvCurrency(row.indicative_amount)}
                               </p>
                               <p className="text-indigo-700">Investor readiness: {investorPct}%</p>
                             </div>

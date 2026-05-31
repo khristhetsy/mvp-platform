@@ -10,6 +10,7 @@ import {
 } from "@/lib/spv/readiness";
 import type {
   SpvOpportunityRecord,
+  SpvParticipationRecord,
   SpvParticipationRequirementRecord,
 } from "@/lib/spv/types";
 
@@ -325,6 +326,7 @@ export type SpvQueryFilters = {
   queue: (typeof SPV_QUEUE_TYPES)[number] | null;
   activity: string | null;
   company: string | null;
+  investor: string | null;
   spv: string | null;
   requirement: string | null;
   q: string;
@@ -341,6 +343,7 @@ export function parseSpvQueryFilters(params: ReadonlyURLSearchParams | URLSearch
     queue: isOneOf(queueRaw, SPV_QUEUE_TYPES) ? queueRaw : null,
     activity: readParam(params, "activity"),
     company: readParam(params, "company"),
+    investor: readParam(params, "investor"),
     spv: readParam(params, "spv"),
     requirement: readParam(params, "requirement"),
     q: readParam(params, "q") ?? "",
@@ -367,7 +370,7 @@ export function filterSpvOpportunities(
   filters: SpvQueryFilters,
   context: {
     requirementsByParticipation: Record<string, SpvParticipationRequirementRecord[]>;
-    participationsBySpv: Record<string, { id: string }[]>;
+    participationsBySpv: Record<string, SpvParticipationRecord[]>;
     companiesById?: Map<string, string>;
   },
 ): SpvOpportunityRecord[] {
@@ -379,6 +382,13 @@ export function filterSpvOpportunities(
 
   if (filters.company) {
     rows = rows.filter((row) => row.company_id === filters.company);
+  }
+
+  if (filters.investor) {
+    rows = rows.filter((row) => {
+      const parts = context.participationsBySpv[row.id] ?? [];
+      return parts.some((part) => part.investor_id === filters.investor);
+    });
   }
 
   if (filters.status) {
@@ -526,6 +536,7 @@ export function buildSpvFilterChips(filters: SpvQueryFilters): FilterChip[] {
   if (filters.queue) chips.push({ key: "queue", label: "Queue", value: formatLabel(filters.queue) });
   if (filters.activity) chips.push({ key: "activity", label: "Activity", value: formatLabel(filters.activity) });
   if (filters.company) chips.push({ key: "company", label: "Company", value: filters.company });
+  if (filters.investor) chips.push({ key: "investor", label: "Investor", value: filters.investor });
   if (filters.spv) chips.push({ key: "spv", label: "SPV", value: filters.spv });
   if (filters.requirement) chips.push({ key: "requirement", label: "Requirement", value: filters.requirement });
   if (filters.q.trim()) chips.push({ key: "q", label: "Search", value: filters.q.trim() });

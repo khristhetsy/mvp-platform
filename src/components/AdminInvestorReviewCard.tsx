@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { investorApprovalStatusLabel } from "@/lib/investor/access";
 import type { InvestorProfileRecord } from "@/lib/investor/types";
+import { getInvestorWorkspaceHref } from "@/lib/ui/drilldown-links";
 
 type Row = InvestorProfileRecord & {
   profiles: { id: string; full_name: string | null; email: string | null; created_at: string } | null;
@@ -62,9 +64,19 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-slate-500">{row.investor_type ?? "Type not set"}</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">{investorName}</h2>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950">
+            <Link href={getInvestorWorkspaceHref(row.profile_id)} className="text-indigo-700 hover:text-indigo-900">
+              {investorName}
+            </Link>
+          </h2>
           {row.profiles?.email ? <p className="text-sm text-slate-600">{row.profiles.email}</p> : null}
           {row.firm_name ? <p className="mt-1 text-sm text-slate-600">Firm: {row.firm_name}</p> : null}
+          <Link
+            href={getInvestorWorkspaceHref(row.profile_id)}
+            className="mt-2 inline-block text-xs font-medium text-indigo-600 hover:text-indigo-800"
+          >
+            Open investor workspace →
+          </Link>
         </div>
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">
           {investorApprovalStatusLabel(status)}

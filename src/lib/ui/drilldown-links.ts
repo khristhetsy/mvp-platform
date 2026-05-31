@@ -29,6 +29,10 @@ export function getCompanyWorkspaceHref(companyId: string): string {
   return `/admin/companies/${companyId}`;
 }
 
+export function getInvestorWorkspaceHref(profileId: string): string {
+  return `/admin/investors/${profileId}`;
+}
+
 export function getDrilldownHref(key: DrilldownKey): string {
   return DRILLDOWN_LINKS[key];
 }
@@ -95,6 +99,15 @@ export function getInvestorActivityRowHref(
   panel: "interests" | "intros" | "saved",
   raw: Record<string, unknown>,
 ): string {
+  const investorId =
+    typeof raw.investor_id === "string"
+      ? raw.investor_id
+      : typeof (raw.profiles as { id?: string } | null)?.id === "string"
+        ? (raw.profiles as { id: string }).id
+        : null;
+  if (investorId) {
+    return getInvestorWorkspaceHref(investorId);
+  }
   const companyId = typeof raw.company_id === "string" ? raw.company_id : null;
   if (companyId) {
     return getCompanyWorkspaceHref(companyId);

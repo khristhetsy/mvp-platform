@@ -1,10 +1,15 @@
 "use client";
 
+import Link from "next/link";
+import { getCompanyWorkspaceHref, getInvestorWorkspaceHref } from "@/lib/ui/drilldown-links";
+
 function formatActivityRow(row: {
   id: string;
+  investor_id?: string;
+  company_id?: string;
   status?: string | null;
   created_at?: string;
-  profiles?: { full_name?: string | null; email?: string | null } | null;
+  profiles?: { id?: string; full_name?: string | null; email?: string | null } | null;
   companies?: { company_name?: string | null; slug?: string | null } | null;
   pledge_amount?: number | null;
   pledge_currency?: string | null;
@@ -15,8 +20,19 @@ function formatActivityRow(row: {
   const date = row.created_at
     ? new Date(row.created_at).toLocaleDateString("en-US", { timeZone: "UTC" })
     : "—";
+  const investorId = row.investor_id ?? row.profiles?.id ?? null;
+  const companyId = row.company_id ?? null;
 
-  return { id: row.id, investor, company, status: row.status ?? "—", date, message: row.message ?? null };
+  return {
+    id: row.id,
+    investor,
+    company,
+    status: row.status ?? "—",
+    date,
+    message: row.message ?? null,
+    investorId,
+    companyId,
+  };
 }
 
 type Props = {
@@ -43,8 +59,20 @@ export function AdminInvestorActivity({ interests, introRequests, savedDeals }: 
                 const row = formatActivityRow(raw as Parameters<typeof formatActivityRow>[0]);
                 return (
                   <div key={row.id} className="py-3 text-sm">
-                    <p className="font-medium text-slate-900">{row.investor}</p>
-                    <p className="text-slate-600">{row.company}</p>
+                    {row.investorId ? (
+                      <Link href={getInvestorWorkspaceHref(row.investorId)} className="font-medium text-indigo-700 hover:text-indigo-900">
+                        {row.investor}
+                      </Link>
+                    ) : (
+                      <p className="font-medium text-slate-900">{row.investor}</p>
+                    )}
+                    {row.companyId ? (
+                      <Link href={getCompanyWorkspaceHref(row.companyId)} className="text-indigo-600 hover:text-indigo-800">
+                        {row.company}
+                      </Link>
+                    ) : (
+                      <p className="text-slate-600">{row.company}</p>
+                    )}
                     <p className="mt-1 text-xs text-slate-500">
                       {row.status} · {row.date}
                     </p>

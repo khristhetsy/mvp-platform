@@ -390,17 +390,17 @@ export async function listAdminInvestorActivity(supabase: SupabaseClient<Databas
   const [interests, intros, saved] = await Promise.all([
     supabase
       .from("investor_interests")
-      .select("id, status, pledge_amount, pledge_currency, message, created_at, profiles:investor_id(full_name, email), companies(company_name, slug)")
+      .select("id, investor_id, status, pledge_amount, pledge_currency, message, created_at, profiles:investor_id(full_name, email), companies(company_name, slug)")
       .order("created_at", { ascending: false })
       .limit(20),
     supabase
       .from("intro_requests")
-      .select("id, status, message, created_at, profiles:investor_id(full_name, email), companies(company_name, slug)")
+      .select("id, investor_id, status, message, created_at, profiles:investor_id(full_name, email), companies(company_name, slug)")
       .order("created_at", { ascending: false })
       .limit(20),
     supabase
       .from("saved_deals")
-      .select("id, status, created_at, profiles:investor_id(full_name, email), companies(company_name, slug)")
+      .select("id, investor_id, status, created_at, profiles:investor_id(full_name, email), companies(company_name, slug)")
       .order("created_at", { ascending: false })
       .limit(20),
   ]);

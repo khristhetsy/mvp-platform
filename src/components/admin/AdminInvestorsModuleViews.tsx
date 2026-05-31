@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Suspense, useMemo } from "react";
 import { AdminInvestorActivity } from "@/components/AdminInvestorActivity";
 import { AdminInvestorReviewCard } from "@/components/AdminInvestorReviewCard";
@@ -11,6 +12,7 @@ import { useAdminQueryFilters } from "@/hooks/use-admin-query-filters";
 import type { PlanType, SubscriptionRecord } from "@/lib/subscriptions/plans";
 import type { InvestorProfileRecord } from "@/lib/investor/types";
 import { filterInvestorProfiles, type InvestorQueryFilters } from "@/lib/ui/query-filters";
+import { getInvestorWorkspaceHref } from "@/lib/ui/drilldown-links";
 
 type InvestorProfileWithMatching = InvestorProfileRecord & {
   profiles: { id: string; full_name: string | null; email: string | null; role: string | null; created_at: string } | null;
@@ -162,7 +164,13 @@ function AdminInvestorsModuleViewsInner({
               {investors.map((investor) => (
                 <div key={`${investor.email ?? investor.name}`} className="flex items-center justify-between py-3 text-sm">
                   <div>
-                    <p className="font-medium text-slate-900">{investor.name}</p>
+                    {investor.id ? (
+                      <Link href={getInvestorWorkspaceHref(investor.id)} className="font-medium text-indigo-700 hover:text-indigo-900">
+                        {investor.name}
+                      </Link>
+                    ) : (
+                      <p className="font-medium text-slate-900">{investor.name}</p>
+                    )}
                     {investor.email ? <p className="text-slate-500">{investor.email}</p> : null}
                   </div>
                   <p className="text-xs text-slate-500">

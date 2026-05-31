@@ -1,4 +1,4 @@
-import { getCompanyWorkspaceHref, getDrilldownHref } from "@/lib/ui/drilldown-links";
+import { getCompanyWorkspaceHref, getDrilldownHref, getInvestorWorkspaceHref } from "@/lib/ui/drilldown-links";
 import { OPERATIONAL_CATEGORY_LABELS } from "@/lib/operational-activity/event-categories";
 import type { OperationalActivityFeedItem, OperationalEventCategory } from "@/lib/operational-activity/types";
 
@@ -63,6 +63,9 @@ export function formatOperationalTimestamp(value: string) {
 }
 
 export function getOperationalEventHref(item: OperationalActivityFeedItem): string {
+  if (item.investor_id) {
+    return getInvestorWorkspaceHref(item.investor_id);
+  }
   switch (item.event_category) {
     case "crm":
     case "investor":
