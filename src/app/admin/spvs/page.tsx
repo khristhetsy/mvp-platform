@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { AdminSpvDashboardKpis } from "@/components/AdminSpvDashboardKpis";
 import { AdminSpvManagement } from "@/components/AdminSpvManagement";
 import { AdminSpvsModuleViews } from "@/components/admin/AdminSpvsModuleViews";
+import { WorkspacePageContainer, PageSection } from "@/components/ui/workspace-layout";
 import { buildAdminSpvDashboardMetrics } from "@/lib/spv/readiness";
 import { listAdminChecklistGrouped } from "@/lib/spv/checklist";
 import {
@@ -111,22 +112,24 @@ export default async function AdminSpvsPage() {
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={profile.role}
     >
-      <PageHeader
-        eyebrow="SPV operations"
-        title="SPV command center"
-        description="Readiness, investor document intake, and indicative participation. Use Refresh readiness per SPV — no sync on page load."
-        metadata="Operational tracking only — not legal formation or securities execution"
-      />
+      <WorkspacePageContainer>
+        <PageHeader
+          eyebrow="SPV operations"
+          title="SPV command center"
+          description="Readiness, investor document intake, and indicative participation. Use Refresh readiness per SPV — no sync on page load."
+          metadata="Operational tracking only — not legal formation or securities execution"
+        />
 
-      <AdminSpvDashboardKpis
-        metrics={buildAdminSpvDashboardMetrics(
-          opportunities,
-          participationsBySpv,
-          requirementsByParticipation,
-        )}
-      />
+        <PageSection title="Operations overview" subtitle="Non-binding indicative totals">
+          <AdminSpvDashboardKpis
+            metrics={buildAdminSpvDashboardMetrics(
+              opportunities,
+              participationsBySpv,
+              requirementsByParticipation,
+            )}
+          />
+        </PageSection>
 
-      <div className="mt-8">
         <AdminSpvsModuleViews>
           {(listViewMode, listDensity, listQuery) => (
             <AdminSpvManagement
@@ -144,7 +147,7 @@ export default async function AdminSpvsPage() {
             />
           )}
         </AdminSpvsModuleViews>
-      </div>
+      </WorkspacePageContainer>
     </AppShell>
   );
 }

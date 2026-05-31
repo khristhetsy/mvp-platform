@@ -12,6 +12,7 @@ import {
   DataTableRow,
 } from "@/components/ui/DataTable";
 import { ModuleEmptyState, PipelineBoard, ViewToolbar } from "@/components/ui/ViewToolbar";
+import { MetricGrid, PageSection } from "@/components/ui/workspace-layout";
 import { useViewMode } from "@/hooks/use-view-mode";
 import type { FounderInvestorCrmView, FounderInvestorRelationRow } from "@/lib/data/investor-crm";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
@@ -48,7 +49,7 @@ function FounderInvestorRelationCard({ row }: Readonly<{ row: FounderInvestorRel
   const pipelineStage = row.pipelineStage ? formatPipelineStage(row.pipelineStage) : null;
 
   return (
-    <div className="rounded-lg border border-slate-200/80 bg-white p-3 shadow-sm">
+    <div className="rounded-lg border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-medium text-slate-900">{row.investorName}</p>
@@ -158,40 +159,43 @@ function FounderInvestorsModuleViewsInner({
         query={query}
         onQueryChange={setQuery}
         searchPlaceholder="Search investors, status, or activity…"
+        sticky
       />
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Interested investors"
-          value={String(crmView.summary.totalInterestedInvestors)}
-          detail="Unique investors with interest, saves, or intro activity"
-          accent="indigo"
-        />
-        <MetricCard
-          label="Pledged / indicative"
-          value={crmView.summary.totalPledgedDisplay}
-          detail={
-            crmView.summary.totalIndicativeInterestDisplay
-              ? `${crmView.summary.totalIndicativeInterestDisplay} indicative interest declared`
-              : "Total pledged amount from investor interests"
-          }
-          accent="violet"
-        />
-        <MetricCard
-          label="Intro requests"
-          value={String(crmView.summary.introRequests)}
-          detail="Investors who requested an introduction"
-          accent="blue"
-        />
-        <MetricCard
-          label="Follow-ups needed"
-          value={String(crmView.summary.followUpsNeeded)}
-          detail="Investors waiting on founder or platform follow-up"
-          accent="slate"
-        />
-      </section>
+      <PageSection title="Pipeline summary" subtitle={companyName}>
+        <MetricGrid>
+          <MetricCard
+            label="Interested investors"
+            value={String(crmView.summary.totalInterestedInvestors)}
+            detail="Unique investors with interest, saves, or intro activity"
+            accent="indigo"
+          />
+          <MetricCard
+            label="Pledged / indicative"
+            value={crmView.summary.totalPledgedDisplay}
+            detail={
+              crmView.summary.totalIndicativeInterestDisplay
+                ? `${crmView.summary.totalIndicativeInterestDisplay} indicative interest declared`
+                : "Total pledged amount from investor interests"
+            }
+            accent="violet"
+          />
+          <MetricCard
+            label="Intro requests"
+            value={String(crmView.summary.introRequests)}
+            detail="Investors who requested an introduction"
+            accent="blue"
+          />
+          <MetricCard
+            label="Follow-ups needed"
+            value={String(crmView.summary.followUpsNeeded)}
+            detail="Investors waiting on founder or platform follow-up"
+            accent="slate"
+          />
+        </MetricGrid>
+      </PageSection>
 
-      <section className="mt-6">
+      <PageSection>
         {viewMode === "table" ? (
           filteredRows.length === 0 ? (
             <ModuleEmptyState title="No matching investors" description="Try adjusting your search or check back when platform activity arrives." />
@@ -264,7 +268,7 @@ function FounderInvestorsModuleViewsInner({
             </WorkspacePanel>
           )
         ) : null}
-      </section>
+      </PageSection>
     </>
   );
 }

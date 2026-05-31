@@ -24,6 +24,7 @@ function AdminSpvsModuleViewsInner({
         query={query}
         onQueryChange={setQuery}
         searchPlaceholder="Search SPVs, companies, or readiness…"
+        sticky
       />
       {children(viewMode, density, query)}
     </>

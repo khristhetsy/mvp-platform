@@ -11,6 +11,7 @@ import {
   DataTableRow,
 } from "@/components/ui/DataTable";
 import { ModuleEmptyState, ViewToolbar } from "@/components/ui/ViewToolbar";
+import { ContentGrid, PageSection } from "@/components/ui/workspace-layout";
 import { useViewMode } from "@/hooks/use-view-mode";
 
 export type AdminReportSection = {
@@ -54,23 +55,25 @@ function AdminReportsModuleViewsInner({
         onQueryChange={setQuery}
         searchPlaceholder="Search report types…"
         showDensity
+        sticky
       />
 
-      {filtered.length === 0 ? (
-        <ModuleEmptyState title="No matching reports" description="Try a different search term." />
-      ) : viewMode === "card" ? (
-        <section className={`mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3 ${density === "compact" ? "gap-3" : "gap-4"}`}>
-          {filtered.map((section) => (
-            <WorkspacePanel key={section.reportType} title={section.title} subtitle={section.description}>
-              <p className="text-xs text-slate-500">
-                Report type: <span className="font-mono text-slate-700">{section.reportType}</span>
-              </p>
-            </WorkspacePanel>
-          ))}
-        </section>
-      ) : (
-        <section className="mb-8">
-          <DataTable density={density}>
+      <PageSection title="Report catalog" subtitle="Internal audit exports — not legal filings">
+        {filtered.length === 0 ? (
+          <ModuleEmptyState title="No matching reports" description="Try a different search term." />
+        ) : viewMode === "card" ? (
+          <ContentGrid columns={3}>
+            {filtered.map((section) => (
+              <WorkspacePanel key={section.reportType} title={section.title} subtitle={section.description}>
+                <p className="text-xs text-slate-500">
+                  Report type: <span className="font-mono text-slate-700">{section.reportType}</span>
+                </p>
+              </WorkspacePanel>
+            ))}
+          </ContentGrid>
+        ) : (
+          <div className="overflow-x-auto">
+            <DataTable density={density}>
             <DataTableHead>
               <DataTableHeaderCell>Report</DataTableHeaderCell>
               <DataTableHeaderCell>Type</DataTableHeaderCell>
@@ -87,9 +90,10 @@ function AdminReportsModuleViewsInner({
                 </DataTableRow>
               ))}
             </DataTableBody>
-          </DataTable>
-        </section>
-      )}
+            </DataTable>
+          </div>
+        )}
+      </PageSection>
 
       {children}
     </>

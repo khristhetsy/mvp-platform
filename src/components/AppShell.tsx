@@ -3,7 +3,6 @@
 import { createContext, useContext } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { compactDisclaimer } from "@/lib/compliance";
 import type { Role } from "@/lib/auth";
@@ -40,16 +39,7 @@ export function AppShell({
   const shellRole = activeWorkspace ? workspaceShellRole(activeWorkspace) : role;
 
   if (insideAppShell && activeWorkspace) {
-    return (
-      <>
-        <WorkspaceHeader
-          workspace={activeWorkspace}
-          profileName={profileName}
-          profileSubtitle={profileSubtitle}
-        />
-        <main className="flex-1 overflow-y-auto bg-[var(--surface-sunken)] p-5 lg:p-7">{children}</main>
-      </>
-    );
+    return <>{children}</>;
   }
 
   if (activeWorkspace) {

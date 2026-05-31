@@ -20,6 +20,7 @@ export function ViewToolbar({
   showDensity = true,
   showSearch = true,
   showSavedViews = true,
+  sticky = true,
 }: Readonly<{
   viewMode: ViewMode;
   allowedModes: readonly ViewMode[];
@@ -33,10 +34,19 @@ export function ViewToolbar({
   showDensity?: boolean;
   showSearch?: boolean;
   showSavedViews?: boolean;
+  sticky?: boolean;
 }>) {
   return (
-    <div className="mb-4 space-y-3 rounded-xl border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
+    <div
+      className={`space-y-3 rounded-xl border border-slate-200 bg-white p-3 shadow-[var(--shadow-panel)] ${
+        sticky ? "sticky z-20 mb-4" : "mb-4"
+      }`}
+      style={sticky ? { top: "calc(var(--workspace-toolbar-top) + 0.5rem)" } : undefined}
+      role="region"
+      aria-label="View controls"
+    >
       <div className="flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">View</span>
         <ViewModeToggle value={viewMode} allowedModes={allowedModes} onChange={onViewModeChange} />
         {showDensity ? <ViewDensityToggle value={density} onChange={onDensityChange} /> : null}
         {showSavedViews ? <SavedViewPlaceholder /> : null}

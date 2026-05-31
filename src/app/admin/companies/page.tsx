@@ -2,6 +2,8 @@ import { AppShell } from "@/components/AppShell";
 import { AdminActionHealthProvider } from "@/components/AdminActionHealthProvider";
 import { AdminCompaniesModuleViews } from "@/components/admin/AdminCompaniesModuleViews";
 import { formatError, RouteDataDiagnostics } from "@/components/RouteDataDiagnostics";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { listAdminCompanies, mapAdminCompaniesToCardData } from "@/lib/data/admin";
 import { getCompanyMatchingSummaries } from "@/lib/matching/admin-matching-summaries";
 import { getLearningAdminSummaryForCompanies } from "@/lib/learning/progress";
@@ -86,19 +88,19 @@ export default async function AdminCompaniesPage() {
           ]}
         />
 
-        <div className="mb-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Admin Workspace</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Companies</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Review submissions, manage publication, and control marketplace visibility.
-          </p>
-        </div>
+        <WorkspacePageContainer>
+          <PageHeader
+            eyebrow="Admin workspace"
+            title="Companies"
+            description="Review submissions, manage publication, and control marketplace visibility."
+          />
 
-        <AdminCompaniesModuleViews
-          companies={companyCards}
-          loadError={loadError}
-          pendingCount={pendingCount}
-        />
+          <AdminCompaniesModuleViews
+            companies={companyCards}
+            loadError={loadError}
+            pendingCount={pendingCount}
+          />
+        </WorkspacePageContainer>
       </AdminActionHealthProvider>
     </AppShell>
   );

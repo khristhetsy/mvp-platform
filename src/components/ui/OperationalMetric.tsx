@@ -35,33 +35,35 @@ export function OperationalMetric({
 
   return (
     <div
-      className={`rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)] transition hover:border-slate-300 ${
+      className={`flex h-full min-h-[8.5rem] flex-col rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)] transition hover:border-slate-300 ${
         urgency ? "ring-1 ring-amber-200" : ""
       }`}
     >
-      <div className={`rounded-xl border-l-[3px] ${border}`}>
-        <div className="p-3.5">
+      <div className={`flex h-full flex-col rounded-xl border-l-[3px] ${border}`}>
+        <div className="flex flex-1 flex-col p-4">
           <div className="flex items-start justify-between gap-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</p>
             {statusLabel ? <StatusBadge label={statusLabel} status={status} dot /> : null}
           </div>
-          <div className="mt-1 flex items-end justify-between gap-2">
-            <div className="flex items-baseline gap-2">
-              <p className="font-mono text-xl font-semibold tabular-nums tracking-tight text-slate-950">{value}</p>
-              {trendSymbol ? (
-                <span className={`text-xs font-medium ${trendColor}`} aria-label={`Trend ${trend}`}>
-                  {trendSymbol}
-                </span>
+          <div className="mt-1.5 flex flex-1 flex-col justify-between gap-2">
+            <div className="flex items-end justify-between gap-2">
+              <div className="flex min-w-0 items-baseline gap-2">
+                <p className="truncate font-mono text-xl font-semibold tabular-nums tracking-tight text-slate-950">{value}</p>
+                {trendSymbol ? (
+                  <span className={`shrink-0 text-xs font-medium ${trendColor}`} aria-label={`Trend ${trend}`}>
+                    {trendSymbol}
+                  </span>
+                ) : null}
+              </div>
+              {sparklineValues && sparklineValues.length > 1 ? (
+                <SparklineChart values={sparklineValues} width={72} height={28} />
               ) : null}
             </div>
-            {sparklineValues && sparklineValues.length > 1 ? (
-              <SparklineChart values={sparklineValues} width={72} height={28} />
+            {detail ? <p className="line-clamp-2 text-xs leading-5 text-slate-600">{detail}</p> : null}
+            {lastUpdated ? (
+              <p className="font-mono text-[10px] text-slate-400">Updated {lastUpdated}</p>
             ) : null}
           </div>
-          {detail ? <p className="mt-1 text-xs leading-5 text-slate-600">{detail}</p> : null}
-          {lastUpdated ? (
-            <p className="mt-1.5 font-mono text-[10px] text-slate-400">Updated {lastUpdated}</p>
-          ) : null}
         </div>
       </div>
     </div>
@@ -90,7 +92,7 @@ export function MetricRow({
           {action}
         </div>
       )}
-      <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">{children}</div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 [&>*]:h-full">{children}</div>
     </section>
   );
 }

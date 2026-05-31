@@ -13,6 +13,7 @@ import {
   DataTableRow,
 } from "@/components/ui/DataTable";
 import { ModuleEmptyState, PipelineBoard, ViewToolbar } from "@/components/ui/ViewToolbar";
+import { ContentGrid, PageSection } from "@/components/ui/workspace-layout";
 import { useViewMode } from "@/hooks/use-view-mode";
 
 export type InvestorOpportunityRow = {
@@ -83,10 +84,7 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
   }
 
   return (
-    <WorkspacePanel
-      title="Recommended for you"
-      subtitle="Sorted by CapitalOS match score (sector, stage, check size, geography, readiness)"
-    >
+    <>
       <ViewToolbar
         viewMode={viewMode}
         allowedModes={allowedModes}
@@ -96,71 +94,79 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
         query={query}
         onQueryChange={setQuery}
         searchPlaceholder="Search companies, sector, or stage…"
+        sticky
       />
 
-      {filtered.length === 0 ? (
-        <ModuleEmptyState title="No matching opportunities" description="Adjust your search or browse the full marketplace." />
-      ) : null}
+      <PageSection
+        title="Recommended for you"
+        subtitle="Sorted by CapitalOS match score (sector, stage, check size, geography, readiness)"
+      >
+        {filtered.length === 0 ? (
+          <ModuleEmptyState title="No matching opportunities" description="Adjust your search or browse the full marketplace." />
+        ) : null}
 
-      {filtered.length > 0 && viewMode === "card" ? (
-        <div className={`grid gap-4 md:grid-cols-2 ${density === "compact" ? "gap-3" : "gap-4"}`}>
-          {filtered.map((row) => (
-            <InvestorMatchOpportunityCard key={row.companyId} {...row} />
-          ))}
-        </div>
-      ) : null}
-
-      {filtered.length > 0 && viewMode === "table" ? (
-        <DataTable density={density}>
-          <DataTableHead>
-            <DataTableHeaderCell>Company</DataTableHeaderCell>
-            <DataTableHeaderCell>Sector / stage</DataTableHeaderCell>
-            <DataTableHeaderCell>Location</DataTableHeaderCell>
-            <DataTableHeaderCell>Target raise</DataTableHeaderCell>
-            <DataTableHeaderCell>Match</DataTableHeaderCell>
-            <DataTableHeaderCell>Top reasons</DataTableHeaderCell>
-          </DataTableHead>
-          <DataTableBody>
+        {filtered.length > 0 && viewMode === "card" ? (
+          <ContentGrid columns={2}>
             {filtered.map((row) => (
-              <DataTableRow key={row.companyId}>
-                <DataTableCell>
-                  <Link href={row.slug ? `/deals/${row.slug}` : "/deals"} className="font-medium text-indigo-700 hover:underline">
-                    {row.companyName}
-                  </Link>
-                </DataTableCell>
-                <DataTableCell>{[row.industry, row.stage].filter(Boolean).join(" · ") || "—"}</DataTableCell>
-                <DataTableCell>{row.location ?? "—"}</DataTableCell>
-                <DataTableCell>{row.fundingTarget ?? "—"}</DataTableCell>
-                <DataTableCell>
-                  <span className="font-semibold text-[var(--navy)]">{row.matchScore}%</span>
-                </DataTableCell>
-                <DataTableCell className="max-w-xs truncate text-xs">{row.matchReasons.slice(0, 2).join("; ") || "—"}</DataTableCell>
-              </DataTableRow>
+              <InvestorMatchOpportunityCard key={row.companyId} {...row} />
             ))}
-          </DataTableBody>
-        </DataTable>
-      ) : null}
+          </ContentGrid>
+        ) : null}
 
-      {filtered.length > 0 && viewMode === "pipeline" ? (
-        <PipelineBoard columns={pipelineColumns} density={density} />
-      ) : null}
+        {filtered.length > 0 && viewMode === "table" ? (
+          <div className="overflow-x-auto">
+            <DataTable density={density}>
+              <DataTableHead>
+                <DataTableHeaderCell>Company</DataTableHeaderCell>
+                <DataTableHeaderCell>Sector / stage</DataTableHeaderCell>
+                <DataTableHeaderCell>Location</DataTableHeaderCell>
+                <DataTableHeaderCell>Target raise</DataTableHeaderCell>
+                <DataTableHeaderCell>Match</DataTableHeaderCell>
+                <DataTableHeaderCell>Top reasons</DataTableHeaderCell>
+              </DataTableHead>
+              <DataTableBody>
+                {filtered.map((row) => (
+                  <DataTableRow key={row.companyId}>
+                    <DataTableCell>
+                      <Link href={row.slug ? `/deals/${row.slug}` : "/deals"} className="font-medium text-[var(--navy)] hover:underline">
+                        {row.companyName}
+                      </Link>
+                    </DataTableCell>
+                    <DataTableCell>{[row.industry, row.stage].filter(Boolean).join(" · ") || "—"}</DataTableCell>
+                    <DataTableCell>{row.location ?? "—"}</DataTableCell>
+                    <DataTableCell>{row.fundingTarget ?? "—"}</DataTableCell>
+                    <DataTableCell>
+                      <span className="font-semibold text-[var(--navy)]">{row.matchScore}%</span>
+                    </DataTableCell>
+                    <DataTableCell className="max-w-xs truncate text-xs">{row.matchReasons.slice(0, 2).join("; ") || "—"}</DataTableCell>
+                  </DataTableRow>
+                ))}
+              </DataTableBody>
+            </DataTable>
+          </div>
+        ) : null}
 
-      {filtered.length > 0 && viewMode === "timeline" ? (
-        <ol className="space-y-3">
-          {timelineRows.map((row, index) => (
-            <li key={row.companyId} className="flex gap-3 rounded-lg border border-slate-200/80 bg-white p-3">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--navy)] text-xs font-bold text-white">
-                {index + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-[var(--navy)]">{row.companyName}</p>
-                <p className="text-xs text-slate-500">{row.matchScore}% match · {row.matchReasons[0] ?? "Ranked opportunity"}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      ) : null}
-    </WorkspacePanel>
+        {filtered.length > 0 && viewMode === "pipeline" ? (
+          <PipelineBoard columns={pipelineColumns} density={density} />
+        ) : null}
+
+        {filtered.length > 0 && viewMode === "timeline" ? (
+          <ol className="space-y-3">
+            {timelineRows.map((row, index) => (
+              <li key={row.companyId} className="flex gap-3 rounded-lg border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--navy)] text-xs font-bold text-white">
+                  {index + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-[var(--navy)]">{row.companyName}</p>
+                  <p className="text-xs text-slate-500">{row.matchScore}% match · {row.matchReasons[0] ?? "Ranked opportunity"}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        ) : null}
+      </PageSection>
+    </>
   );
 }
 

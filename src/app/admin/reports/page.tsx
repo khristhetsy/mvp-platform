@@ -2,6 +2,8 @@ import Link from "next/link";
 import { AdminReportsPanel } from "@/components/AdminReportsPanel";
 import { AdminReportsModuleViews } from "@/components/admin/AdminReportsModuleViews";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { loadAdminReportFilterOptions } from "@/lib/reports/admin-reports";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
@@ -75,35 +77,34 @@ export default async function AdminReportsPage() {
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={profile.role}
     >
-      <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Admin Workspace</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Audit export &amp; reporting</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Generate internal JSON or CSV summaries from existing platform data for compliance, diligence, and
-          operational oversight. Not legal filings, tax reports, or external compliance integrations.
-        </p>
-      </div>
-
-      <AdminReportsModuleViews sections={[...REPORT_SECTIONS]}>
-        <AdminReportsPanel
-          companies={options.companies.map(toFilterOption)}
-          founders={options.founders.map(toFilterOption)}
-          investors={options.investors.map(toFilterOption)}
+      <WorkspacePageContainer>
+        <PageHeader
+          eyebrow="Admin workspace"
+          title="Audit export & reporting"
+          description="Generate internal JSON or CSV summaries from existing platform data for compliance, diligence, and operational oversight. Not legal filings, tax reports, or external compliance integrations."
         />
 
-        <p className="mt-8 text-sm text-slate-600">
-          Each export writes an{" "}
-          <span className="font-medium text-slate-800">audit_logs</span> entry with report type, filters, and
-          generator.{" "}
-          <Link href="/admin/compliance" className="font-semibold text-indigo-700">
-            Compliance center
-          </Link>{" "}
-          ·{" "}
-          <Link href="/admin/analytics" className="font-semibold text-indigo-700">
-            Analytics
-          </Link>
-        </p>
-      </AdminReportsModuleViews>
+        <AdminReportsModuleViews sections={[...REPORT_SECTIONS]}>
+          <AdminReportsPanel
+            companies={options.companies.map(toFilterOption)}
+            founders={options.founders.map(toFilterOption)}
+            investors={options.investors.map(toFilterOption)}
+          />
+
+          <p className="text-sm text-slate-600">
+            Each export writes an{" "}
+            <span className="font-medium text-slate-800">audit_logs</span> entry with report type, filters, and
+            generator.{" "}
+            <Link href="/admin/compliance" className="font-semibold text-[var(--navy)] hover:underline">
+              Compliance center
+            </Link>{" "}
+            ·{" "}
+            <Link href="/admin/analytics" className="font-semibold text-[var(--navy)] hover:underline">
+              Analytics
+            </Link>
+          </p>
+        </AdminReportsModuleViews>
+      </WorkspacePageContainer>
     </AppShell>
   );
 }

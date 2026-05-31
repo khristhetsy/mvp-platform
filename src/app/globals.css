@@ -45,9 +45,12 @@
   --space-6: 1.5rem;
   --space-8: 2rem;
 
-  --shadow-panel: 0 1px 2px rgb(12 35 64 / 0.04), 0 4px 12px rgb(12 35 64 / 0.05);
-  --shadow-sticky: 0 4px 16px rgb(12 35 64 / 0.07);
-  --shadow-card: 0 1px 3px rgb(12 35 64 / 0.06);
+  --shadow-panel: 0 1px 2px rgb(12 35 64 / 0.04), 0 1px 4px rgb(12 35 64 / 0.04);
+  --shadow-sticky: 0 1px 3px rgb(12 35 64 / 0.06);
+  --shadow-card: 0 1px 2px rgb(12 35 64 / 0.05);
+
+  --workspace-header-height: 3.25rem;
+  --workspace-toolbar-top: var(--workspace-header-height);
 
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;

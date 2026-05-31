@@ -1,12 +1,12 @@
 import { MetricCard } from "@/components/MetricCard";
-import { MetricRow } from "@/components/ui/OperationalMetric";
+import { MetricGridWide } from "@/components/ui/workspace-layout";
 import { formatDashboardIndicativeTotal, type AdminSpvDashboardMetrics } from "@/lib/spv/readiness";
 
 export function AdminSpvDashboardKpis({
   metrics,
 }: Readonly<{ metrics: AdminSpvDashboardMetrics }>) {
   return (
-    <MetricRow title="SPV operations" subtitle="Non-binding indicative totals · refresh via SPV command center">
+    <MetricGridWide>
       <MetricCard label="Total SPVs" value={String(metrics.totalSpvs)} detail="All opportunities" accent="indigo" />
       <MetricCard label="Open SPVs" value={String(metrics.openSpvs)} detail="Accepting participation" accent="violet" />
       <MetricCard
@@ -33,6 +33,6 @@ export function AdminSpvDashboardKpis({
         detail="Needs upload or review"
         accent="blue"
       />
-    </MetricRow>
+    </MetricGridWide>
   );
 }
