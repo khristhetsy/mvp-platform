@@ -47,6 +47,16 @@ export type PageBuilderSnapshotRow = {
   created_at: string;
 };
 
+export type PageBuilderSnapshotMeta = PageBuilderSnapshotRow & {
+  blockCount: number;
+  createdByName: string | null;
+  createdByEmail: string | null;
+};
+
+export type AutosaveStatus = "idle" | "unsaved" | "saving" | "saved" | "error";
+
+export type VersionViewMode = "draft" | "snapshot-preview" | "compare";
+
 export type ValidationWarning = {
   blockId?: string;
   code: string;

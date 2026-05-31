@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -16,15 +16,23 @@ import {
   Upload,
 } from "lucide-react";
 import { PageBuilderPreview } from "@/components/page-builder/PageBuilderPreview";
+import {
+  AutosaveIndicator,
+  RestoreSnapshotModal,
+  VersionHistorySidebar,
+} from "@/components/page-builder/VersionHistorySidebar";
 import { BLOCK_DEFINITIONS, createBlock, getBlockDefinition } from "@/lib/page-builder/blocks";
 import type {
+  AutosaveStatus,
   PageBlock,
   PageBlockType,
+  PageBuilderDraftRow,
   PageBuilderSlug,
-  PageBuilderSnapshotRow,
+  PageBuilderSnapshotMeta,
   PageLayoutDocument,
   PreviewMode,
   ValidationWarning,
+  VersionViewMode,
 } from "@/lib/page-builder/types";
 import { PAGE_BUILDER_SLUGS } from "@/lib/page-builder/types";
 import { validateLayout } from "@/lib/page-builder/validation";
@@ -39,85 +47,192 @@ function updateBlockProp(blocks: PageBlock[], blockId: string, key: string, valu
   );
 }
 
+function layoutFingerprint(doc: PageLayoutDocument) {
+  return JSON.stringify(doc);
+}
+
 export function PageBuilderLab() {
   const [pageSlug, setPageSlug] = useState<PageBuilderSlug>("home");
   const [layout, setLayout] = useState<PageLayoutDocument>({ version: 1, pageSlug: "home", blocks: [] });
+  const [draftMeta, setDraftMeta] = useState<PageBuilderDraftRow | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("desktop");
   const [warnings, setWarnings] = useState<ValidationWarning[]>([]);
-  const [snapshots, setSnapshots] = useState<PageBuilderSnapshotRow[]>([]);
+  const [snapshots, setSnapshots] = useState<PageBuilderSnapshotMeta[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<VersionViewMode>("draft");
+  const [activeSnapshotId, setActiveSnapshotId] = useState<string | null>(null);
+  const [compareSnapshotId, setCompareSnapshotId] = useState<string | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<PageBuilderSnapshotMeta | null>(null);
+  const [restoring, setRestoring] = useState(false);
+
+  const skipAutosaveRef = useRef(true);
+  const savedFingerprintRef = useRef("");
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selectedBlock = layout.blocks.find((b) => b.id === selectedBlockId) ?? null;
+
+  const activeSnapshot = useMemo(
+    () => snapshots.find((s) => s.id === activeSnapshotId) ?? null,
+    [snapshots, activeSnapshotId],
+  );
+  const compareSnapshot = useMemo(
+    () => snapshots.find((s) => s.id === compareSnapshotId) ?? null,
+    [snapshots, compareSnapshotId],
+  );
 
   const refreshWarnings = useCallback((doc: PageLayoutDocument) => {
     setWarnings(validateLayout(doc));
   }, []);
 
-  const loadDraft = useCallback(async (slug: PageBuilderSlug) => {
-    setLoading(true);
-    setStatus(null);
-    try {
-      const res = await fetch(`/api/admin/page-builder/${slug}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to load draft.");
-      setLayout(data.draft.layout as PageLayoutDocument);
-      setWarnings(data.warnings ?? validateLayout(data.draft.layout));
-      setSelectedBlockId(data.draft.layout.blocks[0]?.id ?? null);
+  const applyDraft = useCallback(
+    (draft: PageBuilderDraftRow, nextWarnings?: ValidationWarning[]) => {
+      skipAutosaveRef.current = true;
+      setDraftMeta(draft);
+      setLayout(draft.layout);
+      setLastSavedAt(draft.updated_at);
+      savedFingerprintRef.current = layoutFingerprint(draft.layout);
+      setWarnings(nextWarnings ?? validateLayout(draft.layout));
+      setAutosaveStatus("saved");
+      setViewMode("draft");
+      setActiveSnapshotId(null);
+      setCompareSnapshotId(null);
+      setSelectedBlockId(draft.layout.blocks[0]?.id ?? null);
+      window.setTimeout(() => {
+        skipAutosaveRef.current = false;
+      }, 0);
+    },
+    [],
+  );
 
-      const snapRes = await fetch(`/api/admin/page-builder/${slug}/snapshots`);
-      const snapData = await snapRes.json();
-      if (snapRes.ok) setSnapshots(snapData.snapshots ?? []);
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Load failed.");
-    } finally {
-      setLoading(false);
+  const refreshSnapshots = useCallback(async (slug: PageBuilderSlug) => {
+    const snapRes = await fetch(`/api/admin/page-builder/${slug}/snapshots`);
+    const snapData = await snapRes.json();
+    if (snapRes.ok) {
+      setSnapshots(snapData.snapshots ?? []);
+      if (snapData.draft) setDraftMeta(snapData.draft);
     }
   }, []);
+
+  const loadDraft = useCallback(
+    async (slug: PageBuilderSlug) => {
+      setLoading(true);
+      setStatus(null);
+      try {
+        const res = await fetch(`/api/admin/page-builder/${slug}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Failed to load draft.");
+        applyDraft(data.draft as PageBuilderDraftRow, data.warnings);
+        await refreshSnapshots(slug);
+      } catch (error) {
+        setStatus(error instanceof Error ? error.message : "Load failed.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [applyDraft, refreshSnapshots],
+  );
 
   useEffect(() => {
     void loadDraft(pageSlug);
   }, [loadDraft, pageSlug]);
 
-  const saveDraft = async () => {
-    setSaving(true);
-    setStatus(null);
-    try {
-      const res = await fetch(`/api/admin/page-builder/${pageSlug}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ layout: { ...layout, pageSlug, version: 1 } }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to save draft.");
-      setLayout(data.draft.layout as PageLayoutDocument);
-      setWarnings(data.warnings ?? []);
-      setStatus("Draft saved to Supabase (lab only).");
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Save failed.");
-    } finally {
-      setSaving(false);
-    }
-  };
+  const persistDraft = useCallback(
+    async (doc: PageLayoutDocument, { manual = false }: { manual?: boolean } = {}) => {
+      const docWarnings = validateLayout(doc);
+      if (docWarnings.some((w) => w.severity === "error")) {
+        setAutosaveStatus("unsaved");
+        if (manual) setStatus("Fix validation errors before saving.");
+        return false;
+      }
 
-  const runAction = async (path: string, method = "POST") => {
+      if (manual) setSaving(true);
+      else setAutosaveStatus("saving");
+
+      try {
+        const res = await fetch(`/api/admin/page-builder/${pageSlug}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ layout: { ...doc, pageSlug, version: 1 } }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Failed to save draft.");
+        const draft = data.draft as PageBuilderDraftRow;
+        setDraftMeta(draft);
+        setLastSavedAt(draft.updated_at);
+        savedFingerprintRef.current = layoutFingerprint(draft.layout);
+        setWarnings(data.warnings ?? []);
+        setAutosaveStatus("saved");
+        if (manual) setStatus("Draft saved to Supabase (lab only).");
+        return true;
+      } catch (error) {
+        setAutosaveStatus("error");
+        if (manual) setStatus(error instanceof Error ? error.message : "Save failed.");
+        return false;
+      } finally {
+        if (manual) setSaving(false);
+      }
+    },
+    [pageSlug],
+  );
+
+  useEffect(() => {
+    if (skipAutosaveRef.current) return;
+
+    const fingerprint = layoutFingerprint({ ...layout, pageSlug, version: 1 });
+    if (fingerprint === savedFingerprintRef.current) {
+      setAutosaveStatus("saved");
+      return;
+    }
+
+    setAutosaveStatus("unsaved");
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      void persistDraft(layout);
+    }, 1500);
+
+    return () => {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    };
+  }, [layout, pageSlug, persistDraft]);
+
+  const saveDraft = () => void persistDraft(layout, { manual: true });
+
+  const createSnapshot = async () => {
     setLoading(true);
     setStatus(null);
     try {
-      const res = await fetch(path, { method });
+      await persistDraft(layout);
+      const res = await fetch(`/api/admin/page-builder/${pageSlug}/snapshots`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to create snapshot.");
+      await refreshSnapshots(pageSlug);
+      setStatus("Snapshot saved.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Snapshot failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const runDraftAction = async (path: string) => {
+    setLoading(true);
+    setStatus(null);
+    try {
+      const res = await fetch(path, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Action failed.");
-      if (data.draft) {
-        setLayout(data.draft.layout as PageLayoutDocument);
-        setWarnings(data.warnings ?? []);
-      }
-      if (path.includes("/snapshots") && !path.includes("/restore")) {
-        const snapRes = await fetch(`/api/admin/page-builder/${pageSlug}/snapshots`);
-        const snapData = await snapRes.json();
-        if (snapRes.ok) setSnapshots(snapData.snapshots ?? []);
-      }
+      if (data.draft) applyDraft(data.draft, data.warnings);
+      if (data.snapshots) setSnapshots(data.snapshots);
+      else await refreshSnapshots(pageSlug);
       setStatus("Done.");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Action failed.");
@@ -126,11 +241,58 @@ export function PageBuilderLab() {
     }
   };
 
-  const addBlock = (type: PageBlockType) => {
-    const block = createBlock(type);
-    const next = { ...layout, blocks: [...layout.blocks, block] };
+  const confirmRestore = async () => {
+    if (!restoreTarget) return;
+    setRestoring(true);
+    try {
+      const res = await fetch(
+        `/api/admin/page-builder/${pageSlug}/snapshots/${restoreTarget.id}/restore`,
+        { method: "POST" },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Restore failed.");
+      applyDraft(data.draft, data.warnings);
+      if (data.snapshots) setSnapshots(data.snapshots);
+      setStatus("Snapshot restored to active draft.");
+      setRestoreTarget(null);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Restore failed.");
+    } finally {
+      setRestoring(false);
+    }
+  };
+
+  const duplicateSnapshot = async (snapshot: PageBuilderSnapshotMeta) => {
+    setLoading(true);
+    setStatus(null);
+    try {
+      const res = await fetch(
+        `/api/admin/page-builder/${pageSlug}/snapshots/${snapshot.id}/duplicate`,
+        { method: "POST" },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Duplicate failed.");
+      applyDraft(data.draft, data.warnings);
+      if (data.snapshots) setSnapshots(data.snapshots);
+      setStatus("Snapshot duplicated into active draft.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Duplicate failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateLayout = (next: PageLayoutDocument) => {
     setLayout(next);
     refreshWarnings(next);
+    setViewMode("draft");
+    setActiveSnapshotId(null);
+    setCompareSnapshotId(null);
+  };
+
+  const addBlock = (type: PageBlockType) => {
+    const block = createBlock(type);
+    updateLayout({ ...layout, blocks: [...layout.blocks, block] });
     setSelectedBlockId(block.id);
   };
 
@@ -139,24 +301,19 @@ export function PageBuilderLab() {
     if (target < 0 || target >= layout.blocks.length) return;
     const blocks = [...layout.blocks];
     [blocks[index], blocks[target]] = [blocks[target], blocks[index]];
-    const next = { ...layout, blocks };
-    setLayout(next);
-    refreshWarnings(next);
+    updateLayout({ ...layout, blocks });
   };
 
   const toggleVisibility = (blockId: string) => {
-    const next = {
+    updateLayout({
       ...layout,
       blocks: layout.blocks.map((b) => (b.id === blockId ? { ...b, visible: !b.visible } : b)),
-    };
-    setLayout(next);
-    refreshWarnings(next);
+    });
   };
 
   const removeBlock = (blockId: string) => {
     const next = { ...layout, blocks: layout.blocks.filter((b) => b.id !== blockId) };
-    setLayout(next);
-    refreshWarnings(next);
+    updateLayout(next);
     if (selectedBlockId === blockId) setSelectedBlockId(next.blocks[0]?.id ?? null);
   };
 
@@ -175,16 +332,23 @@ export function PageBuilderLab() {
   const importJson = async (file: File) => {
     const text = await file.text();
     const parsed = JSON.parse(text) as PageLayoutDocument;
-    const next = { ...parsed, pageSlug, version: 1 as const };
-    setLayout(next);
-    refreshWarnings(next);
-    setStatus("JSON imported locally — save draft to persist.");
+    updateLayout({ ...parsed, pageSlug, version: 1 });
+    setStatus("JSON imported locally — autosave will persist shortly.");
   };
 
   const errorCount = useMemo(() => warnings.filter((w) => w.severity === "error").length, [warnings]);
 
   return (
     <div className="space-y-4">
+      {restoreTarget ? (
+        <RestoreSnapshotModal
+          snapshot={restoreTarget}
+          busy={restoring}
+          onCancel={() => setRestoreTarget(null)}
+          onConfirm={() => void confirmRestore()}
+        />
+      ) : null}
+
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Page Builder Lab</p>
@@ -197,12 +361,22 @@ export function PageBuilderLab() {
             . Production routes are not modified.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className="cap-btn-primary rounded-lg px-3 py-2 text-sm font-semibold disabled:opacity-60" disabled={saving} onClick={() => void saveDraft()}>
+        <div className="flex flex-wrap items-center gap-2">
+          <AutosaveIndicator status={autosaveStatus} lastSavedAt={lastSavedAt} />
+          <button
+            type="button"
+            className="cap-btn-primary rounded-lg px-3 py-2 text-sm font-semibold disabled:opacity-60"
+            disabled={saving}
+            onClick={saveDraft}
+          >
             <Save className="mr-1 inline h-4 w-4" aria-hidden />
             {saving ? "Saving…" : "Save draft"}
           </button>
-          <Link href={`/preview/${pageSlug}`} target="_blank" className="cap-btn-secondary inline-flex items-center rounded-lg px-3 py-2 text-sm font-semibold">
+          <Link
+            href={`/preview/${pageSlug}`}
+            target="_blank"
+            className="cap-btn-secondary inline-flex items-center rounded-lg px-3 py-2 text-sm font-semibold"
+          >
             <Eye className="mr-1 h-4 w-4" aria-hidden />
             Open preview
           </Link>
@@ -226,11 +400,11 @@ export function PageBuilderLab() {
             ))}
           </select>
         </label>
-        <button type="button" className="cap-btn-secondary rounded-lg px-3 py-1.5 text-sm" disabled={loading} onClick={() => void runAction(`/api/admin/page-builder/${pageSlug}/demo`)}>
+        <button type="button" className="cap-btn-secondary rounded-lg px-3 py-1.5 text-sm" disabled={loading} onClick={() => void runDraftAction(`/api/admin/page-builder/${pageSlug}/demo`)}>
           <Sparkles className="mr-1 inline h-4 w-4" aria-hidden />
           Load demo
         </button>
-        <button type="button" className="cap-btn-secondary rounded-lg px-3 py-1.5 text-sm" disabled={loading} onClick={() => void runAction(`/api/admin/page-builder/${pageSlug}/reset`)}>
+        <button type="button" className="cap-btn-secondary rounded-lg px-3 py-1.5 text-sm" disabled={loading} onClick={() => void runDraftAction(`/api/admin/page-builder/${pageSlug}/reset`)}>
           <RotateCcw className="mr-1 inline h-4 w-4" aria-hidden />
           Reset
         </button>
@@ -252,7 +426,7 @@ export function PageBuilderLab() {
             }}
           />
         </label>
-        <button type="button" className="cap-btn-secondary rounded-lg px-3 py-1.5 text-sm" disabled={loading} onClick={() => void runAction(`/api/admin/page-builder/${pageSlug}/snapshots`)}>
+        <button type="button" className="cap-btn-secondary rounded-lg px-3 py-1.5 text-sm" disabled={loading} onClick={() => void createSnapshot()}>
           Snapshot
         </button>
         <div className="ml-auto flex gap-1 rounded-lg border border-slate-200 p-1">
@@ -275,7 +449,7 @@ export function PageBuilderLab() {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[320px_1fr_320px]">
+      <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_320px_300px]">
         <section className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
           <h2 className="text-sm font-semibold text-[var(--navy)]">Approved blocks</h2>
           <div className="mt-3 space-y-2">
@@ -293,7 +467,7 @@ export function PageBuilderLab() {
           </div>
 
           <h3 className="mt-5 text-sm font-semibold text-[var(--navy)]">Block order</h3>
-          <ul className="mt-2 space-y-1">
+          <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
             {layout.blocks.map((block, index) => {
               const def = getBlockDefinition(block.type);
               return (
@@ -326,10 +500,59 @@ export function PageBuilderLab() {
           </ul>
         </section>
 
-        <section>
+        <section className="min-w-0 space-y-3">
           {loading ? <p className="text-sm text-slate-500">Loading draft…</p> : null}
-          <PageBuilderPreview blocks={layout.blocks} previewMode={previewMode} />
+
+          {viewMode === "compare" && compareSnapshot ? (
+            <div className="grid gap-3 lg:grid-cols-2">
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--navy)]">Current draft</p>
+                <PageBuilderPreview blocks={layout.blocks} previewMode={previewMode} />
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--gold)]">
+                  Snapshot · {compareSnapshot.label ?? compareSnapshot.created_at}
+                </p>
+                <PageBuilderPreview blocks={compareSnapshot.layout.blocks} previewMode={previewMode} />
+              </div>
+            </div>
+          ) : viewMode === "snapshot-preview" && activeSnapshot ? (
+            <>
+              <div className="rounded-lg border border-[var(--gold)]/40 bg-[var(--gold-muted)]/30 px-3 py-2 text-xs text-[var(--navy)]">
+                Previewing snapshot: <strong>{activeSnapshot.label ?? activeSnapshot.created_at}</strong> — edits apply to the active draft when you return.
+              </div>
+              <PageBuilderPreview blocks={activeSnapshot.layout.blocks} previewMode={previewMode} />
+            </>
+          ) : (
+            <PageBuilderPreview blocks={layout.blocks} previewMode={previewMode} />
+          )}
         </section>
+
+        <VersionHistorySidebar
+          draft={draftMeta}
+          snapshots={snapshots}
+          viewMode={viewMode}
+          activeSnapshotId={activeSnapshotId}
+          compareSnapshotId={compareSnapshotId}
+          loading={loading}
+          onSelectDraft={() => {
+            setViewMode("draft");
+            setActiveSnapshotId(null);
+            setCompareSnapshotId(null);
+          }}
+          onPreviewSnapshot={(snapshot) => {
+            setViewMode("snapshot-preview");
+            setActiveSnapshotId(snapshot.id);
+            setCompareSnapshotId(null);
+          }}
+          onCompareSnapshot={(snapshot) => {
+            setViewMode("compare");
+            setCompareSnapshotId(snapshot.id);
+            setActiveSnapshotId(null);
+          }}
+          onRestoreSnapshot={setRestoreTarget}
+          onDuplicateSnapshot={(snapshot) => void duplicateSnapshot(snapshot)}
+        />
 
         <section className="space-y-4">
           <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
@@ -337,7 +560,7 @@ export function PageBuilderLab() {
             <p className="mt-1 text-xs text-slate-500">
               {errorCount > 0 ? `${errorCount} error(s)` : "No blocking errors"} · {warnings.length} total
             </p>
-            <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto text-xs">
+            <ul className="mt-3 max-h-40 space-y-2 overflow-y-auto text-xs">
               {warnings.length === 0 ? (
                 <li className="text-slate-500">No warnings.</li>
               ) : (
@@ -353,38 +576,14 @@ export function PageBuilderLab() {
             </ul>
           </div>
 
-          <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
-            <h2 className="text-sm font-semibold text-[var(--navy)]">Snapshots</h2>
-            <ul className="mt-2 max-h-40 space-y-2 overflow-y-auto text-xs">
-              {snapshots.length === 0 ? (
-                <li className="text-slate-500">No snapshots yet.</li>
-              ) : (
-                snapshots.map((snapshot) => (
-                  <li key={snapshot.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 px-2 py-1.5">
-                    <span className="truncate">{snapshot.label ?? snapshot.created_at}</span>
-                    <button
-                      type="button"
-                      className="shrink-0 font-semibold text-[var(--navy)]"
-                      onClick={() => void runAction(`/api/admin/page-builder/${pageSlug}/snapshots/${snapshot.id}/restore`)}
-                    >
-                      Restore
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-          </div>
-
           {selectedBlock ? (
             <BlockEditor
               block={selectedBlock}
               onChange={(key, value) => {
-                const next = {
+                updateLayout({
                   ...layout,
                   blocks: updateBlockProp(layout.blocks, selectedBlock.id, key, value),
-                };
-                setLayout(next);
-                refreshWarnings(next);
+                });
               }}
             />
           ) : (

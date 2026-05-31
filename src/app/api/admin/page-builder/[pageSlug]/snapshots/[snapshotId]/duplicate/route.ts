@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireSuperAdminApi } from "@/lib/api/super-admin";
 import {
+  duplicateSnapshotToDraft,
   getOrCreateDraft,
   isPageBuilderSlug,
   listSnapshotsWithMeta,
-  restoreSnapshot,
 } from "@/lib/page-builder/drafts";
 import { validateLayout } from "@/lib/page-builder/validation";
 
@@ -20,13 +20,13 @@ export async function POST(_request: Request, context: RouteContext) {
   }
 
   try {
-    const draft = await restoreSnapshot(auth.supabase, pageSlug, snapshotId, auth.userId);
+    const draft = await duplicateSnapshotToDraft(auth.supabase, pageSlug, snapshotId, auth.userId);
     const warnings = validateLayout(draft.layout);
     const snapshots = await listSnapshotsWithMeta(auth.supabase, draft.id, pageSlug);
     return NextResponse.json({ draft, warnings, snapshots });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to restore snapshot." },
+      { error: error instanceof Error ? error.message : "Failed to duplicate snapshot." },
       { status: 500 },
     );
   }

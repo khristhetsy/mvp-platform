@@ -91,6 +91,67 @@ export async function loadDemoDraftLayout(supabase: Client, pageSlug: PageBuilde
   return saveDraftLayout(supabase, pageSlug, buildDemoLayout(pageSlug), userId);
 }
 
+export async function getSnapshotById(supabase: Client, snapshotId: string) {
+  const { data, error } = await supabase
+    .from("page_builder_snapshots")
+    .select("*")
+    .eq("id", snapshotId)
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? "Snapshot not found.");
+  }
+
+  return data as PageBuilderSnapshotRow;
+}
+
+export async function listSnapshotsWithMeta(supabase: Client, draftId: string, pageSlug: PageBuilderSlug) {
+  const { data, error } = await supabase
+    .from("page_builder_snapshots")
+    .select("*")
+    .eq("draft_id", draftId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const snapshots = (data ?? []) as PageBuilderSnapshotRow[];
+  const userIds = [...new Set(snapshots.map((s) => s.created_by).filter((id): id is string => Boolean(id)))];
+
+  let profileMap = new Map<string, { full_name: string | null; email: string | null }>();
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").in("id", userIds);
+    profileMap = new Map((profiles ?? []).map((p) => [p.id, { full_name: p.full_name, email: p.email }]));
+  }
+
+  return snapshots.map((snapshot) => {
+    const layout = normalizeLayout(snapshot.layout, pageSlug);
+    const profile = snapshot.created_by ? profileMap.get(snapshot.created_by) : undefined;
+    return {
+      ...snapshot,
+      layout,
+      blockCount: layout.blocks.length,
+      createdByName: profile?.full_name ?? null,
+      createdByEmail: profile?.email ?? null,
+    };
+  });
+}
+
+export async function duplicateSnapshotToDraft(
+  supabase: Client,
+  pageSlug: PageBuilderSlug,
+  snapshotId: string,
+  userId: string,
+) {
+  const snapshot = await getSnapshotById(supabase, snapshotId);
+  const layout = normalizeLayout(snapshot.layout, pageSlug);
+  const draft = await getOrCreateDraft(supabase, pageSlug, userId);
+  await createSnapshot(supabase, draft, userId, "Auto-backup before duplicate");
+  return saveDraftLayout(supabase, pageSlug, layout, userId);
+}
+
 export async function listSnapshots(supabase: Client, draftId: string) {
   const { data, error } = await supabase
     .from("page_builder_snapshots")
