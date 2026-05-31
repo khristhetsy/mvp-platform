@@ -133,7 +133,7 @@ async function loadCompanyReviewItems(supabase: SupabaseClient<Database>, limit:
       severity: row.review_status === "changes_requested" ? "medium" : "info",
       status: row.review_status ?? "pending",
       next_action_label: "Review company",
-      href: `/admin/companies?status=pending_review&company=${row.id}`,
+      href: `/admin/companies/${row.id}`,
       created_at: row.created_at,
       metadata: {
         onboarding_progress_percent: row.onboarding_progress_percent,
@@ -218,8 +218,9 @@ async function loadComplianceEscalationItems(
     severity: row.severity,
     status: row.status,
     next_action_label: "Review compliance event",
-    href:
-      row.severity === "critical"
+    href: row.company_id
+      ? `/admin/companies/${row.company_id}`
+      : row.severity === "critical"
         ? `/admin/compliance?severity=critical&event=${row.id}`
         : `/admin/compliance?status=open&event=${row.id}`,
     created_at: row.created_at,
@@ -269,10 +270,7 @@ async function loadSpvBlockerItems(supabase: SupabaseClient<Database>, limit: nu
       severity: row.investor_pending_requirements_count > 0 ? "high" : "medium",
       status: readiness,
       next_action_label: "Open SPV",
-      href:
-        readiness === "investors_pending"
-          ? `/admin/spvs?readiness=investors_pending&spv=${row.id}`
-          : `/admin/spvs?status=open&spv=${row.id}`,
+      href: row.company_id ? `/admin/companies/${row.company_id}` : `/admin/spvs?spv=${row.id}`,
       created_at: row.updated_at ?? row.created_at,
       metadata: {
         readiness_pct: readinessPct,
@@ -331,7 +329,7 @@ async function loadInvestorDocumentItems(supabase: SupabaseClient<Database>, lim
       severity: row.status === "rejected" ? "high" : row.status === "under_review" ? "medium" : "info",
       status: row.status,
       next_action_label: "Review requirement",
-      href: `/admin/spvs?queue=investor_documents&requirement=${row.id}`,
+      href: spv?.company_id ? `/admin/companies/${spv.company_id}` : `/admin/spvs?queue=investor_documents&requirement=${row.id}`,
       created_at: row.updated_at ?? row.created_at,
       metadata: {
         category: row.category,
@@ -380,7 +378,7 @@ async function loadFounderRemediationItems(
       severity: row.priority === "high" ? "high" : row.priority === "medium" ? "medium" : "low",
       status: row.status,
       next_action_label: "View founder/company",
-      href: `/admin/companies?queue=remediation&company=${row.company_id}`,
+      href: `/admin/companies/${row.company_id}`,
       created_at: row.created_at,
       metadata: { category: row.category, priority: row.priority },
     };

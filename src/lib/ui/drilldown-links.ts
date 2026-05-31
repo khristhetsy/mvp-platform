@@ -25,6 +25,10 @@ export const DRILLDOWN_LINKS = {
 
 export type DrilldownKey = keyof typeof DRILLDOWN_LINKS;
 
+export function getCompanyWorkspaceHref(companyId: string): string {
+  return `/admin/companies/${companyId}`;
+}
+
 export function getDrilldownHref(key: DrilldownKey): string {
   return DRILLDOWN_LINKS[key];
 }
@@ -93,7 +97,7 @@ export function getInvestorActivityRowHref(
 ): string {
   const companyId = typeof raw.company_id === "string" ? raw.company_id : null;
   if (companyId) {
-    return `/admin/companies?company=${encodeURIComponent(companyId)}`;
+    return getCompanyWorkspaceHref(companyId);
   }
   return getInvestorPanelHref(panel);
 }

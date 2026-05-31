@@ -1,4 +1,4 @@
-import { getDrilldownHref } from "@/lib/ui/drilldown-links";
+import { getCompanyWorkspaceHref, getDrilldownHref } from "@/lib/ui/drilldown-links";
 import { OPERATIONAL_CATEGORY_LABELS } from "@/lib/operational-activity/event-categories";
 import type { OperationalActivityFeedItem, OperationalEventCategory } from "@/lib/operational-activity/types";
 
@@ -82,7 +82,9 @@ export function getOperationalEventHref(item: OperationalActivityFeedItem): stri
       return "/admin/imports";
     case "onboarding":
     case "founder":
-      return item.company_id ? `/admin/companies?company=${item.company_id}` : "/admin/companies";
+      return item.company_id ? getCompanyWorkspaceHref(item.company_id) : "/admin/companies";
+    case "diligence":
+      return item.company_id ? getCompanyWorkspaceHref(item.company_id) : "/admin/companies";
     default:
       return "/admin/dashboard";
   }

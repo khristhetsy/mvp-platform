@@ -324,6 +324,7 @@ export type SpvQueryFilters = {
   readiness: SpvOperationalReadinessStatus | null;
   queue: (typeof SPV_QUEUE_TYPES)[number] | null;
   activity: string | null;
+  company: string | null;
   spv: string | null;
   requirement: string | null;
   q: string;
@@ -339,6 +340,7 @@ export function parseSpvQueryFilters(params: ReadonlyURLSearchParams | URLSearch
     readiness: isOneOf(readiness, SPV_OPERATIONAL_READINESS_STATUSES) ? readiness : null,
     queue: isOneOf(queueRaw, SPV_QUEUE_TYPES) ? queueRaw : null,
     activity: readParam(params, "activity"),
+    company: readParam(params, "company"),
     spv: readParam(params, "spv"),
     requirement: readParam(params, "requirement"),
     q: readParam(params, "q") ?? "",
@@ -373,6 +375,10 @@ export function filterSpvOpportunities(
 
   if (filters.spv) {
     rows = rows.filter((row) => row.id === filters.spv);
+  }
+
+  if (filters.company) {
+    rows = rows.filter((row) => row.company_id === filters.company);
   }
 
   if (filters.status) {
@@ -519,6 +525,7 @@ export function buildSpvFilterChips(filters: SpvQueryFilters): FilterChip[] {
   if (filters.readiness) chips.push({ key: "readiness", label: "Readiness", value: formatLabel(filters.readiness) });
   if (filters.queue) chips.push({ key: "queue", label: "Queue", value: formatLabel(filters.queue) });
   if (filters.activity) chips.push({ key: "activity", label: "Activity", value: formatLabel(filters.activity) });
+  if (filters.company) chips.push({ key: "company", label: "Company", value: filters.company });
   if (filters.spv) chips.push({ key: "spv", label: "SPV", value: filters.spv });
   if (filters.requirement) chips.push({ key: "requirement", label: "Requirement", value: filters.requirement });
   if (filters.q.trim()) chips.push({ key: "q", label: "Search", value: filters.q.trim() });
@@ -542,7 +549,7 @@ const DRILLDOWN_KEYS: Record<AdminFilterPage, string[]> = {
   crm: ["activity", "company", "investor", "date_from", "date_to"],
   companies: ["status", "review_status", "queue", "company", "activity"],
   investors: ["status", "approval_status"],
-  spvs: ["status", "readiness", "queue", "activity", "spv", "requirement"],
+  spvs: ["status", "readiness", "queue", "activity", "company", "spv", "requirement"],
   compliance: ["status", "severity", "company", "investor", "event"],
 };
 

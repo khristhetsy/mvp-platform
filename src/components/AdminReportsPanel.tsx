@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import type { AdminReportPayload, AdminReportType } from "@/lib/reports/admin-reports";
 
 const REPORT_OPTIONS: { value: AdminReportType; label: string; description: string }[] = [
@@ -233,6 +234,7 @@ export function AdminReportsPanel({
   founders: FilterOption[];
   investors: FilterOption[];
 }>) {
+  const searchParams = useSearchParams();
   const [reportType, setReportType] = useState<AdminReportType>("compliance");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -247,6 +249,15 @@ export function AdminReportsPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<AdminReportPayload | null>(null);
+
+  useEffect(() => {
+    const paramCompanyId = searchParams.get("companyId");
+    const paramReportType = searchParams.get("reportType");
+    if (paramCompanyId) setCompanyId(paramCompanyId);
+    if (paramReportType && REPORT_OPTIONS.some((option) => option.value === paramReportType)) {
+      setReportType(paramReportType as AdminReportType);
+    }
+  }, [searchParams]);
 
   const selectedReport = useMemo(
     () => REPORT_OPTIONS.find((option) => option.value === reportType),

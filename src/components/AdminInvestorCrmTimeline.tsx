@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import type { AdminCrmActivityRow } from "@/lib/data/investor-crm";
+import { getCompanyWorkspaceHref } from "@/lib/ui/drilldown-links";
 
 function formatActivityLabel(type: string) {
   return type
@@ -51,7 +53,13 @@ export function AdminInvestorCrmTimeline({ activities }: Props) {
                     </span>
                   ) : null}
                 </div>
-                <p className="text-slate-600">{row.company_name ?? "Unknown company"}</p>
+                {row.company_id ? (
+                  <Link href={getCompanyWorkspaceHref(row.company_id)} className="text-indigo-700 hover:text-indigo-900">
+                    {row.company_name ?? "Unknown company"}
+                  </Link>
+                ) : (
+                  <p className="text-slate-600">{row.company_name ?? "Unknown company"}</p>
+                )}
                 <p className="mt-1 text-xs text-slate-500">{formatDate(row.created_at)}</p>
               </div>
             );

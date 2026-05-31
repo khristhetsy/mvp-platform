@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AdminSubscriptionSummary } from "@/components/AdminSubscriptionSummary";
@@ -8,6 +9,7 @@ import { CompanyStatusBadge } from "@/components/CompanyStatusBadge";
 import type { PlanType, SubscriptionRecord } from "@/lib/subscriptions/plans";
 import { formatApiError } from "@/lib/api/errors";
 import { adminDebug } from "@/lib/debug/admin-debug";
+import { getCompanyWorkspaceHref } from "@/lib/ui/drilldown-links";
 
 export type AdminCompanyCardData = {
   id: string;
@@ -365,7 +367,16 @@ export function AdminCompanyCard({ company }: Props) {
               publishedAt={publishedAt}
             />
           </div>
-          <h2 className="mt-2 text-xl font-semibold text-slate-950">{company.company_name}</h2>
+          <h2 className="mt-2 text-xl font-semibold text-slate-950">
+            <Link href={getCompanyWorkspaceHref(company.id)} className="hover:text-indigo-700">
+              {company.company_name}
+            </Link>
+          </h2>
+          <p className="mt-1">
+            <Link href={getCompanyWorkspaceHref(company.id)} className="text-xs font-medium text-indigo-600 hover:text-indigo-800">
+              Open company workspace →
+            </Link>
+          </p>
           <p className="mt-2 text-sm text-slate-600">
             {company.founder_name} · {company.founder_email}
           </p>

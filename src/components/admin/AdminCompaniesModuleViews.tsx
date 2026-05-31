@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useMemo } from "react";
+import Link from "next/link";
 import { AdminCompanyCard } from "@/components/AdminCompanyCard";
 import type { AdminCompanyCardData } from "@/components/AdminCompanyCard";
 import {
@@ -17,6 +18,7 @@ import { PageSection } from "@/components/ui/workspace-layout";
 import { useAdminQueryFilters } from "@/hooks/use-admin-query-filters";
 import { useViewMode } from "@/hooks/use-view-mode";
 import { filterCompanies as applyCompanyQueryFilters, type CompanyQueryFilters } from "@/lib/ui/query-filters";
+import { getCompanyWorkspaceHref } from "@/lib/ui/drilldown-links";
 
 function formatReviewStatus(status: string | null) {
   if (!status) return "Unknown";
@@ -131,7 +133,9 @@ function AdminCompaniesModuleViewsInner({
             {filtered.map((company) => (
               <DataTableRow key={company.id}>
                 <DataTableCell>
-                  <p className="font-medium text-slate-900">{company.company_name}</p>
+                  <Link href={getCompanyWorkspaceHref(company.id)} className="font-medium text-indigo-700 hover:text-indigo-900">
+                    {company.company_name}
+                  </Link>
                 </DataTableCell>
                 <DataTableCell>
                   <p>{company.founder_name}</p>
