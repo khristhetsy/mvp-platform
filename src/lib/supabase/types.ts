@@ -5,6 +5,7 @@ export type Profile = {
   full_name: string | null;
   email: string | null;
   role: UserRole;
+  is_super_admin?: boolean;
   created_at: string;
 };
 
@@ -1357,6 +1358,51 @@ export type Database = {
           next_follow_up_at?: string | null;
           notes?: string | null;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      page_builder_drafts: {
+        Row: {
+          id: string;
+          page_slug: string;
+          layout: Record<string, unknown>;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          page_slug: string;
+          layout?: Record<string, unknown>;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          page_slug?: string;
+          layout?: Record<string, unknown>;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      page_builder_snapshots: {
+        Row: {
+          id: string;
+          draft_id: string;
+          page_slug: string;
+          layout: Record<string, unknown>;
+          label: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          draft_id: string;
+          page_slug: string;
+          layout: Record<string, unknown>;
+          label?: string | null;
+          created_by?: string | null;
+        };
+        Update: {
+          label?: string | null;
         };
         Relationships: [];
       };

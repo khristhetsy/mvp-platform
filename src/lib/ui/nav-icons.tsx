@@ -53,6 +53,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/admin/reports": BarChart3,
   "/admin/analytics": LineChart,
   "/admin/system-health": Activity,
+  "/admin/page-builder-lab": LayoutDashboard,
 };
 
 export function getWorkspaceNavIcon(href: string): LucideIcon {

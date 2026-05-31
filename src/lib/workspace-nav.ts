@@ -44,6 +44,7 @@ export const adminWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/admin/reports", label: "Reports" },
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/system-health", label: "System Health" },
+  { href: "/admin/page-builder-lab", label: "Page Builder Lab" },
 ];
 
 export function getWorkspaceNav(workspace: WorkspaceId): WorkspaceNavItem[] {
