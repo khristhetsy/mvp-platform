@@ -1,44 +1,40 @@
 import Link from "next/link";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
-import { MarketingNav } from "@/components/MarketingNav";
+import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { PlanComparisonSection } from "@/components/PlanComparisonSection";
 
 export default function PricingPage() {
   return (
-    <main className="min-h-screen bg-white text-slate-950">
-      <MarketingNav />
-      <section className="mx-auto max-w-7xl px-6 py-16">
+    <MarketingShell>
+      <section className="mx-auto max-w-7xl px-4 py-12 lg:px-6 lg:py-16">
         <div className="max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-indigo-600">Pricing</p>
-          <h1 className="mt-4 text-5xl font-semibold tracking-[-0.04em] md:text-6xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--gold)]">Pricing</p>
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-[var(--navy)] md:text-5xl">
             Enterprise-ready plans for founders and investors.
           </h1>
-          <p className="mt-6 text-lg leading-8 text-slate-600">
+          <p className="mt-6 text-base leading-7 text-slate-600 md:text-lg">
             Start with a 3-day founder trial, scale into Basic or Professional when you are ready. Investor accounts are
             always free. Payment checkout is coming soon — request an upgrade today.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href="/auth/sign-up"
-              className="rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-3 text-sm font-semibold text-white hover:from-indigo-500 hover:to-violet-500"
-            >
+            <Link href="/auth/sign-up" className="cap-btn-primary rounded-lg px-5 py-2.5 text-sm font-semibold">
               Create account
             </Link>
             <Link
               href="/upgrade"
-              className="rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="cap-btn-secondary rounded-lg px-5 py-2.5 text-sm font-semibold"
             >
               View upgrade options
             </Link>
           </div>
         </div>
-        <div className="mt-14">
+        <div className="mt-12">
           <PlanComparisonSection />
         </div>
       </section>
       <ComplianceBlock />
       <MarketingFooter />
-    </main>
+    </MarketingShell>
   );
 }

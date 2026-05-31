@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { MarketingFooter } from "@/components/MarketingFooter";
-import { MarketingNav } from "@/components/MarketingNav";
+import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { PlanComparisonSection } from "@/components/PlanComparisonSection";
 import { UpgradeRequestActions } from "@/components/UpgradeRequestActions";
 import {
@@ -156,12 +156,11 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
 
 export default function UpgradePage({ searchParams }: Readonly<{ searchParams: SearchParams }>) {
   return (
-    <main className="min-h-screen bg-white text-slate-950">
-      <MarketingNav />
+    <MarketingShell>
       <Suspense fallback={<p className="px-6 py-16 text-sm text-slate-500">Loading upgrade options...</p>}>
         <UpgradePageContent searchParams={searchParams} />
       </Suspense>
       <MarketingFooter />
-    </main>
+    </MarketingShell>
   );
 }
