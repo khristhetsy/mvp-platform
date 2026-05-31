@@ -51,7 +51,10 @@ export type NotificationType =
   | "spv_requirements_requested"
   | "spv_requirement_reviewed"
   | "spv_requirement_uploaded"
-  | "spv_investor_aggregate_changed";
+  | "spv_investor_aggregate_changed"
+  | "spv_ready_for_legal_docs"
+  | "spv_investor_documents_pending_review"
+  | "spv_target_amount_reached";
 
 export type NotificationRecord = {
   id: string;

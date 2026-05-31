@@ -256,6 +256,8 @@ export type Database = {
           document_ready_at: string | null;
           investors_document_ready_count: number;
           investor_pending_requirements_count: number;
+          operational_readiness_status: string | null;
+          target_amount_reached_notified: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -272,6 +274,8 @@ export type Database = {
           document_ready_at?: string | null;
           investors_document_ready_count?: number;
           investor_pending_requirements_count?: number;
+          operational_readiness_status?: string | null;
+          target_amount_reached_notified?: boolean;
           updated_at?: string;
         };
         Update: {
@@ -285,6 +289,8 @@ export type Database = {
           document_ready_at?: string | null;
           investors_document_ready_count?: number;
           investor_pending_requirements_count?: number;
+          operational_readiness_status?: string | null;
+          target_amount_reached_notified?: boolean;
           updated_at?: string;
         };
         Relationships: [];

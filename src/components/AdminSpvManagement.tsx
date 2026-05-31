@@ -15,6 +15,13 @@ import {
   computeParticipationReadinessPct,
   formatParticipationRequirementCategory,
 } from "@/lib/spv/participation-display";
+import {
+  buildSpvReadinessContext,
+  computeSpvOperationalReadinessStatus,
+  formatOperationalReadinessLabel,
+  getSpvNextAction,
+  type SpvOperationalReadinessStatus,
+} from "@/lib/spv/readiness";
 import type {
   SpvChecklistItemRecord,
   SpvOpportunityRecord,
@@ -46,6 +53,14 @@ export function AdminSpvManagement({
   const [targetAmount, setTargetAmount] = useState("");
   const [minimumCommitment, setMinimumCommitment] = useState("");
   const [description, setDescription] = useState("");
+
+  function requirementsForSpv(spvId: string, parts: SpvParticipationRecord[]) {
+    const rows: SpvParticipationRequirementRecord[] = [];
+    for (const part of parts) {
+      rows.push(...(requirementsByParticipation[part.id] ?? []));
+    }
+    return rows;
+  }
 
   const totalsBySpv = useMemo(() => {
     const map: Record<string, { count: number; total: number }> = {};
@@ -303,6 +318,16 @@ export function AdminSpvManagement({
               const readinessPct =
                 spv.checklist_readiness_pct ?? computeChecklistReadinessPct(checklist);
               const canClose = areRequiredChecklistItemsComplete(checklist);
+              const readinessCtx = buildSpvReadinessContext(
+                spv,
+                checklist,
+                parts,
+                requirementsByParticipation,
+              );
+              const readiness: SpvOperationalReadinessStatus =
+                (spv.operational_readiness_status as SpvOperationalReadinessStatus | null) ??
+                computeSpvOperationalReadinessStatus(readinessCtx);
+              const nextAction = getSpvNextAction(readiness, readinessCtx);
 
               return (
                 <div key={spv.id} className="rounded-xl border border-slate-200 p-4 text-sm">
@@ -312,6 +337,9 @@ export function AdminSpvManagement({
                       <p className="text-xs text-slate-500">
                         {company?.company_name ?? spv.company_id} · {spv.status} · target{" "}
                         {formatSpvCurrency(spv.target_amount)}
+                      </p>
+                      <p className="mt-1 text-xs font-medium text-violet-800">
+                        Readiness: {formatOperationalReadinessLabel(readiness)} · Next: {nextAction}
                       </p>
                     </div>
                     <div className="text-right text-xs text-slate-600">

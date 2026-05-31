@@ -5,6 +5,7 @@ import {
   formatSpvCurrency,
   getSpvParticipationTotals,
 } from "@/lib/spv/display";
+import { buildFounderSpvTimeline, type SpvOperationalReadinessStatus } from "@/lib/spv/readiness";
 import type { SpvChecklistCategory, SpvOpportunityRecord, SpvParticipationRecord } from "@/lib/spv/types";
 
 type CategorySummary = {
@@ -45,6 +46,19 @@ export function FounderSpvStatusPanel({
               const totals = getSpvParticipationTotals(rows);
               const categories = checklistSummaryBySpv[spv.id] ?? [];
               const readinessPct = spv.checklist_readiness_pct ?? 0;
+              const readiness: SpvOperationalReadinessStatus =
+                (spv.operational_readiness_status as SpvOperationalReadinessStatus | null) ??
+                (spv.status === "closed" || spv.status === "canceled"
+                  ? "closed"
+                  : (spv.checklist_readiness_pct ?? 0) >= 100
+                    ? "investors_pending"
+                    : "checklist_incomplete");
+              const timeline = buildFounderSpvTimeline(readiness, {
+                spv,
+                checklist: [],
+                participations: rows,
+                requirements: [],
+              });
 
               return (
                 <div key={spv.id} className="rounded-xl border border-slate-200 p-4 text-sm">
@@ -66,15 +80,23 @@ export function FounderSpvStatusPanel({
                     Investor documents: {spv.investors_document_ready_count ?? 0} investor(s) document-ready ·{" "}
                     {spv.investor_pending_requirements_count ?? 0} pending requirement(s) (aggregate only)
                   </p>
-                  {categories.length > 0 ? (
-                    <ul className="mt-2 grid gap-1 sm:grid-cols-2">
-                      {categories.map((row) => (
-                        <li key={row.category} className="text-xs text-slate-600">
-                          {formatChecklistCategory(row.category)}: {row.completed}/{row.total} complete
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
+                  <ol className="mt-4 space-y-2 border-l-2 border-indigo-100 pl-4">
+                    {timeline.map((step) => (
+                      <li
+                        key={step.key}
+                        className={
+                          step.current
+                            ? "text-sm font-medium text-indigo-800"
+                            : step.complete
+                              ? "text-xs text-slate-500 line-through"
+                              : "text-xs text-slate-600"
+                        }
+                      >
+                        {step.label}
+                        {step.current ? " (current)" : null}
+                      </li>
+                    ))}
+                  </ol>
                   {spv.description ? (
                     <p className="mt-2 text-xs text-slate-600">{spv.description}</p>
                   ) : null}

@@ -148,6 +148,68 @@ export async function notifyStaffSpvRequirementUploaded(input: {
   });
 }
 
+export async function notifyStaffSpvReadyForLegalDocs(input: {
+  spvOpportunityId: string;
+  spvName: string;
+  companyName: string;
+  actorId: string | null;
+}) {
+  return notifyStaff({
+    actorUserId: input.actorId,
+    type: "spv_ready_for_legal_docs",
+    title: "SPV ready for legal document phase",
+    message: `SPV "${input.spvName}" (${input.companyName}) reached operational readiness for the legal document phase. No documents are generated automatically.`,
+    entityType: "spv_opportunity",
+    entityId: input.spvOpportunityId,
+  });
+}
+
+export async function notifyStaffSpvInvestorDocumentsPendingReview(input: {
+  spvOpportunityId: string;
+  spvName: string;
+  companyName: string;
+  pendingReviewCount: number;
+  actorId: string | null;
+}) {
+  return notifyStaff({
+    actorUserId: input.actorId,
+    type: "spv_investor_documents_pending_review",
+    title: "SPV investor documents pending review",
+    message: `${input.pendingReviewCount} investor document(s) for "${input.spvName}" (${input.companyName}) await staff review.`,
+    entityType: "spv_opportunity",
+    entityId: input.spvOpportunityId,
+  });
+}
+
+export async function notifyStaffSpvTargetAmountReached(input: {
+  spvOpportunityId: string;
+  spvName: string;
+  companyName: string;
+  indicativeTotal: number;
+  targetAmount: number;
+  actorId: string | null;
+}) {
+  const formatted = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(input.indicativeTotal);
+  const target = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(input.targetAmount);
+
+  return notifyStaff({
+    actorUserId: input.actorId,
+    type: "spv_target_amount_reached",
+    title: "SPV indicative target reached",
+    message: `SPV "${input.spvName}" (${input.companyName}) reached or exceeded its indicative target (${formatted} vs ${target} target). Non-binding interest only.`,
+    entityType: "spv_opportunity",
+    entityId: input.spvOpportunityId,
+  });
+}
+
 export async function notifyFounderSpvInvestorAggregateChanged(input: {
   companyId: string;
   spvOpportunityId: string;

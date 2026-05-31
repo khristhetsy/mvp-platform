@@ -6,8 +6,10 @@ import Link from "next/link";
 import { SpvComplianceNotice } from "@/components/SpvComplianceNotice";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { formatSpvCurrency, investorPreparationLabel } from "@/lib/spv/display";
+import { InvestorSpvNextActionBanner } from "@/components/InvestorSpvNextActionBanner";
 import { InvestorSpvRequirementRow } from "@/components/InvestorSpvRequirementRow";
 import { computeParticipationReadinessPct } from "@/lib/spv/participation-display";
+import { getInvestorSpvNextAction } from "@/lib/spv/readiness";
 import type {
   SpvOpportunityRecord,
   SpvParticipationRecord,
@@ -63,6 +65,8 @@ export function InvestorSpvWorkspace({
   return (
     <div className="space-y-6">
       <SpvComplianceNotice showChecklistNotice showIntakeNotice showUploadNotice />
+
+      <InvestorSpvNextActionBanner action={getInvestorSpvNextAction(requirements)} />
 
       <WorkspacePanel
         title="Your document requirements"

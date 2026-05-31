@@ -1,5 +1,7 @@
 import { AppShell } from "@/components/AppShell";
+import { AdminSpvDashboardKpis } from "@/components/AdminSpvDashboardKpis";
 import { AdminSpvManagement } from "@/components/AdminSpvManagement";
+import { buildAdminSpvDashboardMetrics } from "@/lib/spv/readiness";
 import { listAdminChecklistGrouped } from "@/lib/spv/checklist";
 import { listAdminRequirementsGrouped } from "@/lib/spv/participation-requirements";
 import {
@@ -53,13 +55,22 @@ export default async function AdminSpvsPage() {
     >
       <div className="mb-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Admin Workspace</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">SPV workflow</h1>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">SPV command center</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Create and manage SPV opportunities and document readiness checklists. Operational tracking only — no
-          legal document generation, banking, or securities execution.
+          SPV readiness, investor document intake, and indicative participation totals. Operational tracking
+          only — no legal document generation, banking, or securities execution.
         </p>
       </div>
 
+      <AdminSpvDashboardKpis
+        metrics={buildAdminSpvDashboardMetrics(
+          opportunities,
+          participationsBySpv,
+          requirementsByParticipation,
+        )}
+      />
+
+      <div className="mt-8">
       <AdminSpvManagement
         opportunities={opportunities}
         participationsBySpv={participationsBySpv}
@@ -67,6 +78,7 @@ export default async function AdminSpvsPage() {
         requirementsByParticipation={requirementsByParticipation}
         companies={companies.map((c) => ({ id: c.id, name: c.company_name }))}
       />
+      </div>
     </AppShell>
   );
 }

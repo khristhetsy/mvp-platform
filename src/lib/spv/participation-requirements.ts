@@ -306,6 +306,9 @@ export async function syncSpvInvestorDocumentAggregate(
     });
   }
 
+  const { refreshSpvOperationalReadiness } = await import("@/lib/spv/sync-readiness");
+  await refreshSpvOperationalReadiness(admin, spvOpportunityId, { actorId: input.actorId });
+
   return { investorsReady, pendingRequirements: pendingCount };
 }
 
@@ -417,6 +420,11 @@ export async function uploadInvestorSpvRequirementDocument(
     actorId: input.investorId,
   });
 
+  const { refreshSpvOperationalReadiness } = await import("@/lib/spv/sync-readiness");
+  await refreshSpvOperationalReadiness(admin, requirement.spv_opportunity_id, {
+    actorId: input.investorId,
+  });
+
   return { data: updated as SpvParticipationRequirementRecord, document };
 }
 
@@ -490,6 +498,11 @@ export async function updateParticipationRequirement(
   }
 
   await syncParticipationDocumentReadiness(admin, existing.spv_participation_id, {
+    actorId: input.actorId,
+  });
+
+  const { refreshSpvOperationalReadiness } = await import("@/lib/spv/sync-readiness");
+  await refreshSpvOperationalReadiness(admin, existing.spv_opportunity_id, {
     actorId: input.actorId,
   });
 

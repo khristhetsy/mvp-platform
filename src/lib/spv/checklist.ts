@@ -267,6 +267,12 @@ export async function syncSpvChecklistReadiness(
     });
   }
 
+  const { refreshSpvOperationalReadiness } = await import("@/lib/spv/sync-readiness");
+  await refreshSpvOperationalReadiness(admin, spvOpportunityId, {
+    actorId: input.actorId,
+    checklist: items ?? [],
+  });
+
   return { readinessPct: pct, documentReadyAt };
 }
 

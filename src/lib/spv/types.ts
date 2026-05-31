@@ -65,6 +65,8 @@ export type SpvOpportunityRecord = {
   document_ready_at?: string | null;
   investors_document_ready_count?: number | null;
   investor_pending_requirements_count?: number | null;
+  operational_readiness_status?: string | null;
+  target_amount_reached_notified?: boolean | null;
   created_at: string;
   updated_at: string;
   companies?: { company_name?: string | null; slug?: string | null } | null;

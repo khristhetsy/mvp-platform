@@ -150,6 +150,9 @@ export async function updateSpvOpportunityStatus(
     }
   }
 
+  const { refreshSpvOperationalReadiness } = await import("@/lib/spv/sync-readiness");
+  await refreshSpvOperationalReadiness(admin, input.spvOpportunityId, { actorId: input.actorId });
+
   return { data: record };
 }
 
@@ -221,6 +224,9 @@ export async function seedSpvParticipationsFromInterests(
       }
     }
   }
+
+  const { refreshSpvOperationalReadiness } = await import("@/lib/spv/sync-readiness");
+  await refreshSpvOperationalReadiness(admin, spvOpportunityId, { actorId });
 
   return { created };
 }
@@ -438,6 +444,12 @@ export async function upsertInvestorSpvParticipation(
       });
     }
   }
+
+  const admin = createServiceRoleClient();
+  const { refreshSpvOperationalReadiness } = await import("@/lib/spv/sync-readiness");
+  await refreshSpvOperationalReadiness(admin, input.spvOpportunityId, {
+    actorId: input.investorId,
+  });
 
   return { data: participation };
 }
