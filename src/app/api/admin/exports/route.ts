@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireStaffApi } from "@/lib/api/admin";
 import { writeAuditLog } from "@/lib/data/audit";
+import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
 import { generateAdminExport } from "@/lib/imports/export";
 import type { ExportFormat, ExportType } from "@/lib/imports/types";
 import { adminExportQuerySchema } from "@/lib/validation";
@@ -45,6 +46,20 @@ export async function GET(request: Request) {
       generatedBy: auth.profile.id,
       timestamp: new Date().toISOString(),
     },
+  });
+
+  emitOperationalEvent(auth.supabase, {
+    eventType: "export_generated",
+    eventCategory: "imports",
+    entityType: "admin_export",
+    entityId: null,
+    actorUserId: auth.profile.id,
+    actorRole: auth.profile.role,
+    title: `Export generated: ${exportType}`,
+    sourceModule: "admin_exports",
+    visibility: "admin_only",
+    dedupeKey: `export:${exportType}:${format}:${auth.profile.id}:${new Date().toISOString().slice(0, 16)}`,
+    metadata: { exportType, format },
   });
 
   const body: BodyInit =

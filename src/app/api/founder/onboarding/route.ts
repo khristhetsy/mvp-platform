@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { writeAuditLog } from "@/lib/data/audit";
+import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { buildCompanyOnboardingSyncUpdate } from "@/lib/onboarding/sync-progress";
 import { createNotification } from "@/lib/notifications/notifications";
@@ -176,6 +178,24 @@ export async function PATCH(request: Request) {
       message: "Your onboarding is complete. Continue strengthening readiness and submit for admin review.",
       entityType: "company",
       entityId: company.id,
+    });
+
+    emitOperationalEvent(createServiceRoleClient(), {
+      eventType: "founder_onboarding_completed",
+      eventCategory: "onboarding",
+      entityType: "company",
+      entityId: company.id,
+      actorUserId: auth.profile.id,
+      actorRole: auth.profile.role,
+      companyId: company.id,
+      relatedUserId: auth.profile.id,
+      title: "Founder onboarding completed",
+      sourceModule: "founder_onboarding",
+      visibility: "company_related",
+      dedupeKey: `founder_onboarding_completed:${company.id}`,
+      metadata: {
+        progress_percent: sync.onboarding_progress_percent,
+      },
     });
   }
 

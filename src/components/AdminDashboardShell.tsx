@@ -23,6 +23,7 @@ export function AdminDashboardShell({
   companyCards,
   investorActivity,
   crmActivity,
+  operationalActivity,
 }: AdminCommandCenterProps) {
   const companyUpdateCount = companyCards.reduce((sum, company) => sum + company.company_updates_published_count, 0);
 
@@ -54,7 +55,7 @@ export function AdminDashboardShell({
 
         <AdminInvestorActivityPanels investorActivity={investorActivity} />
 
-        <AdminRecentActivityTimeline activities={crmActivity} />
+        <AdminRecentActivityTimeline activities={operationalActivity} />
 
         <AdminPlatformOverview companyCards={companyCards} snapshot={snapshot} />
 

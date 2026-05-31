@@ -1,4 +1,6 @@
 import { notifyStaffComplianceAlert } from "@/lib/notifications/compliance-events";
+import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
+import { complianceSeverityToOperational } from "@/lib/operational-activity/event-severity";
 import type {
   ComplianceEventInput,
   ComplianceEventRecord,
@@ -97,6 +99,27 @@ export async function recordComplianceEvent(
       description: record.description,
     });
   }
+
+  emitOperationalEvent(admin, {
+    eventType: "compliance_event_created",
+    eventCategory: "compliance",
+    entityType: "compliance_event",
+    entityId: record.id,
+    companyId: record.company_id,
+    investorId: record.investor_id,
+    relatedUserId: record.founder_id,
+    severity: complianceSeverityToOperational(record.severity),
+    title: record.title,
+    description: record.description,
+    sourceModule: "compliance",
+    visibility: "admin_only",
+    dedupeKey: String(metadata.dedupe_key ?? `compliance:${record.id}`),
+    metadata: {
+      event_type: record.event_type,
+      status: record.status,
+      source: record.source,
+    },
+  });
 
   return { data: record, created: true };
 }

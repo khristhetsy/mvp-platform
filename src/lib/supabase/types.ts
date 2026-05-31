@@ -1368,6 +1368,48 @@ export type Database = {
         };
         Relationships: [];
       };
+      operational_activity_events: {
+        Row: {
+          id: string;
+          event_type: string;
+          event_category: string;
+          entity_type: string;
+          entity_id: string | null;
+          actor_user_id: string | null;
+          actor_role: string | null;
+          company_id: string | null;
+          investor_id: string | null;
+          spv_id: string | null;
+          related_user_id: string | null;
+          severity: string;
+          title: string;
+          description: string | null;
+          metadata: Record<string, unknown>;
+          source_module: string;
+          visibility: string;
+          created_at: string;
+        };
+        Insert: {
+          event_type: string;
+          event_category: string;
+          entity_type: string;
+          entity_id?: string | null;
+          actor_user_id?: string | null;
+          actor_role?: string | null;
+          company_id?: string | null;
+          investor_id?: string | null;
+          spv_id?: string | null;
+          related_user_id?: string | null;
+          severity?: string;
+          title: string;
+          description?: string | null;
+          metadata?: Record<string, unknown>;
+          source_module: string;
+          visibility?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
       audit_logs: {
         Row: Record<string, unknown>;
         Insert: {

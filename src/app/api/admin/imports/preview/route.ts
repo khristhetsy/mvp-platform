@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireStaffApi } from "@/lib/api/admin";
 import { writeAuditLog } from "@/lib/data/audit";
+import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
 import { createImportBatch } from "@/lib/imports/batches";
 import { applyColumnMapping, autoMapColumns } from "@/lib/imports/column-mapping";
 import { parseSpreadsheetBuffer, toParsedImportRows } from "@/lib/imports/parse";
@@ -84,6 +85,24 @@ export async function POST(request: Request) {
       rowCounts: preview.counts,
       format: file.name.toLowerCase().endsWith(".xlsx") ? "xlsx" : "csv",
       timestamp: new Date().toISOString(),
+    },
+  });
+
+  emitOperationalEvent(auth.supabase, {
+    eventType: "import_previewed",
+    eventCategory: "imports",
+    entityType: "import_batch",
+    entityId: batch.id,
+    actorUserId: auth.profile.id,
+    actorRole: auth.profile.role,
+    title: `Import preview: ${importType}`,
+    sourceModule: "admin_imports",
+    visibility: "admin_only",
+    dedupeKey: `import_preview:${batch.id}`,
+    metadata: {
+      importType,
+      fileName: file.name,
+      rowCounts: preview.counts,
     },
   });
 

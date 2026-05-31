@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireInvestorApprovedApi } from "@/lib/api/investor";
 import { writeAuditLog } from "@/lib/data/audit";
 import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
+import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
 import { createIntroRequest } from "@/lib/data/investor-interests";
 import { openMessageThreadFromSignal } from "@/lib/messaging/open-thread-from-signal";
 import { notifyFounderInvestorIntro } from "@/lib/notifications/investor-events";
@@ -64,6 +65,22 @@ export async function POST(request: Request) {
     campaignId: data.campaign_id,
     activityType: "requested_intro",
     metadata: { entityId: data.id, message: data.message },
+  });
+
+  emitOperationalEvent(auth.serviceSupabase, {
+    eventType: "investor_intro_requested",
+    eventCategory: "crm",
+    entityType: "intro_request",
+    entityId: data.id,
+    actorUserId: auth.profile.id,
+    actorRole: auth.profile.role,
+    companyId: data.company_id,
+    investorId: auth.profile.id,
+    title: "Investor requested introduction",
+    sourceModule: "investor_intro_requests",
+    visibility: "internal",
+    dedupeKey: `intro_request:${data.id}`,
+    metadata: { status: data.status },
   });
 
   if (data.company_id) {

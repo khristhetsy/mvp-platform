@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireInvestorApprovedApi } from "@/lib/api/investor";
 import { writeAuditLog } from "@/lib/data/audit";
 import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
+import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
 import { upsertInvestorInterest } from "@/lib/data/investor-interests";
 import { notifyFounderInvestorInterest } from "@/lib/notifications/investor-events";
 import { investorInterestSchema } from "@/lib/validation";
@@ -75,6 +76,22 @@ export async function POST(request: Request) {
       entityId: data.id,
       message: data.message,
     },
+  });
+
+  emitOperationalEvent(auth.serviceSupabase, {
+    eventType: "investor_interest_expressed",
+    eventCategory: "crm",
+    entityType: "investor_interest",
+    entityId: data.id,
+    actorUserId: auth.profile.id,
+    actorRole: auth.profile.role,
+    companyId: data.company_id,
+    investorId: auth.profile.id,
+    title: "Investor expressed interest",
+    sourceModule: "investor_interests",
+    visibility: "internal",
+    dedupeKey: `investor_interest:${data.id}`,
+    metadata: { status: data.status },
   });
 
   if (data.company_id) {

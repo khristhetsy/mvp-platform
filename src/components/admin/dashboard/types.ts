@@ -1,5 +1,6 @@
 import type { AdminCompanyCardData } from "@/components/AdminCompanyCard";
 import type { AdminCrmActivityRow } from "@/lib/data/investor-crm";
+import type { OperationalActivityFeedItem } from "@/lib/operational-activity/types";
 
 export type AdminDashboardMetrics = {
   founders: number;
@@ -37,4 +38,5 @@ export type AdminCommandCenterProps = {
   companyCards: AdminCompanyCardData[];
   investorActivity: AdminInvestorActivityData;
   crmActivity: AdminCrmActivityRow[];
+  operationalActivity: OperationalActivityFeedItem[];
 };

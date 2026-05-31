@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireStaffApi } from "@/lib/api/admin";
 import { writeAuditLog } from "@/lib/data/audit";
+import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
 import { finalizeImportBatch } from "@/lib/imports/batches";
 import type { ImportContextIndex } from "@/lib/imports/dedupe";
 import { executeImportRows } from "@/lib/imports/execute";
@@ -88,6 +89,26 @@ export async function POST(request: Request) {
         failed: result.failed,
       },
       timestamp: new Date().toISOString(),
+    },
+  });
+
+  emitOperationalEvent(auth.supabase, {
+    eventType: "import_completed",
+    eventCategory: "imports",
+    entityType: "import_batch",
+    entityId: batchId,
+    actorUserId: auth.profile.id,
+    actorRole: auth.profile.role,
+    title: `Import completed: ${importType}`,
+    sourceModule: "admin_imports",
+    visibility: "admin_only",
+    dedupeKey: `import_completed:${batchId}`,
+    metadata: {
+      importType,
+      created: result.created,
+      updated: result.updated,
+      skipped: result.skipped,
+      failed: result.failed,
     },
   });
 

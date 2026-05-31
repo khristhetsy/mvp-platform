@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireInvestorApprovedApi } from "@/lib/api/investor";
 import { writeAuditLog } from "@/lib/data/audit";
 import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
+import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
 import { upsertSavedDeal } from "@/lib/data/investor-interests";
 import { investorSaveDealSchema } from "@/lib/validation";
 
@@ -53,6 +54,21 @@ export async function POST(request: Request) {
     campaignId: data.campaign_id,
     activityType: "saved_deal",
     metadata: { entityId: data.id },
+  });
+
+  emitOperationalEvent(auth.serviceSupabase, {
+    eventType: "investor_deal_saved",
+    eventCategory: "crm",
+    entityType: "saved_deal",
+    entityId: data.id,
+    actorUserId: auth.profile.id,
+    actorRole: auth.profile.role,
+    companyId: data.company_id,
+    investorId: auth.profile.id,
+    title: "Investor saved company",
+    sourceModule: "investor_saved_deals",
+    visibility: "internal",
+    dedupeKey: `saved_deal:${data.id}`,
   });
 
   return NextResponse.json({ savedDeal: data });

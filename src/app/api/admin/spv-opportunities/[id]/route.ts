@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireStaffApi } from "@/lib/api/admin";
 import { writeAuditLog } from "@/lib/data/audit";
+import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
 import { updateSpvOpportunityStatus } from "@/lib/spv/spv-workflow";
 import { adminSpvOpportunityUpdateSchema } from "@/lib/validation";
 import type { Database } from "@/lib/supabase/types";
@@ -39,6 +40,22 @@ export async function PATCH(request: Request, context: RouteContext) {
       action: "admin.spv_opportunity_status",
       entityType: "spv_opportunity",
       entityId: id,
+      metadata: { status: parsed.data.status },
+    });
+
+    emitOperationalEvent(auth.supabase, {
+      eventType: "spv_status_changed",
+      eventCategory: "spv",
+      entityType: "spv_opportunity",
+      entityId: id,
+      actorUserId: auth.profile.id,
+      actorRole: auth.profile.role,
+      spvId: id,
+      companyId: result.data.company_id ?? null,
+      title: `SPV status changed to ${parsed.data.status}`,
+      sourceModule: "admin_spv",
+      visibility: "admin_only",
+      dedupeKey: `spv_status:${id}:${parsed.data.status}`,
       metadata: { status: parsed.data.status },
     });
 

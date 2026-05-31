@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { requireStaffApi } from "@/lib/api/admin";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { writeAuditLog } from "@/lib/data/audit";
-import { recordOperationalError, recordOperationalEvent } from "@/lib/monitoring/operational-events";
+import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
+import { recordOperationalError } from "@/lib/monitoring/operational-events";
 import { syncSpvClosingReadiness } from "@/lib/spv/closing-reviews";
 import { refreshSpvOperationalReadiness } from "@/lib/spv/sync-readiness";
 
@@ -55,11 +56,18 @@ export async function POST(_request: Request, context: RouteContext) {
       },
     });
 
-    void recordOperationalEvent(auth.supabase, {
-      action: "spv.readiness_synced",
+    emitOperationalEvent(auth.supabase, {
+      eventType: "spv_readiness_updated",
+      eventCategory: "spv",
       entityType: "spv_opportunity",
       entityId: spvOpportunityId,
-      userId: auth.profile.id,
+      actorUserId: auth.profile.id,
+      actorRole: auth.profile.role,
+      spvId: spvOpportunityId,
+      title: "SPV readiness updated",
+      sourceModule: "admin_spv",
+      visibility: "admin_only",
+      dedupeKey: `spv_readiness:${spvOpportunityId}:${readiness.readiness}`,
       metadata: {
         operationalReadiness: readiness.readiness,
         closingReadinessPct: closing.summary?.readinessPct,

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireStaffApi } from "@/lib/api/admin";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { writeAuditLog } from "@/lib/data/audit";
+import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
 import { recordOperationalError } from "@/lib/monitoring/operational-events";
 import {
   flattenReportForCsv,
@@ -80,6 +81,20 @@ export async function POST(request: Request) {
       generatedAt: payload.meta.generatedAt,
       generatedBy: auth.profile.id,
     },
+  });
+
+  emitOperationalEvent(auth.supabase, {
+    eventType: "report_generated",
+    eventCategory: "reporting",
+    entityType: "admin_report",
+    entityId: null,
+    actorUserId: auth.profile.id,
+    actorRole: auth.profile.role,
+    title: `Report generated: ${reportType}`,
+    sourceModule: "admin_reports",
+    visibility: "admin_only",
+    dedupeKey: `report:${reportType}:${format}:${preview ? "preview" : "export"}:${auth.profile.id}:${new Date().toISOString().slice(0, 16)}`,
+    metadata: { reportType, format, preview: preview ?? false },
   });
 
   if (format === "pdf") {
