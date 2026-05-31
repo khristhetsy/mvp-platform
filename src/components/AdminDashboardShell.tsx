@@ -7,6 +7,11 @@ import { AdminInvestorCrmTimeline } from "@/components/AdminInvestorCrmTimeline"
 import { AdminInvestorActivity } from "@/components/AdminInvestorActivity";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { AdminOperationsBanner } from "@/components/ui/AdminOperationsBanner";
+import { MetricRow } from "@/components/ui/OperationalMetric";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { formatLastUpdated } from "@/lib/ui/format-display";
 
 import type { AdminCrmActivityRow } from "@/lib/data/investor-crm";
 
@@ -49,44 +54,54 @@ export function AdminDashboardShell({
       serviceRoleConfigured={serviceRoleConfigured}
     >
       <div>
-        <div className="mb-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Admin Workspace</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Dashboard</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Manage submitted companies, pending diligence reviews, document uploads, and approval decisions.
-          </p>
-        </div>
+        <PageHeader
+          eyebrow="Private capital operations"
+          title="Command center"
+          description="Company reviews, investor approvals, compliance visibility, SPV operations, and platform health."
+          metadata={`Last loaded ${formatLastUpdated(new Date()) ?? "—"} · audit trail in audit_logs`}
+          queueIndicator={
+            pendingCount > 0 ? (
+              <StatusBadge label={`${pendingCount} in review queue`} status="warning" dot />
+            ) : (
+              <StatusBadge label="Queue clear" status="success" dot />
+            )
+          }
+        />
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard label="Total Companies" value={String(metrics.companies)} detail="Total company submissions" accent="indigo" />
+        <AdminOperationsBanner
+          pendingReviews={pendingCount}
+          serviceRoleOk={serviceRoleConfigured}
+        />
+
+        <MetricRow title="Operational metrics" subtitle="Platform-wide snapshot">
+          <MetricCard
+            label="Companies"
+            value={String(metrics.companies)}
+            detail={`${metrics.pendingReviews} pending review`}
+            accent="indigo"
+            urgency={metrics.pendingReviews > 0}
+          />
           <MetricCard
             label="Investors"
             value="Review"
-            detail="Onboarding and approvals at /admin/investors"
+            detail="Onboarding at /admin/investors"
             accent="violet"
           />
           <MetricCard
-            label="Active Raises"
+            label="Active raises"
             value={String(metrics.publishedDeals)}
-            detail="Live on marketplace"
+            detail="Published marketplace"
             accent="blue"
           />
           <MetricCard
-            label="Platform Health"
-            value={serviceRoleConfigured ? "Online" : "Check config"}
-            detail={`${metrics.documents} documents · ${metrics.pitchDecks} pitch decks`}
+            label="Platform health"
+            value={serviceRoleConfigured ? "Online" : "Check"}
+            detail={`${metrics.documents} docs · ${metrics.pitchDecks} decks`}
             accent="slate"
+            statusLabel={serviceRoleConfigured ? "Operational" : "Degraded"}
+            status={serviceRoleConfigured ? "success" : "warning"}
           />
-        </section>
-
-        {pendingCount > 0 ? (
-          <section className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
-            <h2 className="text-base font-semibold text-amber-950">Pending review queue</h2>
-            <p className="mt-1 text-sm text-amber-900">
-              {pendingCount} {pendingCount === 1 ? "company needs" : "companies need"} a decision.
-            </p>
-          </section>
-        ) : null}
+        </MetricRow>
 
         <section className="mt-8">
           <AdminButtonHealthPanel />
@@ -109,8 +124,8 @@ export function AdminDashboardShell({
           >
             <div className="grid gap-5">
               {companyCards.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-600">
-                  No companies submitted yet.
+                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center text-sm text-slate-600">
+                  No companies in queue. Submissions will appear here for institutional review.
                 </div>
               ) : (
                 companyCards.map((company) => <AdminCompanyCard key={company.id} company={company} />)

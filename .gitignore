@@ -20,6 +20,9 @@
 # production
 /build
 
+# local operational backups (never commit)
+/backups/
+
 # misc
 .DS_Store
 *.pem

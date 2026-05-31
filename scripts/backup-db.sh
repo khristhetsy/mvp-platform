@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Non-destructive Postgres backup via pg_dump. Requires DATABASE_URL.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+BACKUP_DIR="${BACKUP_DIR:-$ROOT/backups}"
+mkdir -p "$BACKUP_DIR"
+
+if [[ -f "$ROOT/.env.local" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source <(grep -v '^#' "$ROOT/.env.local" | sed '/^\s*$/d' | sed 's/\r$//')
+  set +a
+fi
+
+DATABASE_URL="${DATABASE_URL:-}"
+
+if [[ -z "$DATABASE_URL" ]]; then
+  echo "ERROR: DATABASE_URL is not set."
+  echo "Add it to .env.local (Supabase → Project Settings → Database → Connection string)."
+  echo "Alternatively use Supabase Dashboard → Database → Backups for managed snapshots."
+  node "$ROOT/scripts/record-backup-event.mjs" backup.database.failed error '{"reason":"missing_DATABASE_URL"}' 2>/dev/null || true
+  exit 1
+fi
+
+if ! command -v pg_dump >/dev/null 2>&1; then
+  echo "ERROR: pg_dump not found. Install PostgreSQL client tools or use Supabase managed backups."
+  node "$ROOT/scripts/record-backup-event.mjs" backup.database.failed error '{"reason":"pg_dump_missing"}' 2>/dev/null || true
+  exit 1
+fi
+
+STAMP="$(date -u +"%Y%m%dT%H%M%SZ")"
+OUTFILE="$BACKUP_DIR/db-${STAMP}.sql.gz"
+
+echo "Writing backup to $OUTFILE (read-only pg_dump)..."
+if pg_dump "$DATABASE_URL" --no-owner --no-acl --format=plain | gzip -c > "$OUTFILE"; then
+  SIZE="$(wc -c < "$OUTFILE" | tr -d ' ')"
+  if [[ "$SIZE" -lt 128 ]]; then
+    echo "ERROR: Backup file is unexpectedly small (${SIZE} bytes)."
+    node "$ROOT/scripts/record-backup-event.mjs" backup.database.failed error "{\"file\":\"$OUTFILE\",\"bytes\":$SIZE}" 2>/dev/null || true
+    exit 1
+  fi
+  echo "Backup complete (${SIZE} bytes)."
+  node "$ROOT/scripts/record-backup-event.mjs" backup.database.completed info "{\"file\":\"$OUTFILE\",\"bytes\":$SIZE}" 2>/dev/null || true
+else
+  echo "ERROR: pg_dump failed."
+  node "$ROOT/scripts/record-backup-event.mjs" backup.database.failed error '{"reason":"pg_dump_failed"}' 2>/dev/null || true
+  exit 1
+fi

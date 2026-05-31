@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
+import { InvestorPipelineStages } from "@/components/ui/InvestorPipelineStages";
+import { MetricRow } from "@/components/ui/OperationalMetric";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { InvestorActivityTimeline } from "@/components/InvestorActivityTimeline";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { InvestorApprovalBanner } from "@/components/InvestorApprovalBanner";
@@ -32,17 +35,23 @@ export default async function InvestorDashboardPage() {
       profileName={profile.full_name ?? profile.email ?? "Investor"}
       profileSubtitle="Investor account"
     >
-      <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Dashboard</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Track opportunities, watchlist, expressed interest, and marketplace activity.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Investor terminal"
+        title="Dashboard"
+        description="Opportunity pipeline, watchlist, expressed interest, and relationship activity."
+      />
 
       <InvestorApprovalBanner investorProfile={investorProfile} />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="mb-6">
+        <InvestorPipelineStages
+          watchlistCount={savedDeals.length}
+          interestCount={interests.length}
+          introCount={introRequests.length}
+        />
+      </section>
+
+      <MetricRow title="Workspace metrics" subtitle="Non-binding indicators only">
         <MetricCard
           label="Active Opportunities"
           value={String(matches.length)}
@@ -67,7 +76,7 @@ export default async function InvestorDashboardPage() {
           detail="Watchlist, commitments, and company updates"
           accent="slate"
         />
-      </section>
+      </MetricRow>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-2">
         <WorkspacePanel title="Portfolio" subtitle="Watchlist, pipeline, and company updates">

@@ -172,6 +172,10 @@ node scripts/repair-marketplace-campaigns.mjs
 - Service role is used server-side for onboarding repair only.
 - After `0037`, founders cannot SELECT `spv_document_packages` or `spv_closing_reviews` (internal notes). Founder SPV UI uses aggregate fields on `spv_opportunities` only.
 
+## Backup and recovery
+
+See [backup-and-recovery.md](./backup-and-recovery.md) for database/storage backup scripts, env checklists, incident recovery, and cadence.
+
 ## Production deployment (Vercel)
 
 ### Required environment variables

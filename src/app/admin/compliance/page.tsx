@@ -3,6 +3,8 @@ import { AdminComplianceQueue } from "@/components/AdminComplianceQueue";
 import { AnalyticsBreakdownPanel } from "@/components/AnalyticsBreakdownPanel";
 import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
+import { MetricRow } from "@/components/ui/OperationalMetric";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { loadAdminComplianceCenter } from "@/lib/compliance/load-admin-compliance";
 import { requireRole } from "@/lib/supabase/auth";
@@ -20,24 +22,23 @@ export default async function AdminCompliancePage() {
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={profile.role}
     >
-      <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Admin Workspace</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Compliance &amp; risk review</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Internal institutional controls for readiness risk, outreach compliance, messaging flags, and platform
-          activity. Not legal advice — operational review queue only.
-        </p>
-        {data.scanCreated > 0 ? (
-          <p className="mt-2 text-xs text-amber-800">{data.scanCreated} new compliance event(s) recorded this load.</p>
-        ) : null}
-      </div>
+      <PageHeader
+        eyebrow="Risk & compliance"
+        title="Compliance & risk review"
+        description="Internal institutional controls for readiness risk, outreach compliance, messaging flags, and platform activity. Not legal advice."
+        metadata={
+          data.scanCreated > 0
+            ? `${data.scanCreated} event(s) recorded this session · staff-only internal notes`
+            : "Staff-only internal notes · audit trail in compliance_events"
+        }
+      />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <MetricRow title="Review queue indicators" subtitle="Open and under-review counts">
         <MetricCard label="Open events" value={String(data.metrics.openEvents)} detail="Requires staff review" accent="indigo" />
         <MetricCard label="Critical" value={String(data.metrics.criticalEvents)} detail="Open or under review" accent="violet" />
         <MetricCard label="High severity" value={String(data.metrics.highEvents)} detail="Open or under review" accent="blue" />
         <MetricCard label="Under review" value={String(data.metrics.underReview)} detail="Actively being reviewed" accent="slate" />
-      </section>
+      </MetricRow>
 
       <section className="mt-8">
         <WorkspacePanel title="Compliance review queue" subtitle="Open events — internal notes are staff-only">

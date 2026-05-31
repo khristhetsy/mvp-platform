@@ -2,6 +2,8 @@ import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { MetricCard } from "@/components/MetricCard";
+import { MetricRow } from "@/components/ui/OperationalMetric";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingProgressCard";
 import { FounderRemediationActionPlan } from "@/components/FounderRemediationActionPlan";
@@ -69,29 +71,27 @@ export default async function FounderDashboardPage() {
       profileSubtitle={companyName}
     >
       <FounderFeatureGate featureKey="dashboard">
-      <div className="mb-8 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Founder Workspace</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{companyName}</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Track readiness, capital raise progress, investor engagement, and marketplace publication.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href="/founder/settings"
-            className="rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:from-indigo-700 hover:to-violet-700"
-          >
-            Company settings
-          </Link>
-          <Link
-            href="/founder/onboarding"
-            className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-slate-300"
-          >
-            Continue onboarding
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Founder terminal"
+        title={companyName}
+        description="Readiness, capital raise, investor engagement, and marketplace publication."
+        actions={
+          <>
+            <Link
+              href="/founder/settings"
+              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
+            >
+              Company settings
+            </Link>
+            <Link
+              href="/founder/onboarding"
+              className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-300"
+            >
+              Continue onboarding
+            </Link>
+          </>
+        }
+      />
 
       {onboardingProgress ? <FounderOnboardingProgressCard progress={onboardingProgress} /> : null}
 
@@ -131,7 +131,7 @@ export default async function FounderDashboardPage() {
         </div>
       ) : null}
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <MetricRow title="Capital readiness" subtitle="Operational indicators — not investment advice">
         <MetricCard
           label="Readiness Score"
           value={`${founderPipeline.readinessScore}/100`}
@@ -156,7 +156,7 @@ export default async function FounderDashboardPage() {
           detail="Interest, intros, and saved deals"
           accent="slate"
         />
-      </section>
+      </MetricRow>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-2">
         <WorkspacePanel title="Capital Raise Overview" subtitle="Non-binding marketplace interest">

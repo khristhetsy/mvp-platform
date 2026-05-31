@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { AdminSpvDashboardKpis } from "@/components/AdminSpvDashboardKpis";
 import { AdminSpvManagement } from "@/components/AdminSpvManagement";
 import { buildAdminSpvDashboardMetrics } from "@/lib/spv/readiness";
@@ -109,14 +110,12 @@ export default async function AdminSpvsPage() {
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={profile.role}
     >
-      <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Admin Workspace</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">SPV command center</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          SPV readiness, investor document intake, and indicative participation totals. Operational tracking
-          only — no legal document generation, banking, or securities execution.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="SPV operations"
+        title="SPV command center"
+        description="Readiness, investor document intake, and indicative participation. Use Refresh readiness per SPV — no sync on page load."
+        metadata="Operational tracking only — not legal formation or securities execution"
+      />
 
       <AdminSpvDashboardKpis
         metrics={buildAdminSpvDashboardMetrics(

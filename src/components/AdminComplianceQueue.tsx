@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { ComplianceEventRecord } from "@/lib/compliance/types";
+import { StatusBadge, severityToStatus } from "@/components/ui/StatusBadge";
 
 export function AdminComplianceQueue({
   events,
@@ -49,9 +50,10 @@ export function AdminComplianceQueue({
                 {event.severity} · {event.event_type} · {event.source} · {new Date(event.created_at).toLocaleString()}
               </p>
             </div>
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
-              {event.status}
-            </span>
+            <div className="flex flex-wrap gap-1">
+              <StatusBadge label={event.severity} status={severityToStatus(event.severity)} dot />
+              <StatusBadge label={event.status} status="neutral" />
+            </div>
           </div>
           <p className="mt-2 text-slate-700">{event.description}</p>
           {event.internal_notes ? (

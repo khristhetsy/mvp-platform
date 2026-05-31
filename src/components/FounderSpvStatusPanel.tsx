@@ -1,4 +1,5 @@
 import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { WorkflowProgressRail } from "@/components/ui/WorkflowProgressRail";
 import { SpvComplianceNotice } from "@/components/SpvComplianceNotice";
 import {
   formatChecklistCategory,
@@ -112,23 +113,17 @@ export function FounderSpvStatusPanel({
                       {closingSummary.readinessPct}% readiness (summary only)
                     </p>
                   ) : null}
-                  <ol className="mt-4 space-y-2 border-l-2 border-indigo-100 pl-4">
-                    {timeline.map((step) => (
-                      <li
-                        key={step.key}
-                        className={
-                          step.current
-                            ? "text-sm font-medium text-indigo-800"
-                            : step.complete
-                              ? "text-xs text-slate-500 line-through"
-                              : "text-xs text-slate-600"
-                        }
-                      >
-                        {step.label}
-                        {step.current ? " (current)" : null}
-                      </li>
-                    ))}
-                  </ol>
+                  <div className="mt-4 border-t border-slate-100 pt-4">
+                    <WorkflowProgressRail
+                      steps={timeline.map((step) => ({
+                        key: step.key,
+                        label: step.label,
+                        complete: step.complete,
+                        current: step.current,
+                      }))}
+                      compact
+                    />
+                  </div>
                   {spv.description ? (
                     <p className="mt-2 text-xs text-slate-600">{spv.description}</p>
                   ) : null}

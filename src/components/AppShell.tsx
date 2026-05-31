@@ -4,7 +4,7 @@ import { createContext, useContext } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
-import { WorkspaceSidebar } from "@/components/WorkspaceSidebar";
+import { WorkspaceShell } from "@/components/WorkspaceShell";
 import { compactDisclaimer } from "@/lib/compliance";
 import type { Role } from "@/lib/auth";
 import type { WorkspaceId } from "@/lib/workspace-nav";
@@ -42,8 +42,12 @@ export function AppShell({
   if (insideAppShell && activeWorkspace) {
     return (
       <>
-        <WorkspaceHeader profileName={profileName} profileSubtitle={profileSubtitle} />
-        <main className="flex-1 overflow-y-auto bg-slate-50/80 p-6 lg:p-8">{children}</main>
+        <WorkspaceHeader
+          workspace={activeWorkspace}
+          profileName={profileName}
+          profileSubtitle={profileSubtitle}
+        />
+        <main className="flex-1 overflow-y-auto bg-[var(--surface-sunken)] p-5 lg:p-7">{children}</main>
       </>
     );
   }
@@ -51,10 +55,14 @@ export function AppShell({
   if (activeWorkspace) {
     return (
       <AppShellContext.Provider value={true}>
-        <div className="flex min-h-screen w-full flex-1 bg-slate-100 text-slate-950">
-          <WorkspaceSidebar workspace={activeWorkspace} planBadge={planBadge} />
-          <div className="flex min-w-0 flex-1 flex-col">{children}</div>
-        </div>
+        <WorkspaceShell
+          workspace={activeWorkspace}
+          profileName={profileName}
+          profileSubtitle={profileSubtitle}
+          planBadge={planBadge}
+        >
+          {children}
+        </WorkspaceShell>
       </AppShellContext.Provider>
     );
   }
@@ -77,7 +85,7 @@ export function AppShell({
           </nav>
           <Link
             href="/auth/sign-in"
-            className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:border-slate-950"
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:border-slate-950"
           >
             Sign in
           </Link>
