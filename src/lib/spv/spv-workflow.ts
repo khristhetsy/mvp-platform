@@ -269,13 +269,15 @@ export async function loadInvestorSpvWorkspace(
   const [openOpps, participations] = await Promise.all([
     supabase
       .from("spv_opportunities")
-      .select("*, companies(company_name, slug)")
+      .select(
+        "*, companies(company_name, slug)",
+      )
       .eq("status", "open")
       .order("updated_at", { ascending: false }),
     supabase
       .from("spv_participations")
       .select(
-        "*, spv_opportunities(name, status, target_amount, minimum_commitment, description, terms_summary, checklist_readiness_pct, document_ready_at), companies(company_name, slug)",
+        "*, spv_opportunities(name, status, target_amount, minimum_commitment, description, terms_summary, checklist_readiness_pct, document_ready_at, investor_package_status), companies(company_name, slug)",
       )
       .eq("investor_id", investorId)
       .order("updated_at", { ascending: false }),

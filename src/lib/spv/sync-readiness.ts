@@ -87,12 +87,20 @@ export async function refreshSpvOperationalReadiness(
     (Array.isArray(record.companies) ? record.companies[0] : record.companies)?.company_name ??
     "Company";
 
-  if (
-    readiness === "ready_for_legal_docs" &&
-    previousStatus !== "ready_for_legal_docs"
-  ) {
-    void notifyStaffSpvReadyForLegalDocs({
+  if (readiness === "ready_for_legal_docs") {
+    if (previousStatus !== "ready_for_legal_docs") {
+      void notifyStaffSpvReadyForLegalDocs({
+        spvOpportunityId,
+        spvName: record.name,
+        companyName,
+        actorId: input.actorId,
+      });
+    }
+
+    const { seedSpvDocumentPackages } = await import("@/lib/spv/document-packages");
+    await seedSpvDocumentPackages(admin, {
       spvOpportunityId,
+      companyId: record.company_id,
       spvName: record.name,
       companyName,
       actorId: input.actorId,

@@ -31,3 +31,9 @@ export const spvIntakeDisclaimers = [
 export const spvUploadDisclaimers = [
   "Uploaded SPV documents are for operational review only and do not constitute acceptance into an offering.",
 ];
+
+export const spvPackageDisclaimers = [
+  "The document package tracker is operational only and is not legal advice.",
+  "Package status does not constitute an offer to sell securities.",
+  "Documents require counsel and admin approval before any investor reliance.",
+];

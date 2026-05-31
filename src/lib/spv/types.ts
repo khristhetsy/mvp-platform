@@ -67,6 +67,9 @@ export type SpvOpportunityRecord = {
   investor_pending_requirements_count?: number | null;
   operational_readiness_status?: string | null;
   target_amount_reached_notified?: boolean | null;
+  package_readiness_pct?: number | null;
+  investor_package_status?: string | null;
+  packages_fully_approved_notified?: boolean | null;
   created_at: string;
   updated_at: string;
   companies?: { company_name?: string | null; slug?: string | null } | null;
@@ -95,6 +98,47 @@ export const SPV_PARTICIPATION_REQUIREMENT_STATUSES = [
 
 export type SpvParticipationRequirementStatus =
   (typeof SPV_PARTICIPATION_REQUIREMENT_STATUSES)[number];
+
+export const SPV_DOCUMENT_PACKAGE_TYPES = [
+  "formation_package",
+  "subscription_package",
+  "investor_intake_package",
+  "banking_package",
+  "tax_package",
+  "reporting_package",
+  "final_closing_package",
+] as const;
+
+export type SpvDocumentPackageType = (typeof SPV_DOCUMENT_PACKAGE_TYPES)[number];
+
+export const SPV_DOCUMENT_PACKAGE_STATUSES = [
+  "not_started",
+  "preparing",
+  "under_review",
+  "approved",
+  "issued",
+  "archived",
+] as const;
+
+export type SpvDocumentPackageStatus = (typeof SPV_DOCUMENT_PACKAGE_STATUSES)[number];
+
+export type SpvDocumentPackageRecord = {
+  id: string;
+  spv_opportunity_id: string;
+  company_id: string;
+  package_type: SpvDocumentPackageType | string;
+  status: SpvDocumentPackageStatus | string;
+  prepared_by: string | null;
+  reviewed_by: string | null;
+  approved_by: string | null;
+  prepared_at: string | null;
+  reviewed_at: string | null;
+  approved_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  spv_opportunities?: { name?: string | null } | null;
+};
 
 export type SpvParticipationRequirementRecord = {
   id: string;

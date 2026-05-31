@@ -22,8 +22,13 @@ import {
   getSpvNextAction,
   type SpvOperationalReadinessStatus,
 } from "@/lib/spv/readiness";
+import {
+  computePackageReadinessPct,
+  formatPackageTypeLabel,
+} from "@/lib/spv/document-package-display";
 import type {
   SpvChecklistItemRecord,
+  SpvDocumentPackageRecord,
   SpvOpportunityRecord,
   SpvParticipationRecord,
   SpvParticipationRequirementRecord,
@@ -37,12 +42,14 @@ export function AdminSpvManagement({
   participationsBySpv,
   checklistBySpv,
   requirementsByParticipation,
+  packagesBySpv,
   companies,
 }: Readonly<{
   opportunities: SpvOpportunityRecord[];
   participationsBySpv: Record<string, SpvParticipationRecord[]>;
   checklistBySpv: Record<string, SpvChecklistItemRecord[]>;
   requirementsByParticipation: Record<string, SpvParticipationRequirementRecord[]>;
+  packagesBySpv: Record<string, SpvDocumentPackageRecord[]>;
   companies: CompanyOption[];
 }>) {
   const router = useRouter();
@@ -93,6 +100,31 @@ export function AdminSpvManagement({
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to open document.");
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function updatePackage(
+    packageId: string,
+    status: string,
+    notes?: string,
+  ) {
+    setLoading("pkg-" + packageId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/spv-document-packages/${packageId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, notes }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(formatApiError(payload, "Package update failed."));
+      }
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Package update failed.");
     } finally {
       setLoading(null);
     }
@@ -241,7 +273,7 @@ export function AdminSpvManagement({
 
   return (
     <div className="space-y-6">
-      <SpvComplianceNotice showChecklistNotice showIntakeNotice showUploadNotice />
+      <SpvComplianceNotice showChecklistNotice showIntakeNotice showUploadNotice showPackageNotice />
 
       <WorkspacePanel title="Create SPV opportunity" subtitle="Admin-reviewed workflow — not legal formation">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -315,6 +347,9 @@ export function AdminSpvManagement({
               const parts = participationsBySpv[spv.id] ?? [];
               const totals = totalsBySpv[spv.id] ?? { count: 0, total: 0 };
               const checklist = checklistBySpv[spv.id] ?? [];
+              const packages = packagesBySpv[spv.id] ?? [];
+              const packagePct =
+                spv.package_readiness_pct ?? computePackageReadinessPct(packages);
               const readinessPct =
                 spv.checklist_readiness_pct ?? computeChecklistReadinessPct(checklist);
               const canClose = areRequiredChecklistItemsComplete(checklist);
@@ -348,6 +383,7 @@ export function AdminSpvManagement({
                       </p>
                       <p className="mt-1 font-medium text-indigo-700">
                         SPV checklist: {readinessPct}%
+                        {packages.length > 0 ? ` · Document packages: ${packagePct}%` : null}
                       </p>
                       <p className="mt-0.5 text-slate-500">
                         {spv.investors_document_ready_count ?? 0} investors document-ready ·{" "}
@@ -448,6 +484,128 @@ export function AdminSpvManagement({
                       Checklist not initialized for this SPV (create new SPVs to auto-seed).
                     </p>
                   )}
+
+                  {packages.length > 0 ? (
+                    <div className="mt-4 rounded-lg bg-violet-50 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-violet-800">
+                        Document package tracker · {packagePct}% ready
+                      </p>
+                      <ul className="mt-2 space-y-2">
+                        {packages.map((pkg) => (
+                          <li
+                            key={pkg.id}
+                            className="rounded border border-violet-200 bg-white px-2 py-2 text-xs"
+                          >
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-slate-900">
+                                  {formatPackageTypeLabel(pkg.package_type)}
+                                </p>
+                                <p className="text-slate-500">Status: {pkg.status}</p>
+                                <label className="mt-2 block text-slate-600">
+                                  Internal notes (admin only)
+                                  <textarea
+                                    id={`pkg-notes-${pkg.id}`}
+                                    defaultValue={pkg.notes ?? ""}
+                                    rows={2}
+                                    className="mt-1 w-full rounded border border-slate-200 px-2 py-1 text-xs"
+                                    placeholder="Counsel review notes, package blockers…"
+                                  />
+                                </label>
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                <button
+                                  type="button"
+                                  disabled={loading != null}
+                                  onClick={() => {
+                                    const notes =
+                                      (
+                                        document.getElementById(
+                                          `pkg-notes-${pkg.id}`,
+                                        ) as HTMLTextAreaElement | null
+                                      )?.value ?? "";
+                                    void updatePackage(pkg.id, "preparing", notes);
+                                  }}
+                                  className="rounded border px-1.5 py-0.5"
+                                >
+                                  Preparing
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={loading != null}
+                                  onClick={() => {
+                                    const notes =
+                                      (
+                                        document.getElementById(
+                                          `pkg-notes-${pkg.id}`,
+                                        ) as HTMLTextAreaElement | null
+                                      )?.value ?? "";
+                                    void updatePackage(pkg.id, "under_review", notes);
+                                  }}
+                                  className="rounded border px-1.5 py-0.5"
+                                >
+                                  Under review
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={loading != null}
+                                  onClick={() => {
+                                    const notes =
+                                      (
+                                        document.getElementById(
+                                          `pkg-notes-${pkg.id}`,
+                                        ) as HTMLTextAreaElement | null
+                                      )?.value ?? "";
+                                    void updatePackage(pkg.id, "approved", notes);
+                                  }}
+                                  className="rounded border px-1.5 py-0.5"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={loading != null}
+                                  onClick={() => {
+                                    const notes =
+                                      (
+                                        document.getElementById(
+                                          `pkg-notes-${pkg.id}`,
+                                        ) as HTMLTextAreaElement | null
+                                      )?.value ?? "";
+                                    void updatePackage(pkg.id, "issued", notes);
+                                  }}
+                                  className="rounded border px-1.5 py-0.5"
+                                >
+                                  Issue
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={loading != null}
+                                  onClick={() => {
+                                    const notes =
+                                      (
+                                        document.getElementById(
+                                          `pkg-notes-${pkg.id}`,
+                                        ) as HTMLTextAreaElement | null
+                                      )?.value ?? "";
+                                    void updatePackage(pkg.id, "archived", notes);
+                                  }}
+                                  className="rounded border px-1.5 py-0.5"
+                                >
+                                  Archive
+                                </button>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : readiness === "ready_for_legal_docs" ? (
+                    <p className="mt-3 text-xs text-amber-800">
+                      Packages will auto-seed when operational readiness reaches ready for legal
+                      docs (refresh if just updated).
+                    </p>
+                  ) : null}
 
                   {parts.length > 0 ? (
                     <div className="mt-4 space-y-3">

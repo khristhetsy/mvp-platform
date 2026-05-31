@@ -14,14 +14,22 @@ type CategorySummary = {
   completed: number;
 };
 
+type PackageSummary = {
+  complete: number;
+  total: number;
+  readinessPct: number;
+};
+
 export function FounderSpvStatusPanel({
   opportunities,
   participations,
   checklistSummaryBySpv,
+  packageSummaryBySpv = {},
 }: Readonly<{
   opportunities: SpvOpportunityRecord[];
   participations: SpvParticipationRecord[];
   checklistSummaryBySpv: Record<string, CategorySummary[]>;
+  packageSummaryBySpv?: Record<string, PackageSummary>;
 }>) {
   const bySpv = new Map<string, SpvParticipationRecord[]>();
   for (const row of participations) {
@@ -32,7 +40,7 @@ export function FounderSpvStatusPanel({
 
   return (
     <div className="space-y-4">
-      <SpvComplianceNotice showChecklistNotice showIntakeNotice />
+      <SpvComplianceNotice showChecklistNotice showIntakeNotice showPackageNotice />
       <WorkspacePanel
         title="SPV opportunity status"
         subtitle="Admin-managed SPV workflow — founders cannot create legal SPVs in Phase 1"
@@ -45,6 +53,9 @@ export function FounderSpvStatusPanel({
               const rows = bySpv.get(spv.id) ?? [];
               const totals = getSpvParticipationTotals(rows);
               const categories = checklistSummaryBySpv[spv.id] ?? [];
+              const packageSummary = packageSummaryBySpv[spv.id];
+              const packagePct =
+                spv.package_readiness_pct ?? packageSummary?.readinessPct ?? 0;
               const readinessPct = spv.checklist_readiness_pct ?? 0;
               const readiness: SpvOperationalReadinessStatus =
                 (spv.operational_readiness_status as SpvOperationalReadinessStatus | null) ??
@@ -80,6 +91,13 @@ export function FounderSpvStatusPanel({
                     Investor documents: {spv.investors_document_ready_count ?? 0} investor(s) document-ready ·{" "}
                     {spv.investor_pending_requirements_count ?? 0} pending requirement(s) (aggregate only)
                   </p>
+                  {(packageSummary?.total ?? 0) > 0 ? (
+                    <p className="mt-1 text-xs text-violet-800">
+                      Legal document packages (operational): {packagePct}% ·{" "}
+                      {packageSummary?.complete ?? 0} of {packageSummary?.total ?? 0} packages
+                      complete (no internal legal notes shown)
+                    </p>
+                  ) : null}
                   <ol className="mt-4 space-y-2 border-l-2 border-indigo-100 pl-4">
                     {timeline.map((step) => (
                       <li

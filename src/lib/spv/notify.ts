@@ -210,6 +210,55 @@ export async function notifyStaffSpvTargetAmountReached(input: {
   });
 }
 
+export async function notifyStaffSpvPackagesSeeded(input: {
+  spvOpportunityId: string;
+  spvName: string;
+  companyName: string;
+  actorId: string | null;
+}) {
+  return notifyStaff({
+    actorUserId: input.actorId,
+    type: "spv_packages_seeded",
+    title: "SPV document packages seeded",
+    message: `Operational document packages were created for SPV "${input.spvName}" (${input.companyName}). Track status in admin SPVs — no legal documents are generated automatically.`,
+    entityType: "spv_opportunity",
+    entityId: input.spvOpportunityId,
+  });
+}
+
+export async function notifyFounderSpvPackagesApproved(input: {
+  companyId: string;
+  spvOpportunityId: string;
+  spvName: string;
+  actorId: string | null;
+}) {
+  return notifyCompanyFounder(input.companyId, {
+    actorUserId: input.actorId,
+    type: "spv_packages_approved",
+    title: "SPV document packages approved",
+    message: `All operational document packages for SPV "${input.spvName}" are approved. This is internal tracking only — not legal offering documents.`,
+    entityType: "spv_opportunity",
+    entityId: input.spvOpportunityId,
+  });
+}
+
+export async function notifyInvestorSpvSubscriptionPackageIssued(input: {
+  investorId: string;
+  spvOpportunityId: string;
+  spvName: string;
+  actorId: string;
+}) {
+  return createNotification({
+    recipientUserId: input.investorId,
+    actorUserId: input.actorId,
+    type: "spv_subscription_package_issued",
+    title: "SPV subscription package issued",
+    message: `The subscription document package for SPV "${input.spvName}" is marked issued for operational tracking. This is not an offer to sell securities or acceptance into an investment.`,
+    entityType: "spv_opportunity",
+    entityId: input.spvOpportunityId,
+  });
+}
+
 export async function notifyFounderSpvInvestorAggregateChanged(input: {
   companyId: string;
   spvOpportunityId: string;

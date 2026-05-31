@@ -382,6 +382,18 @@ export const adminSpvParticipationRequirementUpdateSchema = z.object({
   reviewNotes: z.string().max(2000).optional(),
 });
 
+export const adminSpvDocumentPackageUpdateSchema = z.object({
+  status: z.enum([
+    "not_started",
+    "preparing",
+    "under_review",
+    "approved",
+    "issued",
+    "archived",
+  ]),
+  notes: z.string().max(5000).optional(),
+});
+
 export const adminSpvParticipationUpdateSchema = z.object({
   status: z.enum([
     "invited",

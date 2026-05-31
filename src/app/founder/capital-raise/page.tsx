@@ -7,6 +7,7 @@ import { listFounderCompanyUpdates } from "@/lib/company-updates/company-updates
 import { FounderCompanyUpdatesPanel } from "@/components/FounderCompanyUpdatesPanel";
 import { FounderSpvStatusPanel } from "@/components/FounderSpvStatusPanel";
 import { listFounderChecklistSummary } from "@/lib/spv/checklist";
+import { listFounderPackageSummaries } from "@/lib/spv/document-packages";
 import { listFounderSpvSummary } from "@/lib/spv/spv-workflow";
 import { formatPledgeTotal, getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
@@ -31,6 +32,7 @@ export default async function FounderCapitalRaisePage() {
   let spvOpportunities: Awaited<ReturnType<typeof listFounderSpvSummary>>["opportunities"] = [];
   let spvParticipations: Awaited<ReturnType<typeof listFounderSpvSummary>>["participations"] = [];
   let spvChecklistSummaryBySpv: Awaited<ReturnType<typeof listFounderChecklistSummary>>["data"] = {};
+  let spvPackageSummaryBySpv: Awaited<ReturnType<typeof listFounderPackageSummaries>>["data"] = {};
 
   try {
     company = await ensureFounderCompanyForUser(profile);
@@ -73,10 +75,17 @@ export default async function FounderCapitalRaisePage() {
         spvOpportunities.map((spv) => spv.id),
       );
       spvChecklistSummaryBySpv = checklistSummary.data ?? {};
+
+      const packageSummary = await listFounderPackageSummaries(
+        supabase,
+        spvOpportunities.map((spv) => spv.id),
+      );
+      spvPackageSummaryBySpv = packageSummary.data ?? {};
     } catch {
       spvOpportunities = [];
       spvParticipations = [];
       spvChecklistSummaryBySpv = {};
+      spvPackageSummaryBySpv = {};
     }
   }
 
@@ -224,6 +233,7 @@ export default async function FounderCapitalRaisePage() {
               opportunities={spvOpportunities}
               participations={spvParticipations}
               checklistSummaryBySpv={spvChecklistSummaryBySpv ?? {}}
+              packageSummaryBySpv={spvPackageSummaryBySpv ?? {}}
             />
           </section>
 

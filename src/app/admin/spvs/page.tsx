@@ -3,13 +3,18 @@ import { AdminSpvDashboardKpis } from "@/components/AdminSpvDashboardKpis";
 import { AdminSpvManagement } from "@/components/AdminSpvManagement";
 import { buildAdminSpvDashboardMetrics } from "@/lib/spv/readiness";
 import { listAdminChecklistGrouped } from "@/lib/spv/checklist";
+import { listAdminPackagesGrouped } from "@/lib/spv/document-packages";
 import { listAdminRequirementsGrouped } from "@/lib/spv/participation-requirements";
 import {
   listAdminCompaniesForSpv,
   listAdminSpvOpportunities,
   listSpvParticipationsForOpportunity,
 } from "@/lib/spv/spv-workflow";
-import type { SpvChecklistItemRecord, SpvParticipationRequirementRecord } from "@/lib/spv/types";
+import type {
+  SpvChecklistItemRecord,
+  SpvDocumentPackageRecord,
+  SpvParticipationRequirementRecord,
+} from "@/lib/spv/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 import type { SpvParticipationRecord } from "@/lib/spv/types";
@@ -40,6 +45,13 @@ export default async function AdminSpvsPage() {
   );
   const requirementsByParticipation: Record<string, SpvParticipationRequirementRecord[]> =
     "data" in requirementsResult ? (requirementsResult.data ?? {}) : {};
+
+  const packagesResult = await listAdminPackagesGrouped(
+    admin,
+    opportunities.map((spv) => spv.id),
+  );
+  const packagesBySpv: Record<string, SpvDocumentPackageRecord[]> =
+    "data" in packagesResult ? (packagesResult.data ?? {}) : {};
 
   for (const spv of opportunities) {
     const { data } = await listSpvParticipationsForOpportunity(admin, spv.id);
@@ -76,6 +88,7 @@ export default async function AdminSpvsPage() {
         participationsBySpv={participationsBySpv}
         checklistBySpv={checklistBySpv}
         requirementsByParticipation={requirementsByParticipation}
+        packagesBySpv={packagesBySpv}
         companies={companies.map((c) => ({ id: c.id, name: c.company_name }))}
       />
       </div>
