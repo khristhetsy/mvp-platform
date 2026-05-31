@@ -1,15 +1,31 @@
 "use client";
 
 import { Suspense } from "react";
+import { AdminSpvManagement } from "@/components/AdminSpvManagement";
 import { ViewToolbar } from "@/components/ui/ViewToolbar";
 import { useViewMode } from "@/hooks/use-view-mode";
-import type { ReactNode } from "react";
+import type { ClosingReadinessSummary } from "@/lib/spv/closing-review-display";
+import type {
+  SpvChecklistItemRecord,
+  SpvClosingReviewRecord,
+  SpvDocumentPackageRecord,
+  SpvOpportunityRecord,
+  SpvParticipationRecord,
+  SpvParticipationRequirementRecord,
+} from "@/lib/spv/types";
 
-function AdminSpvsModuleViewsInner({
-  children,
-}: Readonly<{
-  children: (viewMode: ReturnType<typeof useViewMode>["viewMode"], density: ReturnType<typeof useViewMode>["density"], query: string) => ReactNode;
-}>) {
+export type AdminSpvsModuleViewsProps = Readonly<{
+  opportunities: SpvOpportunityRecord[];
+  participationsBySpv: Record<string, SpvParticipationRecord[]>;
+  checklistBySpv: Record<string, SpvChecklistItemRecord[]>;
+  requirementsByParticipation: Record<string, SpvParticipationRequirementRecord[]>;
+  packagesBySpv: Record<string, SpvDocumentPackageRecord[]>;
+  closingReviewsBySpv: Record<string, SpvClosingReviewRecord>;
+  closingReadinessBySpv: Record<string, ClosingReadinessSummary>;
+  companies: Array<{ id: string; name: string }>;
+}>;
+
+function AdminSpvsModuleViewsInner(props: AdminSpvsModuleViewsProps) {
   const { viewMode, density, query, setViewMode, setDensity, setQuery, allowedModes } =
     useViewMode("admin-spvs");
 
@@ -26,19 +42,20 @@ function AdminSpvsModuleViewsInner({
         searchPlaceholder="Search SPVs, companies, or readiness…"
         sticky
       />
-      {children(viewMode, density, query)}
+      <AdminSpvManagement
+        {...props}
+        listViewMode={viewMode}
+        listDensity={density}
+        listQuery={query}
+      />
     </>
   );
 }
 
-export function AdminSpvsModuleViews({
-  children,
-}: Readonly<{
-  children: (viewMode: ReturnType<typeof useViewMode>["viewMode"], density: ReturnType<typeof useViewMode>["density"], query: string) => ReactNode;
-}>) {
+export function AdminSpvsModuleViews(props: AdminSpvsModuleViewsProps) {
   return (
     <Suspense fallback={<p className="text-sm text-slate-500">Loading view options…</p>}>
-      <AdminSpvsModuleViewsInner>{children}</AdminSpvsModuleViewsInner>
+      <AdminSpvsModuleViewsInner {...props} />
     </Suspense>
   );
 }
