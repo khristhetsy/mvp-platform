@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { FounderClassAssistant } from "@/components/FounderClassAssistant";
+import { FloatingFounderAICoach } from "@/components/FloatingFounderAICoach";
 import { courseHref } from "@/lib/learning/course-keys";
 import type { Course } from "@/lib/learning/course-types";
 import type { CourseLesson, CourseSection } from "@/lib/learning/course-types";
@@ -220,8 +220,6 @@ export function FounderClassLessonExperience({
           </p>
         </section>
 
-        <FounderClassAssistant courseSlug={course.slug} lessonSlug={lesson.slug} />
-
         <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 pt-4">
           <button
             type="button"
@@ -285,6 +283,8 @@ export function FounderClassLessonExperience({
           </div>
         </div>
       </aside>
+
+      <FloatingFounderAICoach courseSlug={course.slug} lessonSlug={lesson.slug} />
     </div>
   );
 }

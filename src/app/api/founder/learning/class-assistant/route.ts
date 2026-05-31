@@ -1,33 +1,87 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
-import { buildClassAssistantReply } from "@/lib/learning/class-assistant";
-import { findCourseLesson, getCourseBySlug } from "@/lib/learning/courses";
+import {
+  buildCatalogCoachContext,
+  buildPersonalCoachContext,
+  COACH_DISCLAIMER,
+  resolveCoachLesson,
+  runPersonalCoach,
+  type CoachMessage,
+} from "@/lib/learning/class-assistant";
+import { computeCoursePercentComplete } from "@/lib/learning/course-progress";
+import { FOUNDER_COURSES } from "@/lib/learning/courses";
+import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
+import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) return auth.error;
 
   const body = await request.json().catch(() => ({}));
-  const courseSlug = typeof body.courseSlug === "string" ? body.courseSlug : null;
-  const lessonSlug = typeof body.lessonSlug === "string" ? body.lessonSlug : null;
+  const courseSlug =
+    typeof body.courseSlug === "string" && body.courseSlug.trim() ? body.courseSlug.trim() : null;
+  const lessonSlug =
+    typeof body.lessonSlug === "string" && body.lessonSlug.trim() ? body.lessonSlug.trim() : null;
   const message = typeof body.message === "string" ? body.message : "";
+  const history = Array.isArray(body.history)
+    ? (body.history as CoachMessage[]).filter(
+        (m) =>
+          m &&
+          (m.role === "user" || m.role === "assistant") &&
+          typeof m.content === "string",
+      )
+    : [];
 
-  if (!courseSlug || !lessonSlug) {
-    return NextResponse.json({ error: "Missing course or lesson." }, { status: 400 });
+  const company = await ensureFounderCompanyForUser(auth.profile);
+  const progressRows = company
+    ? await listLessonProgressForCompany(auth.profile.id, company.id)
+    : [];
+
+  const founderName = auth.profile.full_name ?? auth.profile.email ?? "Founder";
+  const companyName = company?.company_name ?? null;
+
+  if (!courseSlug) {
+    const overallPercent =
+      FOUNDER_COURSES.length > 0
+        ? Math.round(
+            FOUNDER_COURSES.reduce(
+              (sum, course) => sum + computeCoursePercentComplete(course, progressRows),
+              0,
+            ) / FOUNDER_COURSES.length,
+          )
+        : 0;
+
+    const ctx = buildCatalogCoachContext({ founderName, companyName, overallPercent });
+    const result = await runPersonalCoach({ message, ctx, history });
+
+    return NextResponse.json({
+      reply: result.reply,
+      disclaimer: result.disclaimer ?? COACH_DISCLAIMER,
+      mode: result.mode,
+      openAiAvailable: Boolean(process.env.OPENAI_API_KEY?.trim()),
+    });
   }
 
-  const course = getCourseBySlug(courseSlug);
-  const found = course ? findCourseLesson(course, lessonSlug) : null;
-  if (!course || !found) {
-    return NextResponse.json({ error: "Lesson not found." }, { status: 404 });
+  const resolved = resolveCoachLesson(courseSlug, lessonSlug);
+  if (!resolved) {
+    return NextResponse.json({ error: "Course or lesson not found." }, { status: 404 });
   }
 
-  const result = buildClassAssistantReply({
-    message,
-    lessonTitle: found.lesson.title,
-    lessonContent: found.lesson.content,
-    keyPoints: found.lesson.keyPoints,
+  const ctx = buildPersonalCoachContext({
+    course: resolved.course,
+    lesson: resolved.lesson,
+    sectionTitle: resolved.sectionTitle,
+    founderName,
+    companyName,
+    progressRows,
   });
 
-  return NextResponse.json(result);
+  const result = await runPersonalCoach({ message, ctx, history });
+
+  return NextResponse.json({
+    reply: result.reply,
+    disclaimer: result.disclaimer ?? COACH_DISCLAIMER,
+    mode: result.mode,
+    openAiAvailable: Boolean(process.env.OPENAI_API_KEY?.trim()),
+  });
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { FloatingFounderAICoach } from "@/components/FloatingFounderAICoach";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import type { FounderCourseCatalogItem } from "@/lib/learning/load-founder-courses";
@@ -123,6 +124,8 @@ export function FounderCourseCatalog({
           ))}
         </div>
       )}
+
+      <FloatingFounderAICoach />
     </div>
   );
 }

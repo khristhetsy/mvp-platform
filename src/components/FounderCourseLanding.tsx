@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FloatingFounderAICoach } from "@/components/FloatingFounderAICoach";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { courseLessonHref } from "@/lib/learning/course-keys";
@@ -101,6 +102,8 @@ export function FounderCourseLanding({
           ))}
         </div>
       </section>
+
+      <FloatingFounderAICoach courseSlug={course.slug} />
     </div>
   );
 }
