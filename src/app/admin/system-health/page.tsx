@@ -1,8 +1,10 @@
 import { AppShell } from "@/components/AppShell";
 import { AdminActionHealthProvider } from "@/components/AdminActionHealthProvider";
 import { AdminButtonHealthPanel } from "@/components/AdminButtonHealthPanel";
+import { AdminEnvironmentPanel } from "@/components/admin/AdminEnvironmentPanel";
 import { AdminRecoveryChecklist } from "@/components/AdminRecoveryChecklist";
 import { buildOperationalSnapshot } from "@/lib/operations/system-snapshot";
+import { getEnvironmentStatusSummary } from "@/lib/env";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminSystemHealthPage() {
   const profile = await requireRole(["admin", "analyst"]);
   const operationalSnapshot = await buildOperationalSnapshot();
+  const environmentStatus = getEnvironmentStatusSummary();
 
   return (
     <AppShell
@@ -32,6 +35,10 @@ export default async function AdminSystemHealthPage() {
         </div>
 
         <AdminButtonHealthPanel />
+
+        <div className="mt-8">
+          <AdminEnvironmentPanel status={environmentStatus} />
+        </div>
 
         <div className="mt-8">
           <AdminRecoveryChecklist snapshot={operationalSnapshot} />

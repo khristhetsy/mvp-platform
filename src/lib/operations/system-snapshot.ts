@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { isGoogleOAuthConfigured } from "@/lib/integrations/google-env";
-import { getPublicSupabaseEnv } from "@/lib/env/production";
+import { getAppEnv, getAppUrl, getPublicSupabaseEnv } from "@/lib/env";
 
 const BACKUP_AUDIT_ACTIONS = [
   "backup.database.completed",
@@ -18,8 +18,10 @@ const REQUIRED_STORAGE_BUCKETS = ["pitch-decks", "spv-investor-documents", "comp
 export type OperationalSystemSnapshot = {
   generatedAt: string;
   environment: {
+    appEnv: string;
     nodeEnv: string | null;
     vercelEnv: string | null;
+    appUrl: string | null;
     supabasePublicConfigured: boolean;
     supabaseProjectHost: string | null;
     serviceRoleConfigured: boolean;
@@ -142,8 +144,10 @@ export async function buildOperationalSnapshot(): Promise<OperationalSystemSnaps
   return {
     generatedAt: new Date().toISOString(),
     environment: {
+      appEnv: getAppEnv(),
       nodeEnv: process.env.NODE_ENV ?? null,
       vercelEnv: process.env.VERCEL_ENV ?? null,
+      appUrl: getAppUrl(),
       supabasePublicConfigured,
       supabaseProjectHost: hostFromUrl(supabaseUrl),
       serviceRoleConfigured: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
