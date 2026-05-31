@@ -2,6 +2,13 @@ import { listCompanyDocuments } from "@/lib/data/documents";
 import { computeReadinessScore, getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { buildRemediationLearningLinks, buildLearningRecommendations } from "@/lib/learning/recommendations";
 import { computeReadinessMilestones, getCurrentMilestone, getNextMilestone } from "@/lib/learning/milestones";
+import { LEARNING_PROGRAM_CATALOG, computeCapitalOsReadinessTier } from "@/lib/learning/catalog";
+import { listLessonProgressForCompany, countCompletedLessons } from "@/lib/learning/lesson-progress";
+import {
+  buildLessonRecommendations,
+  detectLearningWeaknesses,
+  findNextLessonRecommendation,
+} from "@/lib/learning/personalization";
 import {
   computeOverallLearningPercent,
   listLearningProgressForCompany,
@@ -57,15 +64,29 @@ export async function loadFounderLearningWorkspace(profile: Profile) {
       continueModules: [] as FounderLearningModuleView[],
       recommendedModules: [] as FounderLearningModuleView[],
       remediationLearningLinks: {},
+      programs: LEARNING_PROGRAM_CATALOG,
+      lessonProgress: [],
+      lessonRecommendations: [],
+      nextLesson: null,
+      weaknesses: [],
+      readinessTier: computeCapitalOsReadinessTier({
+        overallLearningPercent: 0,
+        readinessScore: null,
+        onboardingPercent: 0,
+        modulesCompleted: 0,
+      }),
+      completedLessonsCount: 0,
+      pendingActions: [],
     };
   }
 
   const supabase = await createServerSupabaseClient();
   const remediationPlan = await loadFounderRemediationPlan(profile);
-  const [{ data: documents }, { data: diligenceReport }, progressRows] = await Promise.all([
+  const [{ data: documents }, { data: diligenceReport }, progressRows, lessonProgress] = await Promise.all([
     listCompanyDocuments(supabase, company.id),
     getLatestDiligenceReport(supabase, company.id),
     listLearningProgressForCompany(profile.id, company.id),
+    listLessonProgressForCompany(profile.id, company.id),
   ]);
 
   const onboarding = computeFounderOnboardingProgress({
@@ -84,6 +105,12 @@ export async function loadFounderLearningWorkspace(profile: Profile) {
   const uploadedTypes = (documents ?? []).flatMap((document) =>
     document.document_type ? [document.document_type] : [],
   );
+  const hasFinancials = uploadedTypes.some((type) => type.toUpperCase() === "FINANCIAL_STATEMENTS");
+  const { count: companyUpdatesCount } = await supabase
+    .from("company_updates")
+    .select("id", { count: "exact", head: true })
+    .eq("company_id", company.id);
+  const hasCompanyUpdates = (companyUpdatesCount ?? 0) > 0;
   const readinessScore = diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypes);
   const activeTasks = remediationPlan.tasks.filter(
     (task) => task.status === "open" || task.status === "in_progress",
@@ -129,6 +156,46 @@ export async function loadFounderLearningWorkspace(profile: Profile) {
 
   const recommendedModules = moduleViews.filter((module) => recommendedIds.has(module.id));
 
+  const lessonRecommendations = buildLessonRecommendations({
+    modules,
+    lessonProgress,
+    remediationSourceKeys: activeTasks.map((task) => ({
+      source_key: task.source_key,
+      category: task.category,
+      priority: task.priority,
+    })),
+    onboardingPercent: onboarding.percent,
+    readinessScore,
+    hasDiligenceReport: Boolean(diligenceReport),
+    hasPitchDeck: uploadedTypes.some((type) => type.toUpperCase() === "PITCH_DECK"),
+    hasFinancials,
+    reviewStatus: company.review_status ? String(company.review_status) : null,
+    hasCompanyUpdates,
+  });
+
+  const nextLesson = findNextLessonRecommendation(lessonRecommendations, lessonProgress);
+  const weaknesses = detectLearningWeaknesses({
+    readinessScore,
+    hasPitchDeck: uploadedTypes.some((type) => type.toUpperCase() === "PITCH_DECK"),
+    hasFinancials,
+    onboardingPercent: onboarding.percent,
+    remediationHighPriority: highPriorityOpen,
+    hasDiligenceReport: Boolean(diligenceReport),
+  });
+
+  const readinessTier = computeCapitalOsReadinessTier({
+    overallLearningPercent: overallPercent,
+    readinessScore,
+    onboardingPercent: onboarding.percent,
+    modulesCompleted: progressCompleted,
+  });
+
+  const completedLessonsCount = countCompletedLessons(lessonProgress);
+  const pendingActions = lessonRecommendations
+    .filter((l) => l.priority === "high")
+    .slice(0, 3)
+    .map((l) => l.reason);
+
   return {
     company,
     modules: moduleViews,
@@ -143,5 +210,13 @@ export async function loadFounderLearningWorkspace(profile: Profile) {
       modules,
       remediationPlan.tasks.map((task) => ({ source_key: task.source_key, category: task.category })),
     ),
+    programs: LEARNING_PROGRAM_CATALOG,
+    lessonProgress,
+    lessonRecommendations,
+    nextLesson,
+    weaknesses,
+    readinessTier,
+    completedLessonsCount,
+    pendingActions,
   };
 }

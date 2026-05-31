@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { FounderCourseLanding } from "@/components/FounderCourseLanding";
 import { FounderLearningModuleViewer } from "@/components/FounderLearningModuleViewer";
+import { getCourseBySlug } from "@/lib/learning/courses";
+import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
 import { getModuleContent } from "@/lib/learning/modules";
 import { getLearningModuleBySlug, listLearningProgressForCompany } from "@/lib/learning/progress";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
@@ -9,7 +12,7 @@ import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
-export default async function FounderLearningModulePage({
+export default async function FounderLearningSlugPage({
   params,
 }: Readonly<{ params: Promise<{ slug: string }> }>) {
   const profile = await requireRole(["founder"]);
@@ -18,6 +21,22 @@ export default async function FounderLearningModulePage({
 
   if (!company) {
     notFound();
+  }
+
+  const course = getCourseBySlug(slug);
+  if (course) {
+    const lessonProgress = await listLessonProgressForCompany(profile.id, company.id);
+
+    return (
+      <FounderAppShell
+        profileName={profile.full_name ?? profile.email ?? "Founder"}
+        profileSubtitle={company.company_name}
+      >
+        <FounderFeatureGate featureKey="elearning">
+          <FounderCourseLanding course={course} progressRows={lessonProgress} />
+        </FounderFeatureGate>
+      </FounderAppShell>
+    );
   }
 
   const module = await getLearningModuleBySlug(slug);

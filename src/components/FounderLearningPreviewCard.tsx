@@ -30,8 +30,8 @@ export function FounderLearningPreviewCard({
       }
     >
       <p className="mb-4 text-sm leading-6 text-slate-600">
-        Adaptive modules tied to your remediation gaps, onboarding progress, and diligence posture — not a generic course
-        catalog.
+        Online founder courses with lessons, quizzes, and learning progress — educational training for investor
+        preparation only.
       </p>
 
       {nextMilestone && !nextMilestone.achieved ? (

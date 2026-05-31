@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { courseHref } from "@/lib/learning/course-keys";
+import { getProgramForModuleSlug } from "@/lib/learning/catalog";
 import type { FounderLearningModuleView } from "@/lib/learning/load-founder-learning";
 
 function statusLabel(status: string | null | undefined) {
@@ -15,6 +17,17 @@ export function FounderLearningModuleCard({
 }>) {
   const percent = module.progress?.percent_complete ?? 0;
   const status = module.progress?.status ?? "not_started";
+  const program = getProgramForModuleSlug(module.slug);
+  const courseSlugByModule: Record<string, string> = {
+    "investor-ready-company-profiles": "investor-readiness-masterclass",
+    "pitch-deck-fundamentals": "investor-ready-pitch-deck",
+    "financial-projections": "startup-financial-forecasting",
+    "investor-materials": "data-room-preparation",
+    "governance-basics": "founder-governance-basics",
+    "investor-updates": "fundraising-communication",
+    "long-term-capital-strategy": "capital-strategy-foundations",
+  };
+  const linkedCourseSlug = courseSlugByModule[module.slug];
 
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -41,12 +54,20 @@ export function FounderLearningModuleCard({
       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
         <div className="h-full rounded-full bg-indigo-600 transition-all" style={{ width: `${percent}%` }} />
       </div>
-      <Link
-        href={`/founder/learning/${module.slug}`}
-        className="mt-4 inline-flex rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-      >
-        {status === "completed" ? "Review module" : status === "in_progress" ? "Continue" : "Start module"}
-      </Link>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link
+          href={linkedCourseSlug ? courseHref(linkedCourseSlug) : `/founder/learning/${program.slug}`}
+          className="inline-flex rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+        >
+          {status === "completed" ? "Review course" : status === "in_progress" ? "Continue" : "Open course"}
+        </Link>
+        <Link
+          href={`/founder/learning/${module.slug}`}
+          className="inline-flex rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          Module view
+        </Link>
+      </div>
     </article>
   );
 }

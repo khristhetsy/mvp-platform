@@ -213,6 +213,64 @@ export type Database = {
         };
         Relationships: [];
       };
+      learning_programs: {
+        Row: {
+          id: string;
+          slug: string;
+          title: string;
+          description: string;
+          readiness_focus: string;
+          order_index: number;
+          is_published: boolean;
+          created_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      learning_program_modules: {
+        Row: {
+          program_id: string;
+          module_id: string;
+          order_index: number;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      founder_lesson_progress: {
+        Row: {
+          id: string;
+          founder_id: string;
+          company_id: string;
+          module_slug: string;
+          lesson_id: string;
+          status: string;
+          quiz_score: number | null;
+          quiz_passed: boolean | null;
+          completed_at: string | null;
+          last_viewed_at: string | null;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      founder_quiz_attempts: {
+        Row: {
+          id: string;
+          founder_id: string;
+          company_id: string;
+          module_slug: string;
+          lesson_id: string;
+          score: number;
+          passed: boolean;
+          answers: Record<string, string>;
+          created_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
       notifications: {
         Row: {
           id: string;
