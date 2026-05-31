@@ -261,6 +261,11 @@ export type Database = {
           package_readiness_pct: number;
           investor_package_status: string | null;
           packages_fully_approved_notified: boolean;
+          closing_readiness_pct: number;
+          investor_closing_status: string | null;
+          closing_final_review_notified: boolean;
+          closing_approved_notified: boolean;
+          closing_target_override: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -282,6 +287,11 @@ export type Database = {
           package_readiness_pct?: number;
           investor_package_status?: string | null;
           packages_fully_approved_notified?: boolean;
+          closing_readiness_pct?: number;
+          investor_closing_status?: string | null;
+          closing_final_review_notified?: boolean;
+          closing_approved_notified?: boolean;
+          closing_target_override?: boolean;
           updated_at?: string;
         };
         Update: {
@@ -300,6 +310,44 @@ export type Database = {
           package_readiness_pct?: number;
           investor_package_status?: string | null;
           packages_fully_approved_notified?: boolean;
+          closing_readiness_pct?: number;
+          investor_closing_status?: string | null;
+          closing_final_review_notified?: boolean;
+          closing_approved_notified?: boolean;
+          closing_target_override?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      spv_closing_reviews: {
+        Row: {
+          id: string;
+          spv_opportunity_id: string;
+          company_id: string;
+          status: string;
+          readiness_snapshot: Record<string, unknown>;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          internal_notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          spv_opportunity_id: string;
+          company_id: string;
+          status?: string;
+          readiness_snapshot?: Record<string, unknown>;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          internal_notes?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          status?: string;
+          readiness_snapshot?: Record<string, unknown>;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          internal_notes?: string | null;
           updated_at?: string;
         };
         Relationships: [];

@@ -2,6 +2,7 @@ import {
   spvChecklistDisclaimers,
   spvComplianceDisclaimers,
   spvIntakeDisclaimers,
+  spvClosingDisclaimers,
   spvPackageDisclaimers,
   spvUploadDisclaimers,
 } from "@/lib/compliance";
@@ -11,11 +12,13 @@ export function SpvComplianceNotice({
   showIntakeNotice = false,
   showUploadNotice = false,
   showPackageNotice = false,
+  showClosingNotice = false,
 }: Readonly<{
   showChecklistNotice?: boolean;
   showIntakeNotice?: boolean;
   showUploadNotice?: boolean;
   showPackageNotice?: boolean;
+  showClosingNotice?: boolean;
 }>) {
   const lines = [
     ...spvComplianceDisclaimers,
@@ -23,9 +26,12 @@ export function SpvComplianceNotice({
     ...(showIntakeNotice ? spvIntakeDisclaimers : []),
     ...(showUploadNotice ? spvUploadDisclaimers : []),
     ...(showPackageNotice ? spvPackageDisclaimers : []),
+    ...(showClosingNotice ? spvClosingDisclaimers : []),
   ];
 
-  const title = showPackageNotice
+  const title = showClosingNotice
+    ? "SPV participation & operational closing notice"
+    : showPackageNotice
     ? "SPV participation & document package notice"
     : showUploadNotice
       ? "SPV participation & document upload notice"

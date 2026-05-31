@@ -7,6 +7,7 @@ import { listFounderCompanyUpdates } from "@/lib/company-updates/company-updates
 import { FounderCompanyUpdatesPanel } from "@/components/FounderCompanyUpdatesPanel";
 import { FounderSpvStatusPanel } from "@/components/FounderSpvStatusPanel";
 import { listFounderChecklistSummary } from "@/lib/spv/checklist";
+import { listFounderClosingSummaries } from "@/lib/spv/closing-reviews";
 import { listFounderPackageSummaries } from "@/lib/spv/document-packages";
 import { listFounderSpvSummary } from "@/lib/spv/spv-workflow";
 import { formatPledgeTotal, getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
@@ -33,6 +34,7 @@ export default async function FounderCapitalRaisePage() {
   let spvParticipations: Awaited<ReturnType<typeof listFounderSpvSummary>>["participations"] = [];
   let spvChecklistSummaryBySpv: Awaited<ReturnType<typeof listFounderChecklistSummary>>["data"] = {};
   let spvPackageSummaryBySpv: Awaited<ReturnType<typeof listFounderPackageSummaries>>["data"] = {};
+  let spvClosingSummaryBySpv: Awaited<ReturnType<typeof listFounderClosingSummaries>>["data"] = {};
 
   try {
     company = await ensureFounderCompanyForUser(profile);
@@ -81,11 +83,18 @@ export default async function FounderCapitalRaisePage() {
         spvOpportunities.map((spv) => spv.id),
       );
       spvPackageSummaryBySpv = packageSummary.data ?? {};
+
+      const closingSummary = await listFounderClosingSummaries(
+        supabase,
+        spvOpportunities.map((spv) => spv.id),
+      );
+      spvClosingSummaryBySpv = closingSummary.data ?? {};
     } catch {
       spvOpportunities = [];
       spvParticipations = [];
       spvChecklistSummaryBySpv = {};
       spvPackageSummaryBySpv = {};
+      spvClosingSummaryBySpv = {};
     }
   }
 
@@ -234,6 +243,7 @@ export default async function FounderCapitalRaisePage() {
               participations={spvParticipations}
               checklistSummaryBySpv={spvChecklistSummaryBySpv ?? {}}
               packageSummaryBySpv={spvPackageSummaryBySpv ?? {}}
+              closingSummaryBySpv={spvClosingSummaryBySpv ?? {}}
             />
           </section>
 

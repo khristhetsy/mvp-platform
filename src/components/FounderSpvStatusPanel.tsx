@@ -25,11 +25,13 @@ export function FounderSpvStatusPanel({
   participations,
   checklistSummaryBySpv,
   packageSummaryBySpv = {},
+  closingSummaryBySpv = {},
 }: Readonly<{
   opportunities: SpvOpportunityRecord[];
   participations: SpvParticipationRecord[];
   checklistSummaryBySpv: Record<string, CategorySummary[]>;
   packageSummaryBySpv?: Record<string, PackageSummary>;
+  closingSummaryBySpv?: Record<string, { stageLabel: string; readinessPct: number }>;
 }>) {
   const bySpv = new Map<string, SpvParticipationRecord[]>();
   for (const row of participations) {
@@ -40,7 +42,12 @@ export function FounderSpvStatusPanel({
 
   return (
     <div className="space-y-4">
-      <SpvComplianceNotice showChecklistNotice showIntakeNotice showPackageNotice />
+      <SpvComplianceNotice
+        showChecklistNotice
+        showIntakeNotice
+        showPackageNotice
+        showClosingNotice
+      />
       <WorkspacePanel
         title="SPV opportunity status"
         subtitle="Admin-managed SPV workflow — founders cannot create legal SPVs in Phase 1"
@@ -54,6 +61,7 @@ export function FounderSpvStatusPanel({
               const totals = getSpvParticipationTotals(rows);
               const categories = checklistSummaryBySpv[spv.id] ?? [];
               const packageSummary = packageSummaryBySpv[spv.id];
+              const closingSummary = closingSummaryBySpv[spv.id];
               const packagePct =
                 spv.package_readiness_pct ?? packageSummary?.readinessPct ?? 0;
               const readinessPct = spv.checklist_readiness_pct ?? 0;
@@ -96,6 +104,12 @@ export function FounderSpvStatusPanel({
                       Legal document packages (operational): {packagePct}% ·{" "}
                       {packageSummary?.complete ?? 0} of {packageSummary?.total ?? 0} packages
                       complete (no internal legal notes shown)
+                    </p>
+                  ) : null}
+                  {closingSummary ? (
+                    <p className="mt-1 text-xs text-emerald-800">
+                      Final operational closing: {closingSummary.stageLabel} ·{" "}
+                      {closingSummary.readinessPct}% readiness (summary only)
                     </p>
                   ) : null}
                   <ol className="mt-4 space-y-2 border-l-2 border-indigo-100 pl-4">

@@ -57,7 +57,10 @@ export type NotificationType =
   | "spv_target_amount_reached"
   | "spv_packages_seeded"
   | "spv_packages_approved"
-  | "spv_subscription_package_issued";
+  | "spv_subscription_package_issued"
+  | "spv_ready_for_final_review"
+  | "spv_approved_for_closing"
+  | "spv_operationally_closed";
 
 export type NotificationRecord = {
   id: string;

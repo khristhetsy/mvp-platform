@@ -394,6 +394,19 @@ export const adminSpvDocumentPackageUpdateSchema = z.object({
   notes: z.string().max(5000).optional(),
 });
 
+export const adminSpvClosingReviewUpdateSchema = z.object({
+  status: z.enum([
+    "not_started",
+    "in_review",
+    "approved_for_closing",
+    "changes_required",
+    "closed_operationally",
+    "canceled",
+  ]),
+  internalNotes: z.string().max(5000).optional(),
+  closingTargetOverride: z.boolean().optional(),
+});
+
 export const adminSpvParticipationUpdateSchema = z.object({
   status: z.enum([
     "invited",

@@ -37,3 +37,8 @@ export const spvPackageDisclaimers = [
   "Package status does not constitute an offer to sell securities.",
   "Documents require counsel and admin approval before any investor reliance.",
 ];
+
+export const spvClosingDisclaimers = [
+  "Operational closing status is not a legal closing, securities transaction, or confirmation of investment completion.",
+  "Final review tracks internal readiness only and does not execute subscriptions or payments.",
+];

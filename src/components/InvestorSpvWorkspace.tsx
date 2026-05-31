@@ -64,7 +64,13 @@ export function InvestorSpvWorkspace({
 
   return (
     <div className="space-y-6">
-      <SpvComplianceNotice showChecklistNotice showIntakeNotice showUploadNotice showPackageNotice />
+      <SpvComplianceNotice
+        showChecklistNotice
+        showIntakeNotice
+        showUploadNotice
+        showPackageNotice
+        showClosingNotice
+      />
 
       <InvestorSpvNextActionBanner action={getInvestorSpvNextAction(requirements)} />
 
@@ -121,12 +127,14 @@ export function InvestorSpvWorkspace({
                     {formatSpvCurrency(row.indicative_amount)}
                   </p>
                   <p className="mt-1 text-xs text-indigo-700">
-                    {spv?.investor_package_status
-                      ? `SPV documents: ${spv.investor_package_status}`
-                      : `SPV preparation: ${investorPreparationLabel(
-                          spv?.checklist_readiness_pct,
-                          spv?.document_ready_at,
-                        )}`}
+                    {spv?.investor_closing_status
+                      ? `SPV closing: ${spv.investor_closing_status}`
+                      : spv?.investor_package_status
+                        ? `SPV documents: ${spv.investor_package_status}`
+                        : `SPV preparation: ${investorPreparationLabel(
+                            spv?.checklist_readiness_pct,
+                            spv?.document_ready_at,
+                          )}`}
                   </p>
                   {row.company_id ? (
                     <Link
@@ -159,12 +167,14 @@ export function InvestorSpvWorkspace({
                   </p>
                   {spv.description ? <p className="mt-2 text-slate-600">{spv.description}</p> : null}
                   <p className="mt-2 text-xs text-indigo-700">
-                    {spv.investor_package_status
-                      ? `SPV documents: ${spv.investor_package_status}`
-                      : `SPV preparation: ${investorPreparationLabel(
-                          spv.checklist_readiness_pct,
-                          spv.document_ready_at,
-                        )}`}
+                    {spv.investor_closing_status
+                      ? `SPV closing: ${spv.investor_closing_status}`
+                      : spv.investor_package_status
+                        ? `SPV documents: ${spv.investor_package_status}`
+                        : `SPV preparation: ${investorPreparationLabel(
+                            spv.checklist_readiness_pct,
+                            spv.document_ready_at,
+                          )}`}
                   </p>
                   <div className="mt-3 flex flex-wrap items-end gap-2">
                     <label className="text-xs">

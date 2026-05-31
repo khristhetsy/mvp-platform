@@ -210,6 +210,9 @@ export async function syncSpvPackageReadiness(
     });
   }
 
+  const { syncSpvClosingReadiness } = await import("@/lib/spv/closing-reviews");
+  await syncSpvClosingReadiness(admin, spvOpportunityId, { actorId: input.actorId, packages: rows });
+
   return { packageReadinessPct: pct, investorPackageStatus: investorStatus };
 }
 

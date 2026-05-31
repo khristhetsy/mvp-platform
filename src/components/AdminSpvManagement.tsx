@@ -22,12 +22,17 @@ import {
   getSpvNextAction,
   type SpvOperationalReadinessStatus,
 } from "@/lib/spv/readiness";
+import type { ClosingReadinessSummary } from "@/lib/spv/closing-review-display";
+import {
+  formatClosingReviewStatusLabel,
+} from "@/lib/spv/closing-review-display";
 import {
   computePackageReadinessPct,
   formatPackageTypeLabel,
 } from "@/lib/spv/document-package-display";
 import type {
   SpvChecklistItemRecord,
+  SpvClosingReviewRecord,
   SpvDocumentPackageRecord,
   SpvOpportunityRecord,
   SpvParticipationRecord,
@@ -43,6 +48,8 @@ export function AdminSpvManagement({
   checklistBySpv,
   requirementsByParticipation,
   packagesBySpv,
+  closingReviewsBySpv,
+  closingReadinessBySpv,
   companies,
 }: Readonly<{
   opportunities: SpvOpportunityRecord[];
@@ -50,6 +57,8 @@ export function AdminSpvManagement({
   checklistBySpv: Record<string, SpvChecklistItemRecord[]>;
   requirementsByParticipation: Record<string, SpvParticipationRequirementRecord[]>;
   packagesBySpv: Record<string, SpvDocumentPackageRecord[]>;
+  closingReviewsBySpv: Record<string, SpvClosingReviewRecord>;
+  closingReadinessBySpv: Record<string, ClosingReadinessSummary>;
   companies: CompanyOption[];
 }>) {
   const router = useRouter();
@@ -100,6 +109,35 @@ export function AdminSpvManagement({
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to open document.");
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function updateClosingReview(
+    reviewId: string,
+    status: string,
+    options?: { internalNotes?: string; closingTargetOverride?: boolean },
+  ) {
+    setLoading("closing-" + reviewId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/spv-closing-reviews/${reviewId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status,
+          internalNotes: options?.internalNotes,
+          closingTargetOverride: options?.closingTargetOverride,
+        }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(formatApiError(payload, "Closing review update failed."));
+      }
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Closing review update failed.");
     } finally {
       setLoading(null);
     }
@@ -273,7 +311,13 @@ export function AdminSpvManagement({
 
   return (
     <div className="space-y-6">
-      <SpvComplianceNotice showChecklistNotice showIntakeNotice showUploadNotice showPackageNotice />
+      <SpvComplianceNotice
+        showChecklistNotice
+        showIntakeNotice
+        showUploadNotice
+        showPackageNotice
+        showClosingNotice
+      />
 
       <WorkspacePanel title="Create SPV opportunity" subtitle="Admin-reviewed workflow — not legal formation">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -348,6 +392,10 @@ export function AdminSpvManagement({
               const totals = totalsBySpv[spv.id] ?? { count: 0, total: 0 };
               const checklist = checklistBySpv[spv.id] ?? [];
               const packages = packagesBySpv[spv.id] ?? [];
+              const closingReview = closingReviewsBySpv[spv.id];
+              const closingSummary = closingReadinessBySpv[spv.id];
+              const closingPct =
+                spv.closing_readiness_pct ?? closingSummary?.readinessPct ?? 0;
               const packagePct =
                 spv.package_readiness_pct ?? computePackageReadinessPct(packages);
               const readinessPct =
@@ -384,6 +432,7 @@ export function AdminSpvManagement({
                       <p className="mt-1 font-medium text-indigo-700">
                         SPV checklist: {readinessPct}%
                         {packages.length > 0 ? ` · Document packages: ${packagePct}%` : null}
+                        {closingSummary ? ` · Closing readiness: ${closingPct}%` : null}
                       </p>
                       <p className="mt-0.5 text-slate-500">
                         {spv.investors_document_ready_count ?? 0} investors document-ready ·{" "}
@@ -605,6 +654,167 @@ export function AdminSpvManagement({
                       Packages will auto-seed when operational readiness reaches ready for legal
                       docs (refresh if just updated).
                     </p>
+                  ) : null}
+
+                  {closingSummary ? (
+                    <div className="mt-4 rounded-lg bg-emerald-50 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-900">
+                        Final operational closing review · {closingPct}%
+                        {closingReview
+                          ? ` · ${formatClosingReviewStatusLabel(closingReview.status)}`
+                          : null}
+                      </p>
+                      <ul className="mt-2 space-y-1 text-xs">
+                        {closingSummary.criteria.map((item) => (
+                          <li
+                            key={item.key}
+                            className={item.met ? "text-emerald-800" : "text-amber-900"}
+                          >
+                            {item.met ? "✓" : "○"} {item.label}
+                          </li>
+                        ))}
+                      </ul>
+                      <label className="mt-2 flex items-center gap-2 text-xs text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(spv.closing_target_override)}
+                          disabled={loading != null || !closingReview}
+                          onChange={(e) => {
+                            if (!closingReview) {
+                              return;
+                            }
+                            void updateClosingReview(closingReview.id, closingReview.status, {
+                              closingTargetOverride: e.target.checked,
+                            });
+                          }}
+                        />
+                        Admin override: indicative target not required for closing
+                      </label>
+                      {closingReview ? (
+                        <>
+                          <label className="mt-2 block text-xs text-slate-600">
+                            Internal closing notes (admin only)
+                            <textarea
+                              id={`closing-notes-${closingReview.id}`}
+                              defaultValue={closingReview.internal_notes ?? ""}
+                              rows={2}
+                              className="mt-1 w-full rounded border border-slate-200 px-2 py-1 text-xs"
+                            />
+                          </label>
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            <button
+                              type="button"
+                              disabled={
+                                loading != null ||
+                                !closingSummary.eligibleForFinalReview ||
+                                closingReview.status !== "not_started"
+                              }
+                              title={
+                                closingSummary.eligibleForFinalReview
+                                  ? undefined
+                                  : "Complete all closing readiness criteria first."
+                              }
+                              onClick={() => {
+                                const notes =
+                                  (
+                                    document.getElementById(
+                                      `closing-notes-${closingReview.id}`,
+                                    ) as HTMLTextAreaElement | null
+                                  )?.value ?? "";
+                                void updateClosingReview(closingReview.id, "in_review", {
+                                  internalNotes: notes,
+                                });
+                              }}
+                              className="rounded border px-1.5 py-0.5 disabled:opacity-40"
+                            >
+                              Start final review
+                            </button>
+                            <button
+                              type="button"
+                              disabled={loading != null || closingReview.status !== "in_review"}
+                              onClick={() => {
+                                const notes =
+                                  (
+                                    document.getElementById(
+                                      `closing-notes-${closingReview.id}`,
+                                    ) as HTMLTextAreaElement | null
+                                  )?.value ?? "";
+                                void updateClosingReview(closingReview.id, "approved_for_closing", {
+                                  internalNotes: notes,
+                                });
+                              }}
+                              className="rounded border px-1.5 py-0.5 disabled:opacity-40"
+                            >
+                              Approve for closing
+                            </button>
+                            <button
+                              type="button"
+                              disabled={loading != null || closingReview.status !== "in_review"}
+                              onClick={() => {
+                                const notes =
+                                  (
+                                    document.getElementById(
+                                      `closing-notes-${closingReview.id}`,
+                                    ) as HTMLTextAreaElement | null
+                                  )?.value ?? "";
+                                void updateClosingReview(closingReview.id, "changes_required", {
+                                  internalNotes: notes,
+                                });
+                              }}
+                              className="rounded border px-1.5 py-0.5 disabled:opacity-40"
+                            >
+                              Request changes
+                            </button>
+                            <button
+                              type="button"
+                              disabled={
+                                loading != null ||
+                                closingReview.status !== "approved_for_closing"
+                              }
+                              onClick={() => {
+                                const notes =
+                                  (
+                                    document.getElementById(
+                                      `closing-notes-${closingReview.id}`,
+                                    ) as HTMLTextAreaElement | null
+                                  )?.value ?? "";
+                                void updateClosingReview(closingReview.id, "closed_operationally", {
+                                  internalNotes: notes,
+                                });
+                              }}
+                              className="rounded border px-1.5 py-0.5 disabled:opacity-40"
+                            >
+                              Mark operationally closed
+                            </button>
+                            {closingReview.status === "changes_required" ? (
+                              <button
+                                type="button"
+                                disabled={loading != null}
+                                onClick={() => {
+                                  const notes =
+                                    (
+                                      document.getElementById(
+                                        `closing-notes-${closingReview.id}`,
+                                      ) as HTMLTextAreaElement | null
+                                    )?.value ?? "";
+                                  void updateClosingReview(closingReview.id, "in_review", {
+                                    internalNotes: notes,
+                                  });
+                                }}
+                                className="rounded border px-1.5 py-0.5"
+                              >
+                                Resume review
+                              </button>
+                            ) : null}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="mt-2 text-xs text-amber-800">
+                          Closing review initializes when readiness sync runs (update checklist,
+                          packages, or refresh page after migration).
+                        </p>
+                      )}
+                    </div>
                   ) : null}
 
                   {parts.length > 0 ? (

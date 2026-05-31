@@ -242,6 +242,55 @@ export async function notifyFounderSpvPackagesApproved(input: {
   });
 }
 
+export async function notifyStaffSpvReadyForFinalReview(input: {
+  spvOpportunityId: string;
+  spvName: string;
+  companyName: string;
+  actorId: string | null;
+}) {
+  return notifyStaff({
+    actorUserId: input.actorId,
+    type: "spv_ready_for_final_review",
+    title: "SPV ready for final operational review",
+    message: `SPV "${input.spvName}" (${input.companyName}) met closing readiness criteria. Start final review in admin SPVs — not a legal closing.`,
+    entityType: "spv_opportunity",
+    entityId: input.spvOpportunityId,
+  });
+}
+
+export async function notifyFounderSpvApprovedForClosing(input: {
+  companyId: string;
+  spvOpportunityId: string;
+  spvName: string;
+  actorId: string | null;
+}) {
+  return notifyCompanyFounder(input.companyId, {
+    actorUserId: input.actorId,
+    type: "spv_approved_for_closing",
+    title: "SPV approved for operational closing",
+    message: `SPV "${input.spvName}" passed final operational review for closing. This is not a legal closing or confirmation that investments are complete.`,
+    entityType: "spv_opportunity",
+    entityId: input.spvOpportunityId,
+  });
+}
+
+export async function notifyInvestorSpvOperationallyClosed(input: {
+  investorId: string;
+  spvOpportunityId: string;
+  spvName: string;
+  actorId: string;
+}) {
+  return createNotification({
+    recipientUserId: input.investorId,
+    actorUserId: input.actorId,
+    type: "spv_operationally_closed",
+    title: "SPV operationally closed",
+    message: `SPV "${input.spvName}" is marked operationally closed for tracking. This is not a legal closing, securities transaction, or confirmation of investment completion.`,
+    entityType: "spv_opportunity",
+    entityId: input.spvOpportunityId,
+  });
+}
+
 export async function notifyInvestorSpvSubscriptionPackageIssued(input: {
   investorId: string;
   spvOpportunityId: string;

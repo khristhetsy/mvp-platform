@@ -80,6 +80,8 @@ Run migration `0034_spv_operational_readiness.sql` for automated operational rea
 
 Run migration `0035_spv_document_packages.sql` for the operational document package tracker (`spv_document_packages`). When an SPV reaches `ready_for_legal_docs`, seven default packages are auto-seeded. Admins manage package status and internal notes at `/admin/spvs`; founders see aggregate package progress on `/founder/capital-raise`; investors see a simple public document status on `/investor/spvs`. Notifications fire when packages are seeded, when all packages are approved, and when the subscription package is issued.
 
+Run migration `0036_spv_closing_reviews.sql` for the final operational closing review (`spv_closing_reviews`). Closing readiness is scored from checklist, investor requirements, document packages, indicative target (or admin override), and open critical compliance events. Admins run final review at `/admin/spvs`; founders see a simplified stage on `/founder/capital-raise`; investors see a simple closing status on `/investor/spvs`. Notifications fire when an SPV is ready for final review, when approved for closing, and when marked operationally closed.
+
 Use `/admin/reports` (staff-only) to generate JSON, CSV, or **PDF** internal summaries from existing tables, including **Due Diligence** (`due_diligence`) per-company readiness packs. PDF export uses server-side [PDFKit](https://pdfkit.org/) (`pdfkit` dependency) via `src/lib/reports/pdf-export.ts` — no external PDF API. Each export writes an `audit_logs` row (`admin.report_generated`) with `format` (`json`, `csv`, or `pdf`). OAuth tokens, message bodies, and private founder contact PII are excluded from exports.
 
 ## Data model

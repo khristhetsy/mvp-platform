@@ -70,9 +70,39 @@ export type SpvOpportunityRecord = {
   package_readiness_pct?: number | null;
   investor_package_status?: string | null;
   packages_fully_approved_notified?: boolean | null;
+  closing_readiness_pct?: number | null;
+  investor_closing_status?: string | null;
+  closing_final_review_notified?: boolean | null;
+  closing_approved_notified?: boolean | null;
+  closing_target_override?: boolean | null;
   created_at: string;
   updated_at: string;
   companies?: { company_name?: string | null; slug?: string | null } | null;
+};
+
+export const SPV_CLOSING_REVIEW_STATUSES = [
+  "not_started",
+  "in_review",
+  "approved_for_closing",
+  "changes_required",
+  "closed_operationally",
+  "canceled",
+] as const;
+
+export type SpvClosingReviewStatus = (typeof SPV_CLOSING_REVIEW_STATUSES)[number];
+
+export type SpvClosingReviewRecord = {
+  id: string;
+  spv_opportunity_id: string;
+  company_id: string;
+  status: SpvClosingReviewStatus | string;
+  readiness_snapshot: Record<string, unknown> | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  internal_notes: string | null;
+  created_at: string;
+  updated_at: string;
+  spv_opportunities?: { name?: string | null } | null;
 };
 
 export const SPV_PARTICIPATION_REQUIREMENT_CATEGORIES = [

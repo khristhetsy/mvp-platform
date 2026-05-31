@@ -3,6 +3,14 @@ import { AdminSpvDashboardKpis } from "@/components/AdminSpvDashboardKpis";
 import { AdminSpvManagement } from "@/components/AdminSpvManagement";
 import { buildAdminSpvDashboardMetrics } from "@/lib/spv/readiness";
 import { listAdminChecklistGrouped } from "@/lib/spv/checklist";
+import {
+  buildClosingReadinessSummary,
+  computeClosingReadinessCriteria,
+  countCriticalOpenComplianceForCompany,
+  listAdminClosingReviewsBySpv,
+  syncSpvClosingReadiness,
+} from "@/lib/spv/closing-reviews";
+import type { ClosingReadinessSummary } from "@/lib/spv/closing-review-display";
 import { listAdminPackagesGrouped } from "@/lib/spv/document-packages";
 import { listAdminRequirementsGrouped } from "@/lib/spv/participation-requirements";
 import {
@@ -12,6 +20,7 @@ import {
 } from "@/lib/spv/spv-workflow";
 import type {
   SpvChecklistItemRecord,
+  SpvClosingReviewRecord,
   SpvDocumentPackageRecord,
   SpvParticipationRequirementRecord,
 } from "@/lib/spv/types";
@@ -58,6 +67,51 @@ export default async function AdminSpvsPage() {
     participationsBySpv[spv.id] = data ?? [];
   }
 
+  const requirementsBySpv: Record<string, SpvParticipationRequirementRecord[]> = {};
+  for (const rows of Object.values(requirementsByParticipation)) {
+    for (const row of rows) {
+      const list = requirementsBySpv[row.spv_opportunity_id] ?? [];
+      list.push(row);
+      requirementsBySpv[row.spv_opportunity_id] = list;
+    }
+  }
+
+  const companyIds = [...new Set(opportunities.map((spv) => spv.company_id))];
+  const criticalComplianceByCompany: Record<string, number> = {};
+  for (const companyId of companyIds) {
+    const counted = await countCriticalOpenComplianceForCompany(admin, companyId);
+    criticalComplianceByCompany[companyId] = counted.count;
+  }
+
+  const closingReadinessBySpv: Record<string, ClosingReadinessSummary> = {};
+  for (const spv of opportunities) {
+    const criteria = computeClosingReadinessCriteria({
+      spv,
+      checklist: checklistBySpv[spv.id] ?? [],
+      participations: participationsBySpv[spv.id] ?? [],
+      requirements: requirementsBySpv[spv.id] ?? [],
+      packages: packagesBySpv[spv.id] ?? [],
+      criticalComplianceOpenCount: criticalComplianceByCompany[spv.company_id] ?? 0,
+    });
+    closingReadinessBySpv[spv.id] = buildClosingReadinessSummary(criteria);
+
+    await syncSpvClosingReadiness(admin, spv.id, {
+      actorId: profile.id,
+      checklist: checklistBySpv[spv.id] ?? [],
+      participations: participationsBySpv[spv.id] ?? [],
+      requirements: requirementsBySpv[spv.id] ?? [],
+      packages: packagesBySpv[spv.id] ?? [],
+      criticalComplianceOpenCount: criticalComplianceByCompany[spv.company_id] ?? 0,
+    });
+  }
+
+  const closingReviewsResult = await listAdminClosingReviewsBySpv(
+    admin,
+    opportunities.map((spv) => spv.id),
+  );
+  const closingReviewsBySpv: Record<string, SpvClosingReviewRecord> =
+    "data" in closingReviewsResult ? (closingReviewsResult.data ?? {}) : {};
+
   return (
     <AppShell
       role="ADMIN"
@@ -89,6 +143,8 @@ export default async function AdminSpvsPage() {
         checklistBySpv={checklistBySpv}
         requirementsByParticipation={requirementsByParticipation}
         packagesBySpv={packagesBySpv}
+        closingReviewsBySpv={closingReviewsBySpv}
+        closingReadinessBySpv={closingReadinessBySpv}
         companies={companies.map((c) => ({ id: c.id, name: c.company_name }))}
       />
       </div>

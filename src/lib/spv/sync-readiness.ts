@@ -155,5 +155,13 @@ export async function refreshSpvOperationalReadiness(
     return { error: updateError };
   }
 
+  const { syncSpvClosingReadiness } = await import("@/lib/spv/closing-reviews");
+  await syncSpvClosingReadiness(admin, spvOpportunityId, {
+    actorId: input.actorId,
+    checklist,
+    participations,
+    requirements,
+  });
+
   return { readiness, context: ctx as SpvReadinessContext };
 }
