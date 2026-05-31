@@ -507,3 +507,33 @@ export const adminExportQuerySchema = z.object({
   ]),
   format: z.enum(["csv", "xlsx", "json"]).default("csv"),
 });
+
+export const assistantChatSchema = z.object({
+  message: z.string().trim().max(2000).optional(),
+  intent: z.enum(["chat", "opened"]).optional().default("chat"),
+  mode: z
+    .enum([
+      "founder_workflow",
+      "investor_workflow",
+      "admin_operations",
+      "learning",
+      "spv_guidance",
+      "compliance_guidance",
+      "reports_guidance",
+    ])
+    .optional(),
+  currentPath: z.string().max(500).optional(),
+  entityType: z.string().max(64).optional(),
+  entityId: z.string().max(64).optional(),
+  courseSlug: z.string().max(120).optional(),
+  lessonSlug: z.string().max(120).optional(),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string().max(4000),
+      }),
+    )
+    .max(12)
+    .optional(),
+});
