@@ -59,14 +59,47 @@ export function AdminSpvManagement({
     return map;
   }, [participationsBySpv]);
 
+  async function openDocument(documentId: string) {
+    setLoading("doc-" + documentId);
+    setError(null);
+    try {
+      const response = await fetch("/api/documents/signed-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(formatApiError(payload, "Unable to open document."));
+      }
+      const payload = (await response.json()) as { signedUrl?: string };
+      if (payload.signedUrl) {
+        window.open(payload.signedUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unable to open document.");
+    } finally {
+      setLoading(null);
+    }
+  }
+
   async function updateRequirement(requirementId: string, status: string) {
     setLoading("req-" + requirementId);
     setError(null);
+    let reviewNotes: string | undefined;
+    if (status === "rejected") {
+      const reason = window.prompt("Rejection reason (shown to investor, optional):");
+      if (reason === null) {
+        setLoading(null);
+        return;
+      }
+      reviewNotes = reason.trim() || undefined;
+    }
     try {
       const response = await fetch(`/api/admin/spv-participation-requirements/${requirementId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, reviewNotes }),
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
@@ -193,7 +226,7 @@ export function AdminSpvManagement({
 
   return (
     <div className="space-y-6">
-      <SpvComplianceNotice showChecklistNotice showIntakeNotice />
+      <SpvComplianceNotice showChecklistNotice showIntakeNotice showUploadNotice />
 
       <WorkspacePanel title="Create SPV opportunity" subtitle="Admin-reviewed workflow — not legal formation">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -429,53 +462,80 @@ export function AdminSpvManagement({
                             </div>
                             {requirements.length > 0 ? (
                               <ul className="mt-2 space-y-2">
-                                {requirements.map((req) => (
-                                  <li key={req.id} className="rounded border border-slate-100 px-2 py-1.5">
-                                    <p className="font-medium text-slate-800">
-                                      {req.title}
-                                      {req.required ? (
-                                        <span className="ml-1 text-red-600">*</span>
+                                {requirements.map((req) => {
+                                  const doc = Array.isArray(req.documents)
+                                    ? req.documents[0]
+                                    : req.documents;
+
+                                  return (
+                                    <li key={req.id} className="rounded border border-slate-100 px-2 py-1.5">
+                                      <p className="font-medium text-slate-800">
+                                        {req.title}
+                                        {req.required ? (
+                                          <span className="ml-1 text-red-600">*</span>
+                                        ) : null}
+                                      </p>
+                                      <p className="text-slate-500">
+                                        {formatParticipationRequirementCategory(req.category)} · {req.status}
+                                      </p>
+                                      {req.review_notes ? (
+                                        <p className="mt-1 text-red-800">Notes: {req.review_notes}</p>
                                       ) : null}
-                                    </p>
-                                    <p className="text-slate-500">
-                                      {formatParticipationRequirementCategory(req.category)} · {req.status}
-                                    </p>
-                                    <div className="mt-1 flex flex-wrap gap-1">
-                                      <button
-                                        type="button"
-                                        disabled={loading != null}
-                                        onClick={() => void updateRequirement(req.id, "uploaded")}
-                                        className="rounded border px-1.5 py-0.5"
-                                      >
-                                        Uploaded
-                                      </button>
-                                      <button
-                                        type="button"
-                                        disabled={loading != null}
-                                        onClick={() => void updateRequirement(req.id, "approved")}
-                                        className="rounded border px-1.5 py-0.5"
-                                      >
-                                        Approve
-                                      </button>
-                                      <button
-                                        type="button"
-                                        disabled={loading != null}
-                                        onClick={() => void updateRequirement(req.id, "rejected")}
-                                        className="rounded border px-1.5 py-0.5"
-                                      >
-                                        Reject
-                                      </button>
-                                      <button
-                                        type="button"
-                                        disabled={loading != null}
-                                        onClick={() => void updateRequirement(req.id, "waived")}
-                                        className="rounded border px-1.5 py-0.5"
-                                      >
-                                        Waive
-                                      </button>
-                                    </div>
-                                  </li>
-                                ))}
+                                      {doc ? (
+                                        <p className="mt-1 text-slate-600">
+                                          File: {doc.file_name ?? "document"}
+                                          {doc.size_bytes
+                                            ? ` · ${Math.round(doc.size_bytes / 1024)} KB`
+                                            : ""}
+                                        </p>
+                                      ) : null}
+                                      <div className="mt-1 flex flex-wrap gap-1">
+                                        {doc?.id ? (
+                                          <button
+                                            type="button"
+                                            disabled={loading != null}
+                                            onClick={() => void openDocument(doc.id)}
+                                            className="rounded border px-1.5 py-0.5"
+                                          >
+                                            Open document
+                                          </button>
+                                        ) : null}
+                                        <button
+                                          type="button"
+                                          disabled={loading != null}
+                                          onClick={() => void updateRequirement(req.id, "under_review")}
+                                          className="rounded border px-1.5 py-0.5"
+                                        >
+                                          Under review
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={loading != null}
+                                          onClick={() => void updateRequirement(req.id, "approved")}
+                                          className="rounded border px-1.5 py-0.5"
+                                        >
+                                          Approve
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={loading != null}
+                                          onClick={() => void updateRequirement(req.id, "rejected")}
+                                          className="rounded border px-1.5 py-0.5"
+                                        >
+                                          Reject
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={loading != null}
+                                          onClick={() => void updateRequirement(req.id, "waived")}
+                                          className="rounded border px-1.5 py-0.5"
+                                        >
+                                          Waive
+                                        </button>
+                                      </div>
+                                    </li>
+                                  );
+                                })}
                               </ul>
                             ) : (
                               <p className="mt-2 text-amber-800">

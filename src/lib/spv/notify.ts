@@ -112,14 +112,20 @@ export async function notifyInvestorSpvRequirementReviewed(input: {
   spvName: string;
   requirementTitle: string;
   status: string;
+  reviewNotes?: string | null;
   actorId: string;
 }) {
+  const rejectionNote =
+    input.status === "rejected" && input.reviewNotes?.trim()
+      ? ` Reason: ${input.reviewNotes.trim()}`
+      : "";
+
   return createNotification({
     recipientUserId: input.investorId,
     actorUserId: input.actorId,
     type: "spv_requirement_reviewed",
     title: "SPV document requirement updated",
-    message: `"${input.requirementTitle}" for ${input.spvName} is now ${input.status}. This is operational tracking only — not acceptance into an offering.`,
+    message: `"${input.requirementTitle}" for ${input.spvName} is now ${input.status}.${rejectionNote} Operational tracking only — not acceptance into an offering.`,
     entityType: "spv_opportunity",
     entityId: input.spvOpportunityId,
   });
@@ -136,7 +142,7 @@ export async function notifyStaffSpvRequirementUploaded(input: {
     actorUserId: input.actorId,
     type: "spv_requirement_uploaded",
     title: "SPV requirement uploaded",
-    message: `Requirement "${input.requirementTitle}" marked uploaded for ${input.spvName}. Review in admin SPV workspace.`,
+    message: `Investor uploaded "${input.requirementTitle}" for ${input.spvName}. Review in admin SPV workspace.`,
     entityType: "spv_opportunity",
     entityId: input.spvOpportunityId,
   });

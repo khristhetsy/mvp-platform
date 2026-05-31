@@ -13,6 +13,14 @@ import type {
   SpvParticipationRequirementStatus,
   SpvParticipationRequirementCategory,
 } from "@/lib/spv/types";
+import { createDocumentRecord } from "@/lib/data/documents";
+import {
+  buildSpvRequirementStoragePath,
+  SPV_INVESTOR_DOCUMENTS_BUCKET,
+  SPV_REQUIREMENT_DOCUMENT_TYPE,
+  spvRequirementMaxUploadBytes,
+  spvRequirementUploadMimeTypes,
+} from "@/lib/spv/spv-documents";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
@@ -151,7 +159,7 @@ export async function listInvestorParticipationRequirements(
 ) {
   const { data, error } = await client
     .from("spv_participation_requirements")
-    .select("*, spv_opportunities(name, status)")
+    .select("*, spv_opportunities(name, status), documents:uploaded_document_id(id, file_name, mime_type, size_bytes, created_at)")
     .eq("investor_id", investorId)
     .order("updated_at", { ascending: false });
 
@@ -172,7 +180,9 @@ export async function listAdminRequirementsGrouped(
 
   const { data, error } = await admin
     .from("spv_participation_requirements")
-    .select("*, profiles:investor_id(full_name, email)")
+    .select(
+      "*, profiles:investor_id(full_name, email), documents:uploaded_document_id(id, file_name, mime_type, size_bytes, created_at)",
+    )
     .in("spv_opportunity_id", spvOpportunityIds)
     .order("created_at", { ascending: true });
 
@@ -299,12 +309,124 @@ export async function syncSpvInvestorDocumentAggregate(
   return { investorsReady, pendingRequirements: pendingCount };
 }
 
+export async function uploadInvestorSpvRequirementDocument(
+  investorClient: SupabaseClient<Database>,
+  admin: SupabaseClient<Database>,
+  input: {
+    investorId: string;
+    requirementId: string;
+    file: File;
+  },
+) {
+  const { data: requirement, error: loadError } = await investorClient
+    .from("spv_participation_requirements")
+    .select("*, spv_opportunities(name), spv_participations(company_id)")
+    .eq("id", input.requirementId)
+    .eq("investor_id", input.investorId)
+    .single();
+
+  if (loadError || !requirement) {
+    return { error: loadError ?? new Error("Requirement not found.") };
+  }
+
+  const uploadableStatuses = ["pending", "rejected"];
+  if (!uploadableStatuses.includes(requirement.status)) {
+    return { error: new Error("This requirement is not open for upload.") };
+  }
+
+  if (input.file.size > spvRequirementMaxUploadBytes) {
+    return { error: new Error("File exceeds the 25MB upload limit.") };
+  }
+
+  if (!spvRequirementUploadMimeTypes.has(input.file.type)) {
+    return { error: new Error("Unsupported file type.") };
+  }
+
+  const filePath = buildSpvRequirementStoragePath(
+    input.investorId,
+    input.requirementId,
+    input.file.name,
+  );
+
+  const { error: uploadError } = await investorClient.storage
+    .from(SPV_INVESTOR_DOCUMENTS_BUCKET)
+    .upload(filePath, input.file, { contentType: input.file.type, upsert: false });
+
+  if (uploadError) {
+    return { error: new Error(uploadError.message) };
+  }
+
+  const participation = Array.isArray(requirement.spv_participations)
+    ? requirement.spv_participations[0]
+    : requirement.spv_participations;
+  const companyId = participation?.company_id;
+
+  if (!companyId) {
+    return { error: new Error("Participation company not found.") };
+  }
+
+  const { data: document, error: documentError } = await createDocumentRecord(investorClient, {
+    company_id: companyId,
+    uploaded_by: input.investorId,
+    document_type: SPV_REQUIREMENT_DOCUMENT_TYPE,
+    file_name: input.file.name,
+    file_path: filePath,
+    file_url: null,
+    mime_type: input.file.type,
+    size_bytes: input.file.size,
+    status: "uploaded",
+  });
+
+  if (documentError || !document) {
+    return { error: documentError ?? new Error("Unable to save document record.") };
+  }
+
+  const now = new Date().toISOString();
+  const { data: updated, error: updateError } = await admin
+    .from("spv_participation_requirements")
+    .update({
+      uploaded_document_id: document.id,
+      status: "uploaded",
+      review_notes: null,
+      reviewed_by: null,
+      reviewed_at: null,
+      updated_at: now,
+    })
+    .eq("id", input.requirementId)
+    .select("*")
+    .single();
+
+  if (updateError || !updated) {
+    return { error: updateError ?? new Error("Unable to update requirement.") };
+  }
+
+  const spvName =
+    (Array.isArray(requirement.spv_opportunities)
+      ? requirement.spv_opportunities[0]
+      : requirement.spv_opportunities)?.name ?? "SPV";
+
+  void notifyStaffSpvRequirementUploaded({
+    investorId: input.investorId,
+    spvOpportunityId: requirement.spv_opportunity_id,
+    spvName,
+    requirementTitle: requirement.title,
+    actorId: input.investorId,
+  });
+
+  await syncParticipationDocumentReadiness(admin, requirement.spv_participation_id, {
+    actorId: input.investorId,
+  });
+
+  return { data: updated as SpvParticipationRequirementRecord, document };
+}
+
 export async function updateParticipationRequirement(
   admin: SupabaseClient<Database>,
   input: {
     requirementId: string;
     status: SpvParticipationRequirementStatus;
     actorId: string;
+    reviewNotes?: string | null;
   },
 ) {
   const { data: existing, error: loadError } = await admin
@@ -330,6 +452,12 @@ export async function updateParticipationRequirement(
     updated_at: now,
     reviewed_by: reviewedStatuses.includes(input.status) ? input.actorId : null,
     reviewed_at: reviewedStatuses.includes(input.status) ? now : null,
+    review_notes:
+      input.status === "rejected"
+        ? (input.reviewNotes?.trim() ?? null)
+        : input.status === "approved" || input.status === "waived"
+          ? null
+          : undefined,
   };
 
   const { data, error } = await admin
@@ -349,16 +477,6 @@ export async function updateParticipationRequirement(
       ? existing.spv_opportunities[0]
       : existing.spv_opportunities)?.name ?? "SPV";
 
-  if (input.status === "uploaded") {
-    void notifyStaffSpvRequirementUploaded({
-      investorId: existing.investor_id,
-      spvOpportunityId: existing.spv_opportunity_id,
-      spvName,
-      requirementTitle: existing.title,
-      actorId: input.actorId,
-    });
-  }
-
   if (["approved", "rejected", "waived"].includes(input.status)) {
     void notifyInvestorSpvRequirementReviewed({
       investorId: existing.investor_id,
@@ -366,6 +484,7 @@ export async function updateParticipationRequirement(
       spvName,
       requirementTitle: existing.title,
       status: input.status,
+      reviewNotes: input.status === "rejected" ? input.reviewNotes : null,
       actorId: input.actorId,
     });
   }

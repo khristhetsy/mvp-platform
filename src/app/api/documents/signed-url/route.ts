@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireStaffApi } from "@/lib/api/admin";
 import { writeAuditLog } from "@/lib/data/audit";
 import { createSignedDocumentUrl, getStorageBucket, PITCH_DECKS_BUCKET } from "@/lib/data/documents";
+import { SPV_INVESTOR_DOCUMENTS_BUCKET, SPV_REQUIREMENT_DOCUMENT_TYPE } from "@/lib/spv/spv-documents";
 import { userHasCompanyAccess } from "@/lib/onboarding/ensure-founder-setup";
 import { signedDocumentUrlSchema } from "@/lib/validation";
 
@@ -28,15 +29,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Document not found or inaccessible." }, { status: 404 });
   }
 
-  if (auth.profile.role === "founder") {
+  if (document.document_type === SPV_REQUIREMENT_DOCUMENT_TYPE) {
+    if (auth.profile.role === "founder") {
+      return NextResponse.json({ error: "Document not found or inaccessible." }, { status: 404 });
+    }
+
+    if (auth.profile.role === "investor" && document.uploaded_by !== auth.profile.id) {
+      return NextResponse.json({ error: "Document not found or inaccessible." }, { status: 404 });
+    }
+  } else if (auth.profile.role === "founder") {
     const hasAccess = await userHasCompanyAccess(auth.profile.id, document.company_id);
 
     if (!hasAccess) {
       return NextResponse.json({ error: "Document not found or inaccessible." }, { status: 404 });
     }
-  }
-
-  if (auth.profile.role === "investor") {
+  } else if (auth.profile.role === "investor") {
     const { data: company } = await auth.supabase
       .from("companies")
       .select("review_status")
@@ -48,7 +55,10 @@ export async function POST(request: Request) {
     }
   }
 
-  const canonicalBucket = getStorageBucket(document.document_type ?? "");
+  const canonicalBucket =
+    document.document_type === SPV_REQUIREMENT_DOCUMENT_TYPE
+      ? SPV_INVESTOR_DOCUMENTS_BUCKET
+      : getStorageBucket(document.document_type ?? "");
   let { data, error } = await createSignedDocumentUrl(auth.supabase, canonicalBucket, document.file_path);
 
   if (error && (document.document_type === "PITCH_DECK" || document.document_type === "pitch_deck")) {

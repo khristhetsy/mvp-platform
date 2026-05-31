@@ -27,3 +27,7 @@ export const spvIntakeDisclaimers = [
   "It is not legal advice and is not acceptance into a securities offering.",
   "Completion of intake requirements does not equal a securities transaction.",
 ];
+
+export const spvUploadDisclaimers = [
+  "Uploaded SPV documents are for operational review only and do not constitute acceptance into an offering.",
+];

@@ -108,10 +108,18 @@ export type SpvParticipationRequirementRecord = {
   uploaded_document_id: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
+  review_notes: string | null;
   created_at: string;
   updated_at: string;
   profiles?: { full_name?: string | null; email?: string | null } | null;
   spv_opportunities?: { name?: string | null; status?: string | null } | null;
+  documents?: {
+    id: string;
+    file_name: string | null;
+    mime_type: string | null;
+    size_bytes: number | null;
+    created_at: string;
+  } | null;
 };
 
 export type SpvParticipationRecord = {

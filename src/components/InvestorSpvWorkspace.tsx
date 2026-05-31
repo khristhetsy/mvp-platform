@@ -6,10 +6,8 @@ import Link from "next/link";
 import { SpvComplianceNotice } from "@/components/SpvComplianceNotice";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { formatSpvCurrency, investorPreparationLabel } from "@/lib/spv/display";
-import {
-  computeParticipationReadinessPct,
-  formatParticipationRequirementCategory,
-} from "@/lib/spv/participation-display";
+import { InvestorSpvRequirementRow } from "@/components/InvestorSpvRequirementRow";
+import { computeParticipationReadinessPct } from "@/lib/spv/participation-display";
 import type {
   SpvOpportunityRecord,
   SpvParticipationRecord,
@@ -64,11 +62,11 @@ export function InvestorSpvWorkspace({
 
   return (
     <div className="space-y-6">
-      <SpvComplianceNotice showChecklistNotice showIntakeNotice />
+      <SpvComplianceNotice showChecklistNotice showIntakeNotice showUploadNotice />
 
       <WorkspacePanel
         title="Your document requirements"
-        subtitle="Status tracking only — secure upload coming soon"
+        subtitle="Upload supporting documents for your SPV participation requirements"
       >
         {requirements.length === 0 ? (
           <p className="text-sm text-slate-600">No document requirements assigned yet.</p>
@@ -88,17 +86,9 @@ export function InvestorSpvWorkspace({
                 <div key={row.id} className="rounded-xl border border-slate-200 p-4 text-sm">
                   <p className="font-semibold text-slate-900">{spv?.name ?? "SPV"}</p>
                   <p className="mt-1 text-xs text-indigo-700">Your document readiness: {pct}%</p>
-                  <p className="mt-2 text-xs text-amber-900">
-                    Document upload coming soon. Staff will update status after offline intake.
-                  </p>
                   <ul className="mt-3 space-y-2">
                     {rows.map((req) => (
-                      <li key={req.id} className="rounded border border-slate-100 px-2 py-2 text-xs">
-                        <p className="font-medium text-slate-900">{req.title}</p>
-                        <p className="text-slate-500">
-                          {formatParticipationRequirementCategory(req.category)} · {req.status}
-                        </p>
-                      </li>
+                      <InvestorSpvRequirementRow key={req.id} requirement={req} />
                     ))}
                   </ul>
                 </div>

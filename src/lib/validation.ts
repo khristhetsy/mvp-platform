@@ -379,6 +379,7 @@ export const adminSpvChecklistItemUpdateSchema = z.object({
 
 export const adminSpvParticipationRequirementUpdateSchema = z.object({
   status: z.enum(["pending", "uploaded", "under_review", "approved", "rejected", "waived"]),
+  reviewNotes: z.string().max(2000).optional(),
 });
 
 export const adminSpvParticipationUpdateSchema = z.object({

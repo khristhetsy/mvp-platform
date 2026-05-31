@@ -375,6 +375,7 @@ export type Database = {
           uploaded_document_id: string | null;
           reviewed_by: string | null;
           reviewed_at: string | null;
+          review_notes: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -391,6 +392,7 @@ export type Database = {
           uploaded_document_id?: string | null;
           reviewed_by?: string | null;
           reviewed_at?: string | null;
+          review_notes?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -398,6 +400,7 @@ export type Database = {
           uploaded_document_id?: string | null;
           reviewed_by?: string | null;
           reviewed_at?: string | null;
+          review_notes?: string | null;
           updated_at?: string;
         };
         Relationships: [];

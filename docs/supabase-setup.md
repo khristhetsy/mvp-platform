@@ -74,6 +74,8 @@ Run migration `0031_spv_checklist.sql` for the SPV document readiness checklist 
 
 Run migration `0032_spv_participation_requirements.sql` for per-investor SPV document intake (`spv_participation_requirements`). Requirements auto-seed when a participation is created. Admin reviews requirements and investor readiness on `/admin/spvs`; investors see their own requirement checklist on `/investor/spvs` (upload coming soon); founders see aggregate counts only on `/founder/capital-raise`. Marking a participation `completed` is blocked until required requirements are approved or waived.
 
+Run migration `0033_spv_requirement_documents.sql` for investor SPV document uploads to the private `spv-investor-documents` bucket. Investors upload via `POST /api/investor/spv-participation-requirements/[id]/upload`; files are linked on `uploaded_document_id` with `document_type = SPV_REQUIREMENT`. Founders cannot access investor SPV documents (RLS excludes `SPV_REQUIREMENT` from founder company document policies). Staff open files via `POST /api/documents/signed-url`.
+
 Use `/admin/reports` (staff-only) to generate JSON, CSV, or **PDF** internal summaries from existing tables, including **Due Diligence** (`due_diligence`) per-company readiness packs. PDF export uses server-side [PDFKit](https://pdfkit.org/) (`pdfkit` dependency) via `src/lib/reports/pdf-export.ts` — no external PDF API. Each export writes an `audit_logs` row (`admin.report_generated`) with `format` (`json`, `csv`, or `pdf`). OAuth tokens, message bodies, and private founder contact PII are excluded from exports.
 
 ## Data model

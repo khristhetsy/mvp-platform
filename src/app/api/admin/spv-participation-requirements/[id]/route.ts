@@ -23,6 +23,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   const result = await updateParticipationRequirement(auth.supabase, {
     requirementId: id,
     status: parsed.data.status,
+    reviewNotes: parsed.data.reviewNotes,
     actorId: auth.profile.id,
   });
 
