@@ -86,7 +86,7 @@ export default async function FounderDashboardPage() {
             </Link>
             <Link
               href="/founder/onboarding"
-              className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-300"
+              className="cap-btn-secondary rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[var(--navy)]"
             >
               Continue onboarding
             </Link>
@@ -171,8 +171,8 @@ export default async function FounderDashboardPage() {
       <section className="mt-5 grid gap-4 xl:grid-cols-2">
         <WorkspacePanel title="Capital Raise Overview" subtitle="Non-binding marketplace interest">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 p-4 ring-1 ring-indigo-100">
-              <p className="text-sm font-medium text-indigo-700">Total pledged</p>
+            <div className="rounded-xl bg-[var(--navy-muted)] p-4 ring-1 ring-slate-200">
+              <p className="text-sm font-medium text-[var(--navy)]">Total pledged</p>
               <p className="mt-2 text-2xl font-semibold text-slate-950">
                 {formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
               </p>
@@ -220,7 +220,7 @@ export default async function FounderDashboardPage() {
               documents?.slice(0, 5).map((document) => (
                 <div key={document.id} className="flex items-center justify-between py-3 text-sm">
                   <span className="font-medium text-slate-800">{document.file_name ?? document.document_type}</span>
-                  <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">
+                  <span className="rounded-full bg-[var(--navy-muted)] px-2.5 py-1 text-xs font-medium text-[var(--navy)]">
                     {document.status ?? "uploaded"}
                   </span>
                 </div>

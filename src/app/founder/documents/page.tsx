@@ -21,10 +21,10 @@ export default async function DocumentUploadPage() {
       profileSubtitle={company?.company_name ?? "Your company"}
     >
       <FounderFeatureGate featureKey="documents">
-      <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Secure upload</p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Upload diligence documents</h1>
+        <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-panel)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Secure upload</p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--navy)]">Upload diligence documents</h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">
             Files are stored in a private Supabase bucket and served through signed, role-checked URLs only.
           </p>

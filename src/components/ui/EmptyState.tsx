@@ -20,10 +20,8 @@ export function EmptyState({
 }>) {
   return (
     <div className="rounded-xl border border-dashed border-slate-200 bg-white px-6 py-10 text-center shadow-[var(--shadow-panel)] enterprise-animate-in">
-      {icon ? (
-        <div className="mb-3 flex justify-center text-indigo-500">{icon}</div>
-      ) : null}
-      <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+      {icon ? <div className="mb-3 flex justify-center text-[var(--gold)]">{icon}</div> : null}
+      <h3 className="text-sm font-semibold text-[var(--navy)]">{title}</h3>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">{description}</p>
       {guidance ? <p className="mx-auto mt-2 max-w-lg text-xs text-slate-500">{guidance}</p> : null}
       {metadata ? (

@@ -17,19 +17,15 @@ export function DashboardInsightPanel({
     <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-slate-900">{title}</p>
+          <p className="text-sm font-semibold text-[var(--navy)]">{title}</p>
           <p className="text-xs text-slate-500">{subtitle}</p>
         </div>
         <SparklineChart values={series} width={96} height={36} />
       </div>
       <div className="mt-4 flex items-end gap-1.5" style={{ height: 48 }} aria-hidden>
         {series.map((value, i) => (
-          <div
-            key={i}
-            className="flex-1 rounded-sm bg-indigo-100"
-            style={{ height: `${Math.max(12, (value / max) * 100)}%` }}
-          >
-            <div className="h-full w-full rounded-sm bg-indigo-500/80" />
+          <div key={i} className="flex-1 rounded-sm bg-[var(--navy-muted)]" style={{ height: `${Math.max(12, (value / max) * 100)}%` }}>
+            <div className="h-full w-full rounded-sm bg-[var(--navy)]/80" />
           </div>
         ))}
       </div>

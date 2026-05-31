@@ -9,15 +9,13 @@ export function OpportunityCard({
   pledgeSummary,
 }: Readonly<{ deal: MarketplaceListing; pledgeSummary: CompanyPledgeSummary }>) {
   return (
-    <article className="flex h-full flex-col rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)] transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-indigo-600">{deal.industry ?? "Private company"}</p>
-          <h3 className="mt-1 truncate text-lg font-semibold tracking-tight text-slate-900">{deal.companyName}</h3>
-          <p className="mt-0.5 text-xs text-slate-500">
-            {[deal.stage, deal.location].filter(Boolean).join(" · ") || "—"}
-          </p>
-        </div>
+    <article className="flex h-full flex-col rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)] transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
+      <div className="min-w-0">
+        <p className="text-xs font-medium text-[var(--gold)]">{deal.industry ?? "Private company"}</p>
+        <h3 className="mt-1 truncate text-lg font-semibold tracking-tight text-[var(--navy)]">{deal.companyName}</h3>
+        <p className="mt-0.5 text-xs text-slate-500">
+          {[deal.stage, deal.location].filter(Boolean).join(" · ") || "—"}
+        </p>
       </div>
       <p className="mt-3 flex-1 line-clamp-3 text-sm leading-6 text-slate-600">
         {deal.shortSummary ?? deal.overview ?? "—"}
@@ -25,11 +23,11 @@ export function OpportunityCard({
       <div className="mt-4 grid grid-cols-2 gap-2">
         <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
           <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Target</p>
-          <p className="mt-0.5 text-sm font-semibold text-slate-900">{deal.fundingTarget ?? "—"}</p>
+          <p className="mt-0.5 text-sm font-semibold text-[var(--navy)]">{deal.fundingTarget}</p>
         </div>
         <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
           <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Minimum</p>
-          <p className="mt-0.5 text-sm font-semibold text-slate-900">{deal.minimumInvestment ?? "—"}</p>
+          <p className="mt-0.5 text-sm font-semibold text-[var(--navy)]">{deal.minimumInvestment}</p>
         </div>
       </div>
       <div className="mt-3">

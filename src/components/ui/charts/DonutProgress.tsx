@@ -3,11 +3,13 @@ export function DonutProgress({
   size = 56,
   strokeWidth = 6,
   label,
+  strokeColor = "var(--navy)",
 }: Readonly<{
   percent: number;
   size?: number;
   strokeWidth?: number;
   label?: string;
+  strokeColor?: string;
 }>) {
   const clamped = Math.max(0, Math.min(100, percent));
   const radius = (size - strokeWidth) / 2;
@@ -22,7 +24,7 @@ export function DonutProgress({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#e2e8f0"
+          stroke="#e2e6ed"
           strokeWidth={strokeWidth}
         />
         <circle
@@ -30,14 +32,14 @@ export function DonutProgress({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#4f46e5"
+          stroke={strokeColor}
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
         />
       </svg>
-      <span className="absolute text-[11px] font-semibold tabular-nums text-slate-800">
+      <span className="absolute text-[11px] font-semibold tabular-nums text-[var(--navy)]">
         {label ?? `${clamped}%`}
       </span>
     </div>

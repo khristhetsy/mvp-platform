@@ -46,7 +46,7 @@ export function FounderOnboardingProgressCard({
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
               <div
-                className="h-full rounded-full bg-indigo-600 transition-all duration-300"
+                className="h-full rounded-full bg-[var(--navy)] transition-all duration-300"
                 style={{ width: `${progress.percent}%` }}
               />
             </div>

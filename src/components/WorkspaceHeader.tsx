@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import { NotificationBellDropdown } from "@/components/NotificationBellDropdown";
 import { WorkspaceBreadcrumbs } from "@/components/ui/WorkspaceBreadcrumbs";
 import type { WorkspaceId } from "@/lib/workspace-nav";
@@ -20,12 +21,14 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, onMen
     .slice(0, 2)
     .toUpperCase();
 
+  const companyLabel = profileSubtitle?.trim() || "Select company";
+
   return (
-    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white shadow-[var(--shadow-sticky)]">
-      <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-2 lg:px-6">
+    <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white shadow-[var(--shadow-sticky)]">
+      <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-2 lg:px-5">
         <button
           type="button"
-          className="rounded-md border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 lg:hidden"
+          className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 lg:hidden"
           aria-label="Open workspace menu"
           onClick={onMenuClick}
         >
@@ -34,38 +37,26 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, onMen
           </svg>
         </button>
         <WorkspaceBreadcrumbs workspace={workspace} />
-        <span className="ml-auto hidden rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 sm:inline">
+        <span className="ml-auto hidden rounded-md bg-[var(--navy-muted)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--navy)] sm:inline">
           {workspaceLabel(workspace)}
         </span>
       </div>
-      <div className="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:justify-between lg:px-6">
-        <label className="relative min-w-0 flex-1 lg:max-w-md">
-          <span className="sr-only">Search workspace</span>
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path
-                d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm10 2-4.35-4.35"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </span>
-          <input
-            type="search"
-            disabled
-            placeholder="Search (coming soon)"
-            className="w-full cursor-not-allowed rounded-md border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm text-slate-500"
-          />
-        </label>
+      <div className="flex flex-col gap-2 px-4 py-2.5 lg:flex-row lg:items-center lg:justify-between lg:px-5">
+        <button
+          type="button"
+          className="flex max-w-xs items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm font-medium text-[var(--navy)]"
+        >
+          <span className="truncate">{companyLabel}</span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={1.75} aria-hidden />
+        </button>
         <div className="flex items-center justify-end gap-2">
           <NotificationBellDropdown />
-          <div className="flex items-center gap-2.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-indigo-600 text-[10px] font-semibold text-white">
+          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--navy)] text-[10px] font-semibold text-white">
               {initials || "CO"}
             </div>
             <div className="hidden text-left sm:block">
-              <p className="text-sm font-medium text-slate-950">{profileName}</p>
+              <p className="text-sm font-medium text-[var(--navy)]">{profileName}</p>
               {profileSubtitle ? <p className="text-[11px] text-slate-500">{profileSubtitle}</p> : null}
             </div>
           </div>

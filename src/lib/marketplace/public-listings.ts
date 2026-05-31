@@ -15,6 +15,10 @@ export function isPublicMarketplaceListing(listing: MarketplaceListing) {
   const hasSummary = hasMeaningfulText(listing.shortSummary) || hasMeaningfulText(listing.overview);
   if (!hasSummary) return false;
 
+  const hasFundingFields =
+    hasMeaningfulText(listing.fundingTarget) && hasMeaningfulText(listing.minimumInvestment);
+  if (!hasFundingFields) return false;
+
   const hasContext =
     hasMeaningfulText(listing.industry) ||
     hasMeaningfulText(listing.stage) ||

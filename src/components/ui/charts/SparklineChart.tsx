@@ -2,7 +2,7 @@ export function SparklineChart({
   values,
   width = 88,
   height = 32,
-  stroke = "#4f46e5",
+  stroke = "var(--navy)",
   className = "",
 }: Readonly<{
   values: number[];

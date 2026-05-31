@@ -1,34 +1,42 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f4f6f9;
-  --foreground: #0f172a;
+  --background: #f5f6f8;
+  --foreground: #0c2340;
 
-  /* Premium fintech neutrals */
-  --surface-base: #eef1f6;
+  /* Institutional neutrals */
+  --surface-base: #eef0f4;
   --surface-raised: #ffffff;
-  --surface-sunken: #f8fafc;
+  --surface-sunken: #f8f9fb;
   --surface-sidebar: #ffffff;
-  --border-subtle: #e2e8f0;
-  --border-strong: #cbd5e1;
-  --text-primary: #0f172a;
+  --border-subtle: #e2e6ed;
+  --border-strong: #c8d0dc;
+  --text-primary: #0c2340;
   --text-secondary: #334155;
   --text-muted: #64748b;
 
-  /* Brand accent */
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
-  --accent-muted: #eef2ff;
+  /* Brand — deep navy + gold */
+  --navy: #0c2340;
+  --navy-hover: #091a30;
+  --navy-muted: #e8edf4;
+  --gold: #c9a227;
+  --gold-hover: #b8921f;
+  --gold-muted: #faf6ea;
+
+  /* Primary actions use navy; accent highlights use gold */
+  --accent: var(--navy);
+  --accent-hover: var(--navy-hover);
+  --accent-muted: var(--navy-muted);
   --accent-foreground: #ffffff;
+  --accent-gold: var(--gold);
 
   /* Operational status */
-  --status-info: #0284c7;
+  --status-info: #0c2340;
   --status-success: #059669;
   --status-warning: #d97706;
   --status-danger: #dc2626;
-  --status-pending: #7c3aed;
+  --status-pending: #64748b;
 
-  /* Spacing scale (reference) */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -37,16 +45,14 @@
   --space-6: 1.5rem;
   --space-8: 2rem;
 
-  /* Elevation */
-  --shadow-panel: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 12px rgb(15 23 42 / 0.04);
-  --shadow-sticky: 0 4px 16px rgb(15 23 42 / 0.06);
-  --shadow-card: 0 1px 3px rgb(15 23 42 / 0.06);
+  --shadow-panel: 0 1px 2px rgb(12 35 64 / 0.04), 0 4px 12px rgb(12 35 64 / 0.05);
+  --shadow-sticky: 0 4px 16px rgb(12 35 64 / 0.07);
+  --shadow-card: 0 1px 3px rgb(12 35 64 / 0.06);
 
-  /* Radius */
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
 }
 
 @theme inline {
@@ -69,7 +75,6 @@ select {
   color: var(--text-primary);
 }
 
-/* Enterprise table density */
 .enterprise-table thead th {
   position: sticky;
   top: 0;
@@ -132,15 +137,31 @@ select {
 }
 
 .cap-btn-primary {
-  background: var(--accent);
-  color: var(--accent-foreground);
+  background: var(--navy);
+  color: #ffffff;
   transition: background-color 120ms ease;
 }
 
 .cap-btn-primary:hover {
-  background: var(--accent-hover);
+  background: var(--navy-hover);
+}
+
+.cap-btn-secondary {
+  background: #ffffff;
+  color: var(--navy);
+  border: 1px solid var(--border-subtle);
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.cap-btn-secondary:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-sunken);
 }
 
 .cap-marketing-surface {
   background: var(--background);
+}
+
+.cap-text-gold {
+  color: var(--gold);
 }

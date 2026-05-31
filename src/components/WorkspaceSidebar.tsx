@@ -3,9 +3,11 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import type { WorkspaceId } from "@/lib/workspace-nav";
 import { getWorkspaceNav, workspaceLabel } from "@/lib/workspace-nav";
 import { getWorkspaceNavIcon } from "@/lib/ui/nav-icons";
+import { CapitalOSLogo } from "@/components/CapitalOSLogo";
 
 export function WorkspaceSidebar({
   workspace,
@@ -24,14 +26,11 @@ export function WorkspaceSidebar({
 
   const nav = (
     <>
-      <div className="border-b border-slate-200/80 bg-[var(--surface-sidebar)] px-3.5 py-3.5">
-        <Link href="/" className="flex items-center gap-2" onClick={onClose}>
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-xs font-bold text-white shadow-sm">
-            C
-          </span>
-          <span className="text-[15px] font-semibold tracking-tight text-slate-900">CapitalOS</span>
+      <div className="border-b border-slate-200/80 bg-[var(--surface-sidebar)] px-4 py-4">
+        <Link href="/" className="block" onClick={onClose}>
+          <CapitalOSLogo height={28} />
         </Link>
-        <p className="mt-2 pl-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+        <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-2.5">
         {items.map((item) => {
@@ -42,10 +41,10 @@ export function WorkspaceSidebar({
               key={item.href}
               href={item.href}
               onClick={onClose}
-              className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors ${
+              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
                 active
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  ? "bg-[var(--navy)] text-white shadow-sm"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-[var(--navy)]"
               }`}
             >
               <Icon
@@ -58,9 +57,21 @@ export function WorkspaceSidebar({
           );
         })}
       </nav>
-      <div className="border-t border-slate-200/80 bg-[var(--surface-sidebar)] px-3.5 py-3">
-        {planBadge ? <div className="mb-2">{planBadge}</div> : null}
-        <p className="text-[10px] leading-4 text-slate-500">Institutional workspace</p>
+      <div className="space-y-2 border-t border-slate-200/80 bg-[var(--surface-sidebar)] p-3">
+        {planBadge ? <div>{planBadge}</div> : null}
+        <div className="rounded-xl border border-slate-200/80 bg-[var(--surface-sunken)] p-3">
+          <div className="flex items-start gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--navy)] text-white">
+              <Sparkles className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
+            </span>
+            <div>
+              <p className="text-xs font-semibold text-[var(--navy)]">CapitalOS AI</p>
+              <p className="mt-0.5 text-[10px] leading-4 text-slate-500">
+                Educational readiness coach for your workspace.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </>
   );
@@ -70,13 +81,13 @@ export function WorkspaceSidebar({
       {mobileOpen ? (
         <button
           type="button"
-          className="fixed inset-0 z-40 bg-slate-900/30 lg:hidden"
+          className="fixed inset-0 z-40 bg-[var(--navy)]/30 lg:hidden"
           aria-label="Close navigation"
           onClick={onClose}
         />
       ) : null}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-56 shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] shadow-[var(--shadow-panel)] transition-transform lg:sticky lg:top-0 lg:z-30 lg:h-screen lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] shadow-[var(--shadow-panel)] transition-transform lg:sticky lg:top-0 lg:z-30 lg:h-screen lg:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >

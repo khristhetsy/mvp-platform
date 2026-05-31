@@ -1,4 +1,4 @@
-/** Enterprise UI tokens — use with Tailwind + CSS variables in globals.css */
+/** Enterprise UI tokens — navy / gold institutional palette */
 
 export const enterpriseSpacing = {
   pageX: "px-5 lg:px-6",
@@ -27,9 +27,9 @@ export const statusStyles: Record<
     rail: "bg-slate-200",
   },
   info: {
-    badge: "bg-sky-50 text-sky-800 ring-sky-200",
-    dot: "bg-sky-500",
-    rail: "bg-sky-500",
+    badge: "bg-[var(--navy-muted)] text-[var(--navy)] ring-slate-200",
+    dot: "bg-[var(--navy)]",
+    rail: "bg-[var(--navy)]",
   },
   success: {
     badge: "bg-emerald-50 text-emerald-800 ring-emerald-200",
@@ -47,15 +47,15 @@ export const statusStyles: Record<
     rail: "bg-red-500",
   },
   pending: {
-    badge: "bg-violet-50 text-violet-800 ring-violet-200",
-    dot: "bg-violet-500",
-    rail: "bg-violet-400",
+    badge: "bg-slate-100 text-slate-700 ring-slate-200",
+    dot: "bg-slate-400",
+    rail: "bg-slate-300",
   },
 };
 
 export const metricAccentBorder: Record<string, string> = {
-  indigo: "border-l-indigo-600",
-  violet: "border-l-violet-500",
-  blue: "border-l-sky-500",
+  indigo: "border-l-[var(--navy)]",
+  violet: "border-l-[var(--gold)]",
+  blue: "border-l-slate-500",
   slate: "border-l-slate-400",
 };
