@@ -94,6 +94,122 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     description: "Vertical spacing",
     defaultProps: { size: "md" },
   },
+  {
+    type: "testimonial",
+    label: "Testimonial",
+    description: "Customer or partner quote with attribution",
+    defaultProps: {
+      quote: "CapitalOS helped our team organize diligence and present a credible investor narrative.",
+      name: "Jordan Lee",
+      title: "CEO, Northwind Analytics",
+      avatarUrl: "",
+      avatarAlt: "",
+      rating: 5,
+    },
+  },
+  {
+    type: "faq",
+    label: "FAQ",
+    description: "Expandable question and answer list",
+    defaultProps: {
+      title: "Frequently asked questions",
+      items: [
+        {
+          question: "Is this connected to live production pages?",
+          answer: "No. Page Builder Lab drafts are sandbox-only in Phase 1.",
+        },
+        {
+          question: "Who can access the admin lab?",
+          answer: "Authorized internal users with page builder permissions.",
+        },
+      ],
+    },
+  },
+  {
+    type: "process_steps",
+    label: "Process steps",
+    description: "Numbered workflow steps with icons",
+    defaultProps: {
+      title: "How it works",
+      subtitle: "A structured path from readiness to review.",
+      steps: [
+        { icon: "check", title: "Prepare", description: "Organize documents and readiness inputs." },
+        { icon: "shield", title: "Review", description: "Validate diligence context and disclosures." },
+        { icon: "rocket", title: "Engage", description: "Share curated opportunities with investors." },
+      ],
+    },
+  },
+  {
+    type: "pricing_plan",
+    label: "Pricing plan",
+    description: "Single plan card with features and CTA",
+    defaultProps: {
+      planName: "Growth",
+      priceLabel: "From $499 / month",
+      features: ["Readiness scoring", "Secure data room", "Investor CRM workspace"],
+      ctaLabel: "Request access",
+      ctaHref: "/submit-company",
+      highlighted: false,
+    },
+  },
+  {
+    type: "compliance_notice",
+    label: "Compliance notice",
+    description: "Regulatory disclaimer block for investor-facing pages",
+    defaultProps: {
+      title: "Important disclosure",
+      body: "CapitalOS provides educational and workflow tools. Nothing on this page constitutes an offer, solicitation, or investment advice.",
+      style: "legal",
+      required: true,
+    },
+  },
+  {
+    type: "team",
+    label: "Team member",
+    description: "Leadership profile with bio and optional LinkedIn",
+    defaultProps: {
+      name: "Alex Morgan",
+      title: "Managing Partner",
+      bio: "Leads platform strategy and institutional partnerships.",
+      imageUrl: "/capitalos-icon.png",
+      imageAlt: "Alex Morgan headshot",
+      linkedInUrl: "",
+    },
+  },
+  {
+    type: "logo_cloud",
+    label: "Logo cloud",
+    description: "Partner or customer logo row with required alt text",
+    defaultProps: {
+      title: "Trusted by capital-ready teams",
+      logos: [
+        { imageUrl: "/capitalos-wordmark.png", alt: "CapitalOS" },
+        { imageUrl: "/capitalos-icon.png", alt: "CapitalOS icon" },
+      ],
+    },
+  },
+  {
+    type: "stats_comparison",
+    label: "Stats comparison",
+    description: "Before/after or category metric comparison",
+    defaultProps: {
+      title: "Readiness impact",
+      items: [
+        {
+          category: "Before CapitalOS",
+          label: "Diligence completeness",
+          value: "54%",
+          description: "Fragmented documents and inconsistent updates.",
+        },
+        {
+          category: "After CapitalOS",
+          label: "Diligence completeness",
+          value: "92%",
+          description: "Structured workflow with review-ready context.",
+        },
+      ],
+    },
+  },
 ];
 
 export function getBlockDefinition(type: PageBlockType) {

@@ -22,6 +22,7 @@ import {
   VersionHistorySidebar,
 } from "@/components/page-builder/VersionHistorySidebar";
 import { BLOCK_DEFINITIONS, createBlock, getBlockDefinition } from "@/lib/page-builder/blocks";
+import { COMPLIANCE_NOTICE_STYLES, PROCESS_STEP_ICON_OPTIONS } from "@/lib/page-builder/content-rules";
 import type {
   AutosaveStatus,
   PageBlock,
@@ -699,7 +700,461 @@ function BlockEditor({
             </select>
           </label>
         )}
+        {block.type === "testimonial" && (
+          <>
+            {field("Quote", "quote", true)}
+            {field("Name", "name")}
+            {field("Title / company", "title")}
+            {field("Avatar URL (optional)", "avatarUrl")}
+            {field("Avatar alt text", "avatarAlt")}
+            <label className="grid gap-1 text-xs font-medium text-slate-700">
+              Rating (0–5, optional)
+              <input
+                type="number"
+                min={0}
+                max={5}
+                className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm font-normal"
+                value={block.props.rating === "" || block.props.rating === undefined ? "" : String(block.props.rating)}
+                onChange={(e) => onChange("rating", e.target.value === "" ? "" : Number(e.target.value))}
+              />
+            </label>
+          </>
+        )}
+        {block.type === "faq" && (
+          <FaqItemsEditor
+            title={asString(block.props.title)}
+            items={
+              Array.isArray(block.props.items)
+                ? (block.props.items as Array<{ question: string; answer: string }>)
+                : []
+            }
+            onTitleChange={(value) => onChange("title", value)}
+            onItemsChange={(items) => onChange("items", items)}
+          />
+        )}
+        {block.type === "process_steps" && (
+          <ProcessStepsEditor
+            title={asString(block.props.title)}
+            subtitle={asString(block.props.subtitle)}
+            steps={
+              Array.isArray(block.props.steps)
+                ? (block.props.steps as Array<{ icon: string; title: string; description: string }>)
+                : []
+            }
+            onTitleChange={(value) => onChange("title", value)}
+            onSubtitleChange={(value) => onChange("subtitle", value)}
+            onStepsChange={(steps) => onChange("steps", steps)}
+          />
+        )}
+        {block.type === "pricing_plan" && (
+          <>
+            {field("Plan name", "planName")}
+            {field("Price label", "priceLabel")}
+            <label className="grid gap-1 text-xs font-medium text-slate-700">
+              Features (one per line)
+              <textarea
+                className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm font-normal"
+                rows={4}
+                value={Array.isArray(block.props.features) ? block.props.features.join("\n") : ""}
+                onChange={(e) =>
+                  onChange(
+                    "features",
+                    e.target.value
+                      .split("\n")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  )
+                }
+              />
+            </label>
+            {field("CTA label", "ctaLabel")}
+            {field("CTA URL", "ctaHref")}
+            <label className="flex items-center gap-2 text-xs font-medium text-slate-700">
+              <input
+                type="checkbox"
+                checked={Boolean(block.props.highlighted)}
+                onChange={(e) => onChange("highlighted", e.target.checked)}
+              />
+              Highlight plan
+            </label>
+          </>
+        )}
+        {block.type === "compliance_notice" && (
+          <>
+            {field("Title", "title")}
+            {field("Body", "body", true)}
+            <label className="grid gap-1 text-xs font-medium text-slate-700">
+              Disclaimer style
+              <select
+                className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                value={asString(block.props.style) || "info"}
+                onChange={(e) => onChange("style", e.target.value)}
+              >
+                {COMPLIANCE_NOTICE_STYLES.map((style) => (
+                  <option key={style} value={style}>
+                    {style}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-center gap-2 text-xs font-medium text-slate-700">
+              <input
+                type="checkbox"
+                checked={Boolean(block.props.required)}
+                onChange={(e) => onChange("required", e.target.checked)}
+              />
+              Required for investor/deals pages
+            </label>
+          </>
+        )}
+        {block.type === "team" && (
+          <>
+            {field("Name", "name")}
+            {field("Title", "title")}
+            {field("Bio", "bio", true)}
+            {field("Image URL", "imageUrl")}
+            {field("Image alt text", "imageAlt")}
+            {field("LinkedIn URL (optional)", "linkedInUrl")}
+          </>
+        )}
+        {block.type === "logo_cloud" && (
+          <LogoCloudEditor
+            title={asString(block.props.title)}
+            logos={
+              Array.isArray(block.props.logos)
+                ? (block.props.logos as Array<{ imageUrl: string; alt: string }>)
+                : []
+            }
+            onTitleChange={(value) => onChange("title", value)}
+            onLogosChange={(logos) => onChange("logos", logos)}
+          />
+        )}
+        {block.type === "stats_comparison" && (
+          <StatsComparisonEditor
+            title={asString(block.props.title)}
+            items={
+              Array.isArray(block.props.items)
+                ? (block.props.items as Array<{
+                    category: string;
+                    label: string;
+                    value: string;
+                    description: string;
+                  }>)
+                : []
+            }
+            onTitleChange={(value) => onChange("title", value)}
+            onItemsChange={(items) => onChange("items", items)}
+          />
+        )}
       </div>
+    </div>
+  );
+}
+
+function FaqItemsEditor({
+  title,
+  items,
+  onTitleChange,
+  onItemsChange,
+}: Readonly<{
+  title: string;
+  items: Array<{ question: string; answer: string }>;
+  onTitleChange: (value: string) => void;
+  onItemsChange: (items: Array<{ question: string; answer: string }>) => void;
+}>) {
+  return (
+    <div className="space-y-3">
+      <label className="grid gap-1 text-xs font-medium text-slate-700">
+        Section title
+        <input
+          className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm font-normal"
+          value={title}
+          onChange={(e) => onTitleChange(e.target.value)}
+        />
+      </label>
+      {items.map((item, index) => (
+        <div key={index} className="rounded-lg border border-slate-200 p-2">
+          <label className="grid gap-1 text-xs font-medium text-slate-700">
+            Question
+            <input
+              className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm font-normal"
+              value={item.question}
+              onChange={(e) => {
+                const next = [...items];
+                next[index] = { ...next[index], question: e.target.value };
+                onItemsChange(next);
+              }}
+            />
+          </label>
+          <label className="mt-2 grid gap-1 text-xs font-medium text-slate-700">
+            Answer
+            <textarea
+              className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm font-normal"
+              rows={2}
+              value={item.answer}
+              onChange={(e) => {
+                const next = [...items];
+                next[index] = { ...next[index], answer: e.target.value };
+                onItemsChange(next);
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            className="mt-2 text-xs font-medium text-red-700"
+            onClick={() => onItemsChange(items.filter((_, i) => i !== index))}
+          >
+            Remove FAQ
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        className="cap-btn-secondary rounded-lg px-2 py-1 text-xs font-semibold"
+        onClick={() => onItemsChange([...items, { question: "", answer: "" }])}
+      >
+        Add FAQ item
+      </button>
+    </div>
+  );
+}
+
+function ProcessStepsEditor({
+  title,
+  subtitle,
+  steps,
+  onTitleChange,
+  onSubtitleChange,
+  onStepsChange,
+}: Readonly<{
+  title: string;
+  subtitle: string;
+  steps: Array<{ icon: string; title: string; description: string }>;
+  onTitleChange: (value: string) => void;
+  onSubtitleChange: (value: string) => void;
+  onStepsChange: (steps: Array<{ icon: string; title: string; description: string }>) => void;
+}>) {
+  return (
+    <div className="space-y-3">
+      <label className="grid gap-1 text-xs font-medium text-slate-700">
+        Title
+        <input className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm" value={title} onChange={(e) => onTitleChange(e.target.value)} />
+      </label>
+      <label className="grid gap-1 text-xs font-medium text-slate-700">
+        Subtitle
+        <input className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm" value={subtitle} onChange={(e) => onSubtitleChange(e.target.value)} />
+      </label>
+      {steps.map((step, index) => (
+        <div key={index} className="rounded-lg border border-slate-200 p-2">
+          <label className="grid gap-1 text-xs font-medium text-slate-700">
+            Icon
+            <select
+              className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+              value={step.icon || "check"}
+              onChange={(e) => {
+                const next = [...steps];
+                next[index] = { ...next[index], icon: e.target.value };
+                onStepsChange(next);
+              }}
+            >
+              {PROCESS_STEP_ICON_OPTIONS.map((icon) => (
+                <option key={icon} value={icon}>
+                  {icon}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="mt-2 grid gap-1 text-xs font-medium text-slate-700">
+            Step title
+            <input
+              className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+              value={step.title}
+              onChange={(e) => {
+                const next = [...steps];
+                next[index] = { ...next[index], title: e.target.value };
+                onStepsChange(next);
+              }}
+            />
+          </label>
+          <label className="mt-2 grid gap-1 text-xs font-medium text-slate-700">
+            Description
+            <textarea
+              className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+              rows={2}
+              value={step.description}
+              onChange={(e) => {
+                const next = [...steps];
+                next[index] = { ...next[index], description: e.target.value };
+                onStepsChange(next);
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            className="mt-2 text-xs font-medium text-red-700 disabled:opacity-40"
+            disabled={steps.length <= 3}
+            onClick={() => onStepsChange(steps.filter((_, i) => i !== index))}
+          >
+            Remove step
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        className="cap-btn-secondary rounded-lg px-2 py-1 text-xs font-semibold disabled:opacity-40"
+        disabled={steps.length >= 6}
+        onClick={() => onStepsChange([...steps, { icon: "check", title: "", description: "" }])}
+      >
+        Add step
+      </button>
+    </div>
+  );
+}
+
+function LogoCloudEditor({
+  title,
+  logos,
+  onTitleChange,
+  onLogosChange,
+}: Readonly<{
+  title: string;
+  logos: Array<{ imageUrl: string; alt: string }>;
+  onTitleChange: (value: string) => void;
+  onLogosChange: (logos: Array<{ imageUrl: string; alt: string }>) => void;
+}>) {
+  return (
+    <div className="space-y-3">
+      <label className="grid gap-1 text-xs font-medium text-slate-700">
+        Section title
+        <input className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm" value={title} onChange={(e) => onTitleChange(e.target.value)} />
+      </label>
+      {logos.map((logo, index) => (
+        <div key={index} className="rounded-lg border border-slate-200 p-2">
+          <label className="grid gap-1 text-xs font-medium text-slate-700">
+            Image URL
+            <input
+              className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+              value={logo.imageUrl}
+              onChange={(e) => {
+                const next = [...logos];
+                next[index] = { ...next[index], imageUrl: e.target.value };
+                onLogosChange(next);
+              }}
+            />
+          </label>
+          <label className="mt-2 grid gap-1 text-xs font-medium text-slate-700">
+            Alt text (required)
+            <input
+              className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+              value={logo.alt}
+              onChange={(e) => {
+                const next = [...logos];
+                next[index] = { ...next[index], alt: e.target.value };
+                onLogosChange(next);
+              }}
+            />
+          </label>
+          <button type="button" className="mt-2 text-xs font-medium text-red-700" onClick={() => onLogosChange(logos.filter((_, i) => i !== index))}>
+            Remove logo
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        className="cap-btn-secondary rounded-lg px-2 py-1 text-xs font-semibold"
+        onClick={() => onLogosChange([...logos, { imageUrl: "", alt: "" }])}
+      >
+        Add logo
+      </button>
+    </div>
+  );
+}
+
+function StatsComparisonEditor({
+  title,
+  items,
+  onTitleChange,
+  onItemsChange,
+}: Readonly<{
+  title: string;
+  items: Array<{ category: string; label: string; value: string; description: string }>;
+  onTitleChange: (value: string) => void;
+  onItemsChange: (items: Array<{ category: string; label: string; value: string; description: string }>) => void;
+}>) {
+  return (
+    <div className="space-y-3">
+      <label className="grid gap-1 text-xs font-medium text-slate-700">
+        Title
+        <input className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm" value={title} onChange={(e) => onTitleChange(e.target.value)} />
+      </label>
+      {items.map((item, index) => (
+        <div key={index} className="rounded-lg border border-slate-200 p-2">
+          <label className="grid gap-1 text-xs font-medium text-slate-700">
+            Category (before/after)
+            <input
+              className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+              value={item.category}
+              onChange={(e) => {
+                const next = [...items];
+                next[index] = { ...next[index], category: e.target.value };
+                onItemsChange(next);
+              }}
+            />
+          </label>
+          <label className="mt-2 grid gap-1 text-xs font-medium text-slate-700">
+            Metric label
+            <input
+              className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+              value={item.label}
+              onChange={(e) => {
+                const next = [...items];
+                next[index] = { ...next[index], label: e.target.value };
+                onItemsChange(next);
+              }}
+            />
+          </label>
+          <label className="mt-2 grid gap-1 text-xs font-medium text-slate-700">
+            Value
+            <input
+              className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+              value={item.value}
+              onChange={(e) => {
+                const next = [...items];
+                next[index] = { ...next[index], value: e.target.value };
+                onItemsChange(next);
+              }}
+            />
+          </label>
+          <label className="mt-2 grid gap-1 text-xs font-medium text-slate-700">
+            Description
+            <textarea
+              className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+              rows={2}
+              value={item.description}
+              onChange={(e) => {
+                const next = [...items];
+                next[index] = { ...next[index], description: e.target.value };
+                onItemsChange(next);
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            className="mt-2 text-xs font-medium text-red-700 disabled:opacity-40"
+            disabled={items.length <= 2}
+            onClick={() => onItemsChange(items.filter((_, i) => i !== index))}
+          >
+            Remove metric
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        className="cap-btn-secondary rounded-lg px-2 py-1 text-xs font-semibold"
+        onClick={() => onItemsChange([...items, { category: "", label: "", value: "", description: "" }])}
+      >
+        Add metric
+      </button>
     </div>
   );
 }

@@ -1,9 +1,50 @@
 import Image from "next/image";
 import Link from "next/link";
+import {
+  BarChart3,
+  Check,
+  FileText,
+  Lock,
+  Rocket,
+  Shield,
+  Sparkles,
+  Star,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
+import { isComplianceNoticeStyle, isProcessStepIcon } from "@/lib/page-builder/content-rules";
 import type { PageBlock, PreviewMode } from "@/lib/page-builder/types";
 
 function asString(value: unknown) {
   return typeof value === "string" ? value : "";
+}
+
+const STEP_ICON_MAP: Record<string, LucideIcon> = {
+  check: Check,
+  shield: Shield,
+  rocket: Rocket,
+  users: Users,
+  "file-text": FileText,
+  chart: BarChart3,
+  lock: Lock,
+  sparkles: Sparkles,
+};
+
+function StepIcon({ name }: Readonly<{ name: string }>) {
+  const Icon = isProcessStepIcon(name) ? STEP_ICON_MAP[name] : Check;
+  return <Icon className="h-4 w-4" strokeWidth={1.75} aria-hidden />;
+}
+
+function StarRating({ rating }: Readonly<{ rating: number }>) {
+  const count = Math.max(0, Math.min(5, Math.round(rating)));
+  if (count === 0) return null;
+  return (
+    <div className="flex gap-0.5" aria-label={`${count} out of 5 stars`}>
+      {Array.from({ length: count }).map((_, i) => (
+        <Star key={i} className="h-3.5 w-3.5 fill-[var(--gold)] text-[var(--gold)]" aria-hidden />
+      ))}
+    </div>
+  );
 }
 
 function BlockShell({
@@ -177,6 +218,239 @@ export function PageBuilderBlockRenderer({
       const size = asString(block.props.size) || "md";
       const height = size === "sm" ? "h-4" : size === "lg" ? "h-16" : "h-8";
       return block.visible ? <div className={height} aria-hidden /> : null;
+    }
+    case "testimonial":
+      return (
+        <BlockShell block={block} previewMode={previewMode}>
+          <figure className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)]">
+            {typeof block.props.rating === "number" && block.props.rating > 0 ? (
+              <div className="mb-3">
+                <StarRating rating={Number(block.props.rating)} />
+              </div>
+            ) : null}
+            <blockquote className="text-sm leading-6 text-slate-700">
+              &ldquo;{asString(block.props.quote) || "Testimonial quote"}&rdquo;
+            </blockquote>
+            <figcaption className="mt-4 flex items-center gap-3">
+              {asString(block.props.avatarUrl) ? (
+                <Image
+                  src={asString(block.props.avatarUrl)}
+                  alt={asString(block.props.avatarAlt) || asString(block.props.name) || "Avatar"}
+                  width={40}
+                  height={40}
+                  className="h-10 w-10 rounded-full border border-slate-200 object-cover"
+                />
+              ) : (
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--navy-muted)] text-xs font-semibold text-[var(--navy)]">
+                  {asString(block.props.name).slice(0, 1) || "?"}
+                </span>
+              )}
+              <div>
+                <p className="text-sm font-semibold text-[var(--navy)]">{asString(block.props.name) || "Name"}</p>
+                <p className="text-xs text-slate-500">{asString(block.props.title) || "Title / company"}</p>
+              </div>
+            </figcaption>
+          </figure>
+        </BlockShell>
+      );
+    case "faq": {
+      const items = Array.isArray(block.props.items)
+        ? (block.props.items as Array<{ question?: string; answer?: string }>)
+        : [];
+      return (
+        <BlockShell block={block} previewMode={previewMode}>
+          <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)]">
+            <h2 className="text-lg font-semibold text-[var(--navy)]">{asString(block.props.title) || "FAQ"}</h2>
+            <dl className="mt-4 space-y-3">
+              {items.map((item) => (
+                <div key={item.question} className="rounded-lg border border-slate-100 bg-[var(--surface-sunken)] px-3 py-2.5">
+                  <dt className="text-sm font-semibold text-[var(--navy)]">{item.question}</dt>
+                  <dd className="mt-1 text-xs leading-5 text-slate-600">{item.answer}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </BlockShell>
+      );
+    }
+    case "process_steps": {
+      const steps = Array.isArray(block.props.steps)
+        ? (block.props.steps as Array<{ icon?: string; title?: string; description?: string }>)
+        : [];
+      return (
+        <BlockShell block={block} previewMode={previewMode}>
+          <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)]">
+            <h2 className="text-lg font-semibold text-[var(--navy)]">{asString(block.props.title) || "Process"}</h2>
+            {asString(block.props.subtitle) ? (
+              <p className="mt-1 text-sm text-slate-600">{asString(block.props.subtitle)}</p>
+            ) : null}
+            <ol className={`mt-4 grid gap-3 ${previewMode === "mobile" ? "grid-cols-1" : "sm:grid-cols-3"}`}>
+              {steps.map((step, index) => (
+                <li key={`${step.title}-${index}`} className="rounded-lg border border-slate-100 bg-[var(--surface-sunken)] p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--navy)] text-white">
+                      <StepIcon name={asString(step.icon) || "check"} />
+                    </span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--gold)]">
+                      Step {index + 1}
+                    </span>
+                  </div>
+                  <h3 className="mt-2 text-sm font-semibold text-[var(--navy)]">{step.title}</h3>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">{step.description}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </BlockShell>
+      );
+    }
+    case "pricing_plan": {
+      const features = Array.isArray(block.props.features) ? block.props.features.map(String) : [];
+      const highlighted = Boolean(block.props.highlighted);
+      return (
+        <BlockShell block={block} previewMode={previewMode}>
+          <article
+            className={`rounded-xl border p-5 shadow-[var(--shadow-panel)] ${
+              highlighted
+                ? "border-[var(--gold)] bg-[var(--gold-muted)]/40 ring-1 ring-[var(--gold)]/30"
+                : "border-slate-200/80 bg-white"
+            }`}
+          >
+            <h2 className="text-lg font-semibold text-[var(--navy)]">{asString(block.props.planName) || "Plan"}</h2>
+            <p className="mt-1 text-sm font-medium text-[var(--gold)]">{asString(block.props.priceLabel) || "Price"}</p>
+            <ul className="mt-4 space-y-1.5 text-xs text-slate-700">
+              {features.map((feature) => (
+                <li key={feature} className="flex items-start gap-2">
+                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--navy)]" aria-hidden />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+            {asString(block.props.ctaLabel) ? (
+              <Link
+                href={asString(block.props.ctaHref) || "#"}
+                className={`mt-4 inline-flex rounded-lg px-4 py-2 text-sm font-semibold ${
+                  highlighted ? "cap-btn-primary" : "cap-btn-secondary"
+                }`}
+              >
+                {asString(block.props.ctaLabel)}
+              </Link>
+            ) : null}
+          </article>
+        </BlockShell>
+      );
+    }
+    case "compliance_notice": {
+      const style = asString(block.props.style);
+      const tone = isComplianceNoticeStyle(style)
+        ? style
+        : "info";
+      const styles =
+        tone === "legal"
+          ? "border-slate-300 bg-slate-50 text-slate-800"
+          : tone === "warning"
+            ? "border-amber-200 bg-amber-50 text-amber-950"
+            : "border-sky-200 bg-sky-50 text-sky-950";
+      return (
+        <BlockShell block={block} previewMode={previewMode}>
+          <aside className={`rounded-xl border px-4 py-3 ${styles}`}>
+            <div className="flex items-start gap-2">
+              <Shield className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+              <div>
+                <h2 className="text-sm font-semibold">{asString(block.props.title) || "Compliance notice"}</h2>
+                <p className="mt-1 text-xs leading-5">{asString(block.props.body)}</p>
+                {Boolean(block.props.required) ? (
+                  <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide opacity-80">Required disclosure</p>
+                ) : null}
+              </div>
+            </div>
+          </aside>
+        </BlockShell>
+      );
+    }
+    case "team":
+      return (
+        <BlockShell block={block} previewMode={previewMode}>
+          <article className="flex gap-4 rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
+            {asString(block.props.imageUrl) ? (
+              <Image
+                src={asString(block.props.imageUrl)}
+                alt={asString(block.props.imageAlt) || asString(block.props.name) || "Team member"}
+                width={72}
+                height={72}
+                className="h-[72px] w-[72px] shrink-0 rounded-xl border border-slate-200 object-cover"
+              />
+            ) : null}
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-[var(--navy)]">{asString(block.props.name) || "Name"}</h2>
+              <p className="text-xs font-medium text-[var(--gold)]">{asString(block.props.title) || "Title"}</p>
+              <p className="mt-2 text-xs leading-5 text-slate-600">{asString(block.props.bio)}</p>
+              {asString(block.props.linkedInUrl) ? (
+                <Link
+                  href={asString(block.props.linkedInUrl)}
+                  className="mt-2 inline-block text-xs font-semibold text-[var(--navy)] underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  LinkedIn
+                </Link>
+              ) : null}
+            </div>
+          </article>
+        </BlockShell>
+      );
+    case "logo_cloud": {
+      const logos = Array.isArray(block.props.logos)
+        ? (block.props.logos as Array<{ imageUrl?: string; alt?: string }>)
+        : [];
+      return (
+        <BlockShell block={block} previewMode={previewMode}>
+          <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)]">
+            <h2 className="text-sm font-semibold text-[var(--navy)]">{asString(block.props.title) || "Partners"}</h2>
+            <div className="mt-4 flex flex-wrap items-center gap-4">
+              {logos.map((logo) => (
+                <div key={logo.alt} className="flex h-12 items-center rounded-lg border border-slate-100 bg-[var(--surface-sunken)] px-3">
+                  {logo.imageUrl ? (
+                    <Image
+                      src={logo.imageUrl}
+                      alt={logo.alt || "Logo"}
+                      width={120}
+                      height={32}
+                      className="h-8 w-auto max-w-[120px] object-contain"
+                    />
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </BlockShell>
+      );
+    }
+    case "stats_comparison": {
+      const items = Array.isArray(block.props.items)
+        ? (block.props.items as Array<{ category?: string; label?: string; value?: string; description?: string }>)
+        : [];
+      return (
+        <BlockShell block={block} previewMode={previewMode}>
+          <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)]">
+            <h2 className="text-lg font-semibold text-[var(--navy)]">{asString(block.props.title) || "Comparison"}</h2>
+            <div className={`mt-4 grid gap-3 ${previewMode === "mobile" ? "grid-cols-1" : "sm:grid-cols-2"}`}>
+              {items.map((item) => (
+                <div key={`${item.category}-${item.label}`} className="rounded-lg border border-slate-100 bg-[var(--surface-sunken)] p-3">
+                  {asString(item.category) ? (
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--gold)]">{item.category}</p>
+                  ) : null}
+                  <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">{item.label}</p>
+                  <p className="mt-1 text-2xl font-semibold tabular-nums text-[var(--navy)]">{item.value}</p>
+                  {asString(item.description) ? (
+                    <p className="mt-1 text-xs leading-5 text-slate-600">{item.description}</p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </BlockShell>
+      );
     }
     default:
       return null;

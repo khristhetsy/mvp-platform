@@ -7,6 +7,11 @@ export function buildDemoLayout(pageSlug: PageBuilderSlug): PageLayoutDocument {
   const features = createBlock("feature_grid");
   const metrics = createBlock("metrics_row");
   const cta = createBlock("cta_band");
+  const compliance = createBlock("compliance_notice");
+  const faq = createBlock("faq");
+  const testimonial = createBlock("testimonial");
+
+  const blocks = [hero, trust, features, metrics, cta];
 
   if (pageSlug === "founders") {
     hero.props.headline = "Become capital-ready before entering the market.";
@@ -14,6 +19,7 @@ export function buildDemoLayout(pageSlug: PageBuilderSlug): PageLayoutDocument {
       "CapitalOS helps founders organize diligence, validate traction, and prepare for investor review.";
     hero.props.primaryCtaLabel = "Submit your company";
     hero.props.secondaryCtaLabel = "";
+    blocks.push(testimonial, faq);
   }
 
   if (pageSlug === "investors") {
@@ -22,6 +28,8 @@ export function buildDemoLayout(pageSlug: PageBuilderSlug): PageLayoutDocument {
     hero.props.primaryCtaHref = "/deals";
     hero.props.secondaryCtaLabel = "Investor login";
     hero.props.secondaryCtaHref = "/login";
+    blocks.unshift(compliance);
+    blocks.push(faq);
   }
 
   if (pageSlug === "deals") {
@@ -29,6 +37,9 @@ export function buildDemoLayout(pageSlug: PageBuilderSlug): PageLayoutDocument {
     hero.props.eyebrow = "Investor marketplace";
     hero.props.primaryCtaLabel = "";
     hero.props.secondaryCtaLabel = "";
+    blocks.unshift(compliance);
+    compliance.props.body =
+      "Opportunities shown here are for review only. CapitalOS does not guarantee funding, returns, or investment outcomes.";
   }
 
   if (pageSlug === "login") {
@@ -43,7 +54,7 @@ export function buildDemoLayout(pageSlug: PageBuilderSlug): PageLayoutDocument {
   return {
     version: 1,
     pageSlug,
-    blocks: [hero, trust, features, metrics, cta],
+    blocks,
   };
 }
 

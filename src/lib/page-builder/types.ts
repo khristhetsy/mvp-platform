@@ -11,6 +11,14 @@ export const APPROVED_BLOCK_TYPES = [
   "text_section",
   "image_banner",
   "spacer",
+  "testimonial",
+  "faq",
+  "process_steps",
+  "pricing_plan",
+  "compliance_notice",
+  "team",
+  "logo_cloud",
+  "stats_comparison",
 ] as const;
 
 export type PageBlockType = (typeof APPROVED_BLOCK_TYPES)[number];
