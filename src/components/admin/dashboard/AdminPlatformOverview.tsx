@@ -1,21 +1,30 @@
 import type { AdminCompanyCardData } from "@/components/AdminCompanyCard";
+import { ClickableCard } from "@/components/ui/drilldown";
 import { PageSection } from "@/components/ui/workspace-layout";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
+import {
+  getCompanyStatusHref,
+  getDrilldownHref,
+  getInvestorStatusHref,
+} from "@/lib/ui/drilldown-links";
 import type { AdminCommandCenterSnapshot } from "@/components/admin/dashboard/types";
 
 type SummaryStat = {
   label: string;
   value: string;
   detail?: string;
+  href: string;
 };
 
-function SummaryCard({ label, value, detail }: SummaryStat) {
+function SummaryCard({ label, value, detail, href }: SummaryStat) {
   return (
-    <div className="flex h-full flex-col rounded-lg border border-slate-200/80 bg-slate-50/80 p-3">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</p>
-      <p className="mt-1 font-mono text-lg font-semibold tabular-nums text-slate-950">{value}</p>
-      {detail ? <p className="mt-auto pt-1 text-xs text-slate-600">{detail}</p> : null}
-    </div>
+    <ClickableCard href={href} ariaLabel={`View ${label}`}>
+      <div className={`flex h-full flex-col rounded-lg border border-slate-200/80 bg-slate-50/80 p-3 transition-colors hover:border-slate-300 hover:bg-white`}>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</p>
+        <p className="mt-1 font-mono text-lg font-semibold tabular-nums text-slate-950">{value}</p>
+        {detail ? <p className="mt-auto pt-1 text-xs text-slate-600">{detail}</p> : null}
+      </div>
+    </ClickableCard>
   );
 }
 
@@ -64,6 +73,7 @@ export function AdminPlatformOverview({
                   label={status.replace(/_/g, " ")}
                   value={String(count)}
                   detail={`${publishedCount} published · ${marketplaceCount} marketplace visible`}
+                  href={getCompanyStatusHref(status)}
                 />
               ))}
             </div>
@@ -76,21 +86,25 @@ export function AdminPlatformOverview({
               label="Pending investor approvals"
               value={String(snapshot.pendingInvestorApprovals)}
               detail={`${snapshot.totalInvestors} total investor profiles`}
+              href={getInvestorStatusHref("submitted")}
             />
             <SummaryCard
               label="Open compliance events"
               value={String(snapshot.openComplianceEvents)}
               detail="Requires compliance review"
+              href={getDrilldownHref("compliance_open")}
             />
             <SummaryCard
               label="Notifications"
               value={String(snapshot.notificationCount)}
               detail="Platform notification records"
+              href={getDrilldownHref("notifications")}
             />
             <SummaryCard
               label="Reports generated"
               value={String(snapshot.reportsGenerated)}
               detail="Diligence reports on file"
+              href={getDrilldownHref("reports")}
             />
           </div>
         </WorkspacePanel>
@@ -101,7 +115,12 @@ export function AdminPlatformOverview({
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
               {planDistribution.map(([plan, count]) => (
-                <SummaryCard key={plan} label={plan} value={String(count)} />
+                <SummaryCard
+                  key={plan}
+                  label={plan}
+                  value={String(count)}
+                  href={getDrilldownHref("subscriptions")}
+                />
               ))}
             </div>
           )}
@@ -113,21 +132,25 @@ export function AdminPlatformOverview({
               label="Company updates published"
               value={String(totalUpdates)}
               detail="Across loaded founder companies"
+              href={getDrilldownHref("company_updates")}
             />
             <SummaryCard
               label="Pending upgrade requests"
               value={String(snapshot.pendingUpgradeRequests)}
               detail="Billing upgrade queue"
+              href={getDrilldownHref("upgrade_requests")}
             />
             <SummaryCard
               label="SPV pipeline"
               value={String(snapshot.spvPipelineCount)}
               detail="Active SPV opportunities"
+              href={getDrilldownHref("spv_activity")}
             />
             <SummaryCard
               label="Open compliance"
               value={String(snapshot.openComplianceEvents)}
               detail="Open vs resolved tracked in compliance module"
+              href={getDrilldownHref("compliance_open")}
             />
           </div>
         </WorkspacePanel>

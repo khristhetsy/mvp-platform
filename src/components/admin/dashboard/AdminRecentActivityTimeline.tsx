@@ -1,5 +1,7 @@
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ActionablePanelRow } from "@/components/ui/drilldown";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { getTimelineActivityHref } from "@/lib/ui/drilldown-links";
 import type { AdminCrmActivityRow } from "@/lib/data/investor-crm";
 
 const ACTIVITY_ICONS: Record<string, string> = {
@@ -85,19 +87,24 @@ export function AdminRecentActivityTimeline({
               <ul className="space-y-2 pl-8">
                 {rows.slice(0, 5).map((row) => {
                   const investor = row.investor_name ?? row.investor_email ?? "Unknown investor";
+                  const href = getTimelineActivityHref(row.activity_type);
                   return (
                     <li key={row.id} className="relative border-l border-slate-200 pl-4">
                       <span className="absolute -left-[3px] top-2 h-1.5 w-1.5 rounded-full bg-slate-300" aria-hidden />
-                      <div className="flex flex-wrap items-baseline justify-between gap-2">
-                        <p className="text-sm font-medium text-slate-900">{investor}</p>
-                        <time className="font-mono text-[10px] text-slate-400">{formatTimestamp(row.created_at)}</time>
-                      </div>
-                      <p className="text-xs text-slate-600">{row.company_name ?? "Unknown company"}</p>
-                      {row.pipeline_stage ? (
-                        <p className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-400">
-                          Pipeline · {formatActivityLabel(row.pipeline_stage)}
-                        </p>
-                      ) : null}
+                      <ActionablePanelRow href={href} ariaLabel={`View ${formatActivityLabel(row.activity_type)} for ${investor}`}>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-baseline justify-between gap-2">
+                            <p className="text-sm font-medium text-slate-900 group-hover:text-[var(--navy)]">{investor}</p>
+                            <time className="font-mono text-[10px] text-slate-400">{formatTimestamp(row.created_at)}</time>
+                          </div>
+                          <p className="text-xs text-slate-600">{row.company_name ?? "Unknown company"}</p>
+                          {row.pipeline_stage ? (
+                            <p className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-400">
+                              Pipeline · {formatActivityLabel(row.pipeline_stage)}
+                            </p>
+                          ) : null}
+                        </div>
+                      </ActionablePanelRow>
                     </li>
                   );
                 })}

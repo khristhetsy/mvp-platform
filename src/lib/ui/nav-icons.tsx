@@ -19,6 +19,7 @@ import {
   Target,
   TrendingUp,
   Users,
+  Upload,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -52,6 +53,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/admin/diligence": FileText,
   "/admin/compliance": Shield,
   "/admin/reports": BarChart3,
+  "/admin/imports": Upload,
   "/admin/analytics": LineChart,
   "/admin/system-health": Activity,
   "/admin/page-builder-lab": LayoutDashboard,

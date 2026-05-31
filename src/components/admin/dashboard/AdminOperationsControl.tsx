@@ -1,9 +1,14 @@
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PageSection } from "@/components/ui/workspace-layout";
+import { drilldownFocusClass, drilldownHoverClass } from "@/components/ui/drilldown";
+import {
+  getAdminOperationsControlHref,
+  type AdminOperationsControlKey,
+} from "@/lib/ui/drilldown-links";
 
 type ControlItem = {
-  href: string;
+  key: AdminOperationsControlKey;
   label: string;
   count: number | null;
   status: "neutral" | "info" | "success" | "warning" | "danger" | "pending";
@@ -27,42 +32,42 @@ export function AdminOperationsControl({
 }>) {
   const controls: ControlItem[] = [
     {
-      href: "/admin/companies",
+      key: "pending_company_reviews",
       label: "Pending Company Reviews",
       count: pendingReviews,
       status: pendingReviews > 0 ? "warning" : "success",
       detail: pendingReviews > 0 ? "Review queue active" : "Queue clear",
     },
     {
-      href: "/admin/investors",
+      key: "investor_approvals",
       label: "Investor Approvals",
       count: pendingInvestorApprovals,
       status: pendingInvestorApprovals > 0 ? "warning" : "success",
       detail: pendingInvestorApprovals > 0 ? "Approvals required" : "No pending approvals",
     },
     {
-      href: "/admin/compliance",
+      key: "compliance_queue",
       label: "Compliance Queue",
       count: openComplianceEvents,
       status: openComplianceEvents > 0 ? "danger" : "success",
       detail: openComplianceEvents > 0 ? "Events need review" : "No open events",
     },
     {
-      href: "/admin/spvs",
+      key: "spv_readiness",
       label: "SPV Readiness",
       count: spvPipelineCount,
       status: spvPipelineCount > 0 ? "info" : "neutral",
       detail: "Active SPV pipeline",
     },
     {
-      href: "/admin/reports",
+      key: "reports",
       label: "Reports",
       count: reportsGenerated,
       status: "info",
       detail: "Diligence reports generated",
     },
     {
-      href: "/admin/system-health",
+      key: "system_health",
       label: "System Health",
       count: null,
       status: serviceRoleOk ? "success" : "warning",
@@ -75,9 +80,10 @@ export function AdminOperationsControl({
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {controls.map((item) => (
           <Link
-            key={item.href + item.label}
-            href={item.href}
-            className="group flex h-full min-h-[5.5rem] flex-col rounded-xl border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)] transition hover:border-slate-300"
+            key={item.key}
+            href={getAdminOperationsControlHref(item.key)}
+            className={`group flex h-full min-h-[5.5rem] cursor-pointer flex-col rounded-xl border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)] no-underline ${drilldownHoverClass} ${drilldownFocusClass}`}
+            aria-label={`Open ${item.label}`}
           >
             <div className="flex items-start justify-between gap-2">
               <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">{item.label}</p>

@@ -11,6 +11,7 @@ export function MetricCard({
   statusLabel,
   status,
   urgency,
+  href,
 }: Readonly<{
   label: string;
   value: string;
@@ -22,6 +23,7 @@ export function MetricCard({
   statusLabel?: string;
   status?: "neutral" | "info" | "success" | "warning" | "danger" | "pending";
   urgency?: boolean;
+  href?: string;
 }>) {
   return (
     <OperationalMetric
@@ -35,6 +37,7 @@ export function MetricCard({
       statusLabel={statusLabel}
       status={status}
       urgency={urgency}
+      href={href}
     />
   );
 }

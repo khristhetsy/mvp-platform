@@ -1287,6 +1287,87 @@ export type Database = {
         };
         Relationships: [];
       };
+      import_batches: {
+        Row: {
+          id: string;
+          uploaded_by: string;
+          import_type: string;
+          file_name: string;
+          status: string;
+          total_rows: number;
+          valid_rows: number;
+          warning_rows: number;
+          error_rows: number;
+          created_rows: number;
+          updated_rows: number;
+          skipped_rows: number;
+          failed_rows: number;
+          mapping: Record<string, unknown> | null;
+          summary: Record<string, unknown> | null;
+          created_at: string;
+          completed_at: string | null;
+        };
+        Insert: {
+          uploaded_by: string;
+          import_type: string;
+          file_name: string;
+          status?: string;
+          total_rows?: number;
+          valid_rows?: number;
+          warning_rows?: number;
+          error_rows?: number;
+          created_rows?: number;
+          updated_rows?: number;
+          skipped_rows?: number;
+          failed_rows?: number;
+          mapping?: Record<string, unknown> | null;
+          summary?: Record<string, unknown> | null;
+          completed_at?: string | null;
+        };
+        Update: {
+          status?: string;
+          created_rows?: number;
+          updated_rows?: number;
+          skipped_rows?: number;
+          failed_rows?: number;
+          summary?: Record<string, unknown> | null;
+          completed_at?: string | null;
+        };
+        Relationships: [];
+      };
+      import_batch_rows: {
+        Row: {
+          id: string;
+          batch_id: string;
+          row_number: number;
+          status: string;
+          errors: string[] | null;
+          warnings: string[] | null;
+          raw_data: Record<string, unknown>;
+          mapped_data: Record<string, unknown> | null;
+          created_entity_type: string | null;
+          created_entity_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          batch_id: string;
+          row_number: number;
+          status: string;
+          errors?: string[] | null;
+          warnings?: string[] | null;
+          raw_data?: Record<string, unknown>;
+          mapped_data?: Record<string, unknown> | null;
+          created_entity_type?: string | null;
+          created_entity_id?: string | null;
+        };
+        Update: {
+          status?: string;
+          errors?: string[] | null;
+          created_entity_type?: string | null;
+          created_entity_id?: string | null;
+        };
+        Relationships: [];
+      };
       audit_logs: {
         Row: Record<string, unknown>;
         Insert: {

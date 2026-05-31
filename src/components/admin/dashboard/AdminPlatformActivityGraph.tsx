@@ -1,4 +1,7 @@
+import Link from "next/link";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { drilldownFocusClass, drilldownHoverClass } from "@/components/ui/drilldown";
+import { getPlatformActivityCategoryHref } from "@/lib/ui/drilldown-links";
 import type { AdminCrmActivityRow } from "@/lib/data/investor-crm";
 import type { AdminInvestorActivityData } from "@/components/admin/dashboard/types";
 
@@ -6,6 +9,7 @@ type ActivityCategory = {
   key: string;
   label: string;
   count: number;
+  href: string;
 };
 
 function countByTypes(activities: AdminCrmActivityRow[], types: string[]) {
@@ -17,7 +21,7 @@ function buildActivityCategories(
   investorActivity: AdminInvestorActivityData,
   companyUpdateCount: number,
 ): ActivityCategory[] {
-  return [
+  const categories = [
     {
       key: "interests",
       label: "Investor Interests",
@@ -54,6 +58,11 @@ function buildActivityCategories(
       count: countByTypes(crmActivity, ["spv_interest_expressed"]),
     },
   ];
+
+  return categories.map((category) => ({
+    ...category,
+    href: getPlatformActivityCategoryHref(category.key),
+  }));
 }
 
 export function AdminPlatformActivityGraph({
@@ -81,28 +90,27 @@ export function AdminPlatformActivityGraph({
             <p className="font-mono text-2xl font-semibold tabular-nums text-slate-950">{total}</p>
             <p className="text-xs text-slate-500">Combined activity signals in current view</p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            {categories.map((category) => (
-              <div key={category.key} className="text-right">
-                <p className="font-mono text-sm font-semibold tabular-nums text-slate-800">{category.count}</p>
-                <p className="text-[10px] text-slate-500">{category.label}</p>
-              </div>
-            ))}
-          </div>
+          <p className="text-[10px] text-slate-400">Click any category to view source data</p>
         </div>
 
         <div className="space-y-2.5" aria-label="Platform activity by category">
           {categories.map((category) => (
-            <div key={category.key} className="grid grid-cols-[8rem_1fr_2.5rem] items-center gap-3">
-              <p className="truncate text-xs font-medium text-slate-700">{category.label}</p>
+            <Link
+              key={category.key}
+              href={category.href}
+              title={`View ${category.label} in source module`}
+              aria-label={`View ${category.label} source data (${category.count})`}
+              className={`group grid cursor-pointer grid-cols-[8rem_1fr_2.5rem] items-center gap-3 rounded-lg px-1 py-1 no-underline ${drilldownHoverClass} ${drilldownFocusClass}`}
+            >
+              <p className="truncate text-xs font-medium text-slate-700 group-hover:text-[var(--navy)]">{category.label}</p>
               <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                 <div
-                  className="h-full rounded-full bg-[var(--navy)]/70 transition-all"
+                  className="h-full rounded-full bg-[var(--navy)]/70 transition-all group-hover:bg-[var(--navy)]"
                   style={{ width: `${Math.max(4, (category.count / max) * 100)}%` }}
                 />
               </div>
               <p className="text-right font-mono text-xs tabular-nums text-slate-600">{category.count}</p>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

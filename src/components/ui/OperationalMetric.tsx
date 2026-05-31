@@ -3,6 +3,7 @@ import type { OperationalStatus } from "@/lib/ui/design-tokens";
 import { metricAccentBorder } from "@/lib/ui/design-tokens";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { SparklineChart } from "@/components/ui/charts/SparklineChart";
+import { ClickableCard, drilldownHoverClass } from "@/components/ui/drilldown";
 
 export function OperationalMetric({
   label,
@@ -15,6 +16,7 @@ export function OperationalMetric({
   statusLabel,
   status = "neutral",
   urgency,
+  href,
 }: Readonly<{
   label: string;
   value: string;
@@ -26,6 +28,7 @@ export function OperationalMetric({
   statusLabel?: string;
   status?: OperationalStatus;
   urgency?: boolean;
+  href?: string;
 }>) {
   const border = metricAccentBorder[accent] ?? metricAccentBorder.slate;
   const trendSymbol =
@@ -33,9 +36,9 @@ export function OperationalMetric({
   const trendColor =
     trend === "up" ? "text-emerald-600" : trend === "down" ? "text-red-600" : "text-slate-500";
 
-  return (
+  const card = (
     <div
-      className={`flex h-full min-h-[8.5rem] flex-col rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)] transition hover:border-slate-300 ${
+      className={`flex h-full min-h-[8.5rem] flex-col rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)] ${href ? `cursor-pointer ${drilldownHoverClass}` : "transition hover:border-slate-300"} ${
         urgency ? "ring-1 ring-amber-200" : ""
       }`}
     >
@@ -67,6 +70,16 @@ export function OperationalMetric({
         </div>
       </div>
     </div>
+  );
+
+  if (!href) {
+    return card;
+  }
+
+  return (
+    <ClickableCard href={href} ariaLabel={`View ${label}`}>
+      {card}
+    </ClickableCard>
   );
 }
 

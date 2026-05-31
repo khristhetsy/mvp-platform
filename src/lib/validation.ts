@@ -476,3 +476,34 @@ export const companyUpdateCreateSchema = z.object({
 export const outreachCampaignQueueSchema = z.object({
   action: z.literal("queue"),
 });
+
+export const adminImportPreviewSchema = z.object({
+  importType: z.enum([
+    "companies",
+    "investors",
+    "founder_contacts",
+    "social_links",
+    "crm_notes_tags",
+    "outreach_contacts",
+  ]),
+  mapping: z.record(z.string(), z.string()).optional(),
+});
+
+export const adminImportConfirmSchema = z.object({
+  batchId: z.string().uuid(),
+  duplicateBehavior: z.enum(["skip", "update"]).default("skip"),
+});
+
+export const adminExportQuerySchema = z.object({
+  type: z.enum([
+    "companies",
+    "investors",
+    "founder_contacts",
+    "spv_readiness",
+    "compliance_events",
+    "outreach_campaigns",
+    "due_diligence",
+    "investor_activity",
+  ]),
+  format: z.enum(["csv", "xlsx", "json"]).default("csv"),
+});
