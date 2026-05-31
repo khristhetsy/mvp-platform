@@ -24,6 +24,7 @@ export function AdminDashboardShell({
   investorActivity,
   crmActivity,
   operationalActivity,
+  queueSummary,
 }: AdminCommandCenterProps) {
   const companyUpdateCount = companyCards.reduce((sum, company) => sum + company.company_updates_published_count, 0);
 
@@ -38,14 +39,7 @@ export function AdminDashboardShell({
 
         <AdminKpiGrid metrics={metrics} snapshot={snapshot} serviceRoleConfigured={serviceRoleConfigured} />
 
-        <AdminOperationsControl
-          pendingReviews={metrics.pendingReviews}
-          pendingInvestorApprovals={snapshot.pendingInvestorApprovals}
-          openComplianceEvents={snapshot.openComplianceEvents}
-          spvPipelineCount={snapshot.spvPipelineCount}
-          reportsGenerated={snapshot.reportsGenerated}
-          serviceRoleOk={serviceRoleConfigured}
-        />
+        <AdminOperationsControl queueSummary={queueSummary} serviceRoleOk={serviceRoleConfigured} />
 
         <AdminPlatformActivityGraph
           crmActivity={crmActivity}

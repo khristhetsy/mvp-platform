@@ -7,6 +7,7 @@ import { getRemediationSummaryForCompanies } from "@/lib/remediation/tasks";
 import { getRequestedPlansByProfileIds } from "@/lib/billing/requested-plan";
 import { listSubscriptionsByProfileIds } from "@/lib/subscriptions/get-subscription";
 import { getOperationalActivityFeed } from "@/lib/operational-activity/event-queries";
+import { getAdminQueueSummary } from "@/lib/queues/admin-queues";
 import { listRecentInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
 import { getComplianceMetrics } from "@/lib/compliance/events";
@@ -26,6 +27,7 @@ export default async function AdminDashboardPage() {
     investorActivity,
     crmActivity,
     operationalFeed,
+    queueSummary,
     compliance,
     investorCount,
     pendingInvestorApprovals,
@@ -39,6 +41,7 @@ export default async function AdminDashboardPage() {
     listAdminInvestorActivity(supabase),
     listRecentInvestorCrmActivity(supabase),
     getOperationalActivityFeed(supabase, { limit: 30 }).catch(() => ({ items: [], total: 0, hasMore: false })),
+    getAdminQueueSummary(supabase).catch(() => []),
     getComplianceMetrics(supabase),
     supabase.from("profiles").select("id", { count: "exact", head: true }).ilike("role", "investor"),
     supabase.from("investor_profiles").select("id", { count: "exact", head: true }).eq("approval_status", "pending"),
@@ -97,6 +100,7 @@ export default async function AdminDashboardPage() {
         investorActivity={investorActivity}
         crmActivity={crmActivity}
         operationalActivity={operationalFeed.items}
+        queueSummary={queueSummary}
       />
     </AppShell>
   );

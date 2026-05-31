@@ -1,6 +1,7 @@
 import type { AdminCompanyCardData } from "@/components/AdminCompanyCard";
 import type { AdminCrmActivityRow } from "@/lib/data/investor-crm";
 import type { OperationalActivityFeedItem } from "@/lib/operational-activity/types";
+import type { AdminQueueSummaryItem } from "@/lib/queues/admin-queues";
 
 export type AdminDashboardMetrics = {
   founders: number;
@@ -39,4 +40,5 @@ export type AdminCommandCenterProps = {
   investorActivity: AdminInvestorActivityData;
   crmActivity: AdminCrmActivityRow[];
   operationalActivity: OperationalActivityFeedItem[];
+  queueSummary: AdminQueueSummaryItem[];
 };

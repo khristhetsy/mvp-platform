@@ -140,15 +140,15 @@ export type AdminOperationsControlKey =
 export function getAdminOperationsControlHref(key: AdminOperationsControlKey): string {
   switch (key) {
     case "pending_company_reviews":
-      return getDrilldownHref("companies_pending");
+      return "/admin/queues?queue=company_reviews";
     case "investor_approvals":
-      return getDrilldownHref("investors_pending");
+      return "/admin/queues?queue=investor_approvals";
     case "compliance_queue":
-      return getDrilldownHref("compliance_open");
+      return "/admin/queues?queue=compliance_escalations";
     case "spv_readiness":
-      return getDrilldownHref("spv_activity");
+      return "/admin/queues?queue=spv_blockers";
     case "reports":
-      return getDrilldownHref("reports");
+      return "/admin/queues?queue=imports_exports";
     case "system_health":
       return getDrilldownHref("platform_health");
   }
