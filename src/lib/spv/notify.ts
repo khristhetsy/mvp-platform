@@ -89,6 +89,78 @@ export async function notifyFounderSpvDocumentReady(input: {
   });
 }
 
+export async function notifyInvestorSpvRequirementsRequested(input: {
+  investorId: string;
+  spvOpportunityId: string;
+  spvName: string;
+  actorId?: string | null;
+}) {
+  return createNotification({
+    recipientUserId: input.investorId,
+    actorUserId: input.actorId,
+    type: "spv_requirements_requested",
+    title: "SPV document requirements",
+    message: `Document intake requirements were added for SPV "${input.spvName}". Upload is coming soon — track status in your SPV workspace.`,
+    entityType: "spv_opportunity",
+    entityId: input.spvOpportunityId,
+  });
+}
+
+export async function notifyInvestorSpvRequirementReviewed(input: {
+  investorId: string;
+  spvOpportunityId: string;
+  spvName: string;
+  requirementTitle: string;
+  status: string;
+  actorId: string;
+}) {
+  return createNotification({
+    recipientUserId: input.investorId,
+    actorUserId: input.actorId,
+    type: "spv_requirement_reviewed",
+    title: "SPV document requirement updated",
+    message: `"${input.requirementTitle}" for ${input.spvName} is now ${input.status}. This is operational tracking only — not acceptance into an offering.`,
+    entityType: "spv_opportunity",
+    entityId: input.spvOpportunityId,
+  });
+}
+
+export async function notifyStaffSpvRequirementUploaded(input: {
+  investorId: string;
+  spvOpportunityId: string;
+  spvName: string;
+  requirementTitle: string;
+  actorId: string;
+}) {
+  return notifyStaff({
+    actorUserId: input.actorId,
+    type: "spv_requirement_uploaded",
+    title: "SPV requirement uploaded",
+    message: `Requirement "${input.requirementTitle}" marked uploaded for ${input.spvName}. Review in admin SPV workspace.`,
+    entityType: "spv_opportunity",
+    entityId: input.spvOpportunityId,
+  });
+}
+
+export async function notifyFounderSpvInvestorAggregateChanged(input: {
+  companyId: string;
+  spvOpportunityId: string;
+  spvName: string;
+  companyName: string;
+  investorsReady: number;
+  pendingRequirements: number;
+  actorId: string | null;
+}) {
+  return notifyCompanyFounder(input.companyId, {
+    actorUserId: input.actorId,
+    type: "spv_investor_aggregate_changed",
+    title: "SPV investor document readiness updated",
+    message: `${input.spvName}: ${input.investorsReady} investor(s) document-ready, ${input.pendingRequirements} pending requirement(s). Aggregate tracking only — no investor documents are shared with founders.`,
+    entityType: "spv_opportunity",
+    entityId: input.spvOpportunityId,
+  });
+}
+
 export async function notifyInvestorSpvStatusChanged(input: {
   recipientUserId: string;
   spvOpportunityId: string;

@@ -21,3 +21,9 @@ export const spvChecklistDisclaimers = [
   "It is not legal advice and does not generate securities offering documents.",
   "Completion of checklist items does not constitute an offer to sell securities.",
 ];
+
+export const spvIntakeDisclaimers = [
+  "Investor document intake tracking is operational only.",
+  "It is not legal advice and is not acceptance into a securities offering.",
+  "Completion of intake requirements does not equal a securities transaction.",
+];

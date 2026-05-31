@@ -2,6 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { InvestorSpvWorkspace } from "@/components/InvestorSpvWorkspace";
 import { canInvestorPerformSensitiveActions } from "@/lib/investor/access";
+import { listInvestorParticipationRequirements } from "@/lib/spv/participation-requirements";
 import { loadInvestorSpvWorkspace } from "@/lib/spv/spv-workflow";
 import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -19,7 +20,12 @@ export default async function InvestorSpvsPage() {
   }
 
   const supabase = await createServerSupabaseClient();
-  const workspace = await loadInvestorSpvWorkspace(supabase, investorId);
+  const [workspace, requirementsResult] = await Promise.all([
+    loadInvestorSpvWorkspace(supabase, investorId),
+    listInvestorParticipationRequirements(supabase, investorId),
+  ]);
+  const requirements =
+    "data" in requirementsResult ? (requirementsResult.data ?? []) : [];
 
   return (
     <AppShell
@@ -41,6 +47,7 @@ export default async function InvestorSpvsPage() {
         <InvestorSpvWorkspace
           openOpportunities={workspace.openOpportunities}
           participations={workspace.participations}
+          requirements={requirements}
         />
       </InvestorFeatureGate>
     </AppShell>

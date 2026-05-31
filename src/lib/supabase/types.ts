@@ -254,6 +254,8 @@ export type Database = {
           terms_summary: string | null;
           checklist_readiness_pct: number;
           document_ready_at: string | null;
+          investors_document_ready_count: number;
+          investor_pending_requirements_count: number;
           created_at: string;
           updated_at: string;
         };
@@ -268,6 +270,8 @@ export type Database = {
           terms_summary?: string | null;
           checklist_readiness_pct?: number;
           document_ready_at?: string | null;
+          investors_document_ready_count?: number;
+          investor_pending_requirements_count?: number;
           updated_at?: string;
         };
         Update: {
@@ -279,6 +283,8 @@ export type Database = {
           terms_summary?: string | null;
           checklist_readiness_pct?: number;
           document_ready_at?: string | null;
+          investors_document_ready_count?: number;
+          investor_pending_requirements_count?: number;
           updated_at?: string;
         };
         Relationships: [];
@@ -328,6 +334,8 @@ export type Database = {
           indicative_amount: number | null;
           status: string;
           notes: string | null;
+          document_readiness_pct: number;
+          document_ready_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -338,12 +346,58 @@ export type Database = {
           indicative_amount?: number | null;
           status?: string;
           notes?: string | null;
+          document_readiness_pct?: number;
+          document_ready_at?: string | null;
           updated_at?: string;
         };
         Update: {
           indicative_amount?: number | null;
           status?: string;
           notes?: string | null;
+          document_readiness_pct?: number;
+          document_ready_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      spv_participation_requirements: {
+        Row: {
+          id: string;
+          spv_participation_id: string;
+          spv_opportunity_id: string;
+          investor_id: string;
+          requirement_key: string;
+          title: string;
+          description: string | null;
+          category: string;
+          status: string;
+          required: boolean;
+          uploaded_document_id: string | null;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          spv_participation_id: string;
+          spv_opportunity_id: string;
+          investor_id: string;
+          requirement_key: string;
+          title: string;
+          description?: string | null;
+          category: string;
+          status?: string;
+          required?: boolean;
+          uploaded_document_id?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          status?: string;
+          uploaded_document_id?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
           updated_at?: string;
         };
         Relationships: [];

@@ -15,6 +15,10 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { assertSpvCanClose, seedSpvChecklistItems } from "@/lib/spv/checklist";
+import {
+  assertParticipationCanComplete,
+  seedSpvParticipationRequirements,
+} from "@/lib/spv/participation-requirements";
 import { formatSpvCurrency, getSpvParticipationTotals } from "@/lib/spv/display";
 
 export { formatSpvCurrency, getSpvParticipationTotals };
@@ -180,20 +184,32 @@ export async function seedSpvParticipationsFromInterests(
           ? Number(row.interest_amount)
           : null;
 
-    const { error: insertError } = await admin.from("spv_participations").upsert(
-      {
-        spv_opportunity_id: spvOpportunityId,
-        investor_id: row.investor_id,
-        company_id: spv.company_id,
-        indicative_amount: indicative,
-        status: "invited",
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "spv_opportunity_id,investor_id" },
-    );
+    const { data: participation, error: insertError } = await admin
+      .from("spv_participations")
+      .upsert(
+        {
+          spv_opportunity_id: spvOpportunityId,
+          investor_id: row.investor_id,
+          company_id: spv.company_id,
+          indicative_amount: indicative,
+          status: "invited",
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "spv_opportunity_id,investor_id" },
+      )
+      .select("id")
+      .single();
 
-    if (!insertError) {
+    if (!insertError && participation?.id) {
       created += 1;
+      void seedSpvParticipationRequirements(admin, {
+        spvParticipationId: participation.id,
+        spvOpportunityId,
+        investorId: row.investor_id,
+        spvName: spv.name,
+        notifyInvestor: spv.status === "open",
+        actorId,
+      });
       if (spv.status === "open") {
         void notifyInvestorSpvInvited({
           investorId: row.investor_id,
@@ -310,6 +326,23 @@ export async function upsertInvestorSpvParticipation(
     input.status ??
     (input.indicativeAmount != null && input.indicativeAmount > 0 ? "soft_committed" : "interested");
 
+  if (status === "completed") {
+    const { data: existingPart } = await supabase
+      .from("spv_participations")
+      .select("id")
+      .eq("spv_opportunity_id", input.spvOpportunityId)
+      .eq("investor_id", input.investorId)
+      .maybeSingle();
+
+    if (existingPart?.id) {
+      const admin = createServiceRoleClient();
+      const check = await assertParticipationCanComplete(admin, existingPart.id);
+      if (check.error) {
+        return { error: check.error };
+      }
+    }
+  }
+
   const now = new Date().toISOString();
   const { data: existing } = await supabase
     .from("spv_participations")
@@ -346,6 +379,19 @@ export async function upsertInvestorSpvParticipation(
 
   if (result.error || !result.data) {
     return { error: result.error ?? new Error("Unable to save SPV participation.") };
+  }
+
+  const participation = result.data as SpvParticipationRecord;
+
+  if (!existing?.id) {
+    const admin = createServiceRoleClient();
+    void seedSpvParticipationRequirements(admin, {
+      spvParticipationId: participation.id,
+      spvOpportunityId: input.spvOpportunityId,
+      investorId: input.investorId,
+      spvName: spv.name,
+      actorId: input.investorId,
+    });
   }
 
   const companyName =
@@ -393,7 +439,7 @@ export async function upsertInvestorSpvParticipation(
     }
   }
 
-  return { data: result.data as SpvParticipationRecord };
+  return { data: participation };
 }
 
 export async function listAdminCompaniesForSpv(admin: SupabaseClient<Database>) {

@@ -6,7 +6,15 @@ import Link from "next/link";
 import { SpvComplianceNotice } from "@/components/SpvComplianceNotice";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { formatSpvCurrency, investorPreparationLabel } from "@/lib/spv/display";
-import type { SpvOpportunityRecord, SpvParticipationRecord } from "@/lib/spv/types";
+import {
+  computeParticipationReadinessPct,
+  formatParticipationRequirementCategory,
+} from "@/lib/spv/participation-display";
+import type {
+  SpvOpportunityRecord,
+  SpvParticipationRecord,
+  SpvParticipationRequirementRecord,
+} from "@/lib/spv/types";
 import { formatApiError } from "@/lib/api/errors";
 
 type ParticipationRow = SpvParticipationRecord & {
@@ -16,10 +24,18 @@ type ParticipationRow = SpvParticipationRecord & {
 export function InvestorSpvWorkspace({
   openOpportunities,
   participations,
+  requirements,
 }: Readonly<{
   openOpportunities: SpvOpportunityRecord[];
   participations: ParticipationRow[];
+  requirements: SpvParticipationRequirementRecord[];
 }>) {
+  const requirementsByParticipation = new Map<string, SpvParticipationRequirementRecord[]>();
+  for (const row of requirements) {
+    const list = requirementsByParticipation.get(row.spv_participation_id) ?? [];
+    list.push(row);
+    requirementsByParticipation.set(row.spv_participation_id, list);
+  }
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +64,49 @@ export function InvestorSpvWorkspace({
 
   return (
     <div className="space-y-6">
-      <SpvComplianceNotice showChecklistNotice />
+      <SpvComplianceNotice showChecklistNotice showIntakeNotice />
+
+      <WorkspacePanel
+        title="Your document requirements"
+        subtitle="Status tracking only — secure upload coming soon"
+      >
+        {requirements.length === 0 ? (
+          <p className="text-sm text-slate-600">No document requirements assigned yet.</p>
+        ) : (
+          <div className="space-y-4">
+            {participations.map((row) => {
+              const spv = Array.isArray(row.spv_opportunities)
+                ? row.spv_opportunities[0]
+                : row.spv_opportunities;
+              const rows = requirementsByParticipation.get(row.id) ?? [];
+              if (rows.length === 0) {
+                return null;
+              }
+              const pct = row.document_readiness_pct ?? computeParticipationReadinessPct(rows);
+
+              return (
+                <div key={row.id} className="rounded-xl border border-slate-200 p-4 text-sm">
+                  <p className="font-semibold text-slate-900">{spv?.name ?? "SPV"}</p>
+                  <p className="mt-1 text-xs text-indigo-700">Your document readiness: {pct}%</p>
+                  <p className="mt-2 text-xs text-amber-900">
+                    Document upload coming soon. Staff will update status after offline intake.
+                  </p>
+                  <ul className="mt-3 space-y-2">
+                    {rows.map((req) => (
+                      <li key={req.id} className="rounded border border-slate-100 px-2 py-2 text-xs">
+                        <p className="font-medium text-slate-900">{req.title}</p>
+                        <p className="text-slate-500">
+                          {formatParticipationRequirementCategory(req.category)} · {req.status}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </WorkspacePanel>
 
       <WorkspacePanel title="Your SPV participations" subtitle={`${participations.length} record(s)`}>
         {participations.length === 0 ? (

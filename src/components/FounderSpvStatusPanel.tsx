@@ -31,7 +31,7 @@ export function FounderSpvStatusPanel({
 
   return (
     <div className="space-y-4">
-      <SpvComplianceNotice showChecklistNotice />
+      <SpvComplianceNotice showChecklistNotice showIntakeNotice />
       <WorkspacePanel
         title="SPV opportunity status"
         subtitle="Admin-managed SPV workflow — founders cannot create legal SPVs in Phase 1"
@@ -59,8 +59,12 @@ export function FounderSpvStatusPanel({
                     {totals.softCommittedCount} soft-committed
                   </p>
                   <p className="mt-2 text-xs font-medium text-indigo-700">
-                    Document readiness: {readinessPct}%
-                    {spv.document_ready_at ? " · Document-ready (operational)" : null}
+                    SPV checklist: {readinessPct}%
+                    {spv.document_ready_at ? " · SPV document-ready (operational)" : null}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-600">
+                    Investor documents: {spv.investors_document_ready_count ?? 0} investor(s) document-ready ·{" "}
+                    {spv.investor_pending_requirements_count ?? 0} pending requirement(s) (aggregate only)
                   </p>
                   {categories.length > 0 ? (
                     <ul className="mt-2 grid gap-1 sm:grid-cols-2">

@@ -377,6 +377,22 @@ export const adminSpvChecklistItemUpdateSchema = z.object({
   status: z.enum(["pending", "in_progress", "completed", "waived"]),
 });
 
+export const adminSpvParticipationRequirementUpdateSchema = z.object({
+  status: z.enum(["pending", "uploaded", "under_review", "approved", "rejected", "waived"]),
+});
+
+export const adminSpvParticipationUpdateSchema = z.object({
+  status: z.enum([
+    "invited",
+    "interested",
+    "soft_committed",
+    "documents_pending",
+    "completed",
+    "declined",
+    "canceled",
+  ]),
+});
+
 export const investorSpvParticipationSchema = z.object({
   spvOpportunityId: z.string().uuid(),
   indicativeAmount: z.coerce.number().nonnegative().optional(),

@@ -47,7 +47,11 @@ export type NotificationType =
   | "spv_interest_expressed"
   | "spv_participation_status_changed"
   | "spv_checklist_complete"
-  | "spv_document_ready";
+  | "spv_document_ready"
+  | "spv_requirements_requested"
+  | "spv_requirement_reviewed"
+  | "spv_requirement_uploaded"
+  | "spv_investor_aggregate_changed";
 
 export type NotificationRecord = {
   id: string;

@@ -63,9 +63,55 @@ export type SpvOpportunityRecord = {
   terms_summary: string | null;
   checklist_readiness_pct?: number | null;
   document_ready_at?: string | null;
+  investors_document_ready_count?: number | null;
+  investor_pending_requirements_count?: number | null;
   created_at: string;
   updated_at: string;
   companies?: { company_name?: string | null; slug?: string | null } | null;
+};
+
+export const SPV_PARTICIPATION_REQUIREMENT_CATEGORIES = [
+  "subscription_docs",
+  "accreditation",
+  "kyc_aml",
+  "tax",
+  "banking",
+  "admin_review",
+] as const;
+
+export type SpvParticipationRequirementCategory =
+  (typeof SPV_PARTICIPATION_REQUIREMENT_CATEGORIES)[number];
+
+export const SPV_PARTICIPATION_REQUIREMENT_STATUSES = [
+  "pending",
+  "uploaded",
+  "under_review",
+  "approved",
+  "rejected",
+  "waived",
+] as const;
+
+export type SpvParticipationRequirementStatus =
+  (typeof SPV_PARTICIPATION_REQUIREMENT_STATUSES)[number];
+
+export type SpvParticipationRequirementRecord = {
+  id: string;
+  spv_participation_id: string;
+  spv_opportunity_id: string;
+  investor_id: string;
+  requirement_key: string;
+  title: string;
+  description: string | null;
+  category: SpvParticipationRequirementCategory | string;
+  status: SpvParticipationRequirementStatus | string;
+  required: boolean;
+  uploaded_document_id: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  profiles?: { full_name?: string | null; email?: string | null } | null;
+  spv_opportunities?: { name?: string | null; status?: string | null } | null;
 };
 
 export type SpvParticipationRecord = {
@@ -76,6 +122,8 @@ export type SpvParticipationRecord = {
   indicative_amount: number | null;
   status: SpvParticipationStatus | string;
   notes: string | null;
+  document_readiness_pct?: number | null;
+  document_ready_at?: string | null;
   created_at: string;
   updated_at: string;
   profiles?: { full_name?: string | null; email?: string | null } | null;

@@ -10,10 +10,16 @@ import {
   formatChecklistCategory,
   formatSpvCurrency,
 } from "@/lib/spv/display";
+import {
+  areRequiredParticipationRequirementsComplete,
+  computeParticipationReadinessPct,
+  formatParticipationRequirementCategory,
+} from "@/lib/spv/participation-display";
 import type {
   SpvChecklistItemRecord,
   SpvOpportunityRecord,
   SpvParticipationRecord,
+  SpvParticipationRequirementRecord,
 } from "@/lib/spv/types";
 import { formatApiError } from "@/lib/api/errors";
 
@@ -23,11 +29,13 @@ export function AdminSpvManagement({
   opportunities,
   participationsBySpv,
   checklistBySpv,
+  requirementsByParticipation,
   companies,
 }: Readonly<{
   opportunities: SpvOpportunityRecord[];
   participationsBySpv: Record<string, SpvParticipationRecord[]>;
   checklistBySpv: Record<string, SpvChecklistItemRecord[]>;
+  requirementsByParticipation: Record<string, SpvParticipationRequirementRecord[]>;
   companies: CompanyOption[];
 }>) {
   const router = useRouter();
@@ -50,6 +58,48 @@ export function AdminSpvManagement({
     }
     return map;
   }, [participationsBySpv]);
+
+  async function updateRequirement(requirementId: string, status: string) {
+    setLoading("req-" + requirementId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/spv-participation-requirements/${requirementId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(formatApiError(payload, "Requirement update failed."));
+      }
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Requirement update failed.");
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function setParticipationStatus(participationId: string, status: string) {
+    setLoading("part-" + participationId + status);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/spv-participations/${participationId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(formatApiError(payload, "Participation update failed."));
+      }
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Participation update failed.");
+    } finally {
+      setLoading(null);
+    }
+  }
 
   async function updateChecklistItem(itemId: string, status: string) {
     setLoading("checklist-" + itemId);
@@ -143,7 +193,7 @@ export function AdminSpvManagement({
 
   return (
     <div className="space-y-6">
-      <SpvComplianceNotice showChecklistNotice />
+      <SpvComplianceNotice showChecklistNotice showIntakeNotice />
 
       <WorkspacePanel title="Create SPV opportunity" subtitle="Admin-reviewed workflow — not legal formation">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -236,7 +286,11 @@ export function AdminSpvManagement({
                         {totals.count} participants · {formatSpvCurrency(totals.total)} indicative
                       </p>
                       <p className="mt-1 font-medium text-indigo-700">
-                        Document readiness: {readinessPct}%
+                        SPV checklist: {readinessPct}%
+                      </p>
+                      <p className="mt-0.5 text-slate-500">
+                        {spv.investors_document_ready_count ?? 0} investors document-ready ·{" "}
+                        {spv.investor_pending_requirements_count ?? 0} pending investor reqs
                       </p>
                     </div>
                   </div>
@@ -335,17 +389,103 @@ export function AdminSpvManagement({
                   )}
 
                   {parts.length > 0 ? (
-                    <ul className="mt-3 space-y-1 text-xs text-slate-600">
-                      {parts.slice(0, 8).map((row) => {
+                    <div className="mt-4 space-y-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Investor document intake
+                      </p>
+                      {parts.map((row) => {
                         const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+                        const requirements = requirementsByParticipation[row.id] ?? [];
+                        const investorPct =
+                          row.document_readiness_pct ?? computeParticipationReadinessPct(requirements);
+                        const canComplete = areRequiredParticipationRequirementsComplete(requirements);
+
                         return (
-                          <li key={row.id}>
-                            {profile?.full_name ?? profile?.email ?? "Investor"} · {row.status} ·{" "}
-                            {formatSpvCurrency(row.indicative_amount)}
-                          </li>
+                          <div
+                            key={row.id}
+                            className="rounded-lg border border-slate-200 bg-white p-3 text-xs"
+                          >
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                              <p className="font-medium text-slate-900">
+                                {profile?.full_name ?? profile?.email ?? "Investor"} · {row.status} ·{" "}
+                                {formatSpvCurrency(row.indicative_amount)}
+                              </p>
+                              <p className="text-indigo-700">Investor readiness: {investorPct}%</p>
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              <button
+                                type="button"
+                                disabled={loading != null || !canComplete}
+                                title={
+                                  canComplete
+                                    ? undefined
+                                    : "Approve or waive all required investor requirements first."
+                                }
+                                onClick={() => void setParticipationStatus(row.id, "completed")}
+                                className="rounded border px-1.5 py-0.5 disabled:opacity-40"
+                              >
+                                Mark completed
+                              </button>
+                            </div>
+                            {requirements.length > 0 ? (
+                              <ul className="mt-2 space-y-2">
+                                {requirements.map((req) => (
+                                  <li key={req.id} className="rounded border border-slate-100 px-2 py-1.5">
+                                    <p className="font-medium text-slate-800">
+                                      {req.title}
+                                      {req.required ? (
+                                        <span className="ml-1 text-red-600">*</span>
+                                      ) : null}
+                                    </p>
+                                    <p className="text-slate-500">
+                                      {formatParticipationRequirementCategory(req.category)} · {req.status}
+                                    </p>
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                      <button
+                                        type="button"
+                                        disabled={loading != null}
+                                        onClick={() => void updateRequirement(req.id, "uploaded")}
+                                        className="rounded border px-1.5 py-0.5"
+                                      >
+                                        Uploaded
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={loading != null}
+                                        onClick={() => void updateRequirement(req.id, "approved")}
+                                        className="rounded border px-1.5 py-0.5"
+                                      >
+                                        Approve
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={loading != null}
+                                        onClick={() => void updateRequirement(req.id, "rejected")}
+                                        className="rounded border px-1.5 py-0.5"
+                                      >
+                                        Reject
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={loading != null}
+                                        onClick={() => void updateRequirement(req.id, "waived")}
+                                        className="rounded border px-1.5 py-0.5"
+                                      >
+                                        Waive
+                                      </button>
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="mt-2 text-amber-800">
+                                Requirements not seeded (re-seed participation or create new).
+                              </p>
+                            )}
+                          </div>
                         );
                       })}
-                    </ul>
+                    </div>
                   ) : null}
                 </div>
               );
