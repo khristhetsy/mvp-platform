@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
+import { enforceRateLimit } from "@/lib/api/rate-limit";
+import { recordOperationalError } from "@/lib/monitoring/operational-events";
 import { writeAuditLog } from "@/lib/data/audit";
 import {
   buildStoragePath,
@@ -35,6 +37,16 @@ export async function POST(request: Request) {
 
   if ("error" in auth) {
     return auth.error;
+  }
+
+  const rateLimited = await enforceRateLimit({
+    bucket: "document_upload",
+    subjectId: auth.profile.id,
+    limit: 20,
+    windowMs: 60_000,
+  });
+  if (rateLimited) {
+    return rateLimited;
   }
 
   let company = await ensureFounderCompanyForUser(auth.profile);
@@ -115,6 +127,11 @@ export async function POST(request: Request) {
   });
 
   if (uploadError) {
+    recordOperationalError("document.upload_storage_failed", uploadError, {
+      userId: auth.profile.id,
+      companyId: parsed.data.companyId,
+      documentType: parsed.data.documentType,
+    });
     if (uploadError.message.toLowerCase().includes("bucket not found")) {
       return NextResponse.json(
         {

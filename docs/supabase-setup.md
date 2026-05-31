@@ -4,18 +4,47 @@
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY` (server-only)
-2. Run migrations in order in the Supabase SQL editor (or via Supabase CLI):
-   - `supabase/migrations/0001_initial_schema_rls.sql`
-   - `supabase/migrations/0002_auto_profile_trigger.sql`
-   - `supabase/migrations/0003_company_members_rls_storage.sql`
-   - `supabase/migrations/0004_documents_upload_hardening.sql`
-   - `supabase/migrations/0005_company_settings_hardening.sql`
-   - `supabase/migrations/0006_storage_company_documents_policies.sql`
-   - `supabase/migrations/0007_admin_platform_linking.sql`
-   - `supabase/migrations/0008_admin_rls_hardening.sql`
-   - `supabase/migrations/0009_marketplace_publication.sql`
-   - `supabase/migrations/0010_investor_actions.sql`
-   - `supabase/migrations/0011_backfill_marketplace_campaigns.sql`
+2. Run migrations **in numeric order** in the Supabase SQL editor (or via Supabase CLI). Apply every file from `0001` through `0037` on a fresh project:
+
+   | # | File |
+   |---|------|
+   | 0001 | `0001_initial_schema_rls.sql` |
+   | 0002 | `0002_auto_profile_trigger.sql` |
+   | 0003 | `0003_company_members_rls_storage.sql` |
+   | 0004 | `0004_documents_upload_hardening.sql` |
+   | 0005 | `0005_company_settings_hardening.sql` |
+   | 0006 | `0006_storage_company_documents_policies.sql` |
+   | 0007 | `0007_admin_platform_linking.sql` |
+   | 0008 | `0008_admin_rls_hardening.sql` |
+   | 0009 | `0009_marketplace_publication.sql` |
+   | 0010 | `0010_investor_actions.sql` |
+   | 0011 | `0011_backfill_marketplace_campaigns.sql` |
+   | 0012 | `0012_investor_crm.sql` |
+   | 0013 | `0013_investor_pledge_amounts.sql` |
+   | 0014 | `0014_company_pledge_summaries.sql` |
+   | 0015 | `0015_subscriptions.sql` |
+   | 0016 | `0016_upgrade_requests.sql` |
+   | 0017 | `0017_founder_onboarding.sql` |
+   | 0018 | `0018_founder_remediation_tasks.sql` |
+   | 0019 | `0019_founder_learning.sql` |
+   | 0020 | `0020_investor_profiles.sql` |
+   | 0021 | `0021_notifications.sql` |
+   | 0022 | `0022_message_threads.sql` |
+   | 0023 | `0023_connected_accounts.sql` |
+   | 0024 | `0024_thread_meetings_calendar_host.sql` |
+   | 0025 | `0025_founder_investor_crm.sql` |
+   | 0026 | `0026_founder_social_outreach.sql` |
+   | 0027 | `0027_compliance_events.sql` |
+   | 0028 | `0028_investor_report_viewed_activity.sql` |
+   | 0029 | `0029_company_updates.sql` |
+   | 0030 | `0030_spv_workflow.sql` |
+   | 0031 | `0031_spv_checklist.sql` |
+   | 0032 | `0032_spv_participation_requirements.sql` |
+   | 0033 | `0033_spv_requirement_documents.sql` |
+   | 0034 | `0034_spv_operational_readiness.sql` |
+   | 0035 | `0035_spv_document_packages.sql` |
+   | 0036 | `0036_spv_closing_reviews.sql` |
+   | 0037 | `0037_spv_founder_rls_hardening.sql` (removes founder SELECT on internal SPV notes) |
 3. Confirm the private storage bucket `pitch-decks` exists (`0003` creates it).
 4. Pitch deck object path format:
 
@@ -72,7 +101,7 @@ This adds `spv_opportunities` and `spv_participations` with RLS (staff full acce
 
 Run migration `0031_spv_checklist.sql` for the SPV document readiness checklist (`spv_checklist_items`). Checklist items auto-seed when an admin creates an SPV. Staff manage item status on `/admin/spvs`; founders see category-level progress on `/founder/capital-raise`; investors see a simplified preparation label on `/investor/spvs`. Closing an SPV is blocked until required checklist items are completed or waived.
 
-Run migration `0032_spv_participation_requirements.sql` for per-investor SPV document intake (`spv_participation_requirements`). Requirements auto-seed when a participation is created. Admin reviews requirements and investor readiness on `/admin/spvs`; investors see their own requirement checklist on `/investor/spvs` (upload coming soon); founders see aggregate counts only on `/founder/capital-raise`. Marking a participation `completed` is blocked until required requirements are approved or waived.
+Run migration `0032_spv_participation_requirements.sql` for per-investor SPV document intake (`spv_participation_requirements`). Requirements auto-seed when a participation is created. Admin reviews requirements and investor readiness on `/admin/spvs`; investors upload via `/investor/spvs` and `POST /api/investor/spv-participation-requirements/[id]/upload`; founders see aggregate counts only on `/founder/capital-raise`. Marking a participation `completed` is blocked until required requirements are approved or waived.
 
 Run migration `0033_spv_requirement_documents.sql` for investor SPV document uploads to the private `spv-investor-documents` bucket. Investors upload via `POST /api/investor/spv-participation-requirements/[id]/upload`; files are linked on `uploaded_document_id` with `document_type = SPV_REQUIREMENT`. Founders cannot access investor SPV documents (RLS excludes `SPV_REQUIREMENT` from founder company document policies). Staff open files via `POST /api/documents/signed-url`.
 
@@ -141,3 +170,45 @@ node scripts/repair-marketplace-campaigns.mjs
 - Founders can read/update companies they belong to via `company_members` (or legacy `founder_id`).
 - Founders can upload/read documents and `pitch-decks` storage objects only for their companies.
 - Service role is used server-side for onboarding repair only.
+- After `0037`, founders cannot SELECT `spv_document_packages` or `spv_closing_reviews` (internal notes). Founder SPV UI uses aggregate fields on `spv_opportunities` only.
+
+## Production deployment (Vercel)
+
+### Required environment variables
+
+| Variable | Where | Notes |
+|----------|--------|--------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Vercel + local | Project URL from Supabase API settings |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Vercel + local | Public anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Vercel only (server) | Never prefix with `NEXT_PUBLIC_` |
+| `GOOGLE_CLIENT_ID` | Vercel (server) | OAuth client for Calendar connect |
+| `GOOGLE_CLIENT_SECRET` | Vercel (server) | |
+| `GOOGLE_REDIRECT_URI` | Vercel (server) | Production URL, e.g. `https://your-domain.com/api/integrations/google/callback` |
+| `TOKEN_ENCRYPTION_SECRET` | Vercel (server) | 32+ chars; `openssl rand -base64 32` |
+
+Optional: `OPENAI_API_KEY` (server) if AI diligence/draft features are enabled.
+
+If `NEXT_PUBLIC_SUPABASE_*` is missing in production, the app **fails closed**: protected routes redirect to `/configuration-error` instead of allowing anonymous access.
+
+### Google OAuth (production)
+
+1. In Google Cloud Console → APIs & Services → Credentials, create an OAuth 2.0 Web client.
+2. Add **Authorized redirect URI** exactly matching `GOOGLE_REDIRECT_URI` (no trailing slash mismatch).
+3. Enable Google Calendar API for the project.
+4. Set the same client ID/secret in Vercel for Production (and Preview if you test OAuth on preview URLs).
+5. Founders/investors connect from `/founder/settings` or `/investor/settings`. Failed OAuth or calendar sync is logged to `audit_logs` via operational event helpers.
+
+### Vercel checklist
+
+1. Link repo; set **Root Directory** to the app root if monorepo.
+2. Set all required env vars for **Production** (and Preview if needed).
+3. Run migrations `0001`–`0037` on the production Supabase project before first deploy.
+4. Confirm storage buckets: `pitch-decks`, `spv-investor-documents` (from migrations).
+5. Deploy; smoke-test sign-in, founder upload, admin reports export, SPV **Refresh readiness** on `/admin/spvs` (does not run sync on page load).
+6. Supabase Auth → URL configuration: add production site URL and redirect URLs for `/auth/callback`.
+
+### Post-deploy verification
+
+- Founder cannot query `spv_document_packages.notes` or `spv_closing_reviews.internal_notes` via API (403/empty after `0037`).
+- Admin SPV list loads without writing readiness snapshots until **Refresh readiness** is clicked.
+- Rate limits return `429` on burst report exports / uploads (in-memory per instance on Vercel).

@@ -90,6 +90,25 @@ export function AdminSpvManagement({
     return map;
   }, [participationsBySpv]);
 
+  async function syncReadiness(spvId: string) {
+    setLoading("sync-" + spvId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/spv-opportunities/${spvId}/sync-readiness`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(formatApiError(payload, "Unable to refresh readiness."));
+      }
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unable to refresh readiness.");
+    } finally {
+      setLoading(null);
+    }
+  }
+
   async function openDocument(documentId: string) {
     setLoading("doc-" + documentId);
     setError(null);
@@ -441,6 +460,14 @@ export function AdminSpvManagement({
                     </div>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={loading != null}
+                      onClick={() => void syncReadiness(spv.id)}
+                      className="rounded border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-800"
+                    >
+                      {loading === "sync-" + spv.id ? "Refreshing…" : "Refresh readiness"}
+                    </button>
                     <button
                       type="button"
                       disabled={loading != null}

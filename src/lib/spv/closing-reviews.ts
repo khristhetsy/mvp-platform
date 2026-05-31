@@ -1,7 +1,7 @@
 import {
   buildClosingReadinessSummary,
   computeInvestorClosingPublicStatus,
-  formatFounderClosingStageLabel,
+  formatFounderClosingStageFromPublicStatus,
   type ClosingReadinessCriterion,
   type ClosingReadinessSummary,
 } from "@/lib/spv/closing-review-display";
@@ -204,36 +204,19 @@ export async function listFounderClosingSummaries(
     return { data: {} as Record<string, { stageLabel: string; readinessPct: number }> };
   }
 
-  const { data, error } = await supabase
-    .from("spv_closing_reviews")
-    .select("spv_opportunity_id, status")
-    .in("spv_opportunity_id", spvOpportunityIds);
-
-  if (error) {
-    return { error };
-  }
-
   const { data: spvs, error: spvError } = await supabase
     .from("spv_opportunities")
-    .select("id, closing_readiness_pct, investor_closing_status")
+    .select("id, closing_readiness_pct, investor_closing_status, status")
     .in("id", spvOpportunityIds);
 
   if (spvError) {
     return { error: spvError };
   }
 
-  const reviewBySpv = new Map(
-    ((data ?? []) as { spv_opportunity_id: string; status: string }[]).map((row) => [
-      row.spv_opportunity_id,
-      row.status,
-    ]),
-  );
-
   const summaries: Record<string, { stageLabel: string; readinessPct: number }> = {};
   for (const spv of spvs ?? []) {
-    const reviewStatus = reviewBySpv.get(spv.id);
     summaries[spv.id] = {
-      stageLabel: formatFounderClosingStageLabel(reviewStatus, spv.investor_closing_status),
+      stageLabel: formatFounderClosingStageFromPublicStatus(spv.investor_closing_status),
       readinessPct: spv.closing_readiness_pct ?? 0,
     };
   }
@@ -254,16 +237,6 @@ export async function ensureSpvClosingReview(
     return { error: existing.error };
   }
   if (existing.data) {
-    const { error } = await admin
-      .from("spv_closing_reviews")
-      .update({
-        readiness_snapshot: input.snapshot,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", existing.data.id);
-    if (error) {
-      return { error };
-    }
     return { data: existing.data, created: false as const };
   }
 
@@ -297,6 +270,7 @@ export async function syncSpvClosingReadiness(
     requirements?: SpvParticipationRequirementRecord[];
     packages?: SpvDocumentPackageRecord[];
     criticalComplianceOpenCount?: number;
+    persistSnapshot?: boolean;
   },
 ) {
   const { data: spv, error: spvError } = await admin
@@ -382,6 +356,17 @@ export async function syncSpvClosingReadiness(
   }
 
   const review = reviewResult.data!;
+
+  if (input.persistSnapshot) {
+    await admin
+      .from("spv_closing_reviews")
+      .update({
+        readiness_snapshot: snapshot,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", review.id);
+  }
+
   const investorStatus = computeInvestorClosingPublicStatus({
     reviewStatus: review.status,
     spvStatus: record.status,

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { loadThreadForUser, requireFounderMessagingApi, requireInvestorApprovedApi } from "@/lib/api/messaging";
 import { sendUserMessage } from "@/lib/messaging/threads";
 import { threadMessageSchema } from "@/lib/validation";
@@ -16,6 +17,16 @@ export async function POST(request: Request, context: RouteContext) {
 
   const founderAuth = await requireFounderMessagingApi();
   if (!("error" in founderAuth)) {
+    const rateLimited = await enforceRateLimit({
+      bucket: "thread_message_send",
+      subjectId: founderAuth.profile.id,
+      limit: 40,
+      windowMs: 60_000,
+    });
+    if (rateLimited) {
+      return rateLimited;
+    }
+
     const loaded = await loadThreadForUser(
       threadId,
       founderAuth.profile.id,
@@ -42,6 +53,16 @@ export async function POST(request: Request, context: RouteContext) {
   const investorAuth = await requireInvestorApprovedApi();
   if ("error" in investorAuth) {
     return founderAuth.error ?? investorAuth.error;
+  }
+
+  const rateLimited = await enforceRateLimit({
+    bucket: "thread_message_send",
+    subjectId: investorAuth.profile.id,
+    limit: 40,
+    windowMs: 60_000,
+  });
+  if (rateLimited) {
+    return rateLimited;
   }
 
   const loaded = await loadThreadForUser(

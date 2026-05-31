@@ -83,6 +83,8 @@ export async function listAdminPackagesGrouped(
   return { data: grouped };
 }
 
+const FOUNDER_PACKAGE_TRACKER_TOTAL = DEFAULT_SPV_DOCUMENT_PACKAGES.length;
+
 export async function listFounderPackageSummaries(
   supabase: SupabaseClient<Database>,
   spvOpportunityIds: string[],
@@ -92,24 +94,29 @@ export async function listFounderPackageSummaries(
   }
 
   const { data, error } = await supabase
-    .from("spv_document_packages")
-    .select("spv_opportunity_id, package_type, status")
-    .in("spv_opportunity_id", spvOpportunityIds);
+    .from("spv_opportunities")
+    .select("id, package_readiness_pct, operational_readiness_status")
+    .in("id", spvOpportunityIds);
 
   if (error) {
     return { error };
   }
 
-  const grouped: Record<string, SpvDocumentPackageRecord[]> = {};
-  for (const row of data ?? []) {
-    const list = grouped[row.spv_opportunity_id] ?? [];
-    list.push(row as SpvDocumentPackageRecord);
-    grouped[row.spv_opportunity_id] = list;
-  }
-
   const summaries: Record<string, ReturnType<typeof summarizeFounderPackageProgress>> = {};
-  for (const [spvId, rows] of Object.entries(grouped)) {
-    summaries[spvId] = summarizeFounderPackageProgress(rows);
+  for (const spv of data ?? []) {
+    const readinessPct = spv.package_readiness_pct ?? 0;
+    const tracked =
+      readinessPct > 0 ||
+      spv.operational_readiness_status === "ready_for_legal_docs" ||
+      spv.operational_readiness_status === "closed";
+    const total = tracked ? FOUNDER_PACKAGE_TRACKER_TOTAL : 0;
+    const complete = total > 0 ? Math.round((readinessPct / 100) * total) : 0;
+
+    summaries[spv.id] = {
+      complete,
+      total,
+      readinessPct,
+    };
   }
 
   return { data: summaries };

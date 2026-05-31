@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { getPublicSupabaseEnv, isProductionEnvironment } from "@/lib/env/production";
 import type { Database, UserRole } from "@/lib/supabase/types";
 
 const protectedExactPaths = ["/founder", "/investor", "/admin"];
@@ -23,14 +24,23 @@ function isKnownRole(role: string | null | undefined): role is UserRole {
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const { url: supabaseUrl, anonKey: supabaseAnonKey, configured } = getPublicSupabaseEnv();
 
-  if (!supabaseUrl || !supabaseAnonKey) {
+  const pathname = request.nextUrl.pathname;
+  const shouldProtect =
+    protectedExactPaths.includes(pathname) || protectedPrefixes.some((prefix) => pathname.startsWith(prefix));
+
+  if (!configured) {
+    if (shouldProtect || isProductionEnvironment()) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/configuration-error";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
     return response;
   }
 
-  const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+  const supabase = createServerClient<Database>(supabaseUrl!, supabaseAnonKey!, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -42,10 +52,6 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-
-  const pathname = request.nextUrl.pathname;
-  const shouldProtect =
-    protectedExactPaths.includes(pathname) || protectedPrefixes.some((prefix) => pathname.startsWith(prefix));
 
   if (!shouldProtect) {
     return response;

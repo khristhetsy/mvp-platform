@@ -8,7 +8,6 @@ import {
   computeClosingReadinessCriteria,
   countCriticalOpenComplianceForCompany,
   listAdminClosingReviewsBySpv,
-  syncSpvClosingReadiness,
 } from "@/lib/spv/closing-reviews";
 import type { ClosingReadinessSummary } from "@/lib/spv/closing-review-display";
 import { listAdminPackagesGrouped } from "@/lib/spv/document-packages";
@@ -94,15 +93,6 @@ export default async function AdminSpvsPage() {
       criticalComplianceOpenCount: criticalComplianceByCompany[spv.company_id] ?? 0,
     });
     closingReadinessBySpv[spv.id] = buildClosingReadinessSummary(criteria);
-
-    await syncSpvClosingReadiness(admin, spv.id, {
-      actorId: profile.id,
-      checklist: checklistBySpv[spv.id] ?? [],
-      participations: participationsBySpv[spv.id] ?? [],
-      requirements: requirementsBySpv[spv.id] ?? [],
-      packages: packagesBySpv[spv.id] ?? [],
-      criticalComplianceOpenCount: criticalComplianceByCompany[spv.company_id] ?? 0,
-    });
   }
 
   const closingReviewsResult = await listAdminClosingReviewsBySpv(

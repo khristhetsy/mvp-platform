@@ -50,6 +50,55 @@ export async function notifyStaff(input: Omit<CreateNotificationInput, "recipien
   await Promise.all(staffIds.map((recipientUserId) => createNotification({ ...input, recipientUserId })));
 }
 
+/** Skips staff recipients who already received the same type for the same entity recently. */
+export async function notifyStaffIfNotRecent(
+  input: Omit<CreateNotificationInput, "recipientUserId"> & { withinHours?: number },
+) {
+  const staffIds = await listStaffProfileIds();
+  const { withinHours, ...payload } = input;
+
+  await Promise.all(
+    staffIds.map(async (recipientUserId) => {
+      const duplicate = await hasRecentNotification({
+        recipientUserId,
+        type: payload.type,
+        entityId: payload.entityId ?? null,
+        withinHours: withinHours ?? 24,
+      });
+      if (duplicate) {
+        return;
+      }
+      await createNotification({ ...payload, recipientUserId });
+    }),
+  );
+}
+
+export async function notifyCompanyFounderIfNotRecent(
+  companyId: string,
+  input: Omit<CreateNotificationInput, "recipientUserId"> & { withinHours?: number },
+) {
+  const company = await getCompanyFounderId(companyId);
+  if (!company?.founder_id) {
+    return null;
+  }
+
+  const duplicate = await hasRecentNotification({
+    recipientUserId: company.founder_id,
+    type: input.type,
+    entityId: input.entityId ?? null,
+    withinHours: input.withinHours ?? 24,
+  });
+  if (duplicate) {
+    return null;
+  }
+
+  const { withinHours: _hours, ...payload } = input;
+  return createNotification({
+    ...payload,
+    recipientUserId: company.founder_id,
+  });
+}
+
 export async function getCompanyFounderId(companyId: string) {
   const admin = createServiceRoleClient();
   const { data } = await admin.from("companies").select("founder_id, company_name").eq("id", companyId).maybeSingle();

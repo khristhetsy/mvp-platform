@@ -1,4 +1,4 @@
-import { notifyStaff } from "@/lib/notifications/notifications";
+import { notifyStaffIfNotRecent } from "@/lib/notifications/notifications";
 import type { ComplianceSeverity } from "@/lib/compliance/types";
 
 export async function notifyStaffComplianceAlert(input: {
@@ -7,9 +7,10 @@ export async function notifyStaffComplianceAlert(input: {
   title: string;
   description: string;
 }) {
-  return notifyStaff({
+  return notifyStaffIfNotRecent({
     actorUserId: null,
     type: "compliance_event_created",
+    withinHours: 12,
     title: `Compliance alert (${input.severity})`,
     message: `${input.title}: ${input.description}`,
     entityType: "compliance_event",

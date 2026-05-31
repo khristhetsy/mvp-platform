@@ -62,16 +62,24 @@ export default async function InvestorDashboardPage() {
           accent="blue"
         />
         <MetricCard
-          label="Portfolio / Future Investments"
-          value="—"
-          detail="Portfolio tracking coming soon"
+          label="Portfolio"
+          value={String(savedDeals.length + interests.length)}
+          detail="Watchlist, commitments, and company updates"
           accent="slate"
         />
       </section>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-2">
-        <WorkspacePanel title="Portfolio / Future Investments" subtitle="Committed and pipeline investments">
-          <p className="text-sm text-slate-600">Portfolio tracking and future investment pipeline coming soon.</p>
+        <WorkspacePanel title="Portfolio" subtitle="Watchlist, pipeline, and company updates">
+          <p className="text-sm text-slate-600">
+            Review saved deals, expressed interest, SPV participations, and founder updates in one place.
+          </p>
+          <Link
+            href="/investor/portfolio"
+            className="mt-3 inline-flex rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
+          >
+            Open portfolio
+          </Link>
           <p className="mt-3 rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-3 text-sm text-slate-500">
             {introRequests.length} intro {introRequests.length === 1 ? "request" : "requests"} pending follow-up.
           </p>

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireStaffApi } from "@/lib/api/admin";
+import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { writeAuditLog } from "@/lib/data/audit";
+import { recordOperationalError } from "@/lib/monitoring/operational-events";
 import {
   flattenReportForCsv,
   generateAdminReport,
@@ -13,6 +15,16 @@ export async function POST(request: Request) {
   const auth = await requireStaffApi(["admin", "analyst"]);
   if ("error" in auth) {
     return auth.error;
+  }
+
+  const rateLimited = await enforceRateLimit({
+    bucket: "admin_report_export",
+    subjectId: auth.profile.id,
+    limit: 20,
+    windowMs: 60_000,
+  });
+  if (rateLimited) {
+    return rateLimited;
   }
 
   const body = await request.json().catch(() => null);
@@ -39,11 +51,21 @@ export async function POST(request: Request) {
     }
   }
 
-  const payload = await generateAdminReport(auth.supabase, {
-    reportType,
-    filters,
-    preview: preview ?? false,
-  });
+  let payload;
+  try {
+    payload = await generateAdminReport(auth.supabase, {
+      reportType,
+      filters,
+      preview: preview ?? false,
+    });
+  } catch (error) {
+    recordOperationalError("admin.report_export_failed", error, {
+      reportType,
+      format,
+      userId: auth.profile.id,
+    });
+    return NextResponse.json({ error: "Unable to generate report." }, { status: 500 });
+  }
 
   await writeAuditLog(auth.supabase, {
     userId: auth.profile.id,
@@ -65,10 +87,19 @@ export async function POST(request: Request) {
       generatedBy:
         auth.profile.full_name ?? auth.profile.email ?? auth.profile.id,
     };
-    const pdfBuffer =
-      reportType === "spv_readiness"
-        ? await buildSpvReadinessPdf(payload, pdfContext)
-        : await buildDueDiligencePdf(payload, pdfContext);
+    let pdfBuffer: Buffer;
+    try {
+      pdfBuffer =
+        reportType === "spv_readiness"
+          ? await buildSpvReadinessPdf(payload, pdfContext)
+          : await buildDueDiligencePdf(payload, pdfContext);
+    } catch (error) {
+      recordOperationalError("admin.report_pdf_export_failed", error, {
+        reportType,
+        userId: auth.profile.id,
+      });
+      return NextResponse.json({ error: "Unable to generate PDF export." }, { status: 500 });
+    }
     const filename = reportFilename(reportType, "pdf");
 
     return new NextResponse(new Uint8Array(pdfBuffer), {

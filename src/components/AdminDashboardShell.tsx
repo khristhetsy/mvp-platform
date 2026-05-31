@@ -59,7 +59,12 @@ export function AdminDashboardShell({
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <MetricCard label="Total Companies" value={String(metrics.companies)} detail="Total company submissions" accent="indigo" />
-          <MetricCard label="Total Investors" value="—" detail="Investor directory metrics coming soon" accent="violet" />
+          <MetricCard
+            label="Investors"
+            value="Review"
+            detail="Onboarding and approvals at /admin/investors"
+            accent="violet"
+          />
           <MetricCard
             label="Active Raises"
             value={String(metrics.publishedDeals)}

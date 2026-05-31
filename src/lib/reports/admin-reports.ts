@@ -543,7 +543,7 @@ async function generateOutreachActivityReport(
   let campaignsQuery = admin.from("outreach_campaigns").select("*");
   let draftsQuery = admin.from("social_outreach_drafts").select("*");
   let targetsQuery = admin.from("founder_outreach_targets").select("*");
-  let messagesQuery = admin.from("outreach_messages").select("*");
+  const messagesQuery = admin.from("outreach_messages").select("*");
 
   if (filters.companyId) {
     campaignsQuery = campaignsQuery.eq("company_id", filters.companyId);
@@ -624,8 +624,8 @@ async function generateMessagingMeetingsReport(
 ): Promise<AdminReportPayload> {
   let threadsQuery = admin.from("message_threads").select("*");
   let meetingsQuery = admin.from("thread_meetings").select("*");
-  let messagesQuery = admin.from("thread_messages").select("*");
-  let notificationsQuery = admin.from("notifications").select("*");
+  const messagesQuery = admin.from("thread_messages").select("*");
+  const notificationsQuery = admin.from("notifications").select("*");
 
   if (filters.companyId) {
     threadsQuery = threadsQuery.eq("company_id", filters.companyId);

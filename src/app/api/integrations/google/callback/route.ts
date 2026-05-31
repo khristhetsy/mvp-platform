@@ -13,6 +13,7 @@ import {
   COOKIE_STATE,
   verifyGoogleOAuthState,
 } from "@/lib/integrations/google-oauth-state";
+import { recordOperationalError } from "@/lib/monitoring/operational-events";
 import { notifyGoogleAccountConnected } from "@/lib/notifications/google-events";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -31,6 +32,7 @@ export async function GET(request: Request) {
   cookieStore.delete(COOKIE_RETURN);
 
   if (oauthError) {
+    recordOperationalError("google.oauth_callback_error", new Error(oauthError), { returnTo });
     redirectBase.searchParams.set("google", "error");
     redirectBase.searchParams.set("message", oauthError);
     return NextResponse.redirect(redirectBase);
@@ -83,6 +85,7 @@ export async function GET(request: Request) {
     });
 
     if (result.error) {
+      recordOperationalError("google.account_save_failed", result.error, { userId: user.id });
       redirectBase.searchParams.set("google", "error");
       redirectBase.searchParams.set("message", "save_failed");
       return NextResponse.redirect(redirectBase);
@@ -93,6 +96,7 @@ export async function GET(request: Request) {
     redirectBase.searchParams.set("google", "connected");
     return NextResponse.redirect(redirectBase);
   } catch (error) {
+    recordOperationalError("google.oauth_callback_failed", error, { userId: user.id });
     redirectBase.searchParams.set("google", "error");
     redirectBase.searchParams.set(
       "message",

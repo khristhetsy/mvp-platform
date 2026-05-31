@@ -5,6 +5,7 @@ import {
   updateCalendarEvent,
 } from "@/lib/integrations/google-calendar";
 import { isGoogleOAuthConfigured } from "@/lib/integrations/google-env";
+import { recordOperationalError } from "@/lib/monitoring/operational-events";
 import type { MessageThreadRecord, ThreadMeetingRecord } from "@/lib/messaging/types";
 
 const DEFAULT_MEETING_MINUTES = 30;
@@ -117,6 +118,10 @@ export async function syncGoogleCalendarMeeting(input: {
 
     return { synced: true, kind: "updated" };
   } catch (error) {
+    recordOperationalError("google.calendar_sync_failed", error, {
+      meetingId: input.meeting.id,
+      action: input.action,
+    });
     return {
       synced: false,
       skipped: false,

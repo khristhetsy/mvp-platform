@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireInvestorApprovedApi } from "@/lib/api/investor";
+import { enforceRateLimit } from "@/lib/api/rate-limit";
+import { recordOperationalError } from "@/lib/monitoring/operational-events";
 import { writeAuditLog } from "@/lib/data/audit";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { uploadInvestorSpvRequirementDocument } from "@/lib/spv/participation-requirements";
@@ -10,6 +12,16 @@ export async function POST(request: Request, context: RouteContext) {
   const auth = await requireInvestorApprovedApi();
   if ("error" in auth) {
     return auth.error;
+  }
+
+  const rateLimited = await enforceRateLimit({
+    bucket: "spv_requirement_upload",
+    subjectId: auth.profile.id,
+    limit: 15,
+    windowMs: 60_000,
+  });
+  if (rateLimited) {
+    return rateLimited;
   }
 
   const { id } = await context.params;
@@ -28,6 +40,10 @@ export async function POST(request: Request, context: RouteContext) {
   });
 
   if (result.error || !result.data) {
+    recordOperationalError("spv.requirement_upload_failed", result.error, {
+      investorId: auth.investorId,
+      requirementId: id,
+    });
     const message = result.error instanceof Error ? result.error.message : "Upload failed.";
     return NextResponse.json({ error: message }, { status: 400 });
   }

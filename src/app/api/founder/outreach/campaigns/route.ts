@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { requireFounderInvestorCrmApi } from "@/lib/api/founder-crm";
 import {
   addOutreachMessage,
@@ -33,6 +34,16 @@ export async function POST(request: Request) {
   const auth = await requireFounderInvestorCrmApi();
   if ("error" in auth) {
     return auth.error;
+  }
+
+  const rateLimited = await enforceRateLimit({
+    bucket: "founder_outreach_campaign",
+    subjectId: auth.profile.id,
+    limit: 15,
+    windowMs: 60_000,
+  });
+  if (rateLimited) {
+    return rateLimited;
   }
 
   const body = await request.json().catch(() => null);

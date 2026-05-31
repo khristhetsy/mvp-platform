@@ -62,19 +62,39 @@ export function formatFounderClosingStageLabel(
   reviewStatus: SpvClosingReviewStatus | string | null | undefined,
   investorClosingStatus: string | null | undefined,
 ) {
-  if (reviewStatus === "closed_operationally") {
-    return "Operationally closed";
+  if (reviewStatus) {
+    if (reviewStatus === "closed_operationally") {
+      return "Operationally closed";
+    }
+    if (reviewStatus === "approved_for_closing") {
+      return "Approved for operational closing";
+    }
+    if (reviewStatus === "in_review" || reviewStatus === "changes_required") {
+      return "Final operational review";
+    }
   }
-  if (reviewStatus === "approved_for_closing") {
-    return "Approved for operational closing";
+
+  return formatFounderClosingStageFromPublicStatus(investorClosingStatus);
+}
+
+/** Founder-safe label derived from public aggregate status only (no internal review row). */
+export function formatFounderClosingStageFromPublicStatus(
+  investorClosingStatus: string | null | undefined,
+) {
+  switch (investorClosingStatus) {
+    case "Operationally closed":
+      return "Operationally closed";
+    case "Ready for closing":
+      return "Approved for operational closing";
+    case "Final review":
+      return "Final operational review";
+    case "Documents being prepared":
+    case "Documents under review":
+    case "Documents ready":
+      return "Document package phase in progress";
+    default:
+      return "Pre-closing preparation";
   }
-  if (reviewStatus === "in_review" || reviewStatus === "changes_required") {
-    return "Final operational review";
-  }
-  if (investorClosingStatus === "Final review") {
-    return "Final operational review pending";
-  }
-  return "Pre-closing preparation";
 }
 
 export function computeInvestorClosingPublicStatus(input: {
