@@ -42,7 +42,10 @@ export function MarketingShell({ children }: Readonly<{ children: ReactNode }>) 
                 <Menu className="h-5 w-5" strokeWidth={1.75} />
               </button>
               <Link href="/" className="lg:hidden">
-                <CapitalOSLogo height={24} />
+                <CapitalOSLogo variant="icon" height={28} />
+              </Link>
+              <Link href="/" className="hidden lg:block">
+                <CapitalOSLogo variant="wordmark" height={28} priority />
               </Link>
             </div>
             <nav className="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex">

@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { ChevronDown } from "lucide-react";
+import { CapitalOSLogo } from "@/components/CapitalOSLogo";
 import { NotificationBellDropdown } from "@/components/NotificationBellDropdown";
 import { WorkspaceBreadcrumbs } from "@/components/ui/WorkspaceBreadcrumbs";
 import type { WorkspaceId } from "@/lib/workspace-nav";
@@ -36,6 +38,12 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, onMen
             <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
+        <Link href="/" className="shrink-0 lg:hidden">
+          <CapitalOSLogo variant="icon" height={28} />
+        </Link>
+        <Link href="/" className="hidden shrink-0 lg:block">
+          <CapitalOSLogo variant="wordmark" height={26} />
+        </Link>
         <WorkspaceBreadcrumbs workspace={workspace} />
         <span className="ml-auto hidden rounded-md bg-[var(--navy-muted)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--navy)] sm:inline">
           {workspaceLabel(workspace)}

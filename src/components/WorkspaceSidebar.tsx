@@ -28,7 +28,7 @@ export function WorkspaceSidebar({
     <>
       <div className="border-b border-slate-200/80 bg-[var(--surface-sidebar)] px-4 py-4">
         <Link href="/" className="block" onClick={onClose}>
-          <CapitalOSLogo height={28} />
+          <CapitalOSLogo variant="icon" height={32} />
         </Link>
         <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
       </div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CapitalOSLogo } from "@/components/CapitalOSLogo";
 
 const navItems = [
   { href: "/deals", label: "Marketplace" },
@@ -12,15 +13,13 @@ export function MarketingNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-[var(--shadow-panel)] backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3">
-        <Link href="/" className="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-slate-900">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-xs font-bold text-white">
-            C
-          </span>
-          CapitalOS
+        <Link href="/" className="flex items-center">
+          <CapitalOSLogo variant="icon" height={32} className="md:hidden" />
+          <CapitalOSLogo variant="wordmark" height={28} className="hidden md:block" />
         </Link>
         <nav className="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex">
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className="transition hover:text-indigo-600">
+            <Link key={item.href} href={item.href} className="transition hover:text-[var(--navy)]">
               {item.label}
             </Link>
           ))}

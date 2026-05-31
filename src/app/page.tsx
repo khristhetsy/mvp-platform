@@ -37,6 +37,7 @@ export default function Home() {
       <section className="px-4 py-8 lg:px-8 lg:py-10">
         <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr] xl:items-start">
           <div className="flex flex-col justify-center">
+            <CapitalOSLogo variant="full" height={52} priority className="mb-6" />
             <h1 className="max-w-2xl text-4xl font-semibold leading-tight tracking-tight text-[var(--navy)] md:text-5xl lg:text-[3.25rem]">
               The operating system for capital-ready companies.
             </h1>
@@ -71,7 +72,7 @@ export default function Home() {
         </div>
 
         <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-y border-slate-200/80 py-5">
-          <CapitalOSLogo height={26} />
+          <CapitalOSLogo variant="full" height={40} />
           <div className="flex flex-wrap items-center gap-6 text-xs font-medium text-slate-500">
             <span>Trusted by founders preparing institutional raises</span>
             <span className="hidden h-4 w-px bg-slate-200 sm:block" aria-hidden />
