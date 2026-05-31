@@ -16,6 +16,7 @@ import {
   recordLessonView,
 } from "@/lib/learning/lesson-progress";
 import { resolveLessonContext } from "@/lib/learning/resolve-lesson";
+import { getLessonVideoAsset } from "@/lib/learning/video/lesson-video-assets";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -53,6 +54,12 @@ export default async function FounderLearningLessonPage({
 
     const nav = resolveCourseNavigation(course, lessonSlug);
     const curriculum = buildCourseCurriculumProgress(course, progressRows);
+    const videoAsset = await getLessonVideoAsset({
+      founderId: profile.id,
+      companyId: company.id,
+      courseSlug,
+      lessonSlug,
+    }).catch(() => null);
 
     return (
       <FounderAppShell
@@ -70,6 +77,7 @@ export default async function FounderLearningLessonPage({
             initialProgress={lessonProgress}
             prevHref={nav.prev?.href ?? null}
             nextHref={nav.next?.href ?? null}
+            initialVideoAsset={videoAsset}
           />
         </FounderFeatureGate>
       </FounderAppShell>

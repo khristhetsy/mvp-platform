@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FounderAIVideoLesson } from "@/components/FounderAIVideoLesson";
 import { FloatingFounderAICoach } from "@/components/FloatingFounderAICoach";
+import type { FounderLessonVideoAssetRecord } from "@/lib/learning/video/video-types";
 import { courseHref } from "@/lib/learning/course-keys";
 import type { Course } from "@/lib/learning/course-types";
 import type { CourseLesson, CourseSection } from "@/lib/learning/course-types";
@@ -28,6 +30,7 @@ export function FounderClassLessonExperience({
   initialProgress,
   prevHref,
   nextHref,
+  initialVideoAsset,
 }: Readonly<{
   course: Course;
   lesson: CourseLesson;
@@ -38,6 +41,7 @@ export function FounderClassLessonExperience({
   initialProgress: FounderLessonProgressRecord | null;
   prevHref: string | null;
   nextHref: string | null;
+  initialVideoAsset: FounderLessonVideoAssetRecord | null;
 }>) {
   const router = useRouter();
   const [completed, setCompleted] = useState(initialProgress?.status === "completed");
@@ -122,18 +126,13 @@ export function FounderClassLessonExperience({
           </Link>
         </nav>
 
-        <div className="relative aspect-video overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20">
-              <span className="ml-1 text-2xl">▶</span>
-            </div>
-            <p className="mt-4 text-sm font-medium">Video lesson placeholder</p>
-            <p className="mt-1 max-w-md px-4 text-xs text-slate-400">
-              {lesson.durationMinutes} min · {lesson.type === "quiz" ? "Quiz module" : "Founder training"} · Video
-              delivery in Phase 2
-            </p>
-          </div>
-        </div>
+        <FounderAIVideoLesson
+          courseSlug={course.slug}
+          lessonSlug={lesson.slug}
+          lessonTitle={lesson.title}
+          durationMinutes={lesson.durationMinutes}
+          initialAsset={initialVideoAsset}
+        />
 
         <header>
           <p className="text-xs font-medium text-slate-500">

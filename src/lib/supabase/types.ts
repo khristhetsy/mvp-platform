@@ -271,6 +271,27 @@ export type Database = {
         Update: Record<string, unknown>;
         Relationships: [];
       };
+      founder_lesson_video_assets: {
+        Row: {
+          id: string;
+          founder_id: string;
+          company_id: string;
+          course_slug: string;
+          lesson_slug: string;
+          script: string | null;
+          narration_text: string | null;
+          captions: string | null;
+          slides_json: unknown;
+          video_url: string | null;
+          render_status: string;
+          provider: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
       notifications: {
         Row: {
           id: string;
