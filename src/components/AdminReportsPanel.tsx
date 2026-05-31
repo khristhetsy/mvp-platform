@@ -40,9 +40,95 @@ const REPORT_OPTIONS: { value: AdminReportType; label: string; description: stri
     description:
       "Review company readiness, diligence findings, document status, remediation tasks, admin reviews, and investor-readiness indicators.",
   },
+  {
+    value: "spv_readiness",
+    label: "SPV Readiness Report",
+    description:
+      "SPV operational readiness: checklist, investor requirements, document packages, closing review, blockers, compliance counts, and notification activity (no investor documents or legal notes).",
+  },
 ];
 
 type FilterOption = { id: string; label: string };
+
+function SpvReadinessPreview({
+  sections,
+  isPreview,
+}: Readonly<{
+  sections: Record<string, Record<string, unknown>[]>;
+  isPreview: boolean;
+}>) {
+  const rows = sections.spv_readiness_rows ?? [];
+  const notifications = sections.notification_type_totals ?? [];
+
+  return (
+    <div className="mt-6 space-y-6">
+      {notifications.length > 0 ? (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            SPV notification activity
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {notifications.map((row) => (
+              <span
+                key={String(row.notification_type)}
+                className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700"
+              >
+                {String(row.notification_type)}: {String(row.count)}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          SPV readiness ({rows.length} rows{isPreview ? ", preview capped" : ""})
+        </p>
+        {rows.length === 0 ? (
+          <p className="mt-2 text-xs text-slate-500">No SPVs match current filters.</p>
+        ) : (
+          <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+            <table className="min-w-full text-left text-xs">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="px-3 py-2">SPV</th>
+                  <th className="px-3 py-2">Company</th>
+                  <th className="px-3 py-2">Status</th>
+                  <th className="px-3 py-2">Checklist</th>
+                  <th className="px-3 py-2">Investors</th>
+                  <th className="px-3 py-2">Packages</th>
+                  <th className="px-3 py-2">Closing</th>
+                  <th className="px-3 py-2">Blockers</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={String(row.spv_id)} className="border-t border-slate-100">
+                    <td className="px-3 py-2 font-medium text-slate-900">{String(row.spv_name)}</td>
+                    <td className="px-3 py-2">{String(row.company_name)}</td>
+                    <td className="px-3 py-2">{String(row.spv_status)}</td>
+                    <td className="px-3 py-2">{String(row.checklist_readiness_pct)}%</td>
+                    <td className="px-3 py-2">
+                      {String(row.investor_requirement_readiness_pct)}% · {String(row.investor_count)}{" "}
+                      inv
+                    </td>
+                    <td className="px-3 py-2">{String(row.document_package_readiness_pct)}%</td>
+                    <td className="px-3 py-2">
+                      {String(row.closing_readiness_pct)}% · {String(row.closing_review_status)}
+                    </td>
+                    <td className="px-3 py-2 max-w-[200px] truncate" title={String(row.pending_blockers)}>
+                      {String(row.pending_blocker_count ?? 0)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function DueDiligencePreview({
   sections,
@@ -155,6 +241,9 @@ export function AdminReportsPanel({
   const [investorId, setInvestorId] = useState("");
   const [severity, setSeverity] = useState("");
   const [reviewStatus, setReviewStatus] = useState("");
+  const [spvStatus, setSpvStatus] = useState("");
+  const [operationalReadinessStatus, setOperationalReadinessStatus] = useState("");
+  const [closingReviewStatus, setClosingReviewStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<AdminReportPayload | null>(null);
@@ -173,6 +262,11 @@ export function AdminReportsPanel({
     if (investorId) filters.investorId = investorId;
     if (severity) filters.severity = severity;
     if (reviewStatus) filters.reviewStatus = reviewStatus;
+    if (spvStatus) filters.spvStatus = spvStatus;
+    if (operationalReadinessStatus) {
+      filters.operationalReadinessStatus = operationalReadinessStatus;
+    }
+    if (closingReviewStatus) filters.closingReviewStatus = closingReviewStatus;
     return filters;
   }
 
@@ -257,6 +351,58 @@ export function AdminReportsPanel({
                 <option value="critical">Critical</option>
               </select>
             </label>
+          ) : null}
+
+          {reportType === "spv_readiness" ? (
+            <>
+              <label className="block text-sm">
+                <span className="text-slate-600">SPV status (optional)</span>
+                <select
+                  value={spvStatus}
+                  onChange={(e) => setSpvStatus(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+                >
+                  <option value="">All SPV statuses</option>
+                  <option value="draft">Draft</option>
+                  <option value="under_review">Under review</option>
+                  <option value="open">Open</option>
+                  <option value="closed">Closed</option>
+                  <option value="canceled">Canceled</option>
+                </select>
+              </label>
+              <label className="block text-sm">
+                <span className="text-slate-600">Operational readiness (optional)</span>
+                <select
+                  value={operationalReadinessStatus}
+                  onChange={(e) => setOperationalReadinessStatus(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+                >
+                  <option value="">All readiness states</option>
+                  <option value="draft">Draft</option>
+                  <option value="checklist_incomplete">Checklist incomplete</option>
+                  <option value="document_ready">Document ready</option>
+                  <option value="investors_pending">Investors pending</option>
+                  <option value="ready_for_legal_docs">Ready for legal docs</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </label>
+              <label className="block text-sm">
+                <span className="text-slate-600">Closing review status (optional)</span>
+                <select
+                  value={closingReviewStatus}
+                  onChange={(e) => setClosingReviewStatus(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+                >
+                  <option value="">All closing reviews</option>
+                  <option value="not_started">Not started</option>
+                  <option value="in_review">In review</option>
+                  <option value="approved_for_closing">Approved for closing</option>
+                  <option value="changes_required">Changes required</option>
+                  <option value="closed_operationally">Closed operationally</option>
+                  <option value="canceled">Canceled</option>
+                </select>
+              </label>
+            </>
           ) : null}
 
           {reportType === "due_diligence" ? (
@@ -372,7 +518,7 @@ export function AdminReportsPanel({
           >
             Download CSV
           </button>
-          {reportType === "due_diligence" ? (
+          {reportType === "due_diligence" || reportType === "spv_readiness" ? (
             <button
               type="button"
               disabled={loading}
@@ -400,6 +546,8 @@ export function AdminReportsPanel({
 
           {preview.meta.reportType === "due_diligence" ? (
             <DueDiligencePreview sections={preview.sections} isPreview={preview.meta.preview} />
+          ) : preview.meta.reportType === "spv_readiness" ? (
+            <SpvReadinessPreview sections={preview.sections} isPreview={preview.meta.preview} />
           ) : (
             <div className="mt-4 space-y-3">
               {Object.entries(preview.sections).map(([section, rows]) => (

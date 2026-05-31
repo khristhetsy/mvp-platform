@@ -336,6 +336,7 @@ export const adminReportGenerateSchema = z.object({
     "messaging_meetings",
     "subscription_upgrade",
     "due_diligence",
+    "spv_readiness",
   ]),
   format: z.enum(["json", "csv", "pdf"]).default("json"),
   preview: z.boolean().optional(),
@@ -349,6 +350,27 @@ export const adminReportGenerateSchema = z.object({
       severity: z.enum(["low", "medium", "high", "critical"]).optional(),
       reviewStatus: z
         .enum(["pending", "approved", "rejected", "changes_requested"])
+        .optional(),
+      spvStatus: z.enum(["draft", "under_review", "open", "closed", "canceled"]).optional(),
+      operationalReadinessStatus: z
+        .enum([
+          "draft",
+          "checklist_incomplete",
+          "document_ready",
+          "investors_pending",
+          "ready_for_legal_docs",
+          "closed",
+        ])
+        .optional(),
+      closingReviewStatus: z
+        .enum([
+          "not_started",
+          "in_review",
+          "approved_for_closing",
+          "changes_required",
+          "closed_operationally",
+          "canceled",
+        ])
         .optional(),
     })
     .optional(),

@@ -45,6 +45,12 @@ const REPORT_SECTIONS = [
       "Review company readiness, diligence findings, document status, remediation tasks, admin reviews, and investor-readiness indicators.",
     reportType: "due_diligence",
   },
+  {
+    title: "SPV Readiness Report",
+    description:
+      "SPV operational readiness audit: checklist, investor requirements, packages, closing review, blockers, and notification activity.",
+    reportType: "spv_readiness",
+  },
 ] as const;
 
 function toFilterOption(row: {

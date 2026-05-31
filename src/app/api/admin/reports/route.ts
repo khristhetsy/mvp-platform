@@ -6,7 +6,7 @@ import {
   generateAdminReport,
 } from "@/lib/reports/admin-reports";
 import { reportFilename, rowsToCsv } from "@/lib/reports/export";
-import { buildDueDiligencePdf } from "@/lib/reports/pdf-export";
+import { buildDueDiligencePdf, buildSpvReadinessPdf } from "@/lib/reports/pdf-export";
 import { adminReportGenerateSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -25,9 +25,9 @@ export async function POST(request: Request) {
   const { reportType, format, preview, filters } = parsed.data;
 
   if (format === "pdf") {
-    if (reportType !== "due_diligence") {
+    if (reportType !== "due_diligence" && reportType !== "spv_readiness") {
       return NextResponse.json(
-        { error: "PDF export is only available for Due Diligence reports." },
+        { error: "PDF export is only available for Due Diligence and SPV Readiness reports." },
         { status: 400 },
       );
     }
@@ -61,10 +61,14 @@ export async function POST(request: Request) {
   });
 
   if (format === "pdf") {
-    const pdfBuffer = await buildDueDiligencePdf(payload, {
+    const pdfContext = {
       generatedBy:
         auth.profile.full_name ?? auth.profile.email ?? auth.profile.id,
-    });
+    };
+    const pdfBuffer =
+      reportType === "spv_readiness"
+        ? await buildSpvReadinessPdf(payload, pdfContext)
+        : await buildDueDiligencePdf(payload, pdfContext);
     const filename = reportFilename(reportType, "pdf");
 
     return new NextResponse(new Uint8Array(pdfBuffer), {

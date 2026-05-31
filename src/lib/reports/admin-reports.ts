@@ -9,6 +9,7 @@ export const ADMIN_REPORT_TYPES = [
   "messaging_meetings",
   "subscription_upgrade",
   "due_diligence",
+  "spv_readiness",
 ] as const;
 
 export type AdminReportType = (typeof ADMIN_REPORT_TYPES)[number];
@@ -21,6 +22,9 @@ export type AdminReportFilters = {
   investorId?: string;
   severity?: "low" | "medium" | "high" | "critical";
   reviewStatus?: string;
+  spvStatus?: string;
+  operationalReadinessStatus?: string;
+  closingReviewStatus?: string;
 };
 
 export type AdminReportOptions = {
@@ -264,6 +268,10 @@ export async function generateAdminReport(
       return generateSubscriptionUpgradeReport(admin, filters, preview, generatedAt);
     case "due_diligence":
       return generateDueDiligenceReport(admin, filters, preview, generatedAt);
+    case "spv_readiness": {
+      const { generateSpvReadinessReport } = await import("@/lib/reports/spv-readiness-report");
+      return generateSpvReadinessReport(admin, filters, preview, generatedAt);
+    }
     default:
       return {
         meta: {
@@ -1116,6 +1124,10 @@ function groupByCompany<T extends { company_id: string | null }>(rows: T[]): Map
 
 /** Flatten primary section rows for CSV export. */
 export function flattenReportForCsv(payload: AdminReportPayload): Record<string, unknown>[] {
+  if (payload.meta.reportType === "spv_readiness") {
+    return payload.sections.spv_readiness_rows ?? [];
+  }
+
   if (payload.meta.reportType === "due_diligence") {
     return payload.sections.company_diligence ?? [];
   }
