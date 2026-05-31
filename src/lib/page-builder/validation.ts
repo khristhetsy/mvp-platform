@@ -1,4 +1,12 @@
 import { PAGE_BUILDER_FORBIDDEN_PHRASES } from "@/lib/page-builder/content-rules";
+import {
+  flattenVisibleBlocks,
+  getLayoutRegionDescriptors,
+  getRegionBlocks,
+  isLayoutBlockType,
+  canPlaceInLayoutRegion,
+  normalizeLayoutBlocks,
+} from "@/lib/page-builder/layout-blocks";
 import { APPROVED_BLOCK_TYPES, PAGE_BUILDER_SLUGS } from "@/lib/page-builder/types";
 import type { PageBlock, PageLayoutDocument, ValidationWarning } from "@/lib/page-builder/types";
 
@@ -53,7 +61,21 @@ export function validateLayout(layout: PageLayoutDocument): ValidationWarning[] 
     });
   }
 
-  const visibleBlocks = layout.blocks.filter((b) => b.visible);
+  if (layout.blocks.length > 48) {
+    warnings.push({
+      code: "too_many_blocks",
+      message: "More than 48 blocks may hurt performance in preview.",
+      severity: "warning",
+    });
+  }
+
+  const normalizedBlocks = normalizeLayoutBlocks(layout.blocks);
+
+  for (const block of normalizedBlocks) {
+    warnings.push(...validateBlock(block));
+  }
+
+  const visibleBlocks = flattenVisibleBlocks(normalizedBlocks.filter((b) => b.visible));
 
   if (visibleBlocks.length === 0) {
     warnings.push({
@@ -61,18 +83,6 @@ export function validateLayout(layout: PageLayoutDocument): ValidationWarning[] 
       message: "At least one visible block is recommended for preview.",
       severity: "warning",
     });
-  }
-
-  if (layout.blocks.length > 32) {
-    warnings.push({
-      code: "too_many_blocks",
-      message: "More than 32 blocks may hurt performance in preview.",
-      severity: "warning",
-    });
-  }
-
-  for (const block of layout.blocks) {
-    warnings.push(...validateBlock(block));
   }
 
   const heroCount = visibleBlocks.filter((b) => b.type === "hero").length;
@@ -136,7 +146,7 @@ function validateForbiddenCopy(block: PageBlock): ValidationWarning[] {
   return warnings;
 }
 
-function validateBlock(block: PageBlock): ValidationWarning[] {
+function validateBlock(block: PageBlock, depth = 0): ValidationWarning[] {
   const warnings: ValidationWarning[] = [];
 
   if (!APPROVED_BLOCK_TYPES.includes(block.type)) {
@@ -502,6 +512,67 @@ function validateBlock(block: PageBlock): ValidationWarning[] {
             severity: "error",
           });
         }
+      }
+    }
+  }
+
+  if (block.type === "metric") {
+    if (!asString(block.props.label)) {
+      warnings.push({
+        blockId: block.id,
+        code: "metric_missing_label",
+        message: "Metric block requires a label.",
+        severity: "error",
+      });
+    }
+    if (!asString(block.props.value)) {
+      warnings.push({
+        blockId: block.id,
+        code: "metric_missing_value",
+        message: "Metric block requires a value.",
+        severity: "error",
+      });
+    }
+  }
+
+  if (isLayoutBlockType(block.type)) {
+    if (depth > 0) {
+      warnings.push({
+        blockId: block.id,
+        code: "nested_layout_forbidden",
+        message: "Layout blocks cannot be nested inside other layout regions.",
+        severity: "error",
+      });
+    }
+
+    for (const region of getLayoutRegionDescriptors(block)) {
+      const children = getRegionBlocks(block, region.key);
+      if (children.length === 0) {
+        warnings.push({
+          blockId: block.id,
+          code: "layout_region_empty",
+          message: `${region.label} is empty — add at least one content block.`,
+          severity: "warning",
+        });
+      }
+
+      for (const child of children) {
+        if (isLayoutBlockType(child.type)) {
+          warnings.push({
+            blockId: child.id,
+            code: "nested_layout_forbidden",
+            message: "Layout blocks cannot be placed inside layout regions.",
+            severity: "error",
+          });
+        } else if (!canPlaceInLayoutRegion(child.type)) {
+          warnings.push({
+            blockId: child.id,
+            code: "invalid_region_child",
+            message: `Block type "${child.type}" is not allowed inside layout regions.`,
+            severity: "error",
+          });
+        }
+        warnings.push(...validateBlock(child, depth + 1));
       }
     }
   }

@@ -210,6 +210,54 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
       ],
     },
   },
+  {
+    type: "metric",
+    label: "Metric",
+    description: "Single KPI card for grids and columns",
+    defaultProps: {
+      label: "Readiness Score",
+      value: "87/100",
+      description: "Composite readiness index",
+    },
+  },
+  {
+    type: "columns_2",
+    label: "2 columns",
+    description: "Two-column enterprise layout region",
+    defaultProps: {
+      title: "",
+      left: [],
+      right: [],
+    },
+  },
+  {
+    type: "columns_3",
+    label: "3 columns",
+    description: "Three-column enterprise layout region",
+    defaultProps: {
+      title: "",
+      columns: [[], [], []],
+    },
+  },
+  {
+    type: "sidebar_layout",
+    label: "Sidebar layout",
+    description: "Sidebar plus main content regions",
+    defaultProps: {
+      title: "",
+      sidebar: [],
+      content: [],
+    },
+  },
+  {
+    type: "metric_grid",
+    label: "Metric grid",
+    description: "Responsive grid of metric cards",
+    defaultProps: {
+      title: "Key metrics",
+      items: [],
+    },
+  },
 ];
 
 export function getBlockDefinition(type: PageBlockType) {

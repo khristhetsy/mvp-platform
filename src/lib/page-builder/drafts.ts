@@ -1,4 +1,5 @@
 import { buildDemoLayout, emptyLayout } from "@/lib/page-builder/demo-layout";
+import { countAllBlocks, normalizeLayoutBlocks } from "@/lib/page-builder/layout-blocks";
 import { parseLayoutDocument } from "@/lib/page-builder/validation";
 import type {
   PageBuilderDraftRow,
@@ -15,7 +16,7 @@ type Client = SupabaseClient<Database>;
 function normalizeLayout(raw: unknown, pageSlug: PageBuilderSlug): PageLayoutDocument {
   const parsed = parseLayoutDocument(raw);
   if (parsed) {
-    return { ...parsed, pageSlug };
+    return { ...parsed, pageSlug, blocks: normalizeLayoutBlocks(parsed.blocks) };
   }
   return emptyLayout(pageSlug);
 }
@@ -132,7 +133,7 @@ export async function listSnapshotsWithMeta(supabase: Client, draftId: string, p
     return {
       ...snapshot,
       layout,
-      blockCount: layout.blocks.length,
+      blockCount: countAllBlocks(layout.blocks),
       createdByName: profile?.full_name ?? null,
       createdByEmail: profile?.email ?? null,
     };

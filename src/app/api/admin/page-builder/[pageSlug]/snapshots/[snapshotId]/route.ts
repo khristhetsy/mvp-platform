@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePageBuilderApi } from "@/lib/api/permissions";
 import { getSnapshotById, isPageBuilderSlug } from "@/lib/page-builder/drafts";
+import { countAllBlocks } from "@/lib/page-builder/layout-blocks";
 import { parseLayoutDocument } from "@/lib/page-builder/validation";
 
 type RouteContext = { params: Promise<{ pageSlug: string; snapshotId: string }> };
@@ -28,7 +29,7 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({
       snapshot: {
         ...snapshot,
-        blockCount: layout?.blocks.length ?? 0,
+        blockCount: layout ? countAllBlocks(layout.blocks) : 0,
         createdByName: profile?.full_name ?? null,
         createdByEmail: profile?.email ?? null,
       },

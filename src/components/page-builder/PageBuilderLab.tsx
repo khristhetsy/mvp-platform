@@ -17,6 +17,7 @@ import {
   Upload,
 } from "lucide-react";
 import { SortableDragHandle, SortableList } from "@/components/ui/SortableList";
+import { LayoutBlockRegionsEditor } from "@/components/page-builder/LayoutBlockRegionsEditor";
 import { PageBuilderPreview } from "@/components/page-builder/PageBuilderPreview";
 import {
   AutosaveIndicator,
@@ -39,6 +40,13 @@ import type {
 } from "@/lib/page-builder/types";
 import { PAGE_BUILDER_SLUGS } from "@/lib/page-builder/types";
 import { reorderByIndex } from "@/lib/dnd/reorder";
+import {
+  findBlockById,
+  isLayoutBlockType,
+  normalizeLayoutBlocks,
+  removeBlockById,
+  updateBlockById,
+} from "@/lib/page-builder/layout-blocks";
 import { validateLayout } from "@/lib/page-builder/validation";
 
 function asString(value: unknown) {
@@ -78,7 +86,10 @@ export function PageBuilderLab() {
   const savedFingerprintRef = useRef("");
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const selectedBlock = layout.blocks.find((b) => b.id === selectedBlockId) ?? null;
+  const selectedBlock = useMemo(
+    () => (selectedBlockId ? findBlockById(layout.blocks, selectedBlockId) : null),
+    [layout.blocks, selectedBlockId],
+  );
 
   const activeSnapshot = useMemo(
     () => snapshots.find((s) => s.id === activeSnapshotId) ?? null,
@@ -318,7 +329,7 @@ export function PageBuilderLab() {
   };
 
   const removeBlock = (blockId: string) => {
-    const next = { ...layout, blocks: layout.blocks.filter((b) => b.id !== blockId) };
+    const next = { ...layout, blocks: removeBlockById(layout.blocks, blockId) };
     updateLayout(next);
     if (selectedBlockId === blockId) setSelectedBlockId(next.blocks[0]?.id ?? null);
   };
@@ -338,7 +349,7 @@ export function PageBuilderLab() {
   const importJson = async (file: File) => {
     const text = await file.text();
     const parsed = JSON.parse(text) as PageLayoutDocument;
-    updateLayout({ ...parsed, pageSlug, version: 1 });
+    updateLayout({ ...parsed, pageSlug, version: 1, blocks: normalizeLayoutBlocks(parsed.blocks) });
     setStatus("JSON imported locally — autosave will persist shortly.");
   };
 
@@ -603,10 +614,22 @@ export function PageBuilderLab() {
           {selectedBlock ? (
             <BlockEditor
               block={selectedBlock}
+              selectedBlockId={selectedBlockId}
+              disabled={loading}
+              onSelectBlock={setSelectedBlockId}
               onChange={(key, value) => {
                 updateLayout({
                   ...layout,
-                  blocks: updateBlockProp(layout.blocks, selectedBlock.id, key, value),
+                  blocks: updateBlockById(layout.blocks, selectedBlock.id, (b) => ({
+                    ...b,
+                    props: { ...b.props, [key]: value },
+                  })),
+                });
+              }}
+              onLayoutChange={(updated) => {
+                updateLayout({
+                  ...layout,
+                  blocks: updateBlockById(layout.blocks, updated.id, () => updated),
                 });
               }}
             />
@@ -624,9 +647,17 @@ export function PageBuilderLab() {
 function BlockEditor({
   block,
   onChange,
+  onLayoutChange,
+  onSelectBlock,
+  selectedBlockId,
+  disabled,
 }: Readonly<{
   block: PageBlock;
   onChange: (key: string, value: unknown) => void;
+  onLayoutChange?: (block: PageBlock) => void;
+  onSelectBlock?: (blockId: string) => void;
+  selectedBlockId?: string | null;
+  disabled?: boolean;
 }>) {
   const def = getBlockDefinition(block.type);
 
@@ -657,6 +688,25 @@ function BlockEditor({
     <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
       <h2 className="text-sm font-semibold text-[var(--navy)]">Edit {def?.label ?? block.type}</h2>
       <div className="mt-3 space-y-3">
+        {isLayoutBlockType(block.type) && onLayoutChange && onSelectBlock ? (
+          <>
+            {field("Section title (optional)", "title")}
+            <LayoutBlockRegionsEditor
+              layoutBlock={block}
+              selectedBlockId={selectedBlockId ?? null}
+              disabled={disabled}
+              onChange={onLayoutChange}
+              onSelectBlock={onSelectBlock}
+            />
+          </>
+        ) : null}
+        {block.type === "metric" && (
+          <>
+            {field("Label", "label")}
+            {field("Value", "value")}
+            {field("Description", "description", true)}
+          </>
+        )}
         {block.type === "hero" && (
           <>
             {field("Eyebrow", "eyebrow")}

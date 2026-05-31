@@ -19,6 +19,11 @@ export const APPROVED_BLOCK_TYPES = [
   "team",
   "logo_cloud",
   "stats_comparison",
+  "columns_2",
+  "columns_3",
+  "sidebar_layout",
+  "metric_grid",
+  "metric",
 ] as const;
 
 export type PageBlockType = (typeof APPROVED_BLOCK_TYPES)[number];

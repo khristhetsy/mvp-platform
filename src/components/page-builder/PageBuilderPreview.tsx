@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { isComplianceNoticeStyle, isProcessStepIcon } from "@/lib/page-builder/content-rules";
+import { getLayoutRegionDescriptors, getRegionBlocks, isLayoutBlockType } from "@/lib/page-builder/layout-blocks";
 import type { PageBlock, PreviewMode } from "@/lib/page-builder/types";
 
 function asString(value: unknown) {
@@ -51,16 +52,69 @@ function BlockShell({
   block,
   children,
   previewMode,
-}: Readonly<{ block: PageBlock; children: React.ReactNode; previewMode: PreviewMode }>) {
+  nested = false,
+}: Readonly<{ block: PageBlock; children: React.ReactNode; previewMode: PreviewMode; nested?: boolean }>) {
   if (!block.visible) return null;
 
+  const shellClass = nested ? "px-0 py-0" : previewMode === "mobile" ? "px-4 py-4" : "px-6 py-5";
+
   return (
-    <div
-      data-block-id={block.id}
-      data-block-type={block.type}
-      className={previewMode === "mobile" ? "px-4 py-4" : "px-6 py-5"}
-    >
+    <div data-block-id={block.id} data-block-type={block.type} className={shellClass}>
       {children}
+    </div>
+  );
+}
+
+function LayoutRegionsPreview({
+  block,
+  previewMode,
+}: Readonly<{ block: PageBlock; previewMode: PreviewMode }>) {
+  const regions = getLayoutRegionDescriptors(block);
+  const isMobile = previewMode === "mobile";
+
+  const gridClass =
+    block.type === "columns_3"
+      ? isMobile
+        ? "grid grid-cols-1 gap-4"
+        : "grid grid-cols-1 gap-4 md:grid-cols-3"
+      : block.type === "sidebar_layout"
+        ? isMobile
+          ? "grid grid-cols-1 gap-4"
+          : "grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,240px)_minmax(0,1fr)]"
+        : block.type === "metric_grid"
+          ? isMobile
+            ? "grid grid-cols-1 gap-3"
+            : "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+          : isMobile
+            ? "grid grid-cols-1 gap-4"
+            : "grid grid-cols-1 gap-4 md:grid-cols-2";
+
+  if (block.type === "metric_grid") {
+    const children = getRegionBlocks(block, "items");
+    return (
+      <div className={gridClass}>
+        {children.map((child) => (
+          <PageBuilderBlockRenderer key={child.id} block={child} previewMode={previewMode} nested />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className={gridClass}>
+      {regions.map((region) => {
+        const children = getRegionBlocks(block, region.key);
+        return (
+          <div key={region.key} className="min-w-0 space-y-3">
+            {block.type !== "metric_grid" && children.length > 0 ? (
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{region.label}</p>
+            ) : null}
+            {children.map((child) => (
+              <PageBuilderBlockRenderer key={child.id} block={child} previewMode={previewMode} nested />
+            ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -68,7 +122,8 @@ function BlockShell({
 export function PageBuilderBlockRenderer({
   block,
   previewMode = "desktop",
-}: Readonly<{ block: PageBlock; previewMode?: PreviewMode }>) {
+  nested = false,
+}: Readonly<{ block: PageBlock; previewMode?: PreviewMode; nested?: boolean }>) {
   switch (block.type) {
     case "hero":
       return (
@@ -452,6 +507,32 @@ export function PageBuilderBlockRenderer({
         </BlockShell>
       );
     }
+    case "metric":
+      return (
+        <BlockShell block={block} previewMode={previewMode} nested={nested}>
+          <div className="rounded-lg border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{asString(block.props.label) || "Metric"}</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-[var(--navy)]">{asString(block.props.value) || "—"}</p>
+            {asString(block.props.description) ? (
+              <p className="mt-1 text-xs leading-5 text-slate-600">{asString(block.props.description)}</p>
+            ) : null}
+          </div>
+        </BlockShell>
+      );
+    case "columns_2":
+    case "columns_3":
+    case "sidebar_layout":
+    case "metric_grid":
+      return (
+        <BlockShell block={block} previewMode={previewMode} nested={nested}>
+          <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)]">
+            {asString(block.props.title) ? (
+              <h2 className="mb-4 text-lg font-semibold text-[var(--navy)]">{asString(block.props.title)}</h2>
+            ) : null}
+            <LayoutRegionsPreview block={block} previewMode={previewMode} />
+          </div>
+        </BlockShell>
+      );
     default:
       return null;
   }

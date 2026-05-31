@@ -7,6 +7,7 @@ import {
   isPageBuilderSlug,
   listSnapshotsWithMeta,
 } from "@/lib/page-builder/drafts";
+import { countAllBlocks } from "@/lib/page-builder/layout-blocks";
 import { parseLayoutDocument } from "@/lib/page-builder/validation";
 
 type RouteContext = { params: Promise<{ pageSlug: string }> };
@@ -56,7 +57,7 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({
       snapshot: {
         ...snapshot,
-        blockCount: layout?.blocks.length ?? 0,
+        blockCount: layout ? countAllBlocks(layout.blocks) : 0,
         createdByName: auth.profile.full_name,
         createdByEmail: auth.profile.email,
       },
