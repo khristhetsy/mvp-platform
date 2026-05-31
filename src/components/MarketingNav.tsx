@@ -25,8 +25,8 @@ export function MarketingNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-[var(--shadow-panel)] backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 lg:px-6">
+    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/98 shadow-[var(--shadow-sticky)] backdrop-blur-sm">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3.5 lg:px-8">
         <Link href="/" className="flex shrink-0 items-center" onClick={() => setMobileOpen(false)}>
           <CapitalOSLogo variant="icon" height={32} className="md:hidden" />
           <CapitalOSLogo variant="wordmark" height={28} className="hidden md:block" priority />
@@ -37,7 +37,7 @@ export function MarketingNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`transition hover:text-[var(--navy)] ${isActive(pathname, item.href) ? "font-semibold text-[var(--navy)]" : ""}`}
+              className={`transition hover:text-indigo-700 ${isActive(pathname, item.href) ? "font-semibold text-indigo-700" : ""}`}
             >
               {item.label}
             </Link>

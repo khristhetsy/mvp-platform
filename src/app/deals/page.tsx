@@ -32,7 +32,7 @@ export default async function DealsPage() {
   return (
     <MarketingShell>
       <section className="px-4 py-8 lg:px-8 lg:py-10">
-        <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-panel)]">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-panel)] lg:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--gold)]">Investor marketplace</p>
           <h1 className="mt-3 max-w-4xl text-3xl font-semibold tracking-tight text-[var(--navy)] md:text-4xl">
             Reviewed private opportunities with diligence context.

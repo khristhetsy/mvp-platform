@@ -34,7 +34,7 @@ const featureCards = [
 export default function Home() {
   return (
     <MarketingShell>
-      <section className="px-4 py-8 lg:px-8 lg:py-10">
+      <section className="px-4 py-10 lg:px-8 lg:py-12">
         <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr] xl:items-start">
           <div className="flex flex-col justify-center">
             <CapitalOSLogo variant="full" height={52} priority className="mb-6" />
@@ -87,7 +87,7 @@ export default function Home() {
           {featureCards.map((card) => (
             <article
               key={card.title}
-              className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]"
+              className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)] transition hover:border-indigo-200/60 hover:shadow-[var(--shadow-card)]"
             >
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--navy-muted)]">
                 <span className="h-2 w-2 rounded-full bg-[var(--gold)]" aria-hidden />

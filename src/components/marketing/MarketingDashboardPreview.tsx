@@ -12,7 +12,7 @@ export function MarketingDashboardPreview() {
   const interestSeries = [12, 14, 15, 17, 19, 21, 23];
 
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white p-1 shadow-[var(--shadow-panel)]">
+    <div className="rounded-2xl border border-slate-200/80 bg-white p-1 shadow-[var(--shadow-card)]">
       <div className="rounded-lg border border-slate-100 bg-[var(--surface-sunken)] p-3">
         {/* Header bar */}
         <div className="flex items-center justify-between gap-2 border-b border-slate-200/80 pb-3">

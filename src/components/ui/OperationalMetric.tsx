@@ -38,12 +38,12 @@ export function OperationalMetric({
 
   const card = (
     <div
-      className={`flex h-full min-h-[8.5rem] flex-col rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)] ${href ? `cursor-pointer ${drilldownHoverClass}` : "transition hover:border-slate-300"} ${
+      className={`flex h-full min-h-[9rem] flex-col rounded-2xl border border-slate-200/80 bg-white shadow-[var(--shadow-card)] ${href ? `cursor-pointer ${drilldownHoverClass}` : "transition hover:border-indigo-200/80 hover:shadow-[var(--shadow-card)]"} ${
         urgency ? "ring-1 ring-amber-200" : ""
       }`}
     >
       <div className={`flex h-full flex-col rounded-xl border-l-[3px] ${border}`}>
-        <div className="flex flex-1 flex-col p-4">
+        <div className="flex flex-1 flex-col p-5">
           <div className="flex items-start justify-between gap-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</p>
             {statusLabel ? <StatusBadge label={statusLabel} status={status} dot /> : null}
@@ -105,7 +105,7 @@ export function MetricRow({
           {action}
         </div>
       )}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 [&>*]:h-full">{children}</div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 [&>*]:h-full">{children}</div>
     </section>
   );
 }

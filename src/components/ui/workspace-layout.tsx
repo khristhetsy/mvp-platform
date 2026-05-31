@@ -6,7 +6,7 @@ export function WorkspacePageContainer({
   className = "",
 }: Readonly<{ children: ReactNode; className?: string }>) {
   return (
-    <div className={`mx-auto w-full max-w-[1600px] space-y-5 enterprise-animate-in ${className}`}>{children}</div>
+    <div className={`mx-auto w-full max-w-[1600px] space-y-6 enterprise-animate-in ${className}`}>{children}</div>
   );
 }
 
@@ -43,7 +43,7 @@ export function PageSection({
 /** Equal-height KPI row — 4 columns on xl. */
 export function MetricGrid({ children, className = "" }: Readonly<{ children: ReactNode; className?: string }>) {
   return (
-    <div className={`grid gap-3 sm:grid-cols-2 xl:grid-cols-4 [&>*]:h-full ${className}`}>{children}</div>
+    <div className={`grid gap-4 sm:grid-cols-2 xl:grid-cols-4 [&>*]:h-full ${className}`}>{children}</div>
   );
 }
 

@@ -21,7 +21,7 @@ export function WorkspaceShell({
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
-    <div className="flex h-screen w-full flex-1 overflow-hidden bg-[var(--surface-base)] text-slate-950">
+    <div className="flex h-screen w-full flex-1 overflow-hidden bg-[var(--surface-sunken)] text-slate-950">
       <WorkspaceSidebar
         workspace={workspace}
         planBadge={planBadge}
@@ -35,8 +35,8 @@ export function WorkspaceShell({
           profileSubtitle={profileSubtitle}
           onMenuClick={() => setMobileNavOpen(true)}
         />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-[var(--background)] px-4 py-4 lg:px-6 lg:py-5">
-          {children}
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-[var(--background)] px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+          <div className="cap-dashboard-page">{children}</div>
         </main>
       </div>
     </div>

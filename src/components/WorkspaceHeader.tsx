@@ -26,8 +26,8 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, onMen
   const companyLabel = profileSubtitle?.trim() || "Select company";
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200/90 bg-white">
-      <div className="flex min-h-[var(--workspace-header-height)] flex-wrap items-center gap-2 px-4 py-2 lg:gap-3 lg:px-5">
+    <header className="sticky top-0 z-30 border-b border-slate-200/90 bg-white shadow-[var(--shadow-sticky)]">
+      <div className="flex min-h-[var(--workspace-header-height)] flex-wrap items-center gap-2 px-4 py-2.5 lg:gap-4 lg:px-6">
         <button
           type="button"
           className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 lg:hidden"
@@ -45,7 +45,7 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, onMen
           <CapitalOSLogo variant="wordmark" height={26} />
         </Link>
         <WorkspaceBreadcrumbs workspace={workspace} />
-        <span className="hidden rounded-md bg-[var(--navy-muted)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--navy)] sm:inline">
+        <span className="hidden rounded-full bg-indigo-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 sm:inline">
           {workspaceLabel(workspace)}
         </span>
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">

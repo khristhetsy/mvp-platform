@@ -60,8 +60,8 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+      <header className="border-b border-slate-200/90 bg-white shadow-[var(--shadow-panel)]">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
           <Link href="/" className="font-semibold tracking-tight text-slate-950">
             CapitalOS
           </Link>
@@ -82,7 +82,7 @@ export function AppShell({
           </Link>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-7xl px-6 py-8">{children}</main>
+      <main className="mx-auto w-full max-w-7xl px-6 py-10 lg:px-8">{children}</main>
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-6 py-5 text-xs text-slate-500">{compactDisclaimer()}</div>
       </footer>

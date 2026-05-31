@@ -83,10 +83,10 @@ export function WorkspaceSidebar({
               key={item.href}
               href={item.href}
               onClick={onClose}
-              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
+              className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-colors ${
                 active
-                  ? "bg-[var(--navy)] text-white shadow-sm"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-[var(--navy)]"
+                  ? "bg-indigo-600 text-white shadow-sm shadow-indigo-600/20"
+                  : "text-slate-600 hover:bg-indigo-50/80 hover:text-indigo-900"
               }`}
             >
               <Icon
@@ -129,7 +129,7 @@ export function WorkspaceSidebar({
         />
       ) : null}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex min-h-0 w-64 shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] shadow-[var(--shadow-panel)] transition-transform lg:relative lg:z-30 lg:h-screen lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex min-h-0 w-[var(--workspace-sidebar-width)] shrink-0 flex-col border-r border-slate-200/90 bg-white shadow-[var(--shadow-sticky)] transition-transform lg:relative lg:z-30 lg:h-screen lg:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >

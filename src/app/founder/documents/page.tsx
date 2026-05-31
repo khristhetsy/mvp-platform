@@ -21,8 +21,8 @@ export default async function DocumentUploadPage() {
       profileSubtitle={company?.company_name ?? "Your company"}
     >
       <FounderFeatureGate featureKey="documents">
-        <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-panel)]">
+        <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="cap-module-card p-6 lg:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Secure upload</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--navy)]">Upload diligence documents</h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">
@@ -50,7 +50,7 @@ export default async function DocumentUploadPage() {
           )}
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="cap-module-card p-6 lg:p-8">
           <h2 className="text-lg font-semibold text-slate-950">Uploaded files</h2>
           <div className="mt-5 divide-y divide-slate-100">
             {(documents ?? []).length > 0 ? (

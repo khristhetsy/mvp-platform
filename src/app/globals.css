@@ -1,37 +1,41 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f6f8;
+  --background: #f8fafc;
   --foreground: #0c2340;
 
-  /* Institutional neutrals */
-  --surface-base: #eef0f4;
+  /* Institutional neutrals — clean white SaaS surfaces */
+  --surface-base: #f1f5f9;
   --surface-raised: #ffffff;
-  --surface-sunken: #f8f9fb;
+  --surface-sunken: #f8fafc;
   --surface-sidebar: #ffffff;
-  --border-subtle: #e2e6ed;
-  --border-strong: #c8d0dc;
+  --border-subtle: #e2e8f0;
+  --border-strong: #cbd5e1;
   --text-primary: #0c2340;
   --text-secondary: #334155;
   --text-muted: #64748b;
 
-  /* Brand — deep navy + gold */
+  /* Brand — deep navy + gold; indigo for dashboard accents */
   --navy: #0c2340;
   --navy-hover: #091a30;
-  --navy-muted: #e8edf4;
+  --navy-muted: #eef2ff;
   --gold: #c9a227;
   --gold-hover: #b8921f;
   --gold-muted: #faf6ea;
+  --indigo: #4f46e5;
+  --indigo-hover: #4338ca;
+  --indigo-muted: #eef2ff;
 
-  /* Primary actions use navy; accent highlights use gold */
+  /* Primary actions use navy; dashboard highlights use indigo */
   --accent: var(--navy);
   --accent-hover: var(--navy-hover);
-  --accent-muted: var(--navy-muted);
+  --accent-muted: var(--indigo-muted);
   --accent-foreground: #ffffff;
   --accent-gold: var(--gold);
+  --accent-indigo: var(--indigo);
 
   /* Operational status */
-  --status-info: #0c2340;
+  --status-info: #4f46e5;
   --status-success: #059669;
   --status-warning: #d97706;
   --status-danger: #dc2626;
@@ -44,18 +48,21 @@
   --space-5: 1.25rem;
   --space-6: 1.5rem;
   --space-8: 2rem;
+  --space-10: 2.5rem;
 
-  --shadow-panel: 0 1px 2px rgb(12 35 64 / 0.04), 0 1px 4px rgb(12 35 64 / 0.04);
-  --shadow-sticky: 0 1px 3px rgb(12 35 64 / 0.06);
-  --shadow-card: 0 1px 2px rgb(12 35 64 / 0.05);
+  --shadow-panel: 0 1px 3px rgb(15 23 42 / 0.04), 0 1px 2px rgb(15 23 42 / 0.03);
+  --shadow-sticky: 0 1px 3px rgb(15 23 42 / 0.06), 0 4px 12px rgb(15 23 42 / 0.04);
+  --shadow-card: 0 1px 3px rgb(15 23 42 / 0.05), 0 4px 16px rgb(79 70 229 / 0.04);
 
-  --workspace-header-height: 3.25rem;
+  --workspace-header-height: 3.5rem;
   --workspace-toolbar-top: var(--workspace-header-height);
+  --workspace-sidebar-width: 16.5rem;
 
   --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.625rem;
-  --radius-xl: 0.875rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
 }
 
 @theme inline {
@@ -162,7 +169,16 @@ select {
 }
 
 .cap-marketing-surface {
-  background: var(--background);
+  background: #ffffff;
+}
+
+.cap-dashboard-page {
+  @apply mx-auto w-full max-w-[1600px] space-y-6;
+  animation: enterprise-fade-in 180ms ease-out;
+}
+
+.cap-module-card {
+  @apply rounded-2xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)];
 }
 
 .cap-text-gold {
