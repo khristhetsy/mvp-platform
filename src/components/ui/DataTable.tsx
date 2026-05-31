@@ -13,7 +13,7 @@ export function DataTable({
     density === "compact" ? "enterprise-table--compact" : "enterprise-table--comfortable";
 
   return (
-    <div className={`overflow-x-auto rounded-lg border border-slate-200 bg-white ${className}`}>
+    <div className={`overflow-x-auto rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)] ${className}`}>
       <table className={`enterprise-table w-full min-w-[640px] border-collapse text-left text-sm ${densityClass}`}>
         {children}
       </table>
@@ -23,7 +23,7 @@ export function DataTable({
 
 export function DataTableHead({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <thead className="border-b border-slate-200 bg-slate-50">
+    <thead className="border-b border-slate-200/90 bg-[var(--surface-sunken)]">
       <tr>{children}</tr>
     </thead>
   );

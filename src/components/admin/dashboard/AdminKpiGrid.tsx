@@ -14,7 +14,7 @@ export function AdminKpiGrid({
 }>) {
   return (
     <PageSection title="Operational metrics" subtitle="Platform-wide snapshot">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 [&>*]:h-full">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 [&>*]:h-full">
         <MetricCard
           label="Total Companies"
           value={String(metrics.companies)}

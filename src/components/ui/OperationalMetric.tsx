@@ -38,20 +38,20 @@ export function OperationalMetric({
 
   const card = (
     <div
-      className={`flex h-full min-h-[8.5rem] flex-col rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)] ${href ? `cursor-pointer ${drilldownHoverClass}` : "transition hover:border-slate-300"} ${
+      className={`flex h-full min-h-[8.75rem] flex-col rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-card)] ${href ? `cursor-pointer ${drilldownHoverClass}` : "transition hover:border-slate-300 hover:shadow-[var(--shadow-panel)]"} ${
         urgency ? "ring-1 ring-amber-200" : ""
       }`}
     >
       <div className={`flex h-full flex-col rounded-xl border-l-[3px] ${border}`}>
-        <div className="flex flex-1 flex-col p-4">
+        <div className="flex flex-1 flex-col p-5">
           <div className="flex items-start justify-between gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-500">{label}</p>
             {statusLabel ? <StatusBadge label={statusLabel} status={status} dot /> : null}
           </div>
           <div className="mt-1.5 flex flex-1 flex-col justify-between gap-2">
             <div className="flex items-end justify-between gap-2">
               <div className="flex min-w-0 items-baseline gap-2">
-                <p className="truncate font-mono text-xl font-semibold tabular-nums tracking-tight text-slate-950">{value}</p>
+                <p className="truncate font-mono text-xl font-semibold tabular-nums tracking-tight text-[var(--navy)]">{value}</p>
                 {trendSymbol ? (
                   <span className={`shrink-0 text-xs font-medium ${trendColor}`} aria-label={`Trend ${trend}`}>
                     {trendSymbol}
@@ -95,17 +95,17 @@ export function MetricRow({
   children: ReactNode;
 }>) {
   return (
-    <section className="space-y-2.5">
+    <section className="space-y-3">
       {(title || action) && (
-        <div className="flex flex-wrap items-end justify-between gap-2">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            {title ? <h3 className="text-sm font-semibold text-slate-900">{title}</h3> : null}
-            {subtitle ? <p className="text-xs text-slate-500">{subtitle}</p> : null}
+            {title ? <h3 className="text-sm font-semibold text-[var(--navy)]">{title}</h3> : null}
+            {subtitle ? <p className="mt-0.5 text-xs leading-5 text-slate-500">{subtitle}</p> : null}
           </div>
           {action}
         </div>
       )}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 [&>*]:h-full">{children}</div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 [&>*]:h-full">{children}</div>
     </section>
   );
 }

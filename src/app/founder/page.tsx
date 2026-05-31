@@ -168,7 +168,7 @@ export default async function FounderDashboardPage() {
         <DashboardInsightPanel title="Engagement trend" subtitle="Workspace activity snapshot" />
       </section>
 
-      <section className="mt-5 grid gap-4 xl:grid-cols-2">
+      <section className="mt-5 grid gap-5 xl:grid-cols-2">
         <WorkspacePanel title="Capital Raise Overview" subtitle="Non-binding marketplace interest">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-xl bg-[var(--navy-muted)] p-4 ring-1 ring-slate-200">

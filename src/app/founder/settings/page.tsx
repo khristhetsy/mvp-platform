@@ -25,9 +25,9 @@ export default async function FounderSettingsPage() {
       profileName={profile.full_name ?? profile.email ?? "Founder"}
       profileSubtitle={company?.company_name ?? "Your company"}
     >
-      <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Company settings</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-600">Update your company profile details used across the platform.</p>
+      <section className="cap-surface-card p-6 lg:p-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-[var(--navy)]">Company settings</h1>
+        <p className="mt-3 text-sm leading-7 text-slate-600">Update your company profile details used across the platform.</p>
 
         <CompanySettingsForm company={company} />
         <FounderSubscriptionSettingsCard subscription={subscription} requestedPlan={requestedPlan} />

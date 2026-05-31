@@ -83,11 +83,11 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {featureCards.map((card) => (
             <article
               key={card.title}
-              className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]"
+              className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)] transition hover:shadow-[var(--shadow-card)]"
             >
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--navy-muted)]">
                 <span className="h-2 w-2 rounded-full bg-[var(--gold)]" aria-hidden />

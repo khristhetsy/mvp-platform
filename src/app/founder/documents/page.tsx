@@ -21,8 +21,8 @@ export default async function DocumentUploadPage() {
       profileSubtitle={company?.company_name ?? "Your company"}
     >
       <FounderFeatureGate featureKey="documents">
-        <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-panel)]">
+        <section className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="cap-surface-card p-6 lg:p-7">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Secure upload</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--navy)]">Upload diligence documents</h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">
@@ -50,21 +50,21 @@ export default async function DocumentUploadPage() {
           )}
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-950">Uploaded files</h2>
+        <div className="cap-surface-card p-6 lg:p-7">
+          <h2 className="text-lg font-semibold text-[var(--navy)]">Uploaded files</h2>
           <div className="mt-5 divide-y divide-slate-100">
             {(documents ?? []).length > 0 ? (
               documents?.map((document) => (
                 <div key={document.id} className="flex items-center justify-between py-4 text-sm">
                   <span className="font-medium text-slate-800">{document.file_name ?? document.document_type}</span>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">{document.status ?? "uploaded"}</span>
+                  <span className="rounded-full bg-[var(--navy-muted)] px-3 py-1 text-xs font-medium text-[var(--navy)]">{document.status ?? "uploaded"}</span>
                 </div>
               ))
             ) : (
               <p className="py-4 text-sm text-slate-600">No documents uploaded yet.</p>
             )}
           </div>
-          <Link href="/founder/report" className="mt-6 inline-flex rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700">
+          <Link href="/founder/report" className="cap-btn-secondary mt-6 inline-flex rounded-lg px-5 py-2.5 text-sm font-semibold">
             Generate diligence report
           </Link>
         </div>
