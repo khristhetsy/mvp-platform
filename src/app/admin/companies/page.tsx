@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { AdminActionHealthProvider } from "@/components/AdminActionHealthProvider";
 import { AdminCompaniesModuleViews } from "@/components/admin/AdminCompaniesModuleViews";
-import { formatError, RouteDataDiagnostics } from "@/components/RouteDataDiagnostics";
+import { formatError } from "@/lib/errors/format-error";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { listAdminCompanies, mapAdminCompaniesToCardData } from "@/lib/data/admin";
@@ -22,12 +22,10 @@ export default async function AdminCompaniesPage() {
   const serviceRoleConfigured = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
   let loadError: string | null = null;
   let companyCards = mapAdminCompaniesToCardData([]);
-  let rawCompanyCount: number | null = null;
 
   try {
     const supabase = createServiceRoleClient();
     const companies = await listAdminCompanies(supabase);
-    rawCompanyCount = companies.length;
     const founderIds = companies.map((company) => company.founder_id).filter(Boolean);
     const companyIds = companies.map((company) => company.id);
     const [subscriptionsByProfileId, requestedPlansByProfileId, remediationSummaries, learningSummaries, matchingSummaries, updateSummaries] =
@@ -72,22 +70,6 @@ export default async function AdminCompaniesPage() {
         userRole={profile.role}
         serviceRoleConfigured={serviceRoleConfigured}
       >
-        <RouteDataDiagnostics
-          route="/admin/companies"
-          userId={profile.id}
-          profileRole={profile.role}
-          entries={[
-            {
-              dataFunction: "listAdminCompanies() via createServiceRoleClient()",
-              count: rawCompanyCount,
-              error: loadError,
-              note: serviceRoleConfigured
-                ? "Service role env present"
-                : "SUPABASE_SERVICE_ROLE_KEY missing — fetch will fail",
-            },
-          ]}
-        />
-
         <WorkspacePageContainer>
           <PageHeader
             eyebrow="Admin workspace"

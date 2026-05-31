@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { AdminInvestorActivity } from "@/components/AdminInvestorActivity";
 import { AdminInvestorCrmTimeline } from "@/components/AdminInvestorCrmTimeline";
-import { formatError, RouteDataDiagnostics } from "@/components/RouteDataDiagnostics";
+import { formatError } from "@/lib/errors/format-error";
 import { AdminFounderOutreachSummary } from "@/components/AdminFounderOutreachSummary";
 import { AdminMessageThreadsPanel } from "@/components/AdminMessageThreadsPanel";
 import { getFounderOutreachAdminSummary } from "@/lib/founder-crm/admin-outreach-summary";
@@ -30,17 +30,8 @@ export default async function AdminCrmPage() {
     socialDraftFlaggedCount: 0,
     socialDraftCopiedCount: 0,
   };
-  let rawCrmError: string | null = null;
-  let rawInterestsError: string | null = null;
-
   try {
     const supabase = createServiceRoleClient();
-
-    const crmProbe = await supabase.from("investor_activity").select("id", { count: "exact", head: true });
-    rawCrmError = crmProbe.error?.message ?? null;
-
-    const interestsProbe = await supabase.from("investor_interests").select("id", { count: "exact", head: true });
-    rawInterestsError = interestsProbe.error?.message ?? null;
 
     const [activity, crm, threads, outreach] = await Promise.all([
       listAdminInvestorActivity(supabase),
@@ -63,38 +54,6 @@ export default async function AdminCrmPage() {
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={profile.role}
     >
-      <RouteDataDiagnostics
-        route="/admin/crm"
-        userId={profile.id}
-        profileRole={profile.role}
-        entries={[
-          {
-            dataFunction: "createServiceRoleClient()",
-            count: null,
-            error: setupError,
-          },
-          {
-            dataFunction: "listAdminInvestorActivity()",
-            count:
-              investorActivity.interests.length +
-              investorActivity.introRequests.length +
-              investorActivity.savedDeals.length,
-            error: rawInterestsError,
-            note: `interests=${investorActivity.interests.length}, intros=${investorActivity.introRequests.length}, saved=${investorActivity.savedDeals.length}`,
-          },
-          {
-            dataFunction: "listRecentInvestorCrmActivity()",
-            count: crmActivity.length,
-            error: rawCrmError,
-            note: rawCrmError
-              ? "listRecentInvestorCrmActivity() swallows errors and returns []"
-              : crmActivity.length === 0
-                ? "No rows in investor_activity or function returned empty"
-                : null,
-          },
-        ]}
-      />
-
       <div className="mb-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Admin Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">CRM</h1>

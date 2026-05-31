@@ -1,7 +1,7 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { MetricCard } from "@/components/MetricCard";
-import { formatError, RouteDataDiagnostics } from "@/components/RouteDataDiagnostics";
+import { formatError } from "@/lib/errors/format-error";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listFounderCompanyUpdates } from "@/lib/company-updates/company-updates";
 import { FounderCompanyUpdatesPanel } from "@/components/FounderCompanyUpdatesPanel";
@@ -106,31 +106,6 @@ export default async function FounderCapitalRaisePage() {
       profileSubtitle={company?.company_name ?? "Your company"}
     >
       <FounderFeatureGate featureKey="capital_raise">
-      <RouteDataDiagnostics
-        route="/founder/capital-raise"
-        userId={profile.id}
-        profileRole={profile.role}
-        companyId={company?.id ?? null}
-        entries={[
-          {
-            dataFunction: "ensureFounderCompanyForUser()",
-            count: company ? 1 : 0,
-            error: companyError,
-          },
-          {
-            dataFunction: "getCompanyPledgeSummary() via getFounderPledgeCompanyId()",
-            count: pledgeSummary.investorCount,
-            error: pledgeError,
-            note: `totalPledged=${pledgeSummary.totalPledged}`,
-          },
-          {
-            dataFunction: "listFounderInvestorActivity()",
-            count: investorActivity?.interests.length ?? 0,
-            error: activityError,
-          },
-        ]}
-      />
-
       <div className="mb-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Founder Workspace</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Capital Raise</h1>
