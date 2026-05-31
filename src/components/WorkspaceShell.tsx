@@ -21,7 +21,7 @@ export function WorkspaceShell({
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen w-full flex-1 bg-[var(--surface-base)] text-slate-950">
+    <div className="flex h-screen w-full flex-1 overflow-hidden bg-[var(--surface-base)] text-slate-950">
       <WorkspaceSidebar
         workspace={workspace}
         planBadge={planBadge}

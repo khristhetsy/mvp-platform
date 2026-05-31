@@ -24,7 +24,11 @@ export function AdminCommandHeader({
       eyebrow="CapitalOS admin"
       title="Operations Command Center"
       description="Institutional oversight for company reviews, investor approvals, compliance, SPV operations, and platform health."
-      metadata={lastUpdated ? `Last updated ${lastUpdated} UTC` : undefined}
+      metadata={
+        lastUpdated
+          ? `Last updated ${lastUpdated} UTC · Preview build: admin-command-center`
+          : "Preview build: admin-command-center"
+      }
       queueIndicator={
         pendingCount > 0 ? (
           <StatusBadge label={`${pendingCount} pending reviews`} status="warning" dot />

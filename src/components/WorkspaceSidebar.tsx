@@ -74,7 +74,7 @@ export function WorkspaceSidebar({
         </Link>
         <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
       </div>
-      <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-2.5">
+      <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 py-2.5">
         {items.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = getWorkspaceNavIcon(item.href);
@@ -129,7 +129,7 @@ export function WorkspaceSidebar({
         />
       ) : null}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] shadow-[var(--shadow-panel)] transition-transform lg:relative lg:z-30 lg:h-screen lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex min-h-0 w-64 shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] shadow-[var(--shadow-panel)] transition-transform lg:relative lg:z-30 lg:h-screen lg:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
