@@ -1,9 +1,6 @@
 import { AppShell } from "@/components/AppShell";
-import { AdminInvestorActivity } from "@/components/AdminInvestorActivity";
-import { AdminInvestorCrmTimeline } from "@/components/AdminInvestorCrmTimeline";
+import { AdminCrmModuleViews } from "@/components/admin/AdminCrmModuleViews";
 import { formatError } from "@/lib/errors/format-error";
-import { AdminFounderOutreachSummary } from "@/components/AdminFounderOutreachSummary";
-import { AdminMessageThreadsPanel } from "@/components/AdminMessageThreadsPanel";
 import { getFounderOutreachAdminSummary } from "@/lib/founder-crm/admin-outreach-summary";
 import { listRecentInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { listAdminMessageThreads } from "@/lib/messaging/threads";
@@ -68,20 +65,11 @@ export default async function AdminCrmPage() {
         </div>
       ) : null}
 
-      <AdminInvestorCrmTimeline activities={crmActivity} />
-
-      <div className="mb-8">
-        <AdminFounderOutreachSummary summary={outreachSummary} />
-      </div>
-
-      <div className="mb-8">
-        <AdminMessageThreadsPanel threads={messageThreads} />
-      </div>
-
-      <AdminInvestorActivity
-        interests={investorActivity.interests}
-        introRequests={investorActivity.introRequests}
-        savedDeals={investorActivity.savedDeals}
+      <AdminCrmModuleViews
+        crmActivity={crmActivity}
+        messageThreads={messageThreads}
+        outreachSummary={outreachSummary}
+        investorActivity={investorActivity}
       />
     </AppShell>
   );

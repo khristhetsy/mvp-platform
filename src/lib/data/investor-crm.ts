@@ -213,6 +213,8 @@ export type AdminCrmActivityRow = {
   activity_type: string;
   created_at: string;
   metadata: Record<string, unknown> | null;
+  investor_id: string | null;
+  company_id: string | null;
   investor_name: string | null;
   investor_email: string | null;
   company_name: string | null;
@@ -287,6 +289,8 @@ export async function listRecentInvestorCrmActivity(
       activity_type: row.activity_type,
       created_at: row.created_at,
       metadata: (row.metadata as Record<string, unknown> | null) ?? null,
+      investor_id: row.investor_id ?? null,
+      company_id: row.company_id ?? null,
       investor_name: profile?.full_name ?? null,
       investor_email: profile?.email ?? null,
       company_name: company?.company_name ?? null,

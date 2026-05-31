@@ -11,16 +11,19 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/DataTable";
+import { AdminQueryFilterBar } from "@/components/ui/AdminQueryFilterBar";
 import { ModuleEmptyState, PipelineBoard, ViewToolbar } from "@/components/ui/ViewToolbar";
 import { PageSection } from "@/components/ui/workspace-layout";
+import { useAdminQueryFilters } from "@/hooks/use-admin-query-filters";
 import { useViewMode } from "@/hooks/use-view-mode";
+import { filterCompanies as applyCompanyQueryFilters, type CompanyQueryFilters } from "@/lib/ui/query-filters";
 
 function formatReviewStatus(status: string | null) {
   if (!status) return "Unknown";
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
-function filterCompanies(companies: AdminCompanyCardData[], query: string) {
+function filterCompaniesBySearch(companies: AdminCompanyCardData[], query: string) {
   const q = query.trim().toLowerCase();
   if (!q) return companies;
   return companies.filter(
@@ -43,8 +46,15 @@ function AdminCompaniesModuleViewsInner({
 }>) {
   const { viewMode, density, query, setViewMode, setDensity, setQuery, allowedModes } =
     useViewMode("admin-companies");
+  const { filters } = useAdminQueryFilters("companies");
+  const companyFilters = filters as CompanyQueryFilters;
 
-  const filtered = useMemo(() => filterCompanies(companies, query), [companies, query]);
+  const drilldownFiltered = useMemo(
+    () => applyCompanyQueryFilters(companies, { ...companyFilters, q: "" }),
+    [companies, companyFilters],
+  );
+
+  const filtered = useMemo(() => filterCompaniesBySearch(drilldownFiltered, query), [drilldownFiltered, query]);
 
   const pipelineColumns = useMemo(() => {
     const byStatus = new Map<string, AdminCompanyCardData[]>();
@@ -72,6 +82,7 @@ function AdminCompaniesModuleViewsInner({
 
   return (
     <>
+      <AdminQueryFilterBar page="companies" className="mb-4" />
       <ViewToolbar
         viewMode={viewMode}
         allowedModes={allowedModes}

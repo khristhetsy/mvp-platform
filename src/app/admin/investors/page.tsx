@@ -1,8 +1,5 @@
 import { AppShell } from "@/components/AppShell";
-import { AdminInvestorActivity } from "@/components/AdminInvestorActivity";
-import { AdminInvestorReviewCard } from "@/components/AdminInvestorReviewCard";
-import { AdminSubscriptionSummary } from "@/components/AdminSubscriptionSummary";
-import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { AdminInvestorsModuleViews } from "@/components/admin/AdminInvestorsModuleViews";
 import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
 import { getInvestorMatchingSummaries } from "@/lib/matching/admin-matching-summaries";
 import { listInvestorProfilesForAdmin } from "@/lib/investor/profile";
@@ -62,8 +59,11 @@ export default async function AdminInvestorsPage() {
     matchingSummary: matchingSummaries.get(row.profile_id),
   }));
 
-  const pendingQueue = investorProfilesWithMatching.filter(
-    (row) => row.approval_status === "submitted" || row.approval_status === "changes_requested",
+  const profileLookup = new Map(
+    investorProfilesWithMatching.map((row) => [
+      row.profile_id,
+      { full_name: row.profiles?.full_name, email: row.profiles?.email },
+    ]),
   );
 
   const { data: investorAuthProfiles } = await supabase
@@ -94,97 +94,15 @@ export default async function AdminInvestorsPage() {
         </p>
       </div>
 
-      <WorkspacePanel
-        title="Investor approval queue"
-        subtitle={`${pendingQueue.length} profiles awaiting review`}
-      >
-        {pendingQueue.length === 0 ? (
-          <p className="text-sm text-slate-600">No investor profiles pending approval.</p>
-        ) : (
-          <div className="grid gap-5">
-            {pendingQueue.map((row) => (
-              <AdminInvestorReviewCard key={row.id} row={row} />
-            ))}
-          </div>
-        )}
-      </WorkspacePanel>
-
-      <div className="mt-8">
-        <WorkspacePanel
-          title="All investor profiles"
-          subtitle={`${investorProfiles.length} onboarding records`}
-        >
-          <div className="grid gap-5">
-            {investorProfilesWithMatching
-              .filter((row) => !pendingQueue.some((pending) => pending.id === row.id))
-              .map((row) => (
-                <AdminInvestorReviewCard key={row.id} row={row} />
-              ))}
-          </div>
-        </WorkspacePanel>
-      </div>
-
-      <div className="mt-8">
-        <WorkspacePanel
-          title="Investor subscriptions"
-          subtitle={`${investorAuthProfiles?.length ?? 0} investor auth profiles`}
-        >
-          {(investorAuthProfiles ?? []).length === 0 ? (
-            <p className="text-sm text-slate-600">No investor profiles yet.</p>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {(investorAuthProfiles ?? []).map((investor) => (
-                <div key={investor.id} className="grid gap-3 py-4 md:grid-cols-[1fr_1.2fr]">
-                  <div className="text-sm">
-                    <p className="font-medium text-slate-900">{investor.full_name ?? investor.email ?? "Investor"}</p>
-                    {investor.email ? <p className="text-slate-500">{investor.email}</p> : null}
-                  </div>
-                  <AdminSubscriptionSummary
-                    subscription={subscriptionMap.get(investor.id) ?? null}
-                    requestedPlan={requestedPlansMap.get(investor.id) ?? null}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </WorkspacePanel>
-      </div>
-
-      <div className="mt-8">
-        <WorkspacePanel
-          title="Investor directory"
-          subtitle={`${investors.length} investors with recorded activity`}
-        >
-          {investors.length === 0 ? (
-            <p className="text-sm text-slate-600">No investor activity yet.</p>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {investors.map((investor) => (
-                <div key={`${investor.email ?? investor.name}`} className="flex items-center justify-between py-3 text-sm">
-                  <div>
-                    <p className="font-medium text-slate-900">{investor.name}</p>
-                    {investor.email ? <p className="text-slate-500">{investor.email}</p> : null}
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    Last activity{" "}
-                    {investor.lastSeen
-                      ? new Date(investor.lastSeen).toLocaleDateString("en-US", { timeZone: "UTC" })
-                      : "—"}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </WorkspacePanel>
-      </div>
-
-      <div className="mt-8">
-        <AdminInvestorActivity
-          interests={investorActivity.interests}
-          introRequests={investorActivity.introRequests}
-          savedDeals={investorActivity.savedDeals}
-        />
-      </div>
+      <AdminInvestorsModuleViews
+        investorProfiles={investorProfilesWithMatching}
+        investorActivity={investorActivity}
+        investorAuthProfiles={investorAuthProfiles ?? []}
+        subscriptionMap={subscriptionMap}
+        requestedPlansMap={requestedPlansMap}
+        profileLookup={profileLookup}
+        investors={investors}
+      />
     </AppShell>
   );
 }

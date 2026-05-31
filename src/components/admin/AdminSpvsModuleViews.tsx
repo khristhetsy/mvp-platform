@@ -1,8 +1,10 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import { AdminSpvManagement } from "@/components/AdminSpvManagement";
+import { AdminQueryFilterBar } from "@/components/ui/AdminQueryFilterBar";
 import { ViewToolbar } from "@/components/ui/ViewToolbar";
+import { useAdminQueryFilters } from "@/hooks/use-admin-query-filters";
 import { useViewMode } from "@/hooks/use-view-mode";
 import type { ClosingReadinessSummary } from "@/lib/spv/closing-review-display";
 import type {
@@ -13,6 +15,7 @@ import type {
   SpvParticipationRecord,
   SpvParticipationRequirementRecord,
 } from "@/lib/spv/types";
+import { filterSpvOpportunities, type SpvQueryFilters } from "@/lib/ui/query-filters";
 
 export type AdminSpvsModuleViewsProps = Readonly<{
   opportunities: SpvOpportunityRecord[];
@@ -28,9 +31,27 @@ export type AdminSpvsModuleViewsProps = Readonly<{
 function AdminSpvsModuleViewsInner(props: AdminSpvsModuleViewsProps) {
   const { viewMode, density, query, setViewMode, setDensity, setQuery, allowedModes } =
     useViewMode("admin-spvs");
+  const { filters } = useAdminQueryFilters("spvs");
+  const spvFilters = filters as SpvQueryFilters;
+
+  const companiesById = useMemo(
+    () => new Map(props.companies.map((company) => [company.id, company.name])),
+    [props.companies],
+  );
+
+  const filteredOpportunities = useMemo(
+    () =>
+      filterSpvOpportunities(props.opportunities, { ...spvFilters, q: "" }, {
+        requirementsByParticipation: props.requirementsByParticipation,
+        participationsBySpv: props.participationsBySpv,
+        companiesById,
+      }),
+    [props.opportunities, props.requirementsByParticipation, props.participationsBySpv, spvFilters, companiesById],
+  );
 
   return (
     <>
+      <AdminQueryFilterBar page="spvs" className="mb-4" />
       <ViewToolbar
         viewMode={viewMode}
         allowedModes={allowedModes}
@@ -44,6 +65,7 @@ function AdminSpvsModuleViewsInner(props: AdminSpvsModuleViewsProps) {
       />
       <AdminSpvManagement
         {...props}
+        opportunities={filteredOpportunities}
         listViewMode={viewMode}
         listDensity={density}
         listQuery={query}
