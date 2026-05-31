@@ -152,7 +152,7 @@ export function CompanySettingsForm({ company }: Props) {
       ) : null}
 
       <button
-        className="inline-flex justify-center rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white disabled:opacity-60"
+        className="cap-btn-primary inline-flex justify-center rounded-lg px-6 py-2.5 text-sm font-semibold disabled:opacity-60"
         type="submit"
         disabled={isSaving || Boolean(validationError)}
       >

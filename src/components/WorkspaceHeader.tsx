@@ -61,7 +61,7 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, onMen
         <div className="flex items-center justify-end gap-2">
           <NotificationBellDropdown />
           <div className="flex items-center gap-2.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-800 text-[10px] font-semibold text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-indigo-600 text-[10px] font-semibold text-white">
               {initials || "CO"}
             </div>
             <div className="hidden text-left sm:block">

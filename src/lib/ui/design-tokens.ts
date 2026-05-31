@@ -1,12 +1,12 @@
 /** Enterprise UI tokens — use with Tailwind + CSS variables in globals.css */
 
 export const enterpriseSpacing = {
-  pageX: "px-6 lg:px-8",
-  pageY: "py-6 lg:py-8",
-  panel: "p-5",
-  panelCompact: "p-4",
-  gapSection: "gap-6",
-  gapPanel: "gap-4",
+  pageX: "px-5 lg:px-6",
+  pageY: "py-4 lg:py-5",
+  panel: "p-4",
+  panelCompact: "p-3.5",
+  gapSection: "gap-5",
+  gapPanel: "gap-3",
 } as const;
 
 export type OperationalStatus =
@@ -54,8 +54,8 @@ export const statusStyles: Record<
 };
 
 export const metricAccentBorder: Record<string, string> = {
-  indigo: "border-l-slate-800",
-  violet: "border-l-violet-600",
-  blue: "border-l-sky-600",
+  indigo: "border-l-indigo-600",
+  violet: "border-l-violet-500",
+  blue: "border-l-sky-500",
   slate: "border-l-slate-400",
 };

@@ -1,18 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
+  --background: #f4f6f9;
   --foreground: #0f172a;
 
-  /* Enterprise neutrals */
-  --surface-base: #f1f5f9;
+  /* Premium fintech neutrals */
+  --surface-base: #eef1f6;
   --surface-raised: #ffffff;
   --surface-sunken: #f8fafc;
+  --surface-sidebar: #ffffff;
   --border-subtle: #e2e8f0;
   --border-strong: #cbd5e1;
   --text-primary: #0f172a;
-  --text-secondary: #475569;
+  --text-secondary: #334155;
   --text-muted: #64748b;
+
+  /* Brand accent */
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-muted: #eef2ff;
+  --accent-foreground: #ffffff;
 
   /* Operational status */
   --status-info: #0284c7;
@@ -31,13 +38,15 @@
   --space-8: 2rem;
 
   /* Elevation */
-  --shadow-panel: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
-  --shadow-sticky: 0 4px 12px rgb(15 23 42 / 0.06);
+  --shadow-panel: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 12px rgb(15 23 42 / 0.04);
+  --shadow-sticky: 0 4px 16px rgb(15 23 42 / 0.06);
+  --shadow-card: 0 1px 3px rgb(15 23 42 / 0.06);
 
   /* Radius */
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
-  --radius-lg: 0.625rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
 }
 
 @theme inline {
@@ -120,4 +129,18 @@ select {
   background-size: 200% 100%;
   animation: enterprise-shimmer 1.2s ease-in-out infinite;
   border-radius: var(--radius-sm);
+}
+
+.cap-btn-primary {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  transition: background-color 120ms ease;
+}
+
+.cap-btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+.cap-marketing-surface {
+  background: var(--background);
 }

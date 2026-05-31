@@ -4,6 +4,7 @@ import { MetricCard } from "@/components/MetricCard";
 import { InvestorPipelineStages } from "@/components/ui/InvestorPipelineStages";
 import { MetricRow } from "@/components/ui/OperationalMetric";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { DashboardInsightPanel } from "@/components/ui/DashboardInsightPanel";
 import { InvestorActivityTimeline } from "@/components/InvestorActivityTimeline";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { InvestorApprovalBanner } from "@/components/InvestorApprovalBanner";
@@ -57,26 +58,34 @@ export default async function InvestorDashboardPage() {
           value={String(matches.length)}
           detail="Published listings ranked for your profile"
           accent="indigo"
+          sparklineValues={[1, 2, 3, matches.length, matches.length, matches.length, matches.length]}
         />
         <MetricCard
           label="Watchlist"
           value={String(savedDeals.length)}
           detail={savedDeals.slice(0, 2).map(investorCompanyLabel).join(", ") || "No saved deals yet"}
           accent="violet"
+          sparklineValues={[0, 1, 1, savedDeals.length, savedDeals.length, savedDeals.length, savedDeals.length]}
         />
         <MetricCard
           label="Expressed Interest"
           value={String(interests.length)}
           detail={interests.slice(0, 2).map(investorCompanyLabel).join(", ") || "None yet"}
           accent="blue"
+          sparklineValues={[0, 0, 1, interests.length, interests.length, interests.length, interests.length]}
         />
         <MetricCard
           label="Portfolio"
           value={String(savedDeals.length + interests.length)}
           detail="Watchlist, commitments, and company updates"
           accent="slate"
+          sparklineValues={[0, 1, 2, savedDeals.length + interests.length, savedDeals.length + interests.length, savedDeals.length + interests.length, savedDeals.length + interests.length]}
         />
       </MetricRow>
+
+      <section className="mb-5">
+        <DashboardInsightPanel title="Pipeline momentum" subtitle="Watchlist and interest activity" />
+      </section>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-2">
         <WorkspacePanel title="Portfolio" subtitle="Watchlist, pipeline, and company updates">

@@ -16,10 +16,10 @@ export default async function DiligenceReportPage() {
               <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{sampleCompany.name}</h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">{sampleReport.executiveSummary}</p>
             </div>
-            <div className="rounded-2xl bg-slate-950 p-6 text-white">
-              <p className="text-sm text-slate-300">Investor-readiness score</p>
-              <p className="mt-2 text-5xl font-semibold">{sampleCompany.readinessScore}</p>
-              <p className="mt-2 text-sm text-slate-300">Out of 100, pending human review</p>
+            <div className="rounded-xl border border-indigo-100 bg-indigo-600 p-5 text-white shadow-[var(--shadow-panel)]">
+              <p className="text-sm text-indigo-100">Investor-readiness score</p>
+              <p className="mt-2 text-4xl font-semibold tabular-nums">{sampleCompany.readinessScore}</p>
+              <p className="mt-2 text-sm text-indigo-100">Out of 100, pending human review</p>
             </div>
           </div>
         </section>

@@ -17,9 +17,9 @@ export function WorkspacePanel({
 }>) {
   return (
     <section
-      className={`rounded-lg border border-slate-200 bg-white shadow-[var(--shadow-panel)] ${className}`}
+      className={`rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)] ${className}`}
     >
-      <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+      <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-4 py-3">
         <div>
           <h2 className="text-sm font-semibold text-slate-950">{title}</h2>
           {subtitle ? <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p> : null}
@@ -29,7 +29,7 @@ export function WorkspacePanel({
         </div>
         {action}
       </div>
-      <div className="px-5 py-4">{children}</div>
+      <div className="px-4 py-3">{children}</div>
     </section>
   );
 }

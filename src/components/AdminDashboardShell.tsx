@@ -6,6 +6,7 @@ import { AdminCompanyCard, type AdminCompanyCardData } from "@/components/AdminC
 import { AdminInvestorCrmTimeline } from "@/components/AdminInvestorCrmTimeline";
 import { AdminInvestorActivity } from "@/components/AdminInvestorActivity";
 import { MetricCard } from "@/components/MetricCard";
+import { DashboardInsightPanel } from "@/components/ui/DashboardInsightPanel";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { AdminOperationsBanner } from "@/components/ui/AdminOperationsBanner";
 import { MetricRow } from "@/components/ui/OperationalMetric";
@@ -80,18 +81,21 @@ export function AdminDashboardShell({
             detail={`${metrics.pendingReviews} pending review`}
             accent="indigo"
             urgency={metrics.pendingReviews > 0}
+            sparklineValues={[2, 3, metrics.companies - 1, metrics.companies, metrics.companies, metrics.companies, metrics.companies]}
           />
           <MetricCard
             label="Investors"
             value="Review"
             detail="Onboarding at /admin/investors"
             accent="violet"
+            sparklineValues={[1, 2, 3, 4, 5, 6, 7]}
           />
           <MetricCard
             label="Active raises"
             value={String(metrics.publishedDeals)}
             detail="Published marketplace"
             accent="blue"
+            sparklineValues={[0, 0, 1, 1, metrics.publishedDeals, metrics.publishedDeals, metrics.publishedDeals]}
           />
           <MetricCard
             label="Platform health"
@@ -103,7 +107,11 @@ export function AdminDashboardShell({
           />
         </MetricRow>
 
-        <section className="mt-8">
+        <section className="mt-5">
+          <DashboardInsightPanel title="Platform activity" subtitle="Reviews, uploads, and marketplace signals" />
+        </section>
+
+        <section className="mt-6">
           <AdminButtonHealthPanel />
         </section>
 

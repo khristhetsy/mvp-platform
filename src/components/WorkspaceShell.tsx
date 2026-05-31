@@ -35,7 +35,7 @@ export function WorkspaceShell({
           profileSubtitle={profileSubtitle}
           onMenuClick={() => setMobileNavOpen(true)}
         />
-        <main className="flex-1 overflow-y-auto bg-[var(--surface-sunken)] p-5 lg:p-7">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-[var(--background)] p-4 lg:p-5">{children}</main>
       </div>
     </div>
   );

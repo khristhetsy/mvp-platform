@@ -26,7 +26,7 @@ export default function LoginPage() {
               <Link href="/auth/sign-up" className="rounded-2xl border border-slate-200 p-4 text-sm font-semibold text-slate-800">
                 Create founder or investor account
               </Link>
-              <Link href="/submit-company" className="rounded-2xl bg-slate-950 p-4 text-sm font-semibold text-white">
+              <Link href="/submit-company" className="cap-btn-primary rounded-xl p-4 text-sm font-semibold">
                 Submit company profile
               </Link>
             </div>

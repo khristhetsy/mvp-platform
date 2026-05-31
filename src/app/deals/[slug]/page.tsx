@@ -58,8 +58,8 @@ export default async function DealDetailPage({
               {[deal.stage, deal.location].filter(Boolean).join(" · ")}
             </p>
           </div>
-          <div className="rounded-2xl bg-slate-950 p-6 text-white lg:min-w-72">
-            <p className="text-sm text-slate-300">Published</p>
+          <div className="rounded-xl border border-indigo-100 bg-indigo-600 p-5 text-white shadow-[var(--shadow-panel)] lg:min-w-64">
+            <p className="text-sm text-indigo-100">Published</p>
             <p className="mt-2 text-2xl font-semibold">
               {deal.publishedAt
                 ? new Date(deal.publishedAt).toLocaleDateString(undefined, {
@@ -69,7 +69,7 @@ export default async function DealDetailPage({
                   })
                 : "Recently"}
             </p>
-            <p className="mt-2 text-sm text-slate-300">Admin-reviewed listing</p>
+            <p className="mt-2 text-sm text-indigo-100">Admin-reviewed listing</p>
           </div>
         </div>
         <div className="mt-8 grid gap-4 md:grid-cols-2">

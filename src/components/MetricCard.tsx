@@ -6,6 +6,7 @@ export function MetricCard({
   detail,
   accent = "indigo",
   trend,
+  sparklineValues,
   lastUpdated,
   statusLabel,
   status,
@@ -16,6 +17,7 @@ export function MetricCard({
   detail: string;
   accent?: "indigo" | "violet" | "blue" | "slate";
   trend?: "up" | "down" | "flat";
+  sparklineValues?: number[];
   lastUpdated?: string | null;
   statusLabel?: string;
   status?: "neutral" | "info" | "success" | "warning" | "danger" | "pending";
@@ -28,6 +30,7 @@ export function MetricCard({
       detail={detail}
       accent={accent}
       trend={trend}
+      sparklineValues={sparklineValues}
       lastUpdated={lastUpdated}
       statusLabel={statusLabel}
       status={status}

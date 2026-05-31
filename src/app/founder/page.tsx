@@ -11,6 +11,7 @@ import { listCompanyDocuments } from "@/lib/data/documents";
 import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { FounderLearningPreviewCard } from "@/components/FounderLearningPreviewCard";
 import { loadFounderLearningWorkspace } from "@/lib/learning/load-founder-learning";
+import { DashboardInsightPanel } from "@/components/ui/DashboardInsightPanel";
 import { FounderInvestorFitSignals } from "@/components/FounderInvestorFitSignals";
 import { buildFounderInvestorFitSignals } from "@/lib/matching/investor-company-matching";
 import { loadFounderCompanyMatchContext } from "@/lib/matching/load-matching-data";
@@ -79,7 +80,7 @@ export default async function FounderDashboardPage() {
           <>
             <Link
               href="/founder/settings"
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
+              className="cap-btn-primary rounded-lg px-4 py-2 text-sm font-medium"
             >
               Company settings
             </Link>
@@ -137,28 +138,37 @@ export default async function FounderDashboardPage() {
           value={`${founderPipeline.readinessScore}/100`}
           detail={founderPipeline.diligenceProgress}
           accent="indigo"
+          trend="up"
+          sparklineValues={[68, 71, 74, 76, 79, 82, founderPipeline.readinessScore]}
         />
         <MetricCard
           label="Raise Progress"
           value={raiseProgress}
           detail={company?.status ?? founderPipeline.profileStatus}
           accent="violet"
+          sparklineValues={[1, 2, 2, 3, 3, 4, 4]}
         />
         <MetricCard
           label="Indicative Interest"
           value={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
           detail={`From ${pledgeSummary.investorCount} ${pledgeSummary.investorCount === 1 ? "investor" : "investors"}`}
           accent="blue"
+          sparklineValues={[0, 1, 1, 2, pledgeSummary.investorCount, pledgeSummary.investorCount, pledgeSummary.investorCount]}
         />
         <MetricCard
           label="Investor Activity"
           value={String(investorActivityTotal)}
           detail="Interest, intros, and saved deals"
           accent="slate"
+          sparklineValues={[0, 1, 2, investorActivityTotal, investorActivityTotal, investorActivityTotal, investorActivityTotal]}
         />
       </MetricRow>
 
-      <section className="mt-8 grid gap-6 xl:grid-cols-2">
+      <section className="mt-5">
+        <DashboardInsightPanel title="Engagement trend" subtitle="Workspace activity snapshot" />
+      </section>
+
+      <section className="mt-5 grid gap-4 xl:grid-cols-2">
         <WorkspacePanel title="Capital Raise Overview" subtitle="Non-binding marketplace interest">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 p-4 ring-1 ring-indigo-100">

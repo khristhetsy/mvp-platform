@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
+import { MarketingDashboardPreview } from "@/components/marketing/MarketingDashboardPreview";
+import { MarketingMarketplacePlaceholder } from "@/components/marketing/MarketingMarketplacePlaceholder";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
 import { OpportunityCard } from "@/components/OpportunityCard";
+import { filterPublicMarketplaceListings } from "@/lib/marketplace/public-listings";
 import { getCompanyPledgeSummaries, emptyCompanyPledgeSummary } from "@/lib/data/investor-pledges";
 import { listMarketplaceListings } from "@/lib/data/marketplace";
 import {
@@ -46,7 +49,7 @@ export default async function Home() {
 
   try {
     const listings = await listMarketplaceListings(supabase);
-    featuredListings = listings.slice(0, 3);
+    featuredListings = filterPublicMarketplaceListings(listings).slice(0, 3);
   } catch {
     featuredListings = [];
   }
@@ -96,7 +99,7 @@ export default async function Home() {
   ];
 
   return (
-    <main className="min-h-screen bg-white text-slate-950">
+    <main className="cap-marketing-surface min-h-screen text-slate-950">
       <MarketingNav />
 
       <section className="mx-auto grid max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:py-24">
@@ -112,13 +115,13 @@ export default async function Home() {
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/submit-company"
-              className="rounded-full bg-slate-950 px-7 py-3.5 text-center text-sm font-semibold text-white hover:bg-slate-800"
+              className="cap-btn-primary rounded-lg px-6 py-3 text-center text-sm font-semibold"
             >
               Start Capital Readiness
             </Link>
             <Link
               href="/deals"
-              className="rounded-full border border-slate-300 px-7 py-3.5 text-center text-sm font-semibold text-slate-800 hover:border-slate-950"
+              className="rounded-lg border border-slate-200 bg-white px-6 py-3 text-center text-sm font-semibold text-slate-800 hover:border-indigo-300"
             >
               View Marketplace Preview
             </Link>
@@ -137,34 +140,7 @@ export default async function Home() {
           </div>
         </div>
 
-        <div className="rounded-[2rem] border border-slate-200 bg-slate-50 p-4 shadow-sm">
-          <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <p className="text-sm font-semibold text-slate-950">Capital readiness scorecard</p>
-                <p className="mt-1 text-xs text-slate-500">Founder submission preview</p>
-              </div>
-              <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
-                AI review
-              </span>
-            </div>
-            <div className="mt-5 grid gap-4">
-              {[
-                ["Diligence completeness", "76%"],
-                ["Investor readiness", "82/100"],
-                ["Document gaps", "3 open items"],
-                ["Campaign status", "Draft prepared"],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-600">{label}</span>
-                    <span className="font-semibold text-slate-950">{value}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <MarketingDashboardPreview />
       </section>
 
       <section className="border-y border-slate-200 bg-slate-50">
@@ -200,7 +176,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="bg-slate-950 text-white">
+      <section className="bg-indigo-950 text-white">
         <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-400">Capital readiness workflow</p>
@@ -240,9 +216,7 @@ export default async function Home() {
 
         <div className="mt-8 grid gap-5 lg:grid-cols-3">
           {featuredListings.length === 0 ? (
-            <p className="col-span-full text-sm text-slate-600">
-              Published marketplace listings will appear here once companies are approved and published.
-            </p>
+            <MarketingMarketplacePlaceholder />
           ) : (
             featuredListings.map((deal) => (
               <OpportunityCard
@@ -266,7 +240,7 @@ export default async function Home() {
               Organize company information, upload diligence documents, validate traction signals, and prepare a
               structured crowdfunding campaign for review.
             </p>
-            <Link href="/submit-company" className="mt-6 inline-flex rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white">
+            <Link href="/submit-company" className="cap-btn-primary mt-6 inline-flex rounded-lg px-5 py-3 text-sm font-semibold">
               Submit company
             </Link>
           </div>

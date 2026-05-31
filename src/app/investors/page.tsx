@@ -2,9 +2,11 @@ import Link from "next/link";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingNav } from "@/components/MarketingNav";
+import { MarketingMarketplacePlaceholder } from "@/components/marketing/MarketingMarketplacePlaceholder";
 import { OpportunityCard } from "@/components/OpportunityCard";
 import { getCompanyPledgeSummaries, emptyCompanyPledgeSummary } from "@/lib/data/investor-pledges";
 import { listMarketplaceListings } from "@/lib/data/marketplace";
+import { filterPublicMarketplaceListings } from "@/lib/marketplace/public-listings";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +16,8 @@ export default async function InvestorsPage() {
   let listings: Awaited<ReturnType<typeof listMarketplaceListings>> = [];
 
   try {
-    listings = await listMarketplaceListings(supabase);
+    const raw = await listMarketplaceListings(supabase);
+    listings = filterPublicMarketplaceListings(raw);
   } catch {
     listings = [];
   }
@@ -28,7 +31,7 @@ export default async function InvestorsPage() {
       : {};
 
   return (
-    <main className="min-h-screen bg-white text-slate-950">
+    <main className="cap-marketing-surface min-h-screen text-slate-950">
       <MarketingNav />
       <section className="mx-auto max-w-7xl px-6 py-16">
         <div className="max-w-4xl">
@@ -41,7 +44,7 @@ export default async function InvestorsPage() {
             actions in one professional workflow.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link href="/deals" className="rounded-full bg-slate-950 px-6 py-3 text-center text-sm font-semibold text-white">
+            <Link href="/deals" className="cap-btn-primary rounded-lg px-6 py-3 text-center text-sm font-semibold">
               Explore opportunities
             </Link>
             <Link href="/login" className="rounded-full border border-slate-300 px-6 py-3 text-center text-sm font-semibold text-slate-800">
@@ -52,7 +55,7 @@ export default async function InvestorsPage() {
       </section>
       <section className="mx-auto grid max-w-7xl gap-5 px-6 pb-16 lg:grid-cols-3">
         {listings.length === 0 ? (
-          <p className="col-span-full text-sm text-slate-600">No published listings yet.</p>
+          <MarketingMarketplacePlaceholder />
         ) : (
           listings.map((deal) => (
             <OpportunityCard

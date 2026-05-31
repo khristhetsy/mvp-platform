@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { CompanyPledgeSummaryBlock } from "@/components/CompanyPledgeSummary";
 import type { MarketplaceListing } from "@/lib/data/marketplace";
 import type { CompanyPledgeSummary } from "@/lib/data/investor-pledges";
@@ -8,27 +9,27 @@ export function OpportunityCard({
   pledgeSummary,
 }: Readonly<{ deal: MarketplaceListing; pledgeSummary: CompanyPledgeSummary }>) {
   return (
-    <article className="flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-slate-500">{deal.industry ?? "Private company"}</p>
-          <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{deal.companyName}</h3>
-          <p className="mt-1 text-sm text-slate-500">
+    <article className="flex h-full flex-col rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)] transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-indigo-600">{deal.industry ?? "Private company"}</p>
+          <h3 className="mt-1 truncate text-lg font-semibold tracking-tight text-slate-900">{deal.companyName}</h3>
+          <p className="mt-0.5 text-xs text-slate-500">
             {[deal.stage, deal.location].filter(Boolean).join(" · ") || "—"}
           </p>
         </div>
       </div>
-      <p className="mt-5 flex-1 text-sm leading-6 text-slate-600">
+      <p className="mt-3 flex-1 line-clamp-3 text-sm leading-6 text-slate-600">
         {deal.shortSummary ?? deal.overview ?? "—"}
       </p>
-      <div className="mt-6 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-slate-50 p-4">
-          <p className="text-xs text-slate-500">Target</p>
-          <p className="mt-1 font-semibold text-slate-950">{deal.fundingTarget ?? "—"}</p>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Target</p>
+          <p className="mt-0.5 text-sm font-semibold text-slate-900">{deal.fundingTarget ?? "—"}</p>
         </div>
-        <div className="rounded-2xl bg-slate-50 p-4">
-          <p className="text-xs text-slate-500">Minimum</p>
-          <p className="mt-1 font-semibold text-slate-950">{deal.minimumInvestment ?? "—"}</p>
+        <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Minimum</p>
+          <p className="mt-0.5 text-sm font-semibold text-slate-900">{deal.minimumInvestment ?? "—"}</p>
         </div>
       </div>
       <div className="mt-3">
@@ -36,9 +37,10 @@ export function OpportunityCard({
       </div>
       <Link
         href={`/deals/${deal.slug}`}
-        className="mt-6 inline-flex justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+        className="cap-btn-primary mt-4 inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold"
       >
         View opportunity
+        <ArrowUpRight className="h-4 w-4" strokeWidth={1.75} aria-hidden />
       </Link>
     </article>
   );

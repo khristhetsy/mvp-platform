@@ -35,7 +35,7 @@ export default async function DocumentUploadPage() {
               <p className="mt-2">Please create a company profile first, then return here to upload your pitch deck.</p>
               <Link
                 href="/founder/onboarding"
-                className="mt-4 inline-flex rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
+                className="cap-btn-primary mt-4 inline-flex rounded-lg px-5 py-2.5 text-sm font-semibold"
               >
                 Create company profile
               </Link>
