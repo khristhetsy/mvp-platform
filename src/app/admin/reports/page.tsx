@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AdminReportsPanel } from "@/components/AdminReportsPanel";
+import { AdminReportsModuleViews } from "@/components/admin/AdminReportsModuleViews";
 import { AppShell } from "@/components/AppShell";
-import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { loadAdminReportFilterOptions } from "@/lib/reports/admin-reports";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
@@ -84,34 +84,26 @@ export default async function AdminReportsPage() {
         </p>
       </div>
 
-      <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {REPORT_SECTIONS.map((section) => (
-          <WorkspacePanel key={section.reportType} title={section.title} subtitle={section.description}>
-            <p className="text-xs text-slate-500">
-              Report type: <span className="font-mono text-slate-700">{section.reportType}</span>
-            </p>
-          </WorkspacePanel>
-        ))}
-      </section>
+      <AdminReportsModuleViews sections={[...REPORT_SECTIONS]}>
+        <AdminReportsPanel
+          companies={options.companies.map(toFilterOption)}
+          founders={options.founders.map(toFilterOption)}
+          investors={options.investors.map(toFilterOption)}
+        />
 
-      <AdminReportsPanel
-        companies={options.companies.map(toFilterOption)}
-        founders={options.founders.map(toFilterOption)}
-        investors={options.investors.map(toFilterOption)}
-      />
-
-      <p className="mt-8 text-sm text-slate-600">
-        Each export writes an{" "}
-        <span className="font-medium text-slate-800">audit_logs</span> entry with report type, filters, and
-        generator.{" "}
-        <Link href="/admin/compliance" className="font-semibold text-indigo-700">
-          Compliance center
-        </Link>{" "}
-        ·{" "}
-        <Link href="/admin/analytics" className="font-semibold text-indigo-700">
-          Analytics
-        </Link>
-      </p>
+        <p className="mt-8 text-sm text-slate-600">
+          Each export writes an{" "}
+          <span className="font-medium text-slate-800">audit_logs</span> entry with report type, filters, and
+          generator.{" "}
+          <Link href="/admin/compliance" className="font-semibold text-indigo-700">
+            Compliance center
+          </Link>{" "}
+          ·{" "}
+          <Link href="/admin/analytics" className="font-semibold text-indigo-700">
+            Analytics
+          </Link>
+        </p>
+      </AdminReportsModuleViews>
     </AppShell>
   );
 }

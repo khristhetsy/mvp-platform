@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { InvestorApprovalBanner } from "@/components/InvestorApprovalBanner";
-import { InvestorMatchOpportunityCard } from "@/components/InvestorMatchOpportunityCard";
-import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { InvestorOpportunitiesModuleViews } from "@/components/investor/InvestorOpportunitiesModuleViews";
 import { loadInvestorRecommendedMatches } from "@/lib/matching/load-investor-recommendations";
 import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
@@ -13,6 +12,26 @@ export default async function InvestorOpportunitiesPage() {
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
   const { investorProfile } = await loadInvestorWorkspaceContext(profile);
   const { matches } = await loadInvestorRecommendedMatches(supabase, investorId, 24);
+
+  const opportunityRows = matches.map((row) => ({
+    companyId: row.company.id,
+    companyName: row.company.companyName,
+    slug: row.company.slug,
+    industry: row.company.industry,
+    stage: row.company.stage,
+    location: row.company.geography,
+    fundingTarget:
+      row.company.fundingAmount != null
+        ? new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD",
+            maximumFractionDigits: 0,
+          }).format(row.company.fundingAmount)
+        : null,
+    matchScore: row.matchScore,
+    matchReasons: row.matchReasons,
+    missingFitReasons: row.missingFitReasons,
+  }));
 
   return (
     <AppShell
@@ -41,42 +60,7 @@ export default async function InvestorOpportunitiesPage() {
 
       <InvestorApprovalBanner investorProfile={investorProfile} />
 
-      <WorkspacePanel
-        title="Recommended for you"
-        subtitle="Sorted by CapitalOS match score (sector, stage, check size, geography, readiness)"
-      >
-        {matches.length === 0 ? (
-          <p className="text-sm text-slate-600">
-            No marketplace listings available yet, or complete investor onboarding to improve match quality.
-          </p>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {matches.map((row) => (
-              <InvestorMatchOpportunityCard
-                key={row.company.id}
-                companyId={row.company.id}
-                companyName={row.company.companyName}
-                slug={row.company.slug}
-                industry={row.company.industry}
-                stage={row.company.stage}
-                location={row.company.geography}
-                fundingTarget={
-                  row.company.fundingAmount != null
-                    ? new Intl.NumberFormat("en-US", {
-                        style: "currency",
-                        currency: "USD",
-                        maximumFractionDigits: 0,
-                      }).format(row.company.fundingAmount)
-                    : null
-                }
-                matchScore={row.matchScore}
-                matchReasons={row.matchReasons}
-                missingFitReasons={row.missingFitReasons}
-              />
-            ))}
-          </div>
-        )}
-      </WorkspacePanel>
+      <InvestorOpportunitiesModuleViews matches={opportunityRows} />
     </AppShell>
   );
 }

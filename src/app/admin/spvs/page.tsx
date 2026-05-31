@@ -2,6 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AdminSpvDashboardKpis } from "@/components/AdminSpvDashboardKpis";
 import { AdminSpvManagement } from "@/components/AdminSpvManagement";
+import { AdminSpvsModuleViews } from "@/components/admin/AdminSpvsModuleViews";
 import { buildAdminSpvDashboardMetrics } from "@/lib/spv/readiness";
 import { listAdminChecklistGrouped } from "@/lib/spv/checklist";
 import {
@@ -126,16 +127,23 @@ export default async function AdminSpvsPage() {
       />
 
       <div className="mt-8">
-      <AdminSpvManagement
-        opportunities={opportunities}
-        participationsBySpv={participationsBySpv}
-        checklistBySpv={checklistBySpv}
-        requirementsByParticipation={requirementsByParticipation}
-        packagesBySpv={packagesBySpv}
-        closingReviewsBySpv={closingReviewsBySpv}
-        closingReadinessBySpv={closingReadinessBySpv}
-        companies={companies.map((c) => ({ id: c.id, name: c.company_name }))}
-      />
+        <AdminSpvsModuleViews>
+          {(listViewMode, listDensity, listQuery) => (
+            <AdminSpvManagement
+              opportunities={opportunities}
+              participationsBySpv={participationsBySpv}
+              checklistBySpv={checklistBySpv}
+              requirementsByParticipation={requirementsByParticipation}
+              packagesBySpv={packagesBySpv}
+              closingReviewsBySpv={closingReviewsBySpv}
+              closingReadinessBySpv={closingReadinessBySpv}
+              companies={companies.map((c) => ({ id: c.id, name: c.company_name }))}
+              listViewMode={listViewMode}
+              listDensity={listDensity}
+              listQuery={listQuery}
+            />
+          )}
+        </AdminSpvsModuleViews>
       </div>
     </AppShell>
   );

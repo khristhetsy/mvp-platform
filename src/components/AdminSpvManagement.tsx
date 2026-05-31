@@ -39,6 +39,12 @@ import type {
   SpvParticipationRequirementRecord,
 } from "@/lib/spv/types";
 import { formatApiError } from "@/lib/api/errors";
+import {
+  AdminSpvPipelineView,
+  AdminSpvTableView,
+  buildSpvListSummaries,
+} from "@/components/admin/AdminSpvListViews";
+import type { ViewDensity, ViewMode } from "@/lib/ui/view-modes";
 
 type CompanyOption = { id: string; name: string };
 
@@ -51,6 +57,9 @@ export function AdminSpvManagement({
   closingReviewsBySpv,
   closingReadinessBySpv,
   companies,
+  listViewMode = "card",
+  listDensity = "comfortable",
+  listQuery = "",
 }: Readonly<{
   opportunities: SpvOpportunityRecord[];
   participationsBySpv: Record<string, SpvParticipationRecord[]>;
@@ -60,6 +69,9 @@ export function AdminSpvManagement({
   closingReviewsBySpv: Record<string, SpvClosingReviewRecord>;
   closingReadinessBySpv: Record<string, ClosingReadinessSummary>;
   companies: CompanyOption[];
+  listViewMode?: ViewMode;
+  listDensity?: ViewDensity;
+  listQuery?: string;
 }>) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
@@ -89,6 +101,28 @@ export function AdminSpvManagement({
     }
     return map;
   }, [participationsBySpv]);
+
+  const spvListSummaries = useMemo(
+    () =>
+      buildSpvListSummaries({
+        opportunities,
+        participationsBySpv,
+        checklistBySpv,
+        requirementsByParticipation,
+        packagesBySpv,
+        closingReadinessBySpv,
+        closingReviewsBySpv,
+      }),
+    [
+      opportunities,
+      participationsBySpv,
+      checklistBySpv,
+      requirementsByParticipation,
+      packagesBySpv,
+      closingReadinessBySpv,
+      closingReviewsBySpv,
+    ],
+  );
 
   async function syncReadiness(spvId: string) {
     setLoading("sync-" + spvId);
@@ -403,6 +437,10 @@ export function AdminSpvManagement({
       <WorkspacePanel title="SPV opportunities" subtitle={`${opportunities.length} total`}>
         {opportunities.length === 0 ? (
           <p className="text-sm text-slate-500">No SPV opportunities yet.</p>
+        ) : listViewMode === "table" ? (
+          <AdminSpvTableView rows={spvListSummaries} density={listDensity} query={listQuery} />
+        ) : listViewMode === "pipeline" ? (
+          <AdminSpvPipelineView rows={spvListSummaries} density={listDensity} query={listQuery} />
         ) : (
           <div className="space-y-4">
             {opportunities.map((spv) => {

@@ -1,8 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { AdminActionHealthProvider } from "@/components/AdminActionHealthProvider";
-import { AdminCompanyCard } from "@/components/AdminCompanyCard";
+import { AdminCompaniesModuleViews } from "@/components/admin/AdminCompaniesModuleViews";
 import { formatError, RouteDataDiagnostics } from "@/components/RouteDataDiagnostics";
-import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listAdminCompanies, mapAdminCompaniesToCardData } from "@/lib/data/admin";
 import { getCompanyMatchingSummaries } from "@/lib/matching/admin-matching-summaries";
 import { getLearningAdminSummaryForCompanies } from "@/lib/learning/progress";
@@ -95,24 +94,11 @@ export default async function AdminCompaniesPage() {
           </p>
         </div>
 
-        <WorkspacePanel
-          title="Company submissions"
-          subtitle={`${companyCards.length} companies · ${pendingCount} pending review`}
-        >
-          <div className="grid gap-5">
-            {loadError ? (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-sm text-red-800">
-                Failed to load companies: {loadError}
-              </div>
-            ) : companyCards.length === 0 ? (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-8 text-sm text-amber-900">
-                listAdminCompanies() returned 0 records. No companies in database or query returned empty.
-              </div>
-            ) : (
-              companyCards.map((company) => <AdminCompanyCard key={company.id} company={company} />)
-            )}
-          </div>
-        </WorkspacePanel>
+        <AdminCompaniesModuleViews
+          companies={companyCards}
+          loadError={loadError}
+          pendingCount={pendingCount}
+        />
       </AdminActionHealthProvider>
     </AppShell>
   );
