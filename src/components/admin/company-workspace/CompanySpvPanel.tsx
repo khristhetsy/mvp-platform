@@ -2,7 +2,11 @@ import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
-import { buildCompanyFilteredHref, type AdminCompanyWorkspaceSpvSummary } from "@/lib/admin/company-workspace-types";
+import {
+  buildCompanyFilteredHref,
+  type AdminCompanyWorkspaceSpvSummary,
+} from "@/lib/admin/company-workspace-types";
+import { getAdminSpvWorkspaceHref } from "@/lib/admin/spv-workspace-types";
 
 export function CompanySpvPanel({
   spvs,
@@ -26,7 +30,7 @@ export function CompanySpvPanel({
             <div key={spv.id} className="rounded-xl border border-slate-200 p-4 text-sm">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <Link href={`/admin/spvs?spv=${spv.id}`} className="font-semibold text-indigo-700 hover:text-indigo-900">
+                  <Link href={getAdminSpvWorkspaceHref(spv.id)} className="font-semibold text-indigo-700 hover:text-indigo-900">
                     {spv.name}
                   </Link>
                   <p className="mt-1 text-xs text-slate-500">

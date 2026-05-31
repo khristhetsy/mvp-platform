@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   buildSpvReadinessContext,
   computeSpvOperationalReadinessStatus,
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/DataTable";
 import { PipelineBoard } from "@/components/ui/ViewToolbar";
 import type { ViewDensity } from "@/lib/ui/view-modes";
+import { getAdminSpvWorkspaceHref } from "@/lib/ui/drilldown-links";
 
 export type SpvListSummaryRow = {
   id: string;
@@ -125,7 +127,11 @@ export function AdminSpvTableView({
       <DataTableBody>
         {filtered.map((row) => (
           <DataTableRow key={row.id}>
-            <DataTableCell className="font-medium text-slate-900">{row.name}</DataTableCell>
+            <DataTableCell className="font-medium text-slate-900">
+              <Link href={getAdminSpvWorkspaceHref(row.id)} className="text-indigo-700 hover:text-indigo-900">
+                {row.name}
+              </Link>
+            </DataTableCell>
             <DataTableCell>{row.companyName}</DataTableCell>
             <DataTableCell>{row.status}</DataTableCell>
             <DataTableCell>{row.readinessLabel}</DataTableCell>
@@ -180,7 +186,9 @@ export function AdminSpvPipelineView({
       title: formatOperationalReadinessLabel(key),
       items: (byReadiness.get(key) ?? []).map((row) => (
         <div key={row.id} className="rounded-lg border border-slate-200/80 bg-white p-3 text-sm shadow-sm">
-          <p className="font-semibold text-[var(--navy)]">{row.name}</p>
+          <Link href={getAdminSpvWorkspaceHref(row.id)} className="font-semibold text-[var(--navy)] hover:text-indigo-800">
+            {row.name}
+          </Link>
           <p className="text-xs text-slate-500">{row.companyName}</p>
           <p className="mt-2 text-xs text-slate-600">Target {row.targetAmount}</p>
           <p className="text-xs text-violet-800">Next: {row.nextAction}</p>

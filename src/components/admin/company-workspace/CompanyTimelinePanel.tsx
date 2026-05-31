@@ -4,6 +4,7 @@ import { ActionablePanelRow } from "@/components/ui/drilldown";
 import { StatusBadge, severityToStatus } from "@/components/ui/StatusBadge";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { getAdminCompanyWorkspaceHref } from "@/lib/admin/company-workspace-types";
+import { getAdminSpvWorkspaceHref } from "@/lib/ui/drilldown-links";
 import {
   formatOperationalEventType,
   formatOperationalTimestamp,
@@ -18,7 +19,7 @@ function getCompanyTimelineHref(item: OperationalActivityFeedItem, companyId: st
     return `/admin/compliance?company=${companyId}&event=${item.id}`;
   }
   if (item.event_category === "spv" && item.spv_id) {
-    return `/admin/spvs?spv=${item.spv_id}`;
+    return getAdminSpvWorkspaceHref(item.spv_id);
   }
   if (item.event_category === "crm" || item.event_category === "investor" || item.event_category === "messaging") {
     return `/admin/crm?company=${companyId}`;

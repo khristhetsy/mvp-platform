@@ -24,7 +24,7 @@ import {
   type SpvOperationalReadinessStatus,
 } from "@/lib/spv/readiness";
 import type { ClosingReadinessSummary } from "@/lib/spv/closing-review-display";
-import { getInvestorWorkspaceHref } from "@/lib/ui/drilldown-links";
+import { getInvestorWorkspaceHref, getAdminSpvWorkspaceHref } from "@/lib/ui/drilldown-links";
 import {
   formatClosingReviewStatusLabel,
 } from "@/lib/spv/closing-review-display";
@@ -475,7 +475,9 @@ export function AdminSpvManagement({
                 <div key={spv.id} className="rounded-xl border border-slate-200 p-4 text-sm">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <p className="font-semibold text-slate-900">{spv.name}</p>
+                      <Link href={getAdminSpvWorkspaceHref(spv.id)} className="font-semibold text-indigo-700 hover:text-indigo-900">
+                        {spv.name}
+                      </Link>
                       <p className="text-xs text-slate-500">
                         {company?.company_name ?? spv.company_id} · {spv.status} · target{" "}
                         {formatSpvCurrency(spv.target_amount)}

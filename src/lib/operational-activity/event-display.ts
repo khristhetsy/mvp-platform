@@ -1,4 +1,4 @@
-import { getCompanyWorkspaceHref, getDrilldownHref, getInvestorWorkspaceHref } from "@/lib/ui/drilldown-links";
+import { getCompanyWorkspaceHref, getDrilldownHref, getAdminSpvWorkspaceHref, getInvestorWorkspaceHref } from "@/lib/ui/drilldown-links";
 import { OPERATIONAL_CATEGORY_LABELS } from "@/lib/operational-activity/event-categories";
 import type { OperationalActivityFeedItem, OperationalEventCategory } from "@/lib/operational-activity/types";
 
@@ -63,6 +63,9 @@ export function formatOperationalTimestamp(value: string) {
 }
 
 export function getOperationalEventHref(item: OperationalActivityFeedItem): string {
+  if (item.spv_id) {
+    return getAdminSpvWorkspaceHref(item.spv_id);
+  }
   if (item.investor_id) {
     return getInvestorWorkspaceHref(item.investor_id);
   }

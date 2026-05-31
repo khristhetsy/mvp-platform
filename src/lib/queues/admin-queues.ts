@@ -272,7 +272,7 @@ async function loadSpvBlockerItems(supabase: SupabaseClient<Database>, limit: nu
       severity: row.investor_pending_requirements_count > 0 ? "high" : "medium",
       status: readiness,
       next_action_label: "Open SPV",
-      href: row.company_id ? `/admin/companies/${row.company_id}` : `/admin/spvs?spv=${row.id}`,
+      href: `/admin/spvs/${row.id}`,
       created_at: row.updated_at ?? row.created_at,
       metadata: {
         readiness_pct: readinessPct,
@@ -331,7 +331,7 @@ async function loadInvestorDocumentItems(supabase: SupabaseClient<Database>, lim
       severity: row.status === "rejected" ? "high" : row.status === "under_review" ? "medium" : "info",
       status: row.status,
       next_action_label: "Review requirement",
-      href: `/admin/investors/${row.investor_id}`,
+      href: `/admin/spvs/${row.spv_opportunity_id}`,
       created_at: row.updated_at ?? row.created_at,
       metadata: {
         category: row.category,

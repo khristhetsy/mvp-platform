@@ -33,10 +33,12 @@ export function AdminQueuesPanel({
   snapshot,
   initialQueue,
   initialInvestor,
+  initialSpv,
 }: Readonly<{
   snapshot: AdminQueuesSnapshot;
   initialQueue?: string;
   initialInvestor?: string;
+  initialSpv?: string;
 }>) {
   const [activeQueue, setActiveQueue] = useState<AdminQueueType>(
     isAdminQueueType(initialQueue) ? initialQueue : "company_reviews",
@@ -45,11 +47,15 @@ export function AdminQueuesPanel({
   const [severityFilter, setSeverityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const investorFilter = initialInvestor?.trim() || null;
+  const spvFilter = initialSpv?.trim() || null;
 
   const items = useMemo(() => {
     let rows = snapshot.itemsByQueue[activeQueue] ?? [];
     if (investorFilter) {
       rows = rows.filter((row) => row.investor_id === investorFilter);
+    }
+    if (spvFilter) {
+      rows = rows.filter((row) => row.spv_id === spvFilter);
     }
     if (search.trim()) {
       const needle = search.trim().toLowerCase();
@@ -66,7 +72,7 @@ export function AdminQueuesPanel({
       rows = rows.filter((row) => row.status === statusFilter);
     }
     return rows;
-  }, [activeQueue, investorFilter, search, severityFilter, snapshot.itemsByQueue, statusFilter]);
+  }, [activeQueue, investorFilter, spvFilter, search, severityFilter, snapshot.itemsByQueue, statusFilter]);
 
   const severities = useMemo(
     () => [...new Set((snapshot.itemsByQueue[activeQueue] ?? []).map((row) => row.severity))].sort(),

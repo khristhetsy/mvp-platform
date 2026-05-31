@@ -4,6 +4,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { getAdminCompanyWorkspaceHref } from "@/lib/admin/company-workspace-types";
 import { buildInvestorFilteredHref } from "@/lib/admin/investor-workspace-types";
+import { getAdminSpvWorkspaceHref } from "@/lib/admin/spv-workspace-types";
 import type { AdminInvestorWorkspaceSpvSummary } from "@/lib/admin/investor-workspace-types";
 
 export function InvestorSpvPanel({
@@ -32,7 +33,7 @@ export function InvestorSpvPanel({
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <Link
-                    href={`/admin/spvs?spv=${row.id}&investor=${profileId}`}
+                    href={getAdminSpvWorkspaceHref(row.id)}
                     className="font-semibold text-indigo-700 hover:text-indigo-900"
                   >
                     {row.name}

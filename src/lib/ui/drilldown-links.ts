@@ -33,6 +33,10 @@ export function getInvestorWorkspaceHref(profileId: string): string {
   return `/admin/investors/${profileId}`;
 }
 
+export function getAdminSpvWorkspaceHref(spvId: string): string {
+  return `/admin/spvs/${spvId}`;
+}
+
 export function getDrilldownHref(key: DrilldownKey): string {
   return DRILLDOWN_LINKS[key];
 }

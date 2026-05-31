@@ -3,8 +3,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ActionablePanelRow } from "@/components/ui/drilldown";
 import { StatusBadge, severityToStatus } from "@/components/ui/StatusBadge";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
-import { buildInvestorFilteredHref } from "@/lib/admin/investor-workspace-types";
-import { getAdminSpvWorkspaceHref } from "@/lib/ui/drilldown-links";
+import { buildSpvFilteredHref } from "@/lib/admin/spv-workspace-types";
 import {
   formatOperationalEventType,
   formatOperationalTimestamp,
@@ -12,24 +11,31 @@ import {
   getOperationalCategoryLabel,
 } from "@/lib/operational-activity/event-display";
 import type { OperationalActivityFeedItem } from "@/lib/operational-activity/types";
+import { getAdminCompanyWorkspaceHref } from "@/lib/admin/company-workspace-types";
+import { getAdminSpvWorkspaceHref } from "@/lib/admin/spv-workspace-types";
 
-function getInvestorTimelineHref(item: OperationalActivityFeedItem, profileId: string): string {
+function getSpvTimelineHref(
+  item: OperationalActivityFeedItem,
+  spvId: string,
+  companyId: string,
+): string {
   if (item.event_category === "compliance") {
-    return `/admin/compliance?investor=${profileId}&event=${item.id}`;
-  }
-  if (item.event_category === "spv" && item.spv_id) {
-    return getAdminSpvWorkspaceHref(item.spv_id);
+    return buildSpvFilteredHref("/admin/compliance", spvId, companyId, { event: item.id });
   }
   if (item.company_id) {
-    return `/admin/companies/${item.company_id}`;
+    return getAdminCompanyWorkspaceHref(item.company_id);
   }
-  return buildInvestorFilteredHref("/admin/crm", profileId);
+  if (item.investor_id) {
+    return `/admin/investors/${item.investor_id}`;
+  }
+  return getAdminSpvWorkspaceHref(spvId);
 }
 
-export function InvestorTimelinePanel({
+export function SpvTimelinePanel({
   items,
-  profileId,
-}: Readonly<{ items: OperationalActivityFeedItem[]; profileId: string }>) {
+  spvId,
+  companyId,
+}: Readonly<{ items: OperationalActivityFeedItem[]; spvId: string; companyId: string }>) {
   return (
     <WorkspacePanel
       title="Recent operational activity"
@@ -38,8 +44,7 @@ export function InvestorTimelinePanel({
       {items.length === 0 ? (
         <EmptyState
           title="No operational events yet"
-          description="New platform actions involving this investor will appear here as operational activity is recorded."
-          guidance="CRM actions, SPV updates, compliance events, and approval milestones populate this timeline."
+          description="Readiness updates, package activity, requirement reviews, and compliance events will appear here."
           metadata="Limit 25 most recent events"
         />
       ) : (
@@ -47,7 +52,7 @@ export function InvestorTimelinePanel({
           {items.map((row) => (
             <li key={row.id} className="relative border-l border-slate-200 pl-4">
               <span className="absolute -left-[3px] top-2 h-1.5 w-1.5 rounded-full bg-slate-300" aria-hidden />
-              <ActionablePanelRow href={getInvestorTimelineHref(row, profileId)} ariaLabel={`View ${row.title}`}>
+              <ActionablePanelRow href={getSpvTimelineHref(row, spvId, companyId)} ariaLabel={`View ${row.title}`}>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[10px] text-slate-400" aria-hidden>
@@ -62,7 +67,6 @@ export function InvestorTimelinePanel({
                   {row.description ? <p className="mt-1 line-clamp-2 text-xs text-slate-600">{row.description}</p> : null}
                   <p className="mt-1 text-[10px] uppercase tracking-wide text-slate-400">
                     {formatOperationalEventType(row.event_type)}
-                    {row.company_name ? ` · ${row.company_name}` : ""}
                     {" · "}
                     <time>{formatOperationalTimestamp(row.created_at)}</time>
                   </p>
