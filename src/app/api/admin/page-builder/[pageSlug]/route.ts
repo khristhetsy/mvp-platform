@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireSuperAdminApi } from "@/lib/api/super-admin";
+import { requirePageBuilderApi } from "@/lib/api/permissions";
 import { getOrCreateDraft, saveDraftLayout } from "@/lib/page-builder/drafts";
 import { isPageBuilderSlug } from "@/lib/page-builder/drafts";
 import { parseLayoutDocument, validateLayout } from "@/lib/page-builder/validation";
@@ -8,7 +8,7 @@ import type { PageLayoutDocument } from "@/lib/page-builder/types";
 type RouteContext = { params: Promise<{ pageSlug: string }> };
 
 export async function GET(_request: Request, context: RouteContext) {
-  const auth = await requireSuperAdminApi();
+  const auth = await requirePageBuilderApi();
   if ("error" in auth) return auth.error;
 
   const { pageSlug } = await context.params;
@@ -29,7 +29,7 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function PUT(request: Request, context: RouteContext) {
-  const auth = await requireSuperAdminApi();
+  const auth = await requirePageBuilderApi();
   if ("error" in auth) return auth.error;
 
   const { pageSlug } = await context.params;

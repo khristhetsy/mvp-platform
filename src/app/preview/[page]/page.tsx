@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageBuilderPreview } from "@/components/page-builder/PageBuilderPreview";
-import { requireSuperAdminPage } from "@/lib/api/super-admin";
+import { requirePageBuilderPage } from "@/lib/api/permissions";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getDraftBySlug, isPageBuilderSlug } from "@/lib/page-builder/drafts";
 
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function PageBuilderPreviewPage({
   params,
 }: Readonly<{ params: Promise<{ page: string }> }>) {
-  await requireSuperAdminPage();
+  await requirePageBuilderPage();
   const { page } = await params;
 
   if (!isPageBuilderSlug(page)) {

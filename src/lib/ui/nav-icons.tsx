@@ -14,6 +14,7 @@ import {
   Rocket,
   Settings,
   Shield,
+  ShieldCheck,
   Sparkles,
   Target,
   TrendingUp,
@@ -54,6 +55,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/admin/analytics": LineChart,
   "/admin/system-health": Activity,
   "/admin/page-builder-lab": LayoutDashboard,
+  "/admin/users/permissions": ShieldCheck,
 };
 
 export function getWorkspaceNavIcon(href: string): LucideIcon {

@@ -3,11 +3,39 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { Sparkles } from "lucide-react";
+import type { InternalPermission } from "@/lib/rbac/constants";
 import type { WorkspaceId } from "@/lib/workspace-nav";
 import { getWorkspaceNav, workspaceLabel } from "@/lib/workspace-nav";
 import { getWorkspaceNavIcon } from "@/lib/ui/nav-icons";
 import { CapitalOSLogo } from "@/components/CapitalOSLogo";
+
+function useAdminNavPermissions(workspace: WorkspaceId) {
+  const [state, setState] = useState<{ permissions: InternalPermission[]; isSuperAdmin: boolean } | null>(null);
+
+  useEffect(() => {
+    if (workspace !== "admin") return;
+    let cancelled = false;
+    void fetch("/api/admin/users/permissions/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        setState({
+          permissions: data.permissions ?? [],
+          isSuperAdmin: Boolean(data.isSuperAdmin),
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setState({ permissions: [], isSuperAdmin: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspace]);
+
+  return state;
+}
 
 export function WorkspaceSidebar({
   workspace,
@@ -21,7 +49,17 @@ export function WorkspaceSidebar({
   onClose?: () => void;
 }>) {
   const pathname = usePathname();
-  const items = getWorkspaceNav(workspace);
+  const allItems = getWorkspaceNav(workspace);
+  const adminNav = useAdminNavPermissions(workspace);
+  const items = useMemo(() => {
+    if (workspace !== "admin") return allItems;
+    return allItems.filter((item) => {
+      if (!item.requiredPermission) return true;
+      if (!adminNav) return false;
+      if (adminNav.isSuperAdmin) return true;
+      return adminNav.permissions.includes(item.requiredPermission);
+    });
+  }, [allItems, adminNav, workspace]);
   const label = workspaceLabel(workspace);
 
   const nav = (

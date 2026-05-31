@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireSuperAdminApi } from "@/lib/api/super-admin";
+import { requirePageBuilderApi } from "@/lib/api/permissions";
 import {
   duplicateSnapshotToDraft,
   getOrCreateDraft,
@@ -11,7 +11,7 @@ import { validateLayout } from "@/lib/page-builder/validation";
 type RouteContext = { params: Promise<{ pageSlug: string; snapshotId: string }> };
 
 export async function POST(_request: Request, context: RouteContext) {
-  const auth = await requireSuperAdminApi();
+  const auth = await requirePageBuilderApi();
   if ("error" in auth) return auth.error;
 
   const { pageSlug, snapshotId } = await context.params;

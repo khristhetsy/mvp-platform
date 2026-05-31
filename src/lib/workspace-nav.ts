@@ -1,3 +1,4 @@
+import type { InternalPermission } from "@/lib/rbac/constants";
 import type { Role } from "@/lib/auth";
 
 export type WorkspaceId = "founder" | "investor" | "admin";
@@ -5,6 +6,7 @@ export type WorkspaceId = "founder" | "investor" | "admin";
 export type WorkspaceNavItem = {
   href: string;
   label: string;
+  requiredPermission?: InternalPermission;
 };
 
 export const founderWorkspaceNav: WorkspaceNavItem[] = [
@@ -44,7 +46,8 @@ export const adminWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/admin/reports", label: "Reports" },
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/system-health", label: "System Health" },
-  { href: "/admin/page-builder-lab", label: "Page Builder Lab" },
+  { href: "/admin/page-builder-lab", label: "Page Builder Lab", requiredPermission: "manage_page_builder" },
+  { href: "/admin/users/permissions", label: "User Permissions", requiredPermission: "manage_users" },
 ];
 
 export function getWorkspaceNav(workspace: WorkspaceId): WorkspaceNavItem[] {

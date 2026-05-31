@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireSuperAdminApi } from "@/lib/api/super-admin";
+import { requirePageBuilderApi } from "@/lib/api/permissions";
 import { isPageBuilderSlug, loadDemoDraftLayout } from "@/lib/page-builder/drafts";
 import { validateLayout } from "@/lib/page-builder/validation";
 
 type RouteContext = { params: Promise<{ pageSlug: string }> };
 
 export async function POST(_request: Request, context: RouteContext) {
-  const auth = await requireSuperAdminApi();
+  const auth = await requirePageBuilderApi();
   if ("error" in auth) return auth.error;
 
   const { pageSlug } = await context.params;

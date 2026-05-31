@@ -1406,6 +1406,107 @@ export type Database = {
         };
         Relationships: [];
       };
+      internal_roles: {
+        Row: {
+          id: string;
+          slug: string;
+          label: string;
+          description: string | null;
+          rank: number;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          slug: string;
+          label: string;
+          description?: string | null;
+          rank?: number;
+          is_active?: boolean;
+        };
+        Update: Partial<{
+          slug: string;
+          label: string;
+          description: string | null;
+          rank: number;
+          is_active: boolean;
+        }>;
+        Relationships: [];
+      };
+      internal_permissions: {
+        Row: {
+          id: string;
+          slug: string;
+          label: string;
+          description: string | null;
+          created_at: string;
+        };
+        Insert: {
+          slug: string;
+          label: string;
+          description?: string | null;
+        };
+        Update: Partial<{
+          slug: string;
+          label: string;
+          description: string | null;
+        }>;
+        Relationships: [];
+      };
+      internal_role_permissions: {
+        Row: {
+          role_id: string;
+          permission_id: string;
+          granted: boolean;
+        };
+        Insert: {
+          role_id: string;
+          permission_id: string;
+          granted?: boolean;
+        };
+        Update: Partial<{ granted: boolean }>;
+        Relationships: [];
+      };
+      internal_user_roles: {
+        Row: {
+          user_id: string;
+          role_id: string;
+          is_active: boolean;
+          assigned_at: string;
+          assigned_by: string | null;
+        };
+        Insert: {
+          user_id: string;
+          role_id: string;
+          is_active?: boolean;
+          assigned_at?: string;
+          assigned_by?: string | null;
+        };
+        Update: Partial<{
+          role_id: string;
+          is_active: boolean;
+          assigned_at: string;
+          assigned_by: string | null;
+        }>;
+        Relationships: [];
+      };
+      internal_user_permission_overrides: {
+        Row: {
+          user_id: string;
+          permission_id: string;
+          granted: boolean;
+          created_at: string;
+          created_by: string | null;
+        };
+        Insert: {
+          user_id: string;
+          permission_id: string;
+          granted: boolean;
+          created_at?: string;
+          created_by?: string | null;
+        };
+        Update: Partial<{ granted: boolean; created_by: string | null }>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
