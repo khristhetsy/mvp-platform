@@ -6,6 +6,7 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listFounderCompanyUpdates } from "@/lib/company-updates/company-updates";
 import { FounderCompanyUpdatesPanel } from "@/components/FounderCompanyUpdatesPanel";
 import { FounderSpvStatusPanel } from "@/components/FounderSpvStatusPanel";
+import { listFounderChecklistSummary } from "@/lib/spv/checklist";
 import { listFounderSpvSummary } from "@/lib/spv/spv-workflow";
 import { formatPledgeTotal, getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
@@ -29,6 +30,7 @@ export default async function FounderCapitalRaisePage() {
   let companyUpdates: Awaited<ReturnType<typeof listFounderCompanyUpdates>>["data"] = [];
   let spvOpportunities: Awaited<ReturnType<typeof listFounderSpvSummary>>["opportunities"] = [];
   let spvParticipations: Awaited<ReturnType<typeof listFounderSpvSummary>>["participations"] = [];
+  let spvChecklistSummaryBySpv: Awaited<ReturnType<typeof listFounderChecklistSummary>>["data"] = {};
 
   try {
     company = await ensureFounderCompanyForUser(profile);
@@ -65,9 +67,16 @@ export default async function FounderCapitalRaisePage() {
       const spvSummary = await listFounderSpvSummary(supabase, company.id);
       spvOpportunities = spvSummary.opportunities;
       spvParticipations = spvSummary.participations;
+
+      const checklistSummary = await listFounderChecklistSummary(
+        supabase,
+        spvOpportunities.map((spv) => spv.id),
+      );
+      spvChecklistSummaryBySpv = checklistSummary.data ?? {};
     } catch {
       spvOpportunities = [];
       spvParticipations = [];
+      spvChecklistSummaryBySpv = {};
     }
   }
 
@@ -211,7 +220,11 @@ export default async function FounderCapitalRaisePage() {
           </section>
 
           <section className="mt-8">
-            <FounderSpvStatusPanel opportunities={spvOpportunities} participations={spvParticipations} />
+            <FounderSpvStatusPanel
+              opportunities={spvOpportunities}
+              participations={spvParticipations}
+              checklistSummaryBySpv={spvChecklistSummaryBySpv ?? {}}
+            />
           </section>
 
           <section className="mt-8">

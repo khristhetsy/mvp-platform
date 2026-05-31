@@ -373,6 +373,10 @@ export const adminSpvOpportunityUpdateSchema = z.object({
   termsSummary: z.string().max(5000).optional(),
 });
 
+export const adminSpvChecklistItemUpdateSchema = z.object({
+  status: z.enum(["pending", "in_progress", "completed", "waived"]),
+});
+
 export const investorSpvParticipationSchema = z.object({
   spvOpportunityId: z.string().uuid(),
   indicativeAmount: z.coerce.number().nonnegative().optional(),

@@ -4,8 +4,17 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { SpvComplianceNotice } from "@/components/SpvComplianceNotice";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
-import { formatSpvCurrency } from "@/lib/spv/display";
-import type { SpvOpportunityRecord, SpvParticipationRecord } from "@/lib/spv/types";
+import {
+  areRequiredChecklistItemsComplete,
+  computeChecklistReadinessPct,
+  formatChecklistCategory,
+  formatSpvCurrency,
+} from "@/lib/spv/display";
+import type {
+  SpvChecklistItemRecord,
+  SpvOpportunityRecord,
+  SpvParticipationRecord,
+} from "@/lib/spv/types";
 import { formatApiError } from "@/lib/api/errors";
 
 type CompanyOption = { id: string; name: string };
@@ -13,10 +22,12 @@ type CompanyOption = { id: string; name: string };
 export function AdminSpvManagement({
   opportunities,
   participationsBySpv,
+  checklistBySpv,
   companies,
 }: Readonly<{
   opportunities: SpvOpportunityRecord[];
   participationsBySpv: Record<string, SpvParticipationRecord[]>;
+  checklistBySpv: Record<string, SpvChecklistItemRecord[]>;
   companies: CompanyOption[];
 }>) {
   const router = useRouter();
@@ -39,6 +50,27 @@ export function AdminSpvManagement({
     }
     return map;
   }, [participationsBySpv]);
+
+  async function updateChecklistItem(itemId: string, status: string) {
+    setLoading("checklist-" + itemId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/spv-checklist-items/${itemId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(formatApiError(payload, "Checklist update failed."));
+      }
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Checklist update failed.");
+    } finally {
+      setLoading(null);
+    }
+  }
 
   async function callApi(
     path: string,
@@ -111,7 +143,7 @@ export function AdminSpvManagement({
 
   return (
     <div className="space-y-6">
-      <SpvComplianceNotice />
+      <SpvComplianceNotice showChecklistNotice />
 
       <WorkspacePanel title="Create SPV opportunity" subtitle="Admin-reviewed workflow — not legal formation">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -184,6 +216,10 @@ export function AdminSpvManagement({
               const company = Array.isArray(spv.companies) ? spv.companies[0] : spv.companies;
               const parts = participationsBySpv[spv.id] ?? [];
               const totals = totalsBySpv[spv.id] ?? { count: 0, total: 0 };
+              const checklist = checklistBySpv[spv.id] ?? [];
+              const readinessPct =
+                spv.checklist_readiness_pct ?? computeChecklistReadinessPct(checklist);
+              const canClose = areRequiredChecklistItemsComplete(checklist);
 
               return (
                 <div key={spv.id} className="rounded-xl border border-slate-200 p-4 text-sm">
@@ -195,9 +231,14 @@ export function AdminSpvManagement({
                         {formatSpvCurrency(spv.target_amount)}
                       </p>
                     </div>
-                    <p className="text-xs text-slate-600">
-                      {totals.count} participants · {formatSpvCurrency(totals.total)} indicative
-                    </p>
+                    <div className="text-right text-xs text-slate-600">
+                      <p>
+                        {totals.count} participants · {formatSpvCurrency(totals.total)} indicative
+                      </p>
+                      <p className="mt-1 font-medium text-indigo-700">
+                        Document readiness: {readinessPct}%
+                      </p>
+                    </div>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
@@ -210,9 +251,14 @@ export function AdminSpvManagement({
                     </button>
                     <button
                       type="button"
-                      disabled={loading != null}
+                      disabled={loading != null || !canClose}
+                      title={
+                        canClose
+                          ? undefined
+                          : "Complete or waive all required checklist items before closing."
+                      }
                       onClick={() => void setStatus(spv.id, "closed")}
-                      className="rounded border px-2 py-1 text-xs"
+                      className="rounded border px-2 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Close
                     </button>
@@ -225,6 +271,69 @@ export function AdminSpvManagement({
                       Seed from interests
                     </button>
                   </div>
+                  {checklist.length > 0 ? (
+                    <div className="mt-4 rounded-lg bg-slate-50 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Document readiness checklist
+                      </p>
+                      <ul className="mt-2 space-y-2">
+                        {checklist.map((item) => (
+                          <li
+                            key={item.id}
+                            className="rounded border border-slate-200 bg-white px-2 py-2 text-xs"
+                          >
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                              <div>
+                                <p className="font-medium text-slate-900">
+                                  {item.title}
+                                  {item.required ? (
+                                    <span className="ml-1 text-red-600">*</span>
+                                  ) : null}
+                                </p>
+                                <p className="text-slate-500">
+                                  {formatChecklistCategory(item.category)} · {item.status}
+                                </p>
+                                {item.description ? (
+                                  <p className="mt-1 text-slate-600">{item.description}</p>
+                                ) : null}
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                <button
+                                  type="button"
+                                  disabled={loading != null}
+                                  onClick={() => void updateChecklistItem(item.id, "in_progress")}
+                                  className="rounded border px-1.5 py-0.5"
+                                >
+                                  In progress
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={loading != null}
+                                  onClick={() => void updateChecklistItem(item.id, "completed")}
+                                  className="rounded border px-1.5 py-0.5"
+                                >
+                                  Complete
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={loading != null}
+                                  onClick={() => void updateChecklistItem(item.id, "waived")}
+                                  className="rounded border px-1.5 py-0.5"
+                                >
+                                  Waive
+                                </button>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-xs text-amber-800">
+                      Checklist not initialized for this SPV (create new SPVs to auto-seed).
+                    </p>
+                  )}
+
                   {parts.length > 0 ? (
                     <ul className="mt-3 space-y-1 text-xs text-slate-600">
                       {parts.slice(0, 8).map((row) => {

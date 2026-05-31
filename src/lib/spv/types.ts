@@ -20,6 +20,37 @@ export const SPV_PARTICIPATION_STATUSES = [
 
 export type SpvParticipationStatus = (typeof SPV_PARTICIPATION_STATUSES)[number];
 
+export const SPV_CHECKLIST_CATEGORIES = [
+  "legal",
+  "investor_docs",
+  "banking",
+  "compliance",
+  "tax",
+  "reporting",
+  "admin",
+] as const;
+
+export type SpvChecklistCategory = (typeof SPV_CHECKLIST_CATEGORIES)[number];
+
+export const SPV_CHECKLIST_STATUSES = ["pending", "in_progress", "completed", "waived"] as const;
+
+export type SpvChecklistItemStatus = (typeof SPV_CHECKLIST_STATUSES)[number];
+
+export type SpvChecklistItemRecord = {
+  id: string;
+  spv_opportunity_id: string;
+  item_key: string;
+  title: string;
+  description: string | null;
+  category: SpvChecklistCategory | string;
+  status: SpvChecklistItemStatus | string;
+  required: boolean;
+  completed_by: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type SpvOpportunityRecord = {
   id: string;
   company_id: string;
@@ -30,6 +61,8 @@ export type SpvOpportunityRecord = {
   status: SpvOpportunityStatus | string;
   description: string | null;
   terms_summary: string | null;
+  checklist_readiness_pct?: number | null;
+  document_ready_at?: string | null;
   created_at: string;
   updated_at: string;
   companies?: { company_name?: string | null; slug?: string | null } | null;

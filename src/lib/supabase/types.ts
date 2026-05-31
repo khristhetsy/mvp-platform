@@ -252,6 +252,8 @@ export type Database = {
           status: string;
           description: string | null;
           terms_summary: string | null;
+          checklist_readiness_pct: number;
+          document_ready_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -264,6 +266,8 @@ export type Database = {
           status?: string;
           description?: string | null;
           terms_summary?: string | null;
+          checklist_readiness_pct?: number;
+          document_ready_at?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -273,6 +277,44 @@ export type Database = {
           status?: string;
           description?: string | null;
           terms_summary?: string | null;
+          checklist_readiness_pct?: number;
+          document_ready_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      spv_checklist_items: {
+        Row: {
+          id: string;
+          spv_opportunity_id: string;
+          item_key: string;
+          title: string;
+          description: string | null;
+          category: string;
+          status: string;
+          required: boolean;
+          completed_by: string | null;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          spv_opportunity_id: string;
+          item_key: string;
+          title: string;
+          description?: string | null;
+          category: string;
+          status?: string;
+          required?: boolean;
+          completed_by?: string | null;
+          completed_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          status?: string;
+          required?: boolean;
+          completed_by?: string | null;
+          completed_at?: string | null;
           updated_at?: string;
         };
         Relationships: [];

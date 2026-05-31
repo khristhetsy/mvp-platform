@@ -70,6 +70,8 @@ Run migration `0030_spv_workflow.sql` before using SPV admin, founder, or invest
 
 This adds `spv_opportunities` and `spv_participations` with RLS (staff full access, founders read their company SPVs, investors read/write their own participations and open opportunities). Admin manages opportunities at `/admin/spvs`; founders see status on `/founder/capital-raise`; approved investors participate at `/investor/spvs`. Indications of interest are non-binding — no legal formation, banking, or securities execution in this phase.
 
+Run migration `0031_spv_checklist.sql` for the SPV document readiness checklist (`spv_checklist_items`). Checklist items auto-seed when an admin creates an SPV. Staff manage item status on `/admin/spvs`; founders see category-level progress on `/founder/capital-raise`; investors see a simplified preparation label on `/investor/spvs`. Closing an SPV is blocked until required checklist items are completed or waived.
+
 Use `/admin/reports` (staff-only) to generate JSON, CSV, or **PDF** internal summaries from existing tables, including **Due Diligence** (`due_diligence`) per-company readiness packs. PDF export uses server-side [PDFKit](https://pdfkit.org/) (`pdfkit` dependency) via `src/lib/reports/pdf-export.ts` — no external PDF API. Each export writes an `audit_logs` row (`admin.report_generated`) with `format` (`json`, `csv`, or `pdf`). OAuth tokens, message bodies, and private founder contact PII are excluded from exports.
 
 ## Data model

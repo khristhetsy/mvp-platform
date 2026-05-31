@@ -57,6 +57,38 @@ export async function notifyStaffSpvInterest(input: {
   });
 }
 
+export async function notifyStaffSpvChecklistComplete(input: {
+  spvOpportunityId: string;
+  spvName: string;
+  companyName: string;
+  actorId: string | null;
+}) {
+  return notifyStaff({
+    actorUserId: input.actorId,
+    type: "spv_checklist_complete",
+    title: "SPV checklist complete",
+    message: `Document readiness checklist reached 100% for SPV "${input.spvName}" (${input.companyName}).`,
+    entityType: "spv_opportunity",
+    entityId: input.spvOpportunityId,
+  });
+}
+
+export async function notifyFounderSpvDocumentReady(input: {
+  companyId: string;
+  spvOpportunityId: string;
+  spvName: string;
+  actorId: string | null;
+}) {
+  return notifyCompanyFounder(input.companyId, {
+    actorUserId: input.actorId,
+    type: "spv_document_ready",
+    title: "SPV document-ready (operational)",
+    message: `SPV "${input.spvName}" reached document readiness on the internal checklist. This is operational tracking only — not legal offering documents.`,
+    entityType: "spv_opportunity",
+    entityId: input.spvOpportunityId,
+  });
+}
+
 export async function notifyInvestorSpvStatusChanged(input: {
   recipientUserId: string;
   spvOpportunityId: string;

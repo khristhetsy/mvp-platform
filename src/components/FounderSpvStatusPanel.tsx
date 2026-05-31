@@ -1,14 +1,26 @@
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { SpvComplianceNotice } from "@/components/SpvComplianceNotice";
-import { formatSpvCurrency, getSpvParticipationTotals } from "@/lib/spv/display";
-import type { SpvOpportunityRecord, SpvParticipationRecord } from "@/lib/spv/types";
+import {
+  formatChecklistCategory,
+  formatSpvCurrency,
+  getSpvParticipationTotals,
+} from "@/lib/spv/display";
+import type { SpvChecklistCategory, SpvOpportunityRecord, SpvParticipationRecord } from "@/lib/spv/types";
+
+type CategorySummary = {
+  category: SpvChecklistCategory;
+  total: number;
+  completed: number;
+};
 
 export function FounderSpvStatusPanel({
   opportunities,
   participations,
+  checklistSummaryBySpv,
 }: Readonly<{
   opportunities: SpvOpportunityRecord[];
   participations: SpvParticipationRecord[];
+  checklistSummaryBySpv: Record<string, CategorySummary[]>;
 }>) {
   const bySpv = new Map<string, SpvParticipationRecord[]>();
   for (const row of participations) {
@@ -19,7 +31,7 @@ export function FounderSpvStatusPanel({
 
   return (
     <div className="space-y-4">
-      <SpvComplianceNotice />
+      <SpvComplianceNotice showChecklistNotice />
       <WorkspacePanel
         title="SPV opportunity status"
         subtitle="Admin-managed SPV workflow — founders cannot create legal SPVs in Phase 1"
@@ -31,6 +43,8 @@ export function FounderSpvStatusPanel({
             {opportunities.map((spv) => {
               const rows = bySpv.get(spv.id) ?? [];
               const totals = getSpvParticipationTotals(rows);
+              const categories = checklistSummaryBySpv[spv.id] ?? [];
+              const readinessPct = spv.checklist_readiness_pct ?? 0;
 
               return (
                 <div key={spv.id} className="rounded-xl border border-slate-200 p-4 text-sm">
@@ -44,6 +58,19 @@ export function FounderSpvStatusPanel({
                     {formatSpvCurrency(totals.indicativeTotal)} total indicative ·{" "}
                     {totals.softCommittedCount} soft-committed
                   </p>
+                  <p className="mt-2 text-xs font-medium text-indigo-700">
+                    Document readiness: {readinessPct}%
+                    {spv.document_ready_at ? " · Document-ready (operational)" : null}
+                  </p>
+                  {categories.length > 0 ? (
+                    <ul className="mt-2 grid gap-1 sm:grid-cols-2">
+                      {categories.map((row) => (
+                        <li key={row.category} className="text-xs text-slate-600">
+                          {formatChecklistCategory(row.category)}: {row.completed}/{row.total} complete
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                   {spv.description ? (
                     <p className="mt-2 text-xs text-slate-600">{spv.description}</p>
                   ) : null}

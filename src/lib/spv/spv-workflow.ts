@@ -14,6 +14,7 @@ import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
+import { assertSpvCanClose, seedSpvChecklistItems } from "@/lib/spv/checklist";
 import { formatSpvCurrency, getSpvParticipationTotals } from "@/lib/spv/display";
 
 export { formatSpvCurrency, getSpvParticipationTotals };
@@ -82,7 +83,10 @@ export async function createSpvOpportunity(
     return { error: error ?? new Error("Unable to create SPV opportunity.") };
   }
 
-  return { data: data as SpvOpportunityRecord };
+  const record = data as SpvOpportunityRecord;
+  void seedSpvChecklistItems(admin, record.id);
+
+  return { data: record };
 }
 
 export async function updateSpvOpportunityStatus(
@@ -98,6 +102,13 @@ export async function updateSpvOpportunityStatus(
     .select("*, companies(company_name)")
     .eq("id", input.spvOpportunityId)
     .single();
+
+  if (input.status === "closed") {
+    const closeCheck = await assertSpvCanClose(admin, input.spvOpportunityId);
+    if (closeCheck.error) {
+      return { error: closeCheck.error };
+    }
+  }
 
   const now = new Date().toISOString();
   const { data, error } = await admin
@@ -241,7 +252,9 @@ export async function loadInvestorSpvWorkspace(
       .order("updated_at", { ascending: false }),
     supabase
       .from("spv_participations")
-      .select("*, spv_opportunities(name, status, target_amount, minimum_commitment, description, terms_summary), companies(company_name, slug)")
+      .select(
+        "*, spv_opportunities(name, status, target_amount, minimum_commitment, description, terms_summary, checklist_readiness_pct, document_ready_at), companies(company_name, slug)",
+      )
       .eq("investor_id", investorId)
       .order("updated_at", { ascending: false }),
   ]);

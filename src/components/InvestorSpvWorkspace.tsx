@@ -5,7 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { SpvComplianceNotice } from "@/components/SpvComplianceNotice";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
-import { formatSpvCurrency } from "@/lib/spv/display";
+import { formatSpvCurrency, investorPreparationLabel } from "@/lib/spv/display";
 import type { SpvOpportunityRecord, SpvParticipationRecord } from "@/lib/spv/types";
 import { formatApiError } from "@/lib/api/errors";
 
@@ -48,7 +48,7 @@ export function InvestorSpvWorkspace({
 
   return (
     <div className="space-y-6">
-      <SpvComplianceNotice />
+      <SpvComplianceNotice showChecklistNotice />
 
       <WorkspacePanel title="Your SPV participations" subtitle={`${participations.length} record(s)`}>
         {participations.length === 0 ? (
@@ -67,6 +67,13 @@ export function InvestorSpvWorkspace({
                   <p className="text-xs text-slate-500">
                     {company?.company_name ?? "Company"} · {row.status} ·{" "}
                     {formatSpvCurrency(row.indicative_amount)}
+                  </p>
+                  <p className="mt-1 text-xs text-indigo-700">
+                    SPV preparation:{" "}
+                    {investorPreparationLabel(
+                      spv?.checklist_readiness_pct,
+                      spv?.document_ready_at,
+                    )}
                   </p>
                   {row.company_id ? (
                     <Link
@@ -98,6 +105,10 @@ export function InvestorSpvWorkspace({
                     {formatSpvCurrency(spv.minimum_commitment)}
                   </p>
                   {spv.description ? <p className="mt-2 text-slate-600">{spv.description}</p> : null}
+                  <p className="mt-2 text-xs text-indigo-700">
+                    SPV preparation:{" "}
+                    {investorPreparationLabel(spv.checklist_readiness_pct, spv.document_ready_at)}
+                  </p>
                   <div className="mt-3 flex flex-wrap items-end gap-2">
                     <label className="text-xs">
                       Indicative amount (USD)

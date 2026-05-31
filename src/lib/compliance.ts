@@ -15,3 +15,9 @@ export const spvComplianceDisclaimers = [
   "This does not constitute an offer to sell securities.",
   "Legal documents and eligibility checks are required before participation.",
 ];
+
+export const spvChecklistDisclaimers = [
+  "The document readiness checklist is operational tracking only.",
+  "It is not legal advice and does not generate securities offering documents.",
+  "Completion of checklist items does not constitute an offer to sell securities.",
+];
