@@ -151,3 +151,95 @@ export async function updateLessonVideoRenderStatus(input: {
   if (error) throw new Error(error.message);
   return mapVideoAssetRow(data as Record<string, unknown>);
 }
+
+export async function upsertManualLessonVideo(input: {
+  founderId: string;
+  companyId: string;
+  courseSlug: string;
+  lessonSlug: string;
+  storagePath: string;
+}) {
+  const admin = createServiceRoleClient();
+  const now = new Date().toISOString();
+
+  const payload = {
+    founder_id: input.founderId,
+    company_id: input.companyId,
+    course_slug: input.courseSlug,
+    lesson_slug: input.lessonSlug,
+    video_url: input.storagePath,
+    provider: "manual" as const,
+    render_status: "ready" as const,
+    updated_at: now,
+  };
+
+  const { data: existing } = await admin
+    .from("founder_lesson_video_assets")
+    .select("*")
+    .eq("founder_id", input.founderId)
+    .eq("company_id", input.companyId)
+    .eq("course_slug", input.courseSlug)
+    .eq("lesson_slug", input.lessonSlug)
+    .maybeSingle();
+
+  if (existing) {
+    const { data, error } = await admin
+      .from("founder_lesson_video_assets")
+      .update(payload)
+      .eq("id", existing.id)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return mapVideoAssetRow(data as Record<string, unknown>);
+  }
+
+  const { data, error } = await admin
+    .from("founder_lesson_video_assets")
+    .insert({
+      ...payload,
+      slides_json: [],
+      created_at: now,
+    })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return mapVideoAssetRow(data as Record<string, unknown>);
+}
+
+export async function clearManualLessonVideo(input: {
+  founderId: string;
+  companyId: string;
+  courseSlug: string;
+  lessonSlug: string;
+}) {
+  const admin = createServiceRoleClient();
+  const now = new Date().toISOString();
+
+  const { data: existing } = await admin
+    .from("founder_lesson_video_assets")
+    .select("*")
+    .eq("founder_id", input.founderId)
+    .eq("company_id", input.companyId)
+    .eq("course_slug", input.courseSlug)
+    .eq("lesson_slug", input.lessonSlug)
+    .maybeSingle();
+
+  if (!existing) {
+    return null;
+  }
+
+  const hasScript = Boolean(existing.script);
+  const { data, error } = await admin
+    .from("founder_lesson_video_assets")
+    .update({
+      video_url: null,
+      render_status: hasScript ? "script_ready" : "draft",
+      updated_at: now,
+    })
+    .eq("id", existing.id)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return mapVideoAssetRow(data as Record<string, unknown>);
+}

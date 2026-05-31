@@ -31,6 +31,8 @@ export function FounderClassLessonExperience({
   prevHref,
   nextHref,
   initialVideoAsset,
+  companyId,
+  initialVideoPlaybackUrl,
 }: Readonly<{
   course: Course;
   lesson: CourseLesson;
@@ -42,6 +44,8 @@ export function FounderClassLessonExperience({
   prevHref: string | null;
   nextHref: string | null;
   initialVideoAsset: FounderLessonVideoAssetRecord | null;
+  companyId: string;
+  initialVideoPlaybackUrl: string | null;
 }>) {
   const router = useRouter();
   const [completed, setCompleted] = useState(initialProgress?.status === "completed");
@@ -131,7 +135,9 @@ export function FounderClassLessonExperience({
           lessonSlug={lesson.slug}
           lessonTitle={lesson.title}
           durationMinutes={lesson.durationMinutes}
+          companyId={companyId}
           initialAsset={initialVideoAsset}
+          initialPlaybackUrl={initialVideoPlaybackUrl}
         />
 
         <header>

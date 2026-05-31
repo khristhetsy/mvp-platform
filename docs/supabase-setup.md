@@ -4,7 +4,7 @@
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY` (server-only)
-2. Run migrations **in numeric order** in the Supabase SQL editor (or via Supabase CLI). Apply every file from `0001` through `0039` on a fresh project:
+2. Run migrations **in numeric order** in the Supabase SQL editor (or via Supabase CLI). Apply every file from `0001` through `0040` on a fresh project:
 
    | # | File |
    |---|------|
@@ -47,6 +47,7 @@
    | 0037 | `0037_spv_founder_rls_hardening.sql` (removes founder SELECT on internal SPV notes) |
    | 0038 | `0038_learning_programs_lessons.sql` (programs, lesson progress, quiz attempts) |
    | 0039 | `0039_founder_lesson_video_assets.sql` (AI video script, slides, captions metadata) |
+   | 0040 | `0040_learning_videos_storage.sql` (private `learning-videos` bucket for manual lesson MP4/WebM) |
 3. Confirm the private storage bucket `pitch-decks` exists (`0003` creates it).
 4. Pitch deck object path format:
 
@@ -208,7 +209,7 @@ If `NEXT_PUBLIC_SUPABASE_*` is missing in production, the app **fails closed**: 
 
 1. Link repo; set **Root Directory** to the app root if monorepo.
 2. Set all required env vars for **Production** (and Preview if needed).
-3. Run migrations `0001`–`0039` on the production Supabase project before first deploy.
+3. Run migrations `0001`–`0040` on the production Supabase project before first deploy.
 4. Confirm storage buckets: `pitch-decks`, `spv-investor-documents` (from migrations).
 5. Deploy; smoke-test sign-in, founder upload, admin reports export, SPV **Refresh readiness** on `/admin/spvs` (does not run sync on page load).
 6. Supabase Auth → URL configuration: add production site URL and redirect URLs for `/auth/callback`.
