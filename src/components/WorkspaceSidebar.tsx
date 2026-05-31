@@ -20,7 +20,11 @@ function useAdminNavPermissions(workspace: WorkspaceId) {
     void fetch("/api/admin/users/permissions/me")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (cancelled || !data) return;
+        if (cancelled) return;
+        if (!data) {
+          setState({ permissions: [], isSuperAdmin: false });
+          return;
+        }
         setState({
           permissions: data.permissions ?? [],
           isSuperAdmin: Boolean(data.isSuperAdmin),
@@ -125,7 +129,7 @@ export function WorkspaceSidebar({
         />
       ) : null}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] shadow-[var(--shadow-panel)] transition-transform lg:sticky lg:top-0 lg:z-30 lg:h-screen lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] shadow-[var(--shadow-panel)] transition-transform lg:relative lg:z-30 lg:h-screen lg:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >

@@ -39,6 +39,7 @@ export function AppShell({
   const shellRole = activeWorkspace ? workspaceShellRole(activeWorkspace) : role;
 
   if (insideAppShell && activeWorkspace) {
+    // Layout already rendered sidebar + shell; page-level AppShell only supplies content.
     return <>{children}</>;
   }
 
