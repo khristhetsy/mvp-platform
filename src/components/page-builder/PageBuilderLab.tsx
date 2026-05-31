@@ -8,6 +8,7 @@ import {
   Download,
   Eye,
   EyeOff,
+  GripVertical,
   Monitor,
   RotateCcw,
   Save,
@@ -70,6 +71,8 @@ export function PageBuilderLab() {
   const [compareSnapshotId, setCompareSnapshotId] = useState<string | null>(null);
   const [restoreTarget, setRestoreTarget] = useState<PageBuilderSnapshotMeta | null>(null);
   const [restoring, setRestoring] = useState(false);
+  const [dragBlockIndex, setDragBlockIndex] = useState<number | null>(null);
+  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
 
   const skipAutosaveRef = useRef(true);
   const savedFingerprintRef = useRef("");
@@ -300,9 +303,22 @@ export function PageBuilderLab() {
   const moveBlock = (index: number, direction: -1 | 1) => {
     const target = index + direction;
     if (target < 0 || target >= layout.blocks.length) return;
+    reorderBlocks(index, target);
+  };
+
+  const reorderBlocks = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= layout.blocks.length || toIndex >= layout.blocks.length) {
+      return;
+    }
     const blocks = [...layout.blocks];
-    [blocks[index], blocks[target]] = [blocks[target], blocks[index]];
+    const [moved] = blocks.splice(fromIndex, 1);
+    blocks.splice(toIndex, 0, moved);
     updateLayout({ ...layout, blocks });
+  };
+
+  const clearDragState = () => {
+    setDragBlockIndex(null);
+    setDropTargetIndex(null);
   };
 
   const toggleVisibility = (blockId: string) => {
@@ -468,30 +484,67 @@ export function PageBuilderLab() {
           </div>
 
           <h3 className="mt-5 text-sm font-semibold text-[var(--navy)]">Block order</h3>
-          <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
+          <p className="mt-0.5 text-[10px] text-slate-500">Drag the handle or use move up/down.</p>
+          <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto" onDragLeave={clearDragState}>
             {layout.blocks.map((block, index) => {
               const def = getBlockDefinition(block.type);
+              const isDragging = dragBlockIndex === index;
+              const isDropTarget = dropTargetIndex === index && dragBlockIndex !== null && dragBlockIndex !== index;
               return (
-                <li key={block.id}>
+                <li
+                  key={block.id}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                    setDropTargetIndex(index);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const fromRaw = e.dataTransfer.getData("text/plain");
+                    const fromIndex = fromRaw ? Number(fromRaw) : dragBlockIndex;
+                    if (fromIndex !== null && !Number.isNaN(fromIndex)) {
+                      reorderBlocks(fromIndex, index);
+                    }
+                    clearDragState();
+                  }}
+                  className={`rounded-lg transition ${
+                    isDropTarget ? "ring-2 ring-[var(--gold)] ring-offset-1" : ""
+                  } ${isDragging ? "opacity-40" : ""}`}
+                >
                   <div
                     className={`flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs ${
-                      selectedBlockId === block.id ? "border-[var(--navy)] bg-[var(--navy-muted)]" : "border-slate-200"
-                    }`}
+                      selectedBlockId === block.id ? "border-[var(--navy)] bg-[var(--navy-muted)]" : "border-slate-200 bg-white"
+                    } ${isDropTarget ? "border-[var(--gold)] bg-[var(--gold-muted)]/30" : ""}`}
                   >
+                    <button
+                      type="button"
+                      draggable
+                      aria-label={`Drag to reorder ${def?.label ?? block.type}`}
+                      className="cursor-grab touch-none p-0.5 text-slate-400 hover:text-[var(--navy)] active:cursor-grabbing"
+                      onDragStart={(e) => {
+                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.setData("text/plain", String(index));
+                        setDragBlockIndex(index);
+                        setDropTargetIndex(index);
+                      }}
+                      onDragEnd={clearDragState}
+                    >
+                      <GripVertical className="h-3.5 w-3.5" aria-hidden />
+                    </button>
                     <button type="button" className="min-w-0 flex-1 truncate text-left font-medium" onClick={() => setSelectedBlockId(block.id)}>
                       {def?.label ?? block.type}
                       {!block.visible ? " (hidden)" : ""}
                     </button>
-                    <button type="button" aria-label="Move up" className="p-1 text-slate-500" onClick={() => moveBlock(index, -1)}>
+                    <button type="button" aria-label="Move up" className="p-1 text-slate-500 hover:text-[var(--navy)]" onClick={() => moveBlock(index, -1)}>
                       <ChevronUp className="h-3.5 w-3.5" />
                     </button>
-                    <button type="button" aria-label="Move down" className="p-1 text-slate-500" onClick={() => moveBlock(index, 1)}>
+                    <button type="button" aria-label="Move down" className="p-1 text-slate-500 hover:text-[var(--navy)]" onClick={() => moveBlock(index, 1)}>
                       <ChevronDown className="h-3.5 w-3.5" />
                     </button>
-                    <button type="button" aria-label="Toggle visibility" className="p-1 text-slate-500" onClick={() => toggleVisibility(block.id)}>
+                    <button type="button" aria-label="Toggle visibility" className="p-1 text-slate-500 hover:text-[var(--navy)]" onClick={() => toggleVisibility(block.id)}>
                       {block.visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                     </button>
-                    <button type="button" aria-label="Remove block" className="p-1 text-red-600" onClick={() => removeBlock(block.id)}>
+                    <button type="button" aria-label="Remove block" className="p-1 text-red-600 hover:text-red-700" onClick={() => removeBlock(block.id)}>
                       ×
                     </button>
                   </div>
