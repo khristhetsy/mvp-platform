@@ -74,6 +74,7 @@ export type IntegrationHealthSummary = {
   failedDeliveries24h: number;
   pendingRetries: number;
   lastSuccessfulDeliveryAt: string | null;
+  lastFailureAt: string | null;
   providers: Array<{
     provider: IntegrationProvider;
     enabled: boolean;

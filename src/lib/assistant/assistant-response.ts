@@ -288,6 +288,10 @@ export async function runAssistantChat(input: {
   const integrationIntent =
     isIntegrationHealthIntent(message) &&
     (input.profile.role === "admin" || input.profile.role === "analyst");
+  const integrationOnly =
+    integrationIntent &&
+    !message.toLowerCase().includes("automation console") &&
+    !isAutomationConsoleIntent(message);
   const scheduledIntent = isScheduledDigestIntent(message);
   const orchestrationIntent =
     isOrchestrationAttentionIntent(message) || scheduledIntent || cronStatusIntent;
@@ -365,7 +369,7 @@ export async function runAssistantChat(input: {
     } else {
       answer = `No matching actions in your current list. Open the Action Center to review all workflow items.`;
     }
-  } else if (integrationIntent) {
+  } else if (integrationOnly) {
     answer = await formatIntegrationsForAssistant(message);
     relatedLinks.unshift({ label: "Integrations", href: "/admin/integrations" });
   } else if (cronStatusIntent && (input.profile.role === "admin" || input.profile.role === "analyst")) {

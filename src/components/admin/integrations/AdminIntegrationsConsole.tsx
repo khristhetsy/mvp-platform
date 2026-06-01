@@ -2,6 +2,15 @@
 
 import { useMemo, useState } from "react";
 import type { loadIntegrationsAdminConsole } from "@/lib/integrations/admin-console";
+import {
+  DeliveryTimelineSection,
+  ExportDeliveriesSection,
+  FailedDeliveryQueueSection,
+  IntegrationHealthSummarySection,
+  PayloadPreviewPanel,
+  SlackTestTemplatesSection,
+  SubscriptionPresetsSection,
+} from "@/components/admin/integrations/AdminIntegrationsReliabilitySections";
 import { PageSection } from "@/components/ui/workspace-layout";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
@@ -53,14 +62,14 @@ export function AdminIntegrationsConsole({
     }
   }
 
-  async function testConnection(connectionId: string) {
-    setBusy(connectionId);
+  async function testConnection(connectionId: string, templateId?: string) {
+    setBusy(templateId ? `${connectionId}:${templateId}` : connectionId);
     setMessage(null);
     try {
       const res = await fetch("/api/admin/integrations/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ connectionId }),
+        body: JSON.stringify({ connectionId, templateId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Test failed");
@@ -116,20 +125,18 @@ export function AdminIntegrationsConsole({
         <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">{message}</p>
       ) : null}
 
-      <PageSection title="Integration health">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <HealthStat label="Active" value={payload.health.activeConnections} />
-          <HealthStat label="Disabled" value={payload.health.disabledConnections} />
-          <HealthStat label="Unhealthy" value={payload.health.unhealthyConnections} />
-          <HealthStat label="Failed (24h)" value={payload.health.failedDeliveries24h} />
-          <HealthStat label="Pending retries" value={payload.health.pendingRetries} />
-          <HealthStat
-            label="Last success"
-            value={payload.health.lastSuccessfulDeliveryAt ? "Yes" : "—"}
-            sub={payload.health.lastSuccessfulDeliveryAt ?? "None yet"}
-          />
-        </div>
-      </PageSection>
+      <IntegrationHealthSummarySection payload={payload} />
+
+      <FailedDeliveryQueueSection
+        payload={payload}
+        isAdmin={isAdmin}
+        onRetry={retryDelivery}
+        busy={busy}
+      />
+
+      <DeliveryTimelineSection payload={payload} />
+
+      <ExportDeliveriesSection isStaff />
 
       <PageSection title="Active integrations">
         <ul className="space-y-2 text-sm">
@@ -162,6 +169,24 @@ export function AdminIntegrationsConsole({
 
       {isAdmin ? (
         <>
+          <SlackTestTemplatesSection
+            slackId={slack?.id}
+            isAdmin={isAdmin}
+            onTest={testConnection}
+            busy={busy}
+          />
+
+          {slack ? <PayloadPreviewPanel connectionId={slack.id} isAdmin={isAdmin} /> : null}
+          {webhook ? <PayloadPreviewPanel connectionId={webhook.id} isAdmin={isAdmin} /> : null}
+
+          <SubscriptionPresetsSection
+            payload={payload}
+            isAdmin={isAdmin}
+            slackId={slack?.id}
+            webhookId={webhook?.id}
+            onMessage={setMessage}
+          />
+
           <PageSection title="Slack configuration">
             {slack ? (
               <div className="space-y-3 text-sm">
@@ -300,23 +325,6 @@ export function AdminIntegrationsConsole({
         <DeliveryTable deliveries={payload.deliveries} onRetry={isAdmin ? retryDelivery : undefined} busy={busy} />
       </PageSection>
 
-      <PageSection title="Failed deliveries">
-        <DeliveryTable deliveries={payload.failedDeliveries} onRetry={isAdmin ? retryDelivery : undefined} busy={busy} />
-      </PageSection>
-    </div>
-  );
-}
-
-function HealthStat({
-  label,
-  value,
-  sub,
-}: Readonly<{ label: string; value: string | number; sub?: string }>) {
-  return (
-    <div className="rounded-xl border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 font-mono text-xl font-semibold text-slate-950">{value}</p>
-      {sub ? <p className="mt-0.5 text-[10px] text-slate-500 truncate">{sub}</p> : null}
     </div>
   );
 }
@@ -355,9 +363,13 @@ function DeliveryTable({
               <td className="px-3 py-2">
                 <StatusBadge label={row.status} status={deliveryStatusBadge(row.status)} />
               </td>
-              <td className="px-3 py-2">{row.attempt_count}</td>
               <td className="px-3 py-2">
-                {onRetry && (row.status === "failed" || row.status === "retrying") ? (
+                {row.attempt_count}/{row.max_attempts}
+              </td>
+              <td className="px-3 py-2">
+                {onRetry &&
+                (row.status === "failed" || row.status === "retrying") &&
+                row.attempt_count < row.max_attempts ? (
                   <button
                     type="button"
                     disabled={busy === row.id}
