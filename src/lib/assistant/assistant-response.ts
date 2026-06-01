@@ -17,10 +17,8 @@ import {
   sanitizeAssistantHistory,
 } from "@/lib/assistant/assistant-policy";
 import { buildRelatedLinks } from "@/lib/assistant/assistant-actions";
-import {
-  isNextBestActionIntent,
-  loadAndComputeNextBestActions,
-} from "@/lib/next-best-actions/compute";
+import { isNextBestActionIntent } from "@/lib/next-best-actions/compute";
+import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import {
   formatActionsForAssistantAnswer,
   toAssistantSuggestedActions,
@@ -232,7 +230,7 @@ export async function runAssistantChat(input: {
     return runLearningMode(input.profile, input.supabase, input.request);
   }
 
-  const nba = await loadAndComputeNextBestActions({
+  const nba = await loadAndMergeNextBestActions({
     profile: input.profile,
     supabase: input.supabase,
     options: {
@@ -240,6 +238,8 @@ export async function runAssistantChat(input: {
       entityId: input.request.entityId ?? ctx.entity?.id,
       contextPath: input.request.currentPath,
       limit: 6,
+      sync: true,
+      includeInactive: false,
     },
   });
 

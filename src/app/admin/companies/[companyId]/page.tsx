@@ -8,7 +8,7 @@ import { getAdminCompanyWorkspace } from "@/lib/admin/company-workspace";
 import { formatError } from "@/lib/errors/format-error";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { loadAndComputeNextBestActions } from "@/lib/next-best-actions/compute";
+import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +29,7 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
 
   try {
     workspace = await getAdminCompanyWorkspace(companyId);
-    companyActions = await loadAndComputeNextBestActions({
+    companyActions = await loadAndMergeNextBestActions({
       profile,
       supabase,
       options: {
@@ -37,6 +37,7 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
         entityType: "company",
         entityId: companyId,
         limit: 3,
+        sync: true,
       },
     });
   } catch (error) {

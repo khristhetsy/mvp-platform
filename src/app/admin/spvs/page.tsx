@@ -32,7 +32,7 @@ import type {
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { loadAndComputeNextBestActions } from "@/lib/next-best-actions/compute";
+import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 
 export const dynamic = "force-dynamic";
@@ -155,10 +155,10 @@ export default async function AdminSpvsPage() {
   const adminRole = profile.role === "analyst" ? "analyst" : "admin";
   const [{ data, error: loadError }, nextBestActions] = await Promise.all([
     loadAdminSpvWorkspace(),
-    loadAndComputeNextBestActions({
+    loadAndMergeNextBestActions({
       profile,
       supabase,
-      options: { role: adminRole, limit: 3 },
+      options: { role: adminRole, limit: 3, sync: true },
     }),
   ]);
 
@@ -194,6 +194,7 @@ export default async function AdminSpvsPage() {
               initialActions={nextBestActions.actions}
               limit={3}
               className="mb-6"
+              showEscalate
             />
 
             <PageSection title="Operations overview" subtitle="Non-binding indicative totals">

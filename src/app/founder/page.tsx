@@ -25,7 +25,7 @@ import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-set
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
-import { loadAndComputeNextBestActions } from "@/lib/next-best-actions/compute";
+import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 
 export const dynamic = "force-dynamic";
@@ -50,7 +50,7 @@ export default async function FounderDashboardPage() {
     loadFounderRemediationPlan(profile),
     getFounderFeatureAccess("elearning"),
     company ? loadFounderCompanyMatchContext(company) : Promise.resolve(null),
-    loadAndComputeNextBestActions({ profile, supabase, options: { limit: 5 } }),
+    loadAndMergeNextBestActions({ profile, supabase, options: { limit: 5, sync: true } }),
   ]);
   const learning = learningAccess.allowed ? await loadFounderLearningWorkspace(profile) : null;
 

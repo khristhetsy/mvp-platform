@@ -60,7 +60,9 @@ export type NotificationType =
   | "spv_subscription_package_issued"
   | "spv_ready_for_final_review"
   | "spv_approved_for_closing"
-  | "spv_operationally_closed";
+  | "spv_operationally_closed"
+  | "next_best_action_escalated"
+  | "next_best_action_critical_escalated";
 
 export type NotificationRecord = {
   id: string;

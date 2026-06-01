@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
-import { loadAndComputeNextBestActions } from "@/lib/next-best-actions/compute";
+import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import type { NextBestActionRole } from "@/lib/next-best-actions/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
@@ -23,8 +23,10 @@ export async function GET(request: Request) {
   const entityId = url.searchParams.get("entityId") ?? undefined;
   const limitRaw = Number(url.searchParams.get("limit") ?? "5");
   const limit = Number.isFinite(limitRaw) ? limitRaw : 5;
+  const sync = url.searchParams.get("sync") !== "false";
+  const includeInactive = url.searchParams.get("includeInactive") === "true";
 
-  const result = await loadAndComputeNextBestActions({
+  const result = await loadAndMergeNextBestActions({
     profile: auth.profile,
     supabase: auth.supabase,
     options: {
@@ -33,6 +35,8 @@ export async function GET(request: Request) {
       entityType,
       entityId,
       limit,
+      sync,
+      includeInactive,
     },
   });
 
@@ -45,11 +49,12 @@ export async function GET(request: Request) {
     actorRole: auth.profile.role,
     severity: "info",
     title: "Next best actions viewed",
-    description: `Computed ${result.actions.length} actions for ${result.role} role.`,
+    description: null,
     metadata: {
       action_count: result.actions.length,
       role: result.role,
       has_entity_filter: Boolean(entityType && entityId),
+      lifecycle: true,
     },
     sourceModule: "next_best_actions",
     visibility: "admin_only",

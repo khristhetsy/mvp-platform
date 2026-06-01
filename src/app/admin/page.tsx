@@ -13,7 +13,7 @@ import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
 import { getComplianceMetrics } from "@/lib/compliance/events";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
-import { loadAndComputeNextBestActions } from "@/lib/next-best-actions/compute";
+import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 
 export const dynamic = "force-dynamic";
@@ -53,10 +53,10 @@ export default async function AdminDashboardPage() {
     supabase.from("spv_opportunities").select("id", { count: "exact", head: true }).neq("status", "closed"),
     supabase.from("diligence_reports").select("id", { count: "exact", head: true }),
     supabase.from("notifications").select("id", { count: "exact", head: true }),
-    loadAndComputeNextBestActions({
+    loadAndMergeNextBestActions({
       profile,
       supabase,
-      options: { role: adminRole, limit: 5 },
+      options: { role: adminRole, limit: 5, sync: true },
     }),
   ]);
 
@@ -90,7 +90,7 @@ export default async function AdminDashboardPage() {
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role}>
       <div className="mb-6 px-1">
-        <NextBestActionsPanel role={adminRole} initialActions={nextBestActions.actions} limit={5} />
+        <NextBestActionsPanel role={adminRole} initialActions={nextBestActions.actions} limit={5} showEscalate />
       </div>
       <AdminDashboardShell
         userId={profile.id}

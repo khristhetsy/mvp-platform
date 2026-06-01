@@ -36,6 +36,7 @@ export function AdminCompanyWorkspace({
           entityType="company"
           entityId={data.company.id}
           limit={3}
+          showEscalate
         />
       ) : null}
 

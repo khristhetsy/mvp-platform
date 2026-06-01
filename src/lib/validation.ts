@@ -537,3 +537,9 @@ export const assistantChatSchema = z.object({
     .max(12)
     .optional(),
 });
+
+export const nextBestActionLifecycleSchema = z.object({
+  action: z.enum(["complete", "dismiss", "snooze", "reopen", "escalate"]),
+  snoozedUntil: z.string().datetime().optional(),
+  note: z.string().max(500).optional(),
+});
