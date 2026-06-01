@@ -52,6 +52,7 @@ export function AdminDashboardShell({
             scheduledCounts={scheduledCounts}
             executionSummary={executionSummary}
             automationSummary={automationSummary}
+            isStaff={userRole === "admin" || userRole === "analyst"}
           />
         ) : null}
 

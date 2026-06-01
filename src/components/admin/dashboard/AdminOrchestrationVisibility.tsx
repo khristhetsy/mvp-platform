@@ -3,6 +3,7 @@ import { PageSection } from "@/components/ui/workspace-layout";
 import type { OrchestrationSummary } from "@/lib/notifications/orchestration/types";
 import type { OrchestrationExecutionSummary } from "@/lib/notifications/orchestration/execution-log";
 import type { ScheduledOperationalCounts } from "@/lib/notifications/scheduled/types";
+import { AdminAutomationTestRunner } from "@/components/admin/dashboard/AdminAutomationTestRunner";
 import type { AutomationDailySummary } from "@/components/admin/dashboard/types";
 
 export function AdminOrchestrationVisibility({
@@ -10,11 +11,13 @@ export function AdminOrchestrationVisibility({
   scheduledCounts,
   executionSummary,
   automationSummary,
+  isStaff = true,
 }: Readonly<{
   counts: OrchestrationSummary;
   scheduledCounts?: ScheduledOperationalCounts;
   executionSummary?: OrchestrationExecutionSummary;
   automationSummary?: AutomationDailySummary;
+  isStaff?: boolean;
 }>) {
   const items = [
     { label: "Escalated", value: counts.escalatedCount, href: "/admin/actions?tab=escalated&escalated=true" },
@@ -136,6 +139,7 @@ export function AdminOrchestrationVisibility({
           ))}
         </div>
       ) : null}
+      <AdminAutomationTestRunner isStaff={isStaff} />
     </PageSection>
   );
 }
