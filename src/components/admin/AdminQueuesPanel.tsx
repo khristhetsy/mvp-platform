@@ -16,6 +16,7 @@ import {
 import { PageSection } from "@/components/ui/workspace-layout";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { drilldownFocusClass, drilldownHoverClass } from "@/components/ui/drilldown";
+import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
 import type { AdminQueueItem, AdminQueueSummaryItem, AdminQueueType, AdminQueuesSnapshot } from "@/lib/queues/admin-queues";
 import { ADMIN_QUEUE_TYPES } from "@/lib/queues/admin-queues";
 import {
@@ -150,7 +151,7 @@ export function AdminQueuesPanel({
             </DataTableHead>
             <DataTableBody>
               {items.map((item) => (
-                <QueueItemRow key={item.id} item={item} />
+                <QueueItemRowWithDiscussion key={item.id} item={item} />
               ))}
             </DataTableBody>
           </DataTable>
@@ -187,7 +188,25 @@ function QueueSummaryCard({
   );
 }
 
-function QueueItemRow({ item }: Readonly<{ item: AdminQueueItem }>) {
+function QueueItemRowWithDiscussion({ item }: Readonly<{ item: AdminQueueItem }>) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <QueueItemRow item={item} onToggleDiscussion={() => setOpen((v) => !v)} discussionOpen={open} />
+      {open ? <QueueItemDiscussion item={item} /> : null}
+    </>
+  );
+}
+
+function QueueItemRow({
+  item,
+  onToggleDiscussion,
+  discussionOpen,
+}: Readonly<{
+  item: AdminQueueItem;
+  onToggleDiscussion?: () => void;
+  discussionOpen?: boolean;
+}>) {
   const hint = formatQueueMetadataHint(item);
 
   return (
@@ -201,6 +220,18 @@ function QueueItemRow({ item }: Readonly<{ item: AdminQueueItem }>) {
           {item.subtitle ? <p className="text-xs text-slate-600">{item.subtitle}</p> : null}
           {hint ? <p className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-400">{hint}</p> : null}
           <p className="mt-0.5 font-mono text-[10px] text-slate-400">{formatQueueTimestamp(item.created_at)}</p>
+          {onToggleDiscussion ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                onToggleDiscussion();
+              }}
+              className="mt-1 text-[10px] font-semibold text-indigo-600 hover:text-indigo-800"
+            >
+              {discussionOpen ? "Hide discussion" : "Discussion"}
+            </button>
+          ) : null}
         </Link>
       </DataTableCell>
       <DataTableCell>
@@ -214,5 +245,24 @@ function QueueItemRow({ item }: Readonly<{ item: AdminQueueItem }>) {
         </Link>
       </DataTableCell>
     </DataTableRow>
+  );
+}
+
+function QueueItemDiscussion({ item }: Readonly<{ item: AdminQueueItem }>) {
+  return (
+    <tr>
+      <td colSpan={5} className="border-b border-slate-100 bg-slate-50/50 px-4 py-3">
+        <CollaborationDiscussionPanel
+          entityType="queue"
+          entityId={item.id}
+          title="Queue item discussion"
+          threadContext={{
+            companyId: item.company_id,
+            investorProfileId: item.investor_id,
+            spvId: item.spv_id,
+          }}
+        />
+      </td>
+    </tr>
   );
 }

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { ActionPriorityBadge } from "@/components/actions/ActionPriorityBadge";
 import { ActionStatusBadge } from "@/components/actions/ActionStatusBadge";
 import { ActionTimeline } from "@/components/actions/ActionTimeline";
+import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
 import type { ActionCenterDetail } from "@/lib/actions/types";
 import { NBA_DISCLAIMER } from "@/lib/next-best-actions/types";
 
@@ -166,6 +167,14 @@ export function ActionDetailDrawer({
                 <p className="mb-2 text-xs font-semibold uppercase text-slate-500">Operational timeline</p>
                 <ActionTimeline items={detail?.timeline ?? []} />
               </div>
+
+              {action.persistedId ? (
+                <CollaborationDiscussionPanel
+                  entityType="action"
+                  entityId={action.persistedId}
+                  title="Action discussion"
+                />
+              ) : null}
 
               <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
                 <button

@@ -8,6 +8,7 @@ import { getRequestedPlanForProfile } from "@/lib/billing/requested-plan";
 import { requireRole } from "@/lib/supabase/auth";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
+import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
 import { CompanySettingsForm } from "./settings-form";
 
 export default async function FounderSettingsPage() {
@@ -30,6 +31,15 @@ export default async function FounderSettingsPage() {
         <p className="mt-3 text-sm leading-7 text-slate-600">Update your company profile details used across the platform.</p>
 
         <CompanySettingsForm company={company} />
+        {company ? (
+          <div className="mt-8">
+            <CollaborationDiscussionPanel
+              entityType="company"
+              entityId={company.id}
+              title="Company discussion"
+            />
+          </div>
+        ) : null}
         <FounderSubscriptionSettingsCard subscription={subscription} requestedPlan={requestedPlan} />
         <Suspense fallback={<p className="mt-8 text-sm text-slate-500">Loading Google connection…</p>}>
           <GoogleCalendarConnectionCard status={googleStatus} returnPath="/founder/settings" />

@@ -1640,6 +1640,61 @@ export type Database = {
         Update: Partial<{ granted: boolean; created_by: string | null }>;
         Relationships: [];
       };
+      collaboration_threads: {
+        Row: {
+          id: string;
+          entity_type: string;
+          entity_id: string;
+          company_id: string | null;
+          investor_profile_id: string | null;
+          spv_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          entity_type: string;
+          entity_id: string;
+          company_id?: string | null;
+          investor_profile_id?: string | null;
+          spv_id?: string | null;
+        };
+        Update: Partial<{
+          company_id: string | null;
+          investor_profile_id: string | null;
+          spv_id: string | null;
+          updated_at: string;
+        }>;
+        Relationships: [];
+      };
+      collaboration_comments: {
+        Row: {
+          id: string;
+          thread_id: string;
+          author_user_id: string;
+          body: string;
+          visibility: string;
+          mentions: unknown;
+          is_internal_note: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          thread_id: string;
+          author_user_id: string;
+          body: string;
+          visibility?: string;
+          mentions?: unknown;
+          is_internal_note?: boolean;
+        };
+        Update: Partial<{
+          body: string;
+          visibility: string;
+          mentions: unknown;
+          is_internal_note: boolean;
+          updated_at: string;
+        }>;
+        Relationships: [];
+      };
       automation_runs: {
         Row: {
           id: string;

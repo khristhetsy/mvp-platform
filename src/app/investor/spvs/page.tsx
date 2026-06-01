@@ -9,13 +9,15 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { redirect } from "next/navigation";
 import { resolveInvestorDependencies } from "@/lib/automation/dependencies";
+import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
 import { WorkflowDependencyPanel } from "@/components/workflow/WorkflowDependencyPanel";
 
 export const dynamic = "force-dynamic";
 
 export default async function InvestorSpvsPage() {
-  const { profile, investorId } = await requireInvestorWorkspaceSession();
+  const { profile } = await requireInvestorWorkspaceSession();
   const { investorProfile } = await loadInvestorWorkspaceContext(profile);
+  const investorProfileId = investorProfile?.id;
 
   if (!canInvestorPerformSensitiveActions(investorProfile?.approval_status)) {
     redirect("/investor/dashboard");
@@ -23,12 +25,14 @@ export default async function InvestorSpvsPage() {
 
   const supabase = await createServerSupabaseClient();
   const [workspace, requirementsResult] = await Promise.all([
-    loadInvestorSpvWorkspace(supabase, investorId),
-    listInvestorParticipationRequirements(supabase, investorId),
+    loadInvestorSpvWorkspace(supabase, profile.id),
+    listInvestorParticipationRequirements(supabase, profile.id),
   ]);
   const requirements =
     "data" in requirementsResult ? (requirementsResult.data ?? []) : [];
-  const workflowDependencies = await resolveInvestorDependencies(supabase, investorId).catch(() => []);
+  const workflowDependencies = investorProfileId
+    ? await resolveInvestorDependencies(supabase, investorProfileId).catch(() => [])
+    : [];
 
   return (
     <AppShell
@@ -45,6 +49,16 @@ export default async function InvestorSpvsPage() {
           and eligibility checks are required before any investment.
         </p>
       </div>
+
+      {investorProfileId ? (
+        <div className="mb-6">
+          <CollaborationDiscussionPanel
+            entityType="investor"
+            entityId={investorProfileId}
+            title="Investor workspace discussion"
+          />
+        </div>
+      ) : null}
 
       {workflowDependencies.length > 0 ? (
         <div className="mb-6">

@@ -33,6 +33,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { resolveSpvDependencies } from "@/lib/automation/dependencies";
+import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
 import { WorkflowDependencyPanel } from "@/components/workflow/WorkflowDependencyPanel";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
@@ -209,6 +210,12 @@ export default async function AdminSpvsPage() {
                   dependencies={spvDependencies}
                   title={primarySpvId ? "SPV workflow blockers (primary opportunity)" : "SPV workflow blockers"}
                 />
+              </div>
+            ) : null}
+
+            {primarySpvId ? (
+              <div className="mb-6">
+                <CollaborationDiscussionPanel entityType="spv" entityId={primarySpvId} title="SPV discussion" />
               </div>
             ) : null}
 

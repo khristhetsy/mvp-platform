@@ -13,6 +13,7 @@ import { CompanyWorkspaceHeader } from "@/components/admin/company-workspace/Com
 import { CompanyWorkspaceReportsPanel } from "@/components/admin/company-workspace/CompanyWorkspaceReportsPanel";
 import { PageSection } from "@/components/ui/workspace-layout";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
+import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
 import { WorkflowDependencyPanel } from "@/components/workflow/WorkflowDependencyPanel";
 import type { AdminCompanyWorkspaceData } from "@/lib/admin/company-workspace-types";
 import type { WorkflowDependency } from "@/lib/automation/types";
@@ -78,6 +79,14 @@ export function AdminCompanyWorkspace({
 
       <PageSection title="Active queues" subtitle="Items affecting this company across operational queues">
         <CompanyQueuesPanel items={data.queueItems} companyId={data.company.id} />
+      </PageSection>
+
+      <PageSection title="Team discussion" subtitle="Entity-scoped comments — not investor messaging">
+        <CollaborationDiscussionPanel
+          entityType="company"
+          entityId={data.company.id}
+          title="Company discussion"
+        />
       </PageSection>
 
       <PageSection title="Reports & exports" subtitle="Pre-filtered admin report links">
