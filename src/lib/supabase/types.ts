@@ -1640,6 +1640,56 @@ export type Database = {
         Update: Partial<{ granted: boolean; created_by: string | null }>;
         Relationships: [];
       };
+      scheduled_digest_runs: {
+        Row: {
+          id: string;
+          digest_type: string;
+          user_id: string | null;
+          generated_at: string;
+          item_count: number;
+          severity: string;
+          delivery_status: string;
+          metadata: Record<string, unknown>;
+        };
+        Insert: {
+          digest_type: string;
+          user_id?: string | null;
+          item_count?: number;
+          severity?: string;
+          delivery_status?: string;
+          metadata?: Record<string, unknown>;
+        };
+        Update: Partial<{
+          delivery_status: string;
+          metadata: Record<string, unknown>;
+        }>;
+        Relationships: [];
+      };
+      scheduled_digest_items: {
+        Row: {
+          id: string;
+          run_id: string;
+          section: string;
+          title: string;
+          severity: string;
+          deep_link: string | null;
+          action_id: string | null;
+          sort_order: number;
+        };
+        Insert: {
+          run_id: string;
+          section: string;
+          title: string;
+          severity?: string;
+          deep_link?: string | null;
+          action_id?: string | null;
+          sort_order?: number;
+        };
+        Update: Partial<{
+          sort_order: number;
+        }>;
+        Relationships: [];
+      };
       next_best_actions: {
         Row: {
           id: string;

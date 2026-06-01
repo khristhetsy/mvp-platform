@@ -27,6 +27,7 @@ export function AdminDashboardShell({
   operationalActivity,
   queueSummary,
   orchestrationCounts,
+  scheduledCounts,
 }: AdminCommandCenterProps) {
   const companyUpdateCount = companyCards.reduce((sum, company) => sum + company.company_updates_published_count, 0);
 
@@ -43,7 +44,9 @@ export function AdminDashboardShell({
 
         <AdminOperationsControl queueSummary={queueSummary} serviceRoleOk={serviceRoleConfigured} />
 
-        {orchestrationCounts ? <AdminOrchestrationVisibility counts={orchestrationCounts} /> : null}
+        {orchestrationCounts ? (
+          <AdminOrchestrationVisibility counts={orchestrationCounts} scheduledCounts={scheduledCounts} />
+        ) : null}
 
         <AdminPlatformActivityGraph
           crmActivity={crmActivity}

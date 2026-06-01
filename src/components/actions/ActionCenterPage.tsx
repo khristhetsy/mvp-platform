@@ -8,7 +8,9 @@ import { ActionDetailDrawer } from "@/components/actions/ActionDetailDrawer";
 import { ActionEmptyState } from "@/components/actions/ActionEmptyState";
 import { ActionFilters } from "@/components/actions/ActionFilters";
 import { ActionTable } from "@/components/actions/ActionTable";
+import { ActionCenterScheduledStrip } from "@/components/actions/ActionCenterScheduledStrip";
 import { ActionTabs } from "@/components/actions/ActionTabs";
+import type { ActionCenterScheduledContext } from "@/lib/notifications/scheduled/types";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useActionCenterFilters } from "@/hooks/use-action-center-filters";
 import type { ActionCenterAnalytics, BulkActionType } from "@/lib/actions/types";
@@ -25,6 +27,7 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
   const { filters, setFilters, setTab, clearFilters } = useActionCenterFilters();
   const [actions, setActions] = useState<NextBestAction[]>([]);
   const [needsAttention, setNeedsAttention] = useState<NextBestAction[]>([]);
+  const [scheduled, setScheduled] = useState<ActionCenterScheduledContext | null>(null);
   const [analytics, setAnalytics] = useState<ActionCenterAnalytics | null>(null);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -61,11 +64,13 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
       const data = (await res.json()) as {
         actions: NextBestAction[];
         needsAttention?: NextBestAction[];
+        scheduled?: ActionCenterScheduledContext;
         analytics: ActionCenterAnalytics;
         total: number;
       };
       setActions(data.actions ?? []);
       setNeedsAttention(data.needsAttention ?? []);
+      setScheduled(data.scheduled ?? null);
       setAnalytics(data.analytics ?? null);
       setTotal(data.total ?? 0);
       setError(null);
@@ -132,6 +137,8 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
       />
 
       {analytics ? <ActionAnalyticsStrip analytics={analytics} role={role} /> : null}
+
+      {scheduled ? <ActionCenterScheduledStrip scheduled={scheduled} /> : null}
 
       <ActionTabs active={filters.tab} onChange={setTab} />
 

@@ -24,6 +24,10 @@ import {
   getOrchestrationSummaryForProfile,
   isOrchestrationAttentionIntent,
 } from "@/lib/notifications/orchestration/summaries";
+import {
+  formatScheduledAnswerForAssistant,
+  isScheduledDigestIntent,
+} from "@/lib/notifications/scheduled/summaries";
 import type { NextBestActionRole } from "@/lib/next-best-actions/types";
 import { isNextBestActionIntent } from "@/lib/next-best-actions/compute";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
@@ -260,8 +264,9 @@ export async function runAssistantChat(input: {
     },
   });
 
-  const orchestrationIntent = isOrchestrationAttentionIntent(message);
-  const [orchestrationSummary, orchestrationDigest] = orchestrationIntent
+  const scheduledIntent = isScheduledDigestIntent(message);
+  const orchestrationIntent = isOrchestrationAttentionIntent(message) || scheduledIntent;
+  const [orchestrationSummary, orchestrationDigest] = orchestrationIntent && !scheduledIntent
     ? await Promise.all([
         getOrchestrationSummaryForProfile(input.supabase, input.profile, nbaRole),
         buildOrchestrationDigestForProfile(input.supabase, input.profile, nbaRole),
@@ -271,6 +276,11 @@ export async function runAssistantChat(input: {
   const suggestedActions = toAssistantSuggestedActions(nba.actions);
   const relatedLinks = buildRelatedLinks({ ...ctx, mode: resolvedMode });
   const history = sanitizeAssistantHistory(input.request.history);
+
+  if (scheduledIntent || orchestrationIntent) {
+    const base = actionCenterBasePath(ctx.role);
+    relatedLinks.unshift({ label: "Action Center", href: base });
+  }
 
   if (orchestrationIntent && orchestrationSummary) {
     const base = actionCenterBasePath(ctx.role);
@@ -311,6 +321,8 @@ export async function runAssistantChat(input: {
     } else {
       answer = `No matching actions in your current list. Open the Action Center to review all workflow items.`;
     }
+  } else if (scheduledIntent) {
+    answer = `${await formatScheduledAnswerForAssistant(input.supabase, input.profile, nbaRole, message)}\n\nIn-app digest and reminders only — no external email sent.`;
   } else if (orchestrationIntent && orchestrationSummary) {
     answer = `${formatOrchestrationSummaryForAssistant(orchestrationSummary, orchestrationDigest ?? undefined)}\n\nUse your Action Center for lifecycle controls. This is operational awareness only — not legal or investment advice.`;
   } else if (isNextBestActionIntent(message) && nba.actions.length > 0) {

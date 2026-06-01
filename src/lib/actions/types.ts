@@ -1,3 +1,4 @@
+import type { ActionCenterScheduledContext } from "@/lib/notifications/scheduled/types";
 import type {
   NextBestAction,
   NextBestActionCategory,
@@ -55,6 +56,7 @@ export type ActionCenterListResult = {
   };
   role: NextBestActionRole;
   basePath: string;
+  scheduled?: ActionCenterScheduledContext;
 };
 
 export type ActionCenterDetail = {

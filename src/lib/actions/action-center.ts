@@ -27,6 +27,7 @@ import { actionCenterBasePath } from "@/lib/actions/filters";
 import { needsAttentionGroup } from "@/lib/notifications/orchestration/hints";
 import { runNotificationOrchestrationForProfile } from "@/lib/notifications/orchestration/orchestrator";
 import { summarizeActions } from "@/lib/notifications/orchestration/summaries";
+import { loadActionCenterScheduledContext } from "@/lib/notifications/scheduled/summaries";
 
 function roleForProfile(profile: Profile): NextBestActionRole {
   if (profile.role === "investor") return "investor";
@@ -206,6 +207,7 @@ export async function loadActionCenter(input: {
   const analytics = computeActionAnalytics(rows, role);
   const orchestration = summarizeActions(rows);
   const attention = needsAttentionGroup(sorted).slice(0, 8);
+  const scheduled = await loadActionCenterScheduledContext(input.supabase, input.profile, role);
 
   return {
     actions: page,
@@ -221,6 +223,7 @@ export async function loadActionCenter(input: {
     },
     role,
     basePath,
+    scheduled,
   };
 }
 
