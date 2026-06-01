@@ -31,6 +31,15 @@ export function AdminOperationsControl({
           </Link>
         ))}
         <Link
+          href="/admin/audit"
+          className={`group flex h-full min-h-[5.5rem] cursor-pointer flex-col rounded-xl border border-indigo-200/70 bg-indigo-50/30 p-3 shadow-[var(--shadow-panel)] no-underline ${drilldownHoverClass} ${drilldownFocusClass}`}
+          aria-label="Open audit center"
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-indigo-800">Audit center</p>
+          <p className="mt-2 text-sm font-semibold text-indigo-950">Compliance timeline</p>
+          <p className="mt-auto pt-1 text-xs text-indigo-900/80">Evidence packs & export</p>
+        </Link>
+        <Link
           href={getDrilldownHref("platform_health")}
           className={`group flex h-full min-h-[5.5rem] cursor-pointer flex-col rounded-xl border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)] no-underline ${drilldownHoverClass} ${drilldownFocusClass}`}
           aria-label="Open system health"

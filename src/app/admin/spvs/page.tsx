@@ -185,6 +185,16 @@ export default async function AdminSpvsPage() {
           title="SPV command center"
           description="Readiness, investor document intake, and indicative participation. Use Refresh readiness per SPV — no sync on page load."
           metadata="Operational tracking only — not legal formation or securities execution"
+          actions={
+            primarySpvId ? (
+              <a
+                href={`/admin/audit?spv=${primarySpvId}&evidenceType=spv&evidenceId=${primarySpvId}`}
+                className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-900 hover:bg-indigo-100"
+              >
+                Audit trail
+              </a>
+            ) : null
+          }
         />
 
         {loadError ? (

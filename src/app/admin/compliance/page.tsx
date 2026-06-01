@@ -26,6 +26,14 @@ export default async function AdminCompliancePage() {
             ? `${data.scanCreated} event(s) recorded this session · staff-only internal notes`
             : "Staff-only internal notes · audit trail in compliance_events"
         }
+        actions={
+          <a
+            href="/admin/audit"
+            className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-900 hover:bg-indigo-100"
+          >
+            Audit center
+          </a>
+        }
       />
 
       <AdminComplianceModuleViews

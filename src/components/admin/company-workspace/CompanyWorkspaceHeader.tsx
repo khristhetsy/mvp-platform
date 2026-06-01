@@ -69,6 +69,12 @@ export function CompanyWorkspaceHeader({ data }: Readonly<{ data: AdminCompanyWo
               Open CRM
             </Link>
             <Link
+              href={`/admin/audit?company=${companyId}`}
+              className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-900 hover:bg-indigo-100"
+            >
+              Audit trail
+            </Link>
+            <Link
               href={buildCompanyFilteredHref("/admin/compliance", companyId)}
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
             >

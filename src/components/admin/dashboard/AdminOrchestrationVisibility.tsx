@@ -142,9 +142,12 @@ export function AdminOrchestrationVisibility({
       {isStaff ? (
         <p className="mt-3 text-xs text-slate-600">
           <Link href="/admin/automation" className="font-semibold text-indigo-700 hover:underline">
-            Open automation console
+            Automation console
           </Link>
-          {" "}for run history, filters, and execution controls.
+          {" · "}
+          <Link href="/admin/audit" className="font-semibold text-indigo-700 hover:underline">
+            Audit center
+          </Link>
         </p>
       ) : null}
       <AdminAutomationTestRunner isStaff={isStaff} />
