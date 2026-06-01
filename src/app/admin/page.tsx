@@ -90,7 +90,13 @@ export default async function AdminDashboardPage() {
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role}>
       <div className="mb-6 px-1">
-        <NextBestActionsPanel role={adminRole} initialActions={nextBestActions.actions} limit={5} showEscalate />
+        <NextBestActionsPanel
+          role={adminRole}
+          initialActions={nextBestActions.actions}
+          limit={5}
+          showEscalate
+          viewAllHref="/admin/actions?priority=critical"
+        />
       </div>
       <AdminDashboardShell
         userId={profile.id}

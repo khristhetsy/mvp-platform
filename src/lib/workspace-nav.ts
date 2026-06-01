@@ -11,6 +11,7 @@ export type WorkspaceNavItem = {
 
 export const founderWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/founder/dashboard", label: "Dashboard" },
+  { href: "/founder/actions", label: "Actions" },
   { href: "/founder/readiness", label: "Readiness" },
   { href: "/founder/documents", label: "Documents" },
   { href: "/founder/investors", label: "Investors" },
@@ -23,6 +24,7 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
 
 export const investorWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/investor/dashboard", label: "Dashboard" },
+  { href: "/investor/actions", label: "Actions" },
   { href: "/investor/onboarding", label: "Onboarding" },
   { href: "/investor/opportunities", label: "Opportunities" },
   { href: "/investor/watchlist", label: "Watchlist" },
@@ -36,6 +38,7 @@ export const investorWorkspaceNav: WorkspaceNavItem[] = [
 
 export const adminWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/admin/dashboard", label: "Dashboard" },
+  { href: "/admin/actions", label: "Actions" },
   { href: "/admin/companies", label: "Companies" },
   { href: "/admin/spvs", label: "SPVs" },
   { href: "/admin/investors", label: "Investors" },

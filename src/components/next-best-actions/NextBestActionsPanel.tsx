@@ -9,6 +9,7 @@ import {
   priorityBadgeClass,
   statusBadgeClass,
 } from "@/lib/next-best-actions/display";
+import { actionCenterBasePath } from "@/lib/actions/filters";
 import { NBA_DISCLAIMER } from "@/lib/next-best-actions/types";
 import type { NextBestAction, NextBestActionRole } from "@/lib/next-best-actions/types";
 
@@ -21,6 +22,7 @@ type NextBestActionsPanelProps = {
   limit?: number;
   className?: string;
   showEscalate?: boolean;
+  viewAllHref?: string;
 };
 
 type LifecycleAction = "complete" | "dismiss" | "snooze" | "escalate";
@@ -34,7 +36,9 @@ export function NextBestActionsPanel({
   limit = 5,
   className = "",
   showEscalate = false,
+  viewAllHref,
 }: Readonly<NextBestActionsPanelProps>) {
+  const allActionsHref = viewAllHref ?? actionCenterBasePath(role);
   const [actions, setActions] = useState<NextBestAction[]>(initialActions ?? []);
   const [loading, setLoading] = useState(!initialActions);
   const [error, setError] = useState<string | null>(null);
@@ -131,9 +135,17 @@ export function NextBestActionsPanel({
       className={`rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)] ${className}`}
       aria-label={panelTitleForRole(role)}
     >
-      <div className="border-b border-slate-100 px-5 py-4">
-        <h2 className="text-sm font-semibold text-[var(--navy)]">{panelTitleForRole(role)}</h2>
-        <p className="mt-1 text-xs text-slate-500">Prioritized workflow actions with lifecycle tracking</p>
+      <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <div>
+          <h2 className="text-sm font-semibold text-[var(--navy)]">{panelTitleForRole(role)}</h2>
+          <p className="mt-1 text-xs text-slate-500">Prioritized workflow actions with lifecycle tracking</p>
+        </div>
+        <Link
+          href={allActionsHref}
+          className="shrink-0 text-xs font-semibold text-indigo-700 hover:text-indigo-900"
+        >
+          View all actions
+        </Link>
       </div>
 
       <div className="px-5 py-4">

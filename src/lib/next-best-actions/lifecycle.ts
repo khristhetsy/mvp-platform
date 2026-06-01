@@ -86,7 +86,7 @@ export function suggestDueAt(action: NextBestAction): string | null {
   return null;
 }
 
-function recordToMergedAction(computed: NextBestAction | null, row: NextBestActionRecord): NextBestAction {
+export function recordToDisplayAction(computed: NextBestAction | null, row: NextBestActionRecord): NextBestAction {
   const base: NextBestAction = computed ?? {
     id: row.action_type,
     role: row.role,
@@ -152,7 +152,7 @@ export function mergeComputedWithPersistedActions(
       if (!isActionVisible(row, includeInactive)) {
         continue;
       }
-      merged.push(recordToMergedAction(action, row));
+      merged.push(recordToDisplayAction(action, row));
       seen.add(action.id);
       continue;
     }
@@ -166,7 +166,7 @@ export function mergeComputedWithPersistedActions(
     if (!ACTIVE_STATUSES.includes(row.status as (typeof ACTIVE_STATUSES)[number]) && !includeInactive) {
       continue;
     }
-    merged.push(recordToMergedAction(null, row));
+    merged.push(recordToDisplayAction(null, row));
   }
 
   return limitNextBestActions(sortNextBestActions(merged), options?.limit ?? 20);
@@ -261,7 +261,7 @@ export async function markOverdueActions(
     .select("id, action_type, category, priority, status, company_id, investor_id, spv_id")
     .eq("user_id", userId)
     .eq("role", role)
-    .in("status", ["open", "blocked"])
+    .in("status", ["open", "snoozed", "blocked"])
     .not("due_at", "is", null)
     .lt("due_at", now);
 

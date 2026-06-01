@@ -48,7 +48,12 @@ export default async function InvestorDashboardPage() {
       <InvestorApprovalBanner investorProfile={investorProfile} />
 
       <div className="mb-6">
-        <NextBestActionsPanel role="investor" initialActions={nextBestActions.actions} limit={5} />
+        <NextBestActionsPanel
+          role="investor"
+          initialActions={nextBestActions.actions}
+          limit={5}
+          viewAllHref="/investor/actions"
+        />
       </div>
 
       <section className="mb-6">

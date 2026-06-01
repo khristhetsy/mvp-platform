@@ -17,6 +17,7 @@ import {
   sanitizeAssistantHistory,
 } from "@/lib/assistant/assistant-policy";
 import { buildRelatedLinks } from "@/lib/assistant/assistant-actions";
+import { hrefForActionCenterIntent, resolveActionCenterIntent } from "@/lib/actions/filters";
 import { isNextBestActionIntent } from "@/lib/next-best-actions/compute";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import {
@@ -247,8 +248,35 @@ export async function runAssistantChat(input: {
   const relatedLinks = buildRelatedLinks({ ...ctx, mode: resolvedMode });
   const history = sanitizeAssistantHistory(input.request.history);
 
+  const actionCenterIntent = resolveActionCenterIntent(message);
+  if (actionCenterIntent) {
+    const actionCenterHref = hrefForActionCenterIntent(ctx.role, actionCenterIntent);
+    relatedLinks.unshift({ label: "Open Action Center", href: actionCenterHref });
+    suggestedActions.unshift({
+      label: "View filtered actions",
+      href: actionCenterHref,
+      type: "workflow",
+      priority: "high",
+    });
+  }
+
   let answer = buildFallbackAnswer(message, ctx);
-  if (isNextBestActionIntent(message) && nba.actions.length > 0) {
+  if (actionCenterIntent) {
+    const filtered = nba.actions.filter((action) => {
+      if (actionCenterIntent === "overdue") {
+        return action.status === "overdue" || (action.dueAt && new Date(action.dueAt) < new Date());
+      }
+      if (actionCenterIntent === "critical") return action.priority === "critical";
+      if (actionCenterIntent === "spv") return action.category === "spv";
+      if (actionCenterIntent === "escalated") return action.status === "escalated";
+      return true;
+    });
+    if (filtered.length > 0) {
+      answer = `Here are matching actions from your Action Center:\n\n${formatActionsForAssistantAnswer(filtered)}\n\nOpen the Action Center for full filters and lifecycle controls.`;
+    } else {
+      answer = `No matching actions in your current list. Open the Action Center to review all workflow items.`;
+    }
+  } else if (isNextBestActionIntent(message) && nba.actions.length > 0) {
     answer = `Here are your top prioritized actions:\n\n${formatActionsForAssistantAnswer(nba.actions)}\n\n${answer}`;
   }
   let provider: AssistantChatResponse["provider"] = "fallback";

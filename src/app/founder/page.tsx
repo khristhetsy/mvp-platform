@@ -100,7 +100,12 @@ export default async function FounderDashboardPage() {
       {onboardingProgress ? <FounderOnboardingProgressCard progress={onboardingProgress} /> : null}
 
       <div className="mb-8">
-        <NextBestActionsPanel role="founder" initialActions={nextBestActions.actions} limit={5} />
+        <NextBestActionsPanel
+          role="founder"
+          initialActions={nextBestActions.actions}
+          limit={5}
+          viewAllHref="/founder/actions?tab=overdue&overdue=true"
+        />
       </div>
 
       {remediation.tasks.length > 0 ? (
