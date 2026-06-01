@@ -7,6 +7,8 @@ import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { getAdminCompanyWorkspace } from "@/lib/admin/company-workspace";
 import { formatError } from "@/lib/errors/format-error";
 import { requireRole } from "@/lib/supabase/auth";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { loadAndComputeNextBestActions } from "@/lib/next-best-actions/compute";
 
 export const dynamic = "force-dynamic";
 
@@ -17,13 +19,26 @@ type PageProps = {
 export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
   const { companyId } = await params;
   const profile = await requireRole(["admin", "analyst"]);
+  const supabase = await createServerSupabaseClient();
+  const adminRole = profile.role === "analyst" ? "analyst" : "admin";
   const serviceRoleConfigured = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
   let loadError: string | null = null;
   let workspace = null;
+  let companyActions = null;
 
   try {
     workspace = await getAdminCompanyWorkspace(companyId);
+    companyActions = await loadAndComputeNextBestActions({
+      profile,
+      supabase,
+      options: {
+        role: adminRole,
+        entityType: "company",
+        entityId: companyId,
+        limit: 3,
+      },
+    });
   } catch (error) {
     loadError = formatError(error);
   }
@@ -56,7 +71,7 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
                   ← All companies
                 </Link>
               </div>
-              <AdminCompanyWorkspace data={workspace} />
+              <AdminCompanyWorkspace data={workspace} nextBestActions={companyActions?.actions ?? []} adminRole={adminRole} />
             </>
           ) : null}
         </WorkspacePageContainer>

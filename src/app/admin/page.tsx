@@ -13,6 +13,8 @@ import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
 import { getComplianceMetrics } from "@/lib/compliance/events";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
+import { loadAndComputeNextBestActions } from "@/lib/next-best-actions/compute";
+import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,7 @@ export default async function AdminDashboardPage() {
   const profile = await requireRole(["admin", "analyst"]);
   const supabase = createServiceRoleClient();
   const loadedAt = new Date().toISOString();
+  const adminRole = profile.role === "analyst" ? "analyst" : "admin";
 
   const [
     metrics,
@@ -35,6 +38,7 @@ export default async function AdminDashboardPage() {
     spvPipeline,
     reportsGenerated,
     notificationCount,
+    nextBestActions,
   ] = await Promise.all([
     getAdminDashboardMetrics(supabase),
     listAdminCompanies(supabase),
@@ -49,6 +53,11 @@ export default async function AdminDashboardPage() {
     supabase.from("spv_opportunities").select("id", { count: "exact", head: true }).neq("status", "closed"),
     supabase.from("diligence_reports").select("id", { count: "exact", head: true }),
     supabase.from("notifications").select("id", { count: "exact", head: true }),
+    loadAndComputeNextBestActions({
+      profile,
+      supabase,
+      options: { role: adminRole, limit: 5 },
+    }),
   ]);
 
   const pendingCompanies = companies.filter((company) => company.review_status === "pending");
@@ -80,6 +89,9 @@ export default async function AdminDashboardPage() {
 
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role}>
+      <div className="mb-6 px-1">
+        <NextBestActionsPanel role={adminRole} initialActions={nextBestActions.actions} limit={5} />
+      </div>
       <AdminDashboardShell
         userId={profile.id}
         userRole={profile.role}

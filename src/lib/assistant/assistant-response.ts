@@ -16,7 +16,15 @@ import {
   getAssistantGuardrailReply,
   sanitizeAssistantHistory,
 } from "@/lib/assistant/assistant-policy";
-import { buildSuggestedActions, buildRelatedLinks } from "@/lib/assistant/assistant-actions";
+import { buildRelatedLinks } from "@/lib/assistant/assistant-actions";
+import {
+  isNextBestActionIntent,
+  loadAndComputeNextBestActions,
+} from "@/lib/next-best-actions/compute";
+import {
+  formatActionsForAssistantAnswer,
+  toAssistantSuggestedActions,
+} from "@/lib/next-best-actions/display";
 import { contextUsedKeys } from "@/lib/assistant/assistant-context";
 import { buildAssistantSystemPrompt } from "@/lib/assistant/assistant-prompts";
 import { loadAdminAssistantContext } from "@/lib/assistant/load-admin-assistant-context";
@@ -224,11 +232,25 @@ export async function runAssistantChat(input: {
     return runLearningMode(input.profile, input.supabase, input.request);
   }
 
-  const suggestedActions = buildSuggestedActions({ ...ctx, mode: resolvedMode });
+  const nba = await loadAndComputeNextBestActions({
+    profile: input.profile,
+    supabase: input.supabase,
+    options: {
+      entityType: input.request.entityType ?? ctx.entity?.type,
+      entityId: input.request.entityId ?? ctx.entity?.id,
+      contextPath: input.request.currentPath,
+      limit: 6,
+    },
+  });
+
+  const suggestedActions = toAssistantSuggestedActions(nba.actions);
   const relatedLinks = buildRelatedLinks({ ...ctx, mode: resolvedMode });
   const history = sanitizeAssistantHistory(input.request.history);
 
   let answer = buildFallbackAnswer(message, ctx);
+  if (isNextBestActionIntent(message) && nba.actions.length > 0) {
+    answer = `Here are your top prioritized actions:\n\n${formatActionsForAssistantAnswer(nba.actions)}\n\n${answer}`;
+  }
   let provider: AssistantChatResponse["provider"] = "fallback";
 
   const apiKey = process.env.OPENAI_API_KEY?.trim();

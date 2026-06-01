@@ -12,12 +12,32 @@ import { CompanyTimelinePanel } from "@/components/admin/company-workspace/Compa
 import { CompanyWorkspaceHeader } from "@/components/admin/company-workspace/CompanyWorkspaceHeader";
 import { CompanyWorkspaceReportsPanel } from "@/components/admin/company-workspace/CompanyWorkspaceReportsPanel";
 import { PageSection } from "@/components/ui/workspace-layout";
+import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 import type { AdminCompanyWorkspaceData } from "@/lib/admin/company-workspace-types";
+import type { NextBestAction, NextBestActionRole } from "@/lib/next-best-actions/types";
 
-export function AdminCompanyWorkspace({ data }: Readonly<{ data: AdminCompanyWorkspaceData }>) {
+export function AdminCompanyWorkspace({
+  data,
+  nextBestActions = [],
+  adminRole = "admin",
+}: Readonly<{
+  data: AdminCompanyWorkspaceData;
+  nextBestActions?: NextBestAction[];
+  adminRole?: NextBestActionRole;
+}>) {
   return (
     <div className="space-y-6">
       <CompanyWorkspaceHeader data={data} />
+
+      {nextBestActions.length > 0 ? (
+        <NextBestActionsPanel
+          role={adminRole}
+          initialActions={nextBestActions}
+          entityType="company"
+          entityId={data.company.id}
+          limit={3}
+        />
+      ) : null}
 
       <PageSection title="Operational timeline" subtitle="Company-scoped events from operational_activity_events">
         <CompanyTimelinePanel items={data.timeline} companyId={data.company.id} />

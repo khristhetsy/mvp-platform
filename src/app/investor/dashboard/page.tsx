@@ -13,6 +13,8 @@ import { InvestorMatchOpportunityCard } from "@/components/InvestorMatchOpportun
 import { loadInvestorRecommendedMatches } from "@/lib/matching/load-investor-recommendations";
 import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
+import { loadAndComputeNextBestActions } from "@/lib/next-best-actions/compute";
+import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -20,9 +22,10 @@ export default async function InvestorDashboardPage() {
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
   const { investorProfile } = await loadInvestorWorkspaceContext(profile);
 
-  const [{ workspace, crmActivity }, { matches }] = await Promise.all([
+  const [{ workspace, crmActivity }, { matches }, nextBestActions] = await Promise.all([
     loadInvestorWorkspacePageData(investorId),
     loadInvestorRecommendedMatches(supabase, investorId, 4),
+    loadAndComputeNextBestActions({ profile, supabase, options: { role: "investor", limit: 5 } }),
   ]);
   const savedDeals = workspace.savedDeals;
   const interests = workspace.interests;
@@ -43,6 +46,10 @@ export default async function InvestorDashboardPage() {
       />
 
       <InvestorApprovalBanner investorProfile={investorProfile} />
+
+      <div className="mb-6">
+        <NextBestActionsPanel role="investor" initialActions={nextBestActions.actions} limit={5} />
+      </div>
 
       <section className="mb-6">
         <InvestorPipelineStages

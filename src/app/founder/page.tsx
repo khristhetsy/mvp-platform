@@ -25,6 +25,8 @@ import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-set
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
+import { loadAndComputeNextBestActions } from "@/lib/next-best-actions/compute";
+import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -44,10 +46,11 @@ export default async function FounderDashboardPage() {
       })
     : null;
   const investorActivity = company ? await listFounderInvestorActivity(supabase, company.id) : null;
-  const [remediation, learningAccess, investorFit] = await Promise.all([
+  const [remediation, learningAccess, investorFit, nextBestActions] = await Promise.all([
     loadFounderRemediationPlan(profile),
     getFounderFeatureAccess("elearning"),
     company ? loadFounderCompanyMatchContext(company) : Promise.resolve(null),
+    loadAndComputeNextBestActions({ profile, supabase, options: { limit: 5 } }),
   ]);
   const learning = learningAccess.allowed ? await loadFounderLearningWorkspace(profile) : null;
 
@@ -95,6 +98,10 @@ export default async function FounderDashboardPage() {
       />
 
       {onboardingProgress ? <FounderOnboardingProgressCard progress={onboardingProgress} /> : null}
+
+      <div className="mb-8">
+        <NextBestActionsPanel role="founder" initialActions={nextBestActions.actions} limit={5} />
+      </div>
 
       {remediation.tasks.length > 0 ? (
         <div className="mb-8">

@@ -39,10 +39,10 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, onMen
           </svg>
         </button>
         <Link href="/" className="shrink-0 lg:hidden">
-          <CapitalOSLogo variant="icon" height={28} />
+          <CapitalOSLogo height={28} />
         </Link>
         <Link href="/" className="hidden shrink-0 lg:block">
-          <CapitalOSLogo variant="wordmark" height={26} />
+          <CapitalOSLogo height={26} />
         </Link>
         <WorkspaceBreadcrumbs workspace={workspace} />
         <span className="hidden rounded-md bg-[var(--navy-muted)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--navy)] sm:inline">

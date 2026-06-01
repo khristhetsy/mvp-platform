@@ -31,6 +31,9 @@ import type {
 } from "@/lib/spv/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { loadAndComputeNextBestActions } from "@/lib/next-best-actions/compute";
+import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -148,7 +151,16 @@ async function loadAdminSpvWorkspace(): Promise<{ data: SpvWorkspaceData | null;
 
 export default async function AdminSpvsPage() {
   const profile = await requireRole(["admin", "analyst"]);
-  const { data, error: loadError } = await loadAdminSpvWorkspace();
+  const supabase = await createServerSupabaseClient();
+  const adminRole = profile.role === "analyst" ? "analyst" : "admin";
+  const [{ data, error: loadError }, nextBestActions] = await Promise.all([
+    loadAdminSpvWorkspace(),
+    loadAndComputeNextBestActions({
+      profile,
+      supabase,
+      options: { role: adminRole, limit: 3 },
+    }),
+  ]);
 
   const opportunities = data?.opportunities ?? [];
   const companies = data?.companies ?? [];
@@ -177,6 +189,13 @@ export default async function AdminSpvsPage() {
           </WorkspacePanel>
         ) : (
           <>
+            <NextBestActionsPanel
+              role={adminRole}
+              initialActions={nextBestActions.actions}
+              limit={3}
+              className="mb-6"
+            />
+
             <PageSection title="Operations overview" subtitle="Non-binding indicative totals">
               <AdminSpvDashboardKpis
                 metrics={buildAdminSpvDashboardMetrics(

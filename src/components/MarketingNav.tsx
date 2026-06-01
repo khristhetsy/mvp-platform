@@ -28,8 +28,8 @@ export function MarketingNav() {
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-[var(--shadow-panel)] backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 lg:px-6">
         <Link href="/" className="flex shrink-0 items-center" onClick={() => setMobileOpen(false)}>
-          <CapitalOSLogo variant="icon" height={32} className="md:hidden" />
-          <CapitalOSLogo variant="wordmark" height={28} className="hidden md:block" priority />
+          <CapitalOSLogo height={32} className="md:hidden" />
+          <CapitalOSLogo height={28} className="hidden md:block" priority />
         </Link>
 
         <nav className="hidden items-center gap-5 text-sm font-medium text-slate-600 lg:flex" aria-label="Primary">

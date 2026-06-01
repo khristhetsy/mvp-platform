@@ -29,7 +29,7 @@ export function MarketingSidebar({ onNavigate }: Readonly<{ onNavigate?: () => v
     <aside className="flex h-full w-64 shrink-0 flex-col border-r border-slate-200/80 bg-white">
       <div className="border-b border-slate-200/80 px-4 py-4">
         <Link href="/" className="block" onClick={onNavigate}>
-          <CapitalOSLogo variant="icon" height={32} priority />
+          <CapitalOSLogo height={32} priority />
         </Link>
         <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
           Institutional platform
