@@ -75,4 +75,9 @@ export type NotificationRecord = {
   entity_id: string | null;
   is_read: boolean;
   created_at: string;
+  severity?: string | null;
+  orchestration_type?: string | null;
+  action_id?: string | null;
+  deep_link?: string | null;
+  dedupe_key?: string | null;
 };

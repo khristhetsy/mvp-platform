@@ -1,6 +1,7 @@
 import type { AdminCompanyCardData } from "@/components/AdminCompanyCard";
 import type { AdminCrmActivityRow } from "@/lib/data/investor-crm";
 import type { OperationalActivityFeedItem } from "@/lib/operational-activity/types";
+import type { OrchestrationSummary } from "@/lib/notifications/orchestration/types";
 import type { AdminQueueSummaryItem } from "@/lib/queues/admin-queues";
 
 export type AdminDashboardMetrics = {
@@ -41,4 +42,5 @@ export type AdminCommandCenterProps = {
   crmActivity: AdminCrmActivityRow[];
   operationalActivity: OperationalActivityFeedItem[];
   queueSummary: AdminQueueSummaryItem[];
+  orchestrationCounts?: OrchestrationSummary;
 };

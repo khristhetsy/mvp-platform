@@ -17,7 +17,14 @@ import {
   sanitizeAssistantHistory,
 } from "@/lib/assistant/assistant-policy";
 import { buildRelatedLinks } from "@/lib/assistant/assistant-actions";
-import { hrefForActionCenterIntent, resolveActionCenterIntent } from "@/lib/actions/filters";
+import { hrefForActionCenterIntent, resolveActionCenterIntent, actionCenterBasePath } from "@/lib/actions/filters";
+import {
+  buildOrchestrationDigestForProfile,
+  formatOrchestrationSummaryForAssistant,
+  getOrchestrationSummaryForProfile,
+  isOrchestrationAttentionIntent,
+} from "@/lib/notifications/orchestration/summaries";
+import type { NextBestActionRole } from "@/lib/next-best-actions/types";
 import { isNextBestActionIntent } from "@/lib/next-best-actions/compute";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import {
@@ -37,6 +44,13 @@ import type {
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { Profile, Database } from "@/lib/supabase/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+function nbaRoleForProfile(role: Profile["role"]): NextBestActionRole {
+  if (role === "investor") return "investor";
+  if (role === "admin") return "admin";
+  if (role === "analyst") return "analyst";
+  return "founder";
+}
 
 function buildFallbackAnswer(message: string, ctx: SanitizedAssistantContext): string {
   const lower = message.toLowerCase();
@@ -231,10 +245,12 @@ export async function runAssistantChat(input: {
     return runLearningMode(input.profile, input.supabase, input.request);
   }
 
+  const nbaRole = nbaRoleForProfile(input.profile.role);
   const nba = await loadAndMergeNextBestActions({
     profile: input.profile,
     supabase: input.supabase,
     options: {
+      role: nbaRole,
       entityType: input.request.entityType ?? ctx.entity?.type,
       entityId: input.request.entityId ?? ctx.entity?.id,
       contextPath: input.request.currentPath,
@@ -244,9 +260,28 @@ export async function runAssistantChat(input: {
     },
   });
 
+  const orchestrationIntent = isOrchestrationAttentionIntent(message);
+  const [orchestrationSummary, orchestrationDigest] = orchestrationIntent
+    ? await Promise.all([
+        getOrchestrationSummaryForProfile(input.supabase, input.profile, nbaRole),
+        buildOrchestrationDigestForProfile(input.supabase, input.profile, nbaRole),
+      ])
+    : [null, null];
+
   const suggestedActions = toAssistantSuggestedActions(nba.actions);
   const relatedLinks = buildRelatedLinks({ ...ctx, mode: resolvedMode });
   const history = sanitizeAssistantHistory(input.request.history);
+
+  if (orchestrationIntent && orchestrationSummary) {
+    const base = actionCenterBasePath(ctx.role);
+    relatedLinks.unshift({ label: "Workflow attention", href: `${base}?tab=overdue&overdue=true` });
+    suggestedActions.unshift({
+      label: "View needs-attention actions",
+      href: base,
+      type: "workflow",
+      priority: "high",
+    });
+  }
 
   const actionCenterIntent = resolveActionCenterIntent(message);
   if (actionCenterIntent) {
@@ -276,6 +311,8 @@ export async function runAssistantChat(input: {
     } else {
       answer = `No matching actions in your current list. Open the Action Center to review all workflow items.`;
     }
+  } else if (orchestrationIntent && orchestrationSummary) {
+    answer = `${formatOrchestrationSummaryForAssistant(orchestrationSummary, orchestrationDigest ?? undefined)}\n\nUse your Action Center for lifecycle controls. This is operational awareness only — not legal or investment advice.`;
   } else if (isNextBestActionIntent(message) && nba.actions.length > 0) {
     answer = `Here are your top prioritized actions:\n\n${formatActionsForAssistantAnswer(nba.actions)}\n\n${answer}`;
   }

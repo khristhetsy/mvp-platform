@@ -10,6 +10,11 @@ export type CreateNotificationInput = {
   message: string;
   entityType?: string | null;
   entityId?: string | null;
+  severity?: string | null;
+  orchestrationType?: string | null;
+  actionId?: string | null;
+  deepLink?: string | null;
+  dedupeKey?: string | null;
 };
 
 export async function createNotification(input: CreateNotificationInput) {
@@ -25,6 +30,11 @@ export async function createNotification(input: CreateNotificationInput) {
         message: input.message,
         entity_type: input.entityType ?? null,
         entity_id: input.entityId ?? null,
+        severity: input.severity ?? null,
+        orchestration_type: input.orchestrationType ?? null,
+        action_id: input.actionId ?? null,
+        deep_link: input.deepLink ?? null,
+        dedupe_key: input.dedupeKey ?? null,
       })
       .select("*")
       .single();
@@ -179,6 +189,25 @@ export async function markAllNotificationsRead(userId: string) {
   if (error) {
     throw new Error(`Failed to mark all notifications read: ${error.message}`);
   }
+}
+
+export async function hasRecentOrchestrationNotification(input: {
+  recipientUserId: string;
+  dedupeKey: string;
+  withinHours?: number;
+}) {
+  const admin = createServiceRoleClient();
+  const since = new Date(Date.now() - (input.withinHours ?? 24) * 60 * 60 * 1000).toISOString();
+
+  const { data } = await admin
+    .from("notifications")
+    .select("id")
+    .eq("recipient_user_id", input.recipientUserId)
+    .eq("dedupe_key", input.dedupeKey)
+    .gte("created_at", since)
+    .limit(1);
+
+  return (data ?? []).length > 0;
 }
 
 export async function hasRecentNotification(input: {

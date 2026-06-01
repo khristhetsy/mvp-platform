@@ -4,6 +4,7 @@ import { AdminActionHealthProvider } from "@/components/AdminActionHealthProvide
 import { AdminCommandHeader } from "@/components/admin/dashboard/AdminCommandHeader";
 import { AdminInvestorActivityPanels } from "@/components/admin/dashboard/AdminInvestorActivityPanels";
 import { AdminKpiGrid } from "@/components/admin/dashboard/AdminKpiGrid";
+import { AdminOrchestrationVisibility } from "@/components/admin/dashboard/AdminOrchestrationVisibility";
 import { AdminOperationsControl } from "@/components/admin/dashboard/AdminOperationsControl";
 import { AdminPlatformActivityGraph } from "@/components/admin/dashboard/AdminPlatformActivityGraph";
 import { AdminPlatformOverview } from "@/components/admin/dashboard/AdminPlatformOverview";
@@ -25,6 +26,7 @@ export function AdminDashboardShell({
   crmActivity,
   operationalActivity,
   queueSummary,
+  orchestrationCounts,
 }: AdminCommandCenterProps) {
   const companyUpdateCount = companyCards.reduce((sum, company) => sum + company.company_updates_published_count, 0);
 
@@ -40,6 +42,8 @@ export function AdminDashboardShell({
         <AdminKpiGrid metrics={metrics} snapshot={snapshot} serviceRoleConfigured={serviceRoleConfigured} />
 
         <AdminOperationsControl queueSummary={queueSummary} serviceRoleOk={serviceRoleConfigured} />
+
+        {orchestrationCounts ? <AdminOrchestrationVisibility counts={orchestrationCounts} /> : null}
 
         <AdminPlatformActivityGraph
           crmActivity={crmActivity}

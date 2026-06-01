@@ -43,8 +43,16 @@ export type ActionCenterAnalytics = {
 
 export type ActionCenterListResult = {
   actions: NextBestAction[];
+  needsAttention: NextBestAction[];
   total: number;
   analytics: ActionCenterAnalytics;
+  orchestration: {
+    overdueCount: number;
+    escalatedCount: number;
+    blockedCount: number;
+    stalledCount: number;
+    needsAttentionCount: number;
+  };
   role: NextBestActionRole;
   basePath: string;
 };

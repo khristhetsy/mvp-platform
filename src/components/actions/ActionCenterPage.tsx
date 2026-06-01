@@ -24,6 +24,7 @@ type ActionCenterPageProps = {
 function ActionCenterContent({ role, title, description }: Readonly<ActionCenterPageProps>) {
   const { filters, setFilters, setTab, clearFilters } = useActionCenterFilters();
   const [actions, setActions] = useState<NextBestAction[]>([]);
+  const [needsAttention, setNeedsAttention] = useState<NextBestAction[]>([]);
   const [analytics, setAnalytics] = useState<ActionCenterAnalytics | null>(null);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -59,10 +60,12 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
       if (!res.ok) throw new Error("Unable to load actions.");
       const data = (await res.json()) as {
         actions: NextBestAction[];
+        needsAttention?: NextBestAction[];
         analytics: ActionCenterAnalytics;
         total: number;
       };
       setActions(data.actions ?? []);
+      setNeedsAttention(data.needsAttention ?? []);
       setAnalytics(data.analytics ?? null);
       setTotal(data.total ?? 0);
       setError(null);
@@ -131,6 +134,25 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
       {analytics ? <ActionAnalyticsStrip analytics={analytics} role={role} /> : null}
 
       <ActionTabs active={filters.tab} onChange={setTab} />
+
+      {needsAttention.length > 0 && filters.tab === "active" ? (
+        <section className="rounded-xl border border-rose-200/80 bg-rose-50/30 p-4">
+          <h3 className="text-sm font-semibold text-rose-950">Needs attention</h3>
+          <p className="mt-1 text-xs text-rose-800/90">Overdue, escalated, blocked, or critical workflow items.</p>
+          <ul className="mt-3 space-y-2">
+            {needsAttention.map((action) => (
+              <li key={action.persistedId ?? action.id}>
+                <ActionCard
+                  action={action}
+                  selected={action.persistedId ? selectedIds.has(action.persistedId) : false}
+                  onSelect={(checked) => action.persistedId && toggleSelect(action.persistedId, checked)}
+                  onOpen={() => setDetailId(action.persistedId ?? null)}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <ActionFilters filters={filters} onChange={setFilters} onClear={clearFilters} />
 

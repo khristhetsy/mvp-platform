@@ -1,5 +1,6 @@
 "use client";
 
+import { ActionOrchestrationBadges } from "@/components/actions/ActionOrchestrationBadges";
 import { ActionPriorityBadge } from "@/components/actions/ActionPriorityBadge";
 import { ActionStatusBadge } from "@/components/actions/ActionStatusBadge";
 import type { NextBestAction } from "@/lib/next-best-actions/types";
@@ -72,6 +73,9 @@ export function ActionTable({
                 <td className="px-3 py-2">
                   <p className="font-medium text-[var(--navy)]">{action.title}</p>
                   <p className="text-xs text-slate-500 line-clamp-1">{action.reason}</p>
+                  <div className="mt-1">
+                    <ActionOrchestrationBadges action={action} />
+                  </div>
                 </td>
                 <td className="px-3 py-2">
                   <ActionPriorityBadge priority={action.priority} />

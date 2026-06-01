@@ -1,5 +1,6 @@
 "use client";
 
+import { ActionOrchestrationBadges } from "@/components/actions/ActionOrchestrationBadges";
 import { ActionPriorityBadge } from "@/components/actions/ActionPriorityBadge";
 import { ActionStatusBadge } from "@/components/actions/ActionStatusBadge";
 import type { NextBestAction } from "@/lib/next-best-actions/types";
@@ -49,6 +50,7 @@ export function ActionCard({
           <div className="flex flex-wrap items-center gap-2">
             <ActionPriorityBadge priority={action.priority} />
             <ActionStatusBadge status={action.status} />
+            <ActionOrchestrationBadges action={action} />
             <span className="text-[10px] uppercase tracking-wide text-slate-400">{action.category.replaceAll("_", " ")}</span>
           </div>
           <p className="mt-1 text-sm font-medium text-[var(--navy)]">{action.title}</p>

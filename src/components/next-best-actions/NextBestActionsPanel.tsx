@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { ActionOrchestrationBadges } from "@/components/actions/ActionOrchestrationBadges";
 import {
   formatPriorityLabel,
   formatStatusLabel,
@@ -182,6 +183,7 @@ export function NextBestActionsPanel({
                           {formatStatusLabel(action.status)}
                         </span>
                       ) : null}
+                      <ActionOrchestrationBadges action={action} />
                       <p className="text-sm font-medium text-[var(--navy)]">{action.title}</p>
                     </div>
                     {action.description ? (

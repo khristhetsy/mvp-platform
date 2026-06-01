@@ -13,6 +13,7 @@ import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
 import { getComplianceMetrics } from "@/lib/compliance/events";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
+import { getAdminOrchestrationCounts } from "@/lib/notifications/orchestration/summaries";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 
@@ -39,6 +40,7 @@ export default async function AdminDashboardPage() {
     reportsGenerated,
     notificationCount,
     nextBestActions,
+    orchestrationCounts,
   ] = await Promise.all([
     getAdminDashboardMetrics(supabase),
     listAdminCompanies(supabase),
@@ -58,6 +60,7 @@ export default async function AdminDashboardPage() {
       supabase,
       options: { role: adminRole, limit: 5, sync: true },
     }),
+    getAdminOrchestrationCounts(supabase),
   ]);
 
   const pendingCompanies = companies.filter((company) => company.review_status === "pending");
@@ -119,6 +122,7 @@ export default async function AdminDashboardPage() {
         crmActivity={crmActivity}
         operationalActivity={operationalFeed.items}
         queueSummary={queueSummary}
+        orchestrationCounts={orchestrationCounts}
       />
     </AppShell>
   );

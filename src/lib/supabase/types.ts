@@ -305,6 +305,11 @@ export type Database = {
           entity_id: string | null;
           is_read: boolean;
           created_at: string;
+          severity: string | null;
+          orchestration_type: string | null;
+          action_id: string | null;
+          deep_link: string | null;
+          dedupe_key: string | null;
         };
         Insert: {
           recipient_user_id: string;
@@ -315,6 +320,11 @@ export type Database = {
           entity_type?: string | null;
           entity_id?: string | null;
           is_read?: boolean;
+          severity?: string | null;
+          orchestration_type?: string | null;
+          action_id?: string | null;
+          deep_link?: string | null;
+          dedupe_key?: string | null;
         };
         Update: {
           is_read?: boolean;

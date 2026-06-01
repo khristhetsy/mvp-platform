@@ -24,6 +24,9 @@ import type {
 import { compareNextBestActions } from "@/lib/next-best-actions/priority";
 import type { Database, Profile } from "@/lib/supabase/types";
 import { actionCenterBasePath } from "@/lib/actions/filters";
+import { needsAttentionGroup } from "@/lib/notifications/orchestration/hints";
+import { runNotificationOrchestrationForProfile } from "@/lib/notifications/orchestration/orchestrator";
+import { summarizeActions } from "@/lib/notifications/orchestration/summaries";
 
 function roleForProfile(profile: Profile): NextBestActionRole {
   if (profile.role === "investor") return "investor";
@@ -188,6 +191,10 @@ export async function loadActionCenter(input: {
 
   await markOverdueActions(input.supabase, input.profile.id, role);
 
+  if (input.sync !== false) {
+    void runNotificationOrchestrationForProfile(input.supabase, input.profile, role).catch(() => undefined);
+  }
+
   const rows = await fetchPersistedRows(input.supabase, input.profile, role);
   const filtered = applyFilters(rows, input.filters);
   const sorted = filtered
@@ -197,11 +204,21 @@ export async function loadActionCenter(input: {
   const total = sorted.length;
   const page = sorted.slice(input.filters.offset, input.filters.offset + input.filters.limit);
   const analytics = computeActionAnalytics(rows, role);
+  const orchestration = summarizeActions(rows);
+  const attention = needsAttentionGroup(sorted).slice(0, 8);
 
   return {
     actions: page,
+    needsAttention: attention,
     total,
     analytics,
+    orchestration: {
+      overdueCount: orchestration.overdueCount,
+      escalatedCount: orchestration.escalatedCount,
+      blockedCount: orchestration.blockedCount,
+      stalledCount: orchestration.stalledCount,
+      needsAttentionCount: orchestration.needsAttentionCount,
+    },
     role,
     basePath,
   };
@@ -246,6 +263,11 @@ export async function loadActionCenterDetail(
     "next_best_action_snoozed",
     "next_best_action_escalated",
     "next_best_action_overdue",
+    "workflow_overdue_detected",
+    "workflow_escalated",
+    "workflow_inactivity_detected",
+    "reminder_generated",
+    "digest_generated",
   ]);
 
   const timeline: ActionTimelineItem[] = feed.items
