@@ -8,6 +8,8 @@ import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-works
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { redirect } from "next/navigation";
+import { resolveInvestorDependencies } from "@/lib/automation/dependencies";
+import { WorkflowDependencyPanel } from "@/components/workflow/WorkflowDependencyPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +28,7 @@ export default async function InvestorSpvsPage() {
   ]);
   const requirements =
     "data" in requirementsResult ? (requirementsResult.data ?? []) : [];
+  const workflowDependencies = await resolveInvestorDependencies(supabase, investorId).catch(() => []);
 
   return (
     <AppShell
@@ -42,6 +45,12 @@ export default async function InvestorSpvsPage() {
           and eligibility checks are required before any investment.
         </p>
       </div>
+
+      {workflowDependencies.length > 0 ? (
+        <div className="mb-6">
+          <WorkflowDependencyPanel dependencies={workflowDependencies} title="Participation blockers" />
+        </div>
+      ) : null}
 
       <InvestorFeatureGate>
         <InvestorSpvWorkspace

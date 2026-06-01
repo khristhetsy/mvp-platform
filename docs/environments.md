@@ -113,6 +113,12 @@ Summary:
 
 Admins can view non-secret environment status at **`/admin/system-health`** (APP_ENV, app URL, Supabase host, service-role presence).
 
+## Vercel Cron (orchestration + digests)
+
+Set **`CRON_SECRET`** in Vercel (staging/production). Vercel Cron invokes `GET /api/cron/run-orchestration` with `Authorization: Bearer <CRON_SECRET>`.
+
+Schedules are defined in `vercel.json` (7:00 and 19:00 UTC daily). Manual staff triggers remain available at `POST /api/admin/run-digest-pass` and `POST /api/admin/notification-orchestration`.
+
 ---
 
 ## npm scripts

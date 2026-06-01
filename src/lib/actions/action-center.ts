@@ -27,6 +27,7 @@ import { actionCenterBasePath } from "@/lib/actions/filters";
 import { needsAttentionGroup } from "@/lib/notifications/orchestration/hints";
 import { runNotificationOrchestrationForProfile } from "@/lib/notifications/orchestration/orchestrator";
 import { summarizeActions } from "@/lib/notifications/orchestration/summaries";
+import { loadWorkflowDependenciesForProfile } from "@/lib/automation/dependencies";
 import { loadActionCenterScheduledContext } from "@/lib/notifications/scheduled/summaries";
 
 function roleForProfile(profile: Profile): NextBestActionRole {
@@ -208,6 +209,11 @@ export async function loadActionCenter(input: {
   const orchestration = summarizeActions(rows);
   const attention = needsAttentionGroup(sorted).slice(0, 8);
   const scheduled = await loadActionCenterScheduledContext(input.supabase, input.profile, role);
+  const workflowDependencies = await loadWorkflowDependenciesForProfile(input.supabase, input.profile, {
+    companyId: input.filters.companyId,
+    investorId: input.filters.investorId,
+    spvId: input.filters.spvId,
+  }).catch(() => []);
 
   return {
     actions: page,
@@ -224,6 +230,7 @@ export async function loadActionCenter(input: {
     role,
     basePath,
     scheduled,
+    workflowDependencies,
   };
 }
 

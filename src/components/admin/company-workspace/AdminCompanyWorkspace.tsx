@@ -13,21 +13,29 @@ import { CompanyWorkspaceHeader } from "@/components/admin/company-workspace/Com
 import { CompanyWorkspaceReportsPanel } from "@/components/admin/company-workspace/CompanyWorkspaceReportsPanel";
 import { PageSection } from "@/components/ui/workspace-layout";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
+import { WorkflowDependencyPanel } from "@/components/workflow/WorkflowDependencyPanel";
 import type { AdminCompanyWorkspaceData } from "@/lib/admin/company-workspace-types";
+import type { WorkflowDependency } from "@/lib/automation/types";
 import type { NextBestAction, NextBestActionRole } from "@/lib/next-best-actions/types";
 
 export function AdminCompanyWorkspace({
   data,
   nextBestActions = [],
+  workflowDependencies = [],
   adminRole = "admin",
 }: Readonly<{
   data: AdminCompanyWorkspaceData;
   nextBestActions?: NextBestAction[];
+  workflowDependencies?: WorkflowDependency[];
   adminRole?: NextBestActionRole;
 }>) {
   return (
     <div className="space-y-6">
       <CompanyWorkspaceHeader data={data} />
+
+      {workflowDependencies.length > 0 ? (
+        <WorkflowDependencyPanel dependencies={workflowDependencies} title="Company workflow blockers" />
+      ) : null}
 
       {nextBestActions.length > 0 ? (
         <NextBestActionsPanel

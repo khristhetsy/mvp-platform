@@ -32,6 +32,8 @@ import type {
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { resolveSpvDependencies } from "@/lib/automation/dependencies";
+import { WorkflowDependencyPanel } from "@/components/workflow/WorkflowDependencyPanel";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 
@@ -164,6 +166,10 @@ export default async function AdminSpvsPage() {
 
   const opportunities = data?.opportunities ?? [];
   const companies = data?.companies ?? [];
+  const primarySpvId = opportunities[0]?.id;
+  const spvDependencies = primarySpvId
+    ? await resolveSpvDependencies(supabase, primarySpvId).catch(() => [])
+    : [];
 
   return (
     <AppShell
@@ -196,6 +202,15 @@ export default async function AdminSpvsPage() {
               className="mb-6"
               showEscalate
             />
+
+            {spvDependencies.length > 0 ? (
+              <div className="mb-6">
+                <WorkflowDependencyPanel
+                  dependencies={spvDependencies}
+                  title={primarySpvId ? "SPV workflow blockers (primary opportunity)" : "SPV workflow blockers"}
+                />
+              </div>
+            ) : null}
 
             <PageSection title="Operations overview" subtitle="Non-binding indicative totals">
               <AdminSpvDashboardKpis

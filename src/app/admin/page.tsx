@@ -14,7 +14,9 @@ import { getComplianceMetrics } from "@/lib/compliance/events";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 import { getAdminOrchestrationCounts } from "@/lib/notifications/orchestration/summaries";
+import { loadAdminOrchestrationExecutionSummary } from "@/lib/notifications/orchestration/execution-log";
 import { getScheduledOperationalCounts } from "@/lib/notifications/scheduled/summaries";
+import { getAutomationDailySummary } from "@/lib/automation/automation-log";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 
@@ -43,6 +45,8 @@ export default async function AdminDashboardPage() {
     nextBestActions,
     orchestrationCounts,
     scheduledCounts,
+    executionSummary,
+    automationSummary,
   ] = await Promise.all([
     getAdminDashboardMetrics(supabase),
     listAdminCompanies(supabase),
@@ -64,6 +68,20 @@ export default async function AdminDashboardPage() {
     }),
     getAdminOrchestrationCounts(supabase),
     getScheduledOperationalCounts(supabase),
+    loadAdminOrchestrationExecutionSummary().catch(() => ({
+      lastRun: null,
+      lastDigestAt: null,
+      failedRunsToday: 0,
+      remindersGeneratedToday: 0,
+      overdueWorkflowCount: 0,
+    })),
+    getAutomationDailySummary(supabase).catch(() => ({
+      automationsTriggeredToday: 0,
+      blockedWorkflows: 0,
+      dependenciesResolvedToday: 0,
+      automationFailuresToday: 0,
+      staleChains: 0,
+    })),
   ]);
 
   const pendingCompanies = companies.filter((company) => company.review_status === "pending");
@@ -127,6 +145,8 @@ export default async function AdminDashboardPage() {
         queueSummary={queueSummary}
         orchestrationCounts={orchestrationCounts}
         scheduledCounts={scheduledCounts}
+        executionSummary={executionSummary}
+        automationSummary={automationSummary}
       />
     </AppShell>
   );

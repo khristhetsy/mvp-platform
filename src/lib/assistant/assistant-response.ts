@@ -25,6 +25,16 @@ import {
   isOrchestrationAttentionIntent,
 } from "@/lib/notifications/orchestration/summaries";
 import {
+  formatAutomationStatusForAssistant,
+  isAutomationBlockerIntent,
+  loadEntityBlockersForAssistant,
+} from "@/lib/automation/automation-summary";
+import {
+  formatExecutionSummaryForAssistant,
+  isCronStatusIntent,
+  loadAdminOrchestrationExecutionSummary,
+} from "@/lib/notifications/orchestration/execution-log";
+import {
   formatScheduledAnswerForAssistant,
   isScheduledDigestIntent,
 } from "@/lib/notifications/scheduled/summaries";
@@ -264,8 +274,11 @@ export async function runAssistantChat(input: {
     },
   });
 
+  const blockerIntent = isAutomationBlockerIntent(message);
+  const cronStatusIntent = isCronStatusIntent(message);
   const scheduledIntent = isScheduledDigestIntent(message);
-  const orchestrationIntent = isOrchestrationAttentionIntent(message) || scheduledIntent;
+  const orchestrationIntent =
+    isOrchestrationAttentionIntent(message) || scheduledIntent || cronStatusIntent;
   const [orchestrationSummary, orchestrationDigest] = orchestrationIntent && !scheduledIntent
     ? await Promise.all([
         getOrchestrationSummaryForProfile(input.supabase, input.profile, nbaRole),
@@ -306,7 +319,23 @@ export async function runAssistantChat(input: {
   }
 
   let answer = buildFallbackAnswer(message, ctx);
-  if (actionCenterIntent) {
+  if (blockerIntent) {
+    const entityType = input.request.entityType ?? ctx.entity?.type;
+    const entityId = input.request.entityId ?? ctx.entity?.id;
+    if (entityType && entityId) {
+      const blockers = await loadEntityBlockersForAssistant(entityType, entityId);
+      answer = `${blockers}\n\nThis is operational dependency visibility only — no approvals or external actions are taken automatically.`;
+    } else if (
+      message.toLowerCase().includes("what automation triggered") ||
+      input.profile.role === "admin" ||
+      input.profile.role === "analyst"
+    ) {
+      answer = await formatAutomationStatusForAssistant(input.supabase);
+    } else {
+      answer =
+        "Specify a company, investor, or SPV context (open a workspace page) and ask again — e.g. what is blocking this workflow?";
+    }
+  } else if (actionCenterIntent) {
     const filtered = nba.actions.filter((action) => {
       if (actionCenterIntent === "overdue") {
         return action.status === "overdue" || (action.dueAt && new Date(action.dueAt) < new Date());
@@ -321,6 +350,11 @@ export async function runAssistantChat(input: {
     } else {
       answer = `No matching actions in your current list. Open the Action Center to review all workflow items.`;
     }
+  } else if (cronStatusIntent && (input.profile.role === "admin" || input.profile.role === "analyst")) {
+    const execSummary = await loadAdminOrchestrationExecutionSummary().catch(() => null);
+    answer = execSummary
+      ? `${formatExecutionSummaryForAssistant(execSummary)}\n\nScheduled cron runs orchestration and digests in-app only.`
+      : "Orchestration execution history is not available right now.";
   } else if (scheduledIntent) {
     answer = `${await formatScheduledAnswerForAssistant(input.supabase, input.profile, nbaRole, message)}\n\nIn-app digest and reminders only — no external email sent.`;
   } else if (orchestrationIntent && orchestrationSummary) {

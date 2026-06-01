@@ -102,6 +102,11 @@ if (appEnv === "production") {
   record("Production public Supabase", present(supabaseUrl) && present(anonKey), "required");
   record("Production service role", present(serviceKey), "required");
   record("Production app URL", present(appUrl), "required for OAuth/links");
+  record("CRON_SECRET", present(trim("CRON_SECRET")), "required for Vercel cron orchestration");
+}
+
+if (appEnv === "staging") {
+  record("CRON_SECRET (staging)", present(trim("CRON_SECRET")), present(trim("CRON_SECRET")) ? "set" : "missing");
 }
 
 const redirectHost = hostOf(googleRedirect);

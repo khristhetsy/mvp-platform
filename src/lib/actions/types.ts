@@ -1,3 +1,4 @@
+import type { WorkflowDependency } from "@/lib/automation/types";
 import type { ActionCenterScheduledContext } from "@/lib/notifications/scheduled/types";
 import type {
   NextBestAction,
@@ -57,6 +58,7 @@ export type ActionCenterListResult = {
   role: NextBestActionRole;
   basePath: string;
   scheduled?: ActionCenterScheduledContext;
+  workflowDependencies?: WorkflowDependency[];
 };
 
 export type ActionCenterDetail = {

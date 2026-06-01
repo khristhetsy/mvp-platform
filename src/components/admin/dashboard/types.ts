@@ -2,7 +2,16 @@ import type { AdminCompanyCardData } from "@/components/AdminCompanyCard";
 import type { AdminCrmActivityRow } from "@/lib/data/investor-crm";
 import type { OperationalActivityFeedItem } from "@/lib/operational-activity/types";
 import type { OrchestrationSummary } from "@/lib/notifications/orchestration/types";
+import type { OrchestrationExecutionSummary } from "@/lib/notifications/orchestration/execution-log";
 import type { ScheduledOperationalCounts } from "@/lib/notifications/scheduled/types";
+
+export type AutomationDailySummary = {
+  automationsTriggeredToday: number;
+  blockedWorkflows: number;
+  dependenciesResolvedToday: number;
+  automationFailuresToday: number;
+  staleChains: number;
+};
 import type { AdminQueueSummaryItem } from "@/lib/queues/admin-queues";
 
 export type AdminDashboardMetrics = {
@@ -45,4 +54,6 @@ export type AdminCommandCenterProps = {
   queueSummary: AdminQueueSummaryItem[];
   orchestrationCounts?: OrchestrationSummary;
   scheduledCounts?: ScheduledOperationalCounts;
+  executionSummary?: OrchestrationExecutionSummary;
+  automationSummary?: AutomationDailySummary;
 };

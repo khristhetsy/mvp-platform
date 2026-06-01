@@ -8,6 +8,7 @@ import { getAdminCompanyWorkspace } from "@/lib/admin/company-workspace";
 import { formatError } from "@/lib/errors/format-error";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { resolveCompanyDependencies } from "@/lib/automation/dependencies";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 
 export const dynamic = "force-dynamic";
@@ -26,9 +27,11 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
   let loadError: string | null = null;
   let workspace = null;
   let companyActions = null;
+  let workflowDependencies: Awaited<ReturnType<typeof resolveCompanyDependencies>> = [];
 
   try {
     workspace = await getAdminCompanyWorkspace(companyId);
+    workflowDependencies = await resolveCompanyDependencies(supabase, companyId).catch(() => []);
     companyActions = await loadAndMergeNextBestActions({
       profile,
       supabase,
@@ -72,7 +75,12 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
                   ← All companies
                 </Link>
               </div>
-              <AdminCompanyWorkspace data={workspace} nextBestActions={companyActions?.actions ?? []} adminRole={adminRole} />
+              <AdminCompanyWorkspace
+                data={workspace}
+                nextBestActions={companyActions?.actions ?? []}
+                workflowDependencies={workflowDependencies}
+                adminRole={adminRole}
+              />
             </>
           ) : null}
         </WorkspacePageContainer>

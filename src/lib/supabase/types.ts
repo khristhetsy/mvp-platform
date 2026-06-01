@@ -1640,6 +1640,118 @@ export type Database = {
         Update: Partial<{ granted: boolean; created_by: string | null }>;
         Relationships: [];
       };
+      automation_runs: {
+        Row: {
+          id: string;
+          started_at: string;
+          completed_at: string | null;
+          duration_ms: number | null;
+          trigger_type: string | null;
+          source_event_id: string | null;
+          entity_type: string | null;
+          entity_id: string | null;
+          actions_executed: number;
+          actions_skipped: number;
+          failures_count: number;
+          dry_run: boolean;
+          status: string;
+          metadata: Record<string, unknown>;
+        };
+        Insert: {
+          started_at?: string;
+          completed_at?: string | null;
+          duration_ms?: number | null;
+          trigger_type?: string | null;
+          source_event_id?: string | null;
+          entity_type?: string | null;
+          entity_id?: string | null;
+          actions_executed?: number;
+          actions_skipped?: number;
+          failures_count?: number;
+          dry_run?: boolean;
+          status?: string;
+          metadata?: Record<string, unknown>;
+        };
+        Update: Partial<{
+          completed_at: string | null;
+          duration_ms: number | null;
+          actions_executed: number;
+          actions_skipped: number;
+          failures_count: number;
+          status: string;
+          metadata: Record<string, unknown>;
+        }>;
+        Relationships: [];
+      };
+      automation_actions: {
+        Row: {
+          id: string;
+          run_id: string;
+          action_type: string;
+          status: string;
+          target_entity_type: string | null;
+          target_entity_id: string | null;
+          message: string | null;
+          metadata: Record<string, unknown>;
+          created_at: string;
+        };
+        Insert: {
+          run_id: string;
+          action_type: string;
+          status?: string;
+          target_entity_type?: string | null;
+          target_entity_id?: string | null;
+          message?: string | null;
+          metadata?: Record<string, unknown>;
+        };
+        Update: Partial<{
+          status: string;
+          message: string | null;
+          metadata: Record<string, unknown>;
+        }>;
+        Relationships: [];
+      };
+      orchestration_runs: {
+        Row: {
+          id: string;
+          started_at: string;
+          completed_at: string | null;
+          duration_ms: number | null;
+          reminders_generated: number;
+          digests_generated: number;
+          escalations_detected: number;
+          overdue_detected: number;
+          failures_count: number;
+          status: string;
+          trigger_source: string;
+          metadata: Record<string, unknown>;
+        };
+        Insert: {
+          started_at?: string;
+          completed_at?: string | null;
+          duration_ms?: number | null;
+          reminders_generated?: number;
+          digests_generated?: number;
+          escalations_detected?: number;
+          overdue_detected?: number;
+          failures_count?: number;
+          status?: string;
+          trigger_source?: string;
+          metadata?: Record<string, unknown>;
+        };
+        Update: Partial<{
+          completed_at: string | null;
+          duration_ms: number | null;
+          reminders_generated: number;
+          digests_generated: number;
+          escalations_detected: number;
+          overdue_detected: number;
+          failures_count: number;
+          status: string;
+          metadata: Record<string, unknown>;
+        }>;
+        Relationships: [];
+      };
       scheduled_digest_runs: {
         Row: {
           id: string;

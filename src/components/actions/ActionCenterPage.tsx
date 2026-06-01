@@ -9,6 +9,8 @@ import { ActionEmptyState } from "@/components/actions/ActionEmptyState";
 import { ActionFilters } from "@/components/actions/ActionFilters";
 import { ActionTable } from "@/components/actions/ActionTable";
 import { ActionCenterScheduledStrip } from "@/components/actions/ActionCenterScheduledStrip";
+import { WorkflowDependencyPanel } from "@/components/workflow/WorkflowDependencyPanel";
+import type { WorkflowDependency } from "@/lib/automation/types";
 import { ActionTabs } from "@/components/actions/ActionTabs";
 import type { ActionCenterScheduledContext } from "@/lib/notifications/scheduled/types";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -36,6 +38,7 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
   const [detailId, setDetailId] = useState<string | null>(null);
   const [bulkPending, setBulkPending] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+  const [workflowDependencies, setWorkflowDependencies] = useState<WorkflowDependency[]>([]);
 
   const canEscalate = role === "admin" || role === "analyst";
 
@@ -65,12 +68,14 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
         actions: NextBestAction[];
         needsAttention?: NextBestAction[];
         scheduled?: ActionCenterScheduledContext;
+        workflowDependencies?: WorkflowDependency[];
         analytics: ActionCenterAnalytics;
         total: number;
       };
       setActions(data.actions ?? []);
       setNeedsAttention(data.needsAttention ?? []);
       setScheduled(data.scheduled ?? null);
+      setWorkflowDependencies(data.workflowDependencies ?? []);
       setAnalytics(data.analytics ?? null);
       setTotal(data.total ?? 0);
       setError(null);
@@ -139,6 +144,10 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
       {analytics ? <ActionAnalyticsStrip analytics={analytics} role={role} /> : null}
 
       {scheduled ? <ActionCenterScheduledStrip scheduled={scheduled} /> : null}
+
+      {workflowDependencies.length > 0 ? (
+        <WorkflowDependencyPanel dependencies={workflowDependencies} title="Workflow blockers" />
+      ) : null}
 
       <ActionTabs active={filters.tab} onChange={setTab} />
 
