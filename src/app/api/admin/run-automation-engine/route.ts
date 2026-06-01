@@ -13,6 +13,10 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const dryRun = Boolean((body as { dryRun?: boolean }).dryRun);
 
+  if (!dryRun && auth.profile.role !== "admin") {
+    return NextResponse.json({ error: "Live automation passes require admin role." }, { status: 403 });
+  }
+
   try {
     const result = await runAutomationEngine({
       triggerType: (body as { triggerType?: string }).triggerType,

@@ -25,8 +25,10 @@ import {
   isOrchestrationAttentionIntent,
 } from "@/lib/notifications/orchestration/summaries";
 import {
+  formatAutomationConsoleForAssistant,
   formatAutomationStatusForAssistant,
   isAutomationBlockerIntent,
+  isAutomationConsoleIntent,
   loadEntityBlockersForAssistant,
 } from "@/lib/automation/automation-summary";
 import {
@@ -275,6 +277,9 @@ export async function runAssistantChat(input: {
   });
 
   const blockerIntent = isAutomationBlockerIntent(message);
+  const automationConsoleIntent =
+    isAutomationConsoleIntent(message) &&
+    (input.profile.role === "admin" || input.profile.role === "analyst");
   const cronStatusIntent = isCronStatusIntent(message);
   const scheduledIntent = isScheduledDigestIntent(message);
   const orchestrationIntent =
@@ -319,7 +324,10 @@ export async function runAssistantChat(input: {
   }
 
   let answer = buildFallbackAnswer(message, ctx);
-  if (blockerIntent) {
+  if (automationConsoleIntent) {
+    answer = `${await formatAutomationConsoleForAssistant(input.supabase)}\n\nOperational visibility only — no auto-approvals or external actions.`;
+    relatedLinks.unshift({ label: "Automation console", href: "/admin/automation" });
+  } else if (blockerIntent) {
     const entityType = input.request.entityType ?? ctx.entity?.type;
     const entityId = input.request.entityId ?? ctx.entity?.id;
     if (entityType && entityId) {
