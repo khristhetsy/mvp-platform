@@ -23,6 +23,8 @@ import {
   type SpvOperationalReadinessStatus,
 } from "@/lib/spv/readiness";
 import type { ClosingReadinessSummary } from "@/lib/spv/closing-review-display";
+import type { SpvExecutionReadinessSummary } from "@/lib/document-execution/types";
+import { SpvExecutionReadinessPanel } from "@/components/spv/SpvExecutionReadinessPanel";
 import {
   formatClosingReviewStatusLabel,
 } from "@/lib/spv/closing-review-display";
@@ -56,6 +58,7 @@ export function AdminSpvManagement({
   packagesBySpv,
   closingReviewsBySpv,
   closingReadinessBySpv,
+  executionReadinessBySpv,
   companies,
   listViewMode = "card",
   listDensity = "comfortable",
@@ -68,6 +71,7 @@ export function AdminSpvManagement({
   packagesBySpv: Record<string, SpvDocumentPackageRecord[]>;
   closingReviewsBySpv: Record<string, SpvClosingReviewRecord>;
   closingReadinessBySpv: Record<string, ClosingReadinessSummary>;
+  executionReadinessBySpv: Record<string, SpvExecutionReadinessSummary>;
   companies: CompanyOption[];
   listViewMode?: ViewMode;
   listDensity?: ViewDensity;
@@ -451,6 +455,7 @@ export function AdminSpvManagement({
               const packages = packagesBySpv[spv.id] ?? [];
               const closingReview = closingReviewsBySpv[spv.id];
               const closingSummary = closingReadinessBySpv[spv.id];
+              const executionSummary = executionReadinessBySpv[spv.id];
               const closingPct =
                 spv.closing_readiness_pct ?? closingSummary?.readinessPct ?? 0;
               const packagePct =
@@ -490,6 +495,9 @@ export function AdminSpvManagement({
                         SPV checklist: {readinessPct}%
                         {packages.length > 0 ? ` · Document packages: ${packagePct}%` : null}
                         {closingSummary ? ` · Closing readiness: ${closingPct}%` : null}
+                        {executionSummary
+                          ? ` · Execution readiness: ${executionSummary.executionReadinessPct}%`
+                          : null}
                       </p>
                       <p className="mt-0.5 text-slate-500">
                         {spv.investors_document_ready_count ?? 0} investors document-ready ·{" "}
@@ -720,6 +728,8 @@ export function AdminSpvManagement({
                       docs (refresh if just updated).
                     </p>
                   ) : null}
+
+                  {executionSummary ? <SpvExecutionReadinessPanel summary={executionSummary} /> : null}
 
                   {closingSummary ? (
                     <div className="mt-4 rounded-lg bg-emerald-50 p-3">

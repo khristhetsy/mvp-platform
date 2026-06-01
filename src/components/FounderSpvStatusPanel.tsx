@@ -27,12 +27,14 @@ export function FounderSpvStatusPanel({
   checklistSummaryBySpv,
   packageSummaryBySpv = {},
   closingSummaryBySpv = {},
+  executionSummaryBySpv = {},
 }: Readonly<{
   opportunities: SpvOpportunityRecord[];
   participations: SpvParticipationRecord[];
   checklistSummaryBySpv: Record<string, CategorySummary[]>;
   packageSummaryBySpv?: Record<string, PackageSummary>;
   closingSummaryBySpv?: Record<string, { stageLabel: string; readinessPct: number }>;
+  executionSummaryBySpv?: Record<string, { executionPct: number; signerPct: number; nextStep: string }>;
 }>) {
   const bySpv = new Map<string, SpvParticipationRecord[]>();
   for (const row of participations) {
@@ -63,6 +65,7 @@ export function FounderSpvStatusPanel({
               const categories = checklistSummaryBySpv[spv.id] ?? [];
               const packageSummary = packageSummaryBySpv[spv.id];
               const closingSummary = closingSummaryBySpv[spv.id];
+              const executionSummary = executionSummaryBySpv[spv.id];
               const packagePct =
                 spv.package_readiness_pct ?? packageSummary?.readinessPct ?? 0;
               const readinessPct = spv.checklist_readiness_pct ?? 0;
@@ -111,6 +114,13 @@ export function FounderSpvStatusPanel({
                     <p className="mt-1 text-xs text-emerald-800">
                       Final operational closing: {closingSummary.stageLabel} ·{" "}
                       {closingSummary.readinessPct}% readiness (summary only)
+                    </p>
+                  ) : null}
+                  {executionSummary ? (
+                    <p className="mt-1 text-xs text-violet-800">
+                      Document execution readiness: {executionSummary.executionPct}% packages ·{" "}
+                      {executionSummary.signerPct}% signers · DocuSign not connected · Next:{" "}
+                      {executionSummary.nextStep}
                     </p>
                   ) : null}
                   <div className="mt-4 border-t border-slate-100 pt-4">

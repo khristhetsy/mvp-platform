@@ -35,6 +35,10 @@ export default async function FounderCapitalRaisePage() {
   let spvChecklistSummaryBySpv: Awaited<ReturnType<typeof listFounderChecklistSummary>>["data"] = {};
   let spvPackageSummaryBySpv: Awaited<ReturnType<typeof listFounderPackageSummaries>>["data"] = {};
   let spvClosingSummaryBySpv: Awaited<ReturnType<typeof listFounderClosingSummaries>>["data"] = {};
+  let spvExecutionSummaryBySpv: Record<
+    string,
+    { executionPct: number; signerPct: number; nextStep: string }
+  > = {};
 
   try {
     company = await ensureFounderCompanyForUser(profile);
@@ -89,12 +93,27 @@ export default async function FounderCapitalRaisePage() {
         spvOpportunities.map((spv) => spv.id),
       );
       spvClosingSummaryBySpv = closingSummary.data ?? {};
+
+      for (const spv of spvOpportunities) {
+        const pkg = spvPackageSummaryBySpv[spv.id];
+        const partsForSpv = spvParticipations.filter((p) => p.spv_opportunity_id === spv.id);
+        const activeCount = partsForSpv.filter((p) => !["declined", "canceled"].includes(p.status)).length;
+        const readyCount = spv.investors_document_ready_count ?? 0;
+        spvExecutionSummaryBySpv[spv.id] = {
+          executionPct: spv.package_readiness_pct ?? pkg?.readinessPct ?? 0,
+          signerPct:
+            activeCount > 0 ? Math.round((readyCount / activeCount) * 100) : 0,
+          nextStep:
+            "Complete operational packages and investor requirements — DocuSign not connected (readiness only)",
+        };
+      }
     } catch {
       spvOpportunities = [];
       spvParticipations = [];
       spvChecklistSummaryBySpv = {};
       spvPackageSummaryBySpv = {};
       spvClosingSummaryBySpv = {};
+      spvExecutionSummaryBySpv = {};
     }
   }
 
@@ -219,6 +238,7 @@ export default async function FounderCapitalRaisePage() {
               checklistSummaryBySpv={spvChecklistSummaryBySpv ?? {}}
               packageSummaryBySpv={spvPackageSummaryBySpv ?? {}}
               closingSummaryBySpv={spvClosingSummaryBySpv ?? {}}
+              executionSummaryBySpv={spvExecutionSummaryBySpv}
             />
           </section>
 

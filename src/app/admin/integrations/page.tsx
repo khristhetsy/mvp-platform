@@ -3,6 +3,7 @@ import { AdminIntegrationsConsole } from "@/components/admin/integrations/AdminI
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { EmailFoundationSection } from "@/components/admin/integrations/EmailFoundationSection";
+import { DocuSignFoundationSection } from "@/components/admin/integrations/DocuSignFoundationSection";
 import { getGmailFoundationStatus } from "@/lib/email/preferences";
 import { loadIntegrationsAdminConsole } from "@/lib/integrations/admin-console";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -39,6 +40,7 @@ export default async function AdminIntegrationsPage() {
           description="Enterprise connectivity foundation — Slack and signed webhooks with sanitized outbound events, delivery logs, and audit visibility."
         />
         <EmailFoundationSection status={emailFoundation} />
+        <DocuSignFoundationSection />
         {loadError ? (
           <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">{loadError}</p>
         ) : payload ? (

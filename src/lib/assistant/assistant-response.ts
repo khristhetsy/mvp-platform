@@ -43,6 +43,10 @@ import {
 import { formatEmailDraftForAssistant, isEmailDraftIntent } from "@/lib/email/email-summary";
 import { formatCrmExportForAssistant, isCrmExportIntent } from "@/lib/crm-connectors/crm-export-summary";
 import {
+  formatDocumentExecutionForAssistant,
+  isDocumentExecutionIntent,
+} from "@/lib/document-execution/document-execution-summary";
+import {
   formatScheduledAnswerForAssistant,
   isScheduledDigestIntent,
 } from "@/lib/notifications/scheduled/summaries";
@@ -297,6 +301,9 @@ export async function runAssistantChat(input: {
   const emailDraftIntent = isEmailDraftIntent(message);
   const crmExportIntent =
     isCrmExportIntent(message) && (input.profile.role === "admin" || input.profile.role === "analyst");
+  const documentExecutionIntent =
+    isDocumentExecutionIntent(message) &&
+    (input.profile.role === "admin" || input.profile.role === "analyst");
   const scheduledIntent = isScheduledDigestIntent(message);
   const orchestrationIntent =
     isOrchestrationAttentionIntent(message) || scheduledIntent || cronStatusIntent;
@@ -377,6 +384,14 @@ export async function runAssistantChat(input: {
   } else if (crmExportIntent) {
     answer = formatCrmExportForAssistant(message);
     relatedLinks.unshift({ label: "CRM export", href: "/admin/imports#crm-export" });
+  } else if (documentExecutionIntent) {
+    answer = await formatDocumentExecutionForAssistant(
+      message,
+      input.request.entityId ?? ctx.entity?.id ?? null,
+      input.request.entityType ?? ctx.entity?.type ?? null,
+    );
+    relatedLinks.unshift({ label: "SPV execution readiness", href: "/admin/spvs" });
+    relatedLinks.unshift({ label: "DocuSign foundation", href: "/admin/integrations" });
   } else if (emailDraftIntent) {
     answer = await formatEmailDraftForAssistant(
       input.supabase,

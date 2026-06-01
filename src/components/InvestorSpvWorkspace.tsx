@@ -74,6 +74,11 @@ export function InvestorSpvWorkspace({
 
       <InvestorSpvNextActionBanner action={getInvestorSpvNextAction(requirements)} />
 
+      <p className="rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 text-xs text-violet-900">
+        E-sign (DocuSign) is not connected. Complete your assigned requirements below so your SPV participation can
+        reach execution readiness when admin enables future signing.
+      </p>
+
       <WorkspacePanel
         title="Your document requirements"
         subtitle="Upload supporting documents for your SPV participation requirements"

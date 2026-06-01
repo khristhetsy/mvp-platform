@@ -38,6 +38,10 @@ import { DraftEmailPanel } from "@/components/email/DraftEmailPanel";
 import { WorkflowDependencyPanel } from "@/components/workflow/WorkflowDependencyPanel";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
+import { computeExecutionReadinessBySpvMap } from "@/lib/document-execution/readiness";
+import type { SpvExecutionReadinessSummary } from "@/lib/document-execution/types";
+import { logDocumentExecutionReadinessChecked } from "@/lib/document-execution/audit";
+import { SpvExecutionReadinessPanel } from "@/components/spv/SpvExecutionReadinessPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +54,7 @@ type SpvWorkspaceData = {
   packagesBySpv: Record<string, SpvDocumentPackageRecord[]>;
   closingReviewsBySpv: Record<string, SpvClosingReviewRecord>;
   closingReadinessBySpv: Record<string, ClosingReadinessSummary>;
+  executionReadinessBySpv: Record<string, SpvExecutionReadinessSummary>;
 };
 
 async function loadAdminSpvWorkspace(): Promise<{ data: SpvWorkspaceData | null; error: string | null }> {
@@ -135,6 +140,17 @@ async function loadAdminSpvWorkspace(): Promise<{ data: SpvWorkspaceData | null;
     const closingReviewsBySpv: Record<string, SpvClosingReviewRecord> =
       "data" in closingReviewsResult ? (closingReviewsResult.data ?? {}) : {};
 
+    const executionInputs = opportunities.map((spv) => ({
+      spv,
+      packages: packagesBySpv[spv.id] ?? [],
+      participations: participationsBySpv[spv.id] ?? [],
+      requirements: requirementsBySpv[spv.id] ?? [],
+      closingReview: closingReviewsBySpv[spv.id] ?? null,
+      criticalComplianceOpenCount: criticalComplianceByCompany[spv.company_id] ?? 0,
+      hasFounderSigner: Boolean(spv.created_by),
+    }));
+    const executionReadinessBySpv = computeExecutionReadinessBySpvMap(executionInputs);
+
     return {
       data: {
         opportunities,
@@ -145,6 +161,7 @@ async function loadAdminSpvWorkspace(): Promise<{ data: SpvWorkspaceData | null;
         packagesBySpv,
         closingReviewsBySpv,
         closingReadinessBySpv,
+        executionReadinessBySpv,
       },
       error: null,
     };
@@ -169,6 +186,12 @@ export default async function AdminSpvsPage() {
   const opportunities = data?.opportunities ?? [];
   const companies = data?.companies ?? [];
   const primarySpvId = opportunities[0]?.id;
+  const primaryExecutionSummary = primarySpvId
+    ? data?.executionReadinessBySpv?.[primarySpvId]
+    : undefined;
+  if (primaryExecutionSummary) {
+    await logDocumentExecutionReadinessChecked(supabase, profile, primaryExecutionSummary).catch(() => null);
+  }
   const spvDependencies = primarySpvId
     ? await resolveSpvDependencies(supabase, primarySpvId).catch(() => [])
     : [];
@@ -224,6 +247,17 @@ export default async function AdminSpvsPage() {
               </div>
             ) : null}
 
+            {primaryExecutionSummary ? (
+              <div className="mb-6">
+                <WorkspacePanel
+                  title="Document execution readiness"
+                  subtitle="Phase 1 — readiness only, DocuSign not connected"
+                >
+                  <SpvExecutionReadinessPanel summary={primaryExecutionSummary} />
+                </WorkspacePanel>
+              </div>
+            ) : null}
+
             {primarySpvId ? (
               <div className="mb-6 space-y-4">
                 <DraftEmailPanel
@@ -254,6 +288,7 @@ export default async function AdminSpvsPage() {
               packagesBySpv={data?.packagesBySpv ?? {}}
               closingReviewsBySpv={data?.closingReviewsBySpv ?? {}}
               closingReadinessBySpv={data?.closingReadinessBySpv ?? {}}
+              executionReadinessBySpv={data?.executionReadinessBySpv ?? {}}
               companies={companies}
             />
           </>

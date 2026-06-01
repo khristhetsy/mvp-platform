@@ -7,6 +7,7 @@ import { ViewToolbar } from "@/components/ui/ViewToolbar";
 import { useAdminQueryFilters } from "@/hooks/use-admin-query-filters";
 import { useViewMode } from "@/hooks/use-view-mode";
 import type { ClosingReadinessSummary } from "@/lib/spv/closing-review-display";
+import type { SpvExecutionReadinessSummary } from "@/lib/document-execution/types";
 import type {
   SpvChecklistItemRecord,
   SpvClosingReviewRecord,
@@ -25,6 +26,7 @@ export type AdminSpvsModuleViewsProps = Readonly<{
   packagesBySpv: Record<string, SpvDocumentPackageRecord[]>;
   closingReviewsBySpv: Record<string, SpvClosingReviewRecord>;
   closingReadinessBySpv: Record<string, ClosingReadinessSummary>;
+  executionReadinessBySpv: Record<string, SpvExecutionReadinessSummary>;
   companies: Array<{ id: string; name: string }>;
 }>;
 

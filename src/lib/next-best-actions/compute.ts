@@ -11,6 +11,7 @@ import {
   computeAdminActions,
   loadAdminNbaContext,
 } from "@/lib/next-best-actions/compute-admin-actions";
+import { loadDocumentExecutionNbaActions } from "@/lib/document-execution/nba-actions";
 import { limitNextBestActions } from "@/lib/next-best-actions/priority";
 import {
   NBA_DISCLAIMER,
@@ -73,7 +74,11 @@ export async function loadAndComputeNextBestActions(input: {
   } else {
     const adminClient = createServiceRoleClient();
     const ctx = await loadAdminNbaContext(adminClient);
-    actions = computeAdminActions(ctx, role, entityFilter);
+    const [adminActions, executionActions] = await Promise.all([
+      Promise.resolve(computeAdminActions(ctx, role, entityFilter)),
+      loadDocumentExecutionNbaActions(role, entityFilter, 4),
+    ]);
+    actions = [...adminActions, ...executionActions];
   }
 
   return {
