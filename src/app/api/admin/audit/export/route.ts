@@ -12,6 +12,7 @@ import type { AuditEvidenceEntityType } from "@/lib/audit-compliance/types";
 import { AUDIT_EVIDENCE_ENTITY_TYPES } from "@/lib/audit-compliance/types";
 import { requireStaffApi } from "@/lib/api/admin";
 import { writeAuditLog } from "@/lib/data/audit";
+import { bridgeAuditExportGenerated } from "@/lib/integrations/emit-bridge";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export async function GET(request: Request) {
@@ -61,6 +62,8 @@ export async function GET(request: Request) {
         exportedAt: payload.exportedAt,
       },
     });
+
+    bridgeAuditExportGenerated(auth.profile.id, format);
 
     if (format === "csv") {
       const csv = auditExportToCsv(payload);

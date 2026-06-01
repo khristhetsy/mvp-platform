@@ -1807,6 +1807,95 @@ export type Database = {
         }>;
         Relationships: [];
       };
+      integration_connections: {
+        Row: {
+          id: string;
+          provider: string;
+          display_name: string;
+          status: string;
+          enabled: boolean;
+          config: Record<string, unknown>;
+          last_delivery_at: string | null;
+          last_failure_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          provider: string;
+          display_name?: string;
+          status?: string;
+          enabled?: boolean;
+          config?: Record<string, unknown>;
+          last_delivery_at?: string | null;
+          last_failure_at?: string | null;
+          created_by?: string | null;
+        };
+        Update: Partial<{
+          display_name: string;
+          status: string;
+          enabled: boolean;
+          config: Record<string, unknown>;
+          last_delivery_at: string | null;
+          last_failure_at: string | null;
+          updated_at: string;
+        }>;
+        Relationships: [];
+      };
+      outbound_event_subscriptions: {
+        Row: {
+          id: string;
+          connection_id: string;
+          event_type: string;
+          enabled: boolean;
+          created_at: string;
+        };
+        Insert: {
+          connection_id: string;
+          event_type: string;
+          enabled?: boolean;
+        };
+        Update: Partial<{ enabled: boolean }>;
+        Relationships: [];
+      };
+      integration_delivery_logs: {
+        Row: {
+          id: string;
+          connection_id: string;
+          event_type: string;
+          status: string;
+          attempt_count: number;
+          max_attempts: number;
+          response_code: number | null;
+          error_message: string | null;
+          payload_metadata: Record<string, unknown>;
+          next_retry_at: string | null;
+          delivered_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          connection_id: string;
+          event_type: string;
+          status?: string;
+          attempt_count?: number;
+          max_attempts?: number;
+          response_code?: number | null;
+          error_message?: string | null;
+          payload_metadata?: Record<string, unknown>;
+          next_retry_at?: string | null;
+          delivered_at?: string | null;
+        };
+        Update: Partial<{
+          status: string;
+          attempt_count: number;
+          response_code: number | null;
+          error_message: string | null;
+          next_retry_at: string | null;
+          delivered_at: string | null;
+        }>;
+        Relationships: [];
+      };
       scheduled_digest_runs: {
         Row: {
           id: string;

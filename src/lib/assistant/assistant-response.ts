@@ -37,6 +37,10 @@ import {
   loadAdminOrchestrationExecutionSummary,
 } from "@/lib/notifications/orchestration/execution-log";
 import {
+  formatIntegrationsForAssistant,
+  isIntegrationHealthIntent,
+} from "@/lib/integrations/integration-summary";
+import {
   formatScheduledAnswerForAssistant,
   isScheduledDigestIntent,
 } from "@/lib/notifications/scheduled/summaries";
@@ -281,6 +285,9 @@ export async function runAssistantChat(input: {
     isAutomationConsoleIntent(message) &&
     (input.profile.role === "admin" || input.profile.role === "analyst");
   const cronStatusIntent = isCronStatusIntent(message);
+  const integrationIntent =
+    isIntegrationHealthIntent(message) &&
+    (input.profile.role === "admin" || input.profile.role === "analyst");
   const scheduledIntent = isScheduledDigestIntent(message);
   const orchestrationIntent =
     isOrchestrationAttentionIntent(message) || scheduledIntent || cronStatusIntent;
@@ -358,6 +365,9 @@ export async function runAssistantChat(input: {
     } else {
       answer = `No matching actions in your current list. Open the Action Center to review all workflow items.`;
     }
+  } else if (integrationIntent) {
+    answer = await formatIntegrationsForAssistant(message);
+    relatedLinks.unshift({ label: "Integrations", href: "/admin/integrations" });
   } else if (cronStatusIntent && (input.profile.role === "admin" || input.profile.role === "analyst")) {
     const execSummary = await loadAdminOrchestrationExecutionSummary().catch(() => null);
     answer = execSummary

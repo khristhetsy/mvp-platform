@@ -12,6 +12,7 @@ import {
   defaultVisibilityForRole,
   isStaffRole,
 } from "@/lib/collaboration/visibility";
+import { bridgeCollaborationComment } from "@/lib/integrations/emit-bridge";
 import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
 import { sanitizeOperationalMetadata } from "@/lib/operational-activity/sanitize";
 import type { Database, Profile } from "@/lib/supabase/types";
@@ -152,6 +153,12 @@ export async function createCollaborationComment(
     .from("collaboration_threads")
     .update({ updated_at: new Date().toISOString() })
     .eq("id", threadId);
+
+  bridgeCollaborationComment(
+    input.entityType,
+    input.entityId,
+    threadContext.companyId ?? null,
+  );
 
   emitOperationalEvent(supabase, {
     eventType: "comment_created",

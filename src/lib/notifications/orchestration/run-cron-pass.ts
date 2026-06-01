@@ -8,6 +8,14 @@ import {
 } from "@/lib/notifications/orchestration/execution-log";
 import { runNotificationOrchestration } from "@/lib/notifications/orchestration/orchestrator";
 import { runBoundedAutomationPass } from "@/lib/automation/engine";
+import {
+  bridgeAutomationFailed,
+  bridgeDigestGenerated,
+  bridgeOrchestrationFailed,
+  bridgeWorkflowEscalated,
+  bridgeWorkflowOverdue,
+} from "@/lib/integrations/emit-bridge";
+import { processBoundedIntegrationRetries } from "@/lib/integrations/delivery";
 import { runScheduledDigestPass } from "@/lib/notifications/scheduled/digest-scheduler";
 import type { Database } from "@/lib/supabase/types";
 
@@ -101,10 +109,12 @@ export async function runCronOrchestrationPass(options?: {
 
   let automationsTriggered = 0;
   let automationActionsCreated = 0;
+  let automationFailures = 0;
   try {
     const automation = await runBoundedAutomationPass(false);
     automationsTriggered = automation.automationsTriggered;
     automationActionsCreated = automation.actionsCreated;
+    automationFailures = automation.failures;
     if (automation.failures > 0) {
       failuresCount += 1;
       errors.push({
@@ -143,6 +153,28 @@ export async function runCronOrchestrationPass(options?: {
   };
 
   await completeOrchestrationRun(supabase, runId, logInput);
+
+  if (failuresCount > 0) {
+    bridgeOrchestrationFailed(runId, failuresCount);
+  }
+  if (digestsGenerated > 0) {
+    bridgeDigestGenerated(digestsGenerated);
+  }
+  if (overdueWorkflowsDetected > 0) {
+    bridgeWorkflowOverdue(overdueWorkflowsDetected);
+  }
+  if (escalationsDetected > 0) {
+    bridgeWorkflowEscalated(escalationsDetected);
+  }
+  if (automationFailures > 0) {
+    bridgeAutomationFailed(runId, automationFailures);
+  }
+
+  try {
+    await processBoundedIntegrationRetries();
+  } catch {
+    /* bounded retries — non-blocking */
+  }
 
   return {
     success: status !== "failed",
