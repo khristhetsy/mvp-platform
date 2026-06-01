@@ -11,6 +11,7 @@ import {
   type ImportPreviewResult,
   type ImportType,
 } from "@/lib/imports/types";
+import { AdminCrmExportConnector } from "@/components/admin/AdminCrmExportConnector";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import type { OperationalStatus } from "@/lib/ui/design-tokens";
 
@@ -531,6 +532,8 @@ export function AdminImportExportCenter({
           </table>
         </div>
       </section>
+
+      <AdminCrmExportConnector />
 
       <section className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
         <h2 className="text-lg font-semibold text-slate-950">Import safety rules</h2>

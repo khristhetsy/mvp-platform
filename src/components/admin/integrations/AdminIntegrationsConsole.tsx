@@ -11,6 +11,7 @@ import {
   SlackTestTemplatesSection,
   SubscriptionPresetsSection,
 } from "@/components/admin/integrations/AdminIntegrationsReliabilitySections";
+import { AdminCrmExportConnector } from "@/components/admin/AdminCrmExportConnector";
 import { PageSection } from "@/components/ui/workspace-layout";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
@@ -137,6 +138,8 @@ export function AdminIntegrationsConsole({
       <DeliveryTimelineSection payload={payload} />
 
       <ExportDeliveriesSection isStaff />
+
+      <AdminCrmExportConnector />
 
       <PageSection title="Active integrations">
         <ul className="space-y-2 text-sm">

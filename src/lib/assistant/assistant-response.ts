@@ -41,6 +41,7 @@ import {
   isIntegrationHealthIntent,
 } from "@/lib/integrations/integration-summary";
 import { formatEmailDraftForAssistant, isEmailDraftIntent } from "@/lib/email/email-summary";
+import { formatCrmExportForAssistant, isCrmExportIntent } from "@/lib/crm-connectors/crm-export-summary";
 import {
   formatScheduledAnswerForAssistant,
   isScheduledDigestIntent,
@@ -294,6 +295,8 @@ export async function runAssistantChat(input: {
     !message.toLowerCase().includes("automation console") &&
     !isAutomationConsoleIntent(message);
   const emailDraftIntent = isEmailDraftIntent(message);
+  const crmExportIntent =
+    isCrmExportIntent(message) && (input.profile.role === "admin" || input.profile.role === "analyst");
   const scheduledIntent = isScheduledDigestIntent(message);
   const orchestrationIntent =
     isOrchestrationAttentionIntent(message) || scheduledIntent || cronStatusIntent;
@@ -371,6 +374,9 @@ export async function runAssistantChat(input: {
     } else {
       answer = `No matching actions in your current list. Open the Action Center to review all workflow items.`;
     }
+  } else if (crmExportIntent) {
+    answer = formatCrmExportForAssistant(message);
+    relatedLinks.unshift({ label: "CRM export", href: "/admin/imports#crm-export" });
   } else if (emailDraftIntent) {
     answer = await formatEmailDraftForAssistant(
       input.supabase,
