@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { AdminInvestorsModuleViews } from "@/components/admin/AdminInvestorsModuleViews";
+import { DraftEmailPanel } from "@/components/email/DraftEmailPanel";
 import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
 import { getInvestorMatchingSummaries } from "@/lib/matching/admin-matching-summaries";
 import { listInvestorProfilesForAdmin } from "@/lib/investor/profile";
@@ -92,6 +93,10 @@ export default async function AdminInvestorsPage() {
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Review investor onboarding submissions, approve accounts, and monitor marketplace activity.
         </p>
+      </div>
+
+      <div className="mb-6">
+        <DraftEmailPanel role={profile.role} defaultTemplate="admin_investor_approval_followup" />
       </div>
 
       <AdminInvestorsModuleViews

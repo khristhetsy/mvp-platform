@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { AdminComplianceModuleViews } from "@/components/admin/AdminComplianceModuleViews";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { DraftEmailPanel } from "@/components/email/DraftEmailPanel";
 import { loadAdminComplianceCenter } from "@/lib/compliance/load-admin-compliance";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -35,6 +36,10 @@ export default async function AdminCompliancePage() {
           </a>
         }
       />
+
+      <div className="mb-6">
+        <DraftEmailPanel role={profile.role} defaultTemplate="compliance_followup" />
+      </div>
 
       <AdminComplianceModuleViews
         metrics={data.metrics}

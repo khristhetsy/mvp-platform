@@ -10,6 +10,7 @@ import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { redirect } from "next/navigation";
 import { resolveInvestorDependencies } from "@/lib/automation/dependencies";
 import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
+import { DraftEmailPanel } from "@/components/email/DraftEmailPanel";
 import { WorkflowDependencyPanel } from "@/components/workflow/WorkflowDependencyPanel";
 
 export const dynamic = "force-dynamic";
@@ -51,7 +52,13 @@ export default async function InvestorSpvsPage() {
       </div>
 
       {investorProfileId ? (
-        <div className="mb-6">
+        <div className="mb-6 space-y-4">
+          <DraftEmailPanel
+            role="investor"
+            entityType="investor"
+            entityId={investorProfileId}
+            defaultTemplate="investor_spv_requirement_reminder"
+          />
           <CollaborationDiscussionPanel
             entityType="investor"
             entityId={investorProfileId}

@@ -40,6 +40,7 @@ import {
   formatIntegrationsForAssistant,
   isIntegrationHealthIntent,
 } from "@/lib/integrations/integration-summary";
+import { formatEmailDraftForAssistant, isEmailDraftIntent } from "@/lib/email/email-summary";
 import {
   formatScheduledAnswerForAssistant,
   isScheduledDigestIntent,
@@ -292,6 +293,7 @@ export async function runAssistantChat(input: {
     integrationIntent &&
     !message.toLowerCase().includes("automation console") &&
     !isAutomationConsoleIntent(message);
+  const emailDraftIntent = isEmailDraftIntent(message);
   const scheduledIntent = isScheduledDigestIntent(message);
   const orchestrationIntent =
     isOrchestrationAttentionIntent(message) || scheduledIntent || cronStatusIntent;
@@ -369,6 +371,15 @@ export async function runAssistantChat(input: {
     } else {
       answer = `No matching actions in your current list. Open the Action Center to review all workflow items.`;
     }
+  } else if (emailDraftIntent) {
+    answer = await formatEmailDraftForAssistant(
+      input.supabase,
+      input.profile,
+      message,
+      input.request.entityType,
+      input.request.entityId,
+    );
+    relatedLinks.unshift({ label: "Draft email (workspace)", href: actionCenterBasePath(ctx.role) });
   } else if (integrationOnly) {
     answer = await formatIntegrationsForAssistant(message);
     relatedLinks.unshift({ label: "Integrations", href: "/admin/integrations" });

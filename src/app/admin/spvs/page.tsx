@@ -34,6 +34,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { resolveSpvDependencies } from "@/lib/automation/dependencies";
 import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
+import { DraftEmailPanel } from "@/components/email/DraftEmailPanel";
 import { WorkflowDependencyPanel } from "@/components/workflow/WorkflowDependencyPanel";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
@@ -224,7 +225,13 @@ export default async function AdminSpvsPage() {
             ) : null}
 
             {primarySpvId ? (
-              <div className="mb-6">
+              <div className="mb-6 space-y-4">
+                <DraftEmailPanel
+                  role={adminRole}
+                  entityType="spv"
+                  entityId={primarySpvId}
+                  defaultTemplate="investor_spv_requirement_reminder"
+                />
                 <CollaborationDiscussionPanel entityType="spv" entityId={primarySpvId} title="SPV discussion" />
               </div>
             ) : null}

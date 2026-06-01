@@ -6,6 +6,7 @@ import { ActionPriorityBadge } from "@/components/actions/ActionPriorityBadge";
 import { ActionStatusBadge } from "@/components/actions/ActionStatusBadge";
 import { ActionTimeline } from "@/components/actions/ActionTimeline";
 import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
+import { DraftEmailPanel } from "@/components/email/DraftEmailPanel";
 import type { ActionCenterDetail } from "@/lib/actions/types";
 import { NBA_DISCLAIMER } from "@/lib/next-best-actions/types";
 
@@ -14,11 +15,13 @@ type LifecycleAction = "complete" | "dismiss" | "snooze" | "reopen" | "escalate"
 export function ActionDetailDrawer({
   actionId,
   canEscalate,
+  viewerRole = "admin",
   onClose,
   onUpdated,
 }: Readonly<{
   actionId: string | null;
   canEscalate: boolean;
+  viewerRole?: "founder" | "investor" | "admin" | "analyst";
   onClose: () => void;
   onUpdated: () => void;
 }>) {
@@ -148,6 +151,14 @@ export function ActionDetailDrawer({
                   </div>
                 ) : null}
               </dl>
+
+              <DraftEmailPanel
+                role={viewerRole}
+                entityType={action.entityType ?? undefined}
+                entityId={action.entityId ?? undefined}
+                sourceActionId={action.persistedId ?? actionId}
+                compact
+              />
 
               <div className="flex flex-wrap gap-2">
                 <Link href={action.href} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white">

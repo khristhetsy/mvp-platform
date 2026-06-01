@@ -2,6 +2,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge, severityToStatus } from "@/components/ui/StatusBadge";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { DraftEmailPanel } from "@/components/email/DraftEmailPanel";
 import { buildCompanyFilteredHref, type AdminCompanyWorkspaceData } from "@/lib/admin/company-workspace-types";
 
 export function CompanyCompliancePanel({
@@ -32,6 +33,15 @@ export function CompanyCompliancePanel({
           {compliance.nextAction}
         </p>
       ) : null}
+      <div className="mb-4">
+        <DraftEmailPanel
+          role="admin"
+          entityType="company"
+          entityId={companyId}
+          defaultTemplate="compliance_followup"
+          compact
+        />
+      </div>
       {compliance.recentEvents.length === 0 ? (
         <EmptyState title="No compliance events" description="No compliance events recorded for this company." />
       ) : (

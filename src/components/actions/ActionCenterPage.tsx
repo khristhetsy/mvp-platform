@@ -234,6 +234,7 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
       <ActionDetailDrawer
         actionId={detailId}
         canEscalate={canEscalate}
+        viewerRole={role}
         onClose={() => setDetailId(null)}
         onUpdated={() => void refresh()}
       />
