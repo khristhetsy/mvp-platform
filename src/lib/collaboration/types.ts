@@ -4,6 +4,7 @@ export const COLLABORATION_ENTITY_TYPES = [
   "spv",
   "action",
   "queue",
+  "deal_room",
 ] as const;
 
 export type CollaborationEntityType = (typeof COLLABORATION_ENTITY_TYPES)[number];

@@ -1282,6 +1282,73 @@ export type Database = {
         Update: Record<string, unknown>;
         Relationships: [];
       };
+      deal_rooms: {
+        Row: {
+          id: string;
+          company_id: string;
+          founder_id: string;
+          investor_profile_id: string;
+          investor_user_id: string;
+          spv_id: string | null;
+          campaign_id: string | null;
+          status: string;
+          title: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      deal_room_questions: {
+        Row: {
+          id: string;
+          room_id: string;
+          asked_by_user_id: string;
+          category: string;
+          question: string;
+          status: string;
+          founder_response: string | null;
+          responded_at: string | null;
+          resolved_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      deal_room_document_requests: {
+        Row: {
+          id: string;
+          room_id: string;
+          requested_by_user_id: string;
+          request_type: string;
+          custom_request: string | null;
+          status: string;
+          founder_note: string | null;
+          fulfilled_document_id: string | null;
+          fulfilled_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      deal_room_activity_events: {
+        Row: {
+          id: string;
+          room_id: string;
+          event_type: string;
+          actor_user_id: string | null;
+          metadata: unknown;
+          created_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
       campaigns: {
         Row: Campaign;
         Insert: Omit<Partial<Campaign>, "id" | "created_at"> & Pick<Campaign, "company_id">;
