@@ -3,6 +3,7 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { recordOperationalError } from "@/lib/monitoring/operational-events";
 import { writeAuditLog } from "@/lib/data/audit";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import {
   buildStoragePath,
   createDocumentRecord,
@@ -39,8 +40,43 @@ function normalizeDocumentType(input: string) {
   return value;
 }
 
+const FOUNDER_ALLOWED_DOCUMENT_TYPES = new Set([
+  "PITCH_DECK",
+  "BUSINESS_PLAN",
+  "FINANCIAL_STATEMENTS",
+  "CAP_TABLE",
+  "TEAM_BIOS",
+  "LEGAL_DOCUMENTS",
+  "OTHER",
+]);
+
 function isDev() {
   return process.env.NODE_ENV !== "production";
+}
+
+async function verifyUserCanManageCompany(input: { userId: string; companyId: string }) {
+  const admin = createServiceRoleClient();
+
+  const [memberRes, companyRes] = await Promise.all([
+    admin
+      .from("company_members")
+      .select("role")
+      .eq("company_id", input.companyId)
+      .eq("user_id", input.userId)
+      .maybeSingle(),
+    admin.from("companies").select("founder_id").eq("id", input.companyId).maybeSingle(),
+  ]);
+
+  const memberRole = memberRes.data?.role ?? null;
+  const isMemberManager = memberRole === "owner" || memberRole === "admin";
+  const isLegacyFounder = companyRes.data?.founder_id === input.userId;
+
+  return {
+    ok: Boolean(isMemberManager || isLegacyFounder),
+    memberRole,
+    isLegacyFounder,
+    companyFound: Boolean(companyRes.data),
+  };
 }
 
 export async function POST(request: Request) {
@@ -92,7 +128,7 @@ export async function POST(request: Request) {
     // Supabase generated types may not include these helper functions; cast for debug-only RPC calls.
     const rpc = (supabase as unknown as { rpc: (fn: string, args: any) => any }).rpc;
 
-    const [companyRes, membershipRes, canManageRes, belongsRes] = await Promise.all([
+    const [companyRes, membershipRes, canManageRes, belongsRes, adminVerifyRes] = await Promise.all([
       supabase.from("companies").select("id").eq("id", companyId).maybeSingle(),
       supabase
         .from("company_members")
@@ -102,6 +138,7 @@ export async function POST(request: Request) {
         .maybeSingle(),
       rpc("user_can_manage_company", { target_company_id: companyId }),
       rpc("user_belongs_to_company", { target_company_id: companyId }),
+      verifyUserCanManageCompany({ userId: authUserId, companyId }).catch(() => null),
     ]);
 
     return {
@@ -129,6 +166,9 @@ export async function POST(request: Request) {
         user_belongs_to_company_error: belongsRes?.error?.message?.slice(0, 200) ?? null,
         company_members_row_exists: Boolean(membershipRes.data?.id),
         company_members_role: membershipRes.data?.role ?? null,
+        admin_verify_ok: adminVerifyRes?.ok ?? null,
+        admin_verify_member_role: adminVerifyRes?.memberRole ?? null,
+        admin_verify_legacy_founder: adminVerifyRes?.isLegacyFounder ?? null,
       },
       ...(extra ?? {}),
       note:
@@ -158,6 +198,30 @@ export async function POST(request: Request) {
     );
   }
 
+  if (normalizedDocumentType === "SPV_REQUIREMENT" || !FOUNDER_ALLOWED_DOCUMENT_TYPES.has(normalizedDocumentType)) {
+    return NextResponse.json(
+      { error: "Invalid document type.", ...(debugRequested ? { debug: await buildDebug({ stage: "invalid_document_type" }) } : {}) },
+      { status: 400 },
+    );
+  }
+
+  const ownership = await verifyUserCanManageCompany({ userId: authUserId, companyId });
+  if (!ownership.companyFound) {
+    return NextResponse.json(
+      { error: "Company not found.", ...(debugRequested ? { debug: await buildDebug({ stage: "company_not_found" }) } : {}) },
+      { status: 404 },
+    );
+  }
+  if (!ownership.ok) {
+    return NextResponse.json(
+      {
+        error: "You must be the company owner/admin to upload documents.",
+        ...(debugRequested ? { debug: await buildDebug({ stage: "not_company_manager" }) } : {}),
+      },
+      { status: 403 },
+    );
+  }
+
   if (file.size > maxUploadBytes) {
     return NextResponse.json({ error: "File exceeds the 25MB MVP upload limit." }, { status: 400 });
   }
@@ -170,7 +234,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Pitch decks must be uploaded as a PDF." }, { status: 400 });
   }
 
-  const { data: existingDocument, error: existingError } = await supabase
+  // After ownership verification, use service role for all writes/reads to avoid RLS flakiness.
+  const admin = createServiceRoleClient();
+
+  const { data: existingDocument, error: existingError } = await admin
     .from("documents")
     .select("id, document_type, status")
     .eq("company_id", companyId)
@@ -187,7 +254,7 @@ export async function POST(request: Request) {
   const bucket = getStorageBucket(normalizedDocumentType);
   const filePath = buildStoragePath(normalizedDocumentType, companyId, authUserId, file.name);
 
-  const { error: uploadError } = await supabase.storage.from(bucket).upload(filePath, file, {
+  const { error: uploadError } = await admin.storage.from(bucket).upload(filePath, file, {
     contentType: file.type,
     upsert: false,
   });
@@ -229,7 +296,7 @@ export async function POST(request: Request) {
   let operation: "insert" | "update" = "insert";
 
   if (existingDocument?.id && normalizedDocumentType === "PITCH_DECK") {
-    const { data: updated, error: updateError } = await supabase
+    const { data: updated, error: updateError } = await admin
       .from("documents")
       .update({
         uploaded_by: authUserId,
@@ -266,7 +333,7 @@ export async function POST(request: Request) {
     operation = "update";
   } else {
     if (existingDocument?.id) {
-      const { error: archiveError } = await supabase
+      const { error: archiveError } = await admin
         .from("documents")
         .update({ status: "archived" })
         .eq("id", existingDocument.id);
@@ -300,7 +367,7 @@ export async function POST(request: Request) {
       status: "uploaded",
     } as const;
 
-    const { data: inserted, error: documentError } = await createDocumentRecord(supabase, {
+    const { data: inserted, error: documentError } = await createDocumentRecord(admin, {
       ...insertPayload,
       file_path: filePath,
       file_url: null,
@@ -332,7 +399,7 @@ export async function POST(request: Request) {
     documentId = inserted.id;
   }
 
-  await writeAuditLog(supabase, {
+  await writeAuditLog(admin, {
     userId: auth.profile.id,
     action: operation === "update" ? "document.replaced" : "document.uploaded",
     entityType: "document",
@@ -341,7 +408,6 @@ export async function POST(request: Request) {
       companyId,
       documentType: normalizedDocumentType,
       bucket,
-      filePath,
     },
   });
 
