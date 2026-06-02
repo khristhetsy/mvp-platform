@@ -1,4 +1,4 @@
-# CapitalOS migration checklist (0043 → 0056)
+# CapitalOS migration checklist (0043 → 0057)
 
 This checklist is a **deployment aid** for applying Supabase migrations safely after the platform expansion.
 
@@ -139,4 +139,13 @@ This checklist is a **deployment aid** for applying Supabase migrations safely a
   - Approved investor without relationship cannot read unrelated company documents
   - Signed URL route rejects unrelated investor document access
 - **Rollback note**: Do not rollback before private beta; forward-fix policies/triggers only.
+
+## 0057 — beta operations
+- **File**: `supabase/migrations/0057_beta_operations.sql`
+- **Purpose**: Beta feedback queue for founder/investor submissions and staff review.
+- **Verify**
+  - Route: `/admin/beta-operations`
+  - Founder/investor settings → Submit beta feedback
+  - API: `POST /api/beta/feedback`, `GET /api/admin/beta-operations`
+- **Rollback note**: Forward-fix only; feedback rows are operational data.
 

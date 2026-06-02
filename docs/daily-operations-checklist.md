@@ -1,29 +1,28 @@
-# Daily operations checklist (private beta)
+# Daily admin review checklist
 
-Quick daily pass for operators (~15–30 minutes).
+Use at start of each beta operating day (~15 min).
 
-## System
+## Launch health
 - [ ] `/admin/system-health` — no migration warning banner
-- [ ] Pending company reviews count acceptable
-- [ ] Investor approvals queue reviewed
-- [ ] Failed automation / orchestration runs = 0 (or triaged)
+- [ ] Launch readiness green (or documented blockers)
 
-## Approvals
-- [ ] `/admin/companies` — process pending reviews
-- [ ] `/admin/investors` — approve/reject/request changes on submitted profiles
+## Beta operations
+- [ ] `/admin/beta-operations` — review inactivity flags
+- [ ] Pending investor approvals cleared or scheduled
+- [ ] Pending founder company reviews
+- [ ] Open beta feedback triaged
+- [ ] Failed automations / notifications = 0 or triaged
 
-## Deal rooms & SPVs
-- [ ] `/admin/deal-rooms` — unresolved questions and document requests
-- [ ] `/admin/spvs` — page loads; sync readiness if participations changed
+## Queues
+- [ ] `/admin/deal-rooms` — unresolved questions/doc requests
+- [ ] `/admin/queues` — no critical backlog
 
-## Founder support
-- [ ] Any founder stuck in onboarding — check company + documents on admin company workspace
-- [ ] Diligence reports requested only via staff tools when OpenAI is configured
-
-## Investor support
-- [ ] Unapproved investors should not access opportunities documents (verify if reported)
-- [ ] Deal room access only for staff-created rooms
+## Cohort
+- [ ] New signups from yesterday have activation progress
+- [ ] Send onboarding reminders for stalled founders/investors if needed
 
 ## End of day
 - [ ] Note blockers in operator log
-- [ ] Confirm no secrets pasted into tickets
+- [ ] Confirm no secrets shared in support channels
+
+See also: `docs/daily-operations-checklist.md`, `docs/beta-operator-checklist.md`.

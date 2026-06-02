@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { AppShell } from "@/components/AppShell";
+import { BetaFeedbackForm } from "@/components/beta/BetaFeedbackForm";
 import { GoogleCalendarConnectionCard } from "@/components/GoogleCalendarConnectionCard";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -27,6 +28,7 @@ export default async function InvestorSettingsPage() {
         <Suspense fallback={<p className="mt-8 text-sm text-slate-500">Loading Google connection…</p>}>
           <GoogleCalendarConnectionCard status={googleStatus} returnPath="/investor/settings" />
         </Suspense>
+        <BetaFeedbackForm />
       </section>
     </AppShell>
   );

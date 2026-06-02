@@ -23,9 +23,11 @@ Use this checklist after migrations or major feature merges. This is **not** a f
 
 ## Admin smoke
 - [ ] `/admin/system-health` loads (no secrets displayed)
+- [ ] `/admin/beta-operations` loads — activation tables, inactivity flags, feedback queue
+- [ ] Beta invite + feedback review actions work (staff only)
 - [ ] Migration warning banner absent when floor 0056 is applied
 - [ ] Launch readiness panel shows env, cron, OpenAI, Stripe, Google OAuth, beta mode status
-- [ ] Beta invite link generation works (founder + investor)
+- [ ] `/admin/beta-operations` loads; activation tables and feedback queue visible
 - [ ] `/admin/dashboard` loads
 - [ ] `/admin/queues` loads and does not crash when empty
 - [ ] `/admin/actions` loads and lifecycle updates work
@@ -51,6 +53,7 @@ Use this checklist after migrations or major feature merges. This is **not** a f
 
 ## Founder smoke
 - [ ] `/founder/report` shows empty state when no `diligence_reports` row exists (no mock sample report)
+- [ ] `/founder/settings` includes beta feedback form
 - [ ] `/founder` readiness score uses real report or document checklist (not hardcoded mock 82)
 - [ ] `/founder/actions` loads
 - [ ] `/founder/settings` loads and updates save
@@ -60,6 +63,7 @@ Use this checklist after migrations or major feature merges. This is **not** a f
 
 ## Investor smoke
 - [ ] `/investor/dashboard` loads
+- [ ] `/investor/settings` includes beta feedback form
 - [ ] `/investor/actions` loads
 - [ ] `/investor/opportunities` loads
 - [ ] `/investor/portfolio` loads

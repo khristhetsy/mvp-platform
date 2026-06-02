@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { AdminActionHealthProvider } from "@/components/AdminActionHealthProvider";
 import { AdminBetaOnboardingTools } from "@/components/admin/AdminBetaOnboardingTools";
@@ -42,6 +43,20 @@ export default async function AdminSystemHealthPage() {
         </div>
 
         <AdminLaunchReadinessPanel snapshot={launchReadiness} />
+
+        <div className="mt-8">
+          <WorkspacePanel title="Beta operations" subtitle="Cohort activation and support">
+            <p className="text-sm text-slate-600">
+              Monitor founder/investor activation, inactivity flags, feedback queue, and operational event stream.
+            </p>
+            <Link
+              href="/admin/beta-operations"
+              className="mt-3 inline-block rounded-lg bg-[var(--navy)] px-4 py-2 text-sm font-semibold text-white"
+            >
+              Open beta operations
+            </Link>
+          </WorkspacePanel>
+        </div>
 
         <div className="mt-8">
           <WorkspacePanel title="Beta onboarding tools" subtitle="Generate curated signup links (audit-logged)">

@@ -9,6 +9,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { ensureSubscriptionForProfile, getSubscriptionForProfile } from "@/lib/subscriptions/get-subscription";
 import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
+import { BetaFeedbackForm } from "@/components/beta/BetaFeedbackForm";
 import { DraftEmailPanel } from "@/components/email/DraftEmailPanel";
 import { CompanySettingsForm } from "./settings-form";
 
@@ -53,6 +54,7 @@ export default async function FounderSettingsPage() {
         <Suspense fallback={<p className="mt-8 text-sm text-slate-500">Loading Google connection…</p>}>
           <GoogleCalendarConnectionCard status={googleStatus} returnPath="/founder/settings" />
         </Suspense>
+        <BetaFeedbackForm />
       </section>
     </FounderAppShell>
   );

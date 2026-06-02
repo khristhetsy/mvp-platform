@@ -4,6 +4,7 @@ import { InvestorApprovalBanner } from "@/components/InvestorApprovalBanner";
 import { InvestorOpportunitiesModuleViews } from "@/components/investor/InvestorOpportunitiesModuleViews";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
+import { trackInvestorOpportunityView } from "@/lib/beta/track-investor-activation";
 import { loadInvestorRecommendedMatches } from "@/lib/matching/load-investor-recommendations";
 import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InvestorOpportunitiesPage() {
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
+  void trackInvestorOpportunityView(investorId);
   const { investorProfile } = await loadInvestorWorkspaceContext(profile);
   const { matches } = await loadInvestorRecommendedMatches(supabase, investorId, 24);
 

@@ -1599,7 +1599,15 @@ export type Database = {
         Relationships: [];
       };
       audit_logs: {
-        Row: Record<string, unknown>;
+        Row: {
+          id: string;
+          user_id: string | null;
+          action: string;
+          entity_type: string;
+          entity_id: string | null;
+          metadata: Record<string, unknown> | null;
+          created_at: string;
+        };
         Insert: {
           user_id?: string | null;
           action: string;
@@ -1608,6 +1616,40 @@ export type Database = {
           metadata?: Record<string, unknown> | null;
         };
         Update: never;
+        Relationships: [];
+      };
+      beta_feedback: {
+        Row: {
+          id: string;
+          profile_id: string;
+          role: string;
+          category: string;
+          severity: string;
+          message: string;
+          screenshot_url: string | null;
+          status: string;
+          admin_notes: string | null;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          role: string;
+          category: string;
+          severity?: string;
+          message: string;
+          screenshot_url?: string | null;
+          status?: string;
+        };
+        Update: {
+          status?: string;
+          admin_notes?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          updated_at?: string;
+        };
         Relationships: [];
       };
       investor_activity: {
