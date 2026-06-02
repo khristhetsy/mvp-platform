@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { AdminOperationalViewToolbar } from "@/components/admin/AdminOperationalViewToolbar";
 import { clampTrendWindowDays, formatCurrencyAmount, formatPct } from "@/lib/analytics/display";
 import { loadPlatformAnalyticsSnapshot } from "@/lib/analytics/metrics";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -41,6 +42,7 @@ export default async function AdminAnalyticsPage({
   const windowDays = clampTrendWindowDays(
     typeof searchParams?.window === "string" ? searchParams.window : null,
   );
+  const view = typeof searchParams?.view === "string" ? searchParams.view : null;
   const supabase = createServiceRoleClient();
   const analytics = await loadPlatformAnalyticsSnapshot(supabase, windowDays);
 
@@ -90,6 +92,69 @@ export default async function AdminAnalyticsPage({
         </a>
       </div>
 
+      <div className="mt-4">
+        <AdminOperationalViewToolbar moduleId="admin-analytics" />
+      </div>
+
+      {view === "table" ? (
+        <section className="mt-4">
+          <WorkspacePanel title="Core metrics (table)" subtitle="Aggregate only">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  <tr>
+                    <th className="px-3 py-2">Metric</th>
+                    <th className="px-3 py-2">Value</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {[
+                    ["Total companies", analytics.metrics.totalCompanies],
+                    ["Pending company reviews", analytics.metrics.pendingCompanyReviews],
+                    ["Published companies", analytics.metrics.publishedCompanies],
+                    ["Total investors", analytics.metrics.totalInvestors],
+                    ["Approved investors", analytics.metrics.approvedInvestors],
+                    ["Investor interests", analytics.metrics.expressedInterests],
+                    ["Active SPVs", analytics.metrics.activeSpvs],
+                    ["Overdue actions", analytics.metrics.overdueActions],
+                    ["Open compliance", analytics.metrics.complianceOpen],
+                    ["Critical compliance", analytics.metrics.complianceCriticalOpen],
+                    ["Automation ok", analytics.metrics.automationRunsSucceeded],
+                    ["Automation failed/partial", analytics.metrics.automationRunsFailedOrPartial],
+                  ].map(([label, value]) => (
+                    <tr key={String(label)}>
+                      <td className="px-3 py-2 font-medium text-slate-900">{label as string}</td>
+                      <td className="px-3 py-2 text-slate-700">{String(value)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </WorkspacePanel>
+        </section>
+      ) : null}
+
+      {view === "segments" ? (
+        <section className="mt-4 grid gap-6 xl:grid-cols-2">
+          <WorkspacePanel title="Bottlenecks (segments)" subtitle="Counts only · drill down via links below">
+            <div className="grid gap-2 text-sm text-slate-700">
+              {analytics.bottlenecks.cards.map((card) => (
+                <div key={card.key} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
+                  <span className="font-medium text-slate-900">{card.label}</span>
+                  <span className="text-slate-600">{card.count}</span>
+                </div>
+              ))}
+            </div>
+          </WorkspacePanel>
+          <WorkspacePanel title="Health reasons" subtitle="Deterministic scoring">
+            <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+              {analytics.health.reasons.length ? analytics.health.reasons.map((r) => <li key={r}>{r}</li>) : <li>No critical backlogs detected</li>}
+            </ul>
+          </WorkspacePanel>
+        </section>
+      ) : null}
+
+      {view === "table" || view === "segments" ? null : (
       <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Companies"
@@ -116,6 +181,7 @@ export default async function AdminAnalyticsPage({
           accent="slate"
         />
       </section>
+      )}
 
       <section className="mt-8 grid gap-6 xl:grid-cols-2">
         <WorkspacePanel title="Platform Overview" subtitle={`Aggregate metrics · last ${windowDays} days for windowed cards`}>

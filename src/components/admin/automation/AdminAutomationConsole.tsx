@@ -9,7 +9,9 @@ import { AutomationFilters } from "@/components/admin/automation/AutomationFilte
 import { AutomationRunDrawer } from "@/components/admin/automation/AutomationRunDrawer";
 import { AutomationRunTable } from "@/components/admin/automation/AutomationRunTable";
 import { AutomationStatsStrip } from "@/components/admin/automation/AutomationStatsStrip";
+import { ViewToolbar } from "@/components/ui/ViewToolbar";
 import { PageSection } from "@/components/ui/workspace-layout";
+import { useViewMode } from "@/hooks/use-view-mode";
 
 function SafetyStrip({ payload }: Readonly<{ payload: AutomationConsolePayload }>) {
   const { safety, cron, ruleFrequency } = payload;
@@ -57,31 +59,54 @@ function ConsoleBody({
   isAdmin,
 }: Readonly<{ payload: AutomationConsolePayload; isAdmin: boolean }>) {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const { viewMode, density, setViewMode, setDensity, allowedModes } = useViewMode("admin-automation");
 
   return (
     <div className="space-y-6">
+      <ViewToolbar
+        viewMode={viewMode}
+        allowedModes={allowedModes}
+        onViewModeChange={setViewMode}
+        density={density}
+        onDensityChange={setDensity}
+        showSearch={false}
+        showSavedViews={false}
+        sticky
+      />
       <AutomationStatsStrip stats={payload.stats} cron={payload.cron} />
       <AutomationExecutionControls isAdmin={isAdmin} />
       <Suspense fallback={null}>
         <AutomationFilters />
       </Suspense>
-      <SafetyStrip payload={payload} />
-      <div className="grid gap-6 xl:grid-cols-3">
-        <div className="xl:col-span-2">
-          <PageSection title="Automation runs" subtitle={`Showing up to ${payload.runs.length} runs`}>
-            <AutomationRunTable runs={payload.runs} onSelect={setSelectedRunId} />
-          </PageSection>
-        </div>
-        <div className="space-y-4">
-          <AutomationDependencyPanel
-            topBlockers={payload.topBlockers}
-            blockedWorkflows={payload.stats.blockedWorkflows}
-          />
-          <PageSection title="Automation timeline" subtitle="Recent operational automation events">
-            <AutomationExecutionTimeline items={payload.timeline} />
-          </PageSection>
-        </div>
-      </div>
+      {viewMode === "analytics" ? (
+        <>
+          <SafetyStrip payload={payload} />
+          <div className="grid gap-6 xl:grid-cols-3">
+            <div className="xl:col-span-2">
+              <PageSection title="Automation runs" subtitle={`Showing up to ${payload.runs.length} runs`}>
+                <AutomationRunTable runs={payload.runs} onSelect={setSelectedRunId} />
+              </PageSection>
+            </div>
+            <div className="space-y-4">
+              <AutomationDependencyPanel
+                topBlockers={payload.topBlockers}
+                blockedWorkflows={payload.stats.blockedWorkflows}
+              />
+              <PageSection title="Automation timeline" subtitle="Recent operational automation events">
+                <AutomationExecutionTimeline items={payload.timeline} />
+              </PageSection>
+            </div>
+          </div>
+        </>
+      ) : viewMode === "table" ? (
+        <PageSection title="Automation runs" subtitle={`Showing up to ${payload.runs.length} runs`}>
+          <AutomationRunTable runs={payload.runs} onSelect={setSelectedRunId} />
+        </PageSection>
+      ) : (
+        <PageSection title="Automation timeline" subtitle="Recent operational automation events">
+          <AutomationExecutionTimeline items={payload.timeline} />
+        </PageSection>
+      )}
       <AutomationRunDrawer runId={selectedRunId} onClose={() => setSelectedRunId(null)} />
     </div>
   );

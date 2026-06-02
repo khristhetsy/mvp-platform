@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { MetricCard } from "@/components/MetricCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { AdminOperationalViewToolbar } from "@/components/admin/AdminOperationalViewToolbar";
 import { requireRole } from "@/lib/supabase/auth";
 import { loadPlatformInsights } from "@/lib/predictive-intelligence/signals";
 import { clampTrendWindowDays } from "@/lib/analytics/display";
@@ -17,6 +18,7 @@ export default async function AdminInsightsPage({
   const windowDays = clampTrendWindowDays(
     typeof searchParams?.window === "string" ? searchParams.window : null,
   );
+  const view = typeof searchParams?.view === "string" ? searchParams.view : null;
   const insights = await loadPlatformInsights({ window: String(windowDays) });
 
   const topSignals = insights.signals.slice(0, 10);
@@ -68,12 +70,106 @@ export default async function AdminInsightsPage({
         </a>
       </div>
 
+      <div className="mt-4">
+        <AdminOperationalViewToolbar moduleId="admin-insights" />
+      </div>
+
+      {view === "table" ? (
+        <section className="mt-4 grid gap-6 xl:grid-cols-2">
+          <WorkspacePanel title="Top risk signals (table)" subtitle="Platform-level · aggregate only">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  <tr>
+                    <th className="px-3 py-2">Severity</th>
+                    <th className="px-3 py-2">Title</th>
+                    <th className="px-3 py-2">Score</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {topSignals.map((s) => (
+                    <tr key={s.id}>
+                      <td className="px-3 py-2">{s.severity}</td>
+                      <td className="px-3 py-2 font-medium text-slate-900">{s.title}</td>
+                      <td className="px-3 py-2 text-slate-700">{formatRiskScore(s.score)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </WorkspacePanel>
+          <WorkspacePanel title="Recommended actions (table)" subtitle="No actions auto-created">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  <tr>
+                    <th className="px-3 py-2">Priority</th>
+                    <th className="px-3 py-2">Title</th>
+                    <th className="px-3 py-2">Open</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {topRecs.map((r) => (
+                    <tr key={r.id}>
+                      <td className="px-3 py-2">{r.priority}</td>
+                      <td className="px-3 py-2 font-medium text-slate-900">{r.title}</td>
+                      <td className="px-3 py-2">
+                        <a href={r.href} className="font-semibold text-indigo-700 hover:underline">Open</a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </WorkspacePanel>
+        </section>
+      ) : null}
+
+      {view === "segments" ? (
+        <section className="mt-4 grid gap-6 xl:grid-cols-2">
+          <WorkspacePanel title="Risk distribution" subtitle="Counts by severity">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                ["critical", insights.riskOverview.critical],
+                ["high", insights.riskOverview.high],
+                ["medium", insights.riskOverview.medium],
+                ["low", insights.riskOverview.low],
+              ].map(([label, count]) => (
+                <div key={String(label)} className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{String(label)}</p>
+                  <p className="mt-1 text-2xl font-semibold text-slate-950">{String(count)}</p>
+                </div>
+              ))}
+            </div>
+          </WorkspacePanel>
+          <WorkspacePanel title="Top signal domains" subtitle="Grouped by signal type">
+            <div className="grid gap-2 text-sm text-slate-700">
+              {Array.from(
+                insights.signals.reduce((acc, s) => {
+                  acc.set(s.type, (acc.get(s.type) ?? 0) + 1);
+                  return acc;
+                }, new Map<string, number>()),
+              )
+                .sort((a, b) => b[1] - a[1])
+                .map(([type, count]) => (
+                  <div key={type} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
+                    <span className="font-medium text-slate-900">{type}</span>
+                    <span className="text-slate-600">{count}</span>
+                  </div>
+                ))}
+            </div>
+          </WorkspacePanel>
+        </section>
+      ) : null}
+
+      {view === "table" || view === "segments" ? null : (
       <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Critical risks" value={String(insights.riskOverview.critical)} detail="Score ≥ 85" accent="indigo" />
         <MetricCard label="High risks" value={String(insights.riskOverview.high)} detail="Score 65–84" accent="violet" />
         <MetricCard label="Medium risks" value={String(insights.riskOverview.medium)} detail="Score 40–64" accent="blue" />
         <MetricCard label="Avg risk score" value={String(insights.riskOverview.scoreAvg)} detail="Across platform signals" accent="slate" />
       </section>
+      )}
 
       <section className="mt-8 grid gap-6 xl:grid-cols-2">
         <WorkspacePanel title="Risk overview" subtitle="Platform-level signals (aggregate only)">

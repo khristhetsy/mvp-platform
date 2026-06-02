@@ -14,7 +14,9 @@ import type { WorkflowDependency } from "@/lib/automation/types";
 import { ActionTabs } from "@/components/actions/ActionTabs";
 import type { ActionCenterScheduledContext } from "@/lib/notifications/scheduled/types";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ViewToolbar } from "@/components/ui/ViewToolbar";
 import { useActionCenterFilters } from "@/hooks/use-action-center-filters";
+import { useViewMode } from "@/hooks/use-view-mode";
 import type { ActionCenterAnalytics, BulkActionType } from "@/lib/actions/types";
 import type { NextBestAction, NextBestActionRole } from "@/lib/next-best-actions/types";
 import { NBA_DISCLAIMER } from "@/lib/next-best-actions/types";
@@ -37,7 +39,9 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailId, setDetailId] = useState<string | null>(null);
   const [bulkPending, setBulkPending] = useState(false);
-  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+  const { viewMode, density, query, setViewMode, setDensity, setQuery, allowedModes } = useViewMode(
+    role === "admin" || role === "analyst" ? "admin-actions" : "admin-actions",
+  );
   const [workflowDependencies, setWorkflowDependencies] = useState<WorkflowDependency[]>([]);
 
   const canEscalate = role === "admin" || role === "analyst";
@@ -49,7 +53,8 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
     if (filters.priority) params.set("priority", filters.priority);
     if (filters.category) params.set("category", filters.category);
     if (filters.entityType) params.set("entityType", filters.entityType);
-    if (filters.q) params.set("q", filters.q);
+    const effectiveQ = query.trim() ? query.trim() : filters.q;
+    if (effectiveQ) params.set("q", effectiveQ);
     if (filters.overdue) params.set("overdue", "true");
     if (filters.escalated) params.set("escalated", "true");
     if (filters.companyId) params.set("company", filters.companyId);
@@ -57,7 +62,7 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
     if (filters.spvId) params.set("spv", filters.spvId);
     params.set("limit", String(filters.limit));
     return params.toString();
-  }, [filters]);
+  }, [filters, query]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -172,6 +177,19 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
 
       <ActionFilters filters={filters} onChange={setFilters} onClear={clearFilters} />
 
+      <ViewToolbar
+        viewMode={viewMode}
+        allowedModes={allowedModes}
+        onViewModeChange={setViewMode}
+        density={density}
+        onDensityChange={setDensity}
+        query={query}
+        onQueryChange={setQuery}
+        searchPlaceholder="Search actions, entities, or categories…"
+        showSavedViews={false}
+        sticky
+      />
+
       <ActionBulkToolbar
         selectedCount={selectedIds.size}
         canEscalate={canEscalate}
@@ -183,22 +201,6 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
         <span>
           Showing {actions.length} of {total} actions
         </span>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setViewMode("table")}
-            className={viewMode === "table" ? "font-semibold text-indigo-700" : ""}
-          >
-            Table
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("cards")}
-            className={viewMode === "cards" ? "font-semibold text-indigo-700" : ""}
-          >
-            Cards
-          </button>
-        </div>
       </div>
 
       {loading ? (

@@ -10,8 +10,10 @@ import type {
   AuditTimelineEntry,
   ComplianceEvidencePack,
 } from "@/lib/audit-compliance/types";
+import { ViewToolbar } from "@/components/ui/ViewToolbar";
 import { PageSection } from "@/components/ui/workspace-layout";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { useViewMode } from "@/hooks/use-view-mode";
 
 function RiskCard({ label, value, status }: Readonly<{ label: string; value: number; status?: "danger" | "warning" | "neutral" }>) {
   return (
@@ -79,6 +81,7 @@ export function AdminAuditCenter({
 }>) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { viewMode, density, setViewMode, setDensity, allowedModes } = useViewMode("admin-audit");
   const [entityType, setEntityType] = useState(initialEntityType ?? "company");
   const [entityId, setEntityId] = useState(initialEntityId ?? "");
   const [exporting, setExporting] = useState(false);
@@ -133,6 +136,18 @@ export function AdminAuditCenter({
 
   return (
     <div className="space-y-8">
+      <ViewToolbar
+        viewMode={viewMode}
+        allowedModes={allowedModes}
+        onViewModeChange={setViewMode}
+        density={density}
+        onDensityChange={setDensity}
+        showSearch={false}
+        showSavedViews={false}
+        sticky
+      />
+
+      {viewMode === "timeline" || viewMode === "table" ? null : (
       <PageSection title="Audit overview" subtitle="Operational traceability — not legal advice">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <RiskCard label="Critical compliance" value={riskSummary.openCriticalCompliance} status="danger" />
@@ -148,6 +163,7 @@ export function AdminAuditCenter({
           Trace model: Event → Review → Action → Resolution → Audit evidence. No document bodies or message content.
         </p>
       </PageSection>
+      )}
 
       <PageSection title="Compliance timeline" subtitle="Aggregated staff-visible audit trail">
         <div className="mb-4 flex flex-wrap gap-2">
@@ -178,6 +194,7 @@ export function AdminAuditCenter({
         <TimelineTable entries={timeline} />
       </PageSection>
 
+      {viewMode === "timeline" || viewMode === "table" ? null : (
       <PageSection title="Evidence pack" subtitle="Entity-scoped audit evidence (sanitized)">
         <div className="flex flex-wrap items-end gap-2">
           <select
@@ -227,6 +244,7 @@ export function AdminAuditCenter({
           <p className="mt-3 text-xs text-slate-600">Select an entity to build an evidence summary.</p>
         )}
       </PageSection>
+      )}
 
       <PageSection title="Automation & orchestration" subtitle="From timeline sources">
         <p className="text-xs text-slate-600">

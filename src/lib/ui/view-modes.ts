@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
-import { Clock, Columns3, LayoutGrid, Table2 } from "lucide-react";
+import { BarChart3, Clock, Columns3, LayoutGrid, PieChart, Table2 } from "lucide-react";
 
-export const VIEW_MODES = ["table", "card", "pipeline", "timeline"] as const;
+export const VIEW_MODES = ["table", "card", "pipeline", "timeline", "segments", "analytics"] as const;
 
 export type ViewMode = (typeof VIEW_MODES)[number];
 
@@ -14,13 +14,21 @@ export type ViewModeModuleId =
   | "investor-opportunities"
   | "admin-companies"
   | "admin-spvs"
-  | "admin-reports";
+  | "admin-reports"
+  | "admin-actions"
+  | "admin-automation"
+  | "admin-audit"
+  | "admin-analytics"
+  | "admin-insights"
+  | "admin-imports";
 
 export const VIEW_MODE_LABELS: Record<ViewMode, string> = {
   table: "Table",
   card: "Cards",
   pipeline: "Pipeline",
   timeline: "Timeline",
+  segments: "Segments",
+  analytics: "Analytics",
 };
 
 export const VIEW_MODE_ICONS: Record<ViewMode, LucideIcon> = {
@@ -28,6 +36,8 @@ export const VIEW_MODE_ICONS: Record<ViewMode, LucideIcon> = {
   card: LayoutGrid,
   pipeline: Columns3,
   timeline: Clock,
+  segments: PieChart,
+  analytics: BarChart3,
 };
 
 export const VIEW_DENSITY_LABELS: Record<ViewDensity, string> = {
@@ -41,6 +51,12 @@ export const MODULE_VIEW_MODES: Record<ViewModeModuleId, readonly ViewMode[]> = 
   "admin-companies": ["table", "card", "pipeline", "timeline"],
   "admin-spvs": ["table", "card", "pipeline"],
   "admin-reports": ["card", "table"],
+  "admin-actions": ["table", "card", "pipeline", "timeline"],
+  "admin-automation": ["analytics", "table", "timeline"],
+  "admin-audit": ["analytics", "timeline", "table"],
+  "admin-analytics": ["analytics", "table", "segments"],
+  "admin-insights": ["analytics", "table", "segments"],
+  "admin-imports": ["card", "table", "timeline"],
 };
 
 export const MODULE_DEFAULT_VIEW: Record<ViewModeModuleId, ViewMode> = {
@@ -49,6 +65,12 @@ export const MODULE_DEFAULT_VIEW: Record<ViewModeModuleId, ViewMode> = {
   "admin-companies": "card",
   "admin-spvs": "card",
   "admin-reports": "card",
+  "admin-actions": "table",
+  "admin-automation": "analytics",
+  "admin-audit": "analytics",
+  "admin-analytics": "analytics",
+  "admin-insights": "analytics",
+  "admin-imports": "card",
 };
 
 const VIEW_STORAGE_PREFIX = "capitalos:view-mode:";

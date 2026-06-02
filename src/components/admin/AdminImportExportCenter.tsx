@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { ViewToolbar } from "@/components/ui/ViewToolbar";
+import { useViewMode } from "@/hooks/use-view-mode";
 import {
   EXPORT_TYPES,
   IMPORT_FIELD_DEFINITIONS,
@@ -78,6 +80,7 @@ function rowStatusBadge(status: string) {
 export function AdminImportExportCenter({
   initialBatches,
 }: Readonly<{ initialBatches: ImportBatchRecord[] }>) {
+  const { viewMode, density, setViewMode, setDensity, allowedModes } = useViewMode("admin-imports");
   const [step, setStep] = useState<WizardStep>("type");
   const [importType, setImportType] = useState<ImportType>("companies");
   const [file, setFile] = useState<File | null>(null);
@@ -178,11 +181,22 @@ export function AdminImportExportCenter({
 
   return (
     <div className="space-y-8">
+      <ViewToolbar
+        viewMode={viewMode}
+        allowedModes={allowedModes}
+        onViewModeChange={setViewMode}
+        density={density}
+        onDensityChange={setDensity}
+        showSearch={false}
+        showSavedViews={false}
+        sticky
+      />
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
         Imports do not approve investors or publish companies automatically. All imports are audited
         and require admin confirmation before writing data.
       </div>
 
+      {viewMode === "table" ? null : (
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-950">Import wizard</h2>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -435,6 +449,7 @@ export function AdminImportExportCenter({
           </div>
         ) : null}
       </section>
+      )}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-950">Download templates</h2>
