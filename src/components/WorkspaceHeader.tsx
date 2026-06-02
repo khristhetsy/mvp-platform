@@ -1,9 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
-import { CapitalOSLogo } from "@/components/CapitalOSLogo";
 import { NotificationBellDropdown } from "@/components/NotificationBellDropdown";
+import { CAPITALOS_LOGO_SRC } from "@/lib/ui/brand-logos";
 import { WorkspaceBreadcrumbs } from "@/components/ui/WorkspaceBreadcrumbs";
 import type { WorkspaceId } from "@/lib/workspace-nav";
 import { workspaceLabel } from "@/lib/workspace-nav";
@@ -38,11 +39,16 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, onMen
             <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
-        <Link href="/" className="shrink-0 lg:hidden">
-          <CapitalOSLogo height={28} />
-        </Link>
-        <Link href="/" className="hidden shrink-0 lg:block">
-          <CapitalOSLogo height={26} />
+        <Link href="/" className="flex shrink-0 items-center self-center">
+          <Image
+            src={CAPITALOS_LOGO_SRC.wordmark}
+            alt="CapitalOS"
+            width={824}
+            height={543}
+            className="h-7 w-auto max-h-[calc(var(--workspace-header-height)-1rem)] max-w-[140px] shrink-0 object-contain object-left sm:max-w-[160px] lg:max-w-[200px]"
+            sizes="(max-width: 640px) 140px, (max-width: 1024px) 160px, 200px"
+            priority
+          />
         </Link>
         <WorkspaceBreadcrumbs workspace={workspace} />
         <span className="hidden rounded-md bg-[var(--navy-muted)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--navy)] sm:inline">
