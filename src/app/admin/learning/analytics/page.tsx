@@ -34,6 +34,11 @@ export default async function AdminLearningAnalyticsPage() {
       .neq("status", "completed"),
   ]);
 
+  const [adminCourseEnrollments, adminCourseCompletions] = await Promise.all([
+    supabase.from("learning_course_progress").select("id", { count: "exact", head: true }),
+    supabase.from("learning_course_progress").select("id", { count: "exact", head: true }).eq("status", "completed"),
+  ]);
+
   const completionRate =
     progressCount.count && progressCount.count > 0
       ? Math.round(((completedProgress.count ?? 0) / progressCount.count) * 100)
@@ -96,6 +101,21 @@ export default async function AdminLearningAnalyticsPage() {
             value={String(certificatesIssued.count ?? 0)}
             detail="Certificate of Completion"
             accent="slate"
+          />
+        </section>
+
+        <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <MetricCard
+            label="Admin course enrollments"
+            value={String(adminCourseEnrollments.count ?? 0)}
+            detail="learning_course_progress"
+            accent="indigo"
+          />
+          <MetricCard
+            label="Admin course completions"
+            value={String(adminCourseCompletions.count ?? 0)}
+            detail="learning_course_progress (completed)"
+            accent="violet"
           />
         </section>
 

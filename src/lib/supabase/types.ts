@@ -367,6 +367,22 @@ export type Database = {
         Update: Record<string, unknown>;
         Relationships: [];
       };
+      learning_course_progress: {
+        Row: {
+          id: string;
+          founder_id: string;
+          company_id: string;
+          program_id: string;
+          status: string;
+          started_at: string | null;
+          completed_at: string | null;
+          last_viewed_at: string | null;
+          updated_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
       founder_lesson_video_assets: {
         Row: {
           id: string;

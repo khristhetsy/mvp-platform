@@ -11,6 +11,7 @@ import {
 import { computeCoursePercentComplete } from "@/lib/learning/course-progress";
 import { FOUNDER_COURSES } from "@/lib/learning/courses";
 import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
+import { listPublishedAdminCourses } from "@/lib/learning/admin-courses";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 
 export async function POST(request: Request) {
@@ -51,7 +52,15 @@ export async function POST(request: Request) {
           )
         : 0;
 
-    const ctx = buildCatalogCoachContext({ founderName, companyName, overallPercent });
+    const adminCourses = await listPublishedAdminCourses().catch(() => []);
+    const adminCurriculumOutline = adminCourses.length
+      ? `Admin-authored published courses:\n${adminCourses
+          .slice(0, 12)
+          .map((c) => `- ${c.title} (/founder/learning/courses/${c.id}): ${c.description}`)
+          .join("\n")}`
+      : null;
+
+    const ctx = buildCatalogCoachContext({ founderName, companyName, overallPercent, adminCurriculumOutline });
     const result = await runPersonalCoach({ message, ctx, history });
 
     return NextResponse.json({
