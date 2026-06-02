@@ -112,7 +112,10 @@ export async function POST(request: Request) {
   const file = formData.get("file");
 
   if (!parsed.success || !(file instanceof File)) {
-    return NextResponse.json({ error: "Invalid upload request." }, { status: 400 });
+    return NextResponse.json(
+      { stage: "parse_request", clientUsed: "auth_client", error: "Invalid upload request." },
+      { status: 400 },
+    );
   }
 
   const companyId = parsed.data.companyId;
@@ -179,6 +182,8 @@ export async function POST(request: Request) {
   if (!company) {
     return NextResponse.json(
       {
+        stage: "resolve_company",
+        clientUsed: "auth_client",
         error: "No company profile is linked to your account. Please create a company profile first.",
         ...(debugRequested ? { debug: await buildDebug({ stage: "no_company" }) } : {}),
       },
@@ -191,6 +196,8 @@ export async function POST(request: Request) {
   if (!hasAccess) {
     return NextResponse.json(
       {
+        stage: "ownership_verify",
+        clientUsed: "auth_client",
         error: "No company profile is linked to your account. Please create a company profile first.",
         ...(debugRequested ? { debug: await buildDebug({ stage: "no_company_access" }) } : {}),
       },
@@ -200,7 +207,12 @@ export async function POST(request: Request) {
 
   if (normalizedDocumentType === "SPV_REQUIREMENT" || !FOUNDER_ALLOWED_DOCUMENT_TYPES.has(normalizedDocumentType)) {
     return NextResponse.json(
-      { error: "Invalid document type.", ...(debugRequested ? { debug: await buildDebug({ stage: "invalid_document_type" }) } : {}) },
+      {
+        stage: "validate_document_type",
+        clientUsed: "auth_client",
+        error: "Invalid document type.",
+        ...(debugRequested ? { debug: await buildDebug({ stage: "invalid_document_type" }) } : {}),
+      },
       { status: 400 },
     );
   }
@@ -208,13 +220,20 @@ export async function POST(request: Request) {
   const ownership = await verifyUserCanManageCompany({ userId: authUserId, companyId });
   if (!ownership.companyFound) {
     return NextResponse.json(
-      { error: "Company not found.", ...(debugRequested ? { debug: await buildDebug({ stage: "company_not_found" }) } : {}) },
+      {
+        stage: "ownership_verify",
+        clientUsed: "service_role",
+        error: "Company not found.",
+        ...(debugRequested ? { debug: await buildDebug({ stage: "company_not_found" }) } : {}),
+      },
       { status: 404 },
     );
   }
   if (!ownership.ok) {
     return NextResponse.json(
       {
+        stage: "ownership_verify",
+        clientUsed: "service_role",
         error: "You must be the company owner/admin to upload documents.",
         ...(debugRequested ? { debug: await buildDebug({ stage: "not_company_manager" }) } : {}),
       },
@@ -223,15 +242,24 @@ export async function POST(request: Request) {
   }
 
   if (file.size > maxUploadBytes) {
-    return NextResponse.json({ error: "File exceeds the 25MB MVP upload limit." }, { status: 400 });
+    return NextResponse.json(
+      { stage: "validate_file", clientUsed: "auth_client", error: "File exceeds the 25MB MVP upload limit." },
+      { status: 400 },
+    );
   }
 
   if (!allowedMimeTypes.has(file.type)) {
-    return NextResponse.json({ error: "Unsupported file type." }, { status: 400 });
+    return NextResponse.json(
+      { stage: "validate_file", clientUsed: "auth_client", error: "Unsupported file type." },
+      { status: 400 },
+    );
   }
 
   if (parsed.data.documentType === "PITCH_DECK" && file.type !== "application/pdf") {
-    return NextResponse.json({ error: "Pitch decks must be uploaded as a PDF." }, { status: 400 });
+    return NextResponse.json(
+      { stage: "validate_file", clientUsed: "auth_client", error: "Pitch decks must be uploaded as a PDF." },
+      { status: 400 },
+    );
   }
 
   // After ownership verification, use service role for all writes/reads to avoid RLS flakiness.
@@ -248,7 +276,10 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (existingError) {
-    return NextResponse.json({ error: existingError.message }, { status: 400 });
+    return NextResponse.json(
+      { stage: "documents_select_existing", clientUsed: "service_role", error: existingError.message },
+      { status: 400 },
+    );
   }
 
   const bucket = getStorageBucket(normalizedDocumentType);
@@ -268,6 +299,8 @@ export async function POST(request: Request) {
     if (uploadError.message.toLowerCase().includes("bucket not found")) {
       return NextResponse.json(
         {
+          stage: "storage_upload",
+          clientUsed: "service_role",
           error:
             `Storage bucket "${bucket}" was not found in Supabase. ` +
             "Run the latest Supabase migration (0003_company_members_rls_storage.sql) or create the bucket and policies, then retry.",
@@ -280,6 +313,8 @@ export async function POST(request: Request) {
     }
     return NextResponse.json(
       {
+        stage: "storage_upload",
+        clientUsed: "service_role",
         error: uploadError.message,
         ...(debugRequested
           ? { debug: await buildDebug({ stage: "storage_upload_failed", storageError: uploadError.message.slice(0, 300) }) }
@@ -315,6 +350,8 @@ export async function POST(request: Request) {
     if (updateError || !updated?.id) {
       return NextResponse.json(
         {
+          stage: "documents_update",
+          clientUsed: "service_role",
           error: updateError?.message ?? "Unable to replace document.",
           ...(debugRequested
             ? {
@@ -341,6 +378,8 @@ export async function POST(request: Request) {
       if (archiveError) {
         return NextResponse.json(
           {
+            stage: "documents_update",
+            clientUsed: "service_role",
             error: archiveError.message,
             ...(debugRequested
               ? {
@@ -376,10 +415,15 @@ export async function POST(request: Request) {
     if (documentError) {
       // In case a unique constraint is added later, return a clearer message.
       if (documentError.code === "23505") {
-        return NextResponse.json({ error: uploadErrorMessages[409] }, { status: 409 });
+        return NextResponse.json(
+          { stage: "documents_insert", clientUsed: "service_role", error: uploadErrorMessages[409] },
+          { status: 409 },
+        );
       }
       return NextResponse.json(
         {
+          stage: "documents_insert",
+          clientUsed: "service_role",
           error: documentError.message,
           ...(debugRequested
             ? {
