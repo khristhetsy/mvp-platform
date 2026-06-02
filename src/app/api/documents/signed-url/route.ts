@@ -3,6 +3,7 @@ import { requireStaffApi } from "@/lib/api/admin";
 import { writeAuditLog } from "@/lib/data/audit";
 import { createSignedDocumentUrl, getStorageBucket, PITCH_DECKS_BUCKET } from "@/lib/data/documents";
 import { SPV_INVESTOR_DOCUMENTS_BUCKET, SPV_REQUIREMENT_DOCUMENT_TYPE } from "@/lib/spv/spv-documents";
+import { investorHasCompanyDocumentAccess } from "@/lib/investor/document-access";
 import { userHasCompanyAccess } from "@/lib/onboarding/ensure-founder-setup";
 import { signedDocumentUrlSchema } from "@/lib/validation";
 
@@ -44,13 +45,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Document not found or inaccessible." }, { status: 404 });
     }
   } else if (auth.profile.role === "investor") {
-    const { data: company } = await auth.supabase
-      .from("companies")
-      .select("review_status")
-      .eq("id", document.company_id)
-      .single();
+    const hasAccess = await investorHasCompanyDocumentAccess(
+      auth.supabase,
+      auth.profile.id,
+      document.company_id,
+    );
 
-    if (company?.review_status !== "approved") {
+    if (!hasAccess) {
       return NextResponse.json({ error: "Document not found or inaccessible." }, { status: 404 });
     }
   }

@@ -67,6 +67,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/admin/analytics": LineChart,
   "/admin/insights": Sparkles,
   "/admin/system-health": Activity,
+  "/admin/beta-operations": Activity,
   "/admin/page-builder-lab": LayoutDashboard,
   "/admin/users/permissions": ShieldCheck,
 };

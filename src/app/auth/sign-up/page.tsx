@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { SignUpForm } from "@/components/SignUpForm";
+import { isPrivateBetaMode } from "@/lib/env/private-beta";
 
 const trustPoints = [
   "Role-based workspaces for founders and investors",
@@ -9,6 +10,8 @@ const trustPoints = [
 ];
 
 export default function SignUpPage() {
+  const privateBetaMode = isPrivateBetaMode();
+
   return (
     <div className="min-h-screen bg-white lg:grid lg:grid-cols-2">
       <aside className="relative hidden overflow-hidden bg-slate-950 lg:flex lg:flex-col lg:justify-between">
@@ -69,7 +72,7 @@ export default function SignUpPage() {
 
       <main className="flex min-h-screen flex-col justify-center px-6 py-10 sm:px-10 lg:px-12 xl:px-16">
         <Suspense fallback={<p className="text-sm text-slate-500">Loading signup...</p>}>
-          <SignUpForm />
+          <SignUpForm privateBetaMode={privateBetaMode} />
         </Suspense>
       </main>
     </div>

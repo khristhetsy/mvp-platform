@@ -8,7 +8,7 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingProgressCard";
 import { FounderRemediationActionPlan } from "@/components/FounderRemediationActionPlan";
 import { listCompanyDocuments } from "@/lib/data/documents";
-import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
+import { computeReadinessScore, getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { FounderLearningPreviewCard } from "@/components/FounderLearningPreviewCard";
 import { loadFounderLearningWorkspace } from "@/lib/learning/load-founder-learning";
 import { DashboardInsightPanel } from "@/components/ui/DashboardInsightPanel";
@@ -18,7 +18,6 @@ import { loadFounderCompanyMatchContext } from "@/lib/matching/load-matching-dat
 import { loadFounderRemediationPlan } from "@/lib/remediation/load-founder-remediation";
 import { getFounderFeatureAccess } from "@/lib/subscriptions/founder-access";
 import { computeFounderOnboardingProgress } from "@/lib/onboarding/progress";
-import { founderPipeline } from "@/lib/mock-data";
 import { formatPledgeTotal, getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
@@ -62,12 +61,20 @@ export default async function FounderDashboardPage() {
 
   const companyName = company?.company_name ?? "Your company";
   const pitchDeck = documents?.find((document) => document.document_type === "PITCH_DECK");
-  const documentStatus = pitchDeck ? "Pitch deck uploaded" : founderPipeline.documentStatus;
+  const documentStatus = pitchDeck ? "Pitch deck uploaded" : "No pitch deck uploaded";
+  const uploadedTypeCodes = (documents ?? []).flatMap((document) =>
+    document.document_type ? [document.document_type] : [],
+  );
+  const checklistReadinessScore = computeReadinessScore(uploadedTypeCodes);
+  const readinessScore = diligenceReport?.readiness_score ?? checklistReadinessScore;
+  const readinessDetail = diligenceReport
+    ? "Latest stored diligence report"
+    : "Estimate from required document checklist";
   const investorActivityTotal =
     (investorActivity?.interests.length ?? 0) +
     (investorActivity?.introRequests.length ?? 0) +
     (investorActivity?.savedDeals.length ?? 0);
-  const raiseProgress = company?.is_published ? "Published" : founderPipeline.campaignStatus;
+  const raiseProgress = company?.is_published ? "Published" : "Not published";
 
   return (
     <FounderAppShell
@@ -147,16 +154,16 @@ export default async function FounderDashboardPage() {
       <MetricRow title="Capital readiness" subtitle="Operational indicators — not investment advice">
         <MetricCard
           label="Readiness Score"
-          value={`${founderPipeline.readinessScore}/100`}
-          detail={founderPipeline.diligenceProgress}
+          value={`${readinessScore}/100`}
+          detail={readinessDetail}
           accent="indigo"
-          trend="up"
-          sparklineValues={[68, 71, 74, 76, 79, 82, founderPipeline.readinessScore]}
+          trend={diligenceReport ? "up" : "flat"}
+          sparklineValues={[readinessScore, readinessScore, readinessScore, readinessScore, readinessScore, readinessScore, readinessScore]}
         />
         <MetricCard
           label="Raise Progress"
           value={raiseProgress}
-          detail={company?.status ?? founderPipeline.profileStatus}
+          detail={company?.status ?? "Pending"}
           accent="violet"
           sparklineValues={[1, 2, 2, 3, 3, 4, 4]}
         />

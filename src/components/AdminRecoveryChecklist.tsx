@@ -1,4 +1,9 @@
 import type { OperationalSystemSnapshot } from "@/lib/operations/system-snapshot";
+import {
+  REQUIRED_MIGRATION_FLOOR,
+  migrationNumericPrefix,
+  migrationVersionFromFile,
+} from "@/lib/operations/migration-verification";
 
 function StatusRow({
   label,
@@ -19,6 +24,9 @@ export function AdminRecoveryChecklist({
 }: Readonly<{ snapshot: OperationalSystemSnapshot }>) {
   const allRequiredBuckets = Object.values(snapshot.storage.requiredBucketsPresent).every(Boolean);
   const latestMigration = snapshot.migrations.latest ?? "unknown";
+  const repoFloorOk = snapshot.migrations.files.some(
+    (file) => migrationNumericPrefix(migrationVersionFromFile(file)) >= migrationNumericPrefix(REQUIRED_MIGRATION_FLOOR),
+  );
   const lastBackup = snapshot.backup.lastEvents[0];
 
   return (
@@ -34,6 +42,11 @@ export function AdminRecoveryChecklist({
           label="Latest repo migration file"
           ok={snapshot.migrations.total > 0}
           detail={`${latestMigration} (${snapshot.migrations.total} files in repo)`}
+        />
+        <StatusRow
+          label="Repo includes launch floor migration"
+          ok={repoFloorOk}
+          detail={`Required: ${REQUIRED_MIGRATION_FLOOR}`}
         />
         <StatusRow
           label="Supabase public env"

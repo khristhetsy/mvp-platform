@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   SIGNUP_FOUNDER_PLANS,
@@ -12,10 +12,10 @@ import {
 
 type SignupRole = "founder" | "investor";
 
-const signUpDestinationByRole: Record<SignupRole, string> = {
-  founder: "/founder/onboarding",
-  investor: "/investor/dashboard",
-};
+function signUpDestinationByRole(role: SignupRole, privateBetaMode: boolean) {
+  if (role === "founder") return "/founder/onboarding";
+  return privateBetaMode ? "/investor/onboarding" : "/investor/dashboard";
+}
 
 function defaultPlanForRole(role: SignupRole): PlanType {
   return role === "founder" ? "founder_trial" : "investor_free";
@@ -81,8 +81,9 @@ function PlanCard({
   );
 }
 
-export function SignUpForm() {
+export function SignUpForm({ privateBetaMode = false }: Readonly<{ privateBetaMode?: boolean }>) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [role, setRole] = useState<SignupRole>("founder");
   const [selectedPlan, setSelectedPlan] = useState<PlanType>("founder_trial");
   const [fullName, setFullName] = useState("");
@@ -90,6 +91,16 @@ export function SignUpForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const requestedRole = searchParams.get("role");
+    if (requestedRole === "founder" || requestedRole === "investor") {
+      setRole(requestedRole);
+      setSelectedPlan(defaultPlanForRole(requestedRole));
+    }
+    const prefillEmail = searchParams.get("email");
+    if (prefillEmail) setEmail(prefillEmail);
+  }, [searchParams]);
 
   function handleRoleChange(nextRole: SignupRole) {
     setRole(nextRole);
@@ -122,7 +133,7 @@ export function SignUpForm() {
       return;
     }
 
-    router.push(signUpDestinationByRole[role]);
+    router.push(signUpDestinationByRole(role, privateBetaMode));
     router.refresh();
   }
 
@@ -141,9 +152,18 @@ export function SignUpForm() {
 
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Create account</p>
+        {privateBetaMode ? (
+          <span className="mt-3 inline-flex rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800">
+            Private Beta
+          </span>
+        ) : null}
         <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Join CapitalOS</h1>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Choose your workspace, select a plan, and create your secure account. No credit card required to start.
+          {privateBetaMode
+            ? role === "investor"
+              ? "Create your investor account. Access is granted after CapitalOS staff reviews and approves your profile."
+              : "Create your founder account and complete onboarding. CapitalOS staff may review your company before marketplace publication."
+            : "Choose your workspace, select a plan, and create your secure account. No credit card required to start."}
         </p>
       </div>
 

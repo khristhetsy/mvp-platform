@@ -4,7 +4,7 @@ import { recordOperationalError } from "@/lib/monitoring/operational-events";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ensureUserOnboarding } from "@/lib/onboarding/ensure-founder-setup";
 import { parseRequestedPlan } from "@/lib/subscriptions/plans";
-import type { UserRole } from "@/lib/supabase/types";
+import { sanitizePublicSignupRole } from "@/lib/auth/signup-role";
 
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient();
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const role = (body.role as UserRole | undefined) ?? "founder";
+    const role = sanitizePublicSignupRole(body.role);
     const requestedPlan =
       parseRequestedPlan(body.requestedPlan) ??
       parseRequestedPlan(user.user_metadata?.requested_plan);

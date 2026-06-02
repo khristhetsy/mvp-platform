@@ -6,6 +6,8 @@ Use this checklist after migrations or major feature merges. This is **not** a f
 - [ ] `npm run build` passes locally or in CI
 - [ ] Correct environment variables set for the target tier (see `docs/environments.md`)
 - [ ] Migrations applied on staging and verified (see `docs/migration-checklist.md`)
+- [ ] `/admin/system-health` launch readiness: migration floor 0056 applied, security checks OK
+- [ ] `GET /api/admin/launch-readiness` returns 200 for staff (503 if blockers — expected until fixed)
 
 ## Auth + role routing
 - [ ] Founder can sign in and reach `/founder`
@@ -13,8 +15,19 @@ Use this checklist after migrations or major feature merges. This is **not** a f
 - [ ] Admin can sign in and reach `/admin`
 - [ ] Non-staff cannot access `/admin/*` routes
 
+## Launch security (private beta gate)
+- [ ] Founder cannot set `profiles.role` to `admin`/`analyst` via profile update or signup metadata
+- [ ] Investor cannot set `investor_profiles.approval_status` to `approved` via direct client update
+- [ ] Approved investor **without** saved deal/interest/intro/deal room/SPV link cannot read unrelated company documents (RLS + signed URL)
+- [ ] Investor cannot read `SPV_REQUIREMENT` documents for other investors
+
 ## Admin smoke
 - [ ] `/admin/system-health` loads (no secrets displayed)
+- [ ] `/admin/beta-operations` loads — activation tables, inactivity flags, feedback queue
+- [ ] Beta invite + feedback review actions work (staff only)
+- [ ] Migration warning banner absent when floor 0056 is applied
+- [ ] Launch readiness panel shows env, cron, OpenAI, Stripe, Google OAuth, beta mode status
+- [ ] `/admin/beta-operations` loads; activation tables and feedback queue visible
 - [ ] `/admin/dashboard` loads
 - [ ] `/admin/queues` loads and does not crash when empty
 - [ ] `/admin/actions` loads and lifecycle updates work
@@ -27,6 +40,7 @@ Use this checklist after migrations or major feature merges. This is **not** a f
 - [ ] `/admin/companies` loads; company workspace `/admin/companies/[companyId]` loads
 - [ ] `/admin/investors` loads
 - [ ] `/admin/spvs` loads; refresh readiness works
+- [ ] `/admin/deal-rooms` loads; staff can create a deal room from the UI
 - [ ] `/admin/reports` loads; export/download paths work
 - [ ] `/admin/compliance` loads
 
@@ -38,6 +52,9 @@ Use this checklist after migrations or major feature merges. This is **not** a f
 - [ ] `/api/admin/audit/export?format=json` returns 200 (staff only)
 
 ## Founder smoke
+- [ ] `/founder/report` shows empty state when no `diligence_reports` row exists (no mock sample report)
+- [ ] `/founder/settings` includes beta feedback form
+- [ ] `/founder` readiness score uses real report or document checklist (not hardcoded mock 82)
 - [ ] `/founder/actions` loads
 - [ ] `/founder/settings` loads and updates save
 - [ ] `/founder/capital-raise` loads even with 0 SPVs
@@ -46,6 +63,7 @@ Use this checklist after migrations or major feature merges. This is **not** a f
 
 ## Investor smoke
 - [ ] `/investor/dashboard` loads
+- [ ] `/investor/settings` includes beta feedback form
 - [ ] `/investor/actions` loads
 - [ ] `/investor/opportunities` loads
 - [ ] `/investor/portfolio` loads
