@@ -177,7 +177,9 @@ export type Database = {
           readiness_stage: string;
           order_index: number;
           is_published: boolean;
+          content_status?: string;
           created_at: string;
+          updated_at?: string;
         };
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;
@@ -220,9 +222,101 @@ export type Database = {
           slug: string;
           title: string;
           description: string;
+          category?: string | null;
+          difficulty?: string | null;
           readiness_focus: string;
           order_index: number;
           is_published: boolean;
+          content_status?: string;
+          created_at: string;
+          updated_at?: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      learning_lessons: {
+        Row: {
+          id: string;
+          module_id: string | null;
+          module_slug: string;
+          lesson_key: string;
+          title: string;
+          body_markdown: string;
+          order_index: number;
+          estimated_time_minutes: number;
+          content_status: string;
+          created_by: string | null;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      learning_quizzes: {
+        Row: {
+          id: string;
+          scope_type: string;
+          program_id: string | null;
+          module_id: string | null;
+          lesson_id: string | null;
+          title: string;
+          passing_score: number;
+          retry_limit: number | null;
+          content_status: string;
+          created_by: string | null;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      learning_quiz_questions: {
+        Row: {
+          id: string;
+          quiz_id: string;
+          order_index: number;
+          prompt: string;
+          options: unknown;
+          correct_option_index: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      learning_certificates: {
+        Row: {
+          id: string;
+          founder_id: string;
+          company_id: string | null;
+          program_id: string | null;
+          certificate_title: string;
+          certificate_code: string;
+          status: string;
+          issued_at: string;
+          issued_by: string | null;
+          metadata: unknown | null;
+          created_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      learning_content_approvals: {
+        Row: {
+          id: string;
+          content_type: string;
+          content_id: string;
+          from_status: string;
+          to_status: string;
+          reviewer_id: string;
+          notes: string | null;
           created_at: string;
         };
         Insert: Record<string, unknown>;
