@@ -276,16 +276,26 @@ export function filterCompanies(
 export type InvestorQueryFilters = {
   status: InvestorApprovalStatus | null;
   approvalStatus: InvestorApprovalStatus | null;
+  type: string | null;
+  sector: string | null;
+  checkSize: number | null;
   q: string;
 };
 
 export function parseInvestorQueryFilters(params: ReadonlyURLSearchParams | URLSearchParams): InvestorQueryFilters {
   const statusRaw = readParam(params, "status");
   const approvalRaw = readParam(params, "approval_status");
+  const typeRaw = readParam(params, "type");
+  const sectorRaw = readParam(params, "sector");
+  const checkSizeRaw = readParam(params, "checkSize");
+  const checkSize = checkSizeRaw ? Number(checkSizeRaw) : NaN;
 
   return {
     status: isOneOf(statusRaw, INVESTOR_APPROVAL_STATUSES) ? statusRaw : null,
     approvalStatus: isOneOf(approvalRaw, INVESTOR_APPROVAL_STATUSES) ? approvalRaw : null,
+    type: typeRaw?.trim() ? typeRaw.trim() : null,
+    sector: sectorRaw?.trim() ? sectorRaw.trim() : null,
+    checkSize: Number.isFinite(checkSize) && checkSize > 0 ? checkSize : null,
     q: readParam(params, "q") ?? "",
   };
 }
@@ -307,6 +317,23 @@ export function filterInvestorProfiles<T extends InvestorProfileRow>(
   return profiles.filter((row) => {
     const effectiveStatus = filters.approvalStatus ?? filters.status;
     if (effectiveStatus && row.approval_status !== effectiveStatus) return false;
+
+    if (filters.type) {
+      if (String(row.investor_type ?? "").toLowerCase() !== filters.type.toLowerCase()) return false;
+    }
+
+    if (filters.sector) {
+      const wanted = filters.sector.toLowerCase();
+      const sectors = Array.isArray((row as any).preferred_sectors) ? ((row as any).preferred_sectors as string[]) : [];
+      if (!sectors.some((s) => String(s).toLowerCase() === wanted)) return false;
+    }
+
+    if (filters.checkSize != null) {
+      const min = typeof (row as any).check_size_min === "number" ? ((row as any).check_size_min as number) : null;
+      const max = typeof (row as any).check_size_max === "number" ? ((row as any).check_size_max as number) : null;
+      if (min != null && filters.checkSize < min) return false;
+      if (max != null && filters.checkSize > max) return false;
+    }
 
     const profile = profileLookup?.get(row.profile_id);
     if (
@@ -515,6 +542,9 @@ export function buildInvestorFilterChips(filters: InvestorQueryFilters): FilterC
   if (filters.approvalStatus) {
     chips.push({ key: "approval_status", label: "Approval", value: formatLabel(filters.approvalStatus) });
   }
+  if (filters.type) chips.push({ key: "type", label: "Type", value: formatLabel(filters.type) });
+  if (filters.sector) chips.push({ key: "sector", label: "Sector", value: formatLabel(filters.sector) });
+  if (filters.checkSize != null) chips.push({ key: "checkSize", label: "Check size", value: formatLabel(String(filters.checkSize)) });
   if (filters.q.trim()) chips.push({ key: "q", label: "Search", value: filters.q.trim() });
   return chips;
 }
@@ -548,7 +578,7 @@ export type AdminFilterPage = "crm" | "companies" | "investors" | "spvs" | "comp
 const DRILLDOWN_KEYS: Record<AdminFilterPage, string[]> = {
   crm: ["activity", "company", "investor", "date_from", "date_to"],
   companies: ["status", "review_status", "queue", "company", "activity"],
-  investors: ["status", "approval_status"],
+  investors: ["status", "approval_status", "type", "sector", "checkSize"],
   spvs: ["status", "readiness", "queue", "activity", "company", "spv", "requirement"],
   compliance: ["status", "severity", "company", "investor", "event"],
 };
