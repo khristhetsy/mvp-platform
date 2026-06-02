@@ -6,6 +6,8 @@ Use this checklist after migrations or major feature merges. This is **not** a f
 - [ ] `npm run build` passes locally or in CI
 - [ ] Correct environment variables set for the target tier (see `docs/environments.md`)
 - [ ] Migrations applied on staging and verified (see `docs/migration-checklist.md`)
+- [ ] `/admin/system-health` launch readiness: migration floor 0056 applied, security checks OK
+- [ ] `GET /api/admin/launch-readiness` returns 200 for staff (503 if blockers — expected until fixed)
 
 ## Auth + role routing
 - [ ] Founder can sign in and reach `/founder`
@@ -21,6 +23,9 @@ Use this checklist after migrations or major feature merges. This is **not** a f
 
 ## Admin smoke
 - [ ] `/admin/system-health` loads (no secrets displayed)
+- [ ] Migration warning banner absent when floor 0056 is applied
+- [ ] Launch readiness panel shows env, cron, OpenAI, Stripe, Google OAuth, beta mode status
+- [ ] Beta invite link generation works (founder + investor)
 - [ ] `/admin/dashboard` loads
 - [ ] `/admin/queues` loads and does not crash when empty
 - [ ] `/admin/actions` loads and lifecycle updates work

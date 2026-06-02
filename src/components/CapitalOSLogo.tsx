@@ -2,8 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
-
-const LOGO_SRC = "/capitalos-logo.png";
+import { CAPITALOS_LOGO_SRC, CAPITALOS_LOGO_WIDTH_RATIO } from "@/lib/ui/brand-logos";
 
 export function CapitalOSLogo({
   className = "",
@@ -30,9 +29,9 @@ export function CapitalOSLogo({
 
   return (
     <Image
-      src={LOGO_SRC}
+      src={CAPITALOS_LOGO_SRC.full}
       alt="CapitalOS"
-      width={Math.round(height * 3.2)}
+      width={Math.round(height * CAPITALOS_LOGO_WIDTH_RATIO.full)}
       height={height}
       className={`h-auto w-auto object-contain object-left ${className}`}
       style={{ height, width: "auto", maxWidth: "100%" }}

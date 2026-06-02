@@ -9,9 +9,9 @@ export const CAPITALOS_LOGO_SRC: Record<CapitalOSLogoVariant, string> = {
 
 /** Layout width hints for Next/Image; aspect ratio comes from the asset via object-contain. */
 export const CAPITALOS_LOGO_WIDTH_RATIO: Record<CapitalOSLogoVariant, number> = {
-  icon: 522 / 350,
-  wordmark: 824 / 543,
-  full: 1,
+  icon: 396 / 208,
+  wordmark: 588 / 161,
+  full: 913 / 209,
 };
 
 export const DEFAULT_LOGO_HEIGHT: Record<CapitalOSLogoVariant, number> = {

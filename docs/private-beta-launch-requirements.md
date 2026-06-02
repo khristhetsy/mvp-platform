@@ -23,8 +23,21 @@ Use this checklist before inviting external founders and investors.
 
 ## Environment
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` server-only (never `NEXT_PUBLIC_*`)
+- [ ] `DATABASE_URL` set on server for migration + security verification on `/admin/system-health`
 - [ ] `OPENAI_API_KEY` set in production if AI diligence generation is offered; otherwise staff know reports are summary-only
 - [ ] `CRON_SECRET` set if orchestration cron is enabled
+- [ ] `PRIVATE_BETA_MODE=true` for curated beta (optional; pair with `NEXT_PUBLIC_PRIVATE_BETA_MODE=true` for signup UI)
+
+## Launch readiness dashboard
+- [ ] `/admin/system-health` shows **Ready for staff-supervised beta** with no blockers
+- [ ] Security verification checks pass (triggers, relationship-scoped document policy)
+- [ ] Beta onboarding tools generate audit-logged invite links
+
+## Operator runbooks
+- [ ] `docs/beta-operator-checklist.md`
+- [ ] `docs/daily-operations-checklist.md`
+- [ ] `docs/founder-onboarding-checklist.md`
+- [ ] `docs/investor-onboarding-checklist.md`
 
 ## Manual regression
 - [ ] Complete `docs/regression-smoke-test.md` including launch security section
