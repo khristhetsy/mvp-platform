@@ -2,6 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
+import { AdminApprovalsQueue } from "@/components/admin/learning/AdminApprovalsQueue";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -25,6 +26,20 @@ export default async function AdminLearningApprovalsPage() {
     .order("created_at", { ascending: false })
     .limit(200);
 
+  const { data: pendingLessons } = await supabase
+    .from("learning_lessons")
+    .select("id, title, module_slug, content_status, updated_at")
+    .eq("content_status", "pending_review")
+    .order("updated_at", { ascending: false })
+    .limit(200);
+
+  const { data: pendingQuizzes } = await supabase
+    .from("learning_quizzes")
+    .select("id, title, scope_type, content_status, updated_at")
+    .eq("content_status", "pending_review")
+    .order("updated_at", { ascending: false })
+    .limit(200);
+
   return (
     <AppShell
       role="ADMIN"
@@ -37,40 +52,42 @@ export default async function AdminLearningApprovalsPage() {
           eyebrow="Admin Learning"
           title="Approvals"
           description="Educational content only. Review workflow statuses and publish decisions."
-          metadata="Phase 1: view-only (publish APIs next)"
+          metadata="Phase 1: approve/publish/archive with status history"
         />
 
-        <section className="grid gap-6 xl:grid-cols-2">
-          <WorkspacePanel title="Pending course approvals" subtitle={`${(pendingPrograms ?? []).length} programs`}>
-            {(pendingPrograms ?? []).length === 0 ? (
-              <p className="text-sm text-slate-600">No programs pending review.</p>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {(pendingPrograms ?? []).map((p) => (
-                  <div key={p.id} className="py-3 text-sm">
-                    <p className="font-medium text-slate-900">{p.title}</p>
-                    <p className="text-xs text-slate-500">{p.slug} · {p.readiness_focus}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </WorkspacePanel>
-
-          <WorkspacePanel title="Pending module approvals" subtitle={`${(pendingModules ?? []).length} modules`}>
-            {(pendingModules ?? []).length === 0 ? (
-              <p className="text-sm text-slate-600">No modules pending review.</p>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {(pendingModules ?? []).map((m) => (
-                  <div key={m.id} className="py-3 text-sm">
-                    <p className="font-medium text-slate-900">{m.title}</p>
-                    <p className="text-xs text-slate-500">{m.slug} · {m.readiness_stage}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </WorkspacePanel>
-        </section>
+        <WorkspacePanel
+          title="Pending review queue"
+          subtitle={`${(pendingPrograms ?? []).length + (pendingModules ?? []).length + (pendingLessons ?? []).length + (pendingQuizzes ?? []).length} items`}
+        >
+          <AdminApprovalsQueue
+            programs={(pendingPrograms ?? []).map((p) => ({
+              id: p.id,
+              title: p.title,
+              slug: p.slug,
+              content_status: p.content_status,
+              is_published: p.is_published,
+            }))}
+            modules={(pendingModules ?? []).map((m) => ({
+              id: m.id,
+              title: m.title,
+              slug: m.slug,
+              content_status: m.content_status,
+              is_published: m.is_published,
+            }))}
+            lessons={(pendingLessons ?? []).map((l) => ({
+              id: l.id,
+              title: l.title,
+              slug: l.module_slug,
+              content_status: l.content_status,
+            }))}
+            quizzes={(pendingQuizzes ?? []).map((q) => ({
+              id: q.id,
+              title: q.title,
+              slug: q.scope_type,
+              content_status: q.content_status,
+            }))}
+          />
+        </WorkspacePanel>
       </WorkspacePageContainer>
     </AppShell>
   );

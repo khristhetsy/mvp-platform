@@ -2,6 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
+import { AdminCertificatesIssuer } from "@/components/admin/learning/AdminCertificatesIssuer";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -29,10 +30,15 @@ export default async function AdminLearningCertificatesPage() {
           eyebrow="Admin Learning"
           title="Certificates"
           description="Certificates of Completion only. No investment qualification, no guarantees."
-          metadata="Phase 1: view-only (issuance UI/API next)"
+          metadata="Phase 1: manual issuance and listing"
         />
 
-        <WorkspacePanel title="Issued certificates" subtitle={`${(certs ?? []).length} recent`}>
+        <section className="grid gap-6 xl:grid-cols-2">
+          <WorkspacePanel title="Issue certificate" subtitle="Manual staff issuance (Phase 1)">
+            <AdminCertificatesIssuer />
+          </WorkspacePanel>
+
+          <WorkspacePanel title="Issued certificates" subtitle={`${(certs ?? []).length} recent`}>
           {(certs ?? []).length === 0 ? (
             <p className="text-sm text-slate-600">No certificates issued yet.</p>
           ) : (
@@ -64,6 +70,7 @@ export default async function AdminLearningCertificatesPage() {
             </div>
           )}
         </WorkspacePanel>
+        </section>
       </WorkspacePageContainer>
     </AppShell>
   );

@@ -3,6 +3,9 @@ import { AppShell } from "@/components/AppShell";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
+import { AdminCourseEditor } from "@/components/admin/learning/AdminCourseEditor";
+import { AdminCourseModulesManager } from "@/components/admin/learning/AdminCourseModulesManager";
+import { AdminCourseContentStudio } from "@/components/admin/learning/AdminCourseContentStudio";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -19,7 +22,9 @@ export default async function AdminLearningCourseDetailPage({ params }: PageProp
 
   const { data: program } = await supabase
     .from("learning_programs")
-    .select("id, slug, title, description, readiness_focus, content_status, is_published, category, difficulty, created_at")
+    .select(
+      "id, slug, title, description, readiness_focus, content_status, is_published, category, difficulty, order_index, created_at",
+    )
     .eq("id", courseId)
     .maybeSingle();
 
@@ -38,16 +43,20 @@ export default async function AdminLearningCourseDetailPage({ params }: PageProp
     category: string;
     is_published: boolean;
     content_status?: string;
+    description?: string | null;
+    estimated_time_minutes?: number | null;
+    difficulty?: string | null;
+    order_index?: number | null;
   };
 
   const { data: modules } = moduleIds.length
     ? await supabase
         .from("learning_modules")
-        .select("id, slug, title, readiness_stage, category, content_status, is_published")
+        .select(
+          "id, slug, title, readiness_stage, category, description, estimated_time_minutes, difficulty, content_status, is_published, order_index",
+        )
         .in("id", moduleIds)
     : { data: [] as LinkedModuleRow[] };
-
-  const modulesById = new Map((modules ?? []).map((m) => [m.id, m]));
 
   if (!program) {
     return (
@@ -87,48 +96,39 @@ export default async function AdminLearningCourseDetailPage({ params }: PageProp
         />
 
         <section className="grid gap-6 xl:grid-cols-2">
-          <WorkspacePanel title="Metadata" subtitle="Phase 1 view-only">
-            <dl className="grid gap-2 text-sm text-slate-700">
-              <div className="flex justify-between gap-4">
-                <dt className="text-slate-500">Slug</dt>
-                <dd className="font-mono text-xs">{program.slug}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-slate-500">Readiness focus</dt>
-                <dd>{program.readiness_focus}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-slate-500">Status</dt>
-                <dd>{program.content_status}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-slate-500">Published</dt>
-                <dd>{program.is_published ? "Yes" : "No"}</dd>
-              </div>
-            </dl>
-            <p className="mt-3 text-xs text-slate-500">
-              Phase 1: edit/publish UI + approvals API will be added next in this branch.
-            </p>
+          <WorkspacePanel title="Course editor" subtitle="Metadata, workflow status, publish flags">
+            <AdminCourseEditor
+              mode="edit"
+              initial={{
+                id: program.id,
+                slug: program.slug,
+                title: program.title,
+                description: program.description,
+                readiness_focus: program.readiness_focus,
+                category: program.category,
+                difficulty: program.difficulty,
+                content_status: program.content_status,
+                is_published: program.is_published,
+                order_index: program.order_index ?? 0,
+              }}
+            />
           </WorkspacePanel>
 
-          <WorkspacePanel title="Modules" subtitle={`${(links ?? []).length} linked modules`}>
-            {(links ?? []).length === 0 ? (
-              <p className="text-sm text-slate-600">No modules linked to this course yet.</p>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {(links ?? []).map((l) => {
-                  const m = modulesById.get(l.module_id);
-                  return (
-                    <div key={l.module_id} className="py-3 text-sm">
-                      <p className="font-medium text-slate-900">{m?.title ?? l.module_id}</p>
-                      <p className="text-xs text-slate-500">
-                        {m?.slug ?? "—"} · {m?.readiness_stage ?? "—"} · status: {m?.content_status ?? "—"}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+          <WorkspacePanel title="Modules" subtitle="Link modules into this course; reorder by index">
+            <AdminCourseModulesManager
+              courseId={program.id}
+              initialLinks={(links ?? []).map((l) => ({ module_id: l.module_id, order_index: l.order_index }))}
+              initialModules={modules ?? []}
+            />
+            <div className="mt-3 text-xs text-slate-500">
+              Note: founder learning module rendering remains code-driven in Phase 1. Admin module linking is operational metadata only.
+            </div>
+          </WorkspacePanel>
+        </section>
+
+        <section className="mt-6">
+          <WorkspacePanel title="Modules, lessons, quizzes" subtitle="Phase 1 admin management (founder learning remains unchanged)">
+            <AdminCourseContentStudio courseId={program.id} linkedModules={(modules ?? []) as LinkedModuleRow[]} />
           </WorkspacePanel>
         </section>
       </WorkspacePageContainer>
