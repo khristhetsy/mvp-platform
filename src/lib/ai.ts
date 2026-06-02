@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { requiredDocumentTypes, sampleReport } from "./mock-data";
+import { requiredDocumentTypes } from "./mock-data";
 
 type AnalysisInput = {
   companyName: string;
@@ -7,17 +7,38 @@ type AnalysisInput = {
   uploadedDocumentTypes: string[];
 };
 
-export async function generateDiligenceReport(input: AnalysisInput) {
+export type GeneratedDiligenceReport = {
+  executiveSummary: string;
+  sections: Array<{ title: string; body: string }>;
+  riskFlags: string[];
+  missingDocuments: string[];
+  recommendedNextSteps: string[];
+  readinessScore: number | null;
+  generatedBy: "unconfigured" | "openai";
+  isDemo: boolean;
+};
+
+export async function generateDiligenceReport(input: AnalysisInput): Promise<GeneratedDiligenceReport> {
   const missingDocuments = requiredDocumentTypes.filter(
     (documentType) => !input.uploadedDocumentTypes.includes(documentType),
   );
 
+  const documentNextSteps =
+    missingDocuments.length > 0
+      ? [`Upload missing documents: ${missingDocuments.join(", ")}`]
+      : ["Upload required diligence documents for review."];
+
   if (!process.env.OPENAI_API_KEY) {
     return {
-      ...sampleReport,
+      executiveSummary:
+        "AI diligence generation is not configured in this environment. This output is not a completed diligence report. Configure OPENAI_API_KEY or request staff-assisted review.",
+      sections: [],
+      riskFlags: [],
       missingDocuments,
-      readinessScore: Math.max(55, 90 - missingDocuments.length * 6),
-      generatedBy: "mock-ai",
+      recommendedNextSteps: documentNextSteps,
+      readinessScore: null,
+      generatedBy: "unconfigured",
+      isDemo: true,
     };
   }
 
@@ -29,12 +50,12 @@ export async function generateDiligenceReport(input: AnalysisInput) {
       {
         role: "system",
         content:
-          "You produce conservative startup due diligence summaries. Do not provide investment advice or guarantee funding.",
+          "You produce conservative startup due diligence summaries. Do not provide investment advice or guarantee funding. Do not invent numeric readiness scores.",
       },
       {
         role: "user",
         content: JSON.stringify({
-          task: "Create an investor diligence report with risks, missing items, score, and next steps.",
+          task: "Create an investor diligence summary with risks, missing items, and next steps. Return plain text only.",
           companyName: input.companyName,
           documentSummaries: input.documentSummaries,
           missingDocuments,
@@ -45,11 +66,12 @@ export async function generateDiligenceReport(input: AnalysisInput) {
 
   return {
     executiveSummary: response.output_text,
-    sections: sampleReport.sections,
-    riskFlags: sampleReport.riskFlags,
+    sections: [],
+    riskFlags: [],
     missingDocuments,
-    recommendedNextSteps: sampleReport.recommendedNextSteps,
-    readinessScore: Math.max(55, 90 - missingDocuments.length * 6),
+    recommendedNextSteps: documentNextSteps,
+    readinessScore: null,
     generatedBy: "openai",
+    isDemo: false,
   };
 }

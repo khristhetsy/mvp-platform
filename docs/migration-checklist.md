@@ -1,4 +1,4 @@
-# CapitalOS migration checklist (0043 → 0051)
+# CapitalOS migration checklist (0043 → 0056)
 
 This checklist is a **deployment aid** for applying Supabase migrations safely after the platform expansion.
 
@@ -102,4 +102,41 @@ This checklist is a **deployment aid** for applying Supabase migrations safely a
   - Route: `/admin/integrations`
   - APIs: `/api/admin/integrations/*`
 - **Rollback note**: Avoid rollback; forward-fix delivery log schema if needed.
+
+## 0052 — founder document replace RLS
+- **File**: `supabase/migrations/0052_documents_founder_replace_rls.sql`
+- **Purpose**: Founder-safe document replace workflow policies.
+- **Verify**: Founder document upload/replace on `/founder/documents`
+- **Rollback note**: Forward-fix policies only.
+
+## 0053 — admin learning management phase 1
+- **File**: `supabase/migrations/0053_admin_learning_management_phase1.sql`
+- **Purpose**: Admin learning course/module management foundation.
+- **Verify**: `/admin/learning` loads and staff actions work
+- **Rollback note**: Forward-fix only.
+
+## 0054 — learning progress + founder certificates
+- **File**: `supabase/migrations/0054_learning_course_progress_and_founder_certificates.sql`
+- **Purpose**: Founder learning progress and certificate records.
+- **Verify**: `/founder/learning` progress persists
+- **Rollback note**: Forward-fix only.
+
+## 0055 — deal rooms phase 1
+- **File**: `supabase/migrations/0055_deal_rooms_phase1.sql`
+- **Purpose**: Deal room tables, participant RLS, Q&A and document requests.
+- **Verify**
+  - Routes: `/admin/deal-rooms`, `/founder/deal-room`, `/investor/deal-room`
+  - API: `POST /api/admin/deal-rooms`
+- **Rollback note**: Avoid rollback; forward-fix participant policies if needed.
+
+## 0056 — launch hardening security
+- **File**: `supabase/migrations/0056_launch_hardening_security.sql`
+- **Purpose**: Block profile role self-escalation, investor self-approval, and broad investor document reads.
+- **Dependencies**: 0055 recommended (deal room relationship access)
+- **Verify**
+  - Founder/investor cannot set `profiles.role` to staff via profile update
+  - Investor cannot set `investor_profiles.approval_status` to `approved` directly
+  - Approved investor without relationship cannot read unrelated company documents
+  - Signed URL route rejects unrelated investor document access
+- **Rollback note**: Do not rollback before private beta; forward-fix policies/triggers only.
 

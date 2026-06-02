@@ -5,6 +5,7 @@ import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { requireRole } from "@/lib/supabase/auth";
+import { AdminDealRoomCreatePanel } from "@/components/admin/deal-rooms/AdminDealRoomCreatePanel";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -13,12 +14,25 @@ export default async function AdminDealRoomsPage() {
   const profile = await requireRole(["admin", "analyst"]);
   const supabase = createServiceRoleClient();
 
-  const [{ data: rooms }, activeCount, unresolvedQuestions, unresolvedDocs] = await Promise.all([
+  const [
+    { data: rooms },
+    { data: companies },
+    { data: investorProfiles },
+    activeCount,
+    unresolvedQuestions,
+    unresolvedDocs,
+  ] = await Promise.all([
     supabase
       .from("deal_rooms")
       .select("id, title, status, company_id, investor_profile_id, updated_at, created_at")
       .order("updated_at", { ascending: false })
       .limit(200),
+    supabase.from("companies").select("id, company_name").order("company_name", { ascending: true }).limit(500),
+    supabase
+      .from("investor_profiles")
+      .select("id, firm_name, profiles(full_name, email)")
+      .order("created_at", { ascending: false })
+      .limit(500),
     supabase.from("deal_rooms").select("id", { count: "exact", head: true }).eq("status", "active"),
     supabase
       .from("deal_room_questions")
@@ -63,7 +77,25 @@ export default async function AdminDealRoomsPage() {
           <MetricCard label="Total rooms" value={String((rooms ?? []).length)} detail="latest 200" accent="slate" />
         </section>
 
-        <WorkspacePanel title="Rooms" subtitle={`${(rooms ?? []).length} recent`}>
+        <WorkspacePanel title="Create deal room" subtitle="Staff only · links company + investor">
+          <AdminDealRoomCreatePanel
+            companies={(companies ?? []).map((c) => ({ id: c.id, company_name: c.company_name }))}
+            investors={(investorProfiles ?? []).map((row) => {
+              const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+              const label =
+                profile?.full_name?.trim() ||
+                profile?.email?.trim() ||
+                `Investor ${String(row.id).slice(0, 8)}`;
+              return {
+                id: row.id,
+                firm_name: row.firm_name,
+                profileLabel: label,
+              };
+            })}
+          />
+        </WorkspacePanel>
+
+        <WorkspacePanel title="Rooms" subtitle={`${(rooms ?? []).length} recent`} className="mt-6">
           {(rooms ?? []).length === 0 ? (
             <p className="text-sm text-slate-600">No deal rooms yet.</p>
           ) : (

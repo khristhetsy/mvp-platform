@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { dashboardForRole } from "@/lib/supabase/auth";
 import { ensureUserOnboarding } from "@/lib/onboarding/ensure-founder-setup";
 import { parseRequestedPlan } from "@/lib/subscriptions/plans";
-import type { UserRole } from "@/lib/supabase/types";
+import { profileRoleFromPublicMetadata } from "@/lib/auth/signup-role";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
         .eq("id", user.id)
         .maybeSingle();
 
-      const role = existingProfile?.role ?? profileRoleFromMetadata(user.user_metadata?.role) ?? "founder";
+      const role = existingProfile?.role ?? profileRoleFromPublicMetadata(user.user_metadata?.role) ?? "founder";
       const fullName =
         existingProfile?.full_name ?? (user.user_metadata?.full_name as string | undefined) ?? null;
 
@@ -57,12 +57,4 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.redirect(new URL(next || "/", requestUrl.origin));
-}
-
-function profileRoleFromMetadata(value: unknown): UserRole | null {
-  if (value === "founder" || value === "investor" || value === "admin" || value === "analyst") {
-    return value;
-  }
-
-  return null;
 }

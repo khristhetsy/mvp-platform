@@ -13,6 +13,12 @@ Use this checklist after migrations or major feature merges. This is **not** a f
 - [ ] Admin can sign in and reach `/admin`
 - [ ] Non-staff cannot access `/admin/*` routes
 
+## Launch security (private beta gate)
+- [ ] Founder cannot set `profiles.role` to `admin`/`analyst` via profile update or signup metadata
+- [ ] Investor cannot set `investor_profiles.approval_status` to `approved` via direct client update
+- [ ] Approved investor **without** saved deal/interest/intro/deal room/SPV link cannot read unrelated company documents (RLS + signed URL)
+- [ ] Investor cannot read `SPV_REQUIREMENT` documents for other investors
+
 ## Admin smoke
 - [ ] `/admin/system-health` loads (no secrets displayed)
 - [ ] `/admin/dashboard` loads
@@ -27,6 +33,7 @@ Use this checklist after migrations or major feature merges. This is **not** a f
 - [ ] `/admin/companies` loads; company workspace `/admin/companies/[companyId]` loads
 - [ ] `/admin/investors` loads
 - [ ] `/admin/spvs` loads; refresh readiness works
+- [ ] `/admin/deal-rooms` loads; staff can create a deal room from the UI
 - [ ] `/admin/reports` loads; export/download paths work
 - [ ] `/admin/compliance` loads
 
@@ -38,6 +45,8 @@ Use this checklist after migrations or major feature merges. This is **not** a f
 - [ ] `/api/admin/audit/export?format=json` returns 200 (staff only)
 
 ## Founder smoke
+- [ ] `/founder/report` shows empty state when no `diligence_reports` row exists (no mock sample report)
+- [ ] `/founder` readiness score uses real report or document checklist (not hardcoded mock 82)
 - [ ] `/founder/actions` loads
 - [ ] `/founder/settings` loads and updates save
 - [ ] `/founder/capital-raise` loads even with 0 SPVs

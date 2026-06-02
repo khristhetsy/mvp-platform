@@ -85,5 +85,12 @@ export async function POST(request: Request) {
     metadata: { companyId: parsed.data.companyId },
   });
 
-  return NextResponse.json({ report: savedReport });
+  return NextResponse.json({
+    report: savedReport,
+    generation: {
+      generatedBy: report.generatedBy,
+      isDemo: report.isDemo,
+      readinessScoreAvailable: report.readinessScore !== null,
+    },
+  });
 }

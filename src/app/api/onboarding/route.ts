@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { dashboardForRole } from "@/lib/supabase/auth";
 import { ensureUserOnboarding } from "@/lib/onboarding/ensure-founder-setup";
 import { parseRequestedPlan } from "@/lib/subscriptions/plans";
-import type { UserRole } from "@/lib/supabase/types";
+import { profileRoleFromPublicMetadata } from "@/lib/auth/signup-role";
 
 export async function POST() {
   const supabase = await createServerSupabaseClient();
@@ -18,7 +18,7 @@ export async function POST() {
 
   const { data: existingProfile } = await supabase.from("profiles").select("role, full_name").eq("id", user.id).maybeSingle();
 
-  const role = existingProfile?.role ?? profileRoleFromMetadata(user.user_metadata?.role) ?? "founder";
+  const role = existingProfile?.role ?? profileRoleFromPublicMetadata(user.user_metadata?.role) ?? "founder";
   const fullName =
     existingProfile?.full_name ?? (user.user_metadata?.full_name as string | undefined) ?? null;
 
@@ -41,12 +41,4 @@ export async function POST() {
     const message = error instanceof Error ? error.message : "Onboarding failed.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
-
-function profileRoleFromMetadata(value: unknown): UserRole | null {
-  if (value === "founder" || value === "investor" || value === "admin" || value === "analyst") {
-    return value;
-  }
-
-  return null;
 }
