@@ -9,12 +9,59 @@ export type WorkspaceNavItem = {
   requiredPermission?: InternalPermission;
 };
 
+export type WorkspaceNavSection = {
+  title?: string;
+  items: WorkspaceNavItem[];
+};
+
+/** Admin operations cluster: companies, SPVs, investors, deal rooms, CRM. */
+export const adminOperationsNav: WorkspaceNavItem[] = [
+  { href: "/admin/companies", label: "Companies" },
+  { href: "/admin/spvs", label: "SPVs" },
+  { href: "/admin/investors", label: "Investors" },
+  { href: "/admin/deal-rooms", label: "Deal Rooms" },
+  { href: "/admin/crm", label: "CRM" },
+];
+
+export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
+  {
+    items: [
+      { href: "/admin/dashboard", label: "Dashboard" },
+      { href: "/admin/actions", label: "Actions" },
+    ],
+  },
+  {
+    title: "Operations",
+    items: adminOperationsNav,
+  },
+  {
+    items: [
+      { href: "/admin/learning", label: "Learning" },
+      { href: "/admin/billing", label: "Billing" },
+      { href: "/admin/diligence", label: "Diligence" },
+      { href: "/admin/compliance", label: "Compliance" },
+      { href: "/admin/audit", label: "Audit" },
+      { href: "/admin/integrations", label: "Integrations" },
+      { href: "/admin/queues", label: "Queues" },
+      { href: "/admin/automation", label: "Automation" },
+      { href: "/admin/reports", label: "Reports" },
+      { href: "/admin/imports", label: "Import / Export" },
+      { href: "/admin/analytics", label: "Analytics" },
+      { href: "/admin/insights", label: "Insights" },
+      { href: "/admin/system-health", label: "System Health" },
+      { href: "/admin/page-builder-lab", label: "Page Builder Lab", requiredPermission: "manage_page_builder" },
+      { href: "/admin/users/permissions", label: "User Permissions", requiredPermission: "manage_users" },
+    ],
+  },
+];
+
 export const founderWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/founder/dashboard", label: "Dashboard" },
   { href: "/founder/actions", label: "Actions" },
   { href: "/founder/readiness", label: "Readiness" },
   { href: "/founder/documents", label: "Documents" },
   { href: "/founder/investors", label: "Investors" },
+  { href: "/founder/deal-room", label: "Deal Room" },
   { href: "/founder/messages", label: "Messages" },
   { href: "/founder/capital-raise", label: "Capital Raise" },
   { href: "/founder/learning", label: "Learning" },
@@ -29,6 +76,7 @@ export const investorWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/investor/opportunities", label: "Opportunities" },
   { href: "/investor/watchlist", label: "Watchlist" },
   { href: "/investor/interest-pipeline", label: "Interest Pipeline" },
+  { href: "/investor/deal-room", label: "Deal Room" },
   { href: "/investor/spvs", label: "SPVs" },
   { href: "/investor/portfolio", label: "Portfolio" },
   { href: "/investor/messages", label: "Messages" },
@@ -36,29 +84,11 @@ export const investorWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/investor/settings", label: "Settings" },
 ];
 
-export const adminWorkspaceNav: WorkspaceNavItem[] = [
-  { href: "/admin/dashboard", label: "Dashboard" },
-  { href: "/admin/actions", label: "Actions" },
-  { href: "/admin/companies", label: "Companies" },
-  { href: "/admin/spvs", label: "SPVs" },
-  { href: "/admin/investors", label: "Investors" },
-  { href: "/admin/learning", label: "Learning" },
-  { href: "/admin/crm", label: "CRM" },
-  { href: "/admin/billing", label: "Billing" },
-  { href: "/admin/diligence", label: "Diligence" },
-  { href: "/admin/compliance", label: "Compliance" },
-  { href: "/admin/audit", label: "Audit" },
-  { href: "/admin/integrations", label: "Integrations" },
-  { href: "/admin/queues", label: "Queues" },
-  { href: "/admin/automation", label: "Automation" },
-  { href: "/admin/reports", label: "Reports" },
-  { href: "/admin/imports", label: "Import / Export" },
-  { href: "/admin/analytics", label: "Analytics" },
-  { href: "/admin/insights", label: "Insights" },
-  { href: "/admin/system-health", label: "System Health" },
-  { href: "/admin/page-builder-lab", label: "Page Builder Lab", requiredPermission: "manage_page_builder" },
-  { href: "/admin/users/permissions", label: "User Permissions", requiredPermission: "manage_users" },
-];
+export const adminWorkspaceNav: WorkspaceNavItem[] = adminWorkspaceNavSections.flatMap((section) => section.items);
+
+export function getAdminWorkspaceNavSections(): WorkspaceNavSection[] {
+  return adminWorkspaceNavSections;
+}
 
 export function getWorkspaceNav(workspace: WorkspaceId): WorkspaceNavItem[] {
   switch (workspace) {

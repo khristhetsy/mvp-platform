@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Sparkles } from "lucide-react";
 import type { InternalPermission } from "@/lib/rbac/constants";
-import type { WorkspaceId } from "@/lib/workspace-nav";
-import { getWorkspaceNav, workspaceLabel } from "@/lib/workspace-nav";
+import type { WorkspaceId, WorkspaceNavItem } from "@/lib/workspace-nav";
+import { getAdminWorkspaceNavSections, getWorkspaceNav, workspaceLabel } from "@/lib/workspace-nav";
 import { getWorkspaceNavIcon } from "@/lib/ui/nav-icons";
 import { CapitalOSLogo } from "@/components/CapitalOSLogo";
 
@@ -53,18 +53,60 @@ export function WorkspaceSidebar({
   onClose?: () => void;
 }>) {
   const pathname = usePathname();
-  const allItems = getWorkspaceNav(workspace);
   const adminNav = useAdminNavPermissions(workspace);
-  const items = useMemo(() => {
-    if (workspace !== "admin") return allItems;
-    return allItems.filter((item) => {
+  const canShowNavItem = useMemo(() => {
+    return (item: WorkspaceNavItem) => {
+      if (workspace !== "admin") return true;
       if (!item.requiredPermission) return true;
       if (!adminNav) return false;
       if (adminNav.isSuperAdmin) return true;
       return adminNav.permissions.includes(item.requiredPermission);
-    });
-  }, [allItems, adminNav, workspace]);
+    };
+  }, [adminNav, workspace]);
+
+  const items = useMemo(() => {
+    return getWorkspaceNav(workspace).filter(canShowNavItem);
+  }, [canShowNavItem, workspace]);
+
+  const adminSections = useMemo(() => {
+    if (workspace !== "admin") return null;
+    return getAdminWorkspaceNavSections()
+      .map((section) => ({
+        ...section,
+        items: section.items.filter(canShowNavItem),
+      }))
+      .filter((section) => section.items.length > 0);
+  }, [canShowNavItem, workspace]);
+
   const label = workspaceLabel(workspace);
+
+  function isNavItemActive(href: string) {
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
+
+  function renderNavLink(item: WorkspaceNavItem) {
+    const active = isNavItemActive(item.href);
+    const Icon = getWorkspaceNavIcon(item.href);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={onClose}
+        className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
+          active
+            ? "bg-[var(--navy)] text-white shadow-sm"
+            : "text-slate-600 hover:bg-slate-100 hover:text-[var(--navy)]"
+        }`}
+      >
+        <Icon
+          className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-slate-400"}`}
+          strokeWidth={1.75}
+          aria-hidden
+        />
+        <span className="truncate">{item.label}</span>
+      </Link>
+    );
+  }
 
   const nav = (
     <>
@@ -75,29 +117,18 @@ export function WorkspaceSidebar({
         <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
       </div>
       <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 py-2.5">
-        {items.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const Icon = getWorkspaceNavIcon(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
-              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
-                active
-                  ? "bg-[var(--navy)] text-white shadow-sm"
-                  : "text-slate-600 hover:bg-slate-100 hover:text-[var(--navy)]"
-              }`}
-            >
-              <Icon
-                className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-slate-400"}`}
-                strokeWidth={1.75}
-                aria-hidden
-              />
-              <span className="truncate">{item.label}</span>
-            </Link>
-          );
-        })}
+        {adminSections
+          ? adminSections.map((section, index) => (
+              <div key={section.title ?? `section-${index}`} className={section.title ? "pt-1" : undefined}>
+                {section.title ? (
+                  <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                    {section.title}
+                  </p>
+                ) : null}
+                <div className="space-y-0.5">{section.items.map(renderNavLink)}</div>
+              </div>
+            ))
+          : items.map(renderNavLink)}
       </nav>
       <div className="space-y-2 border-t border-slate-200/80 bg-[var(--surface-sidebar)] p-3">
         {planBadge ? <div>{planBadge}</div> : null}
