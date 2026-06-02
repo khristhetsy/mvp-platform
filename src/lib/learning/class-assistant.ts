@@ -57,18 +57,20 @@ export function buildCatalogCoachContext(input: {
   founderName: string;
   companyName: string | null;
   overallPercent: number;
+  adminCurriculumOutline?: string | null;
 }): PersonalCoachContext {
   const courses = FOUNDER_COURSES;
-  const curriculumOutline = courses
+  const coreOutline = courses
     .map((c) => `- ${c.title} (/founder/learning/${c.slug}): ${c.description}`)
     .join("\n");
+  const curriculumOutline = [coreOutline, input.adminCurriculumOutline?.trim()].filter(Boolean).join("\n");
 
   return {
     founderName: input.founderName,
     companyName: input.companyName,
     courseTitle: "CapitalOS Founder Academy",
     courseDescription:
-      "Course catalog for educational founder training — investor readiness, pitch decks, financials, data rooms, governance, communication, and capital strategy.",
+      "Course catalog for educational founder training — investor readiness, pitch decks, financials, data rooms, governance, communication, and capital strategy. Admin-authored courses may also appear in your catalog when published.",
     courseCategory: "All categories",
     courseLevel: "All levels",
     whatYouWillLearn: [

@@ -58,6 +58,33 @@ export default async function AdminLearningCourseDetailPage({ params }: PageProp
         .in("id", moduleIds)
     : { data: [] as LinkedModuleRow[] };
 
+  const [{ count: enrollments }, { count: completions }, { count: certs }, { count: quizAttempts }, { count: quizPasses }] =
+    await Promise.all([
+      supabase
+        .from("learning_course_progress")
+        .select("id", { count: "exact", head: true })
+        .eq("program_id", courseId),
+      supabase
+        .from("learning_course_progress")
+        .select("id", { count: "exact", head: true })
+        .eq("program_id", courseId)
+        .eq("status", "completed"),
+      supabase
+        .from("learning_certificates")
+        .select("id", { count: "exact", head: true })
+        .eq("program_id", courseId)
+        .eq("status", "issued"),
+      supabase
+        .from("founder_quiz_attempts")
+        .select("id", { count: "exact", head: true })
+        .eq("module_slug", `course:${courseId}`),
+      supabase
+        .from("founder_quiz_attempts")
+        .select("id", { count: "exact", head: true })
+        .eq("module_slug", `course:${courseId}`)
+        .eq("passed", true),
+    ]);
+
   if (!program) {
     return (
       <AppShell
@@ -123,6 +150,36 @@ export default async function AdminLearningCourseDetailPage({ params }: PageProp
             <div className="mt-3 text-xs text-slate-500">
               Note: founder learning module rendering remains code-driven in Phase 1. Admin module linking is operational metadata only.
             </div>
+          </WorkspacePanel>
+        </section>
+
+        <section className="mt-6 grid gap-6 xl:grid-cols-3">
+          <WorkspacePanel title="Founder analytics" subtitle="Admin visibility (Phase 2)">
+            <dl className="grid gap-2 text-sm text-slate-700">
+              <div className="flex justify-between gap-4">
+                <dt className="text-slate-500">Enrollments</dt>
+                <dd className="font-semibold">{String(enrollments ?? 0)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-slate-500">Completions</dt>
+                <dd className="font-semibold">{String(completions ?? 0)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-slate-500">Certificates issued</dt>
+                <dd className="font-semibold">{String(certs ?? 0)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-slate-500">Quiz attempts</dt>
+                <dd className="font-semibold">{String(quizAttempts ?? 0)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-slate-500">Quiz passes</dt>
+                <dd className="font-semibold">{String(quizPasses ?? 0)}</dd>
+              </div>
+            </dl>
+            <p className="mt-3 text-xs text-slate-500">
+              Educational analytics only. No private founder messages or documents.
+            </p>
           </WorkspacePanel>
         </section>
 
