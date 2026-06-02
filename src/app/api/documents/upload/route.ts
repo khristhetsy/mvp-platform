@@ -39,12 +39,21 @@ function normalizeDocumentType(input: string) {
   return value;
 }
 
+function isDev() {
+  return process.env.NODE_ENV !== "production";
+}
+
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);
 
   if ("error" in auth) {
     return auth.error;
   }
+
+  const supabase = auth.supabase;
+  const profileId = auth.profile.id;
+  const url = new URL(request.url);
+  const debugRequested = isDev() && url.searchParams.get("debug") === "1";
 
   const rateLimited = await enforceRateLimit({
     bucket: "document_upload",
@@ -69,23 +78,71 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid upload request." }, { status: 400 });
   }
 
+  const companyId = parsed.data.companyId;
   const normalizedDocumentType = normalizeDocumentType(parsed.data.documentType);
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.getUser();
+  const authUserId = authUser?.id ?? profileId;
+
+  async function buildDebug(extra?: Record<string, unknown>) {
+    if (!debugRequested) return undefined;
+
+    // Supabase generated types may not include these helper functions; cast for debug-only RPC calls.
+    const rpc = (supabase as unknown as { rpc: (fn: string, args: any) => any }).rpc;
+
+    const [membershipRes, canManageRes, belongsRes] = await Promise.all([
+      supabase
+        .from("company_members")
+        .select("id, role, company_id, user_id")
+        .eq("company_id", companyId)
+        .eq("user_id", authUserId)
+        .maybeSingle(),
+      rpc("user_can_manage_company", { target_company_id: companyId }),
+      rpc("user_belongs_to_company", { target_company_id: companyId }),
+    ]);
+
+    return {
+      auth: {
+        authUserId,
+        profileId,
+      },
+      insert: {
+        company_id: companyId,
+        uploaded_by: authUserId,
+        document_type: normalizedDocumentType,
+      },
+      checks: {
+        user_can_manage_company: canManageRes?.data ?? null,
+        user_can_manage_company_error: canManageRes?.error?.message?.slice(0, 200) ?? null,
+        user_belongs_to_company: belongsRes?.data ?? null,
+        user_belongs_to_company_error: belongsRes?.error?.message?.slice(0, 200) ?? null,
+        company_members_row_exists: Boolean(membershipRes.data?.id),
+        company_members_role: membershipRes.data?.role ?? null,
+      },
+      ...(extra ?? {}),
+      note:
+        "Debug is development-only. No document contents, paths, or secrets are included.",
+    };
+  }
 
   if (!company) {
     return NextResponse.json(
       {
         error: "No company profile is linked to your account. Please create a company profile first.",
+        ...(debugRequested ? { debug: await buildDebug({ stage: "no_company" }) } : {}),
       },
       { status: 403 },
     );
   }
 
-  const hasAccess = await userHasCompanyAccess(auth.profile.id, parsed.data.companyId);
+  const hasAccess = await userHasCompanyAccess(auth.profile.id, companyId);
 
   if (!hasAccess) {
     return NextResponse.json(
       {
         error: "No company profile is linked to your account. Please create a company profile first.",
+        ...(debugRequested ? { debug: await buildDebug({ stage: "no_company_access" }) } : {}),
       },
       { status: 403 },
     );
@@ -103,10 +160,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Pitch decks must be uploaded as a PDF." }, { status: 400 });
   }
 
-  const { data: existingDocument, error: existingError } = await auth.supabase
+  const { data: existingDocument, error: existingError } = await supabase
     .from("documents")
     .select("id, document_type, status")
-    .eq("company_id", parsed.data.companyId)
+    .eq("company_id", companyId)
     .eq("document_type", normalizedDocumentType)
     .neq("status", "archived")
     .order("created_at", { ascending: false })
@@ -118,14 +175,9 @@ export async function POST(request: Request) {
   }
 
   const bucket = getStorageBucket(normalizedDocumentType);
-  const filePath = buildStoragePath(
-    normalizedDocumentType,
-    parsed.data.companyId,
-    auth.profile.id,
-    file.name,
-  );
+  const filePath = buildStoragePath(normalizedDocumentType, companyId, authUserId, file.name);
 
-  const { error: uploadError } = await auth.supabase.storage.from(bucket).upload(filePath, file, {
+  const { error: uploadError } = await supabase.storage.from(bucket).upload(filePath, file, {
     contentType: file.type,
     upsert: false,
   });
@@ -133,8 +185,8 @@ export async function POST(request: Request) {
   if (uploadError) {
     recordOperationalError("document.upload_storage_failed", uploadError, {
       userId: auth.profile.id,
-      companyId: parsed.data.companyId,
-      documentType: parsed.data.documentType,
+      companyId,
+      documentType: normalizedDocumentType,
     });
     if (uploadError.message.toLowerCase().includes("bucket not found")) {
       return NextResponse.json(
@@ -142,11 +194,22 @@ export async function POST(request: Request) {
           error:
             `Storage bucket "${bucket}" was not found in Supabase. ` +
             "Run the latest Supabase migration (0003_company_members_rls_storage.sql) or create the bucket and policies, then retry.",
+          ...(debugRequested
+            ? { debug: await buildDebug({ stage: "storage_upload_failed", storageError: uploadError.message.slice(0, 300) }) }
+            : {}),
         },
         { status: 500 },
       );
     }
-    return NextResponse.json({ error: uploadError.message }, { status: 400 });
+    return NextResponse.json(
+      {
+        error: uploadError.message,
+        ...(debugRequested
+          ? { debug: await buildDebug({ stage: "storage_upload_failed", storageError: uploadError.message.slice(0, 300) }) }
+          : {}),
+      },
+      { status: 400 },
+    );
   }
 
   // Replacement behavior:
@@ -156,10 +219,10 @@ export async function POST(request: Request) {
   let operation: "insert" | "update" = "insert";
 
   if (existingDocument?.id && normalizedDocumentType === "PITCH_DECK") {
-    const { data: updated, error: updateError } = await auth.supabase
+    const { data: updated, error: updateError } = await supabase
       .from("documents")
       .update({
-        uploaded_by: auth.profile.id,
+        uploaded_by: authUserId,
         document_type: normalizedDocumentType,
         file_name: file.name,
         file_path: filePath,
@@ -173,13 +236,27 @@ export async function POST(request: Request) {
       .single();
 
     if (updateError || !updated?.id) {
-      return NextResponse.json({ error: updateError?.message ?? "Unable to replace document." }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: updateError?.message ?? "Unable to replace document.",
+          ...(debugRequested
+            ? {
+                debug: await buildDebug({
+                  stage: "documents_update_failed",
+                  supabaseErrorCode: updateError?.code ?? null,
+                  supabaseErrorMessage: (updateError?.message ?? "").slice(0, 300),
+                }),
+              }
+            : {}),
+        },
+        { status: 400 },
+      );
     }
     documentId = updated.id;
     operation = "update";
   } else {
     if (existingDocument?.id) {
-      const { error: archiveError } = await auth.supabase
+      const { error: archiveError } = await supabase
         .from("documents")
         .update({ status: "archived" })
         .eq("id", existingDocument.id);
@@ -189,9 +266,9 @@ export async function POST(request: Request) {
       }
     }
 
-    const { data: inserted, error: documentError } = await createDocumentRecord(auth.supabase, {
-      company_id: parsed.data.companyId,
-      uploaded_by: auth.profile.id,
+    const { data: inserted, error: documentError } = await createDocumentRecord(supabase, {
+      company_id: companyId,
+      uploaded_by: authUserId,
       document_type: normalizedDocumentType,
       file_name: file.name,
       file_path: filePath,
@@ -206,19 +283,33 @@ export async function POST(request: Request) {
       if (documentError.code === "23505") {
         return NextResponse.json({ error: uploadErrorMessages[409] }, { status: 409 });
       }
-      return NextResponse.json({ error: documentError.message }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: documentError.message,
+          ...(debugRequested
+            ? {
+                debug: await buildDebug({
+                  stage: "documents_insert_failed",
+                  supabaseErrorCode: documentError.code ?? null,
+                  supabaseErrorMessage: (documentError.message ?? "").slice(0, 300),
+                }),
+              }
+            : {}),
+        },
+        { status: 400 },
+      );
     }
 
     documentId = inserted.id;
   }
 
-  await writeAuditLog(auth.supabase, {
+  await writeAuditLog(supabase, {
     userId: auth.profile.id,
     action: operation === "update" ? "document.replaced" : "document.uploaded",
     entityType: "document",
     entityId: documentId!,
     metadata: {
-      companyId: parsed.data.companyId,
+      companyId,
       documentType: normalizedDocumentType,
       bucket,
       filePath,
