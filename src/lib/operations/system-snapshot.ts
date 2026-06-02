@@ -44,6 +44,10 @@ export type OperationalSystemSnapshot = {
     googleOAuthConfigured: boolean;
     googleConnectedAccounts: number;
   };
+  automation: {
+    lastAutomationRun: { id: string; status: string | null; triggerType: string | null; startedAt: string | null } | null;
+    lastOrchestrationRun: { id: string; status: string | null; triggerSource: string | null; startedAt: string | null } | null;
+  };
   counts: {
     profiles: number | null;
     companies: number | null;
@@ -102,6 +106,8 @@ export async function buildOperationalSnapshot(): Promise<OperationalSystemSnaps
     documentsRes,
     notificationsRes,
     spvRes,
+    lastAutomationRunRes,
+    lastOrchestrationRunRes,
     backupLogsRes,
   ] = await Promise.all([
     admin.storage.listBuckets(),
@@ -111,6 +117,18 @@ export async function buildOperationalSnapshot(): Promise<OperationalSystemSnaps
     admin.from("documents").select("id", { count: "exact", head: true }),
     admin.from("notifications").select("id", { count: "exact", head: true }),
     admin.from("spv_opportunities").select("id", { count: "exact", head: true }),
+    admin
+      .from("automation_runs")
+      .select("id, status, trigger_type, started_at")
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    admin
+      .from("orchestration_runs")
+      .select("id, status, trigger_source, started_at")
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
     admin
       .from("audit_logs")
       .select("action, created_at, metadata")
@@ -168,6 +186,24 @@ export async function buildOperationalSnapshot(): Promise<OperationalSystemSnaps
     integrations: {
       googleOAuthConfigured: isGoogleOAuthConfigured(),
       googleConnectedAccounts: googleAccountsRes.count ?? 0,
+    },
+    automation: {
+      lastAutomationRun: lastAutomationRunRes.data
+        ? {
+            id: String(lastAutomationRunRes.data.id),
+            status: (lastAutomationRunRes.data.status as string | null) ?? null,
+            triggerType: (lastAutomationRunRes.data.trigger_type as string | null) ?? null,
+            startedAt: (lastAutomationRunRes.data.started_at as string | null) ?? null,
+          }
+        : null,
+      lastOrchestrationRun: lastOrchestrationRunRes.data
+        ? {
+            id: String(lastOrchestrationRunRes.data.id),
+            status: (lastOrchestrationRunRes.data.status as string | null) ?? null,
+            triggerSource: (lastOrchestrationRunRes.data.trigger_source as string | null) ?? null,
+            startedAt: (lastOrchestrationRunRes.data.started_at as string | null) ?? null,
+          }
+        : null,
     },
     counts: {
       profiles: profilesRes.count,

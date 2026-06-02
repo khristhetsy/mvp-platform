@@ -16,7 +16,7 @@ export async function POST() {
     const result = await runNotificationOrchestration(supabase, { includeInactivity: true });
     return NextResponse.json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Orchestration failed.";
+    const message = error instanceof Error ? error.message.slice(0, 200) : "Orchestration failed.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const result = await runScheduledDigestPass(supabase, { force });
     return NextResponse.json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Digest pass failed.";
+    const message = error instanceof Error ? error.message.slice(0, 200) : "Digest pass failed.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

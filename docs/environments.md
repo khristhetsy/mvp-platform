@@ -121,6 +121,27 @@ Schedules are defined in `vercel.json` (7:00 and 19:00 UTC daily). Manual staff 
 
 ---
 
+## Required environment variables (summary)
+
+Public (client + server):
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_SITE_URL` (optional legacy alias)
+
+Server-only:
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `CRON_SECRET` (required for cron orchestration on staging/production)
+- `TOKEN_ENCRYPTION_SECRET` (required if Google OAuth is enabled)
+- `OPENAI_API_KEY` (optional; assistant runs in fallback mode without it)
+
+Google OAuth (if used):
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REDIRECT_URI`
+
+---
+
 ## npm scripts
 
 | Script | Description |

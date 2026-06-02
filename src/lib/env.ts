@@ -181,6 +181,7 @@ export function getEnvironmentStatusSummary() {
         trimEnv("GOOGLE_REDIRECT_URI") &&
         trimEnv("TOKEN_ENCRYPTION_SECRET"),
     ),
+    cronConfigured: Boolean(trimEnv("CRON_SECRET")),
     openAiConfigured: Boolean(trimEnv("OPENAI_API_KEY")),
     envValidationOk: validation.ok,
     missingEnvKeys: validation.missing,

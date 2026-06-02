@@ -21,7 +21,14 @@ export async function GET() {
     return NextResponse.json({ companies: data });
   }
 
-  const { data, error } = await auth.supabase.from("companies").select("*").order("created_at", { ascending: false });
+  // Admin/analyst listing is capped and field-limited for safety.
+  const { data, error } = await auth.supabase
+    .from("companies")
+    .select(
+      "id, company_name, review_status, status, is_published, marketplace_visible, published_at, created_at, founder_id, slug",
+    )
+    .order("created_at", { ascending: false })
+    .limit(200);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });

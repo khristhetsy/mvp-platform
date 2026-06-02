@@ -102,6 +102,11 @@ export default async function AdminReportsPage() {
             <Link href="/admin/analytics" className="font-semibold text-[var(--navy)] hover:underline">
               Analytics
             </Link>
+            {" "}
+            ·{" "}
+            <Link href="/admin/system-health" className="font-semibold text-[var(--navy)] hover:underline">
+              System health
+            </Link>
           </p>
         </AdminReportsModuleViews>
       </WorkspacePageContainer>

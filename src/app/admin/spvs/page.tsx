@@ -57,6 +57,7 @@ type SpvWorkspaceData = {
   closingReviewsBySpv: Record<string, SpvClosingReviewRecord>;
   closingReadinessBySpv: Record<string, ClosingReadinessSummary>;
   executionReadinessBySpv: Record<string, SpvExecutionReadinessSummary>;
+  criticalComplianceByCompany: Record<string, number>;
 };
 
 async function loadAdminSpvWorkspace(): Promise<{ data: SpvWorkspaceData | null; error: string | null }> {
@@ -164,6 +165,7 @@ async function loadAdminSpvWorkspace(): Promise<{ data: SpvWorkspaceData | null;
         closingReviewsBySpv,
         closingReadinessBySpv,
         executionReadinessBySpv,
+        criticalComplianceByCompany,
       },
       error: null,
     };
@@ -197,10 +199,7 @@ export default async function AdminSpvsPage() {
       ? computeSpvDelayRiskSignals({
           spv: primarySpv,
           execution: primaryExecutionSummary,
-          criticalComplianceOpenCount: await countCriticalOpenComplianceForCompany(
-            createServiceRoleClient(),
-            primarySpv.company_id,
-          ).then((r) => r.count).catch(() => 0),
+          criticalComplianceOpenCount: data?.criticalComplianceByCompany?.[primarySpv.company_id] ?? 0,
         })
       : [];
   if (primaryExecutionSummary) {

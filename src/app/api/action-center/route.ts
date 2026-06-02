@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     });
     return NextResponse.json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to load action center.";
+    const message = error instanceof Error ? error.message.slice(0, 200) : "Unable to load action center.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
