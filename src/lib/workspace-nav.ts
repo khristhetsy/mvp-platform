@@ -53,6 +53,7 @@ export const adminWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/admin/reports", label: "Reports" },
   { href: "/admin/imports", label: "Import / Export" },
   { href: "/admin/analytics", label: "Analytics" },
+  { href: "/admin/insights", label: "Insights" },
   { href: "/admin/system-health", label: "System Health" },
   { href: "/admin/page-builder-lab", label: "Page Builder Lab", requiredPermission: "manage_page_builder" },
   { href: "/admin/users/permissions", label: "User Permissions", requiredPermission: "manage_users" },
