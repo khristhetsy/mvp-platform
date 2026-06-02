@@ -47,6 +47,10 @@ import {
   isDocumentExecutionIntent,
 } from "@/lib/document-execution/document-execution-summary";
 import {
+  formatPlatformAnalyticsForAssistant,
+  isPlatformAnalyticsIntent,
+} from "@/lib/analytics/metrics";
+import {
   formatScheduledAnswerForAssistant,
   isScheduledDigestIntent,
 } from "@/lib/notifications/scheduled/summaries";
@@ -304,6 +308,9 @@ export async function runAssistantChat(input: {
   const documentExecutionIntent =
     isDocumentExecutionIntent(message) &&
     (input.profile.role === "admin" || input.profile.role === "analyst");
+  const platformAnalyticsIntent =
+    isPlatformAnalyticsIntent(message) &&
+    (input.profile.role === "admin" || input.profile.role === "analyst");
   const scheduledIntent = isScheduledDigestIntent(message);
   const orchestrationIntent =
     isOrchestrationAttentionIntent(message) || scheduledIntent || cronStatusIntent;
@@ -384,6 +391,9 @@ export async function runAssistantChat(input: {
   } else if (crmExportIntent) {
     answer = formatCrmExportForAssistant(message);
     relatedLinks.unshift({ label: "CRM export", href: "/admin/imports#crm-export" });
+  } else if (platformAnalyticsIntent) {
+    answer = await formatPlatformAnalyticsForAssistant(message);
+    relatedLinks.unshift({ label: "Analytics", href: "/admin/analytics" });
   } else if (documentExecutionIntent) {
     answer = await formatDocumentExecutionForAssistant(
       message,
