@@ -68,6 +68,7 @@ create table if not exists public.learning_quiz_questions (
   prompt text not null,
   options jsonb not null default '[]'::jsonb,
   correct_option_index integer not null default 0,
+  explanation text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

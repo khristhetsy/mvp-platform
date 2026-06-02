@@ -283,6 +283,7 @@ export type Database = {
           prompt: string;
           options: unknown;
           correct_option_index: number;
+          explanation?: string | null;
           created_at: string;
           updated_at: string;
         };
