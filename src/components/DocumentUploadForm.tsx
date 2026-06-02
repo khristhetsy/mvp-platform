@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 type Props = {
   companyId: string;
   companyName: string;
-  documentTypes: string[];
+  documentTypes: { label: string; value: string }[];
+  existingByType?: Record<string, { fileName?: string | null } | undefined>;
   maxUploadBytes: number;
 };
 
@@ -50,15 +51,25 @@ function toMessage(status: number, body: unknown) {
   return fallback;
 }
 
-export function DocumentUploadForm({ companyId, companyName, documentTypes, maxUploadBytes }: Props) {
+export function DocumentUploadForm({
+  companyId,
+  companyName,
+  documentTypes,
+  existingByType = {},
+  maxUploadBytes,
+}: Props) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const [documentType, setDocumentType] = useState("PITCH_DECK");
+  const [documentType, setDocumentType] = useState(() => documentTypes[0]?.value ?? "PITCH_DECK");
   const [progress, setProgress] = useState<number | null>(null);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   const accept = useMemo(() => allowedAccept(documentType), [documentType]);
+  const hasExistingForSelected = useMemo(() => {
+    const key = documentType.toUpperCase();
+    return Boolean(existingByType[key]?.fileName);
+  }, [documentType, existingByType]);
 
   async function uploadOnce() {
     const file = fileRef.current?.files?.[0] ?? null;
@@ -134,22 +145,32 @@ export function DocumentUploadForm({ companyId, companyName, documentTypes, maxU
         Uploading for <span className="font-semibold text-slate-950">{companyName}</span>
       </p>
 
-      <select
-        name="documentType"
-        className="rounded-xl border border-slate-300 px-4 py-3"
-        value={documentType}
-        onChange={(e) => setDocumentType(e.target.value)}
-        disabled={isUploading}
-      >
-        {documentTypes.map((label) => {
-          const value = label.toUpperCase().replaceAll(" ", "_");
-          return (
-            <option key={label} value={value}>
-              {label}
-            </option>
-          );
-        })}
-      </select>
+      <div className="grid gap-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Document type</p>
+        <div className="grid gap-2">
+          {documentTypes.map((type) => {
+            const active = type.value === documentType;
+            const existing = existingByType[type.value.toUpperCase()]?.fileName ?? null;
+            return (
+              <button
+                key={type.value}
+                type="button"
+                className={[
+                  "flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm",
+                  active ? "border-slate-900 bg-slate-950 text-white" : "border-slate-300 bg-white text-slate-900",
+                ].join(" ")}
+                onClick={() => setDocumentType(type.value)}
+                disabled={isUploading}
+              >
+                <span className="font-medium">{type.label}</span>
+                <span className={active ? "text-slate-200" : "text-slate-500"}>
+                  {existing ? "Replace" : "Upload"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <input
         ref={fileRef}
@@ -176,9 +197,6 @@ export function DocumentUploadForm({ companyId, companyName, documentTypes, maxU
       {result?.ok === false ? (
         <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
           <p>{result.message}</p>
-          {result.status === 409 ? (
-            <p className="mt-1 text-red-600">Tip: remove the existing pitch deck first, or upload a different document type.</p>
-          ) : null}
         </div>
       ) : null}
 
@@ -189,7 +207,7 @@ export function DocumentUploadForm({ companyId, companyName, documentTypes, maxU
           onClick={() => void uploadWithRetry()}
           disabled={isUploading}
         >
-          {isUploading ? "Uploading..." : "Upload document"}
+          {isUploading ? "Uploading..." : hasExistingForSelected ? "Replace document" : "Upload document"}
         </button>
         {result?.ok === false ? (
           <button

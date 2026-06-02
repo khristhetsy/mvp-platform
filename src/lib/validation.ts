@@ -75,10 +75,15 @@ export const documentUploadSchema = z.object({
   companyId: z.string().min(1),
   documentType: z.enum([
     "PITCH_DECK",
-    "FINANCIAL_STATEMENTS",
     "CAP_TABLE",
     "BUSINESS_PLAN",
+    "FINANCIAL_STATEMENTS",
+    "FINANCIALS",
+    "TEAM_BIOS",
     "LEGAL_DOCUMENTS",
+    "LEGAL_DOCUMENT",
+    "OTHER",
+    // Legacy/extended types (kept for backward compatibility)
     "CORPORATE_DOCUMENTS",
     "CUSTOMER_CONTRACTS",
     "MARKET_RESEARCH",

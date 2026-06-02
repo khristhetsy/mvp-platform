@@ -28,9 +28,16 @@ const uploadErrorMessages: Record<number, string> = {
   400: "Upload failed due to invalid input. Please check the file and try again.",
   401: "Authentication required. Please sign in and try again.",
   403: "No company profile is linked to your account. Please create a company profile first.",
-  409: "A pitch deck is already uploaded for this company.",
+  409: "A document is already uploaded for this company.",
   500: "Upload failed due to a server error. Please try again.",
 };
+
+function normalizeDocumentType(input: string) {
+  const value = input.toUpperCase().trim();
+  if (value === "FINANCIALS") return "FINANCIAL_STATEMENTS";
+  if (value === "LEGAL_DOCUMENT") return "LEGAL_DOCUMENTS";
+  return value;
+}
 
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);
@@ -61,6 +68,8 @@ export async function POST(request: Request) {
   if (!parsed.success || !(file instanceof File)) {
     return NextResponse.json({ error: "Invalid upload request." }, { status: 400 });
   }
+
+  const normalizedDocumentType = normalizeDocumentType(parsed.data.documentType);
 
   if (!company) {
     return NextResponse.json(
@@ -94,28 +103,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Pitch decks must be uploaded as a PDF." }, { status: 400 });
   }
 
-  // Prevent duplicate pitch deck uploads for a company.
-  if (parsed.data.documentType === "PITCH_DECK") {
-    const { data: existingPitchDeck, error: existingError } = await auth.supabase
-      .from("documents")
-      .select("id")
-      .eq("company_id", parsed.data.companyId)
-      .eq("document_type", "PITCH_DECK")
-      .limit(1)
-      .maybeSingle();
+  const { data: existingDocument, error: existingError } = await auth.supabase
+    .from("documents")
+    .select("id, document_type, status")
+    .eq("company_id", parsed.data.companyId)
+    .eq("document_type", normalizedDocumentType)
+    .neq("status", "archived")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-    if (existingError) {
-      return NextResponse.json({ error: existingError.message }, { status: 400 });
-    }
-
-    if (existingPitchDeck) {
-      return NextResponse.json({ error: uploadErrorMessages[409] }, { status: 409 });
-    }
+  if (existingError) {
+    return NextResponse.json({ error: existingError.message }, { status: 400 });
   }
 
-  const bucket = getStorageBucket(parsed.data.documentType);
+  const bucket = getStorageBucket(normalizedDocumentType);
   const filePath = buildStoragePath(
-    parsed.data.documentType,
+    normalizedDocumentType,
     parsed.data.companyId,
     auth.profile.id,
     file.name,
@@ -145,40 +149,83 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: uploadError.message }, { status: 400 });
   }
 
-  const { data: document, error: documentError } = await createDocumentRecord(auth.supabase, {
-    company_id: parsed.data.companyId,
-    uploaded_by: auth.profile.id,
-    document_type: parsed.data.documentType,
-    file_name: file.name,
-    file_path: filePath,
-    file_url: null,
-    mime_type: file.type,
-    size_bytes: file.size,
-    status: "uploaded",
-  });
+  // Replacement behavior:
+  // - For PITCH_DECK: update the existing row to avoid the unique index on (company_id) where document_type = 'PITCH_DECK'.
+  // - For other document types: archive the prior active row (if present) and insert a new row as the latest version.
+  let documentId: string | null = null;
+  let operation: "insert" | "update" = "insert";
 
-  if (documentError) {
-    // In case a unique constraint is added later (e.g., one pitch deck per company), return a clearer message.
-    if (documentError.code === "23505") {
-      return NextResponse.json({ error: uploadErrorMessages[409] }, { status: 409 });
+  if (existingDocument?.id && normalizedDocumentType === "PITCH_DECK") {
+    const { data: updated, error: updateError } = await auth.supabase
+      .from("documents")
+      .update({
+        uploaded_by: auth.profile.id,
+        document_type: normalizedDocumentType,
+        file_name: file.name,
+        file_path: filePath,
+        file_url: null,
+        mime_type: file.type,
+        size_bytes: file.size,
+        status: "uploaded",
+      })
+      .eq("id", existingDocument.id)
+      .select("id")
+      .single();
+
+    if (updateError || !updated?.id) {
+      return NextResponse.json({ error: updateError?.message ?? "Unable to replace document." }, { status: 400 });
     }
-    return NextResponse.json({ error: documentError.message }, { status: 400 });
+    documentId = updated.id;
+    operation = "update";
+  } else {
+    if (existingDocument?.id) {
+      const { error: archiveError } = await auth.supabase
+        .from("documents")
+        .update({ status: "archived" })
+        .eq("id", existingDocument.id);
+
+      if (archiveError) {
+        return NextResponse.json({ error: archiveError.message }, { status: 400 });
+      }
+    }
+
+    const { data: inserted, error: documentError } = await createDocumentRecord(auth.supabase, {
+      company_id: parsed.data.companyId,
+      uploaded_by: auth.profile.id,
+      document_type: normalizedDocumentType,
+      file_name: file.name,
+      file_path: filePath,
+      file_url: null,
+      mime_type: file.type,
+      size_bytes: file.size,
+      status: "uploaded",
+    });
+
+    if (documentError) {
+      // In case a unique constraint is added later, return a clearer message.
+      if (documentError.code === "23505") {
+        return NextResponse.json({ error: uploadErrorMessages[409] }, { status: 409 });
+      }
+      return NextResponse.json({ error: documentError.message }, { status: 400 });
+    }
+
+    documentId = inserted.id;
   }
 
   await writeAuditLog(auth.supabase, {
     userId: auth.profile.id,
-    action: "document.uploaded",
+    action: operation === "update" ? "document.replaced" : "document.uploaded",
     entityType: "document",
-    entityId: document.id,
+    entityId: documentId!,
     metadata: {
       companyId: parsed.data.companyId,
-      documentType: parsed.data.documentType,
+      documentType: normalizedDocumentType,
       bucket,
       filePath,
     },
   });
 
   return NextResponse.json({
-    document,
+    ok: true,
   });
 }

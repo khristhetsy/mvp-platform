@@ -3,10 +3,19 @@ import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { DocumentUploadForm } from "@/components/DocumentUploadForm";
 import { listCompanyDocuments } from "@/lib/data/documents";
-import { requiredDocumentTypes } from "@/lib/mock-data";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
+
+const FOUNDER_DOCUMENT_TYPES: { label: string; value: string; aliases?: string[] }[] = [
+  { label: "Pitch Deck", value: "PITCH_DECK" },
+  { label: "Business Plan", value: "BUSINESS_PLAN" },
+  { label: "Financials", value: "FINANCIALS", aliases: ["FINANCIAL_STATEMENTS"] },
+  { label: "Cap Table", value: "CAP_TABLE" },
+  { label: "Team Bios", value: "TEAM_BIOS" },
+  { label: "Legal Document", value: "LEGAL_DOCUMENT", aliases: ["LEGAL_DOCUMENTS"] },
+  { label: "Other", value: "OTHER" },
+];
 
 export default async function DocumentUploadPage() {
   const profile = await requireRole(["founder"]);
@@ -14,6 +23,21 @@ export default async function DocumentUploadPage() {
   const supabase = await createServerSupabaseClient();
   const { data: documents } = company ? await listCompanyDocuments(supabase, company.id) : { data: [] };
   const maxUploadBytes = 25 * 1024 * 1024;
+
+  const existingByType: Record<string, { fileName?: string | null } | undefined> = {};
+  for (const type of FOUNDER_DOCUMENT_TYPES) {
+    const matchValues = new Set([type.value, ...(type.aliases ?? [])].map((v) => v.toUpperCase()));
+    const latest =
+      (documents ?? []).find(
+        (doc) =>
+          doc.document_type &&
+          matchValues.has(String(doc.document_type).toUpperCase()) &&
+          String(doc.status ?? "").toLowerCase() !== "archived",
+      ) ?? null;
+    if (latest) {
+      existingByType[type.value.toUpperCase()] = { fileName: latest.file_name ?? null };
+    }
+  }
 
   return (
     <FounderAppShell
@@ -44,7 +68,8 @@ export default async function DocumentUploadPage() {
             <DocumentUploadForm
               companyId={company.id}
               companyName={company.company_name}
-              documentTypes={requiredDocumentTypes}
+              documentTypes={FOUNDER_DOCUMENT_TYPES.map(({ label, value }) => ({ label, value }))}
+              existingByType={existingByType}
               maxUploadBytes={maxUploadBytes}
             />
           )}
