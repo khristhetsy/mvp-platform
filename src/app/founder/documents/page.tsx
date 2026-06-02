@@ -21,6 +21,9 @@ export default async function DocumentUploadPage() {
   const profile = await requireRole(["founder"]);
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.getUser();
   const { data: documents } = company ? await listCompanyDocuments(supabase, company.id) : { data: [] };
   const maxUploadBytes = 25 * 1024 * 1024;
 
@@ -38,6 +41,17 @@ export default async function DocumentUploadPage() {
       existingByType[type.value.toUpperCase()] = { fileName: latest.file_name ?? null };
     }
   }
+
+  const debugEnabled = process.env.NODE_ENV !== "production";
+  const membership =
+    debugEnabled && company
+      ? await supabase
+          .from("company_members")
+          .select("role")
+          .eq("company_id", company.id)
+          .eq("user_id", authUser?.id ?? profile.id)
+          .maybeSingle()
+      : null;
 
   return (
     <FounderAppShell
@@ -73,6 +87,28 @@ export default async function DocumentUploadPage() {
               maxUploadBytes={maxUploadBytes}
             />
           )}
+
+          {debugEnabled ? (
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700">
+              <p className="font-semibold text-slate-900">Dev diagnostics (temporary)</p>
+              <pre className="mt-2 whitespace-pre-wrap">
+{JSON.stringify(
+  {
+    authUserId: authUser?.id ?? null,
+    profileId: profile.id,
+    companyId: company?.id ?? null,
+    companyName: company?.company_name ?? null,
+    companyMembersRole: membership?.data?.role ?? null,
+  },
+  null,
+  2,
+)}
+              </pre>
+              <p className="mt-2 text-slate-500">
+                Tip: to get server upload debug, call upload with <span className="font-mono">/api/documents/upload?debug=1</span>.
+              </p>
+            </div>
+          ) : null}
         </div>
 
         <div className="cap-surface-card p-6 lg:p-7">

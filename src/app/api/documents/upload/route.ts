@@ -68,8 +68,9 @@ export async function POST(request: Request) {
   let company = await ensureFounderCompanyForUser(auth.profile);
 
   const formData = await request.formData();
+  const requestedCompanyId = formData.get("companyId");
   const parsed = documentUploadSchema.safeParse({
-    companyId: formData.get("companyId") || company?.id,
+    companyId: requestedCompanyId || company?.id,
     documentType: formData.get("documentType"),
   });
   const file = formData.get("file");
@@ -91,7 +92,8 @@ export async function POST(request: Request) {
     // Supabase generated types may not include these helper functions; cast for debug-only RPC calls.
     const rpc = (supabase as unknown as { rpc: (fn: string, args: any) => any }).rpc;
 
-    const [membershipRes, canManageRes, belongsRes] = await Promise.all([
+    const [companyRes, membershipRes, canManageRes, belongsRes] = await Promise.all([
+      supabase.from("companies").select("id").eq("id", companyId).maybeSingle(),
       supabase
         .from("company_members")
         .select("id, role, company_id, user_id")
@@ -107,12 +109,20 @@ export async function POST(request: Request) {
         authUserId,
         profileId,
       },
+      company_resolution: {
+        requested_company_id: typeof requestedCompanyId === "string" ? requestedCompanyId : null,
+        ensure_founder_company_id: company?.id ?? null,
+        parsed_company_id: companyId,
+        company_exists: Boolean(companyRes.data?.id),
+        company_select_error: companyRes.error?.message?.slice(0, 200) ?? null,
+      },
       insert: {
         company_id: companyId,
         uploaded_by: authUserId,
         document_type: normalizedDocumentType,
       },
       checks: {
+        user_has_company_access: hasAccess,
         user_can_manage_company: canManageRes?.data ?? null,
         user_can_manage_company_error: canManageRes?.error?.message?.slice(0, 200) ?? null,
         user_belongs_to_company: belongsRes?.data ?? null,
@@ -136,7 +146,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const hasAccess = await userHasCompanyAccess(auth.profile.id, companyId);
+  const hasAccess = await userHasCompanyAccess(profileId, companyId);
 
   if (!hasAccess) {
     return NextResponse.json(
@@ -262,20 +272,38 @@ export async function POST(request: Request) {
         .eq("id", existingDocument.id);
 
       if (archiveError) {
-        return NextResponse.json({ error: archiveError.message }, { status: 400 });
+        return NextResponse.json(
+          {
+            error: archiveError.message,
+            ...(debugRequested
+              ? {
+                  debug: await buildDebug({
+                    stage: "documents_archive_failed",
+                    supabaseErrorCode: archiveError.code ?? null,
+                    supabaseErrorMessage: (archiveError.message ?? "").slice(0, 300),
+                  }),
+                }
+              : {}),
+          },
+          { status: 400 },
+        );
       }
     }
 
-    const { data: inserted, error: documentError } = await createDocumentRecord(supabase, {
+    const insertPayload = {
       company_id: companyId,
       uploaded_by: authUserId,
       document_type: normalizedDocumentType,
       file_name: file.name,
-      file_path: filePath,
-      file_url: null,
       mime_type: file.type,
       size_bytes: file.size,
       status: "uploaded",
+    } as const;
+
+    const { data: inserted, error: documentError } = await createDocumentRecord(supabase, {
+      ...insertPayload,
+      file_path: filePath,
+      file_url: null,
     });
 
     if (documentError) {
@@ -292,6 +320,7 @@ export async function POST(request: Request) {
                   stage: "documents_insert_failed",
                   supabaseErrorCode: documentError.code ?? null,
                   supabaseErrorMessage: (documentError.message ?? "").slice(0, 300),
+                  insert_payload_keys: Object.keys(insertPayload),
                 }),
               }
             : {}),

@@ -64,12 +64,14 @@ export function DocumentUploadForm({
   const [progress, setProgress] = useState<number | null>(null);
   const [result, setResult] = useState<UploadResult | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [lastDebug, setLastDebug] = useState<unknown>(null);
 
   const accept = useMemo(() => allowedAccept(documentType), [documentType]);
   const hasExistingForSelected = useMemo(() => {
     const key = documentType.toUpperCase();
     return Boolean(existingByType[key]?.fileName);
   }, [documentType, existingByType]);
+  const debugEnabled = process.env.NODE_ENV !== "production";
 
   async function uploadOnce() {
     const file = fileRef.current?.files?.[0] ?? null;
@@ -95,7 +97,7 @@ export function DocumentUploadForm({
 
     const response = await new Promise<{ status: number; body: unknown }>((resolve) => {
       const xhr = new XMLHttpRequest();
-      xhr.open("POST", "/api/documents/upload");
+      xhr.open("POST", debugEnabled ? "/api/documents/upload?debug=1" : "/api/documents/upload");
 
       xhr.upload.onprogress = (event) => {
         if (!event.lengthComputable) return;
@@ -122,10 +124,16 @@ export function DocumentUploadForm({
 
     if (response.status >= 200 && response.status < 300) {
       setResult({ ok: true });
+      setLastDebug(null);
       router.refresh();
       return;
     }
 
+    if (debugEnabled && response.body && typeof response.body === "object" && "debug" in (response.body as any)) {
+      setLastDebug((response.body as any).debug);
+    } else {
+      setLastDebug(null);
+    }
     setResult({ ok: false, status: response.status, message: toMessage(response.status, response.body) });
   }
 
@@ -197,6 +205,13 @@ export function DocumentUploadForm({
       {result?.ok === false ? (
         <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
           <p>{result.message}</p>
+        </div>
+      ) : null}
+
+      {debugEnabled && lastDebug ? (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+          <p className="font-semibold text-slate-900">Upload debug (temporary)</p>
+          <pre className="mt-2 overflow-auto whitespace-pre-wrap">{JSON.stringify(lastDebug, null, 2)}</pre>
         </div>
       ) : null}
 
