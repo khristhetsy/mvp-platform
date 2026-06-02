@@ -10,6 +10,8 @@ import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { resolveCompanyDependencies } from "@/lib/automation/dependencies";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
+import { computeCompanyReadinessRiskSignals } from "@/lib/predictive-intelligence/readiness-risk";
+import type { RiskSignal } from "@/lib/predictive-intelligence/types";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +30,7 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
   let workspace = null;
   let companyActions = null;
   let workflowDependencies: Awaited<ReturnType<typeof resolveCompanyDependencies>> = [];
+  let companyRiskSignals: RiskSignal[] = [];
 
   try {
     workspace = await getAdminCompanyWorkspace(companyId);
@@ -43,6 +46,9 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
         sync: true,
       },
     });
+    if (workspace) {
+      companyRiskSignals = computeCompanyReadinessRiskSignals({ companyId, workspace });
+    }
   } catch (error) {
     loadError = formatError(error);
   }
@@ -80,6 +86,7 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
                 nextBestActions={companyActions?.actions ?? []}
                 workflowDependencies={workflowDependencies}
                 adminRole={adminRole}
+                riskSignals={companyRiskSignals}
               />
             </>
           ) : null}

@@ -19,17 +19,21 @@ import { DraftEmailPanel } from "@/components/email/DraftEmailPanel";
 import type { AdminCompanyWorkspaceData } from "@/lib/admin/company-workspace-types";
 import type { WorkflowDependency } from "@/lib/automation/types";
 import type { NextBestAction, NextBestActionRole } from "@/lib/next-best-actions/types";
+import type { RiskSignal } from "@/lib/predictive-intelligence/types";
+import { RiskSignalsPanel } from "@/components/predictive-intelligence/RiskSignalsPanel";
 
 export function AdminCompanyWorkspace({
   data,
   nextBestActions = [],
   workflowDependencies = [],
   adminRole = "admin",
+  riskSignals = [],
 }: Readonly<{
   data: AdminCompanyWorkspaceData;
   nextBestActions?: NextBestAction[];
   workflowDependencies?: WorkflowDependency[];
   adminRole?: NextBestActionRole;
+  riskSignals?: RiskSignal[];
 }>) {
   return (
     <div className="space-y-6">
@@ -55,6 +59,17 @@ export function AdminCompanyWorkspace({
           limit={3}
           showEscalate
         />
+      ) : null}
+
+      {riskSignals.length > 0 ? (
+        <PageSection title="Predictive insights" subtitle="Rules-based risk signals (Phase 1)">
+          <RiskSignalsPanel
+            signals={riskSignals}
+            maxItems={3}
+            title="Company risk signals"
+            subtitle="Deterministic rules — no auto-approvals or workflow changes"
+          />
+        </PageSection>
       ) : null}
 
       <PageSection title="Operational timeline" subtitle="Company-scoped events from operational_activity_events">

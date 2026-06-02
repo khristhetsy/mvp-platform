@@ -42,6 +42,8 @@ import { computeExecutionReadinessBySpvMap } from "@/lib/document-execution/read
 import type { SpvExecutionReadinessSummary } from "@/lib/document-execution/types";
 import { logDocumentExecutionReadinessChecked } from "@/lib/document-execution/audit";
 import { SpvExecutionReadinessPanel } from "@/components/spv/SpvExecutionReadinessPanel";
+import { computeSpvDelayRiskSignals } from "@/lib/predictive-intelligence/spv-risk";
+import { RiskSignalsPanel } from "@/components/predictive-intelligence/RiskSignalsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -189,6 +191,18 @@ export default async function AdminSpvsPage() {
   const primaryExecutionSummary = primarySpvId
     ? data?.executionReadinessBySpv?.[primarySpvId]
     : undefined;
+  const primarySpv = primarySpvId ? opportunities.find((o) => o.id === primarySpvId) : undefined;
+  const primarySpvDelaySignals =
+    primarySpv && primaryExecutionSummary
+      ? computeSpvDelayRiskSignals({
+          spv: primarySpv,
+          execution: primaryExecutionSummary,
+          criticalComplianceOpenCount: await countCriticalOpenComplianceForCompany(
+            createServiceRoleClient(),
+            primarySpv.company_id,
+          ).then((r) => r.count).catch(() => 0),
+        })
+      : [];
   if (primaryExecutionSummary) {
     await logDocumentExecutionReadinessChecked(supabase, profile, primaryExecutionSummary).catch(() => null);
   }
@@ -254,6 +268,22 @@ export default async function AdminSpvsPage() {
                   subtitle="Phase 1 — readiness only, DocuSign not connected"
                 >
                   <SpvExecutionReadinessPanel summary={primaryExecutionSummary} />
+                </WorkspacePanel>
+              </div>
+            ) : null}
+
+            {primarySpvDelaySignals.length > 0 ? (
+              <div className="mb-6">
+                <WorkspacePanel
+                  title="Predictive insights"
+                  subtitle="Rules-based SPV delay risk signals (Phase 1)"
+                >
+                  <RiskSignalsPanel
+                    signals={primarySpvDelaySignals}
+                    maxItems={2}
+                    title="SPV delay risk"
+                    subtitle="Deterministic rules — no auto-execution or workflow changes"
+                  />
                 </WorkspacePanel>
               </div>
             ) : null}

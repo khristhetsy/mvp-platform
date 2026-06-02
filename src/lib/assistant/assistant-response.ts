@@ -51,6 +51,10 @@ import {
   isPlatformAnalyticsIntent,
 } from "@/lib/analytics/metrics";
 import {
+  formatPredictiveInsightsForAssistant,
+  isPredictiveInsightsIntent,
+} from "@/lib/predictive-intelligence/signals";
+import {
   formatScheduledAnswerForAssistant,
   isScheduledDigestIntent,
 } from "@/lib/notifications/scheduled/summaries";
@@ -311,6 +315,9 @@ export async function runAssistantChat(input: {
   const platformAnalyticsIntent =
     isPlatformAnalyticsIntent(message) &&
     (input.profile.role === "admin" || input.profile.role === "analyst");
+  const predictiveInsightsIntent =
+    isPredictiveInsightsIntent(message) &&
+    (input.profile.role === "admin" || input.profile.role === "analyst");
   const scheduledIntent = isScheduledDigestIntent(message);
   const orchestrationIntent =
     isOrchestrationAttentionIntent(message) || scheduledIntent || cronStatusIntent;
@@ -394,6 +401,9 @@ export async function runAssistantChat(input: {
   } else if (platformAnalyticsIntent) {
     answer = await formatPlatformAnalyticsForAssistant(message);
     relatedLinks.unshift({ label: "Analytics", href: "/admin/analytics" });
+  } else if (predictiveInsightsIntent) {
+    answer = await formatPredictiveInsightsForAssistant(message);
+    relatedLinks.unshift({ label: "Predictive insights", href: "/admin/insights" });
   } else if (documentExecutionIntent) {
     answer = await formatDocumentExecutionForAssistant(
       message,
