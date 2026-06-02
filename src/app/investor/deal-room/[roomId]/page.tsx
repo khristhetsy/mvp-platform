@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { DealRoomQuestionsPanel } from "@/components/deal-room/DealRoomQuestionsPanel";
 import { DealRoomDocRequestsPanel } from "@/components/deal-room/DealRoomDocRequestsPanel";
+import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,10 @@ export default async function InvestorDealRoomPage({ params }: PageProps) {
               ))}
             </div>
           )}
+        </WorkspacePanel>
+
+        <WorkspacePanel title="Collaboration" subtitle="Discussion thread">
+          <CollaborationDiscussionPanel entityType="deal_room" entityId={roomId} />
         </WorkspacePanel>
       </div>
     </AppShell>

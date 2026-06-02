@@ -125,6 +125,21 @@ export async function resolveEntityAccess(
     return { allowed: false, context };
   }
 
+  if (entityType === "deal_room") {
+    const { data: room } = await supabase
+      .from("deal_rooms")
+      .select("id, company_id, founder_id, investor_profile_id, investor_user_id, spv_id")
+      .eq("id", entityId)
+      .maybeSingle();
+    if (!room) return { allowed: false, context };
+    context.companyId = room.company_id;
+    context.investorProfileId = room.investor_profile_id;
+    context.spvId = room.spv_id;
+    if (profile.role === "founder" && room.founder_id === profile.id) return { allowed: true, context };
+    if (profile.role === "investor" && room.investor_user_id === profile.id) return { allowed: true, context };
+    return { allowed: false, context };
+  }
+
   return { allowed: false, context };
 }
 
@@ -164,6 +179,17 @@ async function enrichContextFromEntity(
     return;
   }
   if (entityType === "queue") {
+    return;
+  }
+  if (entityType === "deal_room") {
+    const { data: room } = await supabase
+      .from("deal_rooms")
+      .select("company_id, investor_profile_id, spv_id")
+      .eq("id", entityId)
+      .maybeSingle();
+    context.companyId = room?.company_id ?? null;
+    context.investorProfileId = room?.investor_profile_id ?? null;
+    context.spvId = room?.spv_id ?? null;
     return;
   }
 }

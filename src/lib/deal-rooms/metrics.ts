@@ -1,5 +1,3 @@
-import type { DealRoomQuestionStatus, DealRoomDocumentRequestStatus } from "@/lib/deal-rooms/types";
-
 export type DealRoomEngagementSnapshot = {
   unresolvedCount: number;
   unresolvedQuestions: number;
@@ -17,8 +15,8 @@ function hoursBetween(aIso: string, bIso: string) {
 }
 
 export function computeEngagementSnapshot(input: {
-  questions: Array<{ status: DealRoomQuestionStatus; created_at: string; responded_at: string | null }>;
-  docRequests: Array<{ status: DealRoomDocumentRequestStatus; created_at: string; fulfilled_at: string | null }>;
+  questions: Array<{ status: string; created_at: string; responded_at: string | null }>;
+  docRequests: Array<{ status: string; created_at: string; fulfilled_at: string | null }>;
   activity: Array<{ created_at: string }>;
 }): DealRoomEngagementSnapshot {
   const unresolvedQuestions = input.questions.filter((q) => q.status !== "resolved").length;

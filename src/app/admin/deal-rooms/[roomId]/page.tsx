@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
+import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
@@ -132,6 +133,18 @@ export default async function AdminDealRoomDetailPage({ params }: PageProps) {
               ))}
             </div>
           )}
+        </WorkspacePanel>
+
+        <WorkspacePanel title="Collaboration" subtitle="Comments & internal notes">
+          <CollaborationDiscussionPanel
+            entityType="deal_room"
+            entityId={roomId}
+            threadContext={{
+              companyId: room.company_id,
+              investorProfileId: room.investor_profile_id,
+              spvId: room.spv_id,
+            }}
+          />
         </WorkspacePanel>
       </WorkspacePageContainer>
     </AppShell>
