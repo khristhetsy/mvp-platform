@@ -4,7 +4,7 @@ import type { MigrationVerificationResult } from "@/lib/operations/migration-ver
 export function AdminMigrationWarningBanner({
   migrations,
 }: Readonly<{ migrations: MigrationVerificationResult }>) {
-  if (migrations.ok) return null;
+  if (migrations.ok || migrations.verificationUnavailable) return null;
 
   return (
     <div

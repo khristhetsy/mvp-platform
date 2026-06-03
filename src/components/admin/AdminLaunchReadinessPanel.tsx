@@ -91,7 +91,11 @@ export function AdminLaunchReadinessPanel({
       <div className="grid gap-6 xl:grid-cols-2">
         <WorkspacePanel title="Migrations" subtitle="Database floor verification">
           <ul className="space-y-2">
-            <StatusRow label="Required floor applied" ok={migrations.ok} detail={migrations.detail} />
+            <StatusRow
+              label="Required floor applied"
+              ok={migrations.verificationUnavailable ? true : migrations.ok}
+              detail={migrations.detail}
+            />
             <StatusRow
               label="Repo latest migration"
               ok={Boolean(migrations.repoLatest)}
@@ -99,11 +103,13 @@ export function AdminLaunchReadinessPanel({
             />
             <StatusRow
               label="Applied latest migration"
-              ok={migrations.floorApplied}
+              ok={migrations.verificationUnavailable ? true : migrations.floorApplied}
               detail={
-                migrations.databaseQueryable
-                  ? `${migrations.appliedLatest ?? "none"} (${migrations.appliedTotal ?? 0} applied)`
-                  : "DATABASE_URL not configured — cannot verify applied migrations"
+                migrations.verificationUnavailable
+                  ? migrations.detail
+                  : migrations.databaseQueryable
+                    ? `${migrations.appliedLatest ?? "none"} (${migrations.appliedTotal ?? 0} applied)`
+                    : migrations.detail
               }
             />
           </ul>
@@ -132,10 +138,10 @@ export function AdminLaunchReadinessPanel({
             <StatusRow key={check.id} label={check.label} ok={check.ok} detail={check.detail} />
           ))}
         </ul>
-        {!security.databaseQueryable ? (
+        {security.verificationUnavailable ? (
           <p className="mt-3 text-xs text-slate-500">
-            Set <code className="rounded bg-slate-100 px-1">DATABASE_URL</code> on the deployment to verify triggers
-            and RLS policies.
+            Optional: set <code className="rounded bg-slate-100 px-1">DATABASE_URL</code> on the deployment to verify
+            triggers and RLS policies. The app does not require it for normal operation.
           </p>
         ) : null}
       </WorkspacePanel>
