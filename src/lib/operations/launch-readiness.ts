@@ -55,13 +55,6 @@ function isMigrationVerificationSkipped(migrations: MigrationVerificationResult)
   );
 }
 
-function isSecurityVerificationSkipped(security: SecurityVerificationSummary) {
-  return (
-    security.verificationUnavailable ||
-    security.checks.some((check) => check.detail.startsWith(MIGRATION_VERIFICATION_UNAVAILABLE))
-  );
-}
-
 function fallbackMigrations(): MigrationVerificationResult {
   return {
     floor: REQUIRED_MIGRATION_FLOOR,
@@ -79,13 +72,13 @@ function fallbackMigrations(): MigrationVerificationResult {
 
 function fallbackSecurity(): SecurityVerificationSummary {
   return {
-    ok: true,
+    ok: false,
     checks: [
       {
         id: "database",
         label: "Database verification",
-        ok: true,
-        detail: `${MIGRATION_VERIFICATION_UNAVAILABLE} — Migration query failed`,
+        ok: false,
+        detail: `${MIGRATION_VERIFICATION_UNAVAILABLE} — Cannot verify security policies without database access`,
       },
     ],
     databaseQueryable: false,
@@ -223,12 +216,22 @@ export async function buildLaunchReadinessSnapshot(): Promise<LaunchReadinessSna
     ]);
 
     const blockers: string[] = [];
+    
+    // Only skip migration blockers if verification was unavailable (non-blocking)
     if (!migrations.verificationUnavailable && !migrations.ok) {
       blockers.push(migrations.detail);
     }
-    if (!security.verificationUnavailable && !security.ok) {
-      blockers.push("One or more security verification checks failed");
+    
+    // SECURITY-CRITICAL: Security checks MUST block deployment
+    // Unlike migrations (which can degrade), security RLS policies are non-negotiable
+    if (!security.ok) {
+      blockers.push(
+        security.verificationUnavailable
+          ? "Security verification unavailable — cannot verify RLS policies and triggers"
+          : "One or more security verification checks failed"
+      );
     }
+    
     if (!env.envValidationOk) blockers.push("Required environment variables are missing");
     if (!env.serviceRoleConfigured) blockers.push("SUPABASE_SERVICE_ROLE_KEY is not configured");
 
@@ -238,10 +241,15 @@ export async function buildLaunchReadinessSnapshot(): Promise<LaunchReadinessSna
       privateBetaMode: isPrivateBetaMode(),
     };
 
+    // SECURITY-CRITICAL: Deployment is blocked if:
+    // - Migrations can't be verified OR migrations failed (but unavailable is OK)
+    // - Security checks CANNOT be verified or FAILED (unavailable is NOT OK)
+    // - Environment validation failed
+    // - Service role not configured
     const readyForPrivateBeta =
       blockers.length === 0 &&
       (migrations.ok || isMigrationVerificationSkipped(migrations)) &&
-      (security.ok || isSecurityVerificationSkipped(security)) &&
+      security.ok &&  // NO exception for security.verificationUnavailable
       env.serviceRoleConfigured;
 
     return {
@@ -282,8 +290,8 @@ export async function buildLaunchReadinessSnapshot(): Promise<LaunchReadinessSna
         investorsApproved: 0,
         investorsPendingReview: 0,
       },
-      readyForPrivateBeta: env.serviceRoleConfigured && env.envValidationOk,
-      blockers: env.serviceRoleConfigured ? [] : ["SUPABASE_SERVICE_ROLE_KEY is not configured"],
+      readyForPrivateBeta: false,
+      blockers: ["Snapshot generation failed — cannot assess deployment readiness"],
     };
   }
 }
