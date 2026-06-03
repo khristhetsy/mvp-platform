@@ -92,7 +92,9 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
   }, [queryString]);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- refresh action list when filters change */
     void refresh();
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [refresh]);
 
   function toggleSelect(id: string, checked: boolean) {

@@ -58,7 +58,9 @@ export function CollaborationDiscussionPanel({
   }, [entityType, entityId]);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- refresh discussion thread when entity changes */
     void refresh();
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [refresh]);
 
   async function handleSubmit(input: {

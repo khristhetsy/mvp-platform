@@ -39,15 +39,15 @@ export default async function FounderLearningSlugPage({
     );
   }
 
-  const module = await getLearningModuleBySlug(slug);
+  const learningModule = await getLearningModuleBySlug(slug);
   const content = getModuleContent(slug);
 
-  if (!module || !content || !module.is_published) {
+  if (!learningModule || !content || !learningModule.is_published) {
     notFound();
   }
 
   const progressRows = await listLearningProgressForCompany(profile.id, company.id);
-  const progress = progressRows.find((row) => row.module_id === module.id) ?? null;
+  const progress = progressRows.find((row) => row.module_id === learningModule.id) ?? null;
 
   return (
     <FounderAppShell
@@ -56,9 +56,9 @@ export default async function FounderLearningSlugPage({
     >
       <FounderFeatureGate featureKey="elearning">
         <FounderLearningModuleViewer
-          moduleId={module.id}
-          moduleSlug={module.slug}
-          title={module.title}
+          moduleId={learningModule.id}
+          moduleSlug={learningModule.slug}
+          title={learningModule.title}
           content={content}
           initialProgress={progress}
         />

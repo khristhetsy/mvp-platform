@@ -62,6 +62,7 @@ export function NextBestActionsPanel({
   }, [role, limit, contextPath, entityType, entityId]);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- hydrate or fetch next-best actions */
     if (initialActions) {
       setActions(initialActions);
       setLoading(false);
@@ -91,6 +92,7 @@ export function NextBestActionsPanel({
     return () => {
       cancelled = true;
     };
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [initialActions, fetchActions]);
 
   async function runLifecycle(persistedId: string, lifecycle: LifecycleAction) {

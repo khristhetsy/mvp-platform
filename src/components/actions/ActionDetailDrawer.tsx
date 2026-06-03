@@ -31,6 +31,7 @@ export function ActionDetailDrawer({
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- load drawer detail when actionId changes */
     if (!actionId) {
       setDetail(null);
       return;
@@ -59,6 +60,7 @@ export function ActionDetailDrawer({
     return () => {
       cancelled = true;
     };
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [actionId]);
 
   if (!actionId) return null;

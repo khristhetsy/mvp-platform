@@ -24,6 +24,7 @@ export function FounderLearningModuleViewer({
   const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- hydrate lesson progress from localStorage */
     try {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
@@ -32,6 +33,7 @@ export function FounderLearningModuleViewer({
     } catch {
       // ignore local storage errors
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [storageKey]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

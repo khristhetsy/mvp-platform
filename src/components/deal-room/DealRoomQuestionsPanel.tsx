@@ -31,7 +31,7 @@ export function DealRoomQuestionsPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ category, question: questionText }),
       });
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       if (!res.ok) throw json;
       setQuestions((v) => [json.question as Question, ...v]);
       setQuestionText("");
@@ -51,7 +51,7 @@ export function DealRoomQuestionsPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ questionId, response: responseById[questionId] ?? "", status: "open" }),
       });
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       if (!res.ok) throw json;
       const updated = json.question as Question;
       setQuestions((v) => v.map((q) => (q.id === updated.id ? updated : q)));

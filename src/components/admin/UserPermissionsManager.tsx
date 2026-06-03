@@ -77,11 +77,14 @@ export function UserPermissionsManager() {
   }, [selectedUserId]);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- initial permissions catalog load */
     void load();
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [load]);
 
   useEffect(() => {
     if (!selectedUser || !payload) return;
+    /* eslint-disable react-hooks/set-state-in-effect -- reset permission editor when selected user changes */
     setRoleSlug(selectedUser.roleSlug ?? "regular_user");
     setIsActive(selectedUser.isActive);
     const next = {} as Record<InternalPermission, "inherit" | "grant" | "revoke">;
@@ -90,6 +93,7 @@ export function UserPermissionsManager() {
       next[perm] = override ? (override.granted ? "grant" : "revoke") : "inherit";
     }
     setOverrideState(next);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [selectedUser, payload]);
 
   const previewPermissions = useMemo(() => {

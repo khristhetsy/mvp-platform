@@ -10,18 +10,18 @@ export async function resolveLessonContext(
   lessonId: string,
 ) {
   const program = getProgramBySlug(programSlug);
-  const module = await getLearningModuleBySlug(moduleSlug);
+  const learningModule = await getLearningModuleBySlug(moduleSlug);
   const content = getModuleContent(moduleSlug);
 
-  if (!program || !module || !content || !program.moduleSlugs.includes(moduleSlug)) {
+  if (!program || !learningModule || !content || !program.moduleSlugs.includes(moduleSlug)) {
     return null;
   }
 
   const lessonIndex = content.lessons.findIndex((l) => l.id === lessonId);
   if (lessonIndex < 0) return null;
 
-  const lesson = enrichLesson(content.lessons[lessonIndex], module, lessonIndex);
-  const lessons: LearningLesson[] = content.lessons.map((l, i) => enrichLesson(l, module, i));
+  const lesson = enrichLesson(content.lessons[lessonIndex], learningModule, lessonIndex);
+  const lessons: LearningLesson[] = content.lessons.map((l, i) => enrichLesson(l, learningModule, i));
 
-  return { program, module, content, lesson, lessonIndex, lessons };
+  return { program, module: learningModule, content, lesson, lessonIndex, lessons };
 }

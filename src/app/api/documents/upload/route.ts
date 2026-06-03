@@ -101,7 +101,7 @@ export async function POST(request: Request) {
     return rateLimited;
   }
 
-  let company = await ensureFounderCompanyForUser(auth.profile);
+  const company = await ensureFounderCompanyForUser(auth.profile);
 
   const formData = await request.formData();
   const requestedCompanyId = formData.get("companyId");
@@ -129,7 +129,11 @@ export async function POST(request: Request) {
     if (!debugRequested) return undefined;
 
     // Supabase generated types may not include these helper functions; cast for debug-only RPC calls.
-    const rpc = (supabase as unknown as { rpc: (fn: string, args: any) => any }).rpc;
+    const rpc = (
+      supabase as unknown as {
+        rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
+      }
+    ).rpc;
 
     const [companyRes, membershipRes, canManageRes, belongsRes, adminVerifyRes] = await Promise.all([
       supabase.from("companies").select("id").eq("id", companyId).maybeSingle(),

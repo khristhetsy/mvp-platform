@@ -40,7 +40,7 @@ export function AdminApprovalsQueue({ programs, modules, lessons, quizzes }: Pro
           notes: noteById[id] || undefined,
         }),
       });
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       if (!res.ok) throw json;
       setHidden((v) => ({ ...v, [id]: true }));
     } catch (e) {

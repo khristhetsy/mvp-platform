@@ -1,9 +1,11 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { writeAuditLog } from "@/lib/data/audit";
+import type { Database } from "@/lib/supabase/types";
 import { companyUpdateSchema } from "@/lib/validation";
 
-async function requireCompanyManager(supabase: any, userId: string, companyId: string) {
+async function requireCompanyManager(supabase: SupabaseClient<Database>, userId: string, companyId: string) {
   const { data: membership, error } = await supabase
     .from("company_members")
     .select("role")

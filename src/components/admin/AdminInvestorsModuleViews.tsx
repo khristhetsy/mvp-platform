@@ -10,7 +10,7 @@ import { ModuleEmptyState } from "@/components/ui/ViewToolbar";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { useAdminQueryFilters } from "@/hooks/use-admin-query-filters";
 import type { PlanType, SubscriptionRecord } from "@/lib/subscriptions/plans";
-import type { InvestorProfileRecord } from "@/lib/investor/types";
+import type { InvestorApprovalStatus, InvestorProfileRecord } from "@/lib/investor/types";
 import { filterInvestorProfiles, type InvestorQueryFilters } from "@/lib/ui/query-filters";
 
 type InvestorsPageView = "cards" | "table" | "approval" | "segments" | "activity";
@@ -132,7 +132,11 @@ function InvestorsPageToolbar({
 
         <select
           value={filters.approvalStatus ?? ""}
-          onChange={(e) => onFilterChange({ approvalStatus: e.target.value ? (e.target.value as any) : null })}
+          onChange={(e) =>
+            onFilterChange({
+              approvalStatus: e.target.value ? (e.target.value as InvestorApprovalStatus) : null,
+            })
+          }
           className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
         >
           <option value="">Approval status</option>

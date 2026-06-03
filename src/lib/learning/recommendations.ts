@@ -62,22 +62,22 @@ export function buildLearningRecommendations(input: {
   hasPitchDeck: boolean;
   reviewStatus: string | null;
 }): LearningRecommendation[] {
-  const moduleBySlug = new Map(input.modules.map((module) => [module.slug, module]));
+  const moduleBySlug = new Map(input.modules.map((learningModule) => [learningModule.slug, learningModule]));
   const recommendations: LearningRecommendation[] = [];
   const seen = new Set<string>();
 
   function add(slug: string, reason: string, priority: "high" | "medium" | "low") {
     if (seen.has(slug)) return;
-    const module = moduleBySlug.get(slug);
-    if (!module) return;
+    const learningModule = moduleBySlug.get(slug);
+    if (!learningModule) return;
     seen.add(slug);
     recommendations.push({
-      moduleId: module.id,
-      slug: module.slug,
-      title: module.title,
+      moduleId: learningModule.id,
+      slug: learningModule.slug,
+      title: learningModule.title,
       reason,
       priority,
-      relatedRemediationCategory: module.related_remediation_category,
+      relatedRemediationCategory: learningModule.related_remediation_category,
     });
   }
 
@@ -116,15 +116,15 @@ export function buildRemediationLearningLinks(
   modules: LearningModuleRecord[],
   tasks: Array<{ source_key: string; category: RemediationCategory }>,
 ) {
-  const moduleBySlug = new Map(modules.map((module) => [module.slug, module]));
+  const moduleBySlug = new Map(modules.map((learningModule) => [learningModule.slug, learningModule]));
   const links: Record<string, { slug: string; title: string }> = {};
 
   for (const task of tasks) {
     const slug = resolveModuleSlugForRemediation(task.source_key, task.category);
     if (!slug) continue;
-    const module = moduleBySlug.get(slug);
-    if (!module) continue;
-    links[task.source_key] = { slug: module.slug, title: module.title };
+    const learningModule = moduleBySlug.get(slug);
+    if (!learningModule) continue;
+    links[task.source_key] = { slug: learningModule.slug, title: learningModule.title };
   }
 
   return links;

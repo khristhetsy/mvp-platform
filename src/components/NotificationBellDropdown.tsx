@@ -39,7 +39,9 @@ export function NotificationBellDropdown() {
   }, []);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- initial fetch and polling for notifications */
     void loadNotifications();
+    /* eslint-enable react-hooks/set-state-in-effect */
     const interval = window.setInterval(() => void loadNotifications(), 60000);
     return () => window.clearInterval(interval);
   }, [loadNotifications]);

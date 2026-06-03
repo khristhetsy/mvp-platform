@@ -11,6 +11,13 @@ type Question = {
   options: string[];
 };
 
+type QuizSubmissionResult = {
+  score: number;
+  passed: boolean;
+  attemptsUsed?: number;
+  attemptsRemaining?: number;
+};
+
 export function FounderAdminCourseQuizClient({
   courseId,
   quizId,
@@ -42,9 +49,17 @@ export function FounderAdminCourseQuizClient({
           body: JSON.stringify({ answers }),
         },
       );
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = (await res.json().catch(() => ({}))) as Partial<QuizSubmissionResult>;
       if (!res.ok) throw json;
-      setResult(json);
+      if (typeof json.score !== "number" || typeof json.passed !== "boolean") {
+        throw new Error("Invalid quiz submission response.");
+      }
+      setResult({
+        score: json.score,
+        passed: json.passed,
+        attemptsUsed: typeof json.attemptsUsed === "number" ? json.attemptsUsed : undefined,
+        attemptsRemaining: typeof json.attemptsRemaining === "number" ? json.attemptsRemaining : undefined,
+      });
       router.refresh();
     } catch (e) {
       setError(formatApiError(e, "Quiz submission failed."));

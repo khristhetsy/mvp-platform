@@ -42,7 +42,9 @@ export function NotificationsPanel() {
   }, []);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- initial notifications load on mount */
     void load();
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [load]);
 
   async function markRead(notificationId: string) {

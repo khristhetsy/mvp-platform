@@ -78,18 +78,18 @@ export async function loadBetaUsageAnalytics(admin: SupabaseClient<Database>): P
   const investorCounts = new Map<string, number>();
 
   for (const row of eventsRes.data ?? []) {
-    const module = row.source_module ?? "unknown";
+    const sourceModule = row.source_module ?? "unknown";
     const label =
       row.actor_role === "investor"
-        ? (INVESTOR_MODULE_MAP[module] ?? module)
-        : (FOUNDER_MODULE_MAP[module] ?? module);
+        ? (INVESTOR_MODULE_MAP[sourceModule] ?? sourceModule)
+        : (FOUNDER_MODULE_MAP[sourceModule] ?? sourceModule);
     const bucket = row.actor_role === "investor" ? investorCounts : founderCounts;
     bucket.set(label, (bucket.get(label) ?? 0) + 1);
   }
 
   const toSorted = (map: Map<string, number>) =>
     [...map.entries()]
-      .map(([module, count]) => ({ module, count }))
+      .map(([moduleName, count]) => ({ module: moduleName, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
 

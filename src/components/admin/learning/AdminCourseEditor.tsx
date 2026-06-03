@@ -70,11 +70,13 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       if (!res.ok) throw json;
-      const program = (json.program ?? json.programs ?? json?.program) ? (json.program as ProgramRow) : (json.program as ProgramRow);
+      const program = json.program ? (json.program as ProgramRow) : undefined;
       setSuccess(mode === "create" ? "Course created." : "Course saved.");
-      onSaved?.(program);
+      if (program) {
+        onSaved?.(program);
+      }
       router.refresh();
       if (mode === "create" && program?.id) {
         router.push(`/admin/learning/courses/${program.id}`);

@@ -38,15 +38,15 @@ export function buildLessonRecommendations(input: {
   const lessons: LessonRecommendation[] = [];
 
   for (const rec of moduleRecs) {
-    const module = input.modules.find((m) => m.slug === rec.slug);
+    const learningModule = input.modules.find((m) => m.slug === rec.slug);
     const content = getModuleContent(rec.slug);
-    if (!module || !content) continue;
+    if (!learningModule || !content) continue;
 
     const program = getProgramForModuleSlug(rec.slug);
     const nextLesson = content.lessons.find((l) => !completed.has(`${rec.slug}:${l.id}`));
     if (!nextLesson) continue;
 
-    const enriched = enrichLesson(nextLesson, module, 0);
+    const enriched = enrichLesson(nextLesson, learningModule, 0);
     lessons.push({
       programSlug: program.slug,
       moduleSlug: rec.slug,
@@ -109,10 +109,10 @@ function pushLesson(
   completed: Set<string>,
 ) {
   if (completed.has(`${moduleSlug}:${lessonId}`)) return;
-  const module = modules.find((m) => m.slug === moduleSlug);
+  const learningModule = modules.find((m) => m.slug === moduleSlug);
   const content = getModuleContent(moduleSlug);
   const lesson = content?.lessons.find((l) => l.id === lessonId) ?? content?.lessons[0];
-  if (!module || !lesson) return;
+  if (!learningModule || !lesson) return;
 
   const program = getProgramForModuleSlug(moduleSlug);
   list.push({

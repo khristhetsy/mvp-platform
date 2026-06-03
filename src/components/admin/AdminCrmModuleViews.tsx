@@ -4,11 +4,13 @@ import { Suspense, useMemo } from "react";
 import { AdminFounderOutreachSummary } from "@/components/AdminFounderOutreachSummary";
 import { AdminInvestorActivity } from "@/components/AdminInvestorActivity";
 import { AdminInvestorCrmTimeline } from "@/components/AdminInvestorCrmTimeline";
+import { AdminInvestorPipelinePanel } from "@/components/admin/AdminInvestorPipelinePanel";
 import { AdminMessageThreadsPanel } from "@/components/AdminMessageThreadsPanel";
 import { AdminQueryFilterBar } from "@/components/ui/AdminQueryFilterBar";
 import { ModuleEmptyState } from "@/components/ui/ViewToolbar";
 import { useAdminQueryFilters } from "@/hooks/use-admin-query-filters";
 import type { AdminCrmActivityRow } from "@/lib/data/investor-crm";
+import type { AdminInvestorPipelineRow } from "@/lib/investor-crm/admin-pipeline";
 import type { FounderOutreachAdminSummary } from "@/lib/founder-crm/admin-outreach-summary";
 import type { MessageThreadListItem } from "@/lib/messaging/types";
 import {
@@ -22,6 +24,7 @@ import {
 
 type Props = Readonly<{
   crmActivity: AdminCrmActivityRow[];
+  pipelineRows: AdminInvestorPipelineRow[];
   messageThreads: MessageThreadListItem[];
   outreachSummary: FounderOutreachAdminSummary;
   investorActivity: {
@@ -58,6 +61,12 @@ function AdminCrmModuleViewsInner(props: Props) {
       <AdminQueryFilterBar page="crm" className="mb-4" />
 
       <AdminInvestorCrmTimeline activities={filteredActivity} />
+
+      <AdminInvestorPipelinePanel
+        rows={props.pipelineRows}
+        initialCompanyId={crmFilters.company}
+        initialInvestorId={crmFilters.investor}
+      />
 
       {filteredActivity.length === 0 && props.crmActivity.length > 0 ? (
         <ModuleEmptyState

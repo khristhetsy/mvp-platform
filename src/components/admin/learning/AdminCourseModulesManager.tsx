@@ -32,7 +32,7 @@ export function AdminCourseModulesManager({ courseId, initialLinks, initialModul
     void (async () => {
       try {
         const res = await fetch("/api/admin/learning/modules");
-        const json = (await res.json().catch(() => ({}))) as any;
+        const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
         if (res.ok && Array.isArray(json.modules)) setAllModules(json.modules as ModuleRow[]);
       } catch {
         // ignore
@@ -59,7 +59,7 @@ export function AdminCourseModulesManager({ courseId, initialLinks, initialModul
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ module_id: moduleId, order_index: nextOrder }),
       });
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       if (!res.ok) throw json;
       setLinks((v) => [...v.filter((x) => x.module_id !== moduleId), json.link as LinkRow]);
     } catch (e) {
@@ -77,7 +77,7 @@ export function AdminCourseModulesManager({ courseId, initialLinks, initialModul
         `/api/admin/learning/courses/${encodeURIComponent(courseId)}/modules?moduleId=${encodeURIComponent(id)}`,
         { method: "DELETE" },
       );
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       if (!res.ok) throw json;
       setLinks((v) => v.filter((x) => x.module_id !== id));
     } catch (e) {
@@ -96,7 +96,7 @@ export function AdminCourseModulesManager({ courseId, initialLinks, initialModul
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ links }),
       });
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       if (!res.ok) throw json;
       if (Array.isArray(json.links)) setLinks(json.links as LinkRow[]);
     } catch (e) {
