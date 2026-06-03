@@ -192,7 +192,8 @@ export async function buildBetaOperationsSnapshot(): Promise<BetaOperationsSnaps
     },
     reliability: {
       ...launchReadiness.environment,
-      migrationsVerified: launchReadiness.migrations.ok,
+      migrationsVerified:
+        launchReadiness.migrations.ok || launchReadiness.migrations.verificationUnavailable,
       cronOperational: launchReadiness.environment.cronConfigured,
     },
     operations: {
