@@ -48,6 +48,7 @@ export function SortableDragHandle({
   handleProps: SortableHandleProps;
   className?: string;
 }>) {
+  /* eslint-disable react-hooks/refs -- dnd-kit drag handle wiring */
   return (
     <button
       type="button"
@@ -61,6 +62,7 @@ export function SortableDragHandle({
       <GripVertical className="h-3.5 w-3.5" aria-hidden />
     </button>
   );
+  /* eslint-enable react-hooks/refs */
 }
 
 export function SortableItem({

@@ -30,7 +30,7 @@ export function FounderAdminLessonClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ moduleSlug, lessonKey }),
       });
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       if (!res.ok) throw json;
       setSuccess(json?.certificateIssued ? "Lesson completed. Certificate issued." : "Lesson completed.");
       router.refresh();

@@ -110,8 +110,8 @@ async function syncModuleProgressFromLessons(input: {
   const { getCourseBySlug } = await import("@/lib/learning/courses");
   if (getCourseBySlug(input.moduleSlug)) return;
 
-  const module = await getLearningModuleBySlug(input.moduleSlug);
-  if (!module) return;
+  const learningModule = await getLearningModuleBySlug(input.moduleSlug);
+  if (!learningModule) return;
 
   const rows = await listLessonProgressForCompany(input.founderId, input.companyId);
   const completed = rows
@@ -121,7 +121,7 @@ async function syncModuleProgressFromLessons(input: {
   await recordModuleView({
     founderId: input.founderId,
     companyId: input.companyId,
-    moduleId: module.id,
+    moduleId: learningModule.id,
     moduleSlug: input.moduleSlug,
     completedLessonIds: completed,
   });

@@ -306,6 +306,9 @@ export type InvestorProfileRow = {
   firm_name: string | null;
   approval_status: InvestorApprovalStatus;
   investor_type?: string | null;
+  preferred_sectors?: string[] | null;
+  check_size_min?: number | null;
+  check_size_max?: number | null;
   matchingSummary?: unknown;
 };
 
@@ -324,13 +327,13 @@ export function filterInvestorProfiles<T extends InvestorProfileRow>(
 
     if (filters.sector) {
       const wanted = filters.sector.toLowerCase();
-      const sectors = Array.isArray((row as any).preferred_sectors) ? ((row as any).preferred_sectors as string[]) : [];
+      const sectors = Array.isArray(row.preferred_sectors) ? row.preferred_sectors : [];
       if (!sectors.some((s) => String(s).toLowerCase() === wanted)) return false;
     }
 
     if (filters.checkSize != null) {
-      const min = typeof (row as any).check_size_min === "number" ? ((row as any).check_size_min as number) : null;
-      const max = typeof (row as any).check_size_max === "number" ? ((row as any).check_size_max as number) : null;
+      const min = typeof row.check_size_min === "number" ? row.check_size_min : null;
+      const max = typeof row.check_size_max === "number" ? row.check_size_max : null;
       if (min != null && filters.checkSize < min) return false;
       if (max != null && filters.checkSize > max) return false;
     }

@@ -17,6 +17,7 @@ export function AutomationRunDrawer({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- load automation run detail when runId changes */
     if (!runId) {
       setDetail(null);
       return;
@@ -49,6 +50,7 @@ export function AutomationRunDrawer({
     return () => {
       cancelled = true;
     };
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [runId]);
 
   if (!runId) return null;

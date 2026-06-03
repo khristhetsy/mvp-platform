@@ -164,6 +164,18 @@ export const investorOnboardingSchema = z
 
 export const adminInvestorReviewActionSchema = adminReviewActionSchema;
 
+export const adminInvestorPipelineUpdateSchema = z.object({
+  stage: z.enum(["interested", "meeting_requested", "follow_up"]).optional(),
+  probability: z.number().int().min(0).max(100).optional(),
+  notes: z.string().max(5000).nullable().optional(),
+  nextFollowUpAt: z.string().datetime().nullable().optional(),
+  clearFollowUp: z.boolean().optional(),
+  markContacted: z.boolean().optional(),
+  lastContactedAt: z.string().datetime().optional(),
+  ownerAdminId: z.string().uuid().optional(),
+  clearOwner: z.boolean().optional(),
+});
+
 export const threadMessageSchema = z.object({
   body: z.string().min(1).max(10000),
 });

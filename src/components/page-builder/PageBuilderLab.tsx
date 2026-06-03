@@ -153,7 +153,9 @@ export function PageBuilderLab() {
   );
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- load page builder draft when slug changes */
     void loadDraft(pageSlug);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [loadDraft, pageSlug]);
 
   const persistDraft = useCallback(

@@ -107,7 +107,7 @@ export async function runAutomationEngine(
   let failures = 0;
   let automationsTriggered = 0;
 
-  let dependencies = baseCtx.entityType && baseCtx.entityId
+  const dependencies = baseCtx.entityType && baseCtx.entityId
     ? await resolveEntityDependencies(supabase, baseCtx.entityType, baseCtx.entityId)
     : [];
 

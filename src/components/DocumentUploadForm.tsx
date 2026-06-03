@@ -45,8 +45,8 @@ function validateClientSide(file: File, documentType: string, maxUploadBytes: nu
 
 function toMessage(status: number, body: unknown) {
   const fallback = status >= 500 ? "Upload failed. Please try again." : "Upload failed.";
-  if (body && typeof body === "object" && "error" in body && typeof (body as any).error === "string") {
-    return (body as any).error as string;
+  if (body && typeof body === "object" && "error" in body && typeof (body as { error?: unknown }).error === "string") {
+    return (body as { error: string }).error;
   }
   return fallback;
 }
@@ -129,8 +129,13 @@ export function DocumentUploadForm({
       return;
     }
 
-    if (debugEnabled && response.body && typeof response.body === "object" && "debug" in (response.body as any)) {
-      setLastDebug((response.body as any).debug);
+    if (
+      debugEnabled &&
+      response.body &&
+      typeof response.body === "object" &&
+      "debug" in (response.body as Record<string, unknown>)
+    ) {
+      setLastDebug((response.body as { debug: unknown }).debug);
     } else {
       setLastDebug(null);
     }

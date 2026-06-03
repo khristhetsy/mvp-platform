@@ -56,6 +56,13 @@ type Props = {
 const STATUS: LearningContentStatus[] = ["draft", "pending_review", "approved", "published", "archived"];
 const DIFFICULTY: Difficulty[] = ["introductory", "intermediate", "advanced"];
 
+type ApiJsonBody = Record<string, unknown>;
+
+async function readApiJson(res: Response): Promise<ApiJsonBody> {
+  const body = await res.json().catch(() => ({}));
+  return body && typeof body === "object" ? (body as ApiJsonBody) : {};
+}
+
 export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
   const [modules, setModules] = useState<ModuleRow[]>(linkedModules);
   const [selectedModuleId, setSelectedModuleId] = useState<string>(linkedModules[0]?.id ?? "");
@@ -103,20 +110,20 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
           order_index: Number(newModule.order_index ?? 0),
         }),
       });
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = await readApiJson(res);
       if (!res.ok) throw json;
-      const module = json.module as ModuleRow;
+      const createdModule = json.module as ModuleRow;
 
       const linkRes = await fetch(`/api/admin/learning/courses/${encodeURIComponent(courseId)}/modules`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ module_id: module.id, order_index: 0 }),
+        body: JSON.stringify({ module_id: createdModule.id, order_index: 0 }),
       });
-      const linkJson = (await linkRes.json().catch(() => ({}))) as any;
+      const linkJson = await readApiJson(linkRes);
       if (!linkRes.ok) throw linkJson;
 
-      setModules((v) => [...v, module]);
-      setSelectedModuleId(module.id);
+      setModules((v) => [...v, createdModule]);
+      setSelectedModuleId(createdModule.id);
       setSuccess("Module created and linked.");
       setNewModule((v) => ({ ...v, slug: "", title: "", description: "" }));
     } catch (e) {
@@ -137,7 +144,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = await readApiJson(res);
       if (!res.ok) throw json;
       const updated = json.module as ModuleRow;
       setModules((v) => v.map((m) => (m.id === updated.id ? { ...m, ...updated } : m)));
@@ -168,7 +175,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
       }
       try {
         const res = await fetch(`/api/admin/learning/lessons?moduleSlug=${encodeURIComponent(selectedModule.slug)}`);
-        const json = (await res.json().catch(() => ({}))) as any;
+        const json = await readApiJson(res);
         if (res.ok && Array.isArray(json.lessons)) setLessons(json.lessons as LessonRow[]);
       } catch {
         setLessons([]);
@@ -196,7 +203,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
           content_status: (lessonDraft.content_status ?? "draft") as LearningContentStatus,
         }),
       });
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = await readApiJson(res);
       if (!res.ok) throw json;
       setLessons((v) => [...v, json.lesson as LessonRow].sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0)));
       setLessonDraft((v) => ({ ...v, lesson_key: "", title: "", body_markdown: "" }));
@@ -218,7 +225,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = await readApiJson(res);
       if (!res.ok) throw json;
       const updated = json.lesson as LessonRow;
       setLessons((v) => v.map((l) => (l.id === updated.id ? updated : l)));
@@ -239,7 +246,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
     void (async () => {
       try {
         const res = await fetch(`/api/admin/learning/quizzes?programId=${encodeURIComponent(courseId)}`);
-        const json = (await res.json().catch(() => ({}))) as any;
+        const json = await readApiJson(res);
         if (res.ok && Array.isArray(json.quizzes)) {
           setQuizzes(json.quizzes as QuizRow[]);
           if (!selectedQuizId && (json.quizzes as QuizRow[])[0]?.id) setSelectedQuizId((json.quizzes as QuizRow[])[0].id);
@@ -259,10 +266,10 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
       }
       try {
         const res = await fetch(`/api/admin/learning/quizzes/${encodeURIComponent(selectedQuizId)}`);
-        const json = (await res.json().catch(() => ({}))) as any;
+        const json = await readApiJson(res);
         if (res.ok && Array.isArray(json.questions)) {
           setQuestions(
-            (json.questions as any[]).map((q) => ({
+            (json.questions as QuestionRow[]).map((q) => ({
               id: q.id,
               order_index: q.order_index,
               prompt: q.prompt,
@@ -295,7 +302,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
           content_status: "draft",
         }),
       });
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = await readApiJson(res);
       if (!res.ok) throw json;
       const quiz = json.quiz as QuizRow;
       setQuizzes((v) => [quiz, ...v]);
@@ -319,7 +326,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = await readApiJson(res);
       if (!res.ok) throw json;
       const updated = json.quiz as QuizRow;
       setQuizzes((v) => v.map((q) => (q.id === updated.id ? updated : q)));
@@ -351,7 +358,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
           })),
         }),
       });
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = await readApiJson(res);
       if (!res.ok) throw json;
       setSuccess("Questions saved.");
     } catch (e) {
@@ -662,7 +669,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
                             lesson_key: l.lesson_key,
                             order_index: l.order_index,
                             estimated_time_minutes: l.estimated_time_minutes,
-                            content_status: l.content_status as any,
+                            content_status: l.content_status as LearningContentStatus,
                             body_markdown: l.body_markdown ?? "",
                           })
                         }

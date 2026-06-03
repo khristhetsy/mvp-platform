@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   MODULE_DEFAULT_VIEW,
@@ -28,25 +28,16 @@ export function useViewMode(moduleId: ViewModeModuleId) {
   const paramDensity = paramDensityRaw && isViewDensity(paramDensityRaw) ? paramDensityRaw : null;
   const paramQuery = searchParams.get("q") ?? "";
 
-  const [viewMode, setViewModeState] = useState<ViewMode>(
+  const [viewModeState, setViewModeState] = useState<ViewMode>(
     () => paramView ?? readStoredViewMode(moduleId, allowedModes) ?? defaultMode,
   );
-  const [density, setDensityState] = useState<ViewDensity>(
+  const [densityState, setDensityState] = useState<ViewDensity>(
     () => paramDensity ?? readStoredViewDensity(moduleId) ?? "comfortable",
   );
-  const [query, setQueryState] = useState(paramQuery);
 
-  useEffect(() => {
-    if (paramView) setViewModeState(paramView);
-  }, [paramView]);
-
-  useEffect(() => {
-    if (paramDensity) setDensityState(paramDensity);
-  }, [paramDensity]);
-
-  useEffect(() => {
-    setQueryState(paramQuery);
-  }, [paramQuery]);
+  const viewMode = paramView ?? viewModeState;
+  const density = paramDensity ?? densityState;
+  const query = paramQuery;
 
   const replaceParams = useCallback(
     (next: { view?: ViewMode; density?: ViewDensity; q?: string }) => {
@@ -83,7 +74,6 @@ export function useViewMode(moduleId: ViewModeModuleId) {
 
   const setQuery = useCallback(
     (next: string) => {
-      setQueryState(next);
       replaceParams({ q: next });
     },
     [replaceParams],

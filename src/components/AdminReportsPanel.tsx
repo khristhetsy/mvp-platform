@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { AdminReportPayload, AdminReportType } from "@/lib/reports/admin-reports";
 
@@ -235,10 +235,12 @@ export function AdminReportsPanel({
   investors: FilterOption[];
 }>) {
   const searchParams = useSearchParams();
-  const [reportType, setReportType] = useState<AdminReportType>("compliance");
+  const paramCompanyId = searchParams.get("companyId");
+  const paramReportType = searchParams.get("reportType");
+  const [reportTypeState, setReportTypeState] = useState<AdminReportType>("compliance");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [companyId, setCompanyId] = useState("");
+  const [companyIdState, setCompanyIdState] = useState("");
   const [founderId, setFounderId] = useState("");
   const [investorId, setInvestorId] = useState("");
   const [severity, setSeverity] = useState("");
@@ -250,14 +252,11 @@ export function AdminReportsPanel({
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<AdminReportPayload | null>(null);
 
-  useEffect(() => {
-    const paramCompanyId = searchParams.get("companyId");
-    const paramReportType = searchParams.get("reportType");
-    if (paramCompanyId) setCompanyId(paramCompanyId);
-    if (paramReportType && REPORT_OPTIONS.some((option) => option.value === paramReportType)) {
-      setReportType(paramReportType as AdminReportType);
-    }
-  }, [searchParams]);
+  const reportType =
+    paramReportType && REPORT_OPTIONS.some((option) => option.value === paramReportType)
+      ? (paramReportType as AdminReportType)
+      : reportTypeState;
+  const companyId = paramCompanyId ?? companyIdState;
 
   const selectedReport = useMemo(
     () => REPORT_OPTIONS.find((option) => option.value === reportType),
@@ -336,7 +335,7 @@ export function AdminReportsPanel({
             <span className="text-slate-600">Report type</span>
             <select
               value={reportType}
-              onChange={(e) => setReportType(e.target.value as AdminReportType)}
+              onChange={(e) => setReportTypeState(e.target.value as AdminReportType)}
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
             >
               {REPORT_OPTIONS.map((option) => (
@@ -455,7 +454,7 @@ export function AdminReportsPanel({
             <span className="text-slate-600">Company (optional)</span>
             <select
               value={companyId}
-              onChange={(e) => setCompanyId(e.target.value)}
+              onChange={(e) => setCompanyIdState(e.target.value)}
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
             >
               <option value="">All companies</option>

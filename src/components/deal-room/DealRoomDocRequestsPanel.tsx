@@ -32,7 +32,7 @@ export function DealRoomDocRequestsPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ request_type: type, custom_request: type === "custom" ? custom : null }),
       });
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       if (!res.ok) throw json;
       setRequests((v) => [json.request as DocRequest, ...v]);
       setCustom("");
@@ -57,7 +57,7 @@ export function DealRoomDocRequestsPanel({
           document_id: docIdById[requestId] ?? null,
         }),
       });
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       if (!res.ok) throw json;
       const updated = json.request as DocRequest;
       setRequests((v) => v.map((r) => (r.id === updated.id ? updated : r)));

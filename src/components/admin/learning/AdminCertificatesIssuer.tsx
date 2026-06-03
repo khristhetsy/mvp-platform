@@ -7,6 +7,12 @@ type Props = {
   onIssued?: () => void;
 };
 
+type IssueCertificateResponse = {
+  certificate?: {
+    certificate_code?: string | null;
+  };
+};
+
 export function AdminCertificatesIssuer({ onIssued }: Props) {
   const [founderId, setFounderId] = useState("");
   const [companyId, setCompanyId] = useState("");
@@ -33,9 +39,9 @@ export function AdminCertificatesIssuer({ onIssued }: Props) {
           status,
         }),
       });
-      const json = (await res.json().catch(() => ({}))) as any;
+      const json = (await res.json().catch(() => ({}))) as IssueCertificateResponse;
       if (!res.ok) throw json;
-      setSuccess(`Issued ${json?.certificate?.certificate_code ?? "certificate"}.`);
+      setSuccess(`Issued ${json.certificate?.certificate_code ?? "certificate"}.`);
       onIssued?.();
     } catch (e) {
       setError(formatApiError(e, "Unable to issue certificate."));
@@ -83,7 +89,7 @@ export function AdminCertificatesIssuer({ onIssued }: Props) {
           <select
             className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
             value={status}
-            onChange={(e) => setStatus(e.target.value as any)}
+            onChange={(e) => setStatus(e.target.value as "issued" | "revoked" | "archived")}
           >
             <option value="issued">issued</option>
             <option value="revoked">revoked</option>

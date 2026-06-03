@@ -56,8 +56,8 @@ export function computeOverallLearningPercent(
   const progressMap = progressByModuleId(progressRows);
   let total = 0;
 
-  for (const module of modules) {
-    total += progressMap.get(module.id)?.percent_complete ?? 0;
+  for (const learningModule of modules) {
+    total += progressMap.get(learningModule.id)?.percent_complete ?? 0;
   }
 
   return Math.round(total / modules.length);

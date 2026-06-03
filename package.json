@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:investor-express-interest": "node scripts/test-investor-express-interest.mjs",
+    "test:investor-crm-pipeline": "node --experimental-strip-types scripts/test-investor-crm-pipeline.ts",
     "ops:check-env": "node scripts/check-env.mjs",
     "ops:backup-db": "bash scripts/backup-db.sh",
     "ops:backup-storage": "bash scripts/backup-storage.sh",

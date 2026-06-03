@@ -66,7 +66,7 @@ export async function ensureCompanySlug(
     return company.slug;
   }
 
-  let candidate = slugifyCompanyName(company.company_name);
+  const candidate = slugifyCompanyName(company.company_name);
   let suffix = 0;
 
   while (suffix < 20) {

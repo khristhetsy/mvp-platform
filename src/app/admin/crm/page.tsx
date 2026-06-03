@@ -3,6 +3,7 @@ import { AdminCrmModuleViews } from "@/components/admin/AdminCrmModuleViews";
 import { formatError } from "@/lib/errors/format-error";
 import { getFounderOutreachAdminSummary } from "@/lib/founder-crm/admin-outreach-summary";
 import { listRecentInvestorCrmActivity } from "@/lib/data/investor-crm";
+import { listAdminInvestorPipeline } from "@/lib/investor-crm/admin-pipeline";
 import { listAdminMessageThreads } from "@/lib/messaging/threads";
 import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -16,6 +17,7 @@ export default async function AdminCrmPage() {
   let setupError: string | null = null;
   let investorActivity = { interests: [] as Array<Record<string, unknown>>, introRequests: [] as Array<Record<string, unknown>>, savedDeals: [] as Array<Record<string, unknown>> };
   let crmActivity: Awaited<ReturnType<typeof listRecentInvestorCrmActivity>> = [];
+  let pipelineRows: Awaited<ReturnType<typeof listAdminInvestorPipeline>> = [];
   let messageThreads: Awaited<ReturnType<typeof listAdminMessageThreads>>["data"] = [];
   let outreachSummary = {
     privateContactCount: 0,
@@ -30,14 +32,16 @@ export default async function AdminCrmPage() {
   try {
     const supabase = createServiceRoleClient();
 
-    const [activity, crm, threads, outreach] = await Promise.all([
+    const [activity, crm, threads, outreach, pipeline] = await Promise.all([
       listAdminInvestorActivity(supabase),
       listRecentInvestorCrmActivity(supabase),
       listAdminMessageThreads(supabase, 30),
       getFounderOutreachAdminSummary(),
+      listAdminInvestorPipeline(supabase),
     ]);
     investorActivity = activity;
     crmActivity = crm;
+    pipelineRows = pipeline;
     messageThreads = threads.data ?? [];
     outreachSummary = outreach;
   } catch (error) {
@@ -67,6 +71,7 @@ export default async function AdminCrmPage() {
 
       <AdminCrmModuleViews
         crmActivity={crmActivity}
+        pipelineRows={pipelineRows}
         messageThreads={messageThreads}
         outreachSummary={outreachSummary}
         investorActivity={investorActivity}

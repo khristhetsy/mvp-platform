@@ -162,11 +162,11 @@ export function AdminImportExportCenter({
   }, [batchId, duplicateBehavior, refreshBatches]);
 
   const downloadTemplate = (type: ImportType) => {
-    window.location.href = `/api/admin/imports/templates/${type}`;
+    window.location.assign(`/api/admin/imports/templates/${type}`);
   };
 
   const downloadExport = () => {
-    window.location.href = `/api/admin/exports?type=${exportType}&format=${exportFormat}`;
+    window.location.assign(`/api/admin/exports?type=${exportType}&format=${exportFormat}`);
   };
 
   const resetWizard = () => {

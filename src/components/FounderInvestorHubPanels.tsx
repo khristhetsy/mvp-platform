@@ -60,7 +60,9 @@ export function FounderInvestorHubPanels({
   const [campaigns] = useState(initialCampaigns);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- refresh targets when server props change */
     setTargets(initialTargets);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [initialTargets]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");

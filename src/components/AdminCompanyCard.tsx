@@ -80,11 +80,13 @@ export function AdminCompanyCard({ company }: Props) {
   const [publishedAt, setPublishedAt] = useState(company.published_at);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- sync card state when company prop updates */
     setReviewStatus(company.review_status);
     setIsPublished(company.is_published);
     setMarketplaceVisible(company.marketplace_visible);
     setPublishedAt(company.published_at);
     setFeedback(company.initial_feedback);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [
     company.id,
     company.review_status,

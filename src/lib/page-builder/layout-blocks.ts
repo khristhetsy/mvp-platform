@@ -209,7 +209,7 @@ export function moveBlockInLayout(
   const activeRegionKey = findRegionForBlockId(layoutBlock, activeBlockId);
   if (!activeRegionKey) return layoutBlock;
 
-  let overRegionKey = parseRegionDropId(overId)?.regionKey ?? findRegionForBlockId(layoutBlock, overId);
+  const overRegionKey = parseRegionDropId(overId)?.regionKey ?? findRegionForBlockId(layoutBlock, overId);
   if (!overRegionKey) return layoutBlock;
 
   let working = layoutBlock;

@@ -93,6 +93,7 @@ export function SignUpForm({ privateBetaMode = false }: Readonly<{ privateBetaMo
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- prefill signup form from URL params */
     const requestedRole = searchParams.get("role");
     if (requestedRole === "founder" || requestedRole === "investor") {
       setRole(requestedRole);
@@ -100,6 +101,7 @@ export function SignUpForm({ privateBetaMode = false }: Readonly<{ privateBetaMo
     }
     const prefillEmail = searchParams.get("email");
     if (prefillEmail) setEmail(prefillEmail);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [searchParams]);
 
   function handleRoleChange(nextRole: SignupRole) {
