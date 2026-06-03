@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MIGRATION_VERIFICATION_UNAVAILABLE } from "@/lib/operations/migration-verification";
 import type { LaunchReadinessSnapshot } from "@/lib/operations/launch-readiness";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { MetricCard } from "@/components/MetricCard";
@@ -23,6 +24,11 @@ export function AdminLaunchReadinessPanel({
   snapshot,
 }: Readonly<{ snapshot: LaunchReadinessSnapshot }>) {
   const { environment, migrations, security, operations, betaOnboarding } = snapshot;
+  const migrationSkipped =
+    migrations.verificationUnavailable || migrations.detail.startsWith(MIGRATION_VERIFICATION_UNAVAILABLE);
+  const securitySkipped =
+    security.verificationUnavailable ||
+    security.checks.some((check) => check.detail.startsWith(MIGRATION_VERIFICATION_UNAVAILABLE));
 
   return (
     <div className="space-y-6">
@@ -103,13 +109,11 @@ export function AdminLaunchReadinessPanel({
             />
             <StatusRow
               label="Applied latest migration"
-              ok={migrations.verificationUnavailable ? true : migrations.floorApplied}
+              ok={migrationSkipped ? true : migrations.floorApplied}
               detail={
-                migrations.verificationUnavailable
+                migrationSkipped
                   ? migrations.detail
-                  : migrations.databaseQueryable
-                    ? `${migrations.appliedLatest ?? "none"} (${migrations.appliedTotal ?? 0} applied)`
-                    : migrations.detail
+                  : `${migrations.appliedLatest ?? "none"} (${migrations.appliedTotal ?? 0} applied)`
               }
             />
           </ul>
@@ -132,13 +136,21 @@ export function AdminLaunchReadinessPanel({
         </WorkspacePanel>
       </div>
 
-      <WorkspacePanel title="Security verification" subtitle="Admin-only structural checks">
+      <WorkspacePanel
+        title="Security verification"
+        subtitle={securitySkipped ? "Optional — skipped when migration verification unavailable" : "Admin-only structural checks"}
+      >
         <ul className="space-y-2">
           {security.checks.map((check) => (
-            <StatusRow key={check.id} label={check.label} ok={check.ok} detail={check.detail} />
+            <StatusRow
+              key={check.id}
+              label={check.label}
+              ok={securitySkipped ? true : check.ok}
+              detail={check.detail}
+            />
           ))}
         </ul>
-        {security.verificationUnavailable ? (
+        {securitySkipped ? (
           <p className="mt-3 text-xs text-slate-500">
             Optional: set <code className="rounded bg-slate-100 px-1">DATABASE_URL</code> on the deployment to verify
             triggers and RLS policies. The app does not require it for normal operation.

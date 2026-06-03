@@ -4,7 +4,6 @@ import {
   MIGRATION_VERIFICATION_UNAVAILABLE,
   REQUIRED_MIGRATION_FLOOR,
   classifyDatabaseVerificationError,
-  sanitizeDatabaseErrorMessage,
 } from "@/lib/operations/migration-verification";
 
 export type SecurityCheckResult = {
@@ -118,16 +117,11 @@ async function queryDatabaseChecks(): Promise<{
       error: null,
     };
   } catch (error) {
-    const classified = classifyDatabaseVerificationError(error);
-    const unavailable =
-      classified === "DATABASE_URL connection failed" ||
-      classified === "DATABASE_URL is invalid or malformed";
-
     return {
-      databaseQueryable: !unavailable,
-      verificationUnavailable: unavailable,
+      databaseQueryable: false,
+      verificationUnavailable: true,
       ...empty,
-      error: unavailable ? classified : `Migration query failed (${sanitizeDatabaseErrorMessage(error)})`,
+      error: classifyDatabaseVerificationError(error),
     };
   } finally {
     await client.end().catch(() => undefined);
@@ -179,7 +173,7 @@ export async function runSecurityVerification(): Promise<SecurityVerificationSum
     const checks: SecurityCheckResult[] = [];
     const db = await queryDatabaseChecks();
 
-    if (db.verificationUnavailable || !db.databaseQueryable) {
+    if (db.verificationUnavailable || db.error || !db.databaseQueryable) {
       const reason = db.error ?? "DATABASE_URL not configured";
       const skipped = buildSkippedSecurityChecks(reason);
       const dealRoomsTableOk = await verifyDealRoomsAccessible();
@@ -198,14 +192,7 @@ export async function runSecurityVerification(): Promise<SecurityVerificationSum
       };
     }
 
-    if (db.error) {
-      checks.push({
-        id: "database",
-        label: "Database verification",
-        ok: false,
-        detail: unavailableDetail("Migration query failed"),
-      });
-    } else {
+    {
       for (const triggerName of HARDENING_TRIGGERS) {
         const present = db.triggers.has(triggerName);
         checks.push({

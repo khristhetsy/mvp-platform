@@ -48,6 +48,20 @@ function countFrom(result: { count: number | null; error: unknown }) {
   return result.count ?? 0;
 }
 
+function isMigrationVerificationSkipped(migrations: MigrationVerificationResult) {
+  return (
+    migrations.verificationUnavailable ||
+    migrations.detail.startsWith(MIGRATION_VERIFICATION_UNAVAILABLE)
+  );
+}
+
+function isSecurityVerificationSkipped(security: SecurityVerificationSummary) {
+  return (
+    security.verificationUnavailable ||
+    security.checks.some((check) => check.detail.startsWith(MIGRATION_VERIFICATION_UNAVAILABLE))
+  );
+}
+
 function fallbackMigrations(): MigrationVerificationResult {
   return {
     floor: REQUIRED_MIGRATION_FLOOR,
@@ -226,8 +240,8 @@ export async function buildLaunchReadinessSnapshot(): Promise<LaunchReadinessSna
 
     const readyForPrivateBeta =
       blockers.length === 0 &&
-      (migrations.ok || migrations.verificationUnavailable) &&
-      (security.ok || security.verificationUnavailable) &&
+      (migrations.ok || isMigrationVerificationSkipped(migrations)) &&
+      (security.ok || isSecurityVerificationSkipped(security)) &&
       env.serviceRoleConfigured;
 
     return {

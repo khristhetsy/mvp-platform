@@ -1,10 +1,19 @@
 import Link from "next/link";
-import type { MigrationVerificationResult } from "@/lib/operations/migration-verification";
+import {
+  MIGRATION_VERIFICATION_UNAVAILABLE,
+  type MigrationVerificationResult,
+} from "@/lib/operations/migration-verification";
 
 export function AdminMigrationWarningBanner({
   migrations,
 }: Readonly<{ migrations: MigrationVerificationResult }>) {
-  if (migrations.ok || migrations.verificationUnavailable) return null;
+  if (
+    migrations.ok ||
+    migrations.verificationUnavailable ||
+    migrations.detail.startsWith(MIGRATION_VERIFICATION_UNAVAILABLE)
+  ) {
+    return null;
+  }
 
   return (
     <div

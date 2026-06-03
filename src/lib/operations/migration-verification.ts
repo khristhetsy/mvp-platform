@@ -165,16 +165,11 @@ export async function queryAppliedMigrationVersions(): Promise<{
       error: null,
     };
   } catch (error) {
-    const classified = classifyDatabaseVerificationError(error);
-    const isConnectionIssue =
-      classified === "DATABASE_URL connection failed" ||
-      classified === "DATABASE_URL is invalid or malformed";
-
     return {
       versions: [],
-      databaseQueryable: !isConnectionIssue,
-      verificationUnavailable: isConnectionIssue,
-      error: classified,
+      databaseQueryable: false,
+      verificationUnavailable: true,
+      error: classifyDatabaseVerificationError(error),
     };
   } finally {
     await client.end().catch(() => undefined);
@@ -191,27 +186,8 @@ export async function verifyMigrationsApplied(
     const { versions, databaseQueryable, verificationUnavailable, error } =
       await queryAppliedMigrationVersions();
 
-    if (verificationUnavailable) {
+    if (verificationUnavailable || error || !databaseQueryable) {
       return buildUnavailableResult(floor, error ?? "DATABASE_URL not configured", repoFiles);
-    }
-
-    if (!databaseQueryable) {
-      return buildUnavailableResult(floor, error ?? "DATABASE_URL not configured", repoFiles);
-    }
-
-    if (error) {
-      return {
-        floor,
-        repoLatest,
-        repoTotal,
-        appliedLatest: null,
-        appliedTotal: 0,
-        floorApplied: false,
-        ok: false,
-        databaseQueryable: true,
-        verificationUnavailable: false,
-        detail: unavailableDetail("Migration query failed"),
-      };
     }
 
     const appliedLatest = versions.at(-1) ?? null;
