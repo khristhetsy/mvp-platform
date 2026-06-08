@@ -20,4 +20,4 @@ alter table public.investor_activity add constraint investor_activity_activity_t
     'follow_up_requested',
     'pledge_amount_submitted'
   )
-);
+) NOT VALID;
