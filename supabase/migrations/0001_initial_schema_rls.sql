@@ -1,6 +1,6 @@
 create extension if not exists "pgcrypto";
 
-create table profiles (
+create table if not exists profiles (
   id uuid primary key,
   full_name text,
   email text,
