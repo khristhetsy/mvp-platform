@@ -147,4 +147,4 @@ alter table public.investor_activity add constraint investor_activity_activity_t
     'report_viewed',
     'spv_interest_expressed'
   )
-);
+) NOT VALID;

@@ -16,4 +16,4 @@ alter table public.investor_activity add constraint investor_activity_activity_t
     'meeting_declined',
     'report_viewed'
   )
-);
+) NOT VALID;
