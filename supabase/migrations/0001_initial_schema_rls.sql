@@ -8,7 +8,7 @@ create table if not exists profiles (
   created_at timestamp default now()
 );
 
-create table companies (
+create table if not exists companies (
   id uuid primary key default gen_random_uuid(),
   founder_id uuid references profiles(id),
   company_name text not null,
@@ -26,7 +26,7 @@ create table companies (
   updated_at timestamp default now()
 );
 
-create table documents (
+create table if not exists documents (
   id uuid primary key default gen_random_uuid(),
   company_id uuid references companies(id),
   uploaded_by uuid references profiles(id),
@@ -40,7 +40,7 @@ create table documents (
   created_at timestamp default now()
 );
 
-create table diligence_reports (
+create table if not exists diligence_reports (
   id uuid primary key default gen_random_uuid(),
   company_id uuid references companies(id),
   executive_summary text,
@@ -56,7 +56,7 @@ create table diligence_reports (
   created_at timestamp default now()
 );
 
-create table campaigns (
+create table if not exists campaigns (
   id uuid primary key default gen_random_uuid(),
   company_id uuid references companies(id),
   title text,
@@ -74,7 +74,7 @@ create table campaigns (
   created_at timestamp default now()
 );
 
-create table investor_interests (
+create table if not exists investor_interests (
   id uuid primary key default gen_random_uuid(),
   investor_id uuid references profiles(id),
   campaign_id uuid references campaigns(id),
@@ -84,7 +84,7 @@ create table investor_interests (
   created_at timestamp default now()
 );
 
-create table admin_reviews (
+create table if not exists admin_reviews (
   id uuid primary key default gen_random_uuid(),
   company_id uuid references companies(id),
   reviewed_by uuid references profiles(id),
@@ -93,7 +93,7 @@ create table admin_reviews (
   created_at timestamp default now()
 );
 
-create table audit_logs (
+create table if not exists audit_logs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references profiles(id),
   action text,
