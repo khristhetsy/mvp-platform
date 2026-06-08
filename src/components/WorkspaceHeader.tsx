@@ -57,6 +57,8 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, onMen
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           <button
             type="button"
+            aria-label={`Current company: ${companyLabel}`}
+            aria-disabled="true"
             className="hidden max-w-[200px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-left text-sm font-medium text-[var(--navy)] md:flex lg:max-w-xs"
           >
             <span className="truncate">{companyLabel}</span>

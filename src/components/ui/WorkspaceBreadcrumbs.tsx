@@ -21,7 +21,7 @@ export function WorkspaceBreadcrumbs({ workspace }: Readonly<{ workspace: Worksp
                 {item.label}
               </Link>
             ) : (
-              <span className={isLast ? "font-medium text-slate-800" : "text-slate-600"}>{item.label}</span>
+              <span aria-current={isLast ? "page" : undefined} className={isLast ? "font-medium text-slate-800" : "text-slate-600"}>{item.label}</span>
             )}
           </span>
         );

@@ -33,7 +33,7 @@ export function DataTableHeaderCell({
   children,
   className = "",
 }: Readonly<{ children: ReactNode; className?: string }>) {
-  return <th className={`whitespace-nowrap ${className}`}>{children}</th>;
+  return <th scope="col" className={`whitespace-nowrap ${className}`}>{children}</th>;
 }
 
 export function DataTableBody({ children }: Readonly<{ children: ReactNode }>) {

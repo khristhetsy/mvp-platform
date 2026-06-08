@@ -92,6 +92,7 @@ export function WorkspaceSidebar({
         key={item.href}
         href={item.href}
         onClick={onClose}
+        aria-current={active ? "page" : undefined}
         className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
           active
             ? "bg-[var(--navy)] text-white shadow-sm"
@@ -116,7 +117,7 @@ export function WorkspaceSidebar({
         </Link>
         <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
       </div>
-      <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 py-2.5">
+      <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 py-2.5" aria-label={`${label} navigation`}>
         {adminSections
           ? adminSections.map((section, index) => (
               <div key={section.title ?? `section-${index}`} className={section.title ? "pt-1" : undefined}>
@@ -160,6 +161,7 @@ export function WorkspaceSidebar({
         />
       ) : null}
       <aside
+        aria-label={`${label} sidebar`}
         className={`fixed inset-y-0 left-0 z-50 flex min-h-0 w-64 shrink-0 flex-col border-r border-slate-200/80 bg-[var(--surface-sidebar)] shadow-[var(--shadow-panel)] transition-transform lg:relative lg:z-30 lg:h-screen lg:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
