@@ -1,7 +1,29 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { getPublicSupabaseEnv, isProductionEnvironment } from "@/lib/env/production";
 import type { Database, UserRole } from "@/lib/supabase/types";
+
+/** Edge-safe env reads — mirrors @/lib/env helpers used here without importing that module. */
+function trimEnv(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value || undefined;
+}
+
+function getPublicSupabaseEnv() {
+  const url = trimEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const anonKey = trimEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  return { url, anonKey, configured: Boolean(url && anonKey) };
+}
+
+function isProductionEnvironment(): boolean {
+  const explicit = trimEnv("APP_ENV")?.toLowerCase();
+  if (explicit === "production") return true;
+  if (explicit === "local" || explicit === "staging") return false;
+
+  const vercelEnv = trimEnv("VERCEL_ENV");
+  if (vercelEnv === "production") return true;
+
+  return false;
+}
 
 type WorkspaceZone = "founder" | "investor" | "admin";
 
