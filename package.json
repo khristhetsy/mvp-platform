@@ -10,6 +10,8 @@
     "check:env": "node scripts/check-env.mjs",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:investor-express-interest": "node scripts/test-investor-express-interest.mjs",
     "test:investor-crm-pipeline": "node --experimental-strip-types scripts/test-investor-crm-pipeline.ts",
     "ops:check-env": "node scripts/check-env.mjs",
@@ -44,6 +46,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.1.8"
   }
 }
