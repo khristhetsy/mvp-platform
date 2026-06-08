@@ -150,15 +150,19 @@ export function CapitalOSAssistant() {
 
       {open ? (
         <div
+          id="capitalos-assistant-dialog"
           role="dialog"
-          aria-label="CapitalOS Assistant"
+          aria-modal="true"
+          aria-labelledby="capitalos-assistant-title"
           className="fixed inset-x-0 bottom-0 z-[100] flex max-h-[85vh] w-full flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-[var(--shadow-card)] sm:inset-x-auto sm:bottom-20 sm:right-4 sm:left-auto sm:w-[400px] sm:max-h-[min(560px,82vh)] sm:rounded-2xl"
         >
           <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 bg-[var(--navy)] px-4 py-3 text-white sm:rounded-t-2xl">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[var(--gold)]" strokeWidth={1.75} aria-hidden />
-                <p className="text-sm font-semibold">CapitalOS Assistant</p>
+                <p id="capitalos-assistant-title" className="text-sm font-semibold">
+                  CapitalOS Assistant
+                </p>
               </div>
               <p className="mt-1 text-[11px] leading-4 text-slate-300">Workflow guidance · Next best action</p>
             </div>
@@ -194,8 +198,16 @@ export function CapitalOSAssistant() {
                 </p>
               ))
             )}
-            {loading ? <p className="text-xs text-slate-400">Preparing guidance…</p> : null}
-            {error ? <p className="text-xs text-red-600">{error}</p> : null}
+            {loading ? (
+              <p className="text-xs text-slate-400" role="status" aria-live="polite">
+                Preparing guidance…
+              </p>
+            ) : null}
+            {error ? (
+              <p className="text-xs text-red-600" role="alert">
+                {error}
+              </p>
+            ) : null}
           </div>
 
           {lastResponse?.suggestedActions?.length ? (
@@ -233,7 +245,11 @@ export function CapitalOSAssistant() {
           </div>
 
           <div className="flex shrink-0 gap-2 border-t border-slate-100 p-3">
+            <label htmlFor="capitalos-assistant-message" className="sr-only">
+              Message CapitalOS Assistant
+            </label>
             <input
+              id="capitalos-assistant-message"
               type="text"
               value={message}
               onChange={(event) => setMessage(event.target.value)}
@@ -263,6 +279,7 @@ export function CapitalOSAssistant() {
         type="button"
         aria-label={open ? "Close CapitalOS Assistant" : "Open CapitalOS Assistant"}
         aria-expanded={open}
+        aria-controls="capitalos-assistant-dialog"
         onClick={() => setOpen((value) => !value)}
         className="fixed bottom-4 right-4 z-[100] flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[var(--navy)] shadow-[var(--shadow-card)] hover:border-slate-300"
       >

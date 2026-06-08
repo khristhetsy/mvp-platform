@@ -29,7 +29,7 @@ export function WorkflowProgressRail({
           const isLast = index === steps.length - 1;
 
           return (
-            <div key={step.key} className="flex min-w-[4.5rem] flex-1 flex-col items-center" role="listitem">
+            <div key={step.key} className="flex min-w-[4.5rem] flex-1 flex-col items-center" role="listitem" aria-current={step.current ? "step" : undefined}>
               <div className="flex w-full items-center">
                 <span
                   className={`flex h-2 w-2 shrink-0 rounded-full ${step.complete || step.current ? rail : "bg-slate-200"}`}

@@ -84,6 +84,7 @@ export function AdminAutomationTestRunner({ isStaff }: Readonly<{ isStaff: boole
           type="button"
           onClick={() => void handleRun()}
           disabled={state === "loading"}
+          aria-busy={state === "loading"}
           className="shrink-0 rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-800 shadow-sm hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {state === "loading" ? "Running…" : "Run dry test"}

@@ -28,6 +28,7 @@ export function ViewModeToggle({
             type="button"
             disabled={disabled}
             aria-pressed={active}
+            aria-label={VIEW_MODE_LABELS[mode]}
             title={VIEW_MODE_LABELS[mode]}
             className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition ${
               active

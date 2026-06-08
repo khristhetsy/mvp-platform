@@ -21,6 +21,7 @@ export function ViewDensityToggle({
             type="button"
             disabled={disabled}
             aria-pressed={active}
+            aria-label={`${VIEW_DENSITY_LABELS[density]} density`}
             className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition ${
               active ? "bg-slate-100 text-[var(--navy)]" : "text-slate-500 hover:text-[var(--navy)]"
             } disabled:opacity-50`}

@@ -48,8 +48,10 @@ export function InvestorPipelineStages({
   ];
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Engagement pipeline</p>
+    <div className="rounded-lg border border-slate-200 bg-white p-4" aria-labelledby="investor-pipeline-stages-heading">
+      <p id="investor-pipeline-stages-heading" className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+        Engagement pipeline
+      </p>
       <div className="mt-3">
         <WorkflowProgressRail steps={steps} compact />
       </div>

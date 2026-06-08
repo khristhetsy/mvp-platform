@@ -53,9 +53,19 @@ export function NotificationBellDropdown() {
       }
     }
 
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
     if (open) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleEscape);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+        document.removeEventListener("keydown", handleEscape);
+      };
     }
   }, [open]);
 
@@ -77,8 +87,10 @@ export function NotificationBellDropdown() {
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        aria-label="Notifications"
+        aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
         aria-expanded={open}
+        aria-haspopup="true"
+        aria-controls="notification-dropdown-panel"
         onClick={() => {
           setOpen((value) => !value);
           if (!open) {
@@ -96,14 +108,19 @@ export function NotificationBellDropdown() {
           />
         </svg>
         {unreadCount > 0 ? (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1 text-[10px] font-bold text-white">
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1 text-[10px] font-bold text-white" aria-hidden>
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         ) : null}
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-50 mt-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+        <div
+          id="notification-dropdown-panel"
+          role="region"
+          aria-label="Notifications"
+          className="absolute right-0 z-50 mt-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
+        >
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <p className="text-sm font-semibold text-slate-950">Notifications</p>
             {unreadCount > 0 ? (
@@ -119,7 +136,9 @@ export function NotificationBellDropdown() {
 
           <div className="max-h-80 overflow-y-auto">
             {loading && notifications.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-slate-500">Loading…</p>
+              <p className="px-4 py-6 text-sm text-slate-500" role="status" aria-live="polite">
+                Loading…
+              </p>
             ) : notifications.length === 0 ? (
               <p className="px-4 py-6 text-sm text-slate-500">No notifications yet.</p>
             ) : (

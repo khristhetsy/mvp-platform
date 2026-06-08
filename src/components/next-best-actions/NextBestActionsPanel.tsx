@@ -153,9 +153,13 @@ export function NextBestActionsPanel({
 
       <div className="px-5 py-4">
         {loading ? (
-          <p className="text-sm text-slate-500">Loading suggested actions…</p>
+          <p className="text-sm text-slate-500" role="status" aria-live="polite">
+            Loading suggested actions…
+          </p>
         ) : error ? (
-          <p className="text-sm text-red-700">{error}</p>
+          <p className="text-sm text-red-700" role="alert">
+            {error}
+          </p>
         ) : actions.length === 0 ? (
           <p className="text-sm text-slate-600">
             You are caught up on prioritized items. Check back as your workflow state changes.
@@ -216,6 +220,7 @@ export function NextBestActionsPanel({
                         <button
                           type="button"
                           disabled={isPending}
+                          aria-label={`Complete action: ${action.title}`}
                           onClick={() => void runLifecycle(action.persistedId!, "complete")}
                           className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
                         >
@@ -224,6 +229,7 @@ export function NextBestActionsPanel({
                         <button
                           type="button"
                           disabled={isPending}
+                          aria-label={`Dismiss action: ${action.title}`}
                           onClick={() => void runLifecycle(action.persistedId!, "dismiss")}
                           className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                         >
@@ -232,6 +238,7 @@ export function NextBestActionsPanel({
                         <button
                           type="button"
                           disabled={isPending}
+                          aria-label={`Snooze action for 24 hours: ${action.title}`}
                           onClick={() => void runLifecycle(action.persistedId!, "snooze")}
                           className="rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-xs font-medium text-violet-800 hover:bg-violet-100 disabled:opacity-50"
                         >
@@ -241,6 +248,7 @@ export function NextBestActionsPanel({
                           <button
                             type="button"
                             disabled={isPending}
+                            aria-label={`Escalate action: ${action.title}`}
                             onClick={() => void runLifecycle(action.persistedId!, "escalate")}
                             className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100 disabled:opacity-50"
                           >
@@ -256,7 +264,11 @@ export function NextBestActionsPanel({
           </ul>
         )}
 
-        {actionError ? <p className="mt-3 text-xs text-red-700">{actionError}</p> : null}
+        {actionError ? (
+          <p className="mt-3 text-xs text-red-700" role="alert">
+            {actionError}
+          </p>
+        ) : null}
 
         <p className="mt-4 text-[10px] leading-relaxed text-slate-400">{NBA_DISCLAIMER}</p>
       </div>
