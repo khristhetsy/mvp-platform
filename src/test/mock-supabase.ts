@@ -2,6 +2,14 @@ import { vi } from "vitest";
 
 type SingleResult = { data: unknown; error: unknown };
 
+type MockQueryChain = {
+  select: ReturnType<typeof vi.fn<() => MockQueryChain>>;
+  eq: ReturnType<typeof vi.fn<() => MockQueryChain>>;
+  insert: ReturnType<typeof vi.fn<() => MockQueryChain>>;
+  update: ReturnType<typeof vi.fn<() => MockQueryChain>>;
+  single: ReturnType<typeof vi.fn<() => Promise<SingleResult>>>;
+};
+
 export function createMockSupabaseClient(options: {
   getUser?: { data: { user: { id: string } | null }; error: unknown };
   profile?: SingleResult;
@@ -10,14 +18,14 @@ export function createMockSupabaseClient(options: {
   const from = vi.fn((table: string) => {
     const tableHandlers = options.tables?.[table] ?? {};
 
-    const chain = {
-      select: vi.fn(() => chain),
-      eq: vi.fn(() => chain),
-      insert: vi.fn(() => chain),
-      update: vi.fn(() => chain),
-      single: vi.fn(async () => {
+    const chain: MockQueryChain = {
+      select: vi.fn((): MockQueryChain => chain),
+      eq: vi.fn((): MockQueryChain => chain),
+      insert: vi.fn((): MockQueryChain => chain),
+      update: vi.fn((): MockQueryChain => chain),
+      single: vi.fn(async (): Promise<SingleResult> => {
         if (tableHandlers.single) {
-          return tableHandlers.single();
+          return tableHandlers.single() as SingleResult;
         }
         if (table === "profiles") {
           return options.profile ?? { data: null, error: { message: "missing" } };
@@ -27,10 +35,10 @@ export function createMockSupabaseClient(options: {
     };
 
     if (tableHandlers.select) {
-      chain.select = vi.fn(() => tableHandlers.select?.() ?? chain);
+      chain.select = vi.fn((): MockQueryChain => (tableHandlers.select?.() as MockQueryChain | undefined) ?? chain);
     }
     if (tableHandlers.insert) {
-      chain.insert = vi.fn(() => tableHandlers.insert?.() ?? chain);
+      chain.insert = vi.fn((): MockQueryChain => (tableHandlers.insert?.() as MockQueryChain | undefined) ?? chain);
     }
 
     return chain;
