@@ -21,11 +21,11 @@ export function InvestorCompanyReportView({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+      <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">
           Investor company report
         </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{listing.companyName}</h1>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">{listing.companyName}</h1>
         <p className="mt-2 text-sm text-slate-500">
           {[report.overview.industry, report.overview.stage, report.overview.location]
             .filter(Boolean)
@@ -42,21 +42,21 @@ export function InvestorCompanyReportView({
       <div className="grid gap-6 lg:grid-cols-2">
         <WorkspacePanel title="Company overview" subtitle="Public marketplace profile">
           <dl className="grid gap-2 text-sm">
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Industry</dt>
-              <dd className="font-medium text-slate-900">{report.overview.industry ?? "—"}</dd>
+              <dd className="min-w-0 text-right font-medium text-slate-900">{report.overview.industry ?? "—"}</dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Stage</dt>
-              <dd className="font-medium text-slate-900">{report.overview.stage ?? "—"}</dd>
+              <dd className="min-w-0 text-right font-medium text-slate-900">{report.overview.stage ?? "—"}</dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Headquarters</dt>
-              <dd className="font-medium text-slate-900">{report.overview.location ?? "—"}</dd>
+              <dd className="min-w-0 text-right font-medium text-slate-900">{report.overview.location ?? "—"}</dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Listed</dt>
-              <dd className="font-medium text-slate-900">
+              <dd className="min-w-0 text-right font-medium text-slate-900">
                 {report.overview.publishedAt
                   ? new Date(report.overview.publishedAt).toLocaleDateString()
                   : "—"}
@@ -67,13 +67,13 @@ export function InvestorCompanyReportView({
 
         <WorkspacePanel title="Capital raise overview" subtitle="From published campaign fields">
           <dl className="grid gap-2 text-sm">
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Funding target</dt>
-              <dd className="font-medium text-slate-900">{report.capitalRaise.fundingTarget ?? "TBD"}</dd>
+              <dd className="min-w-0 text-right font-medium text-slate-900">{report.capitalRaise.fundingTarget ?? "TBD"}</dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Minimum investment</dt>
-              <dd className="font-medium text-slate-900">
+              <dd className="min-w-0 text-right font-medium text-slate-900">
                 {report.capitalRaise.minimumInvestment ?? "TBD"}
               </dd>
             </div>
@@ -85,30 +85,30 @@ export function InvestorCompanyReportView({
 
         <WorkspacePanel title="Readiness summary" subtitle="Scores and onboarding progress">
           <dl className="grid gap-2 text-sm">
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Latest readiness score</dt>
-              <dd className="font-medium text-slate-900">
+              <dd className="min-w-0 text-right font-medium text-slate-900">
                 {report.readiness.readinessScore ?? "—"}
               </dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Onboarding progress</dt>
-              <dd className="font-medium text-slate-900">
+              <dd className="min-w-0 text-right font-medium text-slate-900">
                 {report.readiness.onboardingProgressPercent}%
               </dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Onboarding completed</dt>
-              <dd className="font-medium text-slate-900">
+              <dd className="min-w-0 text-right font-medium text-slate-900">
                 {report.readiness.onboardingCompletedAt
                   ? new Date(report.readiness.onboardingCompletedAt).toLocaleDateString()
                   : "In progress"}
               </dd>
             </div>
             {report.readiness.currentMilestone ? (
-              <div className="flex justify-between gap-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <dt className="text-slate-500">Current milestone</dt>
-                <dd className="font-medium text-slate-900">{report.readiness.currentMilestone}</dd>
+                <dd className="min-w-0 text-right font-medium text-slate-900">{report.readiness.currentMilestone}</dd>
               </div>
             ) : null}
           </dl>
@@ -125,19 +125,19 @@ export function InvestorCompanyReportView({
 
         <WorkspacePanel title="Document / data room summary" subtitle="Availability only — no private file paths">
           <dl className="grid gap-2 text-sm">
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Documents uploaded</dt>
-              <dd className="font-medium text-slate-900">{report.documents.uploadedCount}</dd>
+              <dd className="min-w-0 text-right font-medium text-slate-900">{report.documents.uploadedCount}</dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Pitch deck</dt>
-              <dd className="font-medium text-slate-900">
+              <dd className="min-w-0 text-right font-medium text-slate-900">
                 {report.documents.pitchDeckPresent ? "Available" : "Not uploaded"}
               </dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Admin-approved documents</dt>
-              <dd className="font-medium text-slate-900">{report.documents.approvedCount}</dd>
+              <dd className="min-w-0 text-right font-medium text-slate-900">{report.documents.approvedCount}</dd>
             </div>
           </dl>
           <ul className="mt-4 space-y-1 text-xs text-slate-600">
@@ -157,31 +157,31 @@ export function InvestorCompanyReportView({
           subtitle="Platform-wide aggregates — no private investor identities"
         >
           <dl className="grid gap-2 text-sm">
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Expressed interests</dt>
-              <dd className="font-medium text-slate-900">
+              <dd className="min-w-0 text-right font-medium text-slate-900">
                 {report.investorSignals.expressedInterestCount}
               </dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Indicative pledge total</dt>
-              <dd className="font-medium text-slate-900">{pledgeLabel}</dd>
+              <dd className="min-w-0 text-right font-medium text-slate-900">{pledgeLabel}</dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Participating investors</dt>
-              <dd className="font-medium text-slate-900">{report.investorSignals.investorCount}</dd>
+              <dd className="min-w-0 text-right font-medium text-slate-900">{report.investorSignals.investorCount}</dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Intro requests</dt>
-              <dd className="font-medium text-slate-900">{report.investorSignals.introRequestCount}</dd>
+              <dd className="min-w-0 text-right font-medium text-slate-900">{report.investorSignals.introRequestCount}</dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Message threads</dt>
-              <dd className="font-medium text-slate-900">{report.investorSignals.messageThreadCount}</dd>
+              <dd className="min-w-0 text-right font-medium text-slate-900">{report.investorSignals.messageThreadCount}</dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Scheduled meetings</dt>
-              <dd className="font-medium text-slate-900">
+              <dd className="min-w-0 text-right font-medium text-slate-900">
                 {report.investorSignals.meetingsScheduledCount}
               </dd>
             </div>
@@ -190,13 +190,13 @@ export function InvestorCompanyReportView({
 
         <WorkspacePanel title="Learning progression" subtitle="Founder learning modules on platform">
           <dl className="grid gap-2 text-sm">
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Modules completed</dt>
-              <dd className="font-medium text-slate-900">{report.learning.modulesCompleted}</dd>
+              <dd className="min-w-0 text-right font-medium text-slate-900">{report.learning.modulesCompleted}</dd>
             </div>
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">In progress</dt>
-              <dd className="font-medium text-slate-900">{report.learning.modulesInProgress}</dd>
+              <dd className="min-w-0 text-right font-medium text-slate-900">{report.learning.modulesInProgress}</dd>
             </div>
           </dl>
         </WorkspacePanel>

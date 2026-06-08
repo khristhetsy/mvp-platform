@@ -57,9 +57,9 @@ export default async function FounderDealRoomPage({ params }: PageProps) {
             ) : (
               <div className="divide-y divide-slate-100">
                 {(activity ?? []).map((e) => (
-                  <div key={e.id} className="py-2 text-sm text-slate-700">
-                    <span className="font-semibold">{e.event_type}</span>{" "}
-                    <span className="text-xs text-slate-500">{new Date(String(e.created_at)).toLocaleString("en-US")}</span>
+                  <div key={e.id} className="flex flex-col gap-0.5 py-2 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                    <span className="font-semibold break-words">{e.event_type}</span>
+                    <span className="shrink-0 text-xs text-slate-500">{new Date(String(e.created_at)).toLocaleString("en-US")}</span>
                   </div>
                 ))}
               </div>
