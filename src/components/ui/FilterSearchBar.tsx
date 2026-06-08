@@ -14,7 +14,7 @@ export function FilterSearchBar({
   disabled?: boolean;
 }>) {
   return (
-    <label className="relative block min-w-[200px] flex-1">
+    <label className="relative block min-w-0 flex-1 sm:min-w-[200px]">
       <span className="sr-only">{placeholder}</span>
       <Search
         className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"

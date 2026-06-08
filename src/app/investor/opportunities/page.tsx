@@ -50,11 +50,11 @@ export default async function InvestorOpportunitiesPage() {
           title="Opportunities"
           description="Rule-based matches using your onboarding preferences and published marketplace companies. No external enrichment or AI provider."
           actions={
-            <p className="text-sm text-slate-500">
+            <p className="flex flex-wrap gap-x-1 gap-y-1 text-sm text-slate-500">
               <Link href="/deals" className="font-semibold text-[var(--navy)] hover:underline">
                 Browse marketplace
               </Link>
-              {" · "}
+              <span aria-hidden="true">·</span>
               <Link href="/investor/dashboard" className="font-semibold text-[var(--navy)] hover:underline">
                 Dashboard
               </Link>

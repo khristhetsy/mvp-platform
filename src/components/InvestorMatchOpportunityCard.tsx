@@ -70,13 +70,13 @@ export function InvestorMatchOpportunityCard({
       <div className="mt-4 flex flex-wrap gap-2">
         <Link
           href={`/investor/opportunities/${companyId}/report`}
-          className="inline-flex rounded-full bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500"
+          className="inline-flex min-h-11 items-center rounded-full bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500"
         >
           View report
         </Link>
         <Link
           href={href}
-          className="inline-flex rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+          className="inline-flex min-h-11 items-center rounded-full border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-800 hover:bg-slate-50"
         >
           View opportunity
         </Link>

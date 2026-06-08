@@ -110,7 +110,7 @@ export default async function AdminDealRoomsPage() {
                   </div>
                   <Link
                     href={`/admin/deal-rooms/${r.id}`}
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                   >
                     Open
                   </Link>

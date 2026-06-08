@@ -87,20 +87,20 @@ export default async function FounderDashboardPage() {
         title={companyName}
         description="Readiness, capital raise, investor engagement, and marketplace publication."
         actions={
-          <>
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
             <Link
               href="/founder/settings"
-              className="cap-btn-primary rounded-lg px-4 py-2 text-sm font-medium"
+              className="cap-btn-primary inline-flex w-full justify-center rounded-lg px-4 py-2.5 text-sm font-medium sm:w-auto"
             >
               Company settings
             </Link>
             <Link
               href="/founder/onboarding"
-              className="cap-btn-secondary rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[var(--navy)]"
+              className="cap-btn-secondary inline-flex w-full justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-[var(--navy)] sm:w-auto"
             >
               Continue onboarding
             </Link>
-          </>
+          </div>
         }
       />
 
@@ -210,7 +210,7 @@ export default async function FounderDashboardPage() {
 
         <WorkspacePanel title="Investor Pipeline" subtitle="Read-only activity on your listing">
           {investorActivity ? (
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
               {[
                 ["Expressed interest", investorActivity.interests.length],
                 ["Intro requests", investorActivity.introRequests.length],
@@ -237,9 +237,9 @@ export default async function FounderDashboardPage() {
           <div className="divide-y divide-slate-100">
             {(documents ?? []).length > 0 ? (
               documents?.slice(0, 5).map((document) => (
-                <div key={document.id} className="flex items-center justify-between py-3 text-sm">
-                  <span className="font-medium text-slate-800">{document.file_name ?? document.document_type}</span>
-                  <span className="rounded-full bg-[var(--navy-muted)] px-2.5 py-1 text-xs font-medium text-[var(--navy)]">
+                <div key={document.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                  <span className="min-w-0 flex-1 truncate font-medium text-slate-800">{document.file_name ?? document.document_type}</span>
+                  <span className="shrink-0 rounded-full bg-[var(--navy-muted)] px-2.5 py-1 text-xs font-medium text-[var(--navy)]">
                     {document.status ?? "uploaded"}
                   </span>
                 </div>

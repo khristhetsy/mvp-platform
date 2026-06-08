@@ -57,7 +57,7 @@ export function FounderOnboardingProgressCard({
         </div>
         <Link
           href="/founder/onboarding"
-          className="cap-btn-primary inline-flex shrink-0 rounded-lg px-5 py-2.5 text-sm font-semibold"
+          className="cap-btn-primary inline-flex w-full shrink-0 justify-center rounded-lg px-5 py-2.5 text-sm font-semibold sm:w-auto"
         >
           Continue onboarding
         </Link>

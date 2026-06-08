@@ -47,7 +47,7 @@ export default async function FounderDealRoomIndexPage() {
                         status: {r.status} · updated {new Date(String(r.updated_at)).toLocaleDateString("en-US")}
                       </p>
                     </div>
-                    <Link href={`/founder/deal-room/${r.id}`} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">
+                    <Link href={`/founder/deal-room/${r.id}`} className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-indigo-700">
                       Open
                     </Link>
                   </div>
