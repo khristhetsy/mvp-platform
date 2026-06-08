@@ -21,6 +21,7 @@ export const adminOperationsNav: WorkspaceNavItem[] = [
   { href: "/admin/investors", label: "Investors" },
   { href: "/admin/deal-rooms", label: "Deal Rooms" },
   { href: "/admin/crm", label: "CRM" },
+  { href: "/admin/matching", label: "Matching" },
 ];
 
 export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
@@ -62,6 +63,7 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/founder/readiness", label: "Readiness" },
   { href: "/founder/documents", label: "Documents" },
   { href: "/founder/investors", label: "Investors" },
+  { href: "/founder/matching", label: "Matching" },
   { href: "/founder/deal-room", label: "Deal Room" },
   { href: "/founder/messages", label: "Messages" },
   { href: "/founder/capital-raise", label: "Capital Raise" },

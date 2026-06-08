@@ -25,6 +25,7 @@ import {
   Users,
   Upload,
   Wallet,
+  GitCompare,
   type LucideIcon,
 } from "lucide-react";
 
@@ -33,6 +34,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/founder/readiness": Target,
   "/founder/documents": FileText,
   "/founder/investors": Users,
+  "/founder/matching": GitCompare,
   "/founder/messages": MessageSquare,
   "/founder/capital-raise": Rocket,
   "/founder/learning": GraduationCap,
@@ -55,6 +57,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/admin/investors": Users,
   "/admin/deal-rooms": Handshake,
   "/admin/crm": MessageSquare,
+  "/admin/matching": GitCompare,
   "/admin/learning": GraduationCap,
   "/admin/billing": CreditCard,
   "/admin/diligence": FileText,
