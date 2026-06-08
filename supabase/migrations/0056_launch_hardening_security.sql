@@ -161,6 +161,7 @@ as $$
 $$;
 
 drop policy if exists "documents_select_investor_approved" on public.documents;
+drop policy if exists "documents_select_investor_related" on public.documents;
 create policy "documents_select_investor_related"
   on public.documents for select to authenticated
   using (
