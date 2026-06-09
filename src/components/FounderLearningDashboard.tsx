@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { QuizReviewBanner } from "@/components/founder/learning/QuizReviewBanner";
 import { FounderLearningMilestones } from "@/components/FounderLearningMilestones";
 import { FounderLearningModuleCard } from "@/components/FounderLearningModuleCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
@@ -34,6 +35,7 @@ export function FounderLearningDashboard({
 
   return (
     <div className="space-y-6">
+      <QuizReviewBanner />
       <PageHeader
         eyebrow="Institutional readiness intelligence"
         title="Learning command center"

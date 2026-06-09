@@ -179,12 +179,19 @@ export async function POST(
   const attemptsRemaining =
     quiz.retry_limit != null ? Math.max(0, quiz.retry_limit - (attemptsUsed + 1)) : null;
 
+  const questionResults = q.map((item) => {
+    const selected = answers[item.id];
+    const correct = typeof selected === "number" && selected === item.correct_option_index;
+    return { questionId: item.id, correct };
+  });
+
   return NextResponse.json({
     score,
     passed,
     attemptsUsed: attemptsUsed + 1,
     attemptsRemaining,
     certificateIssued: cert.issued,
+    questionResults,
   });
 }
 

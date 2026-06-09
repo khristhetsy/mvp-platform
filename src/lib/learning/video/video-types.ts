@@ -31,6 +31,9 @@ export type FounderLessonVideoAssetRecord = {
   video_url: string | null;
   render_status: VideoRenderStatus;
   provider: VideoProvider;
+  watch_position_seconds: number;
+  slide_deck_url: string | null;
+  slide_deck_storage_path: string | null;
   created_at: string;
   updated_at: string;
 };

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
+import { CapitalReadyBadge } from "@/components/CapitalReadyBadge";
 import { CompanyPledgeSummaryBlock } from "@/components/CompanyPledgeSummary";
 import type { MarketplaceListing } from "@/lib/data/marketplace";
 import type { CompanyPledgeSummary } from "@/lib/data/investor-pledges";
@@ -12,7 +13,10 @@ export function OpportunityCard({
     <article className="flex h-full flex-col rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)] transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
       <div className="min-w-0">
         <p className="text-xs font-medium text-[var(--gold)]">{deal.industry ?? "Private company"}</p>
-        <h3 className="mt-1 truncate text-lg font-semibold tracking-tight text-[var(--navy)]">{deal.companyName}</h3>
+        <h3 className="mt-1 flex flex-wrap items-center gap-2 text-lg font-semibold tracking-tight text-[var(--navy)]">
+          <span className="truncate">{deal.companyName}</span>
+          {deal.capitalReadyAt ? <CapitalReadyBadge /> : null}
+        </h3>
         <p className="mt-0.5 text-xs text-slate-500">
           {[deal.stage, deal.location].filter(Boolean).join(" · ") || "—"}
         </p>

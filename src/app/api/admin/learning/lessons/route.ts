@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const moduleSlug = url.searchParams.get("moduleSlug");
   const query = auth.supabase
     .from("learning_lessons")
-    .select("id, module_id, module_slug, lesson_key, title, order_index, estimated_time_minutes, content_status, updated_at")
+    .select("id, module_id, module_slug, lesson_key, title, order_index, estimated_time_minutes, content_status, video_url, slide_deck_url, video_render_status, updated_at")
     .order("order_index", { ascending: true })
     .limit(500);
 

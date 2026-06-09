@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { CapitalReadyBadge } from "@/components/CapitalReadyBadge";
 import { CompanyPledgeSummaryBlock } from "@/components/CompanyPledgeSummary";
 import { ComplianceNotice } from "@/components/ComplianceNotice";
 import { InvestorDealActions } from "@/components/InvestorDealActions";
@@ -52,7 +53,10 @@ export default async function DealDetailPage({
         <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-start">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">{deal.industry}</p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">{deal.companyName}</h1>
+            <h1 className="mt-3 flex flex-wrap items-center gap-3 text-4xl font-semibold tracking-tight text-slate-950">
+              {deal.companyName}
+              {deal.capitalReadyAt ? <CapitalReadyBadge /> : null}
+            </h1>
             <p className="mt-4 max-w-3xl text-lg leading-8 text-slate-600">{deal.shortSummary}</p>
             <p className="mt-3 text-sm text-slate-500">
               {[deal.stage, deal.location].filter(Boolean).join(" · ")}

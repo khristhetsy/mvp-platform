@@ -12,7 +12,7 @@ const contentTypeSchema = z.enum(["program", "module", "lesson", "quiz"]);
 const actionSchema = z.object({
   contentType: contentTypeSchema,
   contentId: z.string().uuid(),
-  action: z.enum(["approve", "publish", "unpublish", "archive", "request_review"]),
+  action: z.enum(["approve", "publish", "unpublish", "archive", "request_review", "generate_video"]),
   notes: z.string().max(2000).optional(),
 });
 
@@ -35,6 +35,7 @@ function nextStatus(action: string) {
   if (action === "publish") return "published";
   if (action === "archive") return "archived";
   if (action === "unpublish") return "approved";
+  if (action === "generate_video") return null;
   return null;
 }
 
@@ -55,6 +56,21 @@ export async function POST(request: Request) {
   if (action === "publish" && contentType === "program") {
     // Certificates issuance is separate; no auto-issued certs in Phase 1.
     ensureCanIssueCertificates(auth.profile);
+  }
+
+  if (action === "generate_video") {
+    if (contentType !== "lesson") {
+      return NextResponse.json({ error: "generate_video only applies to lessons." }, { status: 400 });
+    }
+    const now = new Date().toISOString();
+    const { data: updated, error: updateError } = await auth.supabase
+      .from("learning_lessons")
+      .update({ video_render_status: "rendering", updated_at: now, updated_by: auth.profile.id })
+      .eq("id", contentId)
+      .select("*")
+      .single();
+    if (updateError) return jsonBadRequest(updateError);
+    return NextResponse.json({ content: updated });
   }
 
   const table = tableForType(contentType);

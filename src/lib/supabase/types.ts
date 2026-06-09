@@ -307,6 +307,9 @@ export type Database = {
           order_index: number;
           estimated_time_minutes: number;
           content_status: string;
+          video_url: string | null;
+          slide_deck_url: string | null;
+          video_render_status: string | null;
           created_by: string | null;
           updated_by: string | null;
           created_at: string;
@@ -458,8 +461,60 @@ export type Database = {
           video_url: string | null;
           render_status: string;
           provider: string;
+          watch_position_seconds: number;
+          slide_deck_url: string | null;
+          slide_deck_storage_path: string | null;
           created_at: string;
           updated_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      founder_lesson_notes: {
+        Row: {
+          id: string;
+          founder_id: string;
+          company_id: string;
+          module_slug: string;
+          lesson_id: string;
+          content: string;
+          updated_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      founder_worksheet_submissions: {
+        Row: {
+          id: string;
+          founder_id: string;
+          company_id: string;
+          module_slug: string;
+          lesson_id: string;
+          content: string;
+          submitted_at: string;
+          admin_feedback: string | null;
+          feedback_given_at: string | null;
+          feedback_given_by: string | null;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      founder_quiz_reviews: {
+        Row: {
+          id: string;
+          founder_id: string;
+          company_id: string;
+          module_slug: string;
+          lesson_id: string;
+          question_id: string;
+          next_review_at: string;
+          interval_days: number;
+          ease_factor: number;
+          last_score: number | null;
+          review_count: number;
         };
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;

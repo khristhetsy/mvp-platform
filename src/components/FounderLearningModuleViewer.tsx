@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { LessonNotes } from "@/components/founder/learning/LessonNotes";
+import { LessonWorksheet } from "@/components/founder/learning/LessonWorksheet";
 import type { LearningModuleContent } from "@/lib/learning/types";
 import type { LearningProgressRecord } from "@/lib/learning/types";
 
@@ -145,10 +147,13 @@ export function FounderLearningModuleViewer({
                   </li>
                 ))}
               </ul>
+              <div className="mt-4">
+                <LessonNotes moduleSlug={moduleSlug} lessonId={lesson.id} />
+              </div>
               {lesson.worksheetPrompt ? (
-                <p className="mt-4 rounded-xl border border-dashed border-indigo-200 bg-indigo-50/50 px-4 py-3 text-xs text-indigo-900">
-                  <span className="font-semibold">Worksheet (future):</span> {lesson.worksheetPrompt}
-                </p>
+                <div className="mt-4">
+                  <LessonWorksheet moduleSlug={moduleSlug} lessonId={lesson.id} worksheetPrompt={lesson.worksheetPrompt} />
+                </div>
               ) : null}
             </article>
           );
