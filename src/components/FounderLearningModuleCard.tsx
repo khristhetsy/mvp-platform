@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { courseHref } from "@/lib/learning/course-keys";
 import { getProgramForModuleSlug } from "@/lib/learning/catalog";
-import type { FounderLearningModuleView } from "@/lib/learning/load-founder-learning";
+import type { FounderLearningModuleView } from "@/lib/learning/types";
 
 function statusLabel(status: string | null | undefined) {
   if (!status || status === "not_started") return "Not started";
@@ -11,9 +11,13 @@ function statusLabel(status: string | null | undefined) {
 export function FounderLearningModuleCard({
   module,
   highlight,
+  locked = false,
+  lockMessage,
 }: Readonly<{
   module: FounderLearningModuleView;
   highlight?: string;
+  locked?: boolean;
+  lockMessage?: string;
 }>) {
   const percent = module.progress?.percent_complete ?? 0;
   const status = module.progress?.status ?? "not_started";
@@ -30,7 +34,11 @@ export function FounderLearningModuleCard({
   const linkedCourseSlug = courseSlugByModule[module.slug];
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <article
+      className={`rounded-2xl border p-4 shadow-sm ${
+        locked ? "border-slate-200 bg-slate-50 opacity-90" : "border-slate-200 bg-white"
+      }`}
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600">{module.category}</p>
@@ -41,7 +49,13 @@ export function FounderLearningModuleCard({
         </span>
       </div>
       <p className="mt-2 text-sm leading-6 text-slate-600">{module.description}</p>
-      {highlight ? <p className="mt-2 text-xs font-medium text-indigo-700">{highlight}</p> : null}
+      {locked ? (
+        <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-amber-800">
+          <span aria-hidden>🔒</span>
+          {lockMessage ?? "Complete the previous stage to unlock"}
+        </p>
+      ) : null}
+      {highlight && !locked ? <p className="mt-2 text-xs font-medium text-indigo-700">{highlight}</p> : null}
       <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
         <span>{module.estimated_time_minutes} min</span>
         <span>{percent}% complete</span>
@@ -60,18 +74,26 @@ export function FounderLearningModuleCard({
         <div className="h-full rounded-full bg-indigo-600 transition-all" style={{ width: `${percent}%` }} />
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
-        <Link
-          href={linkedCourseSlug ? courseHref(linkedCourseSlug) : `/founder/learning/${program.slug}`}
-          className="inline-flex rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-        >
-          {status === "completed" ? "Review course" : status === "in_progress" ? "Continue" : "Open course"}
-        </Link>
-        <Link
-          href={`/founder/learning/${module.slug}`}
-          className="inline-flex rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          Module view
-        </Link>
+        {locked ? (
+          <span className="inline-flex rounded-full bg-slate-200 px-4 py-2 text-xs font-semibold text-slate-500">
+            Locked
+          </span>
+        ) : (
+          <>
+            <Link
+              href={linkedCourseSlug ? courseHref(linkedCourseSlug) : `/founder/learning/${program.slug}`}
+              className="inline-flex rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+            >
+              {status === "completed" ? "Review course" : status === "in_progress" ? "Continue" : "Open course"}
+            </Link>
+            <Link
+              href={`/founder/learning/${module.slug}`}
+              className="inline-flex rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Module view
+            </Link>
+          </>
+        )}
       </div>
     </article>
   );

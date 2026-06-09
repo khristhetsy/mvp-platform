@@ -1,4 +1,10 @@
 import OpenAI from "openai";
+import {
+  COACH_DISCLAIMER,
+  isQuizAnswerRequest,
+  isRestrictedAdviceRequest,
+  QUIZ_REFUSAL_REPLY,
+} from "@/lib/learning/class-assistant-guardrails";
 import { findContinueCourseLesson } from "@/lib/learning/course-progress";
 import {
   findCourseLesson,
@@ -9,17 +15,7 @@ import {
 import type { Course, CourseLesson } from "@/lib/learning/course-types";
 import type { AICoachRecommendation, FounderLessonProgressRecord } from "@/lib/learning/types";
 
-export const COACH_DISCLAIMER =
-  "CapitalOS provides educational support only. This is not legal, tax, investment, securities, or fundraising advice.";
-
-export const QUIZ_REFUSAL_REPLY =
-  "I can't give the quiz answer directly, but I can explain the concept so you can choose confidently.";
-
-const QUIZ_ANSWER_PATTERN =
-  /\b(quiz answer|correct answer|right answer|which option|what is the answer|give me the answer|answer key|choose [a-d]\b|pick [a-d]\b|option [a-d]\b|letter [a-d]\b|tell me [a-d]\b)\b/i;
-
-const ADVICE_PATTERN =
-  /\b(should i invest|buy stock|sell shares|tax advice|legal advice|securities law|guaranteed funding|sec approved|sec compliance|investor approved|file form d|regulation d)\b/i;
+export { COACH_DISCLAIMER, isQuizAnswerRequest, isRestrictedAdviceRequest, QUIZ_REFUSAL_REPLY };
 
 export type CoachMessage = { role: "user" | "assistant"; content: string };
 
@@ -45,14 +41,6 @@ export type PersonalCoachResult = {
   disclaimer: string;
   mode: "openai" | "fallback" | "guardrail";
 };
-
-export function isQuizAnswerRequest(message: string) {
-  return QUIZ_ANSWER_PATTERN.test(message.trim());
-}
-
-export function isRestrictedAdviceRequest(message: string) {
-  return ADVICE_PATTERN.test(message.trim());
-}
 
 export function buildCatalogCoachContext(input: {
   founderName: string;

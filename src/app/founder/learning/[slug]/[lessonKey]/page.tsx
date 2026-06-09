@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { FounderClassLessonExperience } from "@/components/FounderClassLessonExperience";
@@ -18,6 +18,11 @@ import {
 import { resolveLessonContext } from "@/lib/learning/resolve-lesson";
 import { getLessonVideoAsset } from "@/lib/learning/video/lesson-video-assets";
 import { resolveLessonVideoPlaybackUrl } from "@/lib/learning/video/learning-videos-storage";
+import { computeStageAccess, isModuleStageUnlocked } from "@/lib/learning/stage-access";
+import {
+  listLearningProgressForCompany,
+  listPublishedLearningModules,
+} from "@/lib/learning/progress";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -100,7 +105,15 @@ export default async function FounderLearningLessonPage({
     notFound();
   }
 
-  const progressRows = await listLessonProgressForCompany(profile.id, company.id);
+  const [publishedModules, moduleProgressRows, progressRows] = await Promise.all([
+    listPublishedLearningModules(),
+    listLearningProgressForCompany(profile.id, company.id),
+    listLessonProgressForCompany(profile.id, company.id),
+  ]);
+  const stageAccess = computeStageAccess(publishedModules, moduleProgressRows);
+  if (!isModuleStageUnlocked(context.module.readiness_stage, stageAccess)) {
+    redirect(`/founder/learning/${courseSlug}`);
+  }
   const progressMap = progressByLessonKey(progressRows);
   const lessonProgress = progressMap.get(lessonProgressKey(decoded.moduleSlug, decoded.lessonId)) ?? null;
 

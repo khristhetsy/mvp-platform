@@ -1,8 +1,20 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { lessonCountForSlug } from "@/lib/learning/modules";
+import {
+  countCompletedLessons,
+  lessonProgressKey,
+  moduleLessonCompletionPercent,
+  progressByLessonKey,
+} from "@/lib/learning/lesson-progress-utils";
 import { track } from "@/lib/analytics/posthog";
 import { checkAndAwardBadges, getLearningModuleBySlug, recordModuleView } from "@/lib/learning/progress";
 import type { FounderLessonProgressRecord, LearningProgressStatus } from "@/lib/learning/types";
+
+export {
+  countCompletedLessons,
+  lessonProgressKey,
+  moduleLessonCompletionPercent,
+  progressByLessonKey,
+};
 
 export async function listLessonProgressForCompany(founderId: string, companyId: string) {
   const admin = createServiceRoleClient();
@@ -17,14 +29,6 @@ export async function listLessonProgressForCompany(founderId: string, companyId:
   }
 
   return (data ?? []) as FounderLessonProgressRecord[];
-}
-
-export function lessonProgressKey(moduleSlug: string, lessonId: string) {
-  return `${moduleSlug}:${lessonId}`;
-}
-
-export function progressByLessonKey(rows: FounderLessonProgressRecord[]) {
-  return new Map(rows.map((row) => [lessonProgressKey(row.module_slug, row.lesson_id), row]));
 }
 
 export async function recordLessonView(input: {
@@ -188,20 +192,3 @@ export async function recordQuizAttempt(input: {
   }
 }
 
-export function countCompletedLessons(
-  rows: FounderLessonProgressRecord[],
-  moduleSlug?: string,
-) {
-  return rows.filter(
-    (r) => r.status === "completed" && (moduleSlug ? r.module_slug === moduleSlug : true),
-  ).length;
-}
-
-export function moduleLessonCompletionPercent(
-  moduleSlug: string,
-  rows: FounderLessonProgressRecord[],
-) {
-  const total = lessonCountForSlug(moduleSlug) || 1;
-  const done = countCompletedLessons(rows, moduleSlug);
-  return Math.round((done / total) * 100);
-}

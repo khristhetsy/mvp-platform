@@ -5,20 +5,23 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { WorkflowProgressRail } from "@/components/ui/WorkflowProgressRail";
 import { getModuleContent } from "@/lib/learning/modules";
 import { lessonHref, programHref } from "@/lib/learning/lesson-keys";
-import { moduleLessonCompletionPercent } from "@/lib/learning/lesson-progress";
+import { moduleLessonCompletionPercent } from "@/lib/learning/lesson-progress-utils";
 import type { LearningProgramDefinition } from "@/lib/learning/catalog";
-import type { FounderLearningModuleView } from "@/lib/learning/load-founder-learning";
-import type { FounderLessonProgressRecord } from "@/lib/learning/types";
+import { isModuleStageUnlocked, previousStageLabel } from "@/lib/learning/stage-access";
+import type { FounderLearningModuleView, FounderLessonProgressRecord, StageAccessMap } from "@/lib/learning/types";
 
 export function FounderLearningProgramView({
   program,
   modules,
   lessonProgress,
+  stageAccess,
 }: Readonly<{
   program: LearningProgramDefinition;
   modules: FounderLearningModuleView[];
   lessonProgress: FounderLessonProgressRecord[];
+  stageAccess: StageAccessMap;
 }>) {
+  const programLocked = !stageAccess[program.stage];
   const modulesInProgram = modules.filter((m) => program.moduleSlugs.includes(m.slug));
   const avg =
     modulesInProgram.length > 0
@@ -46,6 +49,18 @@ export function FounderLearningProgramView({
         }
       />
 
+      {programLocked ? (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <span aria-hidden className="text-base">
+            🔒
+          </span>
+          <p>
+            Complete <strong>{previousStageLabel(program.stage)}</strong> to unlock this program (80% stage
+            completion required).
+          </p>
+        </div>
+      ) : null}
+
       <WorkflowProgressRail
         steps={modulesInProgram.map((module) => {
           const pct = moduleLessonCompletionPercent(module.slug, lessonProgress);
@@ -65,9 +80,13 @@ export function FounderLearningProgramView({
           {modulesInProgram.map((module) => {
             const content = getModuleContent(module.slug);
             const modulePct = moduleLessonCompletionPercent(module.slug, lessonProgress);
+            const moduleLocked = programLocked || !isModuleStageUnlocked(module.readiness_stage, stageAccess);
 
             return (
-              <div key={module.id} className="rounded-lg border border-slate-200 p-4">
+              <div
+                key={module.id}
+                className={`rounded-lg border p-4 ${moduleLocked ? "border-slate-200 bg-slate-50 opacity-80" : "border-slate-200"}`}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
@@ -88,15 +107,25 @@ export function FounderLearningProgramView({
                     );
                     return (
                       <li key={lesson.id}>
-                        <Link
-                          href={lessonHref(program.slug, module.slug, lesson.id)}
-                          className="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2 text-sm hover:bg-slate-50"
-                        >
-                          <span className={done ? "text-slate-500 line-through" : "text-slate-900"}>
-                            {lesson.title}
-                          </span>
-                          <span className="text-xs text-slate-500">{done ? "Done" : "Start"}</span>
-                        </Link>
+                        {moduleLocked ? (
+                          <div className="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2 text-sm text-slate-500">
+                            <span className="flex items-center gap-2">
+                              <span aria-hidden>🔒</span>
+                              {lesson.title}
+                            </span>
+                            <span className="text-xs">Locked</span>
+                          </div>
+                        ) : (
+                          <Link
+                            href={lessonHref(program.slug, module.slug, lesson.id)}
+                            className="flex items-center justify-between rounded-md border border-slate-100 px-3 py-2 text-sm hover:bg-slate-50"
+                          >
+                            <span className={done ? "text-slate-500 line-through" : "text-slate-900"}>
+                              {lesson.title}
+                            </span>
+                            <span className="text-xs text-slate-500">{done ? "Done" : "Start"}</span>
+                          </Link>
+                        )}
                       </li>
                     );
                   })}

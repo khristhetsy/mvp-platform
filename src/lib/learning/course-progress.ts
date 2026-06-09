@@ -5,11 +5,7 @@ import {
   getCourseBySlug,
 } from "@/lib/learning/courses";
 import type { Course } from "@/lib/learning/course-types";
-import {
-  lessonProgressKey,
-  listLessonProgressForCompany,
-  progressByLessonKey,
-} from "@/lib/learning/lesson-progress";
+import { lessonProgressKey } from "@/lib/learning/lesson-progress-utils";
 import type { FounderLessonProgressRecord } from "@/lib/learning/types";
 
 export function courseProgressStorageKey(courseSlug: string, lessonSlug: string) {
@@ -81,11 +77,6 @@ export function buildCourseCurriculumProgress(course: Course, progressRows: Foun
       ),
     })),
   }));
-}
-
-export async function loadCourseProgressMap(founderId: string, companyId: string) {
-  const rows = await listLessonProgressForCompany(founderId, companyId);
-  return progressByLessonKey(rows);
 }
 
 export function resolveCourseNavigation(course: Course, lessonSlug: string) {

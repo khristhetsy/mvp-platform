@@ -2,6 +2,8 @@ export type LearningProgressStatus = "not_started" | "in_progress" | "completed"
 
 export type LearningReadinessStage = "foundation" | "readiness" | "capital" | "engagement" | "institutional";
 
+export type StageAccessMap = Record<LearningReadinessStage, boolean>;
+
 export type LearningBadgeCriteriaType =
   | "modules_completed"
   | "lessons_completed"
@@ -91,6 +93,10 @@ export type LearningProgressRecord = {
   started_at: string | null;
   completed_at: string | null;
   last_viewed_at: string | null;
+};
+
+export type FounderLearningModuleView = LearningModuleRecord & {
+  progress: LearningProgressRecord | null;
 };
 
 export type LearningQuizChoice = {

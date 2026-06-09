@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { WorkflowProgressRail } from "@/components/ui/WorkflowProgressRail";
 import { programHref } from "@/lib/learning/lesson-keys";
+import { isModuleStageUnlocked, previousStageLabel } from "@/lib/learning/stage-access";
 import type { loadFounderLearningWorkspace } from "@/lib/learning/load-founder-learning";
 
 type LearningData = Awaited<ReturnType<typeof loadFounderLearningWorkspace>>;
@@ -92,24 +93,45 @@ export function FounderLearningDashboard({
       <section className="grid gap-6 xl:grid-cols-2">
         <WorkspacePanel title="Learning programs" subtitle="Structured institutional curriculum">
           <div className="space-y-3">
-            {programProgress.map(({ program, percent, moduleCount }) => (
-              <Link
-                key={program.slug}
-                href={programHref(program.slug)}
-                className="block rounded-lg border border-slate-200 p-4 transition hover:border-slate-300 hover:bg-slate-50"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-slate-900">{program.title}</p>
-                    <p className="mt-1 text-xs text-slate-500">{program.description}</p>
+            {programProgress.map(({ program, percent, moduleCount }) => {
+              const locked = !learning.stageAccess[program.stage];
+              const inner = (
+                <>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium text-slate-900">
+                        {locked ? <span className="mr-1.5" aria-hidden>🔒</span> : null}
+                        {program.title}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">{program.description}</p>
+                    </div>
+                    <StatusBadge
+                      label={locked ? "Locked" : `${percent}%`}
+                      status={locked ? "warning" : percent >= 100 ? "success" : "neutral"}
+                    />
                   </div>
-                  <StatusBadge label={`${percent}%`} status={percent >= 100 ? "success" : "neutral"} />
+                  <p className="mt-2 text-xs text-slate-500">
+                    {locked
+                      ? `Complete ${previousStageLabel(program.stage)} to unlock (80% required)`
+                      : `${moduleCount} modules · ${program.readinessFocus}`}
+                  </p>
+                </>
+              );
+
+              return locked ? (
+                <div key={program.slug} className="rounded-lg border border-slate-200 bg-slate-50 p-4 opacity-90">
+                  {inner}
                 </div>
-                <p className="mt-2 text-xs text-slate-500">
-                  {moduleCount} modules · {program.readinessFocus}
-                </p>
-              </Link>
-            ))}
+              ) : (
+                <Link
+                  key={program.slug}
+                  href={programHref(program.slug)}
+                  className="block rounded-lg border border-slate-200 p-4 transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  {inner}
+                </Link>
+              );
+            })}
           </div>
         </WorkspacePanel>
 
@@ -224,13 +246,18 @@ export function FounderLearningDashboard({
 
       <WorkspacePanel title="All modules" subtitle="Full curriculum by stage">
         <div className="grid gap-4 md:grid-cols-2">
-          {learning.modules.map((module) => (
-            <FounderLearningModuleCard
-              key={module.id}
-              module={module}
-              highlight={recommendedBySlug.get(module.slug)}
-            />
-          ))}
+          {learning.modules.map((module) => {
+            const locked = !isModuleStageUnlocked(module.readiness_stage, learning.stageAccess);
+            return (
+              <FounderLearningModuleCard
+                key={module.id}
+                module={module}
+                highlight={recommendedBySlug.get(module.slug)}
+                locked={locked}
+                lockMessage={`Complete ${previousStageLabel(module.readiness_stage)} to unlock`}
+              />
+            );
+          })}
         </div>
       </WorkspacePanel>
     </div>

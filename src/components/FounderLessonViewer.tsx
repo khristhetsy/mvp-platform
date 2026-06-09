@@ -46,6 +46,7 @@ export function FounderLessonViewer({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [celebrating, setCelebrating] = useState(false);
 
   const quizRequired = Boolean(lesson.quiz?.questions.length);
   const quizPassed = quizResult?.passed ?? false;
@@ -74,6 +75,7 @@ export function FounderLessonViewer({
     setQuizResult(body);
     if (body.passed) {
       setCompleted(true);
+      setCelebrating(true);
       router.refresh();
     }
   }
@@ -102,6 +104,7 @@ export function FounderLessonViewer({
       return;
     }
     setCompleted(true);
+    setCelebrating(true);
     router.refresh();
   }
 
@@ -137,6 +140,31 @@ export function FounderLessonViewer({
       </header>
 
       {error ? <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+
+      {celebrating || completed ? (
+        <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">Readiness milestone reached</p>
+          <h2 className="mt-1 text-lg font-semibold text-emerald-950">Lesson complete — nice work.</h2>
+          <p className="mt-2 text-sm text-emerald-900">
+            Your progress is saved. Badges and module completion update automatically.
+          </p>
+          {nextHref ? (
+            <Link
+              href={nextHref}
+              className="mt-4 inline-flex rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600"
+            >
+              Continue to next lesson →
+            </Link>
+          ) : (
+            <Link
+              href={`/founder/learning/${programSlug}`}
+              className="mt-4 inline-flex rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600"
+            >
+              Back to program
+            </Link>
+          )}
+        </section>
+      ) : null}
 
       <WorkspacePanel title="Learning objective" subtitle="Institutional readiness focus">
         <p className="text-sm leading-6 text-slate-700">{lesson.learningObjective}</p>

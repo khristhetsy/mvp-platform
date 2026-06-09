@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
-import type { FounderLearningModuleView } from "@/lib/learning/load-founder-learning";
+import type { FounderLearningModuleView } from "@/lib/learning/types";
 import type { LearningRecommendation, ReadinessMilestone } from "@/lib/learning/types";
 
 export function FounderLearningPreviewCard({

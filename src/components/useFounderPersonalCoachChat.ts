@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { COACH_DISCLAIMER } from "@/lib/learning/class-assistant";
+import { COACH_DISCLAIMER } from "@/lib/learning/class-assistant-guardrails";
 
 export type CoachChatEntry = { role: "user" | "assistant"; text: string };
 
