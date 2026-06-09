@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -7,6 +8,7 @@ import { AdminCourseEditor } from "@/components/admin/learning/AdminCourseEditor
 import { AdminCourseModulesManager } from "@/components/admin/learning/AdminCourseModulesManager";
 import { AdminCourseContentStudio } from "@/components/admin/learning/AdminCourseContentStudio";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { isAdminModuleComingSoon } from "@/lib/admin/module-flags";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +18,10 @@ type PageProps = {
 };
 
 export default async function AdminLearningCourseDetailPage({ params }: PageProps) {
+  if (isAdminModuleComingSoon("learning")) {
+    redirect("/admin/learning");
+  }
+
   const profile = await requireRole(["admin", "analyst"]);
   const { courseId } = await params;
   const supabase = createServiceRoleClient();
