@@ -64,7 +64,7 @@ export function OperationalMetric({
             </div>
             {detail ? <p className="line-clamp-2 text-xs leading-5 text-slate-600">{detail}</p> : null}
             {lastUpdated ? (
-              <p className="font-mono text-[10px] text-slate-400">Updated {lastUpdated}</p>
+              <p className="font-mono text-[10px] text-slate-500">Updated {lastUpdated}</p>
             ) : null}
           </div>
         </div>

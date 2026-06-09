@@ -97,10 +97,15 @@ export function ActionDetailDrawer({
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <button type="button" className="absolute inset-0 bg-slate-900/30" onClick={onClose} aria-label="Close drawer" />
-      <aside className="relative flex h-full w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-xl">
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="action-detail-title"
+        className="relative flex h-full w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-xl"
+      >
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <h2 className="text-sm font-semibold text-[var(--navy)]">Action detail</h2>
-          <button type="button" onClick={onClose} className="text-sm text-slate-500 hover:text-slate-800">
+          <h2 id="action-detail-title" className="text-sm font-semibold text-[var(--navy)]">Action detail</h2>
+          <button type="button" onClick={onClose} aria-label="Close action detail" className="text-sm text-slate-500 hover:text-slate-800">
             Close
           </button>
         </div>
@@ -236,7 +241,7 @@ export function ActionDetailDrawer({
                 ) : null}
               </div>
 
-              <p className="text-[10px] text-slate-400">{NBA_DISCLAIMER}</p>
+              <p className="text-[10px] text-slate-500">{NBA_DISCLAIMER}</p>
             </div>
           ) : null}
         </div>

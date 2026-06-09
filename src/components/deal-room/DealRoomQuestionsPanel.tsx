@@ -70,7 +70,7 @@ export function DealRoomQuestionsPanel({
         <div className="rounded-lg border border-slate-200 bg-white p-3">
           <p className="text-sm font-semibold text-slate-900">Ask a diligence question</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <select className="rounded-lg border border-slate-200 px-3 py-2 text-sm" value={category} onChange={(e) => setCategory(e.target.value)}>
+            <select aria-label="Question category" className="rounded-lg border border-slate-200 px-3 py-2 text-sm" value={category} onChange={(e) => setCategory(e.target.value)}>
               {["financial","legal","traction","market","product","team","compliance","operations","other"].map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
@@ -85,6 +85,7 @@ export function DealRoomQuestionsPanel({
             </button>
           </div>
           <textarea
+            aria-label="Due diligence question"
             className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
             rows={3}
             value={questionText}
@@ -107,6 +108,7 @@ export function DealRoomQuestionsPanel({
               ) : viewerRole === "founder" ? (
                 <div className="mt-2 space-y-2">
                   <textarea
+                    aria-label="Founder response"
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                     rows={2}
                     value={responseById[q.id] ?? ""}

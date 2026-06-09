@@ -2,6 +2,56 @@ export type LearningProgressStatus = "not_started" | "in_progress" | "completed"
 
 export type LearningReadinessStage = "foundation" | "readiness" | "capital" | "engagement" | "institutional";
 
+export type LearningBadgeCriteriaType =
+  | "modules_completed"
+  | "lessons_completed"
+  | "quiz_passed"
+  | "streak_days";
+
+export type LearningBadgeRecord = {
+  id: string;
+  name: string;
+  description: string;
+  icon_name: string;
+  criteria_type: LearningBadgeCriteriaType;
+  criteria_value: number;
+  created_at: string;
+};
+
+export type LearningUserBadgeRecord = {
+  id: string;
+  founder_id: string;
+  company_id: string;
+  badge_id: string;
+  earned_at: string;
+};
+
+export type LearningReminderType = "inactivity_nudge" | "milestone_celebration" | "weekly_digest";
+
+export type LearningReminderRecord = {
+  id: string;
+  founder_id: string;
+  company_id: string;
+  type: LearningReminderType;
+  scheduled_at: string;
+  sent_at: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export type LearningAtRiskFounder = {
+  companyId: string;
+  companyName: string;
+  founderId: string;
+  founderName: string | null;
+  founderEmail: string | null;
+  daysInactive: number;
+  lastActivityAt: string | null;
+  percentComplete: number;
+  modulesEngaged: number;
+  modulesCompleted: number;
+};
+
 export type LearningModuleRecord = {
   id: string;
   slug: string;
@@ -15,6 +65,7 @@ export type LearningModuleRecord = {
   readiness_stage: LearningReadinessStage;
   order_index: number;
   is_published: boolean;
+  score_points: number;
   created_at: string;
 };
 

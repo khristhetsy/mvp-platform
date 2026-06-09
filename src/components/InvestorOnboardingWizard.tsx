@@ -107,8 +107,9 @@ export function InvestorOnboardingWizard({
 
       <fieldset disabled={isPending || isApproved} className="grid gap-6 disabled:opacity-70">
         <div className="grid gap-2">
-          <label className="text-sm font-medium text-slate-800">Investor type</label>
+          <label htmlFor="investor-type" className="text-sm font-medium text-slate-800">Investor type</label>
           <select
+            id="investor-type"
             className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
             value={investorType}
             onChange={(event) => setInvestorType(event.target.value)}
@@ -124,8 +125,9 @@ export function InvestorOnboardingWizard({
         </div>
 
         <div className="grid gap-2">
-          <label className="text-sm font-medium text-slate-800">Individual / firm name</label>
+          <label htmlFor="firm-name" className="text-sm font-medium text-slate-800">Individual / firm name</label>
           <input
+            id="firm-name"
             className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
             value={firmName}
             onChange={(event) => setFirmName(event.target.value)}
@@ -135,8 +137,9 @@ export function InvestorOnboardingWizard({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-2">
-            <label className="text-sm font-medium text-slate-800">Check size min (USD)</label>
+            <label htmlFor="check-size-min" className="text-sm font-medium text-slate-800">Check size min (USD)</label>
             <input
+              id="check-size-min"
               type="number"
               min={0}
               className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
@@ -145,8 +148,9 @@ export function InvestorOnboardingWizard({
             />
           </div>
           <div className="grid gap-2">
-            <label className="text-sm font-medium text-slate-800">Check size max (USD)</label>
+            <label htmlFor="check-size-max" className="text-sm font-medium text-slate-800">Check size max (USD)</label>
             <input
+              id="check-size-max"
               type="number"
               min={0}
               className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
@@ -157,8 +161,9 @@ export function InvestorOnboardingWizard({
         </div>
 
         <div className="grid gap-2">
-          <label className="text-sm font-medium text-slate-800">Preferred sectors (comma-separated)</label>
+          <label htmlFor="preferred-sectors" className="text-sm font-medium text-slate-800">Preferred sectors (comma-separated)</label>
           <input
+            id="preferred-sectors"
             className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
             value={preferredSectors}
             onChange={(event) => setPreferredSectors(event.target.value)}
@@ -167,8 +172,9 @@ export function InvestorOnboardingWizard({
         </div>
 
         <div className="grid gap-2">
-          <label className="text-sm font-medium text-slate-800">Preferred geographies (comma-separated)</label>
+          <label htmlFor="preferred-geographies" className="text-sm font-medium text-slate-800">Preferred geographies (comma-separated)</label>
           <input
+            id="preferred-geographies"
             className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
             value={preferredGeographies}
             onChange={(event) => setPreferredGeographies(event.target.value)}
@@ -177,8 +183,9 @@ export function InvestorOnboardingWizard({
         </div>
 
         <div className="grid gap-2">
-          <label className="text-sm font-medium text-slate-800">Investment stage preference (comma-separated)</label>
+          <label htmlFor="preferred-stages" className="text-sm font-medium text-slate-800">Investment stage preference (comma-separated)</label>
           <input
+            id="preferred-stages"
             className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
             value={preferredStages}
             onChange={(event) => setPreferredStages(event.target.value)}
@@ -188,8 +195,9 @@ export function InvestorOnboardingWizard({
         </div>
 
         <div className="grid gap-2">
-          <label className="text-sm font-medium text-slate-800">Investment thesis</label>
+          <label htmlFor="investment-thesis" className="text-sm font-medium text-slate-800">Investment thesis</label>
           <textarea
+            id="investment-thesis"
             className="min-h-28 rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
             value={investmentThesis}
             onChange={(event) => setInvestmentThesis(event.target.value)}
@@ -198,8 +206,9 @@ export function InvestorOnboardingWizard({
         </div>
 
         <div className="grid gap-2">
-          <label className="text-sm font-medium text-slate-800">Contact preference</label>
+          <label htmlFor="contact-preference" className="text-sm font-medium text-slate-800">Contact preference</label>
           <select
+            id="contact-preference"
             className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
             value={contactPreference}
             onChange={(event) => setContactPreference(event.target.value)}

@@ -146,6 +146,7 @@ export function NotificationBellDropdown() {
                 <button
                   key={notification.id}
                   type="button"
+                  aria-label={`${notification.title}. ${notification.is_read ? "Read" : "Unread"}`}
                   className={`block w-full border-b border-slate-50 px-4 py-3 text-left transition hover:bg-slate-50 ${
                     notification.is_read ? "opacity-70" : "bg-indigo-50/30"
                   }`}
@@ -157,7 +158,7 @@ export function NotificationBellDropdown() {
                 >
                   <p className="text-sm font-semibold text-slate-950">{notification.title}</p>
                   <p className="mt-1 text-xs leading-5 text-slate-600">{notification.message}</p>
-                  <p className="mt-1 text-[10px] text-slate-400">{formatRelativeTime(notification.created_at)}</p>
+                  <p className="mt-1 text-[10px] text-slate-500">{formatRelativeTime(notification.created_at)}</p>
                 </button>
               ))
             )}

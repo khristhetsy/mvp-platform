@@ -27,7 +27,7 @@ export function PageHeader({
             <p className="mt-2.5 max-w-3xl text-sm leading-7 text-slate-600">{description}</p>
           ) : null}
           {metadata ? (
-            <p className="mt-2 font-mono text-[10px] uppercase tracking-wide text-slate-400">{metadata}</p>
+            <p className="mt-2 font-mono text-[10px] uppercase tracking-wide text-slate-600">{metadata}</p>
           ) : null}
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">

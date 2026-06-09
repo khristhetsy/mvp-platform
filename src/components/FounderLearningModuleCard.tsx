@@ -45,6 +45,11 @@ export function FounderLearningModuleCard({
       <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
         <span>{module.estimated_time_minutes} min</span>
         <span>{percent}% complete</span>
+        {(module.score_points ?? 0) > 0 ? (
+          <span className="font-medium text-emerald-700">
+            +{module.score_points} readiness points on completion
+          </span>
+        ) : null}
         {module.related_remediation_category ? (
           <span className="rounded-full bg-slate-50 px-2 py-0.5 ring-1 ring-slate-100">
             {module.related_remediation_category.replaceAll("_", " ")}

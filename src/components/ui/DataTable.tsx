@@ -4,17 +4,22 @@ export function DataTable({
   children,
   density = "comfortable",
   className = "",
+  ariaLabel,
 }: Readonly<{
   children: ReactNode;
   density?: "compact" | "comfortable";
   className?: string;
+  ariaLabel?: string;
 }>) {
   const densityClass =
     density === "compact" ? "enterprise-table--compact" : "enterprise-table--comfortable";
 
   return (
     <div className={`overflow-x-auto rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)] ${className}`}>
-      <table className={`enterprise-table w-full min-w-[640px] border-collapse text-left text-sm ${densityClass}`}>
+      <table
+        aria-label={ariaLabel}
+        className={`enterprise-table w-full min-w-[640px] border-collapse text-left text-sm ${densityClass}`}
+      >
         {children}
       </table>
     </div>

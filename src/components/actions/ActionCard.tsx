@@ -46,18 +46,23 @@ export function ActionCard({
             aria-label={`Select ${action.title}`}
           />
         ) : null}
-        <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={`Open action: ${action.title}`}
+          className="min-w-0 flex-1 text-left"
+        >
           <div className="flex flex-wrap items-center gap-2">
             <ActionPriorityBadge priority={action.priority} />
             <ActionStatusBadge status={action.status} />
             <ActionOrchestrationBadges action={action} />
-            <span className="text-[10px] uppercase tracking-wide text-slate-400">{action.category.replaceAll("_", " ")}</span>
+            <span className="text-[10px] uppercase tracking-wide text-slate-500">{action.category.replaceAll("_", " ")}</span>
           </div>
           <p className="mt-1 text-sm font-medium text-[var(--navy)]">{action.title}</p>
           {action.description ? <p className="mt-1 text-xs text-slate-600 line-clamp-2">{action.description}</p> : null}
           <p className="mt-1 text-xs text-slate-500">{action.reason}</p>
           {action.dueAt ? (
-            <p className={`mt-1 text-xs ${overdue ? "font-medium text-red-700" : "text-slate-400"}`}>
+            <p className={`mt-1 text-xs ${overdue ? "font-medium text-red-700" : "text-slate-600"}`}>
               Due {new Date(action.dueAt).toLocaleString()}
             </p>
           ) : null}

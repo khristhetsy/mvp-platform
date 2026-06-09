@@ -5,6 +5,7 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { AdminLearningAtRisk } from "@/components/admin/learning/AdminLearningAtRisk";
 import { WorkspaceModulePlaceholder } from "@/components/ui/WorkspaceModulePlaceholder";
 import { isAdminModuleComingSoon } from "@/lib/admin/module-flags";
 import { requireRole } from "@/lib/supabase/auth";
@@ -109,6 +110,10 @@ export default async function AdminLearningDashboardPage() {
           <MetricCard label="Lesson completions" value={String(lessonCompletions.count ?? 0)} detail="founder_lesson_progress" accent="violet" />
           <MetricCard label="Quiz attempts" value={String(quizAttempts.count ?? 0)} detail="founder_quiz_attempts" accent="blue" />
           <MetricCard label="Certificates issued" value={String(certificatesIssued.count ?? 0)} detail="Certificate of Completion" accent="slate" />
+        </section>
+
+        <section className="mt-8">
+          <AdminLearningAtRisk />
         </section>
 
         <section className="mt-8 grid gap-6 xl:grid-cols-2">

@@ -45,6 +45,7 @@ export function CollaborationCommentForm({
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="space-y-2">
       <textarea
+        aria-label="Comment"
         value={body}
         onChange={(e) => setBody(e.target.value)}
         rows={3}
@@ -56,6 +57,7 @@ export function CollaborationCommentForm({
       <div className="flex flex-wrap items-center gap-2">
         {allowedVisibilities.length > 1 ? (
           <select
+            aria-label="Comment visibility"
             value={visibility}
             onChange={(e) => setVisibility(e.target.value as CollaborationVisibility)}
             disabled={disabled || pending}

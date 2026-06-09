@@ -1,7 +1,6 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { lessonCountForSlug } from "@/lib/learning/modules";
-import { recordModuleView } from "@/lib/learning/progress";
-import { getLearningModuleBySlug } from "@/lib/learning/progress";
+import { checkAndAwardBadges, getLearningModuleBySlug, recordModuleView } from "@/lib/learning/progress";
 import type { FounderLessonProgressRecord, LearningProgressStatus } from "@/lib/learning/types";
 
 export async function listLessonProgressForCompany(founderId: string, companyId: string) {
@@ -100,6 +99,7 @@ export async function completeLesson(input: {
   }
 
   await syncModuleProgressFromLessons(input);
+  await checkAndAwardBadges(input.founderId, input.companyId);
 }
 
 async function syncModuleProgressFromLessons(input: {
@@ -177,6 +177,7 @@ export async function recordQuizAttempt(input: {
 
   if (input.passed) {
     await syncModuleProgressFromLessons(input);
+    await checkAndAwardBadges(input.founderId, input.companyId);
   }
 }
 

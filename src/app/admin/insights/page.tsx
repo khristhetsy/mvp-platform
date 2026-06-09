@@ -78,12 +78,12 @@ export default async function AdminInsightsPage({
         <section className="mt-4 grid gap-6 xl:grid-cols-2">
           <WorkspacePanel title="Top risk signals (table)" subtitle="Platform-level · aggregate only">
             <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
+              <table className="min-w-full text-left text-sm" aria-label="Top risk signals">
                 <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600">
                   <tr>
-                    <th className="px-3 py-2">Severity</th>
-                    <th className="px-3 py-2">Title</th>
-                    <th className="px-3 py-2">Score</th>
+                    <th scope="col" className="px-3 py-2">Severity</th>
+                    <th scope="col" className="px-3 py-2">Title</th>
+                    <th scope="col" className="px-3 py-2">Score</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -100,12 +100,12 @@ export default async function AdminInsightsPage({
           </WorkspacePanel>
           <WorkspacePanel title="Recommended actions (table)" subtitle="No actions auto-created">
             <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
+              <table className="min-w-full text-left text-sm" aria-label="Recommended actions">
                 <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600">
                   <tr>
-                    <th className="px-3 py-2">Priority</th>
-                    <th className="px-3 py-2">Title</th>
-                    <th className="px-3 py-2">Open</th>
+                    <th scope="col" className="px-3 py-2">Priority</th>
+                    <th scope="col" className="px-3 py-2">Title</th>
+                    <th scope="col" className="px-3 py-2">Open</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">

@@ -183,7 +183,7 @@ export function MessagingThreadWorkspace({
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(260px,320px)_1fr]">
-      <aside className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <aside aria-label="Message threads" className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-100 px-4 py-3">
           <p className="text-sm font-semibold text-slate-950">Inbox</p>
           <p className="text-xs text-slate-500">{threads.length} threads</p>
@@ -193,6 +193,7 @@ export function MessagingThreadWorkspace({
             No conversations yet. Threads open when an investor requests an intro or follow-up.
           </p>
         ) : (
+          <nav aria-label="Message threads">
           <ul className="divide-y divide-slate-100">
             {threads.map((thread) => {
               const label =
@@ -203,6 +204,7 @@ export function MessagingThreadWorkspace({
                 <li key={thread.id}>
                   <Link
                     href={`${basePath}/${thread.id}`}
+                    aria-current={active ? "page" : undefined}
                     className={`block px-4 py-3 transition hover:bg-indigo-50/60 ${
                       active ? "bg-indigo-50/80" : ""
                     }`}
@@ -218,7 +220,7 @@ export function MessagingThreadWorkspace({
                     {thread.last_message_preview ? (
                       <p className="mt-1 line-clamp-2 text-xs text-slate-600">{thread.last_message_preview}</p>
                     ) : null}
-                    <p className="mt-1 text-[11px] text-slate-400">
+                    <p className="mt-1 text-[11px] text-slate-500">
                       {thread.last_message_at ? formatDate(thread.last_message_at) : ""}
                     </p>
                   </Link>
@@ -226,6 +228,7 @@ export function MessagingThreadWorkspace({
               );
             })}
           </ul>
+          </nav>
         )}
       </aside>
 
@@ -290,8 +293,9 @@ export function MessagingThreadWorkspace({
             </div>
 
             <div className="border-t border-slate-100 px-6 py-4">
-              <label className="text-sm font-medium text-slate-800">Send message</label>
+              <label htmlFor="message-body" className="text-sm font-medium text-slate-800">Send message</label>
               <textarea
+                id="message-body"
                 value={messageBody}
                 onChange={(event) => setMessageBody(event.target.value)}
                 rows={3}
@@ -348,6 +352,7 @@ export function MessagingThreadWorkspace({
                 />
               </div>
               <textarea
+                aria-label="Meeting notes (optional)"
                 value={meetingNotes}
                 onChange={(event) => setMeetingNotes(event.target.value)}
                 rows={2}

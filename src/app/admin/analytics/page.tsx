@@ -100,11 +100,11 @@ export default async function AdminAnalyticsPage({
         <section className="mt-4">
           <WorkspacePanel title="Core metrics (table)" subtitle="Aggregate only">
             <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
+              <table className="min-w-full text-left text-sm" aria-label="Core metrics">
                 <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600">
                   <tr>
-                    <th className="px-3 py-2">Metric</th>
-                    <th className="px-3 py-2">Value</th>
+                    <th scope="col" className="px-3 py-2">Metric</th>
+                    <th scope="col" className="px-3 py-2">Value</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">

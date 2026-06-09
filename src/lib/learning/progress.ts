@@ -1,6 +1,14 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { lessonCountForSlug } from "@/lib/learning/modules";
-import type { LearningModuleRecord, LearningProgressRecord, LearningProgressStatus } from "@/lib/learning/types";
+import type {
+  LearningAtRiskFounder,
+  LearningBadgeCriteriaType,
+  LearningBadgeRecord,
+  LearningModuleRecord,
+  LearningProgressRecord,
+  LearningProgressStatus,
+  LearningUserBadgeRecord,
+} from "@/lib/learning/types";
 
 export async function listPublishedLearningModules() {
   const admin = createServiceRoleClient();
@@ -187,6 +195,178 @@ export async function getLearningAdminSummaryForCompanies(companyIds: string[]) 
   }
 
   return map;
+}
+
+function computeActivityStreakDays(activityTimestamps: string[]) {
+  if (activityTimestamps.length === 0) return 0;
+
+  const daySet = new Set(activityTimestamps.map((timestamp) => timestamp.slice(0, 10)));
+  const now = new Date();
+  const todayKey = now.toISOString().slice(0, 10);
+  let offset = daySet.has(todayKey) ? 0 : 1;
+
+  let streak = 0;
+  for (let i = offset; i < 400; i += 1) {
+    const day = new Date(now);
+    day.setUTCDate(day.getUTCDate() - i);
+    const key = day.toISOString().slice(0, 10);
+    if (!daySet.has(key)) break;
+    streak += 1;
+  }
+
+  return streak;
+}
+
+export async function checkAndAwardBadges(founderId: string, companyId: string) {
+  const admin = createServiceRoleClient();
+  const [{ data: badges }, { data: earned }, { data: moduleProgress }, { data: lessonProgress }, { data: quizAttempts }] =
+    await Promise.all([
+      admin.from("learning_badges").select("*"),
+      admin.from("learning_user_badges").select("badge_id").eq("founder_id", founderId).eq("company_id", companyId),
+      admin
+        .from("learning_progress")
+        .select("status, last_viewed_at")
+        .eq("founder_id", founderId)
+        .eq("company_id", companyId),
+      admin
+        .from("founder_lesson_progress")
+        .select("status, completed_at, last_viewed_at")
+        .eq("founder_id", founderId)
+        .eq("company_id", companyId),
+      admin
+        .from("founder_quiz_attempts")
+        .select("passed")
+        .eq("founder_id", founderId)
+        .eq("company_id", companyId)
+        .eq("passed", true),
+    ]);
+
+  const earnedSet = new Set((earned ?? []).map((row) => row.badge_id));
+  const activityTimestamps: string[] = [];
+
+  for (const row of lessonProgress ?? []) {
+    if (row.last_viewed_at) activityTimestamps.push(row.last_viewed_at);
+    if (row.completed_at) activityTimestamps.push(row.completed_at);
+  }
+  for (const row of moduleProgress ?? []) {
+    if (row.last_viewed_at) activityTimestamps.push(row.last_viewed_at);
+  }
+
+  const stats: Record<LearningBadgeCriteriaType, number> = {
+    modules_completed: (moduleProgress ?? []).filter((row) => row.status === "completed").length,
+    lessons_completed: (lessonProgress ?? []).filter((row) => row.status === "completed").length,
+    quiz_passed: (quizAttempts ?? []).length,
+    streak_days: computeActivityStreakDays(activityTimestamps),
+  };
+
+  const now = new Date().toISOString();
+  const newlyAwarded: LearningUserBadgeRecord[] = [];
+
+  for (const badge of (badges ?? []) as LearningBadgeRecord[]) {
+    if (earnedSet.has(badge.id)) continue;
+    if (stats[badge.criteria_type] < badge.criteria_value) continue;
+
+    const { data, error } = await admin
+      .from("learning_user_badges")
+      .insert({
+        founder_id: founderId,
+        company_id: companyId,
+        badge_id: badge.id,
+        earned_at: now,
+      })
+      .select("*")
+      .single();
+
+    if (!error && data) {
+      newlyAwarded.push(data as LearningUserBadgeRecord);
+    }
+  }
+
+  return newlyAwarded;
+}
+
+type AtRiskCompanyRow = {
+  id: string;
+  company_name: string;
+  founder_id: string;
+  profiles: { full_name: string | null; email: string | null } | null;
+};
+
+export async function getLearningAtRiskFounders(inactivityDays = 7) {
+  const admin = createServiceRoleClient();
+  const { data: rawCompanies, error } = await admin
+    .from("companies")
+    .select("id, company_name, founder_id, profiles:founder_id(full_name, email)")
+    .not("founder_id", "is", null);
+
+  const companies = (rawCompanies ?? []) as AtRiskCompanyRow[];
+
+  if (error || companies.length === 0) {
+    return [] as LearningAtRiskFounder[];
+  }
+
+  const companyIds = companies.map((company) => company.id);
+  const [{ data: progressRows }, { data: lessonRows }, { data: courseProgressRows }, summaries] = await Promise.all([
+    admin.from("learning_progress").select("company_id, last_viewed_at"),
+    admin.from("founder_lesson_progress").select("company_id, last_viewed_at, completed_at"),
+    admin.from("learning_course_progress").select("company_id, last_viewed_at"),
+    getLearningAdminSummaryForCompanies(companyIds),
+  ]);
+
+  const now = Date.now();
+  const msPerDay = 86_400_000;
+  const cutoff = now - inactivityDays * msPerDay;
+  const atRisk: LearningAtRiskFounder[] = [];
+
+  for (const company of companies) {
+    if (!company.founder_id) continue;
+
+    const activityMs: number[] = [];
+    for (const row of progressRows ?? []) {
+      if (row.company_id === company.id && row.last_viewed_at) {
+        activityMs.push(new Date(row.last_viewed_at).getTime());
+      }
+    }
+    for (const row of lessonRows ?? []) {
+      if (row.company_id !== company.id) continue;
+      if (row.last_viewed_at) activityMs.push(new Date(row.last_viewed_at).getTime());
+      if (row.completed_at) activityMs.push(new Date(row.completed_at).getTime());
+    }
+    for (const row of courseProgressRows ?? []) {
+      if (row.company_id === company.id && row.last_viewed_at) {
+        activityMs.push(new Date(row.last_viewed_at).getTime());
+      }
+    }
+
+    const lastActivityAt =
+      activityMs.length > 0 ? new Date(Math.max(...activityMs)).toISOString() : null;
+    const lastMs = lastActivityAt ? new Date(lastActivityAt).getTime() : 0;
+
+    if (lastMs >= cutoff && activityMs.length > 0) continue;
+
+    const summary = summaries.get(company.id) ?? {
+      percentComplete: 0,
+      modulesEngaged: 0,
+      modulesCompleted: 0,
+    };
+    const profile = company.profiles as { full_name?: string | null; email?: string | null } | null;
+
+    atRisk.push({
+      companyId: company.id,
+      companyName: company.company_name,
+      founderId: company.founder_id,
+      founderName: profile?.full_name ?? null,
+      founderEmail: profile?.email ?? null,
+      daysInactive: lastActivityAt ? Math.floor((now - lastMs) / msPerDay) : inactivityDays + 1,
+      lastActivityAt,
+      percentComplete: summary.percentComplete,
+      modulesEngaged: summary.modulesEngaged,
+      modulesCompleted: summary.modulesCompleted,
+    });
+  }
+
+  atRisk.sort((a, b) => b.daysInactive - a.daysInactive);
+  return atRisk;
 }
 
 export async function getGlobalModuleEngagementCounts() {
