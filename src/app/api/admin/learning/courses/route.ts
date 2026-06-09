@@ -12,6 +12,7 @@ const courseCreateSchema = z.object({
   content_status: z.enum(["draft", "pending_review", "approved", "published", "archived"]).default("draft"),
   is_published: z.boolean().optional(),
   order_index: z.number().int().optional(),
+  banner_image_url: z.string().url().optional().nullable(),
 });
 
 export async function GET() {
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
     content_status: parsed.data.content_status,
     is_published: parsed.data.is_published ?? parsed.data.content_status === "published",
     order_index: parsed.data.order_index ?? 0,
+    banner_image_url: parsed.data.banner_image_url ?? null,
     updated_at: new Date().toISOString(),
   };
 

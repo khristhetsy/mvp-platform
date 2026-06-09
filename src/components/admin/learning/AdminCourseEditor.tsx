@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { CourseBannerUpload } from "@/components/admin/learning/CourseBannerUpload";
 import { formatApiError } from "@/lib/api/errors";
 
 export type LearningContentStatus = "draft" | "pending_review" | "approved" | "published" | "archived";
@@ -18,6 +19,7 @@ export type ProgramRow = {
   content_status?: string | null;
   is_published?: boolean | null;
   order_index?: number | null;
+  banner_image_url?: string | null;
 };
 
 type Props = {
@@ -58,6 +60,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
       content_status: effectiveStatus,
       is_published: isPublishedDerived,
       order_index: typeof form.order_index === "number" ? form.order_index : 0,
+      banner_image_url: form.banner_image_url ?? null,
     };
 
     const path =
@@ -92,6 +95,36 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
     <div className="space-y-3">
       <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
         Educational content only. No investment, legal, or tax advice. No guarantee of funding outcomes.
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div>
+          <p className="mb-2 text-sm text-slate-600">Course banner</p>
+          <CourseBannerUpload
+            value={form.banner_image_url ?? null}
+            onUpload={(url) => setForm((current) => ({ ...current, banner_image_url: url }))}
+            onRemove={() => setForm((current) => ({ ...current, banner_image_url: null }))}
+          />
+        </div>
+        <div>
+          <p className="mb-2 text-sm text-slate-600">Live preview</p>
+          <article className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="h-36 bg-slate-100">
+              {form.banner_image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={form.banner_image_url} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full items-center justify-center bg-gradient-to-br from-indigo-100 to-slate-200 text-xs text-slate-500">
+                  Banner preview
+                </div>
+              )}
+            </div>
+            <div className="p-4">
+              <p className="text-base font-semibold text-slate-950">{form.title || "Course title"}</p>
+              <p className="mt-1 text-xs capitalize text-slate-500">{form.difficulty ?? "intermediate"}</p>
+            </div>
+          </article>
+        </div>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">

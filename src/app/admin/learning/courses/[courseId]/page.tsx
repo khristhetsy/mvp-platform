@@ -29,7 +29,7 @@ export default async function AdminLearningCourseDetailPage({ params }: PageProp
   const { data: program } = await supabase
     .from("learning_programs")
     .select(
-      "id, slug, title, description, readiness_focus, content_status, is_published, category, difficulty, order_index, created_at",
+      "id, slug, title, description, readiness_focus, content_status, is_published, category, difficulty, order_index, banner_image_url, created_at",
     )
     .eq("id", courseId)
     .maybeSingle();
@@ -143,6 +143,7 @@ export default async function AdminLearningCourseDetailPage({ params }: PageProp
                 content_status: program.content_status,
                 is_published: program.is_published,
                 order_index: program.order_index ?? 0,
+                banner_image_url: program.banner_image_url ?? null,
               }}
             />
           </WorkspacePanel>
