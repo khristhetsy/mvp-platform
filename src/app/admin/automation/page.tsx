@@ -4,6 +4,8 @@ import { AdminAutomationConsole } from "@/components/admin/automation/AdminAutom
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { loadAutomationConsole, parseAutomationConsoleFilters } from "@/lib/automation/admin-console";
+import { WorkspaceModulePlaceholder } from "@/components/ui/WorkspaceModulePlaceholder";
+import { isAdminModuleComingSoon } from "@/lib/admin/module-flags";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -15,6 +17,27 @@ type PageProps = {
 
 export default async function AdminAutomationPage({ searchParams }: PageProps) {
   const profile = await requireRole(["admin", "analyst"]);
+
+  if (isAdminModuleComingSoon("automation")) {
+    return (
+      <AppShell
+        role="ADMIN"
+        workspace="admin"
+        profileName={profile.full_name ?? profile.email ?? "Admin"}
+        profileSubtitle={profile.role}
+      >
+        <WorkspacePageContainer>
+          <PageHeader
+            eyebrow="Admin Workspace"
+            title="Workflow automation"
+            description="Monitor rules-based automation runs, dependencies, guards, and bounded manual execution."
+          />
+          <WorkspaceModulePlaceholder title="Automation engine" />
+        </WorkspacePageContainer>
+      </AppShell>
+    );
+  }
+
   const params = await searchParams;
   const urlParams = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {

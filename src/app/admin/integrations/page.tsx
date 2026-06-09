@@ -6,6 +6,8 @@ import { EmailFoundationSection } from "@/components/admin/integrations/EmailFou
 import { DocuSignFoundationSection } from "@/components/admin/integrations/DocuSignFoundationSection";
 import { getGmailFoundationStatus } from "@/lib/email/preferences";
 import { loadIntegrationsAdminConsole } from "@/lib/integrations/admin-console";
+import { WorkspaceModulePlaceholder } from "@/components/ui/WorkspaceModulePlaceholder";
+import { isAdminModuleComingSoon } from "@/lib/admin/module-flags";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -13,6 +15,26 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminIntegrationsPage() {
   const profile = await requireRole(["admin", "analyst"]);
+
+  if (isAdminModuleComingSoon("integrations")) {
+    return (
+      <AppShell
+        role="ADMIN"
+        workspace="admin"
+        profileName={profile.full_name ?? profile.email ?? "Admin"}
+        profileSubtitle={profile.role}
+      >
+        <WorkspacePageContainer>
+          <PageHeader
+            eyebrow="Admin Workspace"
+            title="External integrations"
+            description="Enterprise connectivity foundation — Slack, webhooks, email, and document signing."
+          />
+          <WorkspaceModulePlaceholder title="Third-party integrations" />
+        </WorkspacePageContainer>
+      </AppShell>
+    );
+  }
 
   let payload: Awaited<ReturnType<typeof loadIntegrationsAdminConsole>> | null = null;
   let loadError: string | null = null;
