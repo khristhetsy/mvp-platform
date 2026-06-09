@@ -5,7 +5,7 @@ export const ADMIN_MODULE_COMING_SOON = {
   automation: true,
   integrations: true,
   betaOperations: true,
-  learning: true,
+  learning: false,
 } as const;
 
 export type AdminModuleFlagKey = keyof typeof ADMIN_MODULE_COMING_SOON;
