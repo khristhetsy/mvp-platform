@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { courseHref } from "@/lib/learning/course-keys";
 import { getProgramForModuleSlug } from "@/lib/learning/catalog";
-import type { FounderLearningModuleView } from "@/lib/learning/load-founder-learning";
+import type { FounderLearningModuleView } from "@/lib/learning/types";
 
 function statusLabel(status: string | null | undefined) {
   if (!status || status === "not_started") return "Not started";

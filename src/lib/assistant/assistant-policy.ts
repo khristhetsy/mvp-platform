@@ -1,4 +1,4 @@
-import { COACH_DISCLAIMER, isQuizAnswerRequest, isRestrictedAdviceRequest } from "@/lib/learning/class-assistant";
+import { COACH_DISCLAIMER, isQuizAnswerRequest, isRestrictedAdviceRequest } from "@/lib/learning/class-assistant-guardrails";
 
 export const ASSISTANT_DISCLAIMER =
   "CapitalOS Assistant provides operational workflow guidance only. This is not legal, tax, investment, or securities advice. Approval, funding, and investor outcomes are never guaranteed.";

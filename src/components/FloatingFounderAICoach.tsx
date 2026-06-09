@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { COACH_DISCLAIMER } from "@/lib/learning/class-assistant";
+import { COACH_DISCLAIMER } from "@/lib/learning/class-assistant-guardrails";
 import {
   getCoachQuickPrompts,
   useFounderPersonalCoachChat,

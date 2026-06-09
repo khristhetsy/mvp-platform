@@ -1,8 +1,8 @@
 import { LEARNING_PROGRAM_CATALOG } from "@/lib/learning/catalog";
-import { progressByModuleId } from "@/lib/learning/progress";
-import type { LearningModuleRecord, LearningProgressRecord, LearningReadinessStage } from "@/lib/learning/types";
+import { progressByModuleId } from "@/lib/learning/progress-utils";
+import type { LearningModuleRecord, LearningProgressRecord, LearningReadinessStage, StageAccessMap } from "@/lib/learning/types";
 
-export type StageAccessMap = Record<LearningReadinessStage, boolean>;
+export type { StageAccessMap };
 
 const STAGE_UNLOCK_CHAIN: Array<{ stage: LearningReadinessStage; requires: LearningReadinessStage | null }> = [
   { stage: "foundation", requires: null },

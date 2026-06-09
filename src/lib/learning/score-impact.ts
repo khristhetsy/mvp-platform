@@ -1,13 +1,6 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getLearningModuleBySlug } from "@/lib/learning/progress";
 
-export function applyLearningReadinessBonus(baseScore: number | null, bonus: number | null | undefined) {
-  const base = baseScore ?? 0;
-  const extra = bonus ?? 0;
-  if (extra <= 0) return baseScore;
-  return Math.min(100, base + extra);
-}
-
 export async function awardModuleScorePoints(input: {
   companyId: string;
   moduleSlug: string;

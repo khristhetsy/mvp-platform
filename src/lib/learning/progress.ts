@@ -1,7 +1,10 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { awardModuleScorePoints } from "@/lib/learning/score-impact";
 import { computeStageCompletionPercent } from "@/lib/learning/stage-access";
+import { computeOverallLearningPercent, progressByModuleId } from "@/lib/learning/progress-utils";
 import { lessonCountForSlug } from "@/lib/learning/modules";
+
+export { computeOverallLearningPercent, progressByModuleId };
 import { createNotification } from "@/lib/notifications/notifications";
 import type {
   LearningAtRiskFounder,
@@ -53,26 +56,6 @@ export async function listLearningProgressForCompany(founderId: string, companyI
   }
 
   return (data ?? []) as LearningProgressRecord[];
-}
-
-export function progressByModuleId(rows: LearningProgressRecord[]) {
-  return new Map(rows.map((row) => [row.module_id, row]));
-}
-
-export function computeOverallLearningPercent(
-  modules: LearningModuleRecord[],
-  progressRows: LearningProgressRecord[],
-) {
-  if (modules.length === 0) return 0;
-
-  const progressMap = progressByModuleId(progressRows);
-  let total = 0;
-
-  for (const learningModule of modules) {
-    total += progressMap.get(learningModule.id)?.percent_complete ?? 0;
-  }
-
-  return Math.round(total / modules.length);
 }
 
 export async function updateLearningProgress(input: {

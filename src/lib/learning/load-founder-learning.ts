@@ -1,6 +1,6 @@
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { computeReadinessScore, getLatestDiligenceReport } from "@/lib/data/founder-readiness";
-import { applyLearningReadinessBonus } from "@/lib/learning/score-impact";
+import { applyLearningReadinessBonus } from "@/lib/learning/progress-utils";
 import { computeStageAccess, computeStageCompletionPercent } from "@/lib/learning/stage-access";
 import {
   buildRemediationLearningLinks,
@@ -26,12 +26,15 @@ import { computeFounderOnboardingProgress } from "@/lib/onboarding/progress";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/supabase/types";
-import type { LearningModuleRecord, LearningProgressRecord, LearningReadinessStage } from "@/lib/learning/types";
-import type { StageAccessMap } from "@/lib/learning/stage-access";
+import type {
+  FounderLearningModuleView,
+  LearningModuleRecord,
+  LearningProgressRecord,
+  LearningReadinessStage,
+  StageAccessMap,
+} from "@/lib/learning/types";
 
-export type FounderLearningModuleView = LearningModuleRecord & {
-  progress: LearningProgressRecord | null;
-};
+export type { FounderLearningModuleView };
 
 export async function loadFounderLearningWorkspace(profile: Profile) {
   const company = await ensureFounderCompanyForUser(profile);

@@ -5,12 +5,10 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { WorkflowProgressRail } from "@/components/ui/WorkflowProgressRail";
 import { getModuleContent } from "@/lib/learning/modules";
 import { lessonHref, programHref } from "@/lib/learning/lesson-keys";
-import { moduleLessonCompletionPercent } from "@/lib/learning/lesson-progress";
+import { moduleLessonCompletionPercent } from "@/lib/learning/lesson-progress-utils";
 import type { LearningProgramDefinition } from "@/lib/learning/catalog";
-import type { FounderLearningModuleView } from "@/lib/learning/load-founder-learning";
 import { isModuleStageUnlocked, previousStageLabel } from "@/lib/learning/stage-access";
-import type { FounderLessonProgressRecord } from "@/lib/learning/types";
-import type { StageAccessMap } from "@/lib/learning/stage-access";
+import type { FounderLearningModuleView, FounderLessonProgressRecord, StageAccessMap } from "@/lib/learning/types";
 
 export function FounderLearningProgramView({
   program,

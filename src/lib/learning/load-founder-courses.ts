@@ -1,9 +1,6 @@
 import { courseLessonCount, courseDurationMinutes, FOUNDER_COURSES, formatCourseDuration } from "@/lib/learning/courses";
-import {
-  computeCoursePercentComplete,
-  findContinueCourseLesson,
-  loadCourseProgressMap,
-} from "@/lib/learning/course-progress";
+import { computeCoursePercentComplete, findContinueCourseLesson } from "@/lib/learning/course-progress";
+import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
 import { courseLessonHref, courseHref } from "@/lib/learning/course-keys";
 import { listPublishedAdminCourses } from "@/lib/learning/admin-courses";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
@@ -32,8 +29,7 @@ export async function loadFounderCourseCatalog(profile: Profile) {
     };
   }
 
-  const progressRows = await loadCourseProgressMap(profile.id, company.id);
-  const progressList = [...progressRows.values()];
+  const progressList = await listLessonProgressForCompany(profile.id, company.id);
 
   const coreCourses: FounderCourseCatalogItem[] = FOUNDER_COURSES.map((course) => {
     const percentComplete = computeCoursePercentComplete(course, progressList);
