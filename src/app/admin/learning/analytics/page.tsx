@@ -1,15 +1,21 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { isAdminModuleComingSoon } from "@/lib/admin/module-flags";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminLearningAnalyticsPage() {
+  if (isAdminModuleComingSoon("learning")) {
+    redirect("/admin/learning");
+  }
+
   const profile = await requireRole(["admin", "analyst"]);
   const supabase = createServiceRoleClient();
 
