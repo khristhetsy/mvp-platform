@@ -115,7 +115,7 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
 
         {filtered.length > 0 && viewMode === "table" ? (
           <div className="overflow-x-auto">
-            <DataTable density={density}>
+            <DataTable density={density} ariaLabel="Recommended opportunities">
               <DataTableHead>
                 <DataTableHeaderCell>Company</DataTableHeaderCell>
                 <DataTableHeaderCell>Sector / stage</DataTableHeaderCell>

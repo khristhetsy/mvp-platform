@@ -90,7 +90,7 @@ export function AdminPlatformActivityGraph({
             <p className="font-mono text-2xl font-semibold tabular-nums text-slate-950">{total}</p>
             <p className="text-xs text-slate-500">Combined activity signals in current view</p>
           </div>
-          <p className="text-[10px] text-slate-400">Click any category to view source data</p>
+          <p className="text-[10px] text-slate-600">Click any category to view source data</p>
         </div>
 
         <div className="space-y-2.5" aria-label="Platform activity by category">

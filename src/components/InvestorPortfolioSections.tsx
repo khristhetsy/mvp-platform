@@ -16,7 +16,7 @@ function CompanyRows({ rows, emptyLabel }: { rows: PortfolioCompanyRow[]; emptyL
             <p className="font-medium text-slate-900">{row.companyName}</p>
             <p className="mt-1 text-xs text-slate-500">{row.detail}</p>
             {row.date ? (
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-slate-500">
                 {new Date(row.date).toLocaleDateString("en-US", { timeZone: "UTC" })}
               </p>
             ) : null}

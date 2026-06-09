@@ -197,7 +197,7 @@ export function NextBestActionsPanel({
                     ) : null}
                     <p className="mt-1 text-xs text-slate-500">{action.reason}</p>
                     {action.dueAt ? (
-                      <p className="mt-1 text-xs text-slate-400">
+                      <p className="mt-1 text-xs text-slate-600">
                         Suggested due: {new Date(action.dueAt).toLocaleString()}
                       </p>
                     ) : null}
@@ -270,7 +270,7 @@ export function NextBestActionsPanel({
           </p>
         ) : null}
 
-        <p className="mt-4 text-[10px] leading-relaxed text-slate-400">{NBA_DISCLAIMER}</p>
+        <p className="mt-4 text-[10px] leading-relaxed text-slate-500">{NBA_DISCLAIMER}</p>
       </div>
     </section>
   );

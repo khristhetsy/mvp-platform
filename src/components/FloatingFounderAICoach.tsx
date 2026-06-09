@@ -49,6 +49,7 @@ export function FloatingFounderAICoach({
       {open ? (
         <div
           role="dialog"
+          aria-modal="true"
           aria-label="CapitalOS AI Coach"
           className="fixed inset-x-0 bottom-0 z-[100] flex max-h-[85vh] w-full flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-2xl sm:inset-x-auto sm:bottom-20 sm:right-4 sm:left-auto sm:w-[380px] sm:max-h-[min(520px,80vh)] sm:rounded-2xl"
         >
@@ -126,6 +127,7 @@ export function FloatingFounderAICoach({
           <div className="flex shrink-0 gap-2 border-t border-slate-100 p-3">
             <input
               type="text"
+              aria-label="Message AI coach"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={(e) => {

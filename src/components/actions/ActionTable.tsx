@@ -30,10 +30,10 @@ export function ActionTable({
 
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white">
-      <table className="min-w-full text-left text-sm">
+      <table className="min-w-full text-left text-sm" aria-label="Actions">
         <thead className="border-b border-slate-100 bg-slate-50/80 text-xs uppercase tracking-wide text-slate-500">
           <tr>
-            <th className="px-3 py-2 w-8">
+            <th scope="col" className="px-3 py-2 w-8">
               <input
                 type="checkbox"
                 checked={allSelected}
@@ -41,11 +41,11 @@ export function ActionTable({
                 aria-label="Select all"
               />
             </th>
-            <th className="px-3 py-2">Action</th>
-            <th className="px-3 py-2">Priority</th>
-            <th className="px-3 py-2">Status</th>
-            <th className="px-3 py-2">Category</th>
-            <th className="px-3 py-2">Due</th>
+            <th scope="col" className="px-3 py-2">Action</th>
+            <th scope="col" className="px-3 py-2">Priority</th>
+            <th scope="col" className="px-3 py-2">Status</th>
+            <th scope="col" className="px-3 py-2">Category</th>
+            <th scope="col" className="px-3 py-2">Due</th>
           </tr>
         </thead>
         <tbody>
@@ -58,7 +58,15 @@ export function ActionTable({
                 className={`border-b border-slate-50 cursor-pointer hover:bg-slate-50/80 ${
                   overdue && action.priority === "critical" ? "bg-red-50/40" : overdue ? "bg-amber-50/30" : ""
                 }`}
+                tabIndex={0}
+                aria-label={`Open action: ${action.title}`}
                 onClick={() => onOpen(action)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onOpen(action);
+                  }
+                }}
               >
                 <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                   {pid ? (

@@ -168,6 +168,7 @@ export function DocumentUploadForm({
               <button
                 key={type.value}
                 type="button"
+                aria-pressed={active}
                 className={[
                   "flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm",
                   active ? "border-slate-900 bg-slate-950 text-white" : "border-slate-300 bg-white text-slate-900",
@@ -190,6 +191,7 @@ export function DocumentUploadForm({
         name="file"
         type="file"
         accept={accept}
+        aria-label="Choose file to upload"
         className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-sm"
         required
         disabled={isUploading}

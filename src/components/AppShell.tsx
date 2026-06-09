@@ -65,7 +65,7 @@ export function AppShell({
           <Link href="/" className="font-semibold tracking-tight text-slate-950">
             CapitalOS
           </Link>
-          <nav className="hidden items-center gap-5 text-sm text-slate-600 md:flex">
+          <nav aria-label="Platform navigation" className="hidden items-center gap-5 text-sm text-slate-600 md:flex">
             {platformNavItems
               .filter((item) => item.roles.includes(shellRole))
               .map((item) => (

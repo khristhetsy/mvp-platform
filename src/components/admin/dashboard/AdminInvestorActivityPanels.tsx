@@ -88,7 +88,7 @@ function ActivityPanel({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <p className="truncate text-sm font-medium text-slate-900 group-hover:text-[var(--navy)]">{row.investor}</p>
-                    <time className="shrink-0 font-mono text-[10px] text-slate-400">{row.date}</time>
+                    <time className="shrink-0 font-mono text-[10px] text-slate-500">{row.date}</time>
                   </div>
                   <p className="mt-0.5 truncate text-xs text-slate-600">{row.company}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">

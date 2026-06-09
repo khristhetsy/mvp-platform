@@ -76,7 +76,7 @@ export function DealRoomDocRequestsPanel({
         <div className="rounded-lg border border-slate-200 bg-white p-3">
           <p className="text-sm font-semibold text-slate-900">Request a document</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <select className="rounded-lg border border-slate-200 px-3 py-2 text-sm" value={type} onChange={(e) => setType(e.target.value)}>
+            <select aria-label="Document request type" className="rounded-lg border border-slate-200 px-3 py-2 text-sm" value={type} onChange={(e) => setType(e.target.value)}>
               {["financials","cap_table","legal_docs","customer_metrics","custom"].map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
@@ -91,7 +91,7 @@ export function DealRoomDocRequestsPanel({
             </button>
           </div>
           {type === "custom" ? (
-            <textarea className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" rows={2} value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="Custom request…" />
+            <textarea aria-label="Custom document request" className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" rows={2} value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="Custom request…" />
           ) : null}
           <p className="mt-2 text-xs text-slate-500">
             Private document storage paths are never shown. Founders may link existing uploaded docs.
@@ -117,12 +117,14 @@ export function DealRoomDocRequestsPanel({
               {viewerRole === "founder" && r.status !== "fulfilled" ? (
                 <div className="mt-3 space-y-2">
                   <input
+                    aria-label="Document ID to attach"
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs"
                     placeholder="Optional existing document UUID to attach"
                     value={docIdById[r.id] ?? ""}
                     onChange={(e) => setDocIdById((v) => ({ ...v, [r.id]: e.target.value }))}
                   />
                   <textarea
+                    aria-label="Fulfillment note"
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                     rows={2}
                     placeholder="Response note (no legal advice)…"

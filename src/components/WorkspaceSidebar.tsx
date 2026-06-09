@@ -122,7 +122,7 @@ export function WorkspaceSidebar({
           ? adminSections.map((section, index) => (
               <div key={section.title ?? `section-${index}`} className={section.title ? "pt-1" : undefined}>
                 {section.title ? (
-                  <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
                     {section.title}
                   </p>
                 ) : null}

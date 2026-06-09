@@ -233,7 +233,7 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
         </div>
       )}
 
-      <p className="text-[10px] text-slate-400">{NBA_DISCLAIMER}</p>
+      <p className="text-[10px] text-slate-500">{NBA_DISCLAIMER}</p>
 
       <ActionDetailDrawer
         actionId={detailId}

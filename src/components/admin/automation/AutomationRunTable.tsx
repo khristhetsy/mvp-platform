@@ -12,17 +12,17 @@ export function AutomationRunTable({
 
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200/80">
-      <table className="min-w-full text-left text-sm">
+      <table className="min-w-full text-left text-sm" aria-label="Automation runs">
         <thead className="border-b border-slate-200 bg-slate-50/80 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
           <tr>
-            <th className="px-3 py-2">Status</th>
-            <th className="px-3 py-2">Started</th>
-            <th className="px-3 py-2">Duration</th>
-            <th className="px-3 py-2">Trigger</th>
-            <th className="px-3 py-2">Mode</th>
-            <th className="px-3 py-2">Actions</th>
-            <th className="px-3 py-2">Blockers</th>
-            <th className="px-3 py-2">Failures</th>
+            <th scope="col" className="px-3 py-2">Status</th>
+            <th scope="col" className="px-3 py-2">Started</th>
+            <th scope="col" className="px-3 py-2">Duration</th>
+            <th scope="col" className="px-3 py-2">Trigger</th>
+            <th scope="col" className="px-3 py-2">Mode</th>
+            <th scope="col" className="px-3 py-2">Actions</th>
+            <th scope="col" className="px-3 py-2">Blockers</th>
+            <th scope="col" className="px-3 py-2">Failures</th>
           </tr>
         </thead>
         <tbody>
@@ -30,7 +30,15 @@ export function AutomationRunTable({
             <tr
               key={run.id}
               className="cursor-pointer border-b border-slate-100 hover:bg-indigo-50/30"
+              tabIndex={0}
+              aria-label={`View automation run started ${new Date(run.startedAt).toLocaleString()}`}
               onClick={() => onSelect(run.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelect(run.id);
+                }
+              }}
             >
               <td className="px-3 py-2">
                 <AutomationStatusBadge status={run.status} />

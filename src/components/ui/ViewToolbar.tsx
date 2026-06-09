@@ -76,7 +76,7 @@ export function PipelineBoard({
           <header className="mb-2 border-b border-slate-200/80 pb-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--navy)]">{column.title}</h3>
             {column.subtitle ? <p className="mt-0.5 text-[10px] text-slate-500">{column.subtitle}</p> : null}
-            <p className="mt-1 text-[10px] font-medium text-slate-400">{column.items.length} items</p>
+            <p className="mt-1 text-[10px] font-medium text-slate-500">{column.items.length} items</p>
           </header>
           <div className={`space-y-2 ${column.items.length === 0 ? "py-6 text-center text-xs text-slate-500" : ""}`}>
             {column.items.length === 0 ? "No items" : column.items}

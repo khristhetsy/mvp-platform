@@ -65,12 +65,12 @@ export function AdminRecentActivityTimeline({
                               </span>
                               {row.title}
                             </p>
-                            <time className="font-mono text-[10px] text-slate-400">
+                            <time className="font-mono text-[10px] text-slate-500">
                               {formatOperationalTimestamp(row.created_at)}
                             </time>
                           </div>
                           {subtitle ? <p className="text-xs text-slate-600">{subtitle}</p> : null}
-                          <p className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-400">
+                          <p className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-500">
                             {formatOperationalEventType(row.event_type)}
                             {row.severity !== "info" ? ` · ${row.severity}` : ""}
                           </p>

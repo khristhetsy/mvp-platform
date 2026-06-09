@@ -15,7 +15,7 @@ export function WorkspaceBreadcrumbs({ workspace }: Readonly<{ workspace: Worksp
         const isLast = index === items.length - 1;
         return (
           <span key={`${item.label}-${index}`} className="flex items-center gap-1.5">
-            {index > 0 ? <span className="text-slate-300">/</span> : null}
+            {index > 0 ? <span className="text-slate-500" aria-hidden="true">/</span> : null}
             {item.href && !isLast ? (
               <Link href={item.href} className="font-medium text-slate-600 hover:text-slate-900">
                 {item.label}
