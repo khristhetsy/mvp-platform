@@ -5,12 +5,35 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { WorkspaceModulePlaceholder } from "@/components/ui/WorkspaceModulePlaceholder";
+import { isAdminModuleComingSoon } from "@/lib/admin/module-flags";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminLearningDashboardPage() {
   const profile = await requireRole(["admin", "analyst"]);
+
+  if (isAdminModuleComingSoon("learning")) {
+    return (
+      <AppShell
+        role="ADMIN"
+        workspace="admin"
+        profileName={profile.full_name ?? profile.email ?? "Admin"}
+        profileSubtitle={profile.role}
+      >
+        <WorkspacePageContainer>
+          <PageHeader
+            eyebrow="Learning operations"
+            title="Admin Learning"
+            description="Educational content only. No investment, legal, or tax advice."
+          />
+          <WorkspaceModulePlaceholder title="E-learning admin" />
+        </WorkspacePageContainer>
+      </AppShell>
+    );
+  }
+
   const supabase = createServiceRoleClient();
 
   const [

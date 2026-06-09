@@ -38,6 +38,8 @@ import { DraftEmailPanel } from "@/components/email/DraftEmailPanel";
 import { WorkflowDependencyPanel } from "@/components/workflow/WorkflowDependencyPanel";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
+import { WorkspaceModulePlaceholder } from "@/components/ui/WorkspaceModulePlaceholder";
+import { isAdminModuleComingSoon } from "@/lib/admin/module-flags";
 import { computeExecutionReadinessBySpvMap } from "@/lib/document-execution/readiness";
 import type { SpvExecutionReadinessSummary } from "@/lib/document-execution/types";
 import { logDocumentExecutionReadinessChecked } from "@/lib/document-execution/audit";
@@ -176,6 +178,27 @@ async function loadAdminSpvWorkspace(): Promise<{ data: SpvWorkspaceData | null;
 
 export default async function AdminSpvsPage() {
   const profile = await requireRole(["admin", "analyst"]);
+
+  if (isAdminModuleComingSoon("spvs")) {
+    return (
+      <AppShell
+        role="ADMIN"
+        workspace="admin"
+        profileName={profile.full_name ?? profile.email ?? "Admin"}
+        profileSubtitle={profile.role}
+      >
+        <WorkspacePageContainer>
+          <PageHeader
+            eyebrow="SPV operations"
+            title="SPV command center"
+            description="Readiness, investor document intake, and indicative participation."
+          />
+          <WorkspaceModulePlaceholder title="SPV workflow" />
+        </WorkspacePageContainer>
+      </AppShell>
+    );
+  }
+
   const supabase = await createServerSupabaseClient();
   const adminRole = profile.role === "analyst" ? "analyst" : "admin";
   const [{ data, error: loadError }, nextBestActions] = await Promise.all([
