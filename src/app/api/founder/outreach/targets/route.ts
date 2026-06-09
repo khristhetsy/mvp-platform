@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { track } from "@/lib/analytics/posthog";
 import { requireFounderInvestorCrmApi } from "@/lib/api/founder-crm";
 import { updateFounderInvestorContact } from "@/lib/founder-crm/contacts";
 import { upsertOutreachTarget } from "@/lib/founder-crm/outreach";
@@ -88,6 +89,13 @@ export async function POST(request: Request) {
   if (result.error || !result.data) {
     return NextResponse.json({ error: "Unable to save outreach target." }, { status: 400 });
   }
+
+  track("investor_matched", {
+    founderId: auth.profile.id,
+    companyId: auth.company.id,
+    platformInvestorId,
+    matchScore: parsed.data.matchScore ?? null,
+  });
 
   const displayName = "Platform investor";
   if (parsed.data.action === "select") {

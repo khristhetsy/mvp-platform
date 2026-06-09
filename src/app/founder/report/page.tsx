@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { track } from "@/lib/analytics/posthog";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -25,6 +26,11 @@ export default async function DiligenceReportPage() {
     : { data: null };
 
   const companyName = company?.company_name ?? "Your company";
+
+  if (diligenceReport) {
+    track("report_viewed", { founderId: profile.id, companyId: company?.id });
+  }
+
   const riskFlags = diligenceReport?.risk_flags ?? [];
   const missingDocuments = diligenceReport?.missing_documents ?? [];
   const recommendations = splitLines(diligenceReport?.recommendations);

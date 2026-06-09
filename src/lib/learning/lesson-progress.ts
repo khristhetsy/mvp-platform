@@ -1,5 +1,6 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { lessonCountForSlug } from "@/lib/learning/modules";
+import { track } from "@/lib/analytics/posthog";
 import { checkAndAwardBadges, getLearningModuleBySlug, recordModuleView } from "@/lib/learning/progress";
 import type { FounderLessonProgressRecord, LearningProgressStatus } from "@/lib/learning/types";
 
@@ -100,6 +101,12 @@ export async function completeLesson(input: {
 
   await syncModuleProgressFromLessons(input);
   await checkAndAwardBadges(input.founderId, input.companyId);
+
+  track("lesson_completed", {
+    moduleSlug: input.moduleSlug,
+    lessonId: input.lessonId,
+    founderId: input.founderId,
+  });
 }
 
 async function syncModuleProgressFromLessons(input: {
