@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { formatApiError } from "@/lib/api/errors";
+import { getModuleContent } from "@/lib/learning/modules";
 
 type LearningContentStatus = "draft" | "pending_review" | "approved" | "published" | "archived";
 type Difficulty = "introductory" | "intermediate" | "advanced";
@@ -333,6 +334,95 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
       setSuccess("Quiz saved.");
     } catch (e) {
       setError(formatApiError(e, "Unable to save quiz."));
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  type StaticLessonDraft = {
+    lessonId: string;
+    title: string;
+    summary: string;
+    keyPointsText: string;
+    worksheetPrompt: string;
+    hasOverride: boolean;
+  };
+
+  const [staticLessons, setStaticLessons] = useState<StaticLessonDraft[]>([]);
+
+  useEffect(() => {
+    void (async () => {
+      if (!selectedModule) {
+        setStaticLessons([]);
+        return;
+      }
+      try {
+        const res = await fetch(
+          `/api/admin/learning/lesson-content?moduleSlug=${encodeURIComponent(selectedModule.slug)}`,
+        );
+        const json = await readApiJson(res);
+        if (res.ok && Array.isArray(json.lessons)) {
+          setStaticLessons(
+            (json.lessons as Array<Record<string, unknown>>).map((lesson) => ({
+              lessonId: String(lesson.lessonId),
+              title: String(lesson.title ?? ""),
+              summary: String(lesson.summary ?? ""),
+              keyPointsText: Array.isArray(lesson.keyPoints)
+                ? (lesson.keyPoints as string[]).join("\n")
+                : "",
+              worksheetPrompt: String(lesson.worksheetPrompt ?? ""),
+              hasOverride: Boolean(lesson.hasOverride),
+            })),
+          );
+          return;
+        }
+      } catch {
+        // fall through to static defaults
+      }
+
+      const base = getModuleContent(selectedModule.slug);
+      setStaticLessons(
+        (base?.lessons ?? []).map((lesson) => ({
+          lessonId: lesson.id,
+          title: lesson.title,
+          summary: lesson.summary,
+          keyPointsText: lesson.keyPoints.join("\n"),
+          worksheetPrompt: lesson.worksheetPrompt ?? "",
+          hasOverride: false,
+        })),
+      );
+    })();
+  }, [selectedModule?.slug, selectedModule?.id]);
+
+  async function saveStaticLesson(lesson: StaticLessonDraft) {
+    if (!selectedModule) return;
+    setLoading(`save_static:${lesson.lessonId}`);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch("/api/admin/learning/lesson-content", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          moduleSlug: selectedModule.slug,
+          lessonId: lesson.lessonId,
+          title: lesson.title,
+          summary: lesson.summary,
+          keyPoints: lesson.keyPointsText
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean),
+          worksheetPrompt: lesson.worksheetPrompt || null,
+        }),
+      });
+      const json = await readApiJson(res);
+      if (!res.ok) throw json;
+      setStaticLessons((rows) =>
+        rows.map((row) => (row.lessonId === lesson.lessonId ? { ...lesson, hasOverride: true } : row)),
+      );
+      setSuccess("Founder lesson content override saved.");
+    } catch (e) {
+      setError(formatApiError(e, "Unable to save lesson content override."));
     } finally {
       setLoading(null);
     }
@@ -880,6 +970,89 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
             <p className="mt-3 text-sm text-slate-600">Create or select a quiz to edit questions.</p>
           )}
         </div>
+      </div>
+
+      <div className="rounded-lg border border-slate-200 p-3">
+        <p className="text-sm font-semibold text-slate-900">Founder curriculum overrides</p>
+        <p className="text-xs text-slate-500">
+          Edit static lesson content from <code className="font-mono">modules.ts</code> defaults. Database overrides
+          take precedence for founders.
+        </p>
+        {!selectedModule ? (
+          <p className="mt-2 text-sm text-slate-600">Select a module to edit founder-facing lesson content.</p>
+        ) : staticLessons.length === 0 ? (
+          <p className="mt-2 text-sm text-slate-600">No static lessons for this module slug.</p>
+        ) : (
+          <div className="mt-4 space-y-4">
+            {staticLessons.map((lesson) => (
+              <div key={lesson.lessonId} className="rounded-lg border border-slate-200 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-mono text-xs text-slate-500">{lesson.lessonId}</p>
+                  {lesson.hasOverride ? (
+                    <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">
+                      Override active
+                    </span>
+                  ) : null}
+                </div>
+                <input
+                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  value={lesson.title}
+                  onChange={(e) =>
+                    setStaticLessons((rows) =>
+                      rows.map((row) => (row.lessonId === lesson.lessonId ? { ...row, title: e.target.value } : row)),
+                    )
+                  }
+                />
+                <textarea
+                  rows={3}
+                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  value={lesson.summary}
+                  onChange={(e) =>
+                    setStaticLessons((rows) =>
+                      rows.map((row) =>
+                        row.lessonId === lesson.lessonId ? { ...row, summary: e.target.value } : row,
+                      ),
+                    )
+                  }
+                />
+                <textarea
+                  rows={4}
+                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs"
+                  placeholder="Key points (one per line)"
+                  value={lesson.keyPointsText}
+                  onChange={(e) =>
+                    setStaticLessons((rows) =>
+                      rows.map((row) =>
+                        row.lessonId === lesson.lessonId ? { ...row, keyPointsText: e.target.value } : row,
+                      ),
+                    )
+                  }
+                />
+                <textarea
+                  rows={2}
+                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  placeholder="Worksheet prompt (optional)"
+                  value={lesson.worksheetPrompt}
+                  onChange={(e) =>
+                    setStaticLessons((rows) =>
+                      rows.map((row) =>
+                        row.lessonId === lesson.lessonId ? { ...row, worksheetPrompt: e.target.value } : row,
+                      ),
+                    )
+                  }
+                />
+                <button
+                  type="button"
+                  disabled={loading !== null}
+                  onClick={() => void saveStaticLesson(lesson)}
+                  className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                >
+                  {loading === `save_static:${lesson.lessonId}` ? "Saving…" : "Save founder override"}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,5 +1,7 @@
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { computeReadinessScore, getLatestDiligenceReport } from "@/lib/data/founder-readiness";
+import { applyLearningReadinessBonus } from "@/lib/learning/score-impact";
+import { computeStageAccess, computeStageCompletionPercent } from "@/lib/learning/stage-access";
 import {
   buildRemediationLearningLinks,
   buildLearningRecommendations,
@@ -24,7 +26,8 @@ import { computeFounderOnboardingProgress } from "@/lib/onboarding/progress";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/supabase/types";
-import type { LearningModuleRecord, LearningProgressRecord } from "@/lib/learning/types";
+import type { LearningModuleRecord, LearningProgressRecord, LearningReadinessStage } from "@/lib/learning/types";
+import type { StageAccessMap } from "@/lib/learning/stage-access";
 
 export type FounderLearningModuleView = LearningModuleRecord & {
   progress: LearningProgressRecord | null;
@@ -82,6 +85,20 @@ export async function loadFounderLearningWorkspace(profile: Profile) {
       completedLessonsCount: 0,
       pendingActions: [],
       aiCoachRecommendations: [],
+      stageAccess: {
+        foundation: true,
+        readiness: false,
+        capital: false,
+        engagement: false,
+        institutional: false,
+      } satisfies StageAccessMap,
+      stageCompletion: {
+        foundation: 0,
+        readiness: 0,
+        capital: 0,
+        engagement: 0,
+        institutional: 0,
+      } satisfies Record<LearningReadinessStage, number>,
     };
   }
 
@@ -118,7 +135,11 @@ export async function loadFounderLearningWorkspace(profile: Profile) {
     .select("id", { count: "exact", head: true })
     .eq("company_id", company.id);
   const hasCompanyUpdates = (companyUpdatesCount ?? 0) > 0;
-  const readinessScore = diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypes);
+  const baseReadinessScore = diligenceReport?.readiness_score ?? computeReadinessScore(uploadedTypes);
+  const readinessScore = applyLearningReadinessBonus(
+    baseReadinessScore,
+    company.learning_readiness_bonus ?? 0,
+  );
   const activeTasks = remediationPlan.tasks.filter(
     (task) => task.status === "open" || task.status === "in_progress",
   );
@@ -203,6 +224,15 @@ export async function loadFounderLearningWorkspace(profile: Profile) {
     .slice(0, 3)
     .map((l) => l.reason);
 
+  const stageAccess = computeStageAccess(modules, progressRows);
+  const stageCompletion: Record<LearningReadinessStage, number> = {
+    foundation: computeStageCompletionPercent("foundation", modules, progressRows),
+    readiness: computeStageCompletionPercent("readiness", modules, progressRows),
+    capital: computeStageCompletionPercent("capital", modules, progressRows),
+    engagement: computeStageCompletionPercent("engagement", modules, progressRows),
+    institutional: computeStageCompletionPercent("institutional", modules, progressRows),
+  };
+
   return {
     company,
     modules: moduleViews,
@@ -226,5 +256,7 @@ export async function loadFounderLearningWorkspace(profile: Profile) {
     completedLessonsCount,
     pendingActions,
     aiCoachRecommendations,
+    stageAccess,
+    stageCompletion,
   };
 }

@@ -38,6 +38,8 @@ export type Company = {
   onboarding_progress_percent?: number;
   onboarding_completed_at?: string | null;
   onboarding_step_state?: Record<string, unknown> | null;
+  capital_ready_at?: string | null;
+  learning_readiness_bonus?: number;
   created_at: string;
   updated_at: string;
 };
@@ -273,6 +275,22 @@ export type Database = {
           banner_image_url?: string | null;
           created_at: string;
           updated_at?: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      learning_lesson_content: {
+        Row: {
+          id: string;
+          module_slug: string;
+          lesson_id: string;
+          title: string | null;
+          summary: string | null;
+          key_points: string[] | null;
+          worksheet_prompt: string | null;
+          updated_by: string | null;
+          updated_at: string;
         };
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;

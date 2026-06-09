@@ -1,5 +1,8 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { awardModuleScorePoints } from "@/lib/learning/score-impact";
+import { computeStageCompletionPercent } from "@/lib/learning/stage-access";
 import { lessonCountForSlug } from "@/lib/learning/modules";
+import { createNotification } from "@/lib/notifications/notifications";
 import type {
   LearningAtRiskFounder,
   LearningBadgeCriteriaType,
@@ -107,6 +110,7 @@ export async function updateLearningProgress(input: {
   };
 
   if (existing) {
+    const wasAlreadyCompleted = existing.status === "completed";
     const { data, error } = await admin
       .from("learning_progress")
       .update({
@@ -124,6 +128,17 @@ export async function updateLearningProgress(input: {
       throw new Error(`Failed to update learning progress: ${error?.message ?? "unknown"}`);
     }
 
+    if (input.status === "completed" && !wasAlreadyCompleted) {
+      if (input.moduleSlug) {
+        await awardModuleScorePoints({
+          companyId: input.companyId,
+          moduleSlug: input.moduleSlug,
+          wasAlreadyCompleted: false,
+        });
+      }
+      await checkCapitalReadyMilestone(input.founderId, input.companyId);
+    }
+
     return data as LearningProgressRecord;
   }
 
@@ -133,7 +148,77 @@ export async function updateLearningProgress(input: {
     throw new Error(`Failed to create learning progress: ${error?.message ?? "unknown"}`);
   }
 
+  if (input.status === "completed") {
+    if (input.moduleSlug) {
+      await awardModuleScorePoints({
+        companyId: input.companyId,
+        moduleSlug: input.moduleSlug,
+        wasAlreadyCompleted: false,
+      });
+    }
+    await checkCapitalReadyMilestone(input.founderId, input.companyId);
+  }
+
   return data as LearningProgressRecord;
+}
+
+const CAPITAL_READY_STAGES = ["foundation", "readiness", "capital", "engagement"] as const;
+
+async function checkCapitalReadyMilestone(founderId: string, companyId: string) {
+  const admin = createServiceRoleClient();
+  const [{ data: company }, { data: modules }, { data: progressRows }, { data: capitalBadge }] = await Promise.all([
+    admin.from("companies").select("capital_ready_at, founder_id").eq("id", companyId).maybeSingle(),
+    admin.from("learning_modules").select("*").eq("is_published", true),
+    admin
+      .from("learning_progress")
+      .select("*")
+      .eq("founder_id", founderId)
+      .eq("company_id", companyId),
+    admin.from("learning_badges").select("id").eq("icon_name", "capital-ready").maybeSingle(),
+  ]);
+
+  if (!company || company.capital_ready_at) return;
+
+  const publishedModules = (modules ?? []) as LearningModuleRecord[];
+  const progress = (progressRows ?? []) as LearningProgressRecord[];
+
+  const stagesComplete = CAPITAL_READY_STAGES.every(
+    (stage) => computeStageCompletionPercent(stage, publishedModules, progress) >= 80,
+  );
+
+  if (!stagesComplete) return;
+
+  const now = new Date().toISOString();
+  await admin.from("companies").update({ capital_ready_at: now, updated_at: now }).eq("id", companyId);
+
+  if (capitalBadge?.id) {
+    const { data: existingAward } = await admin
+      .from("learning_user_badges")
+      .select("id")
+      .eq("founder_id", founderId)
+      .eq("company_id", companyId)
+      .eq("badge_id", capitalBadge.id)
+      .maybeSingle();
+
+    if (!existingAward) {
+      await admin.from("learning_user_badges").insert({
+        founder_id: founderId,
+        company_id: companyId,
+        badge_id: capitalBadge.id,
+        earned_at: now,
+      });
+    }
+  }
+
+  void createNotification({
+    recipientUserId: founderId,
+    type: "learning_milestone",
+    title: "Capital Ready",
+    message:
+      "Congratulations — you completed foundation through engagement learning stages. You are Capital Ready for institutional outreach on CapitalOS.",
+    entityType: "company",
+    entityId: companyId,
+  });
 }
 
 export async function recordModuleView(input: {
@@ -282,6 +367,8 @@ export async function checkAndAwardBadges(founderId: string, companyId: string) 
       newlyAwarded.push(data as LearningUserBadgeRecord);
     }
   }
+
+  await checkCapitalReadyMilestone(founderId, companyId);
 
   return newlyAwarded;
 }

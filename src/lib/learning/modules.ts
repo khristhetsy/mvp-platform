@@ -1,3 +1,4 @@
+import { EXPANDED_MODULE_CONTENT } from "@/lib/learning/module-content-gaps";
 import type { LearningModuleContent } from "@/lib/learning/types";
 
 function lesson(
@@ -333,6 +334,7 @@ export const LEARNING_MODULE_CONTENT: Record<string, LearningModuleContent> = {
       ),
     ],
   },
+  ...EXPANDED_MODULE_CONTENT,
 };
 
 export function getModuleContent(slug: string): LearningModuleContent | null {
