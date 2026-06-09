@@ -4,6 +4,7 @@ import type {
   LearningAtRiskFounder,
   LearningBadgeCriteriaType,
   LearningBadgeRecord,
+  LearningLeaderboardEntry,
   LearningModuleRecord,
   LearningProgressRecord,
   LearningProgressStatus,
@@ -367,6 +368,84 @@ export async function getLearningAtRiskFounders(inactivityDays = 7) {
 
   atRisk.sort((a, b) => b.daysInactive - a.daysInactive);
   return atRisk;
+}
+
+type LeaderboardCompanyRow = {
+  id: string;
+  company_name: string;
+  industry: string | null;
+  profiles: { full_name: string | null } | null;
+};
+
+export async function getLeaderboard(companyId: string) {
+  const admin = createServiceRoleClient();
+  const [{ data: progressRows }, { data: modules }, { data: badgeRows }] = await Promise.all([
+    admin.from("learning_progress").select("company_id, status, percent_complete"),
+    admin.from("learning_modules").select("id").eq("is_published", true),
+    admin.from("learning_user_badges").select("company_id"),
+  ]);
+
+  const publishedCount = modules?.length ?? 0;
+  const grouped = new Map<string, Array<{ status: string; percent_complete: number }>>();
+
+  for (const row of progressRows ?? []) {
+    const list = grouped.get(row.company_id) ?? [];
+    list.push(row);
+    grouped.set(row.company_id, list);
+  }
+
+  const companyIds = [...new Set([...grouped.keys(), companyId])];
+  if (companyIds.length === 0) {
+    return [] as LearningLeaderboardEntry[];
+  }
+
+  const { data: rawCompanies } = await admin
+    .from("companies")
+    .select("id, company_name, industry, profiles:founder_id(full_name)")
+    .in("id", companyIds);
+
+  const companyMap = new Map(((rawCompanies ?? []) as LeaderboardCompanyRow[]).map((company) => [company.id, company]));
+
+  const badgeCounts = new Map<string, number>();
+  for (const row of badgeRows ?? []) {
+    badgeCounts.set(row.company_id, (badgeCounts.get(row.company_id) ?? 0) + 1);
+  }
+
+  const scored = companyIds
+    .map((id) => {
+      const company = companyMap.get(id);
+      if (!company) return null;
+
+      const rows = grouped.get(id) ?? [];
+      const modulesCompleted = rows.filter((row) => row.status === "completed").length;
+      const overallPercent =
+        publishedCount > 0
+          ? Math.round(rows.reduce((sum, row) => sum + row.percent_complete, 0) / publishedCount)
+          : 0;
+
+      return {
+        companyId: id,
+        companyName: company.company_name,
+        founderFirstName: company.profiles?.full_name?.split(/\s+/)[0] ?? null,
+        industry: company.industry,
+        overallPercent,
+        modulesCompleted,
+        badgesEarned: badgeCounts.get(id) ?? 0,
+      };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry != null);
+
+  scored.sort((a, b) => {
+    if (b.overallPercent !== a.overallPercent) return b.overallPercent - a.overallPercent;
+    if (b.modulesCompleted !== a.modulesCompleted) return b.modulesCompleted - a.modulesCompleted;
+    return b.badgesEarned - a.badgesEarned;
+  });
+
+  return scored.map((entry, index) => ({
+    ...entry,
+    rank: index + 1,
+    isCurrentCompany: entry.companyId === companyId,
+  }));
 }
 
 export async function getGlobalModuleEngagementCounts() {

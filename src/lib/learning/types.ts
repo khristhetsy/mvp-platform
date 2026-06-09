@@ -39,6 +39,18 @@ export type LearningReminderRecord = {
   created_at: string;
 };
 
+export type LearningLeaderboardEntry = {
+  rank: number;
+  companyId: string;
+  companyName: string;
+  founderFirstName: string | null;
+  industry: string | null;
+  overallPercent: number;
+  modulesCompleted: number;
+  badgesEarned: number;
+  isCurrentCompany: boolean;
+};
+
 export type LearningAtRiskFounder = {
   companyId: string;
   companyName: string;

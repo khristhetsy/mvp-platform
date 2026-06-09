@@ -1,7 +1,9 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { FounderCourseCatalog } from "@/components/FounderCourseCatalog";
+import { FounderLeaderboard } from "@/components/founder/learning/FounderLeaderboard";
 import { loadFounderCourseCatalog } from "@/lib/learning/load-founder-courses";
+import { getLeaderboard } from "@/lib/learning/progress";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function FounderLearningPage() {
   const profile = await requireRole(["founder"]);
   const { courses, categories, overallPercent, company } = await loadFounderCourseCatalog(profile);
+  const leaderboard = company ? await getLeaderboard(company.id) : [];
   const companyName = company?.company_name ?? "Your company";
 
   return (
@@ -17,7 +20,10 @@ export default async function FounderLearningPage() {
       profileSubtitle={companyName}
     >
       <FounderFeatureGate featureKey="elearning">
-        <FounderCourseCatalog courses={courses} categories={categories} overallPercent={overallPercent} />
+        <div className="space-y-6">
+          <FounderCourseCatalog courses={courses} categories={categories} overallPercent={overallPercent} />
+          <FounderLeaderboard entries={leaderboard} />
+        </div>
       </FounderFeatureGate>
     </FounderAppShell>
   );
