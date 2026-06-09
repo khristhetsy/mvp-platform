@@ -12,6 +12,7 @@ const courseUpdateSchema = z.object({
   content_status: z.enum(["draft", "pending_review", "approved", "published", "archived"]).optional(),
   is_published: z.boolean().optional(),
   order_index: z.number().int().optional(),
+  banner_image_url: z.string().url().optional().nullable(),
 });
 
 export async function GET(_: Request, { params }: Readonly<{ params: Promise<{ courseId: string }> }>) {
@@ -22,7 +23,7 @@ export async function GET(_: Request, { params }: Readonly<{ params: Promise<{ c
   const [{ data: program, error: programError }, { data: links, error: linksError }] = await Promise.all([
     auth.supabase
       .from("learning_programs")
-      .select("id, slug, title, description, readiness_focus, category, difficulty, content_status, is_published, order_index, created_at")
+      .select("id, slug, title, description, readiness_focus, category, difficulty, content_status, is_published, order_index, banner_image_url, created_at")
       .eq("id", courseId)
       .maybeSingle(),
     auth.supabase
