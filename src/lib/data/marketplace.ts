@@ -23,6 +23,7 @@ export type MarketplaceListing = {
   riskDisclosures: string | null;
   diligenceSummary: string | null;
   publishedAt: string | null;
+  capitalReadyAt: string | null;
 };
 
 export function getCompanyTitle(company: Pick<Company, "company_name">) {
@@ -140,6 +141,7 @@ function mapCompanyToListing(
       "This opportunity is for informational purposes only and does not constitute an offer to sell securities.",
     diligenceSummary: company.business_description,
     publishedAt: company.published_at ?? null,
+    capitalReadyAt: company.capital_ready_at ?? null,
   };
 }
 

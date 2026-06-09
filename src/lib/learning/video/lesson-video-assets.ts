@@ -21,9 +21,52 @@ export function mapVideoAssetRow(row: Record<string, unknown>): FounderLessonVid
     video_url: row.video_url != null ? String(row.video_url) : null,
     render_status: row.render_status as VideoRenderStatus,
     provider: row.provider as VideoProvider,
+    watch_position_seconds: typeof row.watch_position_seconds === "number" ? row.watch_position_seconds : 0,
+    slide_deck_url: row.slide_deck_url != null ? String(row.slide_deck_url) : null,
+    slide_deck_storage_path: row.slide_deck_storage_path != null ? String(row.slide_deck_storage_path) : null,
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
   };
+}
+
+export async function saveWatchPosition(input: {
+  founderId: string;
+  companyId: string;
+  courseSlug: string;
+  lessonSlug: string;
+  positionSeconds: number;
+}) {
+  const admin = createServiceRoleClient();
+  const now = new Date().toISOString();
+  const { data: existing } = await admin
+    .from("founder_lesson_video_assets")
+    .select("id")
+    .eq("founder_id", input.founderId)
+    .eq("company_id", input.companyId)
+    .eq("course_slug", input.courseSlug)
+    .eq("lesson_slug", input.lessonSlug)
+    .maybeSingle();
+
+  if (existing) {
+    await admin
+      .from("founder_lesson_video_assets")
+      .update({ watch_position_seconds: input.positionSeconds, updated_at: now })
+      .eq("id", existing.id);
+    return;
+  }
+
+  await admin.from("founder_lesson_video_assets").insert({
+    founder_id: input.founderId,
+    company_id: input.companyId,
+    course_slug: input.courseSlug,
+    lesson_slug: input.lessonSlug,
+    watch_position_seconds: input.positionSeconds,
+    slides_json: [],
+    provider: "manual",
+    render_status: "draft",
+    created_at: now,
+    updated_at: now,
+  });
 }
 
 export async function getLessonVideoAsset(input: {

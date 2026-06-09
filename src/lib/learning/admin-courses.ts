@@ -38,6 +38,9 @@ export type AdminPublishedLesson = {
   order_index: number;
   estimated_time_minutes: number;
   content_status: string;
+  video_url?: string | null;
+  slide_deck_url?: string | null;
+  video_render_status?: string | null;
 };
 
 export type AdminPublishedQuiz = {
@@ -120,7 +123,7 @@ export async function listPublishedAdminLessonsForModule(moduleSlug: string): Pr
   const supabase = await createServerSupabaseClient();
   const { data } = await supabase
     .from("learning_lessons")
-    .select("id, module_id, module_slug, lesson_key, title, body_markdown, order_index, estimated_time_minutes, content_status")
+    .select("id, module_id, module_slug, lesson_key, title, body_markdown, order_index, estimated_time_minutes, content_status, video_url, slide_deck_url, video_render_status")
     .eq("module_slug", moduleSlug)
     .eq("content_status", "published")
     .order("order_index", { ascending: true })
@@ -133,7 +136,7 @@ export async function getPublishedAdminLesson(lessonId: string): Promise<AdminPu
   const supabase = await createServerSupabaseClient();
   const { data } = await supabase
     .from("learning_lessons")
-    .select("id, module_id, module_slug, lesson_key, title, body_markdown, order_index, estimated_time_minutes, content_status")
+    .select("id, module_id, module_slug, lesson_key, title, body_markdown, order_index, estimated_time_minutes, content_status, video_url, slide_deck_url, video_render_status")
     .eq("id", lessonId)
     .eq("content_status", "published")
     .maybeSingle();

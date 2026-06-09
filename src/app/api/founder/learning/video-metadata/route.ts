@@ -3,12 +3,42 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { findCourseLesson, getCourseBySlug } from "@/lib/learning/courses";
 import {
   getLessonVideoAsset,
+  saveWatchPosition,
   updateLessonVideoRenderStatus,
 } from "@/lib/learning/video/lesson-video-assets";
 import { isHeyGenConfigured } from "@/lib/learning/video/providers/heygen";
 import { isRemotionConfigured } from "@/lib/learning/video/providers/remotion";
 import { VIDEO_LESSON_DISCLAIMER } from "@/lib/learning/video/video-types";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+
+export async function PATCH(request: Request) {
+  const auth = await requireApiProfile(["founder"]);
+  if ("error" in auth) return auth.error;
+
+  const company = await ensureFounderCompanyForUser(auth.profile);
+  if (!company) {
+    return NextResponse.json({ error: "Company not found." }, { status: 404 });
+  }
+
+  const body = await request.json().catch(() => ({}));
+  const courseSlug = typeof body.courseSlug === "string" ? body.courseSlug.trim() : "";
+  const lessonSlug = typeof body.lessonSlug === "string" ? body.lessonSlug.trim() : "";
+  const positionSeconds = typeof body.positionSeconds === "number" ? body.positionSeconds : null;
+
+  if (!courseSlug || !lessonSlug || positionSeconds == null) {
+    return NextResponse.json({ error: "courseSlug, lessonSlug, and positionSeconds are required." }, { status: 400 });
+  }
+
+  await saveWatchPosition({
+    founderId: auth.profile.id,
+    companyId: company.id,
+    courseSlug,
+    lessonSlug,
+    positionSeconds: Math.max(0, Math.floor(positionSeconds)),
+  });
+
+  return NextResponse.json({ ok: true });
+}
 
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);

@@ -16,6 +16,7 @@ type QuizSubmissionResult = {
   passed: boolean;
   attemptsUsed?: number;
   attemptsRemaining?: number;
+  questionResults?: Array<{ questionId: string; correct: boolean }>;
 };
 
 export function FounderAdminCourseQuizClient({
@@ -60,6 +61,22 @@ export function FounderAdminCourseQuizClient({
         attemptsUsed: typeof json.attemptsUsed === "number" ? json.attemptsUsed : undefined,
         attemptsRemaining: typeof json.attemptsRemaining === "number" ? json.attemptsRemaining : undefined,
       });
+
+      const moduleSlug = `course:${courseId}`;
+      const lessonId = `quiz:${quizId}`;
+      for (const item of json.questionResults ?? []) {
+        await fetch("/api/founder/learning/quiz-review", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            moduleSlug,
+            lessonId,
+            questionId: item.questionId,
+            score: item.correct ? 4 : 1,
+          }),
+        });
+      }
+
       router.refresh();
     } catch (e) {
       setError(formatApiError(e, "Quiz submission failed."));

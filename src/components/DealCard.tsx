@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CapitalReadyBadge } from "@/components/CapitalReadyBadge";
 import { CompanyPledgeSummaryBlock } from "@/components/CompanyPledgeSummary";
 import type { MarketplaceListing } from "@/lib/data/marketplace";
 import type { CompanyPledgeSummary } from "@/lib/data/investor-pledges";
@@ -12,7 +13,10 @@ export function DealCard({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-slate-500">{deal.industry ?? "Private company"}</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{deal.companyName}</h2>
+          <h2 className="mt-2 flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight text-slate-950">
+            {deal.companyName}
+            {deal.capitalReadyAt ? <CapitalReadyBadge /> : null}
+          </h2>
           <p className="mt-1 text-sm text-slate-500">
             {[deal.stage, deal.location].filter(Boolean).join(" · ") || "—"}
           </p>

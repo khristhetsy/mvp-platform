@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FounderAIVideoLesson } from "@/components/FounderAIVideoLesson";
+import { LessonNotes } from "@/components/founder/learning/LessonNotes";
 import { FloatingFounderAICoach } from "@/components/FloatingFounderAICoach";
 import type { FounderLessonVideoAssetRecord } from "@/lib/learning/video/video-types";
 import { courseHref } from "@/lib/learning/course-keys";
@@ -57,8 +58,6 @@ export function FounderClassLessonExperience({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notes, setNotes] = useState("");
-
   const quizRequired = lesson.type === "quiz" || Boolean(lesson.quiz?.questions.length);
   const canComplete = !quizRequired || (quizResult?.passed ?? false);
 
@@ -205,17 +204,7 @@ export function FounderClassLessonExperience({
           </section>
         ) : null}
 
-        <section className="rounded-xl border border-dashed border-slate-200 p-4">
-          <h2 className="text-sm font-semibold text-slate-800">Notes</h2>
-          <p className="mt-1 text-xs text-slate-500">Saved locally in this session (cloud notes in Phase 2).</p>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={4}
-            className="mt-3 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-            placeholder="Your lesson notes…"
-          />
-        </section>
+        <LessonNotes moduleSlug={course.slug} lessonId={lesson.slug} />
 
         <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <h2 className="text-sm font-semibold text-slate-800">Resources & downloads</h2>

@@ -36,7 +36,15 @@ export function CompanyWorkspaceHeader({ data }: Readonly<{ data: AdminCompanyWo
         eyebrow="Company workspace"
         title={company.company_name}
         description={company.industry ? `${company.industry} · Operational command surface` : "Operational command surface"}
-        metadata={`Company ID ${companyId.slice(0, 8)}… · Last loaded ${new Date().toLocaleString("en-US", { timeZone: "UTC" })} UTC`}
+        metadata={[
+          `Company ID ${companyId.slice(0, 8)}…`,
+          company.capital_ready_at
+            ? `Capital Ready since ${new Date(company.capital_ready_at).toLocaleDateString()}`
+            : null,
+          `Last loaded ${new Date().toLocaleString("en-US", { timeZone: "UTC" })} UTC`,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
         queueIndicator={
           data.queueItems.length > 0 ? (
             <StatusBadge label={`${data.queueItems.length} queue item${data.queueItems.length === 1 ? "" : "s"}`} status="warning" dot />

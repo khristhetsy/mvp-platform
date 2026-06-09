@@ -19,6 +19,7 @@ export type AdminCompanyRow = {
   is_published: boolean | null;
   marketplace_visible: boolean | null;
   published_at: string | null;
+  capital_ready_at: string | null;
   slug: string | null;
   founder_id: string;
   onboarding_progress_percent: number | null;
@@ -56,6 +57,7 @@ type CompanyWithRelations = {
   is_published: boolean | null;
   marketplace_visible: boolean | null;
   published_at: string | null;
+  capital_ready_at?: string | null;
   slug: string | null;
   founder_id: string;
   onboarding_progress_percent?: number | null;
@@ -115,6 +117,7 @@ export async function listAdminCompanies(supabase: SupabaseClient<Database>): Pr
       is_published,
       marketplace_visible,
       published_at,
+      capital_ready_at,
       slug,
       founder_id,
       onboarding_progress_percent,
@@ -175,6 +178,7 @@ export async function listAdminCompanies(supabase: SupabaseClient<Database>): Pr
         is_published: row.is_published ?? false,
         marketplace_visible: row.marketplace_visible ?? false,
         published_at: row.published_at ?? null,
+        capital_ready_at: row.capital_ready_at ?? null,
         slug: row.slug ?? null,
         founder_id: row.founder_id,
         onboarding_progress_percent: row.onboarding_progress_percent ?? 0,
@@ -216,6 +220,7 @@ export type AdminCompanyCardPayload = {
   founder_requested_plan: PlanType | null;
   founder_onboarding_percent: number;
   founder_onboarding_completed_at: string | null;
+  capital_ready_at: string | null;
   founder_remediation_active: number;
   founder_remediation_total: number;
   founder_learning_percent: number;
@@ -283,6 +288,7 @@ export function mapAdminCompaniesToCardData(
       founder_requested_plan: requestedPlansByProfileId.get(company.founder_id) ?? null,
       founder_onboarding_percent: company.onboarding_progress_percent ?? 0,
       founder_onboarding_completed_at: company.onboarding_completed_at ?? null,
+      capital_ready_at: company.capital_ready_at ?? null,
       founder_remediation_active: remediation?.active ?? 0,
       founder_remediation_total: remediation?.total ?? 0,
       founder_learning_percent: learning?.percentComplete ?? 0,

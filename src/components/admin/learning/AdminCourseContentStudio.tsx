@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { formatApiError } from "@/lib/api/errors";
+import { AdminLessonMediaUpload } from "@/components/admin/learning/AdminLessonMediaUpload";
+import { AdminLessonWorksheetSubmissions } from "@/components/admin/learning/AdminLessonWorksheetSubmissions";
 import { getModuleContent } from "@/lib/learning/modules";
 
 type LearningContentStatus = "draft" | "pending_review" | "approved" | "published" | "archived";
@@ -30,6 +32,9 @@ type LessonRow = {
   order_index: number;
   estimated_time_minutes: number;
   content_status: string;
+  video_url?: string | null;
+  slide_deck_url?: string | null;
+  video_render_status?: string | null;
 };
 
 type QuizRow = {
@@ -767,6 +772,36 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
                       >
                         {loading === `save_lesson:${l.id}` ? "Saving…" : "Save lesson"}
                       </button>
+
+                      {selectedModule ? (
+                        <>
+                          <hr className="my-4 border-slate-200" />
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Lesson media</p>
+                          <div className="mt-3">
+                            <AdminLessonMediaUpload
+                              courseId={courseId}
+                              moduleSlug={selectedModule.slug}
+                              lessonKey={l.lesson_key}
+                              lessonId={l.id}
+                              existingVideoUrl={l.video_url ?? null}
+                              existingSlideDeckUrl={l.slide_deck_url ?? null}
+                              initialRenderStatus={l.video_render_status ?? null}
+                              onUploaded={(type, url) => {
+                                setLessons((v) =>
+                                  v.map((x) =>
+                                    x.id === l.id
+                                      ? type === "video"
+                                        ? { ...x, video_url: url, video_render_status: "ready" }
+                                        : { ...x, slide_deck_url: url }
+                                      : x,
+                                  ),
+                                );
+                              }}
+                            />
+                          </div>
+                          <AdminLessonWorksheetSubmissions moduleSlug={selectedModule.slug} lessonId={l.lesson_key} />
+                        </>
+                      ) : null}
                     </div>
                   ))
                 )}
