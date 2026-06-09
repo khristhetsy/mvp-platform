@@ -7,7 +7,7 @@ import {
   getCourseBySlug,
 } from "@/lib/learning/courses";
 import type { Course, CourseLesson } from "@/lib/learning/course-types";
-import type { FounderLessonProgressRecord } from "@/lib/learning/types";
+import type { AICoachRecommendation, FounderLessonProgressRecord } from "@/lib/learning/types";
 
 export const COACH_DISCLAIMER =
   "CapitalOS provides educational support only. This is not legal, tax, investment, securities, or fundraising advice.";
@@ -37,6 +37,7 @@ export type PersonalCoachContext = {
   courseProgressPercent: number;
   nextStudySuggestion: string | null;
   curriculumOutline: string;
+  gapBasedRecommendations: AICoachRecommendation[];
 };
 
 export type PersonalCoachResult = {
@@ -58,6 +59,7 @@ export function buildCatalogCoachContext(input: {
   companyName: string | null;
   overallPercent: number;
   adminCurriculumOutline?: string | null;
+  gapBasedRecommendations?: AICoachRecommendation[];
 }): PersonalCoachContext {
   const courses = FOUNDER_COURSES;
   const coreOutline = courses
@@ -86,6 +88,7 @@ export function buildCatalogCoachContext(input: {
       ? `Browse ${courses[0].title} at /founder/learning/${courses[0].slug}`
       : null,
     curriculumOutline,
+    gapBasedRecommendations: input.gapBasedRecommendations ?? [],
   };
 }
 
@@ -96,6 +99,7 @@ export function buildPersonalCoachContext(input: {
   founderName: string;
   companyName: string | null;
   progressRows: FounderLessonProgressRecord[];
+  gapBasedRecommendations?: AICoachRecommendation[];
 }): PersonalCoachContext {
   const flat = flattenCourseLessons(input.course);
   const completed = flat.filter(({ lesson }) =>
@@ -130,7 +134,15 @@ export function buildPersonalCoachContext(input: {
     courseProgressPercent: percent,
     nextStudySuggestion: next ? `${next.lesson.title} (${next.href})` : null,
     curriculumOutline,
+    gapBasedRecommendations: input.gapBasedRecommendations ?? [],
   };
+}
+
+function formatGapRecommendationsForPrompt(recommendations: AICoachRecommendation[]) {
+  if (recommendations.length === 0) return "No personalized module gaps detected yet.";
+  return recommendations
+    .map((rec) => `- ${rec.title} (/founder/learning/${rec.slug}): ${rec.reason}`)
+    .join("\n");
 }
 
 function buildSystemPrompt(ctx: PersonalCoachContext) {
@@ -163,6 +175,9 @@ Curriculum:
 ${ctx.curriculumOutline}
 ${ctx.lessonContent ? `\nCurrent lesson content:\n${ctx.lessonContent}` : ""}
 ${ctx.lessonKeyPoints.length ? `\nKey points:\n${ctx.lessonKeyPoints.map((p) => `- ${p}`).join("\n")}` : ""}
+
+Founder readiness gap recommendations (reference when asked what to study or how to improve):
+${formatGapRecommendationsForPrompt(ctx.gapBasedRecommendations)}
 
 End every reply with a brief reminder that this is educational support only. Do not repeat the full disclaimer verbatim if already clear.`;
 }
@@ -339,6 +354,7 @@ export function buildClassAssistantReply(input: {
     courseProgressPercent: 0,
     nextStudySuggestion: null,
     curriculumOutline: "",
+    gapBasedRecommendations: [],
   };
   if (isQuizAnswerRequest(input.message)) {
     return {

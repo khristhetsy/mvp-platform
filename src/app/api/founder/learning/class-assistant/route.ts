@@ -11,6 +11,7 @@ import {
 import { computeCoursePercentComplete } from "@/lib/learning/course-progress";
 import { FOUNDER_COURSES } from "@/lib/learning/courses";
 import { listLessonProgressForCompany } from "@/lib/learning/lesson-progress";
+import { getAICoachRecommendations } from "@/lib/learning/recommendations";
 import { listPublishedAdminCourses } from "@/lib/learning/admin-courses";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 
@@ -34,9 +35,12 @@ export async function POST(request: Request) {
     : [];
 
   const company = await ensureFounderCompanyForUser(auth.profile);
-  const progressRows = company
-    ? await listLessonProgressForCompany(auth.profile.id, company.id)
-    : [];
+  const [progressRows, gapBasedRecommendations] = company
+    ? await Promise.all([
+        listLessonProgressForCompany(auth.profile.id, company.id),
+        getAICoachRecommendations(auth.profile.id, company.id),
+      ])
+    : [[], []];
 
   const founderName = auth.profile.full_name ?? auth.profile.email ?? "Founder";
   const companyName = company?.company_name ?? null;
@@ -60,7 +64,13 @@ export async function POST(request: Request) {
           .join("\n")}`
       : null;
 
-    const ctx = buildCatalogCoachContext({ founderName, companyName, overallPercent, adminCurriculumOutline });
+    const ctx = buildCatalogCoachContext({
+      founderName,
+      companyName,
+      overallPercent,
+      adminCurriculumOutline,
+      gapBasedRecommendations,
+    });
     const result = await runPersonalCoach({ message, ctx, history });
 
     return NextResponse.json({
@@ -83,6 +93,7 @@ export async function POST(request: Request) {
     founderName,
     companyName,
     progressRows,
+    gapBasedRecommendations,
   });
 
   const result = await runPersonalCoach({ message, ctx, history });

@@ -186,6 +186,13 @@ export type LearningRecommendation = {
   relatedRemediationCategory: string | null;
 };
 
+export type AICoachRecommendation = {
+  moduleId: string;
+  slug: string;
+  title: string;
+  reason: string;
+};
+
 export type ReadinessMilestoneKey =
   | "foundation_ready"
   | "investor_ready_l1"

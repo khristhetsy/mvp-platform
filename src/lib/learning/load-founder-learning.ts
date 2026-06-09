@@ -1,6 +1,10 @@
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { computeReadinessScore, getLatestDiligenceReport } from "@/lib/data/founder-readiness";
-import { buildRemediationLearningLinks, buildLearningRecommendations } from "@/lib/learning/recommendations";
+import {
+  buildRemediationLearningLinks,
+  buildLearningRecommendations,
+  getAICoachRecommendations,
+} from "@/lib/learning/recommendations";
 import { computeReadinessMilestones, getCurrentMilestone, getNextMilestone } from "@/lib/learning/milestones";
 import { LEARNING_PROGRAM_CATALOG, computeCapitalOsReadinessTier } from "@/lib/learning/catalog";
 import { listLessonProgressForCompany, countCompletedLessons } from "@/lib/learning/lesson-progress";
@@ -77,16 +81,19 @@ export async function loadFounderLearningWorkspace(profile: Profile) {
       }),
       completedLessonsCount: 0,
       pendingActions: [],
+      aiCoachRecommendations: [],
     };
   }
 
   const supabase = await createServerSupabaseClient();
   const remediationPlan = await loadFounderRemediationPlan(profile);
-  const [{ data: documents }, { data: diligenceReport }, progressRows, lessonProgress] = await Promise.all([
+  const [{ data: documents }, { data: diligenceReport }, progressRows, lessonProgress, aiCoachRecommendations] =
+    await Promise.all([
     listCompanyDocuments(supabase, company.id),
     getLatestDiligenceReport(supabase, company.id),
     listLearningProgressForCompany(profile.id, company.id),
     listLessonProgressForCompany(profile.id, company.id),
+    getAICoachRecommendations(profile.id, company.id),
   ]);
 
   const onboarding = computeFounderOnboardingProgress({
@@ -218,5 +225,6 @@ export async function loadFounderLearningWorkspace(profile: Profile) {
     readinessTier,
     completedLessonsCount,
     pendingActions,
+    aiCoachRecommendations,
   };
 }

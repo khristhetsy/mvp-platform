@@ -203,6 +203,25 @@ export function FounderLearningDashboard({
         />
       </WorkspacePanel>
 
+      {learning.aiCoachRecommendations.length > 0 ? (
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600">Recommended for you</p>
+          <h2 className="mt-1 text-sm font-semibold text-slate-950">AI coach picks from your readiness gaps</h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {learning.aiCoachRecommendations.map((recommendation) => (
+              <Link
+                key={recommendation.moduleId}
+                href={`/founder/learning/${recommendation.slug}`}
+                className="rounded-xl border border-slate-200 p-4 transition hover:border-indigo-200 hover:bg-indigo-50/40"
+              >
+                <h3 className="text-sm font-semibold text-slate-950">{recommendation.title}</h3>
+                <p className="mt-2 text-xs leading-5 text-slate-600">{recommendation.reason}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <WorkspacePanel title="All modules" subtitle="Full curriculum by stage">
         <div className="grid gap-4 md:grid-cols-2">
           {learning.modules.map((module) => (
