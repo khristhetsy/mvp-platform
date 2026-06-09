@@ -177,9 +177,51 @@ export type Database = {
           readiness_stage: string;
           order_index: number;
           is_published: boolean;
+          score_points?: number;
           content_status?: string;
           created_at: string;
           updated_at?: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      learning_badges: {
+        Row: {
+          id: string;
+          name: string;
+          description: string;
+          icon_name: string;
+          criteria_type: string;
+          criteria_value: number;
+          created_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      learning_user_badges: {
+        Row: {
+          id: string;
+          founder_id: string;
+          company_id: string;
+          badge_id: string;
+          earned_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
+      learning_reminders: {
+        Row: {
+          id: string;
+          founder_id: string;
+          company_id: string;
+          type: string;
+          scheduled_at: string;
+          sent_at: string | null;
+          metadata: Record<string, unknown>;
+          created_at: string;
         };
         Insert: Record<string, unknown>;
         Update: Record<string, unknown>;
