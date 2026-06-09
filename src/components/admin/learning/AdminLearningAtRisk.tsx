@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdminLearningAtRiskNudgeButton } from "@/components/admin/learning/AdminLearningAtRiskNudgeButton";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { getLearningAtRiskFounders } from "@/lib/learning/progress";
 
@@ -31,6 +32,7 @@ export async function AdminLearningAtRisk() {
                 <th className="px-2 py-2">Days inactive</th>
                 <th className="px-2 py-2">Last activity</th>
                 <th className="px-2 py-2">Progress</th>
+                <th className="px-2 py-2">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -55,6 +57,15 @@ export async function AdminLearningAtRisk() {
                   <td className="px-2 py-3 text-slate-600">
                     {founder.percentComplete}% · {founder.modulesCompleted} completed · {founder.modulesEngaged}{" "}
                     engaged
+                  </td>
+                  <td className="px-2 py-3">
+                    <AdminLearningAtRiskNudgeButton
+                      founderId={founder.founderId}
+                      companyId={founder.companyId}
+                      daysInactive={founder.daysInactive}
+                      percentComplete={founder.percentComplete}
+                      lastActivityAt={founder.lastActivityAt}
+                    />
                   </td>
                 </tr>
               ))}
