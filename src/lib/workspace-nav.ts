@@ -67,6 +67,7 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/founder/deal-room", label: "Deal Room" },
   { href: "/founder/messages", label: "Messages" },
   { href: "/founder/capital-raise", label: "Capital Raise" },
+  { href: "/founder/spvs", label: "SPVs" },
   { href: "/founder/learning", label: "Learning" },
   { href: "/founder/analytics", label: "Analytics" },
   { href: "/founder/settings", label: "Settings" },
