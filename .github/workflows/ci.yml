@@ -23,7 +23,7 @@ jobs:
         run: npm ci
 
       - name: Type check
-        run: npx tsc --noEmit
+        run: npx tsc --noEmit --project tsconfig.build.json
 
       - name: Lint
         run: npx next lint --max-warnings 0
