@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-const GA_ID = "G-ZCRJ60MTCS";
+const GA_ID = "G-HHZ2NZ8W8B";
 
 export function GoogleAnalyticsScript() {
   useEffect(() => {
