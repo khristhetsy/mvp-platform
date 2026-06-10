@@ -56,7 +56,7 @@ function menuItemsForWorkspace(workspace: WorkspaceId): MenuItem[] {
 
   if (workspace === "admin") {
     return [
-      { kind: "link", label: "Profile", href: "/admin/analytics", icon: <User className="h-4 w-4" /> },
+      { kind: "link", label: "Profile", href: "/admin/profile", icon: <User className="h-4 w-4" /> },
       { kind: "link", label: "Settings", href: "/admin/analytics", icon: <Settings className="h-4 w-4" /> },
       { kind: "link", label: "Platform settings", href: "/admin/integrations", icon: <Shield className="h-4 w-4" /> },
       { kind: "link", label: "System health", href: "/admin/system-health", icon: <Activity className="h-4 w-4" /> },
