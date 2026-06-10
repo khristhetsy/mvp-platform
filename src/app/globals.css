@@ -15,7 +15,7 @@
   --text-secondary: #334155;
   --text-muted: #64748b;
 
-  /* Brand — deep navy + gold */
+  /* Brand — deep navy + blue */
   --navy: #0c2340;
   --navy-hover: #091a30;
   --navy-muted: #e8edf4;
@@ -23,10 +23,17 @@
   --gold-hover: #b8921f;
   --gold-muted: #faf6ea;
 
-  /* Primary actions use navy; accent highlights use gold */
-  --accent: var(--navy);
-  --accent-hover: var(--navy-hover);
-  --accent-muted: var(--navy-muted);
+  /* Primary blue accent (Full Light theme) */
+  --blue: #2563eb;
+  --blue-hover: #1d4ed8;
+  --blue-muted: #eff6ff;
+  --blue-border: #bfdbfe;
+  --blue-foreground: #ffffff;
+
+  /* Primary actions use blue; navy stays for headings/text */
+  --accent: var(--blue);
+  --accent-hover: var(--blue-hover);
+  --accent-muted: var(--blue-muted);
   --accent-foreground: #ffffff;
   --accent-gold: var(--gold);
 
@@ -140,25 +147,25 @@ select {
 }
 
 .cap-btn-primary {
-  background: var(--navy);
+  background: var(--blue);
   color: #ffffff;
   transition: background-color 120ms ease;
 }
 
 .cap-btn-primary:hover {
-  background: var(--navy-hover);
+  background: var(--blue-hover);
 }
 
 .cap-btn-secondary {
-  background: #ffffff;
-  color: var(--navy);
-  border: 1px solid var(--border-subtle);
+  background: var(--blue-muted);
+  color: var(--blue-hover);
+  border: 1px solid var(--blue-border);
   transition: border-color 120ms ease, background-color 120ms ease;
 }
 
 .cap-btn-secondary:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-sunken);
+  border-color: var(--blue);
+  background: #dbeafe;
 }
 
 .cap-marketing-surface {

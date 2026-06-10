@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bot, Lock, ShieldCheck, Sparkles } from "lucide-react";
+import { Bot, Lock, ShieldCheck, Sparkles, Brain, BarChart3, Building2 } from "lucide-react";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingDashboardPreview } from "@/components/marketing/MarketingDashboardPreview";
 import { MarketingFooter } from "@/components/MarketingFooter";
@@ -16,18 +16,30 @@ const featureCards = [
   {
     title: "AI Diligence",
     copy: "Summarize documents, flag gaps, and generate investor-ready diligence briefs with human review checkpoints.",
+    icon: Brain,
+    iconBg: "bg-[var(--blue-muted)]",
+    iconColor: "text-[var(--blue)]",
   },
   {
     title: "Investor Readiness",
     copy: "Structured readiness scoring, remediation tasks, and campaign preparation aligned to institutional review.",
+    icon: BarChart3,
+    iconBg: "bg-emerald-50",
+    iconColor: "text-emerald-600",
   },
   {
     title: "Secure Data Rooms",
     copy: "Private document rooms with role-based access, audit visibility, and bank-grade storage policies.",
+    icon: Lock,
+    iconBg: "bg-violet-50",
+    iconColor: "text-violet-600",
   },
   {
     title: "Marketplace Access",
     copy: "Publish admin-approved opportunities with disclosures, risk context, and non-binding investor actions.",
+    icon: Building2,
+    iconBg: "bg-amber-50",
+    iconColor: "text-amber-600",
   },
 ];
 
@@ -62,7 +74,7 @@ export default function Home() {
                   key={label}
                   className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm"
                 >
-                  <Icon className="h-3.5 w-3.5 text-[var(--gold)]" strokeWidth={1.75} aria-hidden />
+                  <Icon className="h-3.5 w-3.5 text-[var(--blue)]" strokeWidth={1.75} aria-hidden />
                   {label}
                 </span>
               ))}
@@ -77,7 +89,7 @@ export default function Home() {
             <span>Trusted by founders preparing institutional raises</span>
             <span className="hidden h-4 w-px bg-slate-200 sm:block" aria-hidden />
             <span className="flex items-center gap-1.5">
-              <Bot className="h-3.5 w-3.5 text-[var(--gold)]" strokeWidth={1.75} />
+              <Bot className="h-3.5 w-3.5 text-[var(--blue)]" strokeWidth={1.75} />
               AI-assisted workflows
             </span>
           </div>
@@ -89,8 +101,8 @@ export default function Home() {
               key={card.title}
               className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)] transition hover:shadow-[var(--shadow-card)]"
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--navy-muted)]">
-                <span className="h-2 w-2 rounded-full bg-[var(--gold)]" aria-hidden />
+              <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${card.iconBg}`}>
+                <card.icon className={`h-4.5 w-4.5 ${card.iconColor}`} strokeWidth={1.75} aria-hidden />
               </div>
               <h2 className="mt-3 text-sm font-semibold text-[var(--navy)]">{card.title}</h2>
               <p className="mt-2 text-xs leading-5 text-slate-600">{card.copy}</p>
