@@ -39,9 +39,7 @@ export default function RootLayout({
         </PostHogProvider>
         <Analytics />
         <SpeedInsights />
-        {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ? (
-          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
-        ) : null}
+        <GoogleAnalytics gaId="G-ZCRJ60MTCS" />
       </body>
     </html>
   );
