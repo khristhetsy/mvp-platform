@@ -10,7 +10,7 @@ export function ActionTimeline({ items }: Readonly<{ items: ActionTimelineItem[]
       {items.map((item) => (
         <li key={item.id} className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-medium text-[var(--navy)]">{item.title}</p>
+            <p className="text-xs font-medium text-slate-950">{item.title}</p>
             <span className="text-[10px] uppercase text-slate-400">{item.severity}</span>
           </div>
           <p className="mt-0.5 text-[10px] text-slate-500">

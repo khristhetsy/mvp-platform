@@ -371,10 +371,10 @@ export function PageBuilderLab() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Page Builder Lab</p>
-          <h1 className="mt-1 text-2xl font-semibold text-[var(--navy)]">Sandbox layout editor</h1>
+          <h1 className="mt-1 text-2xl font-semibold text-slate-950">Sandbox layout editor</h1>
           <p className="mt-1 max-w-3xl text-sm text-slate-600">
             Phase 1 drafts only. Preview at{" "}
-            <Link href={`/preview/${pageSlug}`} className="font-medium text-[var(--navy)] underline">
+            <Link href={`/preview/${pageSlug}`} className="font-medium text-slate-950 underline">
               /preview/{pageSlug}
             </Link>
             . Production routes are not modified.
@@ -451,7 +451,7 @@ export function PageBuilderLab() {
         <div className="ml-auto flex gap-1 rounded-lg border border-slate-200 p-1">
           <button
             type="button"
-            className={`rounded-md px-2 py-1 text-xs font-medium ${previewMode === "desktop" ? "bg-[var(--navy)] text-white" : "text-slate-600"}`}
+            className={`rounded-md px-2 py-1 text-xs font-medium ${previewMode === "desktop" ? "bg-[var(--blue)] text-white" : "text-slate-600"}`}
             onClick={() => setPreviewMode("desktop")}
           >
             <Monitor className="mr-1 inline h-3.5 w-3.5" aria-hidden />
@@ -459,7 +459,7 @@ export function PageBuilderLab() {
           </button>
           <button
             type="button"
-            className={`rounded-md px-2 py-1 text-xs font-medium ${previewMode === "mobile" ? "bg-[var(--navy)] text-white" : "text-slate-600"}`}
+            className={`rounded-md px-2 py-1 text-xs font-medium ${previewMode === "mobile" ? "bg-[var(--blue)] text-white" : "text-slate-600"}`}
             onClick={() => setPreviewMode("mobile")}
           >
             <Smartphone className="mr-1 inline h-3.5 w-3.5" aria-hidden />
@@ -470,7 +470,7 @@ export function PageBuilderLab() {
 
       <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_320px_300px]">
         <section className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
-          <h2 className="text-sm font-semibold text-[var(--navy)]">Approved blocks</h2>
+          <h2 className="text-sm font-semibold text-slate-950">Approved blocks</h2>
           <div className="mt-3 space-y-2">
             {BLOCK_DEFINITIONS.map((def) => (
               <button
@@ -479,13 +479,13 @@ export function PageBuilderLab() {
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-left text-sm hover:border-slate-300 hover:bg-slate-50"
                 onClick={() => addBlock(def.type)}
               >
-                <span className="font-medium text-[var(--navy)]">{def.label}</span>
+                <span className="font-medium text-slate-950">{def.label}</span>
                 <span className="mt-0.5 block text-xs text-slate-500">{def.description}</span>
               </button>
             ))}
           </div>
 
-          <h3 className="mt-5 text-sm font-semibold text-[var(--navy)]">Block order</h3>
+          <h3 className="mt-5 text-sm font-semibold text-slate-950">Block order</h3>
           <p className="mt-0.5 text-[10px] text-slate-500">Drag the handle or use move up/down.</p>
           <SortableList
             items={layout.blocks}
@@ -498,7 +498,7 @@ export function PageBuilderLab() {
               return (
                 <div
                   className={`flex items-center gap-1 rounded-lg border px-2 py-1.5 text-xs ${
-                    selectedBlockId === block.id ? "border-[var(--navy)] bg-[var(--navy-muted)]" : "border-slate-200 bg-white"
+                    selectedBlockId === block.id ? "border-[var(--blue)] bg-[var(--blue-muted)]" : "border-slate-200 bg-white"
                   } ${isDragging ? "border-[var(--gold)] bg-[var(--gold-muted)]/30 shadow-sm" : ""}`}
                 >
                   <SortableDragHandle
@@ -510,13 +510,13 @@ export function PageBuilderLab() {
                     {def?.label ?? block.type}
                     {!block.visible ? " (hidden)" : ""}
                   </button>
-                  <button type="button" aria-label="Move up" className="p-1 text-slate-500 hover:text-[var(--navy)]" onClick={() => moveBlock(index, -1)}>
+                  <button type="button" aria-label="Move up" className="p-1 text-slate-500 hover:text-slate-950" onClick={() => moveBlock(index, -1)}>
                     <ChevronUp className="h-3.5 w-3.5" />
                   </button>
-                  <button type="button" aria-label="Move down" className="p-1 text-slate-500 hover:text-[var(--navy)]" onClick={() => moveBlock(index, 1)}>
+                  <button type="button" aria-label="Move down" className="p-1 text-slate-500 hover:text-slate-950" onClick={() => moveBlock(index, 1)}>
                     <ChevronDown className="h-3.5 w-3.5" />
                   </button>
-                  <button type="button" aria-label="Toggle visibility" className="p-1 text-slate-500 hover:text-[var(--navy)]" onClick={() => toggleVisibility(block.id)}>
+                  <button type="button" aria-label="Toggle visibility" className="p-1 text-slate-500 hover:text-slate-950" onClick={() => toggleVisibility(block.id)}>
                     {block.visible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                   </button>
                   <button type="button" aria-label="Remove block" className="p-1 text-red-600 hover:text-red-700" onClick={() => removeBlock(block.id)}>
@@ -528,7 +528,7 @@ export function PageBuilderLab() {
             renderOverlay={(block) => {
               const def = getBlockDefinition(block.type);
               return (
-                <div className="flex items-center gap-2 rounded-lg border border-[var(--gold)] bg-white px-3 py-2 text-xs font-medium text-[var(--navy)] shadow-lg">
+                <div className="flex items-center gap-2 rounded-lg border border-[var(--gold)] bg-white px-3 py-2 text-xs font-medium text-slate-950 shadow-lg">
                   <GripVertical className="h-3.5 w-3.5 text-slate-400" aria-hidden />
                   {def?.label ?? block.type}
                 </div>
@@ -543,7 +543,7 @@ export function PageBuilderLab() {
           {viewMode === "compare" && compareSnapshot ? (
             <div className="grid gap-3 lg:grid-cols-2">
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--navy)]">Current draft</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-950">Current draft</p>
                 <PageBuilderPreview blocks={layout.blocks} previewMode={previewMode} />
               </div>
               <div>
@@ -555,7 +555,7 @@ export function PageBuilderLab() {
             </div>
           ) : viewMode === "snapshot-preview" && activeSnapshot ? (
             <>
-              <div className="rounded-lg border border-[var(--gold)]/40 bg-[var(--gold-muted)]/30 px-3 py-2 text-xs text-[var(--navy)]">
+              <div className="rounded-lg border border-[var(--gold)]/40 bg-[var(--gold-muted)]/30 px-3 py-2 text-xs text-slate-950">
                 Previewing snapshot: <strong>{activeSnapshot.label ?? activeSnapshot.created_at}</strong> — edits apply to the active draft when you return.
               </div>
               <PageBuilderPreview blocks={activeSnapshot.layout.blocks} previewMode={previewMode} />
@@ -593,7 +593,7 @@ export function PageBuilderLab() {
 
         <section className="space-y-4">
           <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
-            <h2 className="text-sm font-semibold text-[var(--navy)]">Validation</h2>
+            <h2 className="text-sm font-semibold text-slate-950">Validation</h2>
             <p className="mt-1 text-xs text-slate-500">
               {errorCount > 0 ? `${errorCount} error(s)` : "No blocking errors"} · {warnings.length} total
             </p>
@@ -688,7 +688,7 @@ function BlockEditor({
 
   return (
     <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
-      <h2 className="text-sm font-semibold text-[var(--navy)]">Edit {def?.label ?? block.type}</h2>
+      <h2 className="text-sm font-semibold text-slate-950">Edit {def?.label ?? block.type}</h2>
       <div className="mt-3 space-y-3">
         {isLayoutBlockType(block.type) && onLayoutChange && onSelectBlock ? (
           <>

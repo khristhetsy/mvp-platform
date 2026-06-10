@@ -216,7 +216,7 @@ function QueueItemRow({
           href={item.href}
           className={`group block no-underline ${drilldownHoverClass} ${drilldownFocusClass}`}
         >
-          <p className="font-medium text-slate-900 group-hover:text-[var(--navy)]">{item.title}</p>
+          <p className="font-medium text-slate-900 group-hover:text-slate-950">{item.title}</p>
           {item.subtitle ? <p className="text-xs text-slate-600">{item.subtitle}</p> : null}
           {hint ? <p className="mt-0.5 text-[10px] uppercase tracking-wide text-slate-400">{hint}</p> : null}
           <p className="mt-0.5 font-mono text-[10px] text-slate-400">{formatQueueTimestamp(item.created_at)}</p>

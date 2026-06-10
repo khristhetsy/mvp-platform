@@ -101,8 +101,8 @@ function InvestorsPageToolbar({
                   aria-pressed={active}
                   className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition ${
                     active
-                      ? "bg-[var(--navy)] text-white shadow-sm"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-[var(--navy)]"
+                      ? "bg-[var(--blue)] text-white shadow-sm"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                   }`}
                   onClick={() => onViewChange(v.id)}
                 >

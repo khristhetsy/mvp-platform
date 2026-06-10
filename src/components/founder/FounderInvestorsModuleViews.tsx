@@ -260,7 +260,7 @@ function FounderInvestorsModuleViewsInner({
                   <li key={row.id} className={`${density === "compact" ? "mb-4" : "mb-6"} ml-2`}>
                     <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border-2 border-white bg-[var(--gold)]" />
                     <p className="text-xs font-medium text-slate-500">{formatActivityDate(row.lastActivityAt)}</p>
-                    <p className="mt-1 text-sm font-semibold text-[var(--navy)]">{row.investorName}</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-950">{row.investorName}</p>
                     <p className="text-sm text-slate-700">{row.actionLabel}</p>
                   </li>
                 ))}

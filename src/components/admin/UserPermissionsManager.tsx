@@ -195,7 +195,7 @@ export function UserPermissionsManager() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Internal RBAC</p>
-          <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold text-[var(--navy)]">
+          <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold text-slate-950">
             <ShieldCheck className="h-6 w-6 text-[var(--gold)]" strokeWidth={1.75} aria-hidden />
             User Permissions
           </h1>
@@ -216,7 +216,7 @@ export function UserPermissionsManager() {
       <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
         <section className="rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
           <div className="border-b border-slate-100 px-4 py-3">
-            <h2 className="text-sm font-semibold text-[var(--navy)]">Internal users</h2>
+            <h2 className="text-sm font-semibold text-slate-950">Internal users</h2>
             <p className="text-xs text-slate-500">{payload.users.length} staff accounts</p>
           </div>
           <ul className="max-h-[32rem] overflow-y-auto p-2">
@@ -229,11 +229,11 @@ export function UserPermissionsManager() {
                     onClick={() => setSelectedUserId(user.id)}
                     className={`mb-1 w-full rounded-lg border px-3 py-2.5 text-left transition ${
                       active
-                        ? "border-[var(--navy)] bg-[var(--navy-muted)] ring-1 ring-[var(--navy)]/20"
+                        ? "border-[var(--blue)] bg-[var(--blue-muted)] ring-1 ring-[var(--blue)]/20"
                         : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                     }`}
                   >
-                    <p className="truncate text-sm font-medium text-[var(--navy)]">{displayName(user)}</p>
+                    <p className="truncate text-sm font-medium text-slate-950">{displayName(user)}</p>
                     <p className="truncate text-xs text-slate-500">{user.email}</p>
                     <div className="mt-1 flex flex-wrap gap-1">
                       <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700">
@@ -255,7 +255,7 @@ export function UserPermissionsManager() {
         {selectedUser ? (
           <section className="space-y-4">
             <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
-              <h2 className="text-sm font-semibold text-[var(--navy)]">{displayName(selectedUser)}</h2>
+              <h2 className="text-sm font-semibold text-slate-950">{displayName(selectedUser)}</h2>
               <p className="text-xs text-slate-500">
                 Profile role: {selectedUser.profileRole} · {selectedUser.email}
               </p>
@@ -294,7 +294,7 @@ export function UserPermissionsManager() {
             </div>
 
             <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
-              <h3 className="text-sm font-semibold text-[var(--navy)]">Permission overrides</h3>
+              <h3 className="text-sm font-semibold text-slate-950">Permission overrides</h3>
               <p className="mt-1 text-xs text-slate-500">Inherit role defaults, or explicitly grant/revoke permissions.</p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {payload.permissions.map((perm) => {
@@ -305,7 +305,7 @@ export function UserPermissionsManager() {
                       key={perm.id}
                       className="rounded-lg border border-slate-200 px-3 py-2"
                     >
-                      <p className="text-xs font-medium text-[var(--navy)]">{INTERNAL_PERMISSION_LABELS[perm.slug]}</p>
+                      <p className="text-xs font-medium text-slate-950">{INTERNAL_PERMISSION_LABELS[perm.slug]}</p>
                       <p className="text-[10px] text-slate-500">Role default: {roleHas ? "Granted" : "Denied"}</p>
                       <select
                         className="mt-1 w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
@@ -329,7 +329,7 @@ export function UserPermissionsManager() {
             </div>
 
             <div className="rounded-xl border border-[var(--gold)]/30 bg-[var(--gold-muted)]/40 p-4">
-              <h3 className="text-sm font-semibold text-[var(--navy)]">Effective permissions preview</h3>
+              <h3 className="text-sm font-semibold text-slate-950">Effective permissions preview</h3>
               <ul className="mt-2 flex flex-wrap gap-1.5">
                 {previewPermissions.length === 0 ? (
                   <li className="text-xs text-slate-600">No permissions — user cannot access protected admin tools.</li>
@@ -337,7 +337,7 @@ export function UserPermissionsManager() {
                   previewPermissions.map((perm) => (
                     <li
                       key={perm}
-                      className="rounded-full border border-[var(--navy)]/15 bg-white px-2.5 py-0.5 text-[11px] font-medium text-[var(--navy)]"
+                      className="rounded-full border border-[var(--blue)]/15 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-950"
                     >
                       {INTERNAL_PERMISSION_LABELS[perm]}
                     </li>

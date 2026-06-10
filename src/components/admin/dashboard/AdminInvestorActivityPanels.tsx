@@ -84,10 +84,10 @@ function ActivityPanel({
           {rows.slice(0, 8).map((row) => (
             <li key={row.id}>
               <ActionablePanelRow href={row.href} ariaLabel={`View ${row.investor} · ${row.company}`}>
-                <div className="mt-0.5 h-8 w-1 shrink-0 rounded-full bg-[var(--navy)]/20" aria-hidden />
+                <div className="mt-0.5 h-8 w-1 shrink-0 rounded-full bg-[var(--blue)]/20" aria-hidden />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <p className="truncate text-sm font-medium text-slate-900 group-hover:text-[var(--navy)]">{row.investor}</p>
+                    <p className="truncate text-sm font-medium text-slate-900 group-hover:text-slate-950">{row.investor}</p>
                     <time className="shrink-0 font-mono text-[10px] text-slate-500">{row.date}</time>
                   </div>
                   <p className="mt-0.5 truncate text-xs text-slate-600">{row.company}</p>

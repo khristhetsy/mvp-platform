@@ -74,7 +74,7 @@ export function PipelineBoard({
       {columns.map((column) => (
         <section key={column.id} className={`rounded-xl border border-slate-200/80 bg-[var(--surface-sunken)] ${pad}`}>
           <header className="mb-2 border-b border-slate-200/80 pb-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--navy)]">{column.title}</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-950">{column.title}</h3>
             {column.subtitle ? <p className="mt-0.5 text-[10px] text-slate-500">{column.subtitle}</p> : null}
             <p className="mt-1 text-[10px] font-medium text-slate-500">{column.items.length} items</p>
           </header>
@@ -93,7 +93,7 @@ export function ModuleEmptyState({
 }: Readonly<{ title: string; description: string }>) {
   return (
     <div className="rounded-xl border border-dashed border-slate-200 bg-white px-6 py-10 text-center shadow-[var(--shadow-panel)]">
-      <p className="text-sm font-semibold text-[var(--navy)]">{title}</p>
+      <p className="text-sm font-semibold text-slate-950">{title}</p>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">{description}</p>
     </div>
   );

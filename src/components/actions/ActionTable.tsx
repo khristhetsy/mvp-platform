@@ -79,7 +79,7 @@ export function ActionTable({
                   ) : null}
                 </td>
                 <td className="px-3 py-2">
-                  <p className="font-medium text-[var(--navy)]">{action.title}</p>
+                  <p className="font-medium text-slate-950">{action.title}</p>
                   <p className="text-xs text-slate-500 line-clamp-1">{action.reason}</p>
                   <div className="mt-1">
                     <ActionOrchestrationBadges action={action} />

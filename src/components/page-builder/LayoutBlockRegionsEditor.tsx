@@ -90,7 +90,7 @@ function SortableRegionBlock({
       ref={setNodeRef}
       style={style}
       className={`flex items-center gap-1 rounded-md border px-2 py-1.5 text-[11px] ${
-        selectedBlockId === block.id ? "border-[var(--navy)] bg-[var(--navy-muted)]" : "border-slate-200 bg-white"
+        selectedBlockId === block.id ? "border-[var(--blue)] bg-[var(--blue-muted)]" : "border-slate-200 bg-white"
       } ${isDragging ? "opacity-50" : ""}`}
     >
       <button
@@ -194,7 +194,7 @@ export function LayoutBlockRegionsEditor({
             {regions.map((region) => (
               <div key={region.key} className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--navy)]">{region.label}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-950">{region.label}</p>
                   <select
                     className="max-w-[140px] rounded-md border border-slate-200 px-1.5 py-1 text-[10px]"
                     defaultValue=""
@@ -249,7 +249,7 @@ export function LayoutBlockRegionsEditor({
 
         <DragOverlay>
           {activeBlock ? (
-            <div className="flex items-center gap-2 rounded-md border border-[var(--gold)] bg-white px-2 py-1.5 text-[11px] font-medium text-[var(--navy)] shadow-lg">
+            <div className="flex items-center gap-2 rounded-md border border-[var(--gold)] bg-white px-2 py-1.5 text-[11px] font-medium text-slate-950 shadow-lg">
               <GripVertical className="h-3 w-3 text-slate-400" aria-hidden />
               {getBlockDefinition(activeBlock.type)?.label ?? activeBlock.type}
             </div>

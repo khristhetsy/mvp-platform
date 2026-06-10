@@ -58,7 +58,7 @@ export function ActionCard({
             <ActionOrchestrationBadges action={action} />
             <span className="text-[10px] uppercase tracking-wide text-slate-500">{action.category.replaceAll("_", " ")}</span>
           </div>
-          <p className="mt-1 text-sm font-medium text-[var(--navy)]">{action.title}</p>
+          <p className="mt-1 text-sm font-medium text-slate-950">{action.title}</p>
           {action.description ? <p className="mt-1 text-xs text-slate-600 line-clamp-2">{action.description}</p> : null}
           <p className="mt-1 text-xs text-slate-500">{action.reason}</p>
           {action.dueAt ? (

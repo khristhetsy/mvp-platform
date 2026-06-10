@@ -30,7 +30,7 @@ export function RouteSegmentError({
     <div className="mx-auto w-full max-w-[1600px] px-4 py-10 enterprise-animate-in lg:px-6">
       <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-panel)] lg:p-8">
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--gold)]">{eyebrow}</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--navy)] lg:text-[1.65rem]">{title}</h1>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 lg:text-[1.65rem]">{title}</h1>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">{description}</p>
         <div className="mt-6 flex flex-wrap gap-3">
           <button

@@ -50,7 +50,7 @@ export function OperationalMetric({
           <div className="mt-1.5 flex flex-1 flex-col justify-between gap-2">
             <div className="flex items-end justify-between gap-2">
               <div className="flex min-w-0 items-baseline gap-2">
-                <p className="truncate font-mono text-xl font-semibold tabular-nums tracking-tight text-[var(--navy)]">{value}</p>
+                <p className="truncate font-mono text-xl font-semibold tabular-nums tracking-tight text-slate-950">{value}</p>
                 {trendSymbol ? (
                   <span className={`shrink-0 text-xs font-medium ${trendColor}`} aria-label={`Trend ${trend}`}>
                     {trendSymbol}
@@ -97,7 +97,7 @@ export function MetricRow({
       {(title || action) && (
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            {title ? <h3 className="text-sm font-semibold text-[var(--navy)]">{title}</h3> : null}
+            {title ? <h3 className="text-sm font-semibold text-slate-950">{title}</h3> : null}
             {subtitle ? <p className="mt-0.5 text-xs leading-5 text-slate-500">{subtitle}</p> : null}
           </div>
           {action}

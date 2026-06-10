@@ -158,7 +158,7 @@ function AdminCompaniesModuleViewsInner({
             {timelineRows.map((company) => (
               <li key={company.id} className="rounded-lg border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
                 <p className="text-xs text-slate-500">{new Date(company.created_at).toLocaleDateString("en-US")}</p>
-                <p className="text-sm font-semibold text-[var(--navy)]">{company.company_name}</p>
+                <p className="text-sm font-semibold text-slate-950">{company.company_name}</p>
                 <p className="text-xs text-slate-600">
                   {formatReviewStatus(company.review_status)} · {company.founder_name}
                 </p>

@@ -19,7 +19,7 @@ export function ActionCenterScheduledStrip({
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-indigo-800">Digest summary</p>
-              <p className="mt-1 text-sm font-medium text-[var(--navy)]">{digestBanner.title}</p>
+              <p className="mt-1 text-sm font-medium text-slate-950">{digestBanner.title}</p>
               <p className="mt-0.5 text-xs text-indigo-900/80">{digestBanner.summary}</p>
             </div>
             <Link

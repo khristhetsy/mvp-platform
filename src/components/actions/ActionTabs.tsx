@@ -28,7 +28,7 @@ export function ActionTabs({
           aria-selected={active === tab.id}
           onClick={() => onChange(tab.id)}
           className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-            active === tab.id ? "bg-white text-[var(--navy)] shadow-sm" : "text-slate-600 hover:text-[var(--navy)]"
+            active === tab.id ? "bg-white text-slate-950 shadow-sm" : "text-slate-600 hover:text-slate-950"
           }`}
         >
           {tab.label}

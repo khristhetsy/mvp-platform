@@ -180,7 +180,7 @@ export function AdminSpvPipelineView({
       title: formatOperationalReadinessLabel(key),
       items: (byReadiness.get(key) ?? []).map((row) => (
         <div key={row.id} className="rounded-lg border border-slate-200/80 bg-white p-3 text-sm shadow-sm">
-          <p className="font-semibold text-[var(--navy)]">{row.name}</p>
+          <p className="font-semibold text-slate-950">{row.name}</p>
           <p className="text-xs text-slate-500">{row.companyName}</p>
           <p className="mt-2 text-xs text-slate-600">Target {row.targetAmount}</p>
           <p className="text-xs text-violet-800">Next: {row.nextAction}</p>

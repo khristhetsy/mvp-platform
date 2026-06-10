@@ -3,7 +3,7 @@ export function DonutProgress({
   size = 56,
   strokeWidth = 6,
   label,
-  strokeColor = "var(--navy)",
+  strokeColor = "var(--blue)",
 }: Readonly<{
   percent: number;
   size?: number;
@@ -39,7 +39,7 @@ export function DonutProgress({
           strokeLinecap="round"
         />
       </svg>
-      <span className="absolute text-[11px] font-semibold tabular-nums text-[var(--navy)]">
+      <span className="absolute text-[11px] font-semibold tabular-nums text-slate-950">
         {label ?? `${clamped}%`}
       </span>
     </div>

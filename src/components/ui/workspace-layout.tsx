@@ -29,7 +29,7 @@ export function PageSection({
       {title || subtitle || action ? (
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
-            {title ? <h2 className="text-sm font-semibold text-[var(--navy)]">{title}</h2> : null}
+            {title ? <h2 className="text-sm font-semibold text-slate-950">{title}</h2> : null}
             {subtitle ? <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p> : null}
           </div>
           {action}

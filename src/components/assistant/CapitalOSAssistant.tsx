@@ -218,7 +218,7 @@ export function CapitalOSAssistant() {
                   <Link
                     key={action.href}
                     href={action.href}
-                    className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-medium text-[var(--navy)] hover:border-slate-300"
+                    className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-medium text-slate-950 hover:border-slate-300"
                     onClick={() => setOpen(false)}
                   >
                     {action.label}
@@ -281,7 +281,7 @@ export function CapitalOSAssistant() {
         aria-expanded={open}
         aria-controls="capitalos-assistant-dialog"
         onClick={() => setOpen((value) => !value)}
-        className="fixed bottom-4 right-4 z-[100] flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[var(--navy)] shadow-[var(--shadow-card)] hover:border-slate-300"
+        className="fixed bottom-4 right-4 z-[100] flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-950 shadow-[var(--shadow-card)] hover:border-slate-300"
       >
         <Sparkles className="h-4 w-4 text-[var(--gold)]" strokeWidth={1.75} aria-hidden />
         <span className="hidden sm:inline">{open ? "Close" : "Assistant"}</span>

@@ -59,7 +59,7 @@ export function AdminRecentActivityTimeline({
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-baseline justify-between gap-2">
-                            <p className="flex items-center gap-1.5 text-sm font-medium text-slate-900 group-hover:text-[var(--navy)]">
+                            <p className="flex items-center gap-1.5 text-sm font-medium text-slate-900 group-hover:text-slate-950">
                               <span className="text-[10px] text-slate-400" aria-hidden>
                                 {getOperationalEventIcon(row.event_type, row.event_category)}
                               </span>

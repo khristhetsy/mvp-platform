@@ -21,7 +21,7 @@ export function WorkspacePanel({
     >
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:px-5 sm:py-4">
         <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-semibold text-[var(--navy)]">{title}</h2>
+          <h2 className="text-sm font-semibold text-slate-950">{title}</h2>
           {subtitle ? <p className="mt-1 text-xs leading-5 text-slate-500">{subtitle}</p> : null}
           {provenance ? (
             <p className="mt-1 font-mono text-[10px] uppercase tracking-wide text-slate-400">{provenance}</p>

@@ -104,7 +104,7 @@ export function ActionDetailDrawer({
         className="relative flex h-full w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-xl"
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <h2 id="action-detail-title" className="text-sm font-semibold text-[var(--navy)]">Action detail</h2>
+          <h2 id="action-detail-title" className="text-sm font-semibold text-slate-950">Action detail</h2>
           <button type="button" onClick={onClose} aria-label="Close action detail" className="text-sm text-slate-500 hover:text-slate-800">
             Close
           </button>
@@ -121,7 +121,7 @@ export function ActionDetailDrawer({
                 <ActionPriorityBadge priority={action.priority} />
                 <ActionStatusBadge status={action.status} />
               </div>
-              <h3 className="text-lg font-semibold text-[var(--navy)]">{action.title}</h3>
+              <h3 className="text-lg font-semibold text-slate-950">{action.title}</h3>
               {action.description ? <p className="text-sm text-slate-600">{action.description}</p> : null}
               <p className="text-sm text-slate-500">{action.reason}</p>
 

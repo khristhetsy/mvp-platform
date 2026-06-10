@@ -96,7 +96,7 @@ export function WorkspaceSidebar({
         className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
           active
             ? "bg-[var(--blue-muted)] text-[var(--blue-hover)]"
-            : "text-slate-600 hover:bg-slate-100 hover:text-[var(--navy)]"
+            : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
         }`}
       >
         <Icon
@@ -139,7 +139,7 @@ export function WorkspaceSidebar({
               <Sparkles className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
             </span>
             <div>
-              <p className="text-xs font-semibold text-[var(--navy)]">CapitalOS AI</p>
+              <p className="text-xs font-semibold text-slate-950">CapitalOS AI</p>
               <p className="mt-0.5 text-[10px] leading-4 text-slate-500">
                 Educational readiness coach for your workspace.
               </p>
@@ -155,7 +155,7 @@ export function WorkspaceSidebar({
       {mobileOpen ? (
         <button
           type="button"
-          className="fixed inset-0 z-40 bg-[var(--navy)]/20 lg:hidden"
+          className="fixed inset-0 z-40 bg-[var(--blue)]/20 lg:hidden"
           aria-label="Close navigation"
           onClick={onClose}
         />

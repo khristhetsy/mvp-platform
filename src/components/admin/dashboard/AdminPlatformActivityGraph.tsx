@@ -102,10 +102,10 @@ export function AdminPlatformActivityGraph({
               aria-label={`View ${category.label} source data (${category.count})`}
               className={`group grid cursor-pointer grid-cols-[8rem_1fr_2.5rem] items-center gap-3 rounded-lg px-1 py-1 no-underline ${drilldownHoverClass} ${drilldownFocusClass}`}
             >
-              <p className="truncate text-xs font-medium text-slate-700 group-hover:text-[var(--navy)]">{category.label}</p>
+              <p className="truncate text-xs font-medium text-slate-700 group-hover:text-slate-950">{category.label}</p>
               <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                 <div
-                  className="h-full rounded-full bg-[var(--navy)]/70 transition-all group-hover:bg-[var(--navy)]"
+                  className="h-full rounded-full bg-[var(--blue)]/70 transition-all group-hover:bg-[var(--blue)]"
                   style={{ width: `${Math.max(4, (category.count / max) * 100)}%` }}
                 />
               </div>

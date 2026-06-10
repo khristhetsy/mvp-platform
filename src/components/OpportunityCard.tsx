@@ -13,7 +13,7 @@ export function OpportunityCard({
     <article className="flex h-full flex-col rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)] transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
       <div className="min-w-0">
         <p className="text-xs font-medium text-[var(--gold)]">{deal.industry ?? "Private company"}</p>
-        <h3 className="mt-1 flex flex-wrap items-center gap-2 text-lg font-semibold tracking-tight text-[var(--navy)]">
+        <h3 className="mt-1 flex flex-wrap items-center gap-2 text-lg font-semibold tracking-tight text-slate-950">
           <span className="truncate">{deal.companyName}</span>
           {deal.capitalReadyAt ? <CapitalReadyBadge /> : null}
         </h3>
@@ -27,11 +27,11 @@ export function OpportunityCard({
       <div className="mt-4 grid grid-cols-2 gap-2">
         <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
           <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Target</p>
-          <p className="mt-0.5 text-sm font-semibold text-[var(--navy)]">{deal.fundingTarget}</p>
+          <p className="mt-0.5 text-sm font-semibold text-slate-950">{deal.fundingTarget}</p>
         </div>
         <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
           <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Minimum</p>
-          <p className="mt-0.5 text-sm font-semibold text-[var(--navy)]">{deal.minimumInvestment}</p>
+          <p className="mt-0.5 text-sm font-semibold text-slate-950">{deal.minimumInvestment}</p>
         </div>
       </div>
       <div className="mt-3">

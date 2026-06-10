@@ -5,7 +5,7 @@ function Stat({ label, value, tone }: Readonly<{ label: string; value: number; t
   return (
     <div className={`rounded-lg border px-3 py-2 ${tone ?? "border-slate-200/80 bg-white"}`}>
       <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-[var(--navy)]">{value}</p>
+      <p className="mt-1 text-lg font-semibold text-slate-950">{value}</p>
     </div>
   );
 }

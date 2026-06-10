@@ -135,7 +135,7 @@ export function PageBuilderBlockRenderer({
               </p>
             ) : null}
             <h1
-              className={`mt-2 font-semibold tracking-tight text-[var(--navy)] ${
+              className={`mt-2 font-semibold tracking-tight text-slate-950 ${
                 previewMode === "mobile" ? "text-2xl leading-tight" : "text-3xl md:text-4xl"
               }`}
             >
@@ -188,12 +188,12 @@ export function PageBuilderBlockRenderer({
       return (
         <BlockShell block={block} previewMode={previewMode}>
           {asString(block.props.title) ? (
-            <h2 className="mb-3 text-lg font-semibold text-[var(--navy)]">{asString(block.props.title)}</h2>
+            <h2 className="mb-3 text-lg font-semibold text-slate-950">{asString(block.props.title)}</h2>
           ) : null}
           <div className={`grid gap-3 ${previewMode === "mobile" ? "grid-cols-1" : "sm:grid-cols-2 xl:grid-cols-4"}`}>
             {items.map((item) => (
               <article key={item.title} className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
-                <h3 className="text-sm font-semibold text-[var(--navy)]">{item.title}</h3>
+                <h3 className="text-sm font-semibold text-slate-950">{item.title}</h3>
                 <p className="mt-2 text-xs leading-5 text-slate-600">{item.body}</p>
               </article>
             ))}
@@ -211,7 +211,7 @@ export function PageBuilderBlockRenderer({
             {metrics.map((metric) => (
               <div key={metric.label} className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{metric.label}</p>
-                <p className="mt-1 text-xl font-semibold tabular-nums text-[var(--navy)]">{metric.value}</p>
+                <p className="mt-1 text-xl font-semibold tabular-nums text-slate-950">{metric.value}</p>
               </div>
             ))}
           </div>
@@ -221,8 +221,8 @@ export function PageBuilderBlockRenderer({
     case "cta_band":
       return (
         <BlockShell block={block} previewMode={previewMode}>
-          <div className="rounded-xl border border-slate-200/80 bg-[var(--navy-muted)] p-5">
-            <h2 className="text-lg font-semibold text-[var(--navy)]">{asString(block.props.title) || "CTA title"}</h2>
+          <div className="rounded-xl border border-slate-200/80 bg-[var(--blue-muted)] p-5">
+            <h2 className="text-lg font-semibold text-slate-950">{asString(block.props.title) || "CTA title"}</h2>
             {asString(block.props.body) ? <p className="mt-2 text-sm text-slate-600">{asString(block.props.body)}</p> : null}
             {asString(block.props.ctaLabel) ? (
               <Link href={asString(block.props.ctaHref) || "#"} className="cap-btn-primary mt-4 inline-flex rounded-lg px-4 py-2 text-sm font-semibold">
@@ -240,7 +240,7 @@ export function PageBuilderBlockRenderer({
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">{asString(block.props.eyebrow)}</p>
             ) : null}
             {asString(block.props.title) ? (
-              <h2 className="mt-1 text-xl font-semibold text-[var(--navy)]">{asString(block.props.title)}</h2>
+              <h2 className="mt-1 text-xl font-semibold text-slate-950">{asString(block.props.title)}</h2>
             ) : null}
             {asString(block.props.body) ? (
               <p className="mt-2 text-sm leading-6 text-slate-600">{asString(block.props.body)}</p>
@@ -296,12 +296,12 @@ export function PageBuilderBlockRenderer({
                   className="h-10 w-10 rounded-full border border-slate-200 object-cover"
                 />
               ) : (
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--navy-muted)] text-xs font-semibold text-[var(--navy)]">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--blue-muted)] text-xs font-semibold text-slate-950">
                   {asString(block.props.name).slice(0, 1) || "?"}
                 </span>
               )}
               <div>
-                <p className="text-sm font-semibold text-[var(--navy)]">{asString(block.props.name) || "Name"}</p>
+                <p className="text-sm font-semibold text-slate-950">{asString(block.props.name) || "Name"}</p>
                 <p className="text-xs text-slate-500">{asString(block.props.title) || "Title / company"}</p>
               </div>
             </figcaption>
@@ -315,11 +315,11 @@ export function PageBuilderBlockRenderer({
       return (
         <BlockShell block={block} previewMode={previewMode}>
           <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)]">
-            <h2 className="text-lg font-semibold text-[var(--navy)]">{asString(block.props.title) || "FAQ"}</h2>
+            <h2 className="text-lg font-semibold text-slate-950">{asString(block.props.title) || "FAQ"}</h2>
             <dl className="mt-4 space-y-3">
               {items.map((item) => (
                 <div key={item.question} className="rounded-lg border border-slate-100 bg-[var(--surface-sunken)] px-3 py-2.5">
-                  <dt className="text-sm font-semibold text-[var(--navy)]">{item.question}</dt>
+                  <dt className="text-sm font-semibold text-slate-950">{item.question}</dt>
                   <dd className="mt-1 text-xs leading-5 text-slate-600">{item.answer}</dd>
                 </div>
               ))}
@@ -335,7 +335,7 @@ export function PageBuilderBlockRenderer({
       return (
         <BlockShell block={block} previewMode={previewMode}>
           <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)]">
-            <h2 className="text-lg font-semibold text-[var(--navy)]">{asString(block.props.title) || "Process"}</h2>
+            <h2 className="text-lg font-semibold text-slate-950">{asString(block.props.title) || "Process"}</h2>
             {asString(block.props.subtitle) ? (
               <p className="mt-1 text-sm text-slate-600">{asString(block.props.subtitle)}</p>
             ) : null}
@@ -343,14 +343,14 @@ export function PageBuilderBlockRenderer({
               {steps.map((step, index) => (
                 <li key={`${step.title}-${index}`} className="rounded-lg border border-slate-100 bg-[var(--surface-sunken)] p-3">
                   <div className="flex items-center gap-2">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--navy)] text-white">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--blue)] text-white">
                       <StepIcon name={asString(step.icon) || "check"} />
                     </span>
                     <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--gold)]">
                       Step {index + 1}
                     </span>
                   </div>
-                  <h3 className="mt-2 text-sm font-semibold text-[var(--navy)]">{step.title}</h3>
+                  <h3 className="mt-2 text-sm font-semibold text-slate-950">{step.title}</h3>
                   <p className="mt-1 text-xs leading-5 text-slate-600">{step.description}</p>
                 </li>
               ))}
@@ -371,12 +371,12 @@ export function PageBuilderBlockRenderer({
                 : "border-slate-200/80 bg-white"
             }`}
           >
-            <h2 className="text-lg font-semibold text-[var(--navy)]">{asString(block.props.planName) || "Plan"}</h2>
+            <h2 className="text-lg font-semibold text-slate-950">{asString(block.props.planName) || "Plan"}</h2>
             <p className="mt-1 text-sm font-medium text-[var(--gold)]">{asString(block.props.priceLabel) || "Price"}</p>
             <ul className="mt-4 space-y-1.5 text-xs text-slate-700">
               {features.map((feature) => (
                 <li key={feature} className="flex items-start gap-2">
-                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--navy)]" aria-hidden />
+                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-950" aria-hidden />
                   {feature}
                 </li>
               ))}
@@ -437,13 +437,13 @@ export function PageBuilderBlockRenderer({
               />
             ) : null}
             <div className="min-w-0">
-              <h2 className="text-base font-semibold text-[var(--navy)]">{asString(block.props.name) || "Name"}</h2>
+              <h2 className="text-base font-semibold text-slate-950">{asString(block.props.name) || "Name"}</h2>
               <p className="text-xs font-medium text-[var(--gold)]">{asString(block.props.title) || "Title"}</p>
               <p className="mt-2 text-xs leading-5 text-slate-600">{asString(block.props.bio)}</p>
               {asString(block.props.linkedInUrl) ? (
                 <Link
                   href={asString(block.props.linkedInUrl)}
-                  className="mt-2 inline-block text-xs font-semibold text-[var(--navy)] underline"
+                  className="mt-2 inline-block text-xs font-semibold text-slate-950 underline"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -461,7 +461,7 @@ export function PageBuilderBlockRenderer({
       return (
         <BlockShell block={block} previewMode={previewMode}>
           <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)]">
-            <h2 className="text-sm font-semibold text-[var(--navy)]">{asString(block.props.title) || "Partners"}</h2>
+            <h2 className="text-sm font-semibold text-slate-950">{asString(block.props.title) || "Partners"}</h2>
             <div className="mt-4 flex flex-wrap items-center gap-4">
               {logos.map((logo) => (
                 <div key={logo.alt} className="flex h-12 items-center rounded-lg border border-slate-100 bg-[var(--surface-sunken)] px-3">
@@ -488,7 +488,7 @@ export function PageBuilderBlockRenderer({
       return (
         <BlockShell block={block} previewMode={previewMode}>
           <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)]">
-            <h2 className="text-lg font-semibold text-[var(--navy)]">{asString(block.props.title) || "Comparison"}</h2>
+            <h2 className="text-lg font-semibold text-slate-950">{asString(block.props.title) || "Comparison"}</h2>
             <div className={`mt-4 grid gap-3 ${previewMode === "mobile" ? "grid-cols-1" : "sm:grid-cols-2"}`}>
               {items.map((item) => (
                 <div key={`${item.category}-${item.label}`} className="rounded-lg border border-slate-100 bg-[var(--surface-sunken)] p-3">
@@ -496,7 +496,7 @@ export function PageBuilderBlockRenderer({
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--gold)]">{item.category}</p>
                   ) : null}
                   <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">{item.label}</p>
-                  <p className="mt-1 text-2xl font-semibold tabular-nums text-[var(--navy)]">{item.value}</p>
+                  <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-950">{item.value}</p>
                   {asString(item.description) ? (
                     <p className="mt-1 text-xs leading-5 text-slate-600">{item.description}</p>
                   ) : null}
@@ -512,7 +512,7 @@ export function PageBuilderBlockRenderer({
         <BlockShell block={block} previewMode={previewMode} nested={nested}>
           <div className="rounded-lg border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{asString(block.props.label) || "Metric"}</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums text-[var(--navy)]">{asString(block.props.value) || "—"}</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-slate-950">{asString(block.props.value) || "—"}</p>
             {asString(block.props.description) ? (
               <p className="mt-1 text-xs leading-5 text-slate-600">{asString(block.props.description)}</p>
             ) : null}
@@ -527,7 +527,7 @@ export function PageBuilderBlockRenderer({
         <BlockShell block={block} previewMode={previewMode} nested={nested}>
           <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)]">
             {asString(block.props.title) ? (
-              <h2 className="mb-4 text-lg font-semibold text-[var(--navy)]">{asString(block.props.title)}</h2>
+              <h2 className="mb-4 text-lg font-semibold text-slate-950">{asString(block.props.title)}</h2>
             ) : null}
             <LayoutRegionsPreview block={block} previewMode={previewMode} />
           </div>

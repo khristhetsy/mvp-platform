@@ -59,7 +59,7 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, onMen
             type="button"
             aria-label={`Current company: ${companyLabel}`}
             aria-disabled="true"
-            className="hidden max-w-[200px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-left text-sm font-medium text-[var(--navy)] md:flex lg:max-w-xs"
+            className="hidden max-w-[200px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-left text-sm font-medium text-slate-950 md:flex lg:max-w-xs"
           >
             <span className="truncate">{companyLabel}</span>
             <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={1.75} aria-hidden />
@@ -70,7 +70,7 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, onMen
               {initials || "CO"}
             </div>
             <div className="hidden text-left sm:block">
-              <p className="text-sm font-medium leading-tight text-[var(--navy)]">{profileName}</p>
+              <p className="text-sm font-medium leading-tight text-slate-950">{profileName}</p>
               {profileSubtitle ? <p className="text-[11px] text-slate-500">{profileSubtitle}</p> : null}
             </div>
           </div>

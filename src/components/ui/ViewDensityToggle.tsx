@@ -23,7 +23,7 @@ export function ViewDensityToggle({
             aria-pressed={active}
             aria-label={`${VIEW_DENSITY_LABELS[density]} density`}
             className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition ${
-              active ? "bg-slate-100 text-[var(--navy)]" : "text-slate-500 hover:text-[var(--navy)]"
+              active ? "bg-slate-100 text-slate-700" : "text-slate-500 hover:text-slate-700"
             } disabled:opacity-50`}
             onClick={() => onChange(density)}
           >

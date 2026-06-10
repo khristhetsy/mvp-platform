@@ -140,7 +140,7 @@ export function NextBestActionsPanel({
     >
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:px-5 sm:py-4">
         <div>
-          <h2 className="text-sm font-semibold text-[var(--navy)]">{panelTitleForRole(role)}</h2>
+          <h2 className="text-sm font-semibold text-slate-950">{panelTitleForRole(role)}</h2>
           <p className="mt-1 text-xs text-slate-500">Prioritized workflow actions with lifecycle tracking</p>
         </div>
         <Link
@@ -190,7 +190,7 @@ export function NextBestActionsPanel({
                         </span>
                       ) : null}
                       <ActionOrchestrationBadges action={action} />
-                      <p className="text-sm font-medium text-[var(--navy)]">{action.title}</p>
+                      <p className="text-sm font-medium text-slate-950">{action.title}</p>
                     </div>
                     {action.description ? (
                       <p className="mt-1 text-xs text-slate-600">{action.description}</p>

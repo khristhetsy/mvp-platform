@@ -55,7 +55,7 @@ export function SortableDragHandle({
       ref={handleProps.setActivatorNodeRef}
       aria-label={label}
       disabled={disabled}
-      className={`cursor-grab touch-none p-0.5 text-slate-400 hover:text-[var(--navy)] active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
+      className={`cursor-grab touch-none p-0.5 text-slate-400 hover:text-slate-700 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
       {...handleProps.attributes}
       {...handleProps.listeners}
     >

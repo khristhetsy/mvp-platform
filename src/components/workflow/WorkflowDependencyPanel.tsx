@@ -19,7 +19,7 @@ export function WorkflowDependencyPanel({
         {unresolved.map((dep) => (
           <li key={dep.id} className="rounded-lg border border-amber-100 bg-white/60 px-3 py-2 text-sm">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium text-[var(--navy)]">{dep.blocker}</span>
+              <span className="font-medium text-slate-950">{dep.blocker}</span>
               <span className="rounded-full border border-amber-200 px-1.5 py-0.5 text-[10px] uppercase text-amber-800">
                 {dep.severity}
               </span>

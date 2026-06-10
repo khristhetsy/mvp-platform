@@ -75,7 +75,7 @@ export function AdminBetaOnboardingTools() {
           <button
             type="submit"
             disabled={loading}
-            className="rounded-lg bg-[var(--navy)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            className="rounded-lg bg-[var(--blue)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             {loading ? "Generating…" : "Generate invite link"}
           </button>

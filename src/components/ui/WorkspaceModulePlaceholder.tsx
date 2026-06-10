@@ -8,7 +8,7 @@ export function WorkspaceModulePlaceholder({
   return (
     <div className="rounded-xl border border-dashed border-slate-200 bg-white px-6 py-12 text-center shadow-[var(--shadow-panel)]">
       <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--gold)]">Coming soon</p>
-      <p className="mt-2 text-sm font-semibold text-[var(--navy)]">{title}</p>
+      <p className="mt-2 text-sm font-semibold text-slate-950">{title}</p>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">{description}</p>
     </div>
   );

@@ -128,7 +128,7 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
                 {filtered.map((row) => (
                   <DataTableRow key={row.companyId}>
                     <DataTableCell>
-                      <Link href={row.slug ? `/deals/${row.slug}` : "/deals"} className="font-medium text-[var(--navy)] hover:underline">
+                      <Link href={row.slug ? `/deals/${row.slug}` : "/deals"} className="font-medium text-slate-950 hover:underline">
                         {row.companyName}
                       </Link>
                     </DataTableCell>
@@ -136,7 +136,7 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
                     <DataTableCell>{row.location ?? "—"}</DataTableCell>
                     <DataTableCell>{row.fundingTarget ?? "—"}</DataTableCell>
                     <DataTableCell>
-                      <span className="font-semibold text-[var(--navy)]">{row.matchScore}%</span>
+                      <span className="font-semibold text-slate-950">{row.matchScore}%</span>
                     </DataTableCell>
                     <DataTableCell className="max-w-xs truncate text-xs">{row.matchReasons.slice(0, 2).join("; ") || "—"}</DataTableCell>
                   </DataTableRow>
@@ -154,11 +154,11 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
           <ol className="space-y-3">
             {timelineRows.map((row, index) => (
               <li key={row.companyId} className="flex gap-3 rounded-lg border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--navy)] text-xs font-bold text-white">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--blue)] text-xs font-bold text-white">
                   {index + 1}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-[var(--navy)]">{row.companyName}</p>
+                  <p className="text-sm font-semibold text-slate-950">{row.companyName}</p>
                   <p className="text-xs text-slate-500">{row.matchScore}% match · {row.matchReasons[0] ?? "Ranked opportunity"}</p>
                 </div>
               </li>

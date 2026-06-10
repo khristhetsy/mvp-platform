@@ -37,7 +37,7 @@ export function MarketingNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`transition hover:text-[var(--navy)] ${isActive(pathname, item.href) ? "font-semibold text-[var(--navy)]" : ""}`}
+              className={`transition hover:text-slate-950 ${isActive(pathname, item.href) ? "font-semibold text-slate-950" : ""}`}
             >
               {item.label}
             </Link>
@@ -47,7 +47,7 @@ export function MarketingNav() {
         <div className="hidden items-center gap-2 sm:flex">
           <Link
             href="/auth/sign-in"
-            className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:text-[var(--navy)]"
+            className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-950"
           >
             Sign In
           </Link>
@@ -81,7 +81,7 @@ export function MarketingNav() {
                   className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${
                     isActive(pathname, item.href)
                       ? "bg-[var(--blue-muted)] text-[var(--blue-hover)]"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-[var(--navy)]"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                   }`}
                 >
                   {item.label}
