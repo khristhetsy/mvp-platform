@@ -3,16 +3,37 @@ export const INTERNAL_ROLE_SLUGS = ["regular_user", "manager", "admin", "super_a
 export type InternalRoleSlug = (typeof INTERNAL_ROLE_SLUGS)[number];
 
 export const INTERNAL_PERMISSIONS = [
+  // Core
   "view_admin_dashboard",
+  "view_actions",
+  // Operations
   "manage_companies",
+  "manage_spvs",
   "manage_investors",
-  "review_documents",
-  "approve_marketplace",
+  "manage_deal_rooms",
+  "manage_crm",
+  "manage_matching",
+  // Finance & compliance
   "manage_learning",
-  "manage_page_builder",
+  "manage_billing",
+  "manage_diligence",
+  "manage_compliance",
+  "view_audit_logs",
+  "review_documents",
+  // Platform tools
+  "manage_integrations",
+  "manage_queues",
+  "manage_automation",
+  "manage_reports",
+  "manage_imports",
+  "view_analytics",
+  "view_insights",
+  "view_system_health",
+  "manage_beta_operations",
+  "approve_marketplace",
+  // Admin only
   "manage_users",
   "assign_roles",
-  "view_audit_logs",
   "manage_settings",
 ] as const;
 
@@ -20,15 +41,31 @@ export type InternalPermission = (typeof INTERNAL_PERMISSIONS)[number];
 
 export const INTERNAL_PERMISSION_LABELS: Record<InternalPermission, string> = {
   view_admin_dashboard: "View Admin Dashboard",
+  view_actions: "View Actions",
   manage_companies: "Manage Companies",
+  manage_spvs: "Manage SPVs",
   manage_investors: "Manage Investors",
-  review_documents: "Review Documents",
-  approve_marketplace: "Approve Marketplace",
+  manage_deal_rooms: "Manage Deal Rooms",
+  manage_crm: "Manage CRM",
+  manage_matching: "Manage Matching",
   manage_learning: "Manage Learning",
-  manage_page_builder: "Manage Page Builder",
+  manage_billing: "Manage Billing",
+  manage_diligence: "Manage Diligence",
+  manage_compliance: "Manage Compliance",
+  view_audit_logs: "View Audit Logs",
+  review_documents: "Review Documents",
+  manage_integrations: "Manage Integrations",
+  manage_queues: "Manage Queues",
+  manage_automation: "Manage Automation",
+  manage_reports: "Manage Reports",
+  manage_imports: "Manage Import / Export",
+  view_analytics: "View Analytics",
+  view_insights: "View Insights",
+  view_system_health: "View System Health",
+  manage_beta_operations: "Manage Beta Operations",
+  approve_marketplace: "Approve Marketplace",
   manage_users: "Manage Users",
   assign_roles: "Assign Roles",
-  view_audit_logs: "View Audit Logs",
   manage_settings: "Manage Settings",
 };
 
@@ -48,13 +85,12 @@ export const INTERNAL_ROLE_RANK: Record<InternalRoleSlug, number> = {
 
 /** Permissions granted to legacy staff (admin/analyst) without an RBAC row. */
 export const LEGACY_STAFF_PERMISSIONS: InternalPermission[] = INTERNAL_PERMISSIONS.filter(
-  (p) => p !== "manage_users" && p !== "assign_roles" && p !== "manage_page_builder",
+  (p) => p !== "manage_users" && p !== "assign_roles",
 );
 
 export const SUPER_ADMIN_ONLY_PERMISSIONS: InternalPermission[] = [
   "manage_users",
   "assign_roles",
-  "manage_page_builder",
 ];
 
 export function isInternalPermission(value: string): value is InternalPermission {

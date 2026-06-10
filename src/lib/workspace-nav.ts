@@ -16,19 +16,19 @@ export type WorkspaceNavSection = {
 
 /** Admin operations cluster: companies, SPVs, investors, deal rooms, CRM. */
 export const adminOperationsNav: WorkspaceNavItem[] = [
-  { href: "/admin/companies", label: "Companies" },
-  { href: "/admin/spvs", label: "SPVs" },
-  { href: "/admin/investors", label: "Investors" },
-  { href: "/admin/deal-rooms", label: "Deal Rooms" },
-  { href: "/admin/crm", label: "CRM" },
-  { href: "/admin/matching", label: "Matching" },
+  { href: "/admin/companies", label: "Companies", requiredPermission: "manage_companies" },
+  { href: "/admin/spvs", label: "SPVs", requiredPermission: "manage_spvs" },
+  { href: "/admin/investors", label: "Investors", requiredPermission: "manage_investors" },
+  { href: "/admin/deal-rooms", label: "Deal Rooms", requiredPermission: "manage_deal_rooms" },
+  { href: "/admin/crm", label: "CRM", requiredPermission: "manage_crm" },
+  { href: "/admin/matching", label: "Matching", requiredPermission: "manage_matching" },
 ];
 
 export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     items: [
-      { href: "/admin/dashboard", label: "Dashboard" },
-      { href: "/admin/actions", label: "Actions" },
+      { href: "/admin/dashboard", label: "Dashboard", requiredPermission: "view_admin_dashboard" },
+      { href: "/admin/actions", label: "Actions", requiredPermission: "view_actions" },
     ],
   },
   {
@@ -37,20 +37,20 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
   },
   {
     items: [
-      { href: "/admin/learning", label: "Learning" },
-      { href: "/admin/billing", label: "Billing" },
-      { href: "/admin/diligence", label: "Diligence" },
-      { href: "/admin/compliance", label: "Compliance" },
-      { href: "/admin/audit", label: "Audit" },
-      { href: "/admin/integrations", label: "Integrations" },
-      { href: "/admin/queues", label: "Queues" },
-      { href: "/admin/automation", label: "Automation" },
-      { href: "/admin/reports", label: "Reports" },
-      { href: "/admin/imports", label: "Import / Export" },
-      { href: "/admin/analytics", label: "Analytics" },
-      { href: "/admin/insights", label: "Insights" },
-      { href: "/admin/system-health", label: "System Health" },
-      { href: "/admin/beta-operations", label: "Beta Operations" },
+      { href: "/admin/learning", label: "Learning", requiredPermission: "manage_learning" },
+      { href: "/admin/billing", label: "Billing", requiredPermission: "manage_billing" },
+      { href: "/admin/diligence", label: "Diligence", requiredPermission: "manage_diligence" },
+      { href: "/admin/compliance", label: "Compliance", requiredPermission: "manage_compliance" },
+      { href: "/admin/audit", label: "Audit", requiredPermission: "view_audit_logs" },
+      { href: "/admin/integrations", label: "Integrations", requiredPermission: "manage_integrations" },
+      { href: "/admin/queues", label: "Queues", requiredPermission: "manage_queues" },
+      { href: "/admin/automation", label: "Automation", requiredPermission: "manage_automation" },
+      { href: "/admin/reports", label: "Reports", requiredPermission: "manage_reports" },
+      { href: "/admin/imports", label: "Import / Export", requiredPermission: "manage_imports" },
+      { href: "/admin/analytics", label: "Analytics", requiredPermission: "view_analytics" },
+      { href: "/admin/insights", label: "Insights", requiredPermission: "view_insights" },
+      { href: "/admin/system-health", label: "System Health", requiredPermission: "view_system_health" },
+      { href: "/admin/beta-operations", label: "Beta Operations", requiredPermission: "manage_beta_operations" },
       { href: "/admin/users/permissions", label: "User Permissions", requiredPermission: "manage_users" },
     ],
   },
