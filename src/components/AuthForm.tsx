@@ -173,7 +173,7 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
         className="rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white disabled:opacity-60"
         disabled={isLoading}
       >
-        {isLoading ? "Please wait..." : mode === "sign-up" ? "Create account" : "Sign in"}
+        {isLoading ? "Please wait..." : mode === "sign-up" ? "Create account" : "Login"}
       </button>
     </form>
   );
