@@ -111,10 +111,10 @@ function AdminComplianceModuleViewsInner(props: Props) {
       <AdminQueryFilterBar page="compliance" className="mb-4" />
 
       <MetricRow title="Review queue indicators" subtitle="Open and under-review counts">
-        <MetricCard label="Open events" value={String(props.metrics.openEvents)} detail="Requires staff review" accent="indigo" />
-        <MetricCard label="Critical" value={String(props.metrics.criticalEvents)} detail="Open or under review" accent="violet" />
-        <MetricCard label="High severity" value={String(props.metrics.highEvents)} detail="Open or under review" accent="blue" />
-        <MetricCard label="Under review" value={String(props.metrics.underReview)} detail="Actively being reviewed" accent="slate" />
+        <MetricCard label="Open events" value={String(props.metrics.openEvents)} detail="Requires staff review" accent="indigo" href="/admin/compliance" />
+        <MetricCard label="Critical" value={String(props.metrics.criticalEvents)} detail="Open or under review" accent="violet" href="/admin/compliance" />
+        <MetricCard label="High severity" value={String(props.metrics.highEvents)} detail="Open or under review" accent="blue" href="/admin/compliance" />
+        <MetricCard label="Under review" value={String(props.metrics.underReview)} detail="Actively being reviewed" accent="slate" href="/admin/compliance" />
       </MetricRow>
 
       <section className="mt-8">

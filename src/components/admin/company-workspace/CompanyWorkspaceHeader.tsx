@@ -120,6 +120,7 @@ export function CompanyWorkspaceHeader({ data }: Readonly<{ data: AdminCompanyWo
           value={readiness.latestScore != null ? String(readiness.latestScore) : "—"}
           detail={readiness.milestoneLabel}
           accent="indigo"
+          href={`/admin/companies/${companyId}`}
         />
         <MetricCard
           label="Open remediation"
@@ -127,12 +128,14 @@ export function CompanyWorkspaceHeader({ data }: Readonly<{ data: AdminCompanyWo
           detail={`${readiness.remediation.highPriorityOpen} high priority`}
           accent="violet"
           status={readiness.remediation.active > 0 ? "warning" : "success"}
+          href={buildCompanyFilteredHref("/admin/companies", companyId, { queue: "remediation" })}
         />
         <MetricCard
           label="Investor interests"
           value={String(data.investorActivity.interests)}
           detail={`${data.investorActivity.introRequests} intro requests`}
           accent="blue"
+          href={buildCompanyFilteredHref("/admin/crm", companyId)}
         />
         <MetricCard
           label="Open compliance"
@@ -140,6 +143,7 @@ export function CompanyWorkspaceHeader({ data }: Readonly<{ data: AdminCompanyWo
           detail={`${data.compliance.criticalCount} critical`}
           accent="slate"
           status={data.compliance.criticalCount > 0 ? "danger" : data.compliance.openCount > 0 ? "warning" : "success"}
+          href={buildCompanyFilteredHref("/admin/compliance", companyId)}
         />
       </MetricGrid>
     </div>

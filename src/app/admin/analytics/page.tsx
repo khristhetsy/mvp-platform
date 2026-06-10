@@ -161,24 +161,28 @@ export default async function AdminAnalyticsPage({
           value={String(analytics.metrics.totalCompanies)}
           detail={`${analytics.metrics.pendingCompanyReviews} pending review · ${analytics.metrics.publishedCompanies} published`}
           accent="indigo"
+          href="/admin/companies"
         />
         <MetricCard
           label="Investors"
           value={String(analytics.metrics.totalInvestors)}
           detail={`${analytics.metrics.approvedInvestors} approved · ${analytics.metrics.expressedInterests} interests`}
           accent="violet"
+          href="/admin/investors"
         />
         <MetricCard
           label="Active SPVs"
           value={String(analytics.metrics.activeSpvs)}
           detail={`Avg readiness: ${formatPct(analytics.metrics.spvChecklistReadinessAvg)} checklist`}
           accent="blue"
+          href="/admin/spvs"
         />
         <MetricCard
           label="Health"
           value={analytics.health.score}
           detail={analytics.health.reasons.slice(0, 2).join(" · ") || "No critical backlogs detected"}
           accent="slate"
+          href="/admin/insights"
         />
       </section>
       )}

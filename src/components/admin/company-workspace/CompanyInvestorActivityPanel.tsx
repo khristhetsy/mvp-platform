@@ -25,8 +25,8 @@ export function CompanyInvestorActivityPanel({
         <MetricCard label="Message threads" value={String(activity.messageThreads)} detail={`${activity.meetingsScheduled} meetings scheduled`} accent="slate" href={buildCompanyFilteredHref("/admin/crm", companyId)} />
       </MetricGrid>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <MetricCard label="Pledge total" value={formatCurrency(activity.pledgeTotal)} detail="From investor_interests" accent="indigo" />
-        <MetricCard label="Interest amounts" value={formatCurrency(activity.interestAmountTotal)} detail="Indicative totals" accent="slate" />
+        <MetricCard label="Pledge total" value={formatCurrency(activity.pledgeTotal)} detail="From investor_interests" accent="indigo" href={buildCompanyFilteredHref("/admin/crm", companyId)} />
+        <MetricCard label="Interest amounts" value={formatCurrency(activity.interestAmountTotal)} detail="Indicative totals" accent="slate" href={buildCompanyFilteredHref("/admin/crm", companyId)} />
       </div>
       <p className="mt-4 text-xs text-slate-500">
         Source: investor_interests, saved_deals, intro_requests, message_threads ·{" "}

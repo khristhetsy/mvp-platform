@@ -159,6 +159,7 @@ export default async function FounderDashboardPage() {
           accent="indigo"
           trend={diligenceReport ? "up" : "flat"}
           sparklineValues={[readinessScore, readinessScore, readinessScore, readinessScore, readinessScore, readinessScore, readinessScore]}
+          href="/founder/readiness"
         />
         <MetricCard
           label="Raise Progress"
@@ -166,6 +167,7 @@ export default async function FounderDashboardPage() {
           detail={company?.status ?? "Pending"}
           accent="violet"
           sparklineValues={[1, 2, 2, 3, 3, 4, 4]}
+          href="/founder/capital-raise"
         />
         <MetricCard
           label="Indicative Interest"
@@ -173,6 +175,7 @@ export default async function FounderDashboardPage() {
           detail={`From ${pledgeSummary.investorCount} ${pledgeSummary.investorCount === 1 ? "investor" : "investors"}`}
           accent="blue"
           sparklineValues={[0, 1, 1, 2, pledgeSummary.investorCount, pledgeSummary.investorCount, pledgeSummary.investorCount]}
+          href="/founder/investors"
         />
         <MetricCard
           label="Investor Activity"
@@ -180,6 +183,7 @@ export default async function FounderDashboardPage() {
           detail="Interest, intros, and saved deals"
           accent="slate"
           sparklineValues={[0, 1, 2, investorActivityTotal, investorActivityTotal, investorActivityTotal, investorActivityTotal]}
+          href="/founder/investors"
         />
       </MetricRow>
 

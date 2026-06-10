@@ -37,18 +37,21 @@ export function FounderMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: Fo
           detail="Approved investors scoring 70% or higher"
           accent="indigo"
           status={snapshot.strongMatchCount > 0 ? "success" : "neutral"}
+          href="/founder/matching"
         />
         <MetricCard
           label="Approved investors"
           value={String(snapshot.approvedInvestorCount)}
           detail="In the CapitalOS matching pool"
           accent="violet"
+          href="/founder/investors"
         />
         <MetricCard
           label="Your profile"
           value={snapshot.industry ?? "Not set"}
           detail={[snapshot.companyGeography, `${filteredMatches.length} matches shown`].filter(Boolean).join(" · ")}
           accent="blue"
+          href="/founder/settings"
         />
       </ContentGrid>
 

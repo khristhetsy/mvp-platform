@@ -59,24 +59,28 @@ export default async function FounderAnalyticsPage() {
                     : "Current snapshot"
                 }
                 accent="indigo"
+                href="/founder/onboarding"
               />
               <MetricCard
                 label="Readiness score"
                 value={analytics.readinessScore != null ? String(analytics.readinessScore) : "—"}
                 detail="Latest diligence report"
                 accent="violet"
+                href="/founder/readiness"
               />
               <MetricCard
                 label="Private contacts"
                 value={String(analytics.privateContactCount)}
                 detail="Founder CRM contacts"
                 accent="blue"
+                href="/founder/investors"
               />
               <MetricCard
                 label="Investor pledges"
                 value={analytics.pledgeTotalDisplay}
                 detail={`${analytics.pledgeInvestorCount} investors · platform activity`}
                 accent="slate"
+                href="/founder/investors"
               />
             </section>
 
@@ -86,24 +90,28 @@ export default async function FounderAnalyticsPage() {
                 value={String(analytics.remediation.active)}
                 detail={`${analytics.remediation.completed} completed · ${analytics.remediation.open} open`}
                 accent="slate"
+                href="/founder/readiness"
               />
               <MetricCard
                 label="Learning progress"
                 value={`${analytics.learningPercent}%`}
                 detail={`${analytics.learningModulesCompleted}/${analytics.learningModulesPublished} modules completed`}
                 accent="indigo"
+                href="/founder/learning"
               />
               <MetricCard
                 label="Message threads"
                 value={String(analytics.messageThreadCount)}
                 detail={`${analytics.meetingsScheduled} meetings scheduled`}
                 accent="blue"
+                href="/founder/messages"
               />
               <MetricCard
                 label="Queued outreach"
                 value={String(analytics.queuedMessageCount)}
                 detail={`${analytics.campaignDraftCount} draft · ${analytics.campaignQueuedCount} queued campaigns`}
                 accent="violet"
+                href="/founder/capital-raise"
               />
             </section>
 

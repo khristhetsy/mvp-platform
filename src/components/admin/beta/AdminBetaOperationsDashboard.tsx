@@ -33,19 +33,21 @@ export function AdminBetaOperationsDashboard({ snapshot }: { snapshot: BetaOpera
   return (
     <div className="space-y-6">
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Active founders (7d)" value={String(summary.activeFounders)} detail="Recent activity" accent="indigo" />
-        <MetricCard label="Active investors (7d)" value={String(summary.activeInvestors)} detail="Recent activity" accent="violet" />
+        <MetricCard label="Active founders (7d)" value={String(summary.activeFounders)} detail="Recent activity" accent="indigo" href="/admin/companies" />
+        <MetricCard label="Active investors (7d)" value={String(summary.activeInvestors)} detail="Recent activity" accent="violet" href="/admin/investors" />
         <MetricCard
           label="Founder onboarding avg"
           value={`${summary.founderOnboardingCompletionPercent}%`}
           detail={`${summary.pendingFounderOnboarding} pending companies`}
           accent="blue"
+          href="/admin/companies"
         />
         <MetricCard
           label="Investor approvals queue"
           value={String(summary.pendingInvestorApprovals)}
           detail={`${summary.openBetaFeedback} open feedback`}
           accent="slate"
+          href="/admin/investors"
         />
       </section>
 

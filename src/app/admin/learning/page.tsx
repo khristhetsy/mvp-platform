@@ -99,17 +99,17 @@ export default async function AdminLearningDashboardPage() {
         />
 
         <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard label="Total courses" value={String(coursesTotal.count ?? 0)} detail="learning_programs" accent="indigo" />
-          <MetricCard label="Published courses" value={String(coursesPublished.count ?? 0)} detail="Visible to founders" accent="violet" />
-          <MetricCard label="Draft courses" value={String(coursesDraft.count ?? 0)} detail="Not published" accent="blue" />
-          <MetricCard label="Pending approvals" value={String(pendingApprovals.count ?? 0)} detail="Awaiting review" accent="slate" />
+          <MetricCard label="Total courses" value={String(coursesTotal.count ?? 0)} detail="learning_programs" accent="indigo" href="/admin/learning/courses" />
+          <MetricCard label="Published courses" value={String(coursesPublished.count ?? 0)} detail="Visible to founders" accent="violet" href="/admin/learning/courses" />
+          <MetricCard label="Draft courses" value={String(coursesDraft.count ?? 0)} detail="Not published" accent="blue" href="/admin/learning/courses" />
+          <MetricCard label="Pending approvals" value={String(pendingApprovals.count ?? 0)} detail="Awaiting review" accent="slate" href="/admin/learning/approvals" />
         </section>
 
         <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard label="Enrolled founders" value={String(foundersEnrolled.count ?? 0)} detail="learning_progress" accent="indigo" />
-          <MetricCard label="Lesson completions" value={String(lessonCompletions.count ?? 0)} detail="founder_lesson_progress" accent="violet" />
-          <MetricCard label="Quiz attempts" value={String(quizAttempts.count ?? 0)} detail="founder_quiz_attempts" accent="blue" />
-          <MetricCard label="Certificates issued" value={String(certificatesIssued.count ?? 0)} detail="Certificate of Completion" accent="slate" />
+          <MetricCard label="Enrolled founders" value={String(foundersEnrolled.count ?? 0)} detail="learning_progress" accent="indigo" href="/admin/learning/analytics" />
+          <MetricCard label="Lesson completions" value={String(lessonCompletions.count ?? 0)} detail="founder_lesson_progress" accent="violet" href="/admin/learning/analytics" />
+          <MetricCard label="Quiz attempts" value={String(quizAttempts.count ?? 0)} detail="founder_quiz_attempts" accent="blue" href="/admin/learning/analytics" />
+          <MetricCard label="Certificates issued" value={String(certificatesIssued.count ?? 0)} detail="Certificate of Completion" accent="slate" href="/admin/learning/certificates" />
         </section>
 
         <section className="mt-8">

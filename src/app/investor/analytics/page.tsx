@@ -35,18 +35,20 @@ export default async function InvestorAnalyticsPage() {
 
       <InvestorFeatureGate>
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <MetricCard label="Saved deals" value={String(analytics.savedDeals)} detail="Companies on your watchlist" accent="indigo" />
+          <MetricCard label="Saved deals" value={String(analytics.savedDeals)} detail="Companies on your watchlist" accent="indigo" href="/investor/portfolio" />
           <MetricCard
             label="Expressed interests"
             value={String(analytics.expressedInterests)}
             detail="Interest records across listings"
             accent="violet"
+            href="/investor/portfolio"
           />
           <MetricCard
             label="Intro requests"
             value={String(analytics.introRequests)}
             detail="Warm intro and follow-up requests"
             accent="blue"
+            href="/investor/messages"
           />
           <MetricCard
             label="Recommended deals"
@@ -57,12 +59,14 @@ export default async function InvestorAnalyticsPage() {
                 : "Match scores from marketplace listings"
             }
             accent="indigo"
+            href="/investor/opportunities"
           />
           <MetricCard
             label="Message threads"
             value={String(analytics.messageThreadCount)}
             detail={`${analytics.meetingsScheduled} meetings scheduled`}
             accent="slate"
+            href="/investor/messages"
           />
         </section>
 
@@ -72,18 +76,21 @@ export default async function InvestorAnalyticsPage() {
             value={analytics.pledgeTotalDisplay}
             detail={`${analytics.indicativeTotalDisplay} indicative interest`}
             accent="slate"
+            href="/investor/portfolio"
           />
           <MetricCard
             label="Pending / indicative"
             value={String(analytics.pendingInterestCount)}
             detail={`${analytics.portfolioInterestCount} portfolio interest rows`}
             accent="violet"
+            href="/investor/portfolio"
           />
           <MetricCard
             label="Recent CRM activity"
             value={String(analytics.recentActivityCount)}
             detail="Events in your timeline"
             accent="blue"
+            href="/investor/analytics"
           />
         </section>
 

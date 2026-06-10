@@ -169,6 +169,7 @@ function FounderInvestorsModuleViewsInner({
             value={String(crmView.summary.totalInterestedInvestors)}
             detail="Unique investors with interest, saves, or intro activity"
             accent="indigo"
+            href="/founder/investors"
           />
           <MetricCard
             label="Pledged / indicative"
@@ -179,18 +180,21 @@ function FounderInvestorsModuleViewsInner({
                 : "Total pledged amount from investor interests"
             }
             accent="violet"
+            href="/founder/capital-raise"
           />
           <MetricCard
             label="Intro requests"
             value={String(crmView.summary.introRequests)}
             detail="Investors who requested an introduction"
             accent="blue"
+            href="/founder/messages"
           />
           <MetricCard
             label="Follow-ups needed"
             value={String(crmView.summary.followUpsNeeded)}
             detail="Investors waiting on founder or platform follow-up"
             accent="slate"
+            href="/founder/investors"
           />
         </MetricGrid>
       </PageSection>

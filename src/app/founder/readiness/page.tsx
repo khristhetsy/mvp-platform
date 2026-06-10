@@ -116,24 +116,28 @@ export default async function FounderReadinessPage() {
                   : "Estimated from document checklist"
               }
               accent="indigo"
+              href="/founder/readiness"
             />
             <MetricCard
               label="Profile Completion"
               value={`${profileCompletion.percent}%`}
               detail={`${profileCompletion.items.filter((item) => item.complete).length} of ${profileCompletion.items.length} fields complete`}
               accent="violet"
+              href="/founder/settings"
             />
             <MetricCard
               label="Documents Uploaded"
               value={`${uploadedCount}/${checklist.length}`}
               detail={`${missingDocuments.length} key ${missingDocuments.length === 1 ? "document" : "documents"} missing`}
               accent="blue"
+              href="/founder/documents"
             />
             <MetricCard
               label="Diligence Review"
               value={formatReviewStatus(reviewStatus ? String(reviewStatus) : null)}
               detail={company.is_published ? "Published to marketplace" : "Admin review and publication pending"}
               accent="slate"
+              href="/founder/onboarding"
             />
           </section>
 

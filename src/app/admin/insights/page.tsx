@@ -164,10 +164,10 @@ export default async function AdminInsightsPage({
 
       {view === "table" || view === "segments" ? null : (
       <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Critical risks" value={String(insights.riskOverview.critical)} detail="Score ≥ 85" accent="indigo" />
-        <MetricCard label="High risks" value={String(insights.riskOverview.high)} detail="Score 65–84" accent="violet" />
-        <MetricCard label="Medium risks" value={String(insights.riskOverview.medium)} detail="Score 40–64" accent="blue" />
-        <MetricCard label="Avg risk score" value={String(insights.riskOverview.scoreAvg)} detail="Across platform signals" accent="slate" />
+        <MetricCard label="Critical risks" value={String(insights.riskOverview.critical)} detail="Score ≥ 85" accent="indigo" href="/admin/insights?view=segments" />
+        <MetricCard label="High risks" value={String(insights.riskOverview.high)} detail="Score 65–84" accent="violet" href="/admin/insights?view=segments" />
+        <MetricCard label="Medium risks" value={String(insights.riskOverview.medium)} detail="Score 40–64" accent="blue" href="/admin/insights?view=segments" />
+        <MetricCard label="Avg risk score" value={String(insights.riskOverview.scoreAvg)} detail="Across platform signals" accent="slate" href="/admin/analytics" />
       </section>
       )}
 

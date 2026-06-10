@@ -72,24 +72,28 @@ export function AdminLaunchReadinessPanel({
             value={String(operations.pendingCompanyReviews)}
             detail="review_status=pending"
             accent="slate"
+            href="/admin/companies"
           />
           <MetricCard
             label="Investor approvals queue"
             value={String(operations.pendingInvestorApprovals)}
             detail="submitted / changes_requested"
             accent="violet"
+            href="/admin/investors"
           />
           <MetricCard
             label="Deal room questions"
             value={String(operations.unresolvedDealRoomQuestions)}
             detail="unresolved"
             accent="blue"
+            href="/admin/deal-rooms"
           />
           <MetricCard
             label="Deal room doc requests"
             value={String(operations.unresolvedDealRoomDocRequests)}
             detail="not fulfilled"
             accent="slate"
+            href="/admin/deal-rooms"
           />
         </section>
       </WorkspacePanel>
@@ -160,19 +164,21 @@ export function AdminLaunchReadinessPanel({
 
       <WorkspacePanel title="Beta onboarding visibility" subtitle="Curated cohort status">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <MetricCard label="Founders" value={String(betaOnboarding.foundersTotal)} detail="profiles" accent="indigo" />
+          <MetricCard label="Founders" value={String(betaOnboarding.foundersTotal)} detail="profiles" accent="indigo" href="/admin/companies" />
           <MetricCard
             label="Companies"
             value={String(betaOnboarding.foundersWithCompany)}
             detail="founder companies"
             accent="violet"
+            href="/admin/companies"
           />
-          <MetricCard label="Investors" value={String(betaOnboarding.investorsTotal)} detail="profiles" accent="blue" />
+          <MetricCard label="Investors" value={String(betaOnboarding.investorsTotal)} detail="profiles" accent="blue" href="/admin/investors" />
           <MetricCard
             label="Approved investors"
             value={String(betaOnboarding.investorsApproved)}
             detail={`${betaOnboarding.investorsPendingReview} pending onboarding/approval`}
             accent="slate"
+            href="/admin/investors"
           />
         </div>
         <p className="mt-4 text-xs text-slate-500">

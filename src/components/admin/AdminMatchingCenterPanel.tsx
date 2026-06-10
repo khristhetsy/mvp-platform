@@ -64,24 +64,28 @@ export function AdminMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: Admi
           detail="Investor–company pairs scoring 70% or higher"
           accent="indigo"
           status={snapshot.stats.highMatchCount > 0 ? "success" : "neutral"}
+          href="/admin/matching"
         />
         <MetricCard
           label="Average match score"
           value={`${snapshot.stats.averageMatchScore}%`}
           detail={`Across ${snapshot.stats.totalPairs.toLocaleString()} marketplace pairs`}
           accent="violet"
+          href="/admin/matching"
         />
         <MetricCard
           label="Marketplace companies"
           value={String(snapshot.stats.marketplaceCompanyCount)}
           detail="Published listings in matching pool"
           accent="blue"
+          href="/admin/companies"
         />
         <MetricCard
           label="Approved investors"
           value={String(snapshot.stats.approvedInvestorCount)}
           detail="Eligible for CapitalOS matching"
           accent="slate"
+          href="/admin/investors"
         />
       </MetricGrid>
 

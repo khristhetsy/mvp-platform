@@ -44,6 +44,7 @@ export function CompanyReadinessPanel({
           value={readiness.latestScore != null ? String(readiness.latestScore) : "—"}
           detail={readiness.scoreHistory.length > 1 ? `${readiness.scoreHistory.length} reports on file` : "Single or no report"}
           accent="indigo"
+          href={`/admin/companies/${companyId}`}
         />
         <MetricCard
           label="Remediation tasks"
@@ -51,6 +52,7 @@ export function CompanyReadinessPanel({
           detail={`${readiness.remediation.completed} completed · ${readiness.remediation.highPriorityOpen} high priority`}
           accent="violet"
           status={readiness.remediation.highPriorityOpen > 0 ? "warning" : "neutral"}
+          href={buildCompanyFilteredHref("/admin/companies", companyId, { queue: "remediation" })}
         />
       </div>
       <p className="mt-4 rounded-lg border border-slate-100 bg-slate-50 p-3 text-sm text-slate-700">

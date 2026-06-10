@@ -71,6 +71,7 @@ export default async function InvestorDashboardPage() {
           detail="Published listings ranked for your profile"
           accent="indigo"
           sparklineValues={[1, 2, 3, matches.length, matches.length, matches.length, matches.length]}
+          href="/investor/opportunities"
         />
         <MetricCard
           label="Watchlist"
@@ -78,6 +79,7 @@ export default async function InvestorDashboardPage() {
           detail={savedDeals.slice(0, 2).map(investorCompanyLabel).join(", ") || "No saved deals yet"}
           accent="violet"
           sparklineValues={[0, 1, 1, savedDeals.length, savedDeals.length, savedDeals.length, savedDeals.length]}
+          href="/investor/portfolio"
         />
         <MetricCard
           label="Expressed Interest"
@@ -85,6 +87,7 @@ export default async function InvestorDashboardPage() {
           detail={interests.slice(0, 2).map(investorCompanyLabel).join(", ") || "None yet"}
           accent="blue"
           sparklineValues={[0, 0, 1, interests.length, interests.length, interests.length, interests.length]}
+          href="/investor/portfolio"
         />
         <MetricCard
           label="Portfolio"
@@ -92,6 +95,7 @@ export default async function InvestorDashboardPage() {
           detail="Watchlist, commitments, and company updates"
           accent="slate"
           sparklineValues={[0, 1, 2, savedDeals.length + interests.length, savedDeals.length + interests.length, savedDeals.length + interests.length, savedDeals.length + interests.length]}
+          href="/investor/portfolio"
         />
       </MetricRow>
 

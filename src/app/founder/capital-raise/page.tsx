@@ -157,18 +157,21 @@ export default async function FounderCapitalRaisePage() {
               value={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
               detail={`From ${pledgeSummary.investorCount} ${pledgeSummary.investorCount === 1 ? "investor" : "investors"}`}
               accent="indigo"
+              href="/founder/investors"
             />
             <MetricCard
               label="Raise Status"
               value={raiseStatus}
               detail={company.is_published ? "Live on marketplace" : "Not yet published"}
               accent="violet"
+              href="/founder/capital-raise"
             />
             <MetricCard
               label="Funding Target"
               value={company.funding_amount ? formatPledgeTotal(Number(company.funding_amount)) : "TBD"}
               detail="Company funding goal"
               accent="blue"
+              href="/founder/settings"
             />
           </section>
 
