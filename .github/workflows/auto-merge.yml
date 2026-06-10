@@ -22,4 +22,8 @@ jobs:
               repo: context.repo.repo,
               pull_number: context.payload.pull_request.number,
               merge_method: 'squash',
+<<<<<<< HEAD
             })
+=======
+            })
+>>>>>>> b16db7fc6d8a8b61e0c873299c205e85636ec72c
