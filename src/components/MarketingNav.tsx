@@ -80,7 +80,7 @@ export function MarketingNav() {
                   onClick={() => setMobileOpen(false)}
                   className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${
                     isActive(pathname, item.href)
-                      ? "bg-[var(--navy-muted)] text-[var(--navy)]"
+                      ? "bg-[var(--blue-muted)] text-[var(--blue-hover)]"
                       : "text-slate-600 hover:bg-slate-50 hover:text-[var(--navy)]"
                   }`}
                 >

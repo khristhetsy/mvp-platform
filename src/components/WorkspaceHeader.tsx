@@ -51,7 +51,7 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, onMen
           />
         </Link>
         <WorkspaceBreadcrumbs workspace={workspace} />
-        <span className="hidden rounded-md bg-[var(--navy-muted)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--navy)] sm:inline">
+        <span className="hidden rounded-md bg-[var(--blue-muted)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--blue-hover)] sm:inline">
           {workspaceLabel(workspace)}
         </span>
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
@@ -66,7 +66,7 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, onMen
           </button>
           <NotificationBellDropdown />
           <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--navy)] text-[10px] font-semibold text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--blue)] text-[10px] font-semibold text-white">
               {initials || "CO"}
             </div>
             <div className="hidden text-left sm:block">

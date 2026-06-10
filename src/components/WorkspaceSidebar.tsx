@@ -95,12 +95,12 @@ export function WorkspaceSidebar({
         aria-current={active ? "page" : undefined}
         className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
           active
-            ? "bg-[var(--navy)] text-white shadow-sm"
+            ? "bg-[var(--blue-muted)] text-[var(--blue-hover)] border-r-2 border-[var(--blue)]"
             : "text-slate-600 hover:bg-slate-100 hover:text-[var(--navy)]"
         }`}
       >
         <Icon
-          className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-slate-400"}`}
+          className={`h-4 w-4 shrink-0 ${active ? "text-[var(--blue)]" : "text-slate-400"}`}
           strokeWidth={1.75}
           aria-hidden
         />
@@ -135,7 +135,7 @@ export function WorkspaceSidebar({
         {planBadge ? <div>{planBadge}</div> : null}
         <div className="rounded-xl border border-slate-200/80 bg-[var(--surface-sunken)] p-3">
           <div className="flex items-start gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--navy)] text-white">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--blue)] text-white">
               <Sparkles className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
             </span>
             <div>
@@ -155,7 +155,7 @@ export function WorkspaceSidebar({
       {mobileOpen ? (
         <button
           type="button"
-          className="fixed inset-0 z-40 bg-[var(--navy)]/30 lg:hidden"
+          className="fixed inset-0 z-40 bg-[var(--navy)]/20 lg:hidden"
           aria-label="Close navigation"
           onClick={onClose}
         />
