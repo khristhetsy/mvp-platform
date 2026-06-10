@@ -14,7 +14,7 @@ export function PlatformEmptyState({
 }>) {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white px-6 py-12 text-center shadow-[var(--shadow-panel)]">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--navy-muted)] text-[var(--navy)]">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--blue-muted)] text-[var(--blue)]">
         <Icon className="h-6 w-6" strokeWidth={1.75} aria-hidden />
       </div>
       <h3 className="mt-4 text-sm font-semibold text-[var(--navy)]">{title}</h3>

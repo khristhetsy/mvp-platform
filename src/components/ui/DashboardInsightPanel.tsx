@@ -24,8 +24,8 @@ export function DashboardInsightPanel({
       </div>
       <div className="mt-4 flex items-end gap-1.5" style={{ height: 48 }} aria-hidden>
         {series.map((value, i) => (
-          <div key={i} className="flex-1 rounded-sm bg-[var(--navy-muted)]" style={{ height: `${Math.max(12, (value / max) * 100)}%` }}>
-            <div className="h-full w-full rounded-sm bg-[var(--navy)]/80" />
+          <div key={i} className="flex-1 rounded-sm bg-[var(--blue-muted)]" style={{ height: `${Math.max(12, (value / max) * 100)}%` }}>
+            <div className="h-full w-full rounded-sm bg-[var(--blue)]/80" />
           </div>
         ))}
       </div>

@@ -94,7 +94,7 @@ export function BetaFeedbackForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-fit rounded-lg bg-[var(--navy)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+        className="cap-btn-primary w-fit rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60"
       >
         {loading ? "Submitting…" : "Submit feedback"}
       </button>

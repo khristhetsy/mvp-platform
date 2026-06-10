@@ -26,7 +26,7 @@ export function FilterSearchBar({
         disabled={disabled}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-8 pr-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[var(--navy)] focus:outline-none focus:ring-1 focus:ring-[var(--navy)]/20"
+        className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-8 pr-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[var(--blue)] focus:outline-none focus:ring-1 focus:ring-[var(--blue)]/20"
       />
     </label>
   );

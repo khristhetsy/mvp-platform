@@ -32,8 +32,8 @@ export function ViewModeToggle({
             title={VIEW_MODE_LABELS[mode]}
             className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition ${
               active
-                ? "bg-[var(--navy)] text-white shadow-sm"
-                : "text-slate-600 hover:bg-slate-50 hover:text-[var(--navy)]"
+                ? "bg-[var(--blue)] text-white shadow-sm"
+                : "text-slate-600 hover:bg-slate-50 hover:text-[var(--blue-hover)]"
             } disabled:opacity-50`}
             onClick={() => onChange(mode)}
           >

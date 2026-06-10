@@ -156,7 +156,7 @@ export function CapitalOSAssistant() {
           aria-labelledby="capitalos-assistant-title"
           className="fixed inset-x-0 bottom-0 z-[100] flex max-h-[85vh] w-full flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-[var(--shadow-card)] sm:inset-x-auto sm:bottom-20 sm:right-4 sm:left-auto sm:w-[400px] sm:max-h-[min(560px,82vh)] sm:rounded-2xl"
         >
-          <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 bg-[var(--navy)] px-4 py-3 text-white sm:rounded-t-2xl">
+          <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 bg-[var(--blue)] px-4 py-3 text-white sm:rounded-t-2xl">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[var(--gold)]" strokeWidth={1.75} aria-hidden />
@@ -191,7 +191,7 @@ export function CapitalOSAssistant() {
                 <p
                   key={`${entry.role}-${index}`}
                   className={`whitespace-pre-wrap rounded-lg px-3 py-2 leading-6 ${
-                    entry.role === "user" ? "ml-6 bg-slate-100 text-slate-800" : "mr-2 bg-[var(--navy-muted)] text-[var(--navy)]"
+                    entry.role === "user" ? "ml-6 bg-slate-100 text-slate-800" : "mr-2 bg-[var(--blue-muted)] text-[var(--blue-hover)]"
                   }`}
                 >
                   {entry.text}
