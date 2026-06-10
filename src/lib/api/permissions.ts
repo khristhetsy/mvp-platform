@@ -91,13 +91,13 @@ export async function requirePermissionPage(
   return { profile, supabase, userId: user.id, effective };
 }
 
-/** Page builder: manage_page_builder OR legacy super admin flag. */
+/** Page builder: deprecated — requires manage_settings (super admin only). */
 export async function requirePageBuilderPage() {
-  return requirePermissionPage("manage_page_builder");
+  return requirePermissionPage("manage_settings");
 }
 
 export async function requirePageBuilderApi() {
-  return requirePermissionApi("manage_page_builder");
+  return requirePermissionApi("manage_settings");
 }
 
 /** User permissions admin: manage_users OR super admin. */
