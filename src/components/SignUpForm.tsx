@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
 import {
   SIGNUP_FOUNDER_PLANS,
   SIGNUP_INVESTOR_PLAN,
   type PlanType,
 } from "@/lib/subscriptions/plans";
+import { FormField } from "@/components/ui/FormField";
+import { useFormValidation } from "@/hooks/useFormValidation";
 
 type SignupRole = "founder" | "investor";
 
@@ -81,15 +84,26 @@ function PlanCard({
   );
 }
 
+const signUpSchema = z.object({
+  fullName: z.string().min(1),
+  email: z.string().email(),
+  password: z.string().min(8),
+});
+
+const BASE_INPUT =
+  "rounded-xl border px-4 py-3 font-normal text-slate-900 outline-none transition";
+
 export function SignUpForm({ privateBetaMode = false }: Readonly<{ privateBetaMode?: boolean }>) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { getError, inputCls, validate, clearError } = useFormValidation();
+
   const [role, setRole] = useState<SignupRole>("founder");
   const [selectedPlan, setSelectedPlan] = useState<PlanType>("founder_trial");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -111,9 +125,11 @@ export function SignUpForm({ privateBetaMode = false }: Readonly<{ privateBetaMo
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setIsLoading(true);
+    setApiError(null);
 
+    if (!validate(signUpSchema, { fullName, email, password })) return;
+
+    setIsLoading(true);
     const supabase = createClient();
     const { error: signUpError } = await supabase.auth.signUp({
       email,
@@ -131,7 +147,7 @@ export function SignUpForm({ privateBetaMode = false }: Readonly<{ privateBetaMo
     setIsLoading(false);
 
     if (signUpError) {
-      setError(signUpError.message);
+      setApiError(signUpError.message);
       return;
     }
 
@@ -220,41 +236,36 @@ export function SignUpForm({ privateBetaMode = false }: Readonly<{ privateBetaMo
         <input type="hidden" name="role" value={role} />
         <input type="hidden" name="requested_plan" value={selectedPlan} />
 
-        <label className="grid gap-2 text-sm font-medium text-slate-700">
-          Full name
+        <FormField label="Full name" error={getError("fullName")} required>
           <input
-            className="rounded-xl border border-slate-300 px-4 py-3 font-normal text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+            className={`${BASE_INPUT} ${inputCls("fullName")}`}
             placeholder="Jane Founder"
             value={fullName}
-            onChange={(event) => setFullName(event.target.value)}
-            required
+            onChange={(e) => { setFullName(e.target.value); clearError("fullName"); }}
           />
-        </label>
-        <label className="grid gap-2 text-sm font-medium text-slate-700">
-          Work email
+        </FormField>
+
+        <FormField label="Work email" error={getError("email")} required>
           <input
-            className="rounded-xl border border-slate-300 px-4 py-3 font-normal text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+            className={`${BASE_INPUT} ${inputCls("email")}`}
             placeholder="you@company.com"
             type="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
+            onChange={(e) => { setEmail(e.target.value); clearError("email"); }}
           />
-        </label>
-        <label className="grid gap-2 text-sm font-medium text-slate-700">
-          Password
+        </FormField>
+
+        <FormField label="Password" error={getError("password")} required hint="Minimum 8 characters">
           <input
-            className="rounded-xl border border-slate-300 px-4 py-3 font-normal text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-            placeholder="Minimum 8 characters"
+            className={`${BASE_INPUT} ${inputCls("password")}`}
+            placeholder="••••••••"
             type="password"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-            minLength={8}
+            onChange={(e) => { setPassword(e.target.value); clearError("password"); }}
           />
-        </label>
+        </FormField>
 
-        {error ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
+        {apiError ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{apiError}</p> : null}
 
         <button
           type="submit"

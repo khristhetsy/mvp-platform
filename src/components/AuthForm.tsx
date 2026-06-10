@@ -2,15 +2,11 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
 import type { UserRole } from "@/lib/supabase/types";
-
-const signUpDestinationByRole: Record<UserRole, string> = {
-  founder: "/founder/onboarding",
-  investor: "/investor/dashboard",
-  admin: "/admin/dashboard",
-  analyst: "/admin/dashboard",
-};
+import { FormField } from "@/components/ui/FormField";
+import { useFormValidation } from "@/hooks/useFormValidation";
 
 const signInDestinationByRole: Record<UserRole, string> = {
   founder: "/founder/dashboard",
@@ -19,21 +15,47 @@ const signInDestinationByRole: Record<UserRole, string> = {
   analyst: "/admin/dashboard",
 };
 
+const signUpDestinationByRole: Record<UserRole, string> = {
+  founder: "/founder/onboarding",
+  investor: "/investor/dashboard",
+  admin: "/admin/dashboard",
+  analyst: "/admin/dashboard",
+};
+
+const signInSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+});
+
+const signUpSchema = z.object({
+  fullName: z.string().min(1),
+  email: z.string().email(),
+  password: z.string().min(8),
+});
+
+const BASE_INPUT = "rounded-xl border px-4 py-3 w-full";
+
 export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { getError, inputCls, validate, clearError } = useFormValidation();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<UserRole>("founder");
-  const [error, setError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setIsLoading(true);
+    setApiError(null);
 
+    const data = mode === "sign-up" ? { fullName, email, password } : { email, password };
+    const schema = mode === "sign-up" ? signUpSchema : signInSchema;
+    if (!validate(schema, data)) return;
+
+    setIsLoading(true);
     const supabase = createClient();
 
     if (mode === "sign-up") {
@@ -49,7 +71,7 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
       setIsLoading(false);
 
       if (signUpError) {
-        setError(signUpError.message);
+        setApiError(signUpError.message);
         return;
       }
 
@@ -62,7 +84,7 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
 
     if (signInError) {
       setIsLoading(false);
-      setError(signInError.message);
+      setApiError(signInError.message);
       return;
     }
 
@@ -73,7 +95,7 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
 
     if (userError || !user) {
       setIsLoading(false);
-      setError("Unable to verify the signed-in user.");
+      setApiError("Unable to verify the signed-in user.");
       return;
     }
 
@@ -82,12 +104,13 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
       .select("role")
       .eq("id", user.id)
       .single();
+
     const next = searchParams.get("next");
 
     if (profileError || !profile) {
       await supabase.auth.signOut();
       setIsLoading(false);
-      setError("No profile was found for this account.");
+      setApiError("No profile was found for this account.");
       return;
     }
 
@@ -102,42 +125,54 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
     <form onSubmit={handleSubmit} className="mt-8 grid gap-4">
       {mode === "sign-up" ? (
         <>
-          <input
-            className="rounded-xl border border-slate-300 px-4 py-3"
-            placeholder="Full name"
-            value={fullName}
-            onChange={(event) => setFullName(event.target.value)}
-            required
-          />
-          <select
-            className="rounded-xl border border-slate-300 px-4 py-3"
-            value={role}
-            onChange={(event) => setRole(event.target.value as UserRole)}
-          >
-            <option value="founder">Founder</option>
-            <option value="investor">Investor</option>
-          </select>
+          <FormField label="Full name" error={getError("fullName")} required>
+            <input
+              className={`${BASE_INPUT} ${inputCls("fullName")}`}
+              placeholder="Jane Founder"
+              value={fullName}
+              onChange={(e) => { setFullName(e.target.value); clearError("fullName"); }}
+            />
+          </FormField>
+          <div className="grid gap-1.5">
+            <span className="text-sm font-medium text-slate-700">I am a</span>
+            <select
+              className={`${BASE_INPUT} border-slate-300 text-slate-950`}
+              value={role}
+              onChange={(e) => setRole(e.target.value as UserRole)}
+            >
+              <option value="founder">Founder</option>
+              <option value="investor">Investor</option>
+            </select>
+          </div>
         </>
       ) : null}
-      <input
-        className="rounded-xl border border-slate-300 px-4 py-3"
-        placeholder="Work email"
-        type="email"
-        value={email}
-        onChange={(event) => setEmail(event.target.value)}
-        required
-      />
-      <input
-        className="rounded-xl border border-slate-300 px-4 py-3"
-        placeholder="Password"
-        type="password"
-        value={password}
-        onChange={(event) => setPassword(event.target.value)}
-        required
-        minLength={8}
-      />
-      {error ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-      <button className="rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white" disabled={isLoading}>
+
+      <FormField label="Work email" error={getError("email")} required>
+        <input
+          className={`${BASE_INPUT} ${inputCls("email")}`}
+          placeholder="you@company.com"
+          type="email"
+          value={email}
+          onChange={(e) => { setEmail(e.target.value); clearError("email"); }}
+        />
+      </FormField>
+
+      <FormField label="Password" error={getError("password")} required hint={mode === "sign-up" ? "Minimum 8 characters" : undefined}>
+        <input
+          className={`${BASE_INPUT} ${inputCls("password")}`}
+          placeholder="••••••••"
+          type="password"
+          value={password}
+          onChange={(e) => { setPassword(e.target.value); clearError("password"); }}
+        />
+      </FormField>
+
+      {apiError ? <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{apiError}</p> : null}
+
+      <button
+        className="rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white disabled:opacity-60"
+        disabled={isLoading}
+      >
         {isLoading ? "Please wait..." : mode === "sign-up" ? "Create account" : "Sign in"}
       </button>
     </form>

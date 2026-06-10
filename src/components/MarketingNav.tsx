@@ -49,7 +49,7 @@ export function MarketingNav() {
             href="/auth/sign-in"
             className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-950"
           >
-            Sign In
+            Login
           </Link>
           <Link href="/submit-company" className="cap-btn-primary rounded-lg px-4 py-2 text-sm font-semibold">
             Get Started
@@ -95,7 +95,7 @@ export function MarketingNav() {
               onClick={() => setMobileOpen(false)}
               className="rounded-lg border border-slate-200 px-3 py-2.5 text-center text-sm font-medium text-slate-700"
             >
-              Sign In
+              Login
             </Link>
             <Link
               href="/submit-company"

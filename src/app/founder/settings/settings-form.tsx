@@ -1,24 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 import type { Company } from "@/lib/supabase/types";
+import { FormField } from "@/components/ui/FormField";
+import { useFormValidation, type ZodFlatErrors } from "@/hooks/useFormValidation";
+
+const settingsSchema = z.object({
+  company_name: z.string().min(2),
+  business_description: z.string().min(20),
+  industry: z.string().min(2),
+  website: z.string().url().optional().or(z.literal("")),
+  logo_url: z.string().url().optional().or(z.literal("")),
+});
 
 type Props = {
   company: Company | null;
 };
 
-function isValidUrl(value: string) {
-  try {
-    new URL(value);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export function CompanySettingsForm({ company }: Props) {
   const router = useRouter();
+  const { getError, inputCls, validate, setApiErrors, clearError } = useFormValidation();
+
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -28,15 +32,7 @@ export function CompanySettingsForm({ company }: Props) {
   const [industry, setIndustry] = useState(company?.industry ?? "");
   const [logoUrl, setLogoUrl] = useState(company?.logo_url ?? "");
 
-  const validationError = useMemo(() => {
-    if (!company) return "No company profile is linked to your account.";
-    if (companyName.trim().length < 2) return "Company name must be at least 2 characters.";
-    if (description.trim().length < 20) return "Description must be at least 20 characters.";
-    if (industry.trim().length < 2) return "Industry must be at least 2 characters.";
-    if (website && !isValidUrl(website)) return "Website must be a valid URL (include https://).";
-    if (logoUrl && !isValidUrl(logoUrl)) return "Logo URL must be a valid URL (include https://).";
-    return null;
-  }, [company, companyName, description, industry, website, logoUrl]);
+  const BASE_INPUT = "rounded-xl border px-4 py-3 font-normal w-full";
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -47,10 +43,14 @@ export function CompanySettingsForm({ company }: Props) {
       return;
     }
 
-    if (validationError) {
-      setMessage({ type: "error", text: validationError });
-      return;
-    }
+    const ok = validate(settingsSchema, {
+      company_name: companyName.trim(),
+      business_description: description.trim(),
+      industry: industry.trim(),
+      website: website.trim(),
+      logo_url: logoUrl.trim(),
+    });
+    if (!ok) return;
 
     setIsSaving(true);
 
@@ -66,12 +66,19 @@ export function CompanySettingsForm({ company }: Props) {
       }),
     });
 
-    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+      details?: ZodFlatErrors;
+    } | null;
 
     setIsSaving(false);
 
     if (!response.ok) {
-      setMessage({ type: "error", text: body?.error ?? "Unable to save company settings." });
+      if (body?.details) {
+        setApiErrors(body.details);
+      } else {
+        setMessage({ type: "error", text: body?.error ?? "Unable to save company settings." });
+      }
       return;
     }
 
@@ -82,62 +89,54 @@ export function CompanySettingsForm({ company }: Props) {
   return (
     <form onSubmit={handleSubmit} className="mt-8 grid gap-5">
       <div className="grid gap-5 md:grid-cols-2">
-        <label className="grid gap-2 text-sm font-medium text-slate-700">
-          Company name
+        <FormField label="Company name" error={getError("company_name")} required>
           <input
-            className="rounded-xl border border-slate-300 px-4 py-3 font-normal"
+            className={`${BASE_INPUT} ${inputCls("company_name")}`}
             value={companyName}
-            onChange={(e) => setCompanyName(e.target.value)}
+            onChange={(e) => { setCompanyName(e.target.value); clearError("company_name"); }}
             disabled={isSaving}
-            required
           />
-        </label>
+        </FormField>
 
-        <label className="grid gap-2 text-sm font-medium text-slate-700">
-          Industry
+        <FormField label="Industry" error={getError("industry")} required>
           <input
-            className="rounded-xl border border-slate-300 px-4 py-3 font-normal"
+            className={`${BASE_INPUT} ${inputCls("industry")}`}
             value={industry}
-            onChange={(e) => setIndustry(e.target.value)}
+            onChange={(e) => { setIndustry(e.target.value); clearError("industry"); }}
             disabled={isSaving}
-            required
           />
-        </label>
+        </FormField>
       </div>
 
-      <label className="grid gap-2 text-sm font-medium text-slate-700">
-        Website
+      <FormField label="Website" error={getError("website")} hint="Include https:// — e.g. https://example.com">
         <input
-          className="rounded-xl border border-slate-300 px-4 py-3 font-normal"
+          className={`${BASE_INPUT} ${inputCls("website")}`}
           value={website ?? ""}
-          onChange={(e) => setWebsite(e.target.value)}
+          onChange={(e) => { setWebsite(e.target.value); clearError("website"); }}
           disabled={isSaving}
           placeholder="https://example.com"
         />
-      </label>
+      </FormField>
 
-      <label className="grid gap-2 text-sm font-medium text-slate-700">
-        Logo URL
+      <FormField label="Logo URL" error={getError("logo_url")} hint="Must start with https://">
         <input
-          className="rounded-xl border border-slate-300 px-4 py-3 font-normal"
+          className={`${BASE_INPUT} ${inputCls("logo_url")}`}
           value={logoUrl ?? ""}
-          onChange={(e) => setLogoUrl(e.target.value)}
+          onChange={(e) => { setLogoUrl(e.target.value); clearError("logo_url"); }}
           disabled={isSaving}
           placeholder="https://.../logo.png"
         />
-      </label>
+      </FormField>
 
-      <label className="grid gap-2 text-sm font-medium text-slate-700">
-        Description
+      <FormField label="Description" error={getError("business_description")} required hint="Min 20 characters">
         <textarea
           rows={6}
-          className="rounded-xl border border-slate-300 px-4 py-3 font-normal"
+          className={`${BASE_INPUT} ${inputCls("business_description")}`}
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(e) => { setDescription(e.target.value); clearError("business_description"); }}
           disabled={isSaving}
-          required
         />
-      </label>
+      </FormField>
 
       {message ? (
         <p
@@ -154,11 +153,10 @@ export function CompanySettingsForm({ company }: Props) {
       <button
         className="cap-btn-primary inline-flex justify-center rounded-lg px-6 py-2.5 text-sm font-semibold disabled:opacity-60"
         type="submit"
-        disabled={isSaving || Boolean(validationError)}
+        disabled={isSaving}
       >
         {isSaving ? "Saving..." : "Save settings"}
       </button>
     </form>
   );
 }
-

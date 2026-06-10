@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 import {
   ONBOARDING_STEPS,
   type OnboardingStepId,
@@ -10,6 +11,23 @@ import {
 } from "@/lib/onboarding/progress";
 import type { FounderOnboardingProgress } from "@/lib/onboarding/progress";
 import type { Company, DocumentRecord } from "@/lib/supabase/types";
+import { FormField } from "@/components/ui/FormField";
+import { useFormValidation, type ZodFlatErrors } from "@/hooks/useFormValidation";
+
+const companyProfileSchema = z.object({
+  company_name: z.string().min(2),
+  website: z.string().url().optional().or(z.literal("")),
+  industry: z.string().min(2),
+  country: z.string().min(2),
+  business_description: z.string().min(20),
+  founder_goals: z.string().min(10),
+});
+
+const fundingInfoSchema = z.object({
+  revenue_stage: z.string().min(2),
+  funding_amount: z.coerce.number().positive(),
+  use_of_funds: z.string().min(10),
+});
 
 type Props = Readonly<{
   company: Company;
@@ -23,6 +41,8 @@ function stepIndex(stepId: OnboardingStepId) {
 
 export function FounderOnboardingWizard({ company, documents, initialProgress }: Props) {
   const router = useRouter();
+  const { getError, inputCls, validate, setApiErrors, clearError } = useFormValidation();
+
   const [activeStep, setActiveStep] = useState<OnboardingStepId>(initialProgress.currentStep);
   const [progress, setProgress] = useState(initialProgress);
   const [isSaving, setIsSaving] = useState(false);
@@ -46,11 +66,9 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
     if (progress.isComplete) {
       return "Onboarding complete. Your profile is positioned for stronger investor visibility.";
     }
-
     if (progress.percent >= 60) {
       return "You are close to institutional readiness. Complete remaining steps to improve investor visibility.";
     }
-
     return "Complete your profile to unlock stronger investor visibility and improve readiness during your trial.";
   }, [progress.isComplete, progress.percent]);
 
@@ -58,12 +76,37 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
     setIsSaving(true);
     setMessage(null);
 
+    // Client-side validation before the fetch
+    if (step === "company_profile") {
+      const ok = validate(companyProfileSchema, {
+        company_name: companyName.trim(),
+        website: website.trim(),
+        industry: industry.trim(),
+        country: country.trim(),
+        business_description: description.trim(),
+        founder_goals: founderGoals.trim(),
+      });
+      if (!ok) {
+        setIsSaving(false);
+        return;
+      }
+    }
+
+    if (step === "funding_information") {
+      const ok = validate(fundingInfoSchema, {
+        revenue_stage: revenueStage.trim(),
+        funding_amount: fundingAmount,
+        use_of_funds: useOfFunds.trim(),
+      });
+      if (!ok) {
+        setIsSaving(false);
+        return;
+      }
+    }
+
     const nextStep = advance ? getNextOnboardingStep(step) ?? step : step;
 
-    const payload: Record<string, unknown> = {
-      step,
-      advanceToStep: nextStep,
-    };
+    const payload: Record<string, unknown> = { step, advanceToStep: nextStep };
 
     if (step === "company_profile") {
       payload.company_name = companyName.trim();
@@ -89,13 +132,18 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
 
     const body = (await response.json().catch(() => null)) as {
       error?: string;
+      details?: ZodFlatErrors;
       progress?: FounderOnboardingProgress;
     } | null;
 
     setIsSaving(false);
 
     if (!response.ok) {
-      setMessage({ type: "error", text: body?.error ?? "Unable to save this step." });
+      if (body?.details) {
+        setApiErrors(body.details);
+      } else {
+        setMessage({ type: "error", text: body?.error ?? "Unable to save this step." });
+      }
       return;
     }
 
@@ -111,6 +159,8 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
 
     router.refresh();
   }
+
+  const BASE_INPUT = "rounded-xl border px-4 py-3 font-normal w-full";
 
   return (
     <div className="space-y-8">
@@ -135,7 +185,6 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
         {ONBOARDING_STEPS.map((step, index) => {
           const complete = progress.steps[step.id].completed;
           const active = step.id === activeStep;
-
           return (
             <button
               key={step.id}
@@ -164,58 +213,96 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
 
         {activeStep === "company_profile" ? (
           <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <label className="grid gap-2 text-sm font-medium text-slate-700 md:col-span-2">
-              Company name
-              <input className="rounded-xl border border-slate-300 px-4 py-3 font-normal" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required />
-            </label>
-            <label className="grid gap-2 text-sm font-medium text-slate-700">
-              Website
-              <input className="rounded-xl border border-slate-300 px-4 py-3 font-normal" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://example.com" />
-            </label>
-            <label className="grid gap-2 text-sm font-medium text-slate-700">
-              Industry / sector
-              <input className="rounded-xl border border-slate-300 px-4 py-3 font-normal" value={industry} onChange={(e) => setIndustry(e.target.value)} required />
-            </label>
-            <label className="grid gap-2 text-sm font-medium text-slate-700">
-              Headquarters country
-              <input className="rounded-xl border border-slate-300 px-4 py-3 font-normal" value={country} onChange={(e) => setCountry(e.target.value)} required />
-            </label>
-            <label className="grid gap-2 text-sm font-medium text-slate-700">
-              State / region
-              <input className="rounded-xl border border-slate-300 px-4 py-3 font-normal" value={state} onChange={(e) => setState(e.target.value)} />
-            </label>
-            <label className="grid gap-2 text-sm font-medium text-slate-700 md:col-span-2">
-              Company description
-              <textarea className="rounded-xl border border-slate-300 px-4 py-3 font-normal" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} required />
-            </label>
-            <label className="grid gap-2 text-sm font-medium text-slate-700 md:col-span-2">
-              Founder goals & objectives
+            <FormField label="Company name" error={getError("company_name")} required className="md:col-span-2">
+              <input
+                className={`${BASE_INPUT} ${inputCls("company_name")}`}
+                value={companyName}
+                onChange={(e) => { setCompanyName(e.target.value); clearError("company_name"); }}
+              />
+            </FormField>
+
+            <FormField label="Website" error={getError("website")} hint="Include https:// — e.g. https://example.com">
+              <input
+                className={`${BASE_INPUT} ${inputCls("website")}`}
+                value={website}
+                onChange={(e) => { setWebsite(e.target.value); clearError("website"); }}
+                placeholder="https://example.com"
+              />
+            </FormField>
+
+            <FormField label="Industry / sector" error={getError("industry")} required>
+              <input
+                className={`${BASE_INPUT} ${inputCls("industry")}`}
+                value={industry}
+                onChange={(e) => { setIndustry(e.target.value); clearError("industry"); }}
+              />
+            </FormField>
+
+            <FormField label="Headquarters country" error={getError("country")} required>
+              <input
+                className={`${BASE_INPUT} ${inputCls("country")}`}
+                value={country}
+                onChange={(e) => { setCountry(e.target.value); clearError("country"); }}
+              />
+            </FormField>
+
+            <FormField label="State / region" error={getError("state")}>
+              <input
+                className={`${BASE_INPUT} ${inputCls("state")}`}
+                value={state}
+                onChange={(e) => { setState(e.target.value); clearError("state"); }}
+              />
+            </FormField>
+
+            <FormField label="Company description" error={getError("business_description")} required hint="Min 20 characters" className="md:col-span-2">
               <textarea
-                className="rounded-xl border border-slate-300 px-4 py-3 font-normal"
+                className={`${BASE_INPUT} ${inputCls("business_description")}`}
+                rows={4}
+                value={description}
+                onChange={(e) => { setDescription(e.target.value); clearError("business_description"); }}
+              />
+            </FormField>
+
+            <FormField label="Founder goals & objectives" error={getError("founder_goals")} required hint="What are you raising capital for? What milestones will this funding unlock?" className="md:col-span-2">
+              <textarea
+                className={`${BASE_INPUT} ${inputCls("founder_goals")}`}
                 rows={4}
                 value={founderGoals}
-                onChange={(e) => setFounderGoals(e.target.value)}
-                placeholder="What are you raising capital for? What milestones will this funding unlock?"
-                required
+                onChange={(e) => { setFounderGoals(e.target.value); clearError("founder_goals"); }}
               />
-            </label>
+            </FormField>
           </div>
         ) : null}
 
         {activeStep === "funding_information" ? (
           <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <label className="grid gap-2 text-sm font-medium text-slate-700">
-              Funding stage
-              <input className="rounded-xl border border-slate-300 px-4 py-3 font-normal" value={revenueStage} onChange={(e) => setRevenueStage(e.target.value)} placeholder="Seed, Series A..." required />
-            </label>
-            <label className="grid gap-2 text-sm font-medium text-slate-700">
-              Target raise amount (USD)
-              <input className="rounded-xl border border-slate-300 px-4 py-3 font-normal" type="number" min={1} value={fundingAmount} onChange={(e) => setFundingAmount(e.target.value)} required />
-            </label>
-            <label className="grid gap-2 text-sm font-medium text-slate-700 md:col-span-2">
-              Use of funds
-              <textarea className="rounded-xl border border-slate-300 px-4 py-3 font-normal" rows={4} value={useOfFunds} onChange={(e) => setUseOfFunds(e.target.value)} required />
-            </label>
+            <FormField label="Funding stage" error={getError("revenue_stage")} required>
+              <input
+                className={`${BASE_INPUT} ${inputCls("revenue_stage")}`}
+                value={revenueStage}
+                onChange={(e) => { setRevenueStage(e.target.value); clearError("revenue_stage"); }}
+                placeholder="Seed, Series A..."
+              />
+            </FormField>
+
+            <FormField label="Target raise amount (USD)" error={getError("funding_amount")} required>
+              <input
+                className={`${BASE_INPUT} ${inputCls("funding_amount")}`}
+                type="number"
+                min={1}
+                value={fundingAmount}
+                onChange={(e) => { setFundingAmount(e.target.value); clearError("funding_amount"); }}
+              />
+            </FormField>
+
+            <FormField label="Use of funds" error={getError("use_of_funds")} required hint="Min 10 characters" className="md:col-span-2">
+              <textarea
+                className={`${BASE_INPUT} ${inputCls("use_of_funds")}`}
+                rows={4}
+                value={useOfFunds}
+                onChange={(e) => { setUseOfFunds(e.target.value); clearError("use_of_funds"); }}
+              />
+            </FormField>
           </div>
         ) : null}
 
@@ -235,10 +322,15 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
                   </li>
                 ))
               ) : (
-                <li className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-slate-500">No documents uploaded yet.</li>
+                <li className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-slate-500">
+                  No documents uploaded yet.
+                </li>
               )}
             </ul>
-            <Link href="/founder/documents" className="inline-flex rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white">
+            <Link
+              href="/founder/documents"
+              className="inline-flex rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
+            >
               Go to document uploads
             </Link>
           </div>
@@ -252,10 +344,16 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
                 : "Generate or review diligence insights to understand gaps before investor conversations."}
             </p>
             <div className="flex flex-wrap gap-3">
-              <Link href="/founder/readiness" className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white">
+              <Link
+                href="/founder/readiness"
+                className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
+              >
                 Improve your readiness
               </Link>
-              <Link href="/founder/report" className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700">
+              <Link
+                href="/founder/report"
+                className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700"
+              >
                 View diligence report
               </Link>
             </div>
@@ -265,14 +363,15 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
         {activeStep === "investor_readiness_review" ? (
           <div className="mt-6 space-y-4">
             <p className="text-sm text-slate-600">
-              Submit your company for admin review when your profile and documents are ready. This improves marketplace visibility
-              and institutional investor confidence.
+              Submit your company for admin review when your profile and documents are ready. This improves marketplace
+              visibility and institutional investor confidence.
             </p>
             <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
               Review status: <strong>{company.review_status ?? company.status ?? "draft"}</strong>
             </p>
             <p className="text-sm text-slate-600">
-              Complete your profile to unlock stronger investor visibility. CapitalOS preserves your onboarding data even after trial expiration.
+              Complete your profile to unlock stronger investor visibility. CapitalOS preserves your onboarding data
+              even after trial expiration.
             </p>
           </div>
         ) : null}
@@ -297,21 +396,27 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
             Back
           </button>
           <div className="flex flex-wrap gap-3">
-            {activeStep === "company_profile" || activeStep === "funding_information" || activeStep === "investor_readiness_review" ? (
+            {activeStep === "company_profile" ||
+            activeStep === "funding_information" ||
+            activeStep === "investor_readiness_review" ? (
               <button
                 type="button"
                 className="rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
                 disabled={isSaving}
-                onClick={() => saveStep(activeStep, true)}
+                onClick={() => void saveStep(activeStep, true)}
               >
-                {isSaving ? "Saving..." : activeStep === "investor_readiness_review" ? "Submit for review & finish" : "Save & continue"}
+                {isSaving
+                  ? "Saving..."
+                  : activeStep === "investor_readiness_review"
+                    ? "Submit for review & finish"
+                    : "Save & continue"}
               </button>
             ) : (
               <button
                 type="button"
                 className="rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
                 disabled={isSaving}
-                onClick={() => saveStep(activeStep, true)}
+                onClick={() => void saveStep(activeStep, true)}
               >
                 {isSaving ? "Saving..." : "Continue"}
               </button>
@@ -320,7 +425,7 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
               type="button"
               className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 disabled:opacity-60"
               disabled={isSaving}
-              onClick={() => saveStep(activeStep, false)}
+              onClick={() => void saveStep(activeStep, false)}
             >
               Save step
             </button>
@@ -332,7 +437,10 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900">
           <p className="font-semibold">Onboarding complete</p>
           <p className="mt-2">Head to your dashboard to track readiness, documents, and investor engagement.</p>
-          <Link href="/founder/dashboard" className="mt-4 inline-flex rounded-full bg-emerald-800 px-5 py-3 text-sm font-semibold text-white">
+          <Link
+            href="/founder/dashboard"
+            className="mt-4 inline-flex rounded-full bg-emerald-800 px-5 py-3 text-sm font-semibold text-white"
+          >
             Open founder dashboard
           </Link>
         </div>

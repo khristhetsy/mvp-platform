@@ -2,7 +2,21 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { z } from "zod";
 import { CONTACT_PREFERENCES, INVESTOR_TYPES, type InvestorProfileRecord } from "@/lib/investor/types";
+import { FormField } from "@/components/ui/FormField";
+import { useFormValidation, type ZodFlatErrors } from "@/hooks/useFormValidation";
+
+const investorProfileSchema = z.object({
+  investor_type: z.string().min(1),
+  preferred_sectors: z.string().min(2),
+  preferred_geographies: z.string().min(2),
+  preferred_stages: z.string().min(2),
+  investment_thesis: z.string().min(20).max(5000),
+  accredited_status: z.literal(true, {
+    errorMap: () => ({ message: "You must confirm accredited investor status to submit." }),
+  }),
+});
 
 function joinList(values: string[] | null | undefined) {
   return (values ?? []).join(", ");
@@ -16,6 +30,8 @@ export function InvestorOnboardingWizard({
   profileName: string;
 }>) {
   const router = useRouter();
+  const { getError, inputCls, validate, setApiErrors, clearError } = useFormValidation();
+
   const [investorType, setInvestorType] = useState(investorProfile.investor_type ?? "");
   const [firmName, setFirmName] = useState(investorProfile.firm_name ?? "");
   const [checkSizeMin, setCheckSizeMin] = useState(
@@ -36,9 +52,26 @@ export function InvestorOnboardingWizard({
   const isPending = investorProfile.approval_status === "submitted";
   const isApproved = investorProfile.approval_status === "approved";
 
+  const BASE_INPUT = "rounded-xl border px-4 py-2.5 text-sm w-full";
+
   async function save(submit: boolean) {
     setIsSaving(true);
     setMessage(null);
+
+    if (submit) {
+      const ok = validate(investorProfileSchema, {
+        investor_type: investorType,
+        preferred_sectors: preferredSectors,
+        preferred_geographies: preferredGeographies,
+        preferred_stages: preferredStages,
+        investment_thesis: investmentThesis,
+        accredited_status: accreditedStatus,
+      });
+      if (!ok) {
+        setIsSaving(false);
+        return;
+      }
+    }
 
     const response = await fetch("/api/investor/onboarding", {
       method: "PATCH",
@@ -58,11 +91,19 @@ export function InvestorOnboardingWizard({
       }),
     });
 
-    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+      details?: ZodFlatErrors;
+    } | null;
+
     setIsSaving(false);
 
     if (!response.ok) {
-      setMessage({ type: "error", text: body?.error ?? "Unable to save investor onboarding." });
+      if (body?.details) {
+        setApiErrors(body.details);
+      } else {
+        setMessage({ type: "error", text: body?.error ?? "Unable to save investor onboarding." });
+      }
       return;
     }
 
@@ -106,14 +147,11 @@ export function InvestorOnboardingWizard({
       ) : null}
 
       <fieldset disabled={isPending || isApproved} className="grid gap-6 disabled:opacity-70">
-        <div className="grid gap-2">
-          <label htmlFor="investor-type" className="text-sm font-medium text-slate-800">Investor type</label>
+        <FormField label="Investor type" error={getError("investor_type")} required>
           <select
-            id="investor-type"
-            className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
+            className={`${BASE_INPUT} ${inputCls("investor_type")}`}
             value={investorType}
-            onChange={(event) => setInvestorType(event.target.value)}
-            required
+            onChange={(e) => { setInvestorType(e.target.value); clearError("investor_type"); }}
           >
             <option value="">Select type</option>
             {INVESTOR_TYPES.map((option) => (
@@ -122,97 +160,76 @@ export function InvestorOnboardingWizard({
               </option>
             ))}
           </select>
-        </div>
+        </FormField>
 
-        <div className="grid gap-2">
-          <label htmlFor="firm-name" className="text-sm font-medium text-slate-800">Individual / firm name</label>
+        <FormField label="Individual / firm name" error={getError("firm_name")}>
           <input
-            id="firm-name"
-            className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
+            className={`${BASE_INPUT} ${inputCls("firm_name")}`}
             value={firmName}
-            onChange={(event) => setFirmName(event.target.value)}
+            onChange={(e) => { setFirmName(e.target.value); clearError("firm_name"); }}
             placeholder="Fund name or individual investing entity"
           />
-        </div>
+        </FormField>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="grid gap-2">
-            <label htmlFor="check-size-min" className="text-sm font-medium text-slate-800">Check size min (USD)</label>
+          <FormField label="Check size min (USD)" error={getError("check_size_min")}>
             <input
-              id="check-size-min"
               type="number"
               min={0}
-              className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
+              className={`${BASE_INPUT} ${inputCls("check_size_min")}`}
               value={checkSizeMin}
-              onChange={(event) => setCheckSizeMin(event.target.value)}
+              onChange={(e) => { setCheckSizeMin(e.target.value); clearError("check_size_min"); }}
             />
-          </div>
-          <div className="grid gap-2">
-            <label htmlFor="check-size-max" className="text-sm font-medium text-slate-800">Check size max (USD)</label>
+          </FormField>
+          <FormField label="Check size max (USD)" error={getError("check_size_max")}>
             <input
-              id="check-size-max"
               type="number"
               min={0}
-              className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
+              className={`${BASE_INPUT} ${inputCls("check_size_max")}`}
               value={checkSizeMax}
-              onChange={(event) => setCheckSizeMax(event.target.value)}
+              onChange={(e) => { setCheckSizeMax(e.target.value); clearError("check_size_max"); }}
             />
-          </div>
+          </FormField>
         </div>
 
-        <div className="grid gap-2">
-          <label htmlFor="preferred-sectors" className="text-sm font-medium text-slate-800">Preferred sectors (comma-separated)</label>
+        <FormField label="Preferred sectors" error={getError("preferred_sectors")} required hint="Comma-separated — e.g. FinTech, SaaS, HealthTech">
           <input
-            id="preferred-sectors"
-            className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
+            className={`${BASE_INPUT} ${inputCls("preferred_sectors")}`}
             value={preferredSectors}
-            onChange={(event) => setPreferredSectors(event.target.value)}
-            required
+            onChange={(e) => { setPreferredSectors(e.target.value); clearError("preferred_sectors"); }}
           />
-        </div>
+        </FormField>
 
-        <div className="grid gap-2">
-          <label htmlFor="preferred-geographies" className="text-sm font-medium text-slate-800">Preferred geographies (comma-separated)</label>
+        <FormField label="Preferred geographies" error={getError("preferred_geographies")} required hint="Comma-separated — e.g. US, Europe, LATAM">
           <input
-            id="preferred-geographies"
-            className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
+            className={`${BASE_INPUT} ${inputCls("preferred_geographies")}`}
             value={preferredGeographies}
-            onChange={(event) => setPreferredGeographies(event.target.value)}
-            required
+            onChange={(e) => { setPreferredGeographies(e.target.value); clearError("preferred_geographies"); }}
           />
-        </div>
+        </FormField>
 
-        <div className="grid gap-2">
-          <label htmlFor="preferred-stages" className="text-sm font-medium text-slate-800">Investment stage preference (comma-separated)</label>
+        <FormField label="Investment stage preference" error={getError("preferred_stages")} required hint="Comma-separated — e.g. Pre-seed, Seed, Series A">
           <input
-            id="preferred-stages"
-            className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
+            className={`${BASE_INPUT} ${inputCls("preferred_stages")}`}
             value={preferredStages}
-            onChange={(event) => setPreferredStages(event.target.value)}
+            onChange={(e) => { setPreferredStages(e.target.value); clearError("preferred_stages"); }}
             placeholder="Pre-seed, Seed, Series A"
-            required
           />
-        </div>
+        </FormField>
 
-        <div className="grid gap-2">
-          <label htmlFor="investment-thesis" className="text-sm font-medium text-slate-800">Investment thesis</label>
+        <FormField label="Investment thesis" error={getError("investment_thesis")} required hint="Min 20 characters, max 5000">
           <textarea
-            id="investment-thesis"
-            className="min-h-28 rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
+            className={`min-h-28 ${BASE_INPUT} ${inputCls("investment_thesis")}`}
             value={investmentThesis}
-            onChange={(event) => setInvestmentThesis(event.target.value)}
-            required
+            onChange={(e) => { setInvestmentThesis(e.target.value); clearError("investment_thesis"); }}
           />
-        </div>
+        </FormField>
 
-        <div className="grid gap-2">
-          <label htmlFor="contact-preference" className="text-sm font-medium text-slate-800">Contact preference</label>
+        <FormField label="Contact preference" error={getError("contact_preference")} required>
           <select
-            id="contact-preference"
-            className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
+            className={`${BASE_INPUT} ${inputCls("contact_preference")}`}
             value={contactPreference}
-            onChange={(event) => setContactPreference(event.target.value)}
-            required
+            onChange={(e) => { setContactPreference(e.target.value); clearError("contact_preference"); }}
           >
             {CONTACT_PREFERENCES.map((option) => (
               <option key={option.value} value={option.value}>
@@ -220,21 +237,27 @@ export function InvestorOnboardingWizard({
               </option>
             ))}
           </select>
-        </div>
+        </FormField>
 
-        <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-          <input
-            type="checkbox"
-            className="mt-1"
-            checked={accreditedStatus}
-            onChange={(event) => setAccreditedStatus(event.target.checked)}
-            required
-          />
-          <span>
-            I self-attest that I am an accredited investor (or equivalent qualified investor in my jurisdiction) and
-            understand this is not a third-party verification.
-          </span>
-        </label>
+        <div className="grid gap-1.5">
+          <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={accreditedStatus}
+              onChange={(e) => { setAccreditedStatus(e.target.checked); clearError("accredited_status"); }}
+            />
+            <span>
+              I self-attest that I am an accredited investor (or equivalent qualified investor in my jurisdiction) and
+              understand this is not a third-party verification.
+            </span>
+          </label>
+          {getError("accredited_status") ? (
+            <p className="flex items-center gap-1.5 text-xs text-red-600" role="alert">
+              {getError("accredited_status")}
+            </p>
+          ) : null}
+        </div>
       </fieldset>
 
       <div className="flex flex-wrap gap-3">

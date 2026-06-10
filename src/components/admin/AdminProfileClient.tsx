@@ -1,7 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { z } from "zod";
 import { adminWorkspaceNavSections } from "@/lib/workspace-nav";
+import { FormField } from "@/components/ui/FormField";
+import { useFormValidation } from "@/hooks/useFormValidation";
+
+const changePasswordSchema = z
+  .object({
+    newPwd: z.string().min(8),
+    confirmPwd: z.string().min(1),
+  })
+  .refine((data) => data.newPwd === data.confirmPwd, {
+    message: "Passwords do not match.",
+    path: ["confirmPwd"],
+  });
 
 const MODULE_ICONS: Record<string, { bg: string; color: string; icon: string }> = {
   Dashboard: { bg: "#dbeafe", color: "#1d4ed8", icon: "ti-layout-dashboard" },
@@ -51,6 +64,8 @@ type Props = {
 };
 
 export function AdminProfileClient({ initialName, email, role, isSuperAdmin, createdAt }: Readonly<Props>) {
+  const { getError, inputCls, validate, clearError } = useFormValidation();
+
   const [name, setName] = useState(initialName ?? "");
   const [editingName, setEditingName] = useState(false);
   const [nameSaving, setNameSaving] = useState(false);
@@ -63,6 +78,8 @@ export function AdminProfileClient({ initialName, email, role, isSuperAdmin, cre
   const [pwdSaving, setPwdSaving] = useState(false);
   const [pwdError, setPwdError] = useState<string | null>(null);
   const [pwdSuccess, setPwdSuccess] = useState(false);
+
+  const PWD_INPUT = "w-full rounded-md border px-3 py-2 text-sm outline-none";
 
   const [resetSending, setResetSending] = useState(false);
   const [resetSent, setResetSent] = useState(false);
@@ -95,14 +112,7 @@ export function AdminProfileClient({ initialName, email, role, isSuperAdmin, cre
   async function changePassword() {
     setPwdError(null);
     setPwdSuccess(false);
-    if (newPwd !== confirmPwd) {
-      setPwdError("Passwords do not match.");
-      return;
-    }
-    if (newPwd.length < 8) {
-      setPwdError("Password must be at least 8 characters.");
-      return;
-    }
+    if (!validate(changePasswordSchema, { newPwd, confirmPwd })) return;
     setPwdSaving(true);
     const res = await fetch("/api/admin/profile", {
       method: "POST",
@@ -275,36 +285,33 @@ export function AdminProfileClient({ initialName, email, role, isSuperAdmin, cre
               <div>
                 <h3 className="mb-3 text-xs font-medium text-slate-700">Change password</h3>
                 <div className="space-y-3">
-                  <div>
-                    <label className="mb-1 block text-[10px] text-slate-500">Current password</label>
+                  <FormField label="Current password" hint="Required by Supabase to verify identity">
                     <input
                       type="password"
                       value={currentPwd}
                       onChange={(e) => setCurrentPwd(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[var(--blue)] focus:ring-1 focus:ring-[var(--blue)]"
+                      className={`${PWD_INPUT} ${inputCls("currentPwd")}`}
                     />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] text-slate-500">New password</label>
+                  </FormField>
+                  <FormField label="New password" error={getError("newPwd")} hint="Min 8 characters">
                     <input
                       type="password"
                       value={newPwd}
-                      onChange={(e) => setNewPwd(e.target.value)}
+                      onChange={(e) => { setNewPwd(e.target.value); clearError("newPwd"); }}
                       placeholder="Min. 8 characters"
-                      className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[var(--blue)] focus:ring-1 focus:ring-[var(--blue)]"
+                      className={`${PWD_INPUT} ${inputCls("newPwd")}`}
                     />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] text-slate-500">Confirm new password</label>
+                  </FormField>
+                  <FormField label="Confirm new password" error={getError("confirmPwd")}>
                     <input
                       type="password"
                       value={confirmPwd}
-                      onChange={(e) => setConfirmPwd(e.target.value)}
+                      onChange={(e) => { setConfirmPwd(e.target.value); clearError("confirmPwd"); }}
                       placeholder="Repeat new password"
-                      className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[var(--blue)] focus:ring-1 focus:ring-[var(--blue)]"
+                      className={`${PWD_INPUT} ${inputCls("confirmPwd")}`}
                     />
-                  </div>
+                  </FormField>
                   <button
                     type="button"
                     disabled={pwdSaving || !newPwd || !confirmPwd}
@@ -313,8 +320,8 @@ export function AdminProfileClient({ initialName, email, role, isSuperAdmin, cre
                   >
                     {pwdSaving ? "Updating…" : "Update password"}
                   </button>
-                  {pwdError && <p className="text-xs text-red-600">{pwdError}</p>}
-                  {pwdSuccess && <p className="text-xs text-emerald-600">Password updated successfully.</p>}
+                  {pwdError ? <p className="text-xs text-red-600">{pwdError}</p> : null}
+                  {pwdSuccess ? <p className="text-xs text-emerald-600">Password updated successfully.</p> : null}
                 </div>
               </div>
 
