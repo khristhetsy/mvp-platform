@@ -78,7 +78,8 @@ export async function PATCH(request: Request, { params }: Readonly<{ params: Pro
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
   const admin = createServiceRoleClient();
-  const { data: existing } = await admin.from("deal_rooms").select("status, title").eq("id", roomId).maybeSingle();
+  const { data: existing, error: existingError } = await admin.from("deal_rooms").select("status, title").eq("id", roomId).maybeSingle();
+  if (existingError) return NextResponse.json({ error: existingError.message }, { status: 500 });
   const { data, error } = await admin
     .from("deal_rooms")
     .update({ ...parsed.data, updated_at: new Date().toISOString() })

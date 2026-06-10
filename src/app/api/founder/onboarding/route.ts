@@ -66,8 +66,10 @@ export async function GET() {
     return NextResponse.json({ error: "Company not found." }, { status: 404 });
   }
 
-  const { data: documents } = await listCompanyDocuments(auth.supabase, company.id);
-  const { data: diligenceReport } = await getLatestDiligenceReport(auth.supabase, company.id);
+  const [{ data: documents }, { data: diligenceReport }] = await Promise.all([
+    listCompanyDocuments(auth.supabase, company.id),
+    getLatestDiligenceReport(auth.supabase, company.id),
+  ]);
   const sync = buildCompanyOnboardingSyncUpdate({
     company: company as typeof company & { onboarding_step_state?: unknown },
     documents: documents ?? [],
@@ -129,8 +131,10 @@ export async function PATCH(request: Request) {
     updatedCompany = data;
   }
 
-  const { data: documents } = await listCompanyDocuments(auth.supabase, company.id);
-  const { data: diligenceReport } = await getLatestDiligenceReport(auth.supabase, company.id);
+  const [{ data: documents }, { data: diligenceReport }] = await Promise.all([
+    listCompanyDocuments(auth.supabase, company.id),
+    getLatestDiligenceReport(auth.supabase, company.id),
+  ]);
 
   const sync = buildCompanyOnboardingSyncUpdate({
     company: updatedCompany as typeof updatedCompany & { onboarding_step_state?: unknown },

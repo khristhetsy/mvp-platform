@@ -173,17 +173,17 @@ export async function generateAdminExport(
 ) {
   if (exportType === "companies") {
     const rows = await exportCompanies(supabase);
-    return buildExportPayload(exportType, format, rows);
+    return await buildExportPayload(exportType, format, rows);
   }
 
   if (exportType === "investors") {
     const rows = await exportInvestors(supabase);
-    return buildExportPayload(exportType, format, rows);
+    return await buildExportPayload(exportType, format, rows);
   }
 
   if (exportType === "founder_contacts") {
     const rows = await exportFounderContacts(supabase);
-    return buildExportPayload(exportType, format, rows);
+    return await buildExportPayload(exportType, format, rows);
   }
 
   const reportType = EXPORT_REPORT_MAP[exportType];
@@ -193,10 +193,10 @@ export async function generateAdminExport(
 
   const payload = await generateAdminReport(supabase, { reportType, preview: false });
   const rows = sanitizeRows(flattenReportForCsv(payload));
-  return buildExportPayload(exportType, format, rows, payload);
+  return await buildExportPayload(exportType, format, rows, payload);
 }
 
-function buildExportPayload(
+async function buildExportPayload(
   exportType: ExportType,
   format: ExportFormat,
   rows: Record<string, unknown>[],
@@ -221,7 +221,7 @@ function buildExportPayload(
     };
   }
 
-  const buffer = rowsToWorkbookBuffer(rows, exportType);
+  const buffer = await rowsToWorkbookBuffer(rows, exportType);
   return {
     contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     filename: `${baseName}.xlsx`,

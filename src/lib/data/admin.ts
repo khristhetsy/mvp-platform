@@ -84,15 +84,17 @@ export async function getAdminDashboardMetrics(supabase: SupabaseClient<Database
     .eq("marketplace_visible", true)
     .not("published_at", "is", null);
 
-  const pendingCount =
+  const [pendingFallback, publishedFallback] = await Promise.all([
     pendingReviews.error?.code === "42703"
-      ? (await supabase.from("companies").select("id", { count: "exact", head: true }).eq("status", "in_review")).count ?? 0
-      : pendingReviews.count ?? 0;
-
-  const publishedCount =
+      ? supabase.from("companies").select("id", { count: "exact", head: true }).eq("status", "in_review")
+      : Promise.resolve(null),
     published.error?.code === "42703"
-      ? (await supabase.from("companies").select("id", { count: "exact", head: true }).eq("status", "published")).count ?? 0
-      : published.count ?? 0;
+      ? supabase.from("companies").select("id", { count: "exact", head: true }).eq("status", "published")
+      : Promise.resolve(null),
+  ]);
+
+  const pendingCount = pendingFallback?.count ?? pendingReviews.count ?? 0;
+  const publishedCount = publishedFallback?.count ?? published.count ?? 0;
 
   return {
     founders: founders.count ?? 0,
@@ -153,20 +155,22 @@ export async function listAdminCompanies(supabase: SupabaseClient<Database>): Pr
   const rows = (result.data as CompanyWithRelations[] | null) ?? [];
   const service = createServiceRoleClient();
 
-  return Promise.all(
-    rows.map(async (row) => {
-      const pitchDeck = row.documents?.find(
-        (doc) => doc.document_type?.toUpperCase() === "PITCH_DECK",
-      );
-      let pitchDeckUrl: string | null = null;
+  const pitchDecks = rows.map((row) =>
+    row.documents?.find((doc) => doc.document_type?.toUpperCase() === "PITCH_DECK") ?? null,
+  );
 
-      if (pitchDeck?.file_path) {
-        const bucket = getStorageBucket(pitchDeck.document_type ?? "PITCH_DECK");
-        const signed = await createSignedDocumentUrl(service, bucket, pitchDeck.file_path, 3600);
-        pitchDeckUrl = signed.data?.signedUrl ?? null;
-      }
+  const signedUrls = await Promise.all(
+    pitchDecks.map(async (pitchDeck) => {
+      if (!pitchDeck?.file_path) return null;
+      const bucket = getStorageBucket(pitchDeck.document_type ?? "PITCH_DECK");
+      const signed = await createSignedDocumentUrl(service, bucket, pitchDeck.file_path, 3600);
+      return signed.data?.signedUrl ?? null;
+    }),
+  );
 
-      return {
+  return rows.map((row, i) => {
+    const pitchDeckUrl = signedUrls[i] ?? null;
+    return {
         id: row.id,
         company_name: row.company_name,
         industry: row.industry,
@@ -190,8 +194,7 @@ export async function listAdminCompanies(supabase: SupabaseClient<Database>): Pr
         ),
         pitchDeckUrl,
       };
-    }),
-  );
+  });
 }
 
 export type AdminCompanyCardPayload = {

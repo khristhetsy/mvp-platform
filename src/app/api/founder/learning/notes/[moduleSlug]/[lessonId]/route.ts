@@ -15,7 +15,7 @@ export async function GET(
 
   const { moduleSlug, lessonId } = await params;
   const admin = createServiceRoleClient();
-  const { data } = await admin
+  const { data, error } = await admin
     .from("founder_lesson_notes")
     .select("content")
     .eq("founder_id", auth.profile.id)
@@ -23,6 +23,8 @@ export async function GET(
     .eq("module_slug", moduleSlug)
     .eq("lesson_id", lessonId)
     .maybeSingle();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ content: data?.content ?? "" });
 }
