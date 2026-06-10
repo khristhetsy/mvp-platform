@@ -98,6 +98,7 @@ export default async function AdminLearningCourseDetailPage({ params }: PageProp
         workspace="admin"
         profileName={profile.full_name ?? profile.email ?? "Admin"}
         profileSubtitle={profile.role}
+          profileEmail={profile.email ?? undefined}
       >
         <WorkspacePageContainer>
           <PageHeader eyebrow="Admin Learning" title="Course not found" description="Invalid course id." />
@@ -112,6 +113,7 @@ export default async function AdminLearningCourseDetailPage({ params }: PageProp
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={profile.role}
+          profileEmail={profile.email ?? undefined}
     >
       <WorkspacePageContainer>
         <PageHeader

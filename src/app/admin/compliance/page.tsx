@@ -17,6 +17,7 @@ export default async function AdminCompliancePage() {
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={profile.role}
+          profileEmail={profile.email ?? undefined}
     >
       <PageHeader
         eyebrow="Risk & compliance"

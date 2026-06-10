@@ -24,6 +24,7 @@ export function AppShell({
   workspace,
   profileName = "CapitalOS User",
   profileSubtitle,
+  profileEmail,
   planBadge,
 }: Readonly<{
   children: React.ReactNode;
@@ -31,6 +32,7 @@ export function AppShell({
   workspace?: WorkspaceId;
   profileName?: string;
   profileSubtitle?: string;
+  profileEmail?: string;
   planBadge?: React.ReactNode;
 }>) {
   const insideAppShell = useContext(AppShellContext);
@@ -50,6 +52,7 @@ export function AppShell({
           workspace={activeWorkspace}
           profileName={profileName}
           profileSubtitle={profileSubtitle}
+          profileEmail={profileEmail}
           planBadge={planBadge}
         >
           {children}

@@ -42,6 +42,7 @@ export default async function AdminQueuesPage({ searchParams }: PageProps) {
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={profile.role}
+          profileEmail={profile.email ?? undefined}
     >
       <WorkspacePageContainer>
         <PageHeader

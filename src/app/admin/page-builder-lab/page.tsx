@@ -18,6 +18,7 @@ export default async function PageBuilderLabPage() {
         workspace="admin"
         profileName={profile.full_name ?? profile.email ?? "Admin"}
         profileSubtitle={profile.role}
+          profileEmail={profile.email ?? undefined}
       >
         <WorkspacePageContainer>
           <PageHeader
@@ -37,6 +38,7 @@ export default async function PageBuilderLabPage() {
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={profile.role}
+          profileEmail={profile.email ?? undefined}
     >
       <PageBuilderLab />
       <p className="mt-6 text-xs text-slate-500">

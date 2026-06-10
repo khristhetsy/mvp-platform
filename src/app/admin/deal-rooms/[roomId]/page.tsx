@@ -36,7 +36,8 @@ export default async function AdminDealRoomDetailPage({ params }: PageProps) {
   const room = roomRes.data;
   if (!room) {
     return (
-      <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role}>
+      <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role}
+          profileEmail={profile.email ?? undefined}>
         <WorkspacePageContainer>
           <PageHeader eyebrow="Deal rooms" title="Deal room not found" description="Invalid room id." />
         </WorkspacePageContainer>
@@ -45,7 +46,8 @@ export default async function AdminDealRoomDetailPage({ params }: PageProps) {
   }
 
   return (
-    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role}>
+    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role}
+          profileEmail={profile.email ?? undefined}>
       <WorkspacePageContainer>
         <PageHeader
           eyebrow="Deal room"

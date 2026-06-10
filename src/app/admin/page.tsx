@@ -112,7 +112,8 @@ export default async function AdminDashboardPage() {
   );
 
   return (
-    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role}>
+    <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role}
+          profileEmail={profile.email ?? undefined}>
       <div className="mb-6 px-1">
         <NextBestActionsPanel
           role={adminRole}

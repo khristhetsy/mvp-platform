@@ -2,7 +2,24 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import {
+  Activity,
+  Bell,
+  Briefcase,
+  Building2,
+  ChevronDown,
+  CreditCard,
+  HelpCircle,
+  LogOut,
+  PieChart,
+  Settings,
+  Shield,
+  SwitchCamera,
+  Terminal,
+  User,
+} from "lucide-react";
 import { NotificationBellDropdown } from "@/components/NotificationBellDropdown";
 import { CAPITALOS_LOGO_SRC } from "@/lib/ui/brand-logos";
 import { WorkspaceBreadcrumbs } from "@/components/ui/WorkspaceBreadcrumbs";
@@ -13,17 +30,177 @@ type Props = {
   workspace: WorkspaceId;
   profileName: string;
   profileSubtitle?: string;
+  profileEmail?: string;
   onMenuClick?: () => void;
 };
 
-export function WorkspaceHeader({ workspace, profileName, profileSubtitle, onMenuClick }: Readonly<Props>) {
+type MenuItem =
+  | { kind: "link"; label: string; href: string; icon: React.ReactNode }
+  | { kind: "divider" }
+  | { kind: "signout" };
+
+function menuItemsForWorkspace(workspace: WorkspaceId): MenuItem[] {
+  if (workspace === "founder") {
+    return [
+      { kind: "link", label: "Profile", href: "/founder/settings", icon: <User className="h-4 w-4" /> },
+      { kind: "link", label: "Settings", href: "/founder/settings", icon: <Settings className="h-4 w-4" /> },
+      { kind: "link", label: "Company settings", href: "/founder/settings", icon: <Building2 className="h-4 w-4" /> },
+      { kind: "link", label: "Billing & plan", href: "/billing", icon: <CreditCard className="h-4 w-4" /> },
+      { kind: "link", label: "Switch company", href: "/founder/settings", icon: <SwitchCamera className="h-4 w-4" /> },
+      { kind: "divider" },
+      { kind: "link", label: "Help & support", href: "https://docs.capitalos.com", icon: <HelpCircle className="h-4 w-4" /> },
+      { kind: "divider" },
+      { kind: "signout" },
+    ];
+  }
+
+  if (workspace === "admin") {
+    return [
+      { kind: "link", label: "Profile", href: "/admin/analytics", icon: <User className="h-4 w-4" /> },
+      { kind: "link", label: "Settings", href: "/admin/analytics", icon: <Settings className="h-4 w-4" /> },
+      { kind: "link", label: "Platform settings", href: "/admin/integrations", icon: <Shield className="h-4 w-4" /> },
+      { kind: "link", label: "System health", href: "/admin/system-health", icon: <Activity className="h-4 w-4" /> },
+      { kind: "link", label: "Audit log", href: "/admin/audit", icon: <Terminal className="h-4 w-4" /> },
+      { kind: "divider" },
+      { kind: "link", label: "Help & support", href: "https://docs.capitalos.com", icon: <HelpCircle className="h-4 w-4" /> },
+      { kind: "divider" },
+      { kind: "signout" },
+    ];
+  }
+
+  return [
+    { kind: "link", label: "Profile", href: "/investor/settings", icon: <User className="h-4 w-4" /> },
+    { kind: "link", label: "Settings", href: "/investor/settings", icon: <Settings className="h-4 w-4" /> },
+    { kind: "link", label: "Investor profile", href: "/investor/settings", icon: <Briefcase className="h-4 w-4" /> },
+    { kind: "link", label: "Portfolio", href: "/investor/portfolio", icon: <PieChart className="h-4 w-4" /> },
+    { kind: "link", label: "Notification preferences", href: "/investor/settings", icon: <Bell className="h-4 w-4" /> },
+    { kind: "divider" },
+    { kind: "link", label: "Help & support", href: "https://docs.capitalos.com", icon: <HelpCircle className="h-4 w-4" /> },
+    { kind: "divider" },
+    { kind: "signout" },
+  ];
+}
+
+function ProfileDropdown({
+  profileName,
+  profileEmail,
+  profileSubtitle,
+  workspace,
+}: Readonly<{
+  profileName: string;
+  profileEmail?: string;
+  profileSubtitle?: string;
+  workspace: WorkspaceId;
+}>) {
+  const [open, setOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
   const initials = profileName
     .split(" ")
-    .map((part) => part[0])
+    .map((p) => p[0])
     .join("")
     .slice(0, 2)
     .toUpperCase();
 
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try {
+      await fetch("/auth/logout", { method: "POST" });
+      router.push("/");
+    } catch {
+      setSigningOut(false);
+    }
+  }
+
+  const items = menuItemsForWorkspace(workspace);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        aria-label="Open user menu"
+        aria-expanded={open}
+        aria-haspopup="true"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1.5 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+      >
+        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--blue)] text-[10px] font-semibold text-white shrink-0">
+          {initials || "CO"}
+        </div>
+        <div className="hidden text-left sm:block">
+          <p className="text-sm font-medium leading-tight text-slate-950">{profileName}</p>
+          {profileSubtitle ? <p className="text-[11px] text-slate-500">{profileSubtitle}</p> : null}
+        </div>
+        <ChevronDown className={`hidden sm:block h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} strokeWidth={2} aria-hidden />
+      </button>
+
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-50 mt-1.5 w-56 rounded-xl border border-slate-200 bg-white shadow-lg"
+        >
+          <div className="border-b border-slate-100 px-3.5 py-2.5">
+            <p className="text-sm font-medium text-slate-950">{profileName}</p>
+            {profileEmail ? (
+              <p className="text-[11px] text-slate-500 mt-0.5 truncate">{profileEmail}</p>
+            ) : profileSubtitle ? (
+              <p className="text-[11px] text-slate-500 mt-0.5">{profileSubtitle}</p>
+            ) : null}
+          </div>
+
+          <div className="py-1">
+            {items.map((item, i) => {
+              if (item.kind === "divider") {
+                return <div key={i} className="my-1 border-t border-slate-100" />;
+              }
+              if (item.kind === "signout") {
+                return (
+                  <button
+                    key="signout"
+                    type="button"
+                    role="menuitem"
+                    disabled={signingOut}
+                    onClick={() => void handleSignOut()}
+                    className="flex w-full items-center gap-2.5 px-3.5 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60 transition-colors"
+                  >
+                    <LogOut className="h-4 w-4 shrink-0" aria-hidden />
+                    {signingOut ? "Signing out…" : "Sign out"}
+                  </button>
+                );
+              }
+              return (
+                <Link
+                  key={item.href + item.label}
+                  href={item.href}
+                  role="menuitem"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2.5 px-3.5 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-950 transition-colors"
+                >
+                  <span className="shrink-0 text-slate-400">{item.icon}</span>
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profileEmail, onMenuClick }: Readonly<Props>) {
   const companyLabel = profileSubtitle?.trim() || "Select company";
 
   return (
@@ -65,15 +242,12 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, onMen
             <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={1.75} aria-hidden />
           </button>
           <NotificationBellDropdown />
-          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--blue)] text-[10px] font-semibold text-white">
-              {initials || "CO"}
-            </div>
-            <div className="hidden text-left sm:block">
-              <p className="text-sm font-medium leading-tight text-slate-950">{profileName}</p>
-              {profileSubtitle ? <p className="text-[11px] text-slate-500">{profileSubtitle}</p> : null}
-            </div>
-          </div>
+          <ProfileDropdown
+            profileName={profileName}
+            profileEmail={profileEmail}
+            profileSubtitle={profileSubtitle}
+            workspace={workspace}
+          />
         </div>
       </div>
     </header>

@@ -64,6 +64,7 @@ export default async function AdminCompaniesPage() {
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={profile.role}
+          profileEmail={profile.email ?? undefined}
     >
       <AdminActionHealthProvider
         userId={profile.id}

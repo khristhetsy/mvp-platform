@@ -52,6 +52,7 @@ export default async function AdminLearningApprovalsPage() {
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={profile.role}
+          profileEmail={profile.email ?? undefined}
     >
       <WorkspacePageContainer>
         <PageHeader

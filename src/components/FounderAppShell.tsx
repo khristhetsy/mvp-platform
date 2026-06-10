@@ -28,6 +28,7 @@ export async function FounderAppShell({ children, profileName, profileSubtitle }
       workspace="founder"
       profileName={profileName ?? profile?.full_name ?? profile?.email ?? "Founder"}
       profileSubtitle={profileSubtitle}
+      profileEmail={profile?.email ?? undefined}
       planBadge={planBadge}
     >
       {children}

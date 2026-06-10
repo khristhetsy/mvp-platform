@@ -10,12 +10,14 @@ export function WorkspaceShell({
   workspace,
   profileName,
   profileSubtitle,
+  profileEmail,
   planBadge,
   children,
 }: Readonly<{
   workspace: WorkspaceId;
   profileName: string;
   profileSubtitle?: string;
+  profileEmail?: string;
   planBadge?: ReactNode;
   children: ReactNode;
 }>) {
@@ -34,6 +36,7 @@ export function WorkspaceShell({
           workspace={workspace}
           profileName={profileName}
           profileSubtitle={profileSubtitle}
+          profileEmail={profileEmail}
           onMenuClick={() => setMobileNavOpen(true)}
         />
         <main className="mx-auto w-full max-w-[1600px] flex-1 overflow-x-hidden overflow-y-auto bg-[var(--background)] px-4 py-5 lg:px-6 lg:py-6">

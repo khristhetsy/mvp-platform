@@ -22,6 +22,7 @@ export default async function AdminLearningDashboardPage() {
         workspace="admin"
         profileName={profile.full_name ?? profile.email ?? "Admin"}
         profileSubtitle={profile.role}
+          profileEmail={profile.email ?? undefined}
       >
         <WorkspacePageContainer>
           <PageHeader
@@ -76,6 +77,7 @@ export default async function AdminLearningDashboardPage() {
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={profile.role}
+          profileEmail={profile.email ?? undefined}
     >
       <WorkspacePageContainer>
         <PageHeader
