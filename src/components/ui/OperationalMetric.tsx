@@ -42,8 +42,7 @@ export function OperationalMetric({
         urgency ? "ring-1 ring-amber-200" : ""
       }`}
     >
-      <div className={`flex h-full flex-col rounded-xl border-l-[3px] ${border}`}>
-        <div className="flex flex-1 flex-col p-5">
+      <div className="flex flex-1 flex-col p-5">
           <div className="flex items-start justify-between gap-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-500">{label}</p>
             {statusLabel ? <StatusBadge label={statusLabel} status={status} dot /> : null}
@@ -68,7 +67,6 @@ export function OperationalMetric({
             ) : null}
           </div>
         </div>
-      </div>
     </div>
   );
 

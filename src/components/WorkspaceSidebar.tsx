@@ -95,7 +95,7 @@ export function WorkspaceSidebar({
         aria-current={active ? "page" : undefined}
         className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
           active
-            ? "bg-[var(--blue-muted)] text-[var(--blue-hover)] border-r-2 border-[var(--blue)]"
+            ? "bg-[var(--blue-muted)] text-[var(--blue-hover)]"
             : "text-slate-600 hover:bg-slate-100 hover:text-[var(--navy)]"
         }`}
       >
