@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import Script from "next/script";
 import { AuthHandler } from "@/components/AuthHandler";
 import { PostHogProvider } from "@/components/PostHogProvider";
+import { GoogleAnalyticsScript } from "@/components/GoogleAnalytics";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,8 +22,6 @@ export const metadata: Metadata = {
   description: "CapitalOS — AI due diligence and campaign review portal for founders, admins, analysts, and approved investors.",
 };
 
-const GA_ID = "G-ZCRJ60MTCS";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -35,18 +33,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        <Script
-          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', '${GA_ID}');
-          `}
-        </Script>
+        <GoogleAnalyticsScript />
         <PostHogProvider>
           <AuthHandler />
           {children}
