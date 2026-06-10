@@ -43,6 +43,7 @@ export function FounderAIVideoLesson({
   companyId,
   initialAsset,
   initialPlaybackUrl,
+  viewOnly = false,
 }: Readonly<{
   courseSlug: string;
   lessonSlug: string;
@@ -51,6 +52,7 @@ export function FounderAIVideoLesson({
   companyId: string;
   initialAsset: FounderLessonVideoAssetRecord | null;
   initialPlaybackUrl: string | null;
+  viewOnly?: boolean;
 }>) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [asset, setAsset] = useState<FounderLessonVideoAssetRecord | null>(initialAsset);
@@ -198,6 +200,57 @@ export function FounderAIVideoLesson({
 
   const busy = loading || uploading;
 
+  // ── Founder / view-only mode ──────────────────────────────────────────────
+  if (viewOnly) {
+    return (
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[var(--shadow-panel)]">
+        <div className="relative aspect-video bg-slate-950">
+          {canPlayVideo && playbackUrl ? (
+            <video
+              key={playbackUrl}
+              className="h-full w-full bg-black"
+              controls
+              src={playbackUrl}
+              title={lessonTitle}
+            >
+              <track kind="captions" />
+            </video>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+              {/* Play icon placeholder */}
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-8 w-8 translate-x-0.5 text-white/80">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </div>
+              <p className="mt-4 text-sm font-medium text-white/90">
+                {lessonTitle}
+              </p>
+              <p className="mt-1 text-xs text-white/50">
+                {durationMinutes} min · Video coming soon
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="border-b border-slate-100 px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Video Lesson</p>
+              <p className="mt-0.5 text-[11px] leading-5 text-slate-500">{VIDEO_LESSON_DISCLAIMER}</p>
+            </div>
+            {canPlayVideo ? (
+              <StatusBadge label="Video ready" status="success" dot />
+            ) : (
+              <StatusBadge label="Coming soon" status="neutral" dot />
+            )}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // ── Admin / full management mode ───────────────────────────────────────────
   return (
     <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[var(--shadow-panel)]">
       <input

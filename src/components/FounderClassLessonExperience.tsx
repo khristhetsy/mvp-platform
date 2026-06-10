@@ -120,11 +120,11 @@ export function FounderClassLessonExperience({
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-6">
       <div className="min-w-0 space-y-6">
         <nav className="text-xs text-slate-500">
-          <Link href="/founder/learning" className="text-indigo-600 hover:text-indigo-500">
+          <Link href="/founder/learning" className="text-[var(--blue)] hover:text-[var(--blue-hover)]">
             Courses
           </Link>
           <span className="mx-2">/</span>
-          <Link href={courseHref(course.slug)} className="text-indigo-600 hover:text-indigo-500">
+          <Link href={courseHref(course.slug)} className="text-[var(--blue)] hover:text-[var(--blue-hover)]">
             {course.title}
           </Link>
         </nav>
@@ -137,6 +137,7 @@ export function FounderClassLessonExperience({
           companyId={companyId}
           initialAsset={initialVideoAsset}
           initialPlaybackUrl={initialVideoPlaybackUrl}
+          viewOnly
         />
 
         <header>
@@ -191,7 +192,7 @@ export function FounderClassLessonExperience({
                 type="button"
                 disabled={saving}
                 onClick={() => void submitQuiz()}
-                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+                className="rounded-md bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-[#1d4ed8] disabled:opacity-60"
               >
                 Submit quiz
               </button>
@@ -219,17 +220,17 @@ export function FounderClassLessonExperience({
             type="button"
             disabled={saving || completed || !canComplete}
             onClick={() => void markComplete()}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-60"
+            className="rounded-md bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-[#1d4ed8] disabled:opacity-60"
           >
             {completed ? "Lesson complete" : "Mark lesson complete"}
           </button>
           {prevHref ? (
-            <Link href={prevHref} className="text-sm font-medium text-slate-600 hover:text-slate-900">
+            <Link href={prevHref} className="text-sm font-medium text-slate-600 hover:text-slate-800">
               ← Previous
             </Link>
           ) : null}
           {nextHref ? (
-            <Link href={nextHref} className="text-sm font-medium text-indigo-600">
+            <Link href={nextHref} className="text-sm font-medium text-[var(--blue)] hover:text-[var(--blue-hover)]">
               Next →
             </Link>
           ) : null}
@@ -258,7 +259,7 @@ export function FounderClassLessonExperience({
                           href={`/founder/learning/${course.slug}/${item.slug}`}
                           className={`block rounded-md px-2 py-1.5 ${
                             active
-                              ? "bg-indigo-50 font-medium text-indigo-900"
+                              ? "bg-[var(--blue-muted)] font-medium text-[var(--blue)]"
                               : "text-slate-600 hover:bg-slate-50"
                           }`}
                         >
