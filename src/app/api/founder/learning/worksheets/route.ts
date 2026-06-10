@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   }
 
   const admin = createServiceRoleClient();
-  const { data } = await admin
+  const { data, error } = await admin
     .from("founder_worksheet_submissions")
     .select("content, submitted_at, admin_feedback")
     .eq("founder_id", auth.profile.id)
@@ -26,6 +26,8 @@ export async function GET(request: Request) {
     .eq("module_slug", moduleSlug)
     .eq("lesson_id", lessonId)
     .maybeSingle();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({
     submission: data

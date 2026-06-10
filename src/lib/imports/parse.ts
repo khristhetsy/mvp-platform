@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -110,25 +110,33 @@ function rowsFromMatrix(matrix: unknown[][]): { headers: string[]; rows: Record<
   return { headers, rows };
 }
 
-function runExcelWorker<T>(payload: unknown): T {
+async function runExcelWorker<T>(payload: unknown): Promise<T> {
   const dir = mkdtempSync(join(tmpdir(), "capitalos-excel-"));
   const inPath = join(dir, "in.json");
   const outPath = join(dir, "out.json");
 
   writeFileSync(inPath, JSON.stringify(payload));
 
-  const proc = spawnSync(process.execPath, ["-e", EXCEL_WORKER_SCRIPT, inPath, outPath], {
-    encoding: "utf8",
-    maxBuffer: 64 * 1024 * 1024,
-  });
-
   try {
-    if (proc.error) {
-      throw proc.error;
-    }
-    if (proc.status !== 0) {
-      throw new Error(proc.stderr || proc.stdout || "Excel worker failed");
-    }
+    await new Promise<void>((resolve, reject) => {
+      const proc = spawn(process.execPath, ["-e", EXCEL_WORKER_SCRIPT, inPath, outPath], {
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+
+      let stderr = "";
+      let stdout = "";
+      proc.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
+      proc.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
+
+      proc.on("error", reject);
+      proc.on("close", (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(stderr || stdout || "Excel worker failed"));
+        }
+      });
+    });
 
     const parsed = JSON.parse(readFileSync(outPath, "utf8")) as
       | { ok: true; result: T }
@@ -195,16 +203,16 @@ export function parseCsvText(text: string): { headers: string[]; rows: Record<st
   return { headers, rows };
 }
 
-export function parseSpreadsheetBuffer(
+export async function parseSpreadsheetBuffer(
   buffer: Buffer,
   fileName: string,
-): { headers: string[]; rows: Record<string, string>[] } {
+): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
   const lower = fileName.toLowerCase();
   if (lower.endsWith(".csv")) {
     return parseCsvText(buffer.toString("utf-8"));
   }
 
-  const matrix = runExcelWorker<unknown[][]>({
+  const matrix = await runExcelWorker<unknown[][]>({
     op: "parse",
     bufferBase64: buffer.toString("base64"),
   });
@@ -220,8 +228,8 @@ export function toParsedImportRows(rows: Record<string, string>[]): ParsedImport
   }));
 }
 
-export function rowsToWorkbookBuffer(rows: Record<string, unknown>[], sheetName = "Export"): Buffer {
-  const bufferBase64 = runExcelWorker<string>({
+export async function rowsToWorkbookBuffer(rows: Record<string, unknown>[], sheetName = "Export"): Promise<Buffer> {
+  const bufferBase64 = await runExcelWorker<string>({
     op: "write",
     rows,
     sheetName,

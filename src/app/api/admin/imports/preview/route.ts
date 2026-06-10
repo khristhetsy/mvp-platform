@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 
   const importType = parsedMeta.data.importType as ImportType;
   const buffer = Buffer.from(await file.arrayBuffer());
-  const { headers, rows } = parseSpreadsheetBuffer(buffer, file.name);
+  const { headers, rows } = await parseSpreadsheetBuffer(buffer, file.name);
 
   if (rows.length === 0) {
     return NextResponse.json({ error: "No data rows found in uploaded file." }, { status: 400 });

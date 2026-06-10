@@ -24,13 +24,14 @@ function buildAdminStoragePath(courseId: string, moduleSlug: string, lessonKey: 
 
 async function findLesson(moduleSlug: string, lessonKey: string) {
   const admin = createServiceRoleClient();
-  const { data: lesson } = await admin
+  const { data: lesson, error } = await admin
     .from("learning_lessons")
     .select("id, video_url, slide_deck_url, video_render_status")
     .eq("module_slug", moduleSlug)
     .eq("lesson_key", lessonKey)
     .maybeSingle();
 
+  if (error) throw new Error(error.message);
   return lesson;
 }
 
