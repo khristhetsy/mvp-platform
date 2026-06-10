@@ -1,6 +1,6 @@
 /** Toggle admin workspace modules between full UI and a coming-soon placeholder. */
 export const ADMIN_MODULE_COMING_SOON = {
-  spvs: true,
+  spvs: false,
   pageBuilderLab: true,
   automation: true,
   integrations: true,
