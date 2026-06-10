@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActionOrchestrationBadges } from "@/components/actions/ActionOrchestrationBadges";
 import {
   formatPriorityLabel,
@@ -27,6 +27,22 @@ type NextBestActionsPanelProps = {
 };
 
 type LifecycleAction = "complete" | "dismiss" | "snooze" | "escalate";
+type ViewTab = "all" | "critical" | "overdue" | "escalated";
+
+const VIEW_TABS: { id: ViewTab; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "critical", label: "Critical" },
+  { id: "overdue", label: "Overdue" },
+  { id: "escalated", label: "Escalated" },
+];
+
+function filterByTab(actions: NextBestAction[], tab: ViewTab): NextBestAction[] {
+  if (tab === "all") return actions;
+  if (tab === "critical") return actions.filter((a) => a.priority === "critical");
+  if (tab === "overdue") return actions.filter((a) => a.status === "overdue");
+  if (tab === "escalated") return actions.filter((a) => a.status === "escalated");
+  return actions;
+}
 
 export function NextBestActionsPanel({
   role,
@@ -45,6 +61,7 @@ export function NextBestActionsPanel({
   const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<ViewTab>("all");
 
   const fetchActions = useCallback(async () => {
     const params = new URLSearchParams({ role, limit: String(limit), sync: "true" });
@@ -133,6 +150,18 @@ export function NextBestActionsPanel({
 
   const canEscalate = showEscalate || role === "admin" || role === "analyst";
 
+  const tabCounts = useMemo(
+    () => ({
+      all: actions.length,
+      critical: actions.filter((a) => a.priority === "critical").length,
+      overdue: actions.filter((a) => a.status === "overdue").length,
+      escalated: actions.filter((a) => a.status === "escalated").length,
+    }),
+    [actions],
+  );
+
+  const visibleActions = useMemo(() => filterByTab(actions, activeTab), [actions, activeTab]);
+
   return (
     <section
       className={`rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)] ${className}`}
@@ -145,10 +174,42 @@ export function NextBestActionsPanel({
         </div>
         <Link
           href={allActionsHref}
-          className="shrink-0 text-xs font-semibold text-indigo-700 hover:text-indigo-900"
+          className="shrink-0 text-xs font-semibold text-[var(--blue)] hover:text-[var(--blue-hover)]"
         >
           View all actions
         </Link>
+      </div>
+
+      <div className="flex gap-1 border-b border-slate-100 px-4 pt-3 sm:px-5">
+        {VIEW_TABS.map((tab) => {
+          const count = tabCounts[tab.id];
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 border-b-2 px-3 pb-2.5 text-xs font-medium transition-colors ${
+                isActive
+                  ? "border-[var(--blue)] text-[var(--blue)]"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {tab.label}
+              {count > 0 ? (
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
+                    isActive
+                      ? "bg-[var(--blue-muted)] text-[var(--blue-hover)]"
+                      : "bg-slate-100 text-slate-500"
+                  }`}
+                >
+                  {count}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
       </div>
 
       <div className="px-4 py-4 sm:px-5 sm:py-4">
@@ -160,13 +221,15 @@ export function NextBestActionsPanel({
           <p className="text-sm text-red-700" role="alert">
             {error}
           </p>
-        ) : actions.length === 0 ? (
+        ) : visibleActions.length === 0 ? (
           <p className="text-sm text-slate-600">
-            You are caught up on prioritized items. Check back as your workflow state changes.
+            {activeTab === "all"
+              ? "You are caught up on prioritized items. Check back as your workflow state changes."
+              : `No ${activeTab} actions right now.`}
           </p>
         ) : (
           <ul className="space-y-3">
-            {actions.map((action) => {
+            {visibleActions.map((action) => {
               const rowKey = action.persistedId ?? action.id;
               const isPending = pendingId === action.persistedId;
 
@@ -211,7 +274,7 @@ export function NextBestActionsPanel({
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
                       href={action.href}
-                      className="inline-flex min-h-11 items-center justify-center rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
+                      className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[var(--blue)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--blue-hover)]"
                     >
                       Open
                     </Link>
