@@ -95,16 +95,16 @@ export default async function AdminReportsPage() {
             Each export writes an{" "}
             <span className="font-medium text-slate-800">audit_logs</span> entry with report type, filters, and
             generator.{" "}
-            <Link href="/admin/compliance" className="font-semibold text-[var(--navy)] hover:underline">
+            <Link href="/admin/compliance" className="font-semibold text-[var(--blue)] hover:underline">
               Compliance center
             </Link>{" "}
             ·{" "}
-            <Link href="/admin/analytics" className="font-semibold text-[var(--navy)] hover:underline">
+            <Link href="/admin/analytics" className="font-semibold text-[var(--blue)] hover:underline">
               Analytics
             </Link>
             {" "}
             ·{" "}
-            <Link href="/admin/system-health" className="font-semibold text-[var(--navy)] hover:underline">
+            <Link href="/admin/system-health" className="font-semibold text-[var(--blue)] hover:underline">
               System health
             </Link>
           </p>

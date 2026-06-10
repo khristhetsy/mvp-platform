@@ -2,9 +2,9 @@
 export const ADMIN_MODULE_COMING_SOON = {
   spvs: false,
   pageBuilderLab: true,
-  automation: true,
-  integrations: true,
-  betaOperations: true,
+  automation: false,
+  integrations: false,
+  betaOperations: false,
   learning: false,
 } as const;
 

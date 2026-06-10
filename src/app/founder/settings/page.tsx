@@ -29,7 +29,7 @@ export default async function FounderSettingsPage() {
       profileSubtitle={company?.company_name ?? "Your company"}
     >
       <section className="cap-surface-card p-6 lg:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--navy)]">Company settings</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Company settings</h1>
         <p className="mt-3 text-sm leading-7 text-slate-600">Update your company profile details used across the platform.</p>
 
         <CompanySettingsForm company={company} />

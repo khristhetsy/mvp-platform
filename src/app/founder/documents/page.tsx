@@ -62,7 +62,7 @@ export default async function DocumentUploadPage() {
         <section className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="cap-surface-card p-4 sm:p-6 lg:p-7">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Secure upload</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--navy)]">Upload diligence documents</h1>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Upload diligence documents</h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">
             Files are stored in a private Supabase bucket and served through signed, role-checked URLs only.
           </p>
@@ -112,13 +112,13 @@ export default async function DocumentUploadPage() {
         </div>
 
         <div className="cap-surface-card p-4 sm:p-6 lg:p-7">
-          <h2 className="text-lg font-semibold text-[var(--navy)]">Uploaded files</h2>
+          <h2 className="text-lg font-semibold text-slate-950">Uploaded files</h2>
           <div className="mt-5 divide-y divide-slate-100">
             {(documents ?? []).length > 0 ? (
               documents?.map((document) => (
                 <div key={document.id} className="flex items-center justify-between gap-3 py-4 text-sm">
                   <span className="min-w-0 flex-1 truncate font-medium text-slate-800">{document.file_name ?? document.document_type}</span>
-                  <span className="shrink-0 rounded-full bg-[var(--navy-muted)] px-3 py-1 text-xs font-medium text-[var(--navy)]">{document.status ?? "uploaded"}</span>
+                  <span className="shrink-0 rounded-full bg-[var(--blue-muted)] px-3 py-1 text-xs font-medium text-[var(--blue-hover)]">{document.status ?? "uploaded"}</span>
                 </div>
               ))
             ) : (

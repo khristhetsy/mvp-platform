@@ -8,7 +8,7 @@ export default function SignInPage() {
       <section className="mx-auto max-w-xl px-4 py-12 lg:px-6">
         <div className="rounded-xl border border-slate-200/80 bg-white p-8 shadow-[var(--shadow-panel)]">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Platform access</p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[var(--navy)]">Sign in</h1>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Sign in</h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">
             Sign in with Supabase Auth. Middleware will redirect you to the right dashboard based on your profile role.
           </p>
