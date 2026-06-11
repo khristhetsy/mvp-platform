@@ -1,21 +1,21 @@
 import { AppShell } from "@/components/AppShell";
-import { AdminInvestorCrmTimeline } from "@/components/AdminInvestorCrmTimeline";
+import { AdminInvestorPipelinePanel } from "@/components/admin/AdminInvestorPipelinePanel";
 import { formatError } from "@/lib/errors/format-error";
-import { listRecentInvestorCrmActivity } from "@/lib/data/investor-crm";
+import { listAdminInvestorPipeline } from "@/lib/investor-crm/admin-pipeline";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminCrmPage() {
+export default async function AdminCrmPipelinePage() {
   const profile = await requireRole(["admin", "analyst"]);
 
   let setupError: string | null = null;
-  let crmActivity: Awaited<ReturnType<typeof listRecentInvestorCrmActivity>> = [];
+  let pipelineRows: Awaited<ReturnType<typeof listAdminInvestorPipeline>> = [];
 
   try {
     const supabase = createServiceRoleClient();
-    crmActivity = await listRecentInvestorCrmActivity(supabase);
+    pipelineRows = await listAdminInvestorPipeline(supabase);
   } catch (error) {
     setupError = formatError(error);
   }
@@ -30,9 +30,9 @@ export default async function AdminCrmPage() {
     >
       <div className="mb-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">CRM</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Activity</h1>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Pipeline</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Investor–company CRM activity timeline and relationship events.
+          Investor–company pipeline status across all active deal relationships.
         </p>
       </div>
 
@@ -42,7 +42,7 @@ export default async function AdminCrmPage() {
         </div>
       ) : null}
 
-      <AdminInvestorCrmTimeline activities={crmActivity} />
+      <AdminInvestorPipelinePanel rows={pipelineRows} />
     </AppShell>
   );
 }

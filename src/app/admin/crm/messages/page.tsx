@@ -1,21 +1,22 @@
 import { AppShell } from "@/components/AppShell";
-import { AdminInvestorCrmTimeline } from "@/components/AdminInvestorCrmTimeline";
+import { AdminMessageThreadsPanel } from "@/components/AdminMessageThreadsPanel";
 import { formatError } from "@/lib/errors/format-error";
-import { listRecentInvestorCrmActivity } from "@/lib/data/investor-crm";
+import { listAdminMessageThreads } from "@/lib/messaging/threads";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminCrmPage() {
+export default async function AdminCrmMessagesPage() {
   const profile = await requireRole(["admin", "analyst"]);
 
   let setupError: string | null = null;
-  let crmActivity: Awaited<ReturnType<typeof listRecentInvestorCrmActivity>> = [];
+  let messageThreads: Awaited<ReturnType<typeof listAdminMessageThreads>>["data"] = [];
 
   try {
     const supabase = createServiceRoleClient();
-    crmActivity = await listRecentInvestorCrmActivity(supabase);
+    const result = await listAdminMessageThreads(supabase, 30);
+    messageThreads = result.data ?? [];
   } catch (error) {
     setupError = formatError(error);
   }
@@ -30,9 +31,9 @@ export default async function AdminCrmPage() {
     >
       <div className="mb-8">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">CRM</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Activity</h1>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Messages</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Investor–company CRM activity timeline and relationship events.
+          Platform message threads between founders and investors.
         </p>
       </div>
 
@@ -42,7 +43,7 @@ export default async function AdminCrmPage() {
         </div>
       ) : null}
 
-      <AdminInvestorCrmTimeline activities={crmActivity} />
+      <AdminMessageThreadsPanel threads={messageThreads} />
     </AppShell>
   );
 }
