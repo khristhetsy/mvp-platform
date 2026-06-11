@@ -90,11 +90,11 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
                 adminRole={adminRole}
                 riskSignals={companyRiskSignals}
               />
-              {workspace.founder_id ? (
+              {workspace.founder?.id ? (
                 <DeleteUserDangerZone
-                  userId={workspace.founder_id}
-                  userName={workspace.founder?.full_name ?? null}
-                  userEmail={workspace.founder?.email ?? null}
+                  userId={workspace.founder.id}
+                  userName={workspace.founder.full_name ?? null}
+                  userEmail={workspace.founder.email ?? null}
                 />
               ) : null}
             </>
