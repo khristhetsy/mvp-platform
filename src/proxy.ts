@@ -1,6 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
+import createIntlMiddleware from "next-intl/middleware";
 import { NextResponse, type NextRequest } from "next/server";
+import { routing } from "./i18n/routing";
 import type { Database, UserRole } from "@/lib/supabase/types";
+
+const handleI18n = createIntlMiddleware(routing);
 
 /** Edge-safe env reads — mirrors @/lib/env helpers used here without importing that module. */
 function trimEnv(name: string): string | undefined {
@@ -18,10 +22,8 @@ function isProductionEnvironment(): boolean {
   const explicit = trimEnv("APP_ENV")?.toLowerCase();
   if (explicit === "production") return true;
   if (explicit === "local" || explicit === "staging") return false;
-
   const vercelEnv = trimEnv("VERCEL_ENV");
   if (vercelEnv === "production") return true;
-
   return false;
 }
 
@@ -49,24 +51,12 @@ function isKnownRole(role: string | null | undefined): role is UserRole {
 }
 
 function resolveWorkspaceZone(pathname: string): WorkspaceZone | null {
-  if (pathname === "/founder" || pathname.startsWith("/founder/")) {
-    return "founder";
-  }
-  if (pathname === "/investor" || pathname.startsWith("/investor/")) {
-    return "investor";
-  }
-  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
-    return "admin";
-  }
-  if (pathname.startsWith("/api/founder/")) {
-    return "founder";
-  }
-  if (pathname.startsWith("/api/investor/")) {
-    return "investor";
-  }
-  if (pathname.startsWith("/api/admin/")) {
-    return "admin";
-  }
+  if (pathname === "/founder" || pathname.startsWith("/founder/")) return "founder";
+  if (pathname === "/investor" || pathname.startsWith("/investor/")) return "investor";
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) return "admin";
+  if (pathname.startsWith("/api/founder/")) return "founder";
+  if (pathname.startsWith("/api/investor/")) return "investor";
+  if (pathname.startsWith("/api/admin/")) return "admin";
   return null;
 }
 
@@ -86,21 +76,52 @@ function jsonError(status: number, message: string) {
   return NextResponse.json({ error: message }, { status });
 }
 
-export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
-  const pathname = request.nextUrl.pathname;
+/** Strip locale prefix to get the canonical pathname for auth checks. */
+function stripLocale(pathname: string): string {
+  for (const locale of routing.locales) {
+    if (pathname === `/${locale}`) return "/";
+    if (pathname.startsWith(`/${locale}/`)) return pathname.slice(locale.length + 1);
+  }
+  return pathname;
+}
 
-  if (!shouldProtectPath(pathname)) {
-    return response;
+/** Get current locale from pathname, defaulting to defaultLocale. */
+function getLocale(pathname: string): string {
+  for (const locale of routing.locales) {
+    if (pathname === `/${locale}` || pathname.startsWith(`/${locale}/`)) return locale;
+  }
+  return routing.defaultLocale;
+}
+
+export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const apiRequest = isApiRequest(pathname);
+
+  // ── Locale routing (non-API routes only) ──────────────────────────────────
+  if (!apiRequest) {
+    const i18nResponse = handleI18n(request);
+    // If next-intl is redirecting (e.g. / → /en/), return immediately.
+    if (i18nResponse.headers.get("location")) {
+      return i18nResponse;
+    }
   }
 
-  const zone = resolveWorkspaceZone(pathname);
+  // ── Auth protection ───────────────────────────────────────────────────────
+  // Strip locale prefix to determine the protected zone.
+  const authPathname = apiRequest ? pathname : stripLocale(pathname);
+  const locale = apiRequest ? routing.defaultLocale : getLocale(pathname);
+
+  if (!shouldProtectPath(authPathname)) {
+    // Not a protected path — pass through (intl middleware already ran above).
+    return NextResponse.next({ request });
+  }
+
+  const zone = resolveWorkspaceZone(authPathname);
   if (!zone) {
-    return response;
+    return NextResponse.next({ request });
   }
 
   const { url: supabaseUrl, anonKey: supabaseAnonKey, configured } = getPublicSupabaseEnv();
-  const apiRequest = isApiRequest(pathname);
 
   if (!configured) {
     if (isProductionEnvironment()) {
@@ -108,12 +129,14 @@ export async function proxy(request: NextRequest) {
         return jsonError(503, "Authentication service is not configured.");
       }
       const url = request.nextUrl.clone();
-      url.pathname = "/configuration-error";
+      url.pathname = `/${locale}/configuration-error`;
       url.search = "";
       return NextResponse.redirect(url);
     }
-    return response;
+    return NextResponse.next({ request });
   }
+
+  let response = NextResponse.next({ request });
 
   const supabase = createServerClient<Database>(supabaseUrl!, supabaseAnonKey!, {
     cookies: {
@@ -137,7 +160,7 @@ export async function proxy(request: NextRequest) {
       return jsonError(401, "Authentication required.");
     }
     const url = request.nextUrl.clone();
-    url.pathname = "/auth/sign-in";
+    url.pathname = `/${locale}/auth/sign-in`;
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
@@ -150,7 +173,7 @@ export async function proxy(request: NextRequest) {
       return jsonError(403, "Profile not found.");
     }
     const url = request.nextUrl.clone();
-    url.pathname = "/auth/sign-in";
+    url.pathname = `/${locale}/auth/sign-in`;
     url.searchParams.set("next", pathname);
     url.searchParams.set("error", "profile_required");
     return NextResponse.redirect(url);
@@ -162,7 +185,7 @@ export async function proxy(request: NextRequest) {
       return jsonError(403, "Insufficient permissions.");
     }
     const url = request.nextUrl.clone();
-    url.pathname = dashboardByRole[role];
+    url.pathname = `/${locale}${dashboardByRole[role]}`;
     return NextResponse.redirect(url);
   }
 
@@ -171,14 +194,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/founder",
-    "/founder/:path*",
-    "/investor",
-    "/investor/:path*",
-    "/admin",
-    "/admin/:path*",
-    "/api/founder/:path*",
-    "/api/investor/:path*",
-    "/api/admin/:path*",
+    // Match all paths except _next internals, static files, and images
+    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|sitemap|robots).*)",
   ],
 };
