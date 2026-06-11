@@ -16,7 +16,6 @@ import {
   PieChart,
   Settings,
   Shield,
-  SwitchCamera,
   Terminal,
   User,
 } from "lucide-react";
@@ -42,11 +41,10 @@ type MenuItem =
 function menuItemsForWorkspace(workspace: WorkspaceId): MenuItem[] {
   if (workspace === "founder") {
     return [
-      { kind: "link", label: "Profile", href: "/founder/settings", icon: <User className="h-4 w-4" /> },
       { kind: "link", label: "Settings", href: "/founder/settings", icon: <Settings className="h-4 w-4" /> },
-      { kind: "link", label: "Company settings", href: "/founder/settings", icon: <Building2 className="h-4 w-4" /> },
-      { kind: "link", label: "Billing & plan", href: "/billing", icon: <CreditCard className="h-4 w-4" /> },
-      { kind: "link", label: "Switch company", href: "/founder/settings", icon: <SwitchCamera className="h-4 w-4" /> },
+      { kind: "link", label: "Company onboarding", href: "/founder/onboarding", icon: <Building2 className="h-4 w-4" /> },
+      { kind: "link", label: "Capital raise", href: "/founder/capital-raise", icon: <CreditCard className="h-4 w-4" /> },
+      { kind: "link", label: "Documents", href: "/founder/documents", icon: <Terminal className="h-4 w-4" /> },
       { kind: "divider" },
       { kind: "link", label: "Help & support", href: "https://docs.capitalos.com", icon: <HelpCircle className="h-4 w-4" /> },
       { kind: "divider" },
@@ -57,7 +55,6 @@ function menuItemsForWorkspace(workspace: WorkspaceId): MenuItem[] {
   if (workspace === "admin") {
     return [
       { kind: "link", label: "Profile", href: "/admin/profile", icon: <User className="h-4 w-4" /> },
-      { kind: "link", label: "Settings", href: "/admin/analytics", icon: <Settings className="h-4 w-4" /> },
       { kind: "link", label: "Platform settings", href: "/admin/integrations", icon: <Shield className="h-4 w-4" /> },
       { kind: "link", label: "System health", href: "/admin/system-health", icon: <Activity className="h-4 w-4" /> },
       { kind: "link", label: "Audit log", href: "/admin/audit", icon: <Terminal className="h-4 w-4" /> },
@@ -69,11 +66,11 @@ function menuItemsForWorkspace(workspace: WorkspaceId): MenuItem[] {
   }
 
   return [
-    { kind: "link", label: "Profile", href: "/investor/settings", icon: <User className="h-4 w-4" /> },
     { kind: "link", label: "Settings", href: "/investor/settings", icon: <Settings className="h-4 w-4" /> },
-    { kind: "link", label: "Investor profile", href: "/investor/settings", icon: <Briefcase className="h-4 w-4" /> },
+    { kind: "link", label: "Investor profile", href: "/investor/onboarding", icon: <Briefcase className="h-4 w-4" /> },
     { kind: "link", label: "Portfolio", href: "/investor/portfolio", icon: <PieChart className="h-4 w-4" /> },
-    { kind: "link", label: "Notification preferences", href: "/investor/settings", icon: <Bell className="h-4 w-4" /> },
+    { kind: "link", label: "Watchlist", href: "/investor/watchlist", icon: <Bell className="h-4 w-4" /> },
+    { kind: "link", label: "Opportunities", href: "/investor/opportunities", icon: <PieChart className="h-4 w-4" /> },
     { kind: "divider" },
     { kind: "link", label: "Help & support", href: "https://docs.capitalos.com", icon: <HelpCircle className="h-4 w-4" /> },
     { kind: "divider" },
