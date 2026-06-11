@@ -39,6 +39,7 @@ export function DraftEmailPanel({
   defaultTemplate,
   compact,
   gmailConnected,
+  googleConnected,
 }: Readonly<{
   role: UserRole;
   entityType?: string | null;

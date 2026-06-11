@@ -130,8 +130,9 @@ export function useFormValidation() {
     const flat = result.error.flatten();
     const errors: FieldErrors = {};
     for (const [key, msgs] of Object.entries(flat.fieldErrors)) {
-      if (msgs && msgs.length > 0) {
-        errors[key] = humanize(key, msgs[0]);
+      const msgArr = msgs as string[] | undefined;
+      if (msgArr && msgArr.length > 0) {
+        errors[key] = humanize(key, msgArr[0]);
       }
     }
     setFieldErrors(errors);
