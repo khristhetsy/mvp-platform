@@ -1,8 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
-
-type ViewMode = "kanban" | "grid" | "list";
+import { useMemo } from "react";
 
 type ActivityRow = {
   id: string;
@@ -75,8 +73,6 @@ type Props = {
 };
 
 export function AdminInvestorActivity({ interests, introRequests, savedDeals }: Props) {
-  const [view, setView] = useState<ViewMode>("kanban");
-
   const cards = useMemo<PipelineCard[]>(() => {
     const result: PipelineCard[] = [];
 
@@ -164,27 +160,10 @@ export function AdminInvestorActivity({ interests, introRequests, savedDeals }: 
           </span>
         </div>
 
-        <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
-          {(["kanban", "grid", "list"] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setView(v)}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                view === v
-                  ? "bg-white text-slate-950 shadow-sm border border-slate-200"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              {v === "kanban" ? "⊞ Kanban" : v === "grid" ? "⊟ Grid" : "≡ List"}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Kanban */}
-      {view === "kanban" && (
-        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
           {COLUMNS.map((col) => {
             const colCards = byColumn[col.key] ?? [];
             return (
@@ -227,70 +206,6 @@ export function AdminInvestorActivity({ interests, introRequests, savedDeals }: 
             );
           })}
         </div>
-      )}
-
-      {/* Grid */}
-      {view === "grid" && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {cards.length === 0 ? (
-            <p className="text-sm text-slate-500">No activity yet.</p>
-          ) : (
-            cards.map((card) => {
-              const col = COLUMNS.find((c) => c.key === card.column)!;
-              return (
-                <div key={card.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="font-medium text-slate-900">{card.investor}</p>
-                  {card.investorEmail ? (
-                    <p className="text-xs text-slate-400">{card.investorEmail}</p>
-                  ) : null}
-                  <p className="mt-0.5 text-xs text-slate-600">{card.company}</p>
-                  <p className="mt-1 text-[11px] text-slate-400">{formatDate(card.date)}</p>
-                  {card.amount ? (
-                    <p className="mt-2 text-xs font-semibold text-indigo-700">{card.amount}</p>
-                  ) : null}
-                  {card.message ? (
-                    <p className="mt-1.5 line-clamp-2 text-xs text-slate-600">{card.message}</p>
-                  ) : null}
-                  <span className={`mt-3 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${col.color}`}>
-                    {col.label}
-                  </span>
-                </div>
-              );
-            })
-          )}
-        </div>
-      )}
-
-      {/* List */}
-      {view === "list" && (
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-          {cards.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-slate-500">No activity yet.</p>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {cards.map((card) => {
-                const col = COLUMNS.find((c) => c.key === card.column)!;
-                return (
-                  <div key={card.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${col.dot}`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900">{card.investor}</p>
-                      <p className="text-xs text-slate-500">{card.company}</p>
-                    </div>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${col.color}`}>
-                      {col.label}
-                    </span>
-                    {card.amount ? (
-                      <span className="text-xs font-semibold text-indigo-700">{card.amount}</span>
-                    ) : null}
-                    <span className="text-[11px] text-slate-400">{formatDate(card.date)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
     </section>
   );
 }

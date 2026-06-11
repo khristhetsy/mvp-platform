@@ -1,20 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { InvestorMatchOpportunityCard } from "@/components/InvestorMatchOpportunityCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-} from "@/components/ui/DataTable";
-import { ModuleEmptyState, PipelineBoard, ViewToolbar } from "@/components/ui/ViewToolbar";
-import { ContentGrid, PageSection } from "@/components/ui/workspace-layout";
-import { useViewMode } from "@/hooks/use-view-mode";
+import { ModuleEmptyState, PipelineBoard } from "@/components/ui/ViewToolbar";
+import { PageSection } from "@/components/ui/workspace-layout";
 
 export type InvestorOpportunityRow = {
   companyId: string;
@@ -48,13 +38,16 @@ function filterMatches(rows: InvestorOpportunityRow[], query: string) {
 }
 
 function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: InvestorOpportunityRow[] }>) {
-  const { viewMode, density, query, setViewMode, setDensity, setQuery, allowedModes } =
-    useViewMode("investor-opportunities");
+  const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => filterMatches(matches, query), [matches, query]);
 
   const pipelineColumns = useMemo(() => {
-    const buckets = { high: [] as InvestorOpportunityRow[], medium: [] as InvestorOpportunityRow[], low: [] as InvestorOpportunityRow[] };
+    const buckets = {
+      high: [] as InvestorOpportunityRow[],
+      medium: [] as InvestorOpportunityRow[],
+      low: [] as InvestorOpportunityRow[],
+    };
     for (const row of filtered) {
       buckets[scoreBucket(row.matchScore)].push(row);
     }
@@ -68,11 +61,6 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
     ];
   }, [filtered]);
 
-  const timelineRows = useMemo(
-    () => [...filtered].sort((a, b) => b.matchScore - a.matchScore),
-    [filtered],
-  );
-
   if (matches.length === 0) {
     return (
       <WorkspacePanel title="Recommended for you" subtitle="Sorted by CapitalOS match score">
@@ -85,86 +73,28 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
 
   return (
     <>
-      <ViewToolbar
-        viewMode={viewMode}
-        allowedModes={allowedModes}
-        onViewModeChange={setViewMode}
-        density={density}
-        onDensityChange={setDensity}
-        query={query}
-        onQueryChange={setQuery}
-        searchPlaceholder="Search companies, sector, or stage…"
-        sticky
-      />
+      <div className="mb-4">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search companies, sector, or stage…"
+          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+        />
+      </div>
 
       <PageSection
         title="Recommended for you"
         subtitle="Sorted by CapitalOS match score (sector, stage, check size, geography, readiness)"
       >
         {filtered.length === 0 ? (
-          <ModuleEmptyState title="No matching opportunities" description="Adjust your search or browse the full marketplace." />
-        ) : null}
-
-        {filtered.length > 0 && viewMode === "card" ? (
-          <ContentGrid columns={2}>
-            {filtered.map((row) => (
-              <InvestorMatchOpportunityCard key={row.companyId} {...row} />
-            ))}
-          </ContentGrid>
-        ) : null}
-
-        {filtered.length > 0 && viewMode === "table" ? (
-          <div className="overflow-x-auto">
-            <DataTable density={density} ariaLabel="Recommended opportunities">
-              <DataTableHead>
-                <DataTableHeaderCell>Company</DataTableHeaderCell>
-                <DataTableHeaderCell>Sector / stage</DataTableHeaderCell>
-                <DataTableHeaderCell>Location</DataTableHeaderCell>
-                <DataTableHeaderCell>Target raise</DataTableHeaderCell>
-                <DataTableHeaderCell>Match</DataTableHeaderCell>
-                <DataTableHeaderCell>Top reasons</DataTableHeaderCell>
-              </DataTableHead>
-              <DataTableBody>
-                {filtered.map((row) => (
-                  <DataTableRow key={row.companyId}>
-                    <DataTableCell>
-                      <Link href={row.slug ? `/deals/${row.slug}` : "/deals"} className="font-medium text-slate-950 hover:underline">
-                        {row.companyName}
-                      </Link>
-                    </DataTableCell>
-                    <DataTableCell>{[row.industry, row.stage].filter(Boolean).join(" · ") || "—"}</DataTableCell>
-                    <DataTableCell>{row.location ?? "—"}</DataTableCell>
-                    <DataTableCell>{row.fundingTarget ?? "—"}</DataTableCell>
-                    <DataTableCell>
-                      <span className="font-semibold text-slate-950">{row.matchScore}%</span>
-                    </DataTableCell>
-                    <DataTableCell className="max-w-xs truncate text-xs">{row.matchReasons.slice(0, 2).join("; ") || "—"}</DataTableCell>
-                  </DataTableRow>
-                ))}
-              </DataTableBody>
-            </DataTable>
-          </div>
-        ) : null}
-
-        {filtered.length > 0 && viewMode === "pipeline" ? (
-          <PipelineBoard columns={pipelineColumns} density={density} />
-        ) : null}
-
-        {filtered.length > 0 && viewMode === "timeline" ? (
-          <ol className="space-y-3">
-            {timelineRows.map((row, index) => (
-              <li key={row.companyId} className="flex gap-3 rounded-lg border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--blue)] text-xs font-bold text-white">
-                  {index + 1}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-950">{row.companyName}</p>
-                  <p className="text-xs text-slate-500">{row.matchScore}% match · {row.matchReasons[0] ?? "Ranked opportunity"}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        ) : null}
+          <ModuleEmptyState
+            title="No matching opportunities"
+            description="Adjust your search or browse the full marketplace."
+          />
+        ) : (
+          <PipelineBoard columns={pipelineColumns} density="comfortable" />
+        )}
       </PageSection>
     </>
   );
@@ -172,7 +102,7 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
 
 export function InvestorOpportunitiesModuleViews(props: Readonly<{ matches: InvestorOpportunityRow[] }>) {
   return (
-    <Suspense fallback={<p className="text-sm text-slate-500">Loading view options…</p>}>
+    <Suspense fallback={<p className="text-sm text-slate-500">Loading opportunities…</p>}>
       <InvestorOpportunitiesModuleViewsInner {...props} />
     </Suspense>
   );

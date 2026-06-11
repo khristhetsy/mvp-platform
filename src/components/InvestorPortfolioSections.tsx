@@ -1,11 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { CompanyUpdateRecord } from "@/lib/company-updates/types";
 import type { InvestorPortfolioSnapshot } from "@/lib/investor/load-portfolio";
-
-type ViewMode = "kanban" | "grid" | "list";
 
 type PortfolioCard = {
   id: string;
@@ -94,8 +92,6 @@ function UpdateFeed({ updates }: { updates: CompanyUpdateRecord[] }) {
 }
 
 export function InvestorPortfolioSections({ portfolio }: { portfolio: InvestorPortfolioSnapshot }) {
-  const [view, setView] = useState<ViewMode>("kanban");
-
   const cards = useMemo<PortfolioCard[]>(() => {
     const result: PortfolioCard[] = [];
 
@@ -173,32 +169,14 @@ export function InvestorPortfolioSections({ portfolio }: { portfolio: InvestorPo
 
   return (
     <div className="space-y-8">
-      {/* View toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
           {totalCards} relationship{totalCards !== 1 ? "s" : ""}
         </span>
-        <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
-          {(["kanban", "grid", "list"] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setView(v)}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                view === v
-                  ? "bg-white text-slate-950 shadow-sm border border-slate-200"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              {v === "kanban" ? "⊞ Kanban" : v === "grid" ? "⊟ Grid" : "≡ List"}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Kanban view */}
-      {view === "kanban" && (
-        <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
           {COLUMNS.map((col) => {
             const colCards = byColumn[col.key] ?? [];
             return (
@@ -235,69 +213,6 @@ export function InvestorPortfolioSections({ portfolio }: { portfolio: InvestorPo
             );
           })}
         </div>
-      )}
-
-      {/* Grid view */}
-      {view === "grid" && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {cards.length === 0 ? (
-            <p className="text-sm text-slate-500">No portfolio activity yet.</p>
-          ) : (
-            cards.map((card) => {
-              const col = COLUMNS.find((c) => c.key === card.column)!;
-              return (
-                <div key={card.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="font-medium text-slate-900">{card.company}</p>
-                  <p className="mt-1 text-xs text-slate-500">{card.detail}</p>
-                  {card.date ? (
-                    <p className="mt-0.5 text-[11px] text-slate-400">{formatDate(card.date)}</p>
-                  ) : null}
-                  <span className={`mt-3 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${col.color}`}>
-                    {col.label}
-                  </span>
-                  {card.companyId ? <CardLinks companyId={card.companyId} slug={card.slug} /> : null}
-                </div>
-              );
-            })
-          )}
-        </div>
-      )}
-
-      {/* List view */}
-      {view === "list" && (
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-          {cards.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-slate-500">No portfolio activity yet.</p>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {cards.map((card) => {
-                const col = COLUMNS.find((c) => c.key === card.column)!;
-                return (
-                  <div key={card.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${col.dot}`} />
-                    <p className="flex-1 text-sm font-medium text-slate-900">{card.company}</p>
-                    <span className="text-xs text-slate-500">{card.detail}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${col.color}`}>
-                      {col.label}
-                    </span>
-                    {card.date ? (
-                      <span className="text-[11px] text-slate-400">{formatDate(card.date)}</span>
-                    ) : null}
-                    {card.companyId ? (
-                      <Link
-                        href={`/investor/opportunities/${card.companyId}/report`}
-                        className="text-[11px] font-semibold text-indigo-700 hover:underline"
-                      >
-                        Report
-                      </Link>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Company updates feed — always shown below */}
       <section>
