@@ -5,12 +5,64 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Sparkles } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { InternalPermission } from "@/lib/rbac/constants";
 import type { WorkspaceId, WorkspaceNavItem } from "@/lib/workspace-nav";
 import { getAdminWorkspaceNavSections, getWorkspaceNav, workspaceLabel } from "@/lib/workspace-nav";
 import { getWorkspaceNavIcon } from "@/lib/ui/nav-icons";
 import { CapitalOSLogo } from "@/components/CapitalOSLogo";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+
+const NAV_LABEL_KEYS: Record<string, string> = {
+  "Dashboard": "dashboard",
+  "Actions": "actions",
+  "Documents": "documents",
+  "Messages": "messages",
+  "Matching": "matching",
+  "Analytics": "analytics",
+  "Settings": "settings",
+  "Learning": "learning",
+  "Readiness": "readiness",
+  "Checklist": "checklist",
+  "Diligence & review": "diligenceReview",
+  "Document checklist": "documentChecklist",
+  "Missing documents": "missingDocuments",
+  "Investors": "investors",
+  "Overview": "overview",
+  "Outreach & CRM": "outreachCrm",
+  "Platform matches": "platformMatches",
+  "Deal Room": "dealRoom",
+  "Capital Raise": "capitalRaise",
+  "SPVs": "spvs",
+  "Companies": "companies",
+  "CRM": "crm",
+  "Activity": "activity",
+  "Pipeline": "pipeline",
+  "Outreach": "outreach",
+  "Deal Rooms": "dealRooms",
+  "Billing": "billing",
+  "Operations": "operations",
+  "Reports": "reports",
+  "Insights": "insights",
+  "Compliance": "compliance",
+  "Diligence": "diligence",
+  "Audit": "audit",
+  "System": "system",
+  "Integrations": "integrations",
+  "Queues": "queues",
+  "Automation": "automation",
+  "System Health": "systemHealth",
+  "Import / Export": "importExport",
+  "Beta Operations": "betaOperations",
+  "User Permissions": "userPermissions",
+  "Deal Flow": "dealFlow",
+  "Opportunities": "opportunities",
+  "Watchlist": "watchlist",
+  "Interest Pipeline": "interestPipeline",
+  "Portfolio & Deals": "portfolioDeals",
+  "Portfolio": "portfolio",
+  "Onboarding": "onboarding",
+};
 
 function useAdminNavPermissions(workspace: WorkspaceId) {
   const [state, setState] = useState<{ permissions: InternalPermission[]; isSuperAdmin: boolean } | null>(null);
@@ -54,7 +106,14 @@ export function WorkspaceSidebar({
   onClose?: () => void;
 }>) {
   const pathname = usePathname();
+  const t = useTranslations("nav");
   const adminNav = useAdminNavPermissions(workspace);
+
+  function tLabel(label: string): string {
+    const key = NAV_LABEL_KEYS[label];
+    if (!key) return label;
+    try { return t(key as Parameters<typeof t>[0]); } catch { return label; }
+  }
   const canShowNavItem = useMemo(() => {
     return (item: WorkspaceNavItem) => {
       if (workspace !== "admin") return true;
@@ -110,7 +169,7 @@ export function WorkspaceSidebar({
             strokeWidth={1.75}
             aria-hidden
           />
-          <span className="truncate">{item.label}</span>
+          <span className="truncate">{tLabel(item.label)}</span>
           <ChevronDown
             className={`ml-auto h-3.5 w-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""} ${parentActive ? "text-[var(--blue)]" : "text-slate-400"}`}
             strokeWidth={2}
@@ -139,7 +198,7 @@ export function WorkspaceSidebar({
                     strokeWidth={1.75}
                     aria-hidden
                   />
-                  <span className="truncate">{child.label}</span>
+                  <span className="truncate">{tLabel(child.label)}</span>
                 </Link>
               );
             })}
@@ -172,7 +231,7 @@ export function WorkspaceSidebar({
           strokeWidth={1.75}
           aria-hidden
         />
-        <span className="truncate">{item.label}</span>
+        <span className="truncate">{tLabel(item.label)}</span>
       </Link>
     );
   }
@@ -191,7 +250,7 @@ export function WorkspaceSidebar({
               <div key={section.title ?? `section-${index}`} className={section.title ? "pt-1" : undefined}>
                 {section.title ? (
                   <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                    {section.title}
+                    {tLabel(section.title)}
                   </p>
                 ) : null}
                 <div className="space-y-0.5">{section.items.map(renderNavLink)}</div>
