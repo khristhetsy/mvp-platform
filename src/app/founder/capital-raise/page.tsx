@@ -5,6 +5,7 @@ import { formatError } from "@/lib/errors/format-error";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listFounderCompanyUpdates } from "@/lib/company-updates/company-updates";
 import { FounderCompanyUpdatesPanel } from "@/components/FounderCompanyUpdatesPanel";
+import { FounderInvestorPipelineKanban } from "@/components/FounderInvestorPipelineKanban";
 import { FounderSpvStatusPanel } from "@/components/FounderSpvStatusPanel";
 import { listFounderChecklistSummary } from "@/lib/spv/checklist";
 import { listFounderClosingSummaries } from "@/lib/spv/closing-reviews";
@@ -200,36 +201,15 @@ export default async function FounderCapitalRaisePage() {
               )}
             </WorkspacePanel>
 
-            <WorkspacePanel title="Recent investor activity" subtitle="Interest tied to your listing">
+            <WorkspacePanel title="Investor pipeline" subtitle="Interest tied to your listing">
               {activityError ? (
                 <p className="text-sm text-red-700">Activity query failed: {activityError}</p>
-              ) : !investorActivity || investorActivity.interests.length === 0 ? (
+              ) : !investorActivity ? (
                 <p className="text-sm text-amber-900">
-                  Activity query succeeded but returned 0 interest records for company_id={company.id}.
+                  Activity query succeeded but returned no data for company_id={company.id}.
                 </p>
               ) : (
-                <div className="divide-y divide-slate-100">
-                  {investorActivity.interests.map((raw) => {
-                    const row = raw as {
-                      id: string;
-                      status?: string | null;
-                      created_at?: string;
-                      profiles?: { full_name?: string | null; email?: string | null } | null;
-                    };
-                    const investor = row.profiles?.full_name ?? row.profiles?.email ?? "Unknown investor";
-                    const date = row.created_at
-                      ? new Date(row.created_at).toLocaleDateString("en-US", { timeZone: "UTC" })
-                      : "—";
-                    return (
-                      <div key={row.id} className="py-3 text-sm">
-                        <p className="font-medium text-slate-900">{investor}</p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {row.status ?? "interested"} · {date}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
+                <FounderInvestorPipelineKanban activity={investorActivity} />
               )}
             </WorkspacePanel>
           </section>
