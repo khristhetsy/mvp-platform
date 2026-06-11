@@ -60,7 +60,16 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
 export const founderWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/founder/dashboard", label: "Dashboard" },
   { href: "/founder/actions", label: "Actions" },
-  { href: "/founder/readiness", label: "Readiness" },
+  {
+    href: "/founder/readiness",
+    label: "Readiness",
+    children: [
+      { href: "/founder/readiness", label: "Checklist" },
+      { href: "/founder/readiness/diligence", label: "Diligence & review" },
+      { href: "/founder/readiness/documents", label: "Document checklist" },
+      { href: "/founder/readiness/missing", label: "Missing documents" },
+    ],
+  },
   { href: "/founder/documents", label: "Documents" },
   {
     href: "/founder/investors",

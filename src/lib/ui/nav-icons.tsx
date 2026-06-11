@@ -1,5 +1,6 @@
 import {
   Activity,
+  AlertTriangle,
   BarChart3,
   BookOpen,
   Building2,
@@ -32,6 +33,9 @@ import {
 export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/founder/dashboard": LayoutDashboard,
   "/founder/readiness": Target,
+  "/founder/readiness/diligence": ShieldCheck,
+  "/founder/readiness/documents": FileText,
+  "/founder/readiness/missing": AlertTriangle,
   "/founder/documents": FileText,
   "/founder/investors": Users,
   "/founder/investors/outreach": MessageSquare,
