@@ -10,6 +10,7 @@ import type { WorkspaceId, WorkspaceNavItem } from "@/lib/workspace-nav";
 import { getAdminWorkspaceNavSections, getWorkspaceNav, workspaceLabel } from "@/lib/workspace-nav";
 import { getWorkspaceNavIcon } from "@/lib/ui/nav-icons";
 import { CapitalOSLogo } from "@/components/CapitalOSLogo";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 function useAdminNavPermissions(workspace: WorkspaceId) {
   const [state, setState] = useState<{ permissions: InternalPermission[]; isSuperAdmin: boolean } | null>(null);
@@ -200,6 +201,7 @@ export function WorkspaceSidebar({
       </nav>
       <div className="space-y-2 border-t border-slate-200/80 bg-[var(--surface-sidebar)] p-3">
         {planBadge ? <div>{planBadge}</div> : null}
+        <LanguageSwitcher />
         <div className="rounded-xl border border-slate-200/80 bg-[var(--surface-sunken)] p-3">
           <div className="flex items-start gap-2">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--blue)] text-white">
