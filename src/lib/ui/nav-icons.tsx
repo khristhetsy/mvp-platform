@@ -51,6 +51,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/investor/opportunities": Building2,
   "/investor/watchlist": Heart,
   "/investor/interest-pipeline": TrendingUp,
+  "/investor/deal-room": Handshake,
   "/investor/spvs": Wallet,
   "/investor/portfolio": BarChart3,
   "/investor/messages": MessageSquare,
