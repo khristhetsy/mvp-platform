@@ -14,7 +14,7 @@ const investorProfileSchema = z.object({
   preferred_stages: z.string().min(2),
   investment_thesis: z.string().min(20).max(5000),
   accredited_status: z.literal(true, {
-    errorMap: () => ({ message: "You must confirm accredited investor status to submit." }),
+    error: () => ({ message: "You must confirm accredited investor status to submit." }),
   }),
 });
 
