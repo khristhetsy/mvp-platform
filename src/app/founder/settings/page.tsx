@@ -49,7 +49,7 @@ export default async function FounderSettingsPage() {
             entityType={company ? "company" : undefined}
             entityId={company?.id}
             defaultTemplate="founder_investor_intro_followup"
-            gmailConnected={googleStatus.scopes.includes("https://www.googleapis.com/auth/gmail.send")}
+            googleConnected={googleStatus.connected}
           />
         </div>
         <Suspense fallback={<p className="mt-8 text-sm text-slate-500">Loading Google connection…</p>}>

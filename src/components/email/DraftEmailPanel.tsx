@@ -47,6 +47,7 @@ export function DraftEmailPanel({
   defaultTemplate?: EmailTemplateType;
   compact?: boolean;
   gmailConnected?: boolean;
+  googleConnected?: boolean;
 }>) {
   const options = TEMPLATES_BY_ROLE[role] ?? [];
   const [open, setOpen] = useState(false);
@@ -180,7 +181,7 @@ export function DraftEmailPanel({
             </button>
           </div>
 
-          {gmailConnected ? (
+          {gmailConnected || googleConnected ? (
             <div className="mt-3 border-t border-slate-100 pt-3">
               <p className="mb-1.5 text-[10px] font-semibold text-slate-700">Send via your Gmail</p>
               <input
