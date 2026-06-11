@@ -38,6 +38,7 @@ export function DraftEmailPanel({
   sourceActionId,
   defaultTemplate,
   compact,
+  gmailConnected,
 }: Readonly<{
   role: UserRole;
   entityType?: string | null;
@@ -45,6 +46,7 @@ export function DraftEmailPanel({
   sourceActionId?: string | null;
   defaultTemplate?: EmailTemplateType;
   compact?: boolean;
+  gmailConnected?: boolean;
 }>) {
   const options = TEMPLATES_BY_ROLE[role] ?? [];
   const [open, setOpen] = useState(false);
@@ -54,8 +56,11 @@ export function DraftEmailPanel({
   const [draft, setDraft] = useState<EmailDraft | null>(null);
   const [safetyNotes, setSafetyNotes] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState("");
 
   const canDraft = options.length > 0;
 
@@ -95,6 +100,31 @@ export function DraftEmailPanel({
     if (!draft) return;
     await navigator.clipboard.writeText(formatDraftForClipboard(draft));
     setCopied(true);
+  }
+
+  async function sendGmail() {
+    if (!draft || !recipientEmail.trim()) return;
+    setSending(true);
+    setError(null);
+    setSent(false);
+    try {
+      const res = await fetch("/api/integrations/google/gmail/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: recipientEmail.trim(),
+          subject: draft.subject,
+          body: draft.body,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to send.");
+      setSent(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Send failed.");
+    } finally {
+      setSending(false);
+    }
   }
 
   if (!canDraft) return null;
@@ -149,6 +179,34 @@ export function DraftEmailPanel({
               Close
             </button>
           </div>
+
+          {gmailConnected ? (
+            <div className="mt-3 border-t border-slate-100 pt-3">
+              <p className="mb-1.5 text-[10px] font-semibold text-slate-700">Send via your Gmail</p>
+              <input
+                type="email"
+                value={recipientEmail}
+                onChange={(e) => setRecipientEmail(e.target.value)}
+                placeholder="Recipient email address"
+                className="w-full rounded border border-slate-200 px-2 py-1 text-[11px]"
+              />
+              <div className="mt-1.5 flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={sending || !recipientEmail.trim()}
+                  onClick={() => void sendGmail()}
+                  className="rounded bg-indigo-600 px-3 py-1 text-[10px] font-semibold text-white disabled:opacity-50"
+                >
+                  {sending ? "Sending…" : "Send"}
+                </button>
+                {sent ? <span className="text-[10px] text-emerald-700">Sent successfully</span> : null}
+              </div>
+            </div>
+          ) : (
+            <p className="mt-2 text-[10px] text-slate-500">
+              Connect Google in Settings to enable Send via Gmail.
+            </p>
+          )}
         </div>
       ) : null}
     </div>
