@@ -7,6 +7,7 @@ export type WorkspaceNavItem = {
   href: string;
   label: string;
   requiredPermission?: InternalPermission;
+  children?: WorkspaceNavItem[];
 };
 
 export type WorkspaceNavSection = {
@@ -61,7 +62,15 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/founder/actions", label: "Actions" },
   { href: "/founder/readiness", label: "Readiness" },
   { href: "/founder/documents", label: "Documents" },
-  { href: "/founder/investors", label: "Investors" },
+  {
+    href: "/founder/investors",
+    label: "Investors",
+    children: [
+      { href: "/founder/investors", label: "Overview" },
+      { href: "/founder/investors/outreach", label: "Outreach & CRM" },
+      { href: "/founder/investors/matches", label: "Platform matches" },
+    ],
+  },
   { href: "/founder/matching", label: "Matching" },
   { href: "/founder/deal-room", label: "Deal Room" },
   { href: "/founder/messages", label: "Messages" },

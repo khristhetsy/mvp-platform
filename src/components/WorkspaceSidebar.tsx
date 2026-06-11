@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { ChevronDown, Sparkles } from "lucide-react";
 import type { InternalPermission } from "@/lib/rbac/constants";
 import type { WorkspaceId, WorkspaceNavItem } from "@/lib/workspace-nav";
 import { getAdminWorkspaceNavSections, getWorkspaceNav, workspaceLabel } from "@/lib/workspace-nav";
@@ -84,7 +84,74 @@ export function WorkspaceSidebar({
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
+  function isChildActive(item: WorkspaceNavItem) {
+    return item.children?.some((child) => isNavItemActive(child.href)) ?? false;
+  }
+
+  function NavItemWithChildren({ item }: Readonly<{ item: WorkspaceNavItem }>) {
+    const parentActive = isChildActive(item);
+    const [open, setOpen] = useState(parentActive);
+    const Icon = getWorkspaceNavIcon(item.href);
+
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
+            parentActive
+              ? "bg-[var(--blue-muted)] text-[var(--blue-hover)]"
+              : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+          }`}
+        >
+          <Icon
+            className={`h-4 w-4 shrink-0 ${parentActive ? "text-[var(--blue)]" : "text-slate-400"}`}
+            strokeWidth={1.75}
+            aria-hidden
+          />
+          <span className="truncate">{item.label}</span>
+          <ChevronDown
+            className={`ml-auto h-3.5 w-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""} ${parentActive ? "text-[var(--blue)]" : "text-slate-400"}`}
+            strokeWidth={2}
+            aria-hidden
+          />
+        </button>
+        {open ? (
+          <div className="ml-3 mt-0.5 space-y-0.5 border-l border-slate-200 pl-3">
+            {item.children!.map((child) => {
+              const childActive = pathname === child.href;
+              const ChildIcon = getWorkspaceNavIcon(child.href);
+              return (
+                <Link
+                  key={child.href}
+                  href={child.href}
+                  onClick={onClose}
+                  aria-current={childActive ? "page" : undefined}
+                  className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px] font-medium transition-colors ${
+                    childActive
+                      ? "bg-[var(--blue-muted)] text-[var(--blue-hover)]"
+                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"
+                  }`}
+                >
+                  <ChildIcon
+                    className={`h-3.5 w-3.5 shrink-0 ${childActive ? "text-[var(--blue)]" : "text-slate-400"}`}
+                    strokeWidth={1.75}
+                    aria-hidden
+                  />
+                  <span className="truncate">{child.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   function renderNavLink(item: WorkspaceNavItem) {
+    if (item.children && item.children.length > 0) {
+      return <NavItemWithChildren key={item.href} item={item} />;
+    }
     const active = isNavItemActive(item.href);
     const Icon = getWorkspaceNavIcon(item.href);
     return (
