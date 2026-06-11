@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { GoogleCalendarMeetingReadiness } from "@/components/GoogleCalendarMeetingReadiness";
 import type { MessageThreadDetail, MessageThreadListItem } from "@/lib/messaging/types";
 
@@ -67,6 +67,13 @@ export function MessagingThreadWorkspace({
   const [meetingNotes, setMeetingNotes] = useState("");
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Auto-refresh every 20s so new messages appear without manual reload
+  useEffect(() => {
+    if (!selectedThreadId) return;
+    const interval = setInterval(() => { router.refresh(); }, 20_000);
+    return () => clearInterval(interval);
+  }, [selectedThreadId, router]);
 
   const counterpartyLabel = useMemo(() => {
     if (!detail) {
@@ -333,6 +340,21 @@ export function MessagingThreadWorkspace({
                 <p className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-sm text-amber-900">
                   Meeting accepted. Connect Google to create Calendar/Meet event.
                 </p>
+              ) : null}
+
+              {latestMeeting && latestMeeting.proposed_start_time ? (
+                <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                  <p className="font-medium text-slate-800">Proposed time</p>
+                  <p className="mt-0.5">
+                    {formatDate(latestMeeting.proposed_start_time)}
+                    {latestMeeting.proposed_end_time
+                      ? ` → ${formatDate(latestMeeting.proposed_end_time)}`
+                      : ""}
+                  </p>
+                  {latestMeeting.meeting_notes ? (
+                    <p className="mt-1 text-slate-600">{latestMeeting.meeting_notes}</p>
+                  ) : null}
+                </div>
               ) : null}
 
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
