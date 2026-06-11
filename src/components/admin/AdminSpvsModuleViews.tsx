@@ -1,11 +1,9 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { AdminSpvManagement } from "@/components/AdminSpvManagement";
 import { AdminQueryFilterBar } from "@/components/ui/AdminQueryFilterBar";
-import { ViewToolbar } from "@/components/ui/ViewToolbar";
 import { useAdminQueryFilters } from "@/hooks/use-admin-query-filters";
-import { useViewMode } from "@/hooks/use-view-mode";
 import type { ClosingReadinessSummary } from "@/lib/spv/closing-review-display";
 import type { SpvExecutionReadinessSummary } from "@/lib/document-execution/types";
 import type {
@@ -17,6 +15,8 @@ import type {
   SpvParticipationRequirementRecord,
 } from "@/lib/spv/types";
 import { filterSpvOpportunities, type SpvQueryFilters } from "@/lib/ui/query-filters";
+
+type ViewMode = "kanban" | "grid" | "list";
 
 export type AdminSpvsModuleViewsProps = Readonly<{
   opportunities: SpvOpportunityRecord[];
@@ -31,8 +31,7 @@ export type AdminSpvsModuleViewsProps = Readonly<{
 }>;
 
 function AdminSpvsModuleViewsInner(props: AdminSpvsModuleViewsProps) {
-  const { viewMode, density, query, setViewMode, setDensity, setQuery, allowedModes } =
-    useViewMode("admin-spvs");
+  const [view, setView] = useState<ViewMode>("kanban");
   const { filters } = useAdminQueryFilters("spvs");
   const spvFilters = filters as SpvQueryFilters;
 
@@ -51,26 +50,35 @@ function AdminSpvsModuleViewsInner(props: AdminSpvsModuleViewsProps) {
     [props.opportunities, props.requirementsByParticipation, props.participationsBySpv, spvFilters, companiesById],
   );
 
+  const listViewMode = view === "kanban" ? "pipeline" : view === "grid" ? "card" : "table";
+
   return (
     <>
-      <AdminQueryFilterBar page="spvs" className="mb-4" />
-      <ViewToolbar
-        viewMode={viewMode}
-        allowedModes={allowedModes}
-        onViewModeChange={setViewMode}
-        density={density}
-        onDensityChange={setDensity}
-        query={query}
-        onQueryChange={setQuery}
-        searchPlaceholder="Search SPVs, companies, or readiness…"
-        sticky
-      />
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <AdminQueryFilterBar page="spvs" />
+        <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
+          {(["kanban", "grid", "list"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setView(v)}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                view === v
+                  ? "bg-white text-slate-950 shadow-sm border border-slate-200"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {v === "kanban" ? "⊞ Kanban" : v === "grid" ? "⊟ Grid" : "≡ List"}
+            </button>
+          ))}
+        </div>
+      </div>
       <AdminSpvManagement
         {...props}
         opportunities={filteredOpportunities}
-        listViewMode={viewMode}
-        listDensity={density}
-        listQuery={query}
+        listViewMode={listViewMode}
+        listDensity="comfortable"
+        listQuery=""
       />
     </>
   );

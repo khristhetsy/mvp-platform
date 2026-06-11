@@ -1,24 +1,15 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
-import Link from "next/link";
+import { Suspense, useMemo, useState } from "react";
 import { AdminCompanyCard } from "@/components/AdminCompanyCard";
 import type { AdminCompanyCardData } from "@/components/AdminCompanyCard";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-} from "@/components/ui/DataTable";
 import { AdminQueryFilterBar } from "@/components/ui/AdminQueryFilterBar";
-import { ModuleEmptyState, PipelineBoard, ViewToolbar } from "@/components/ui/ViewToolbar";
+import { ModuleEmptyState, PipelineBoard } from "@/components/ui/ViewToolbar";
 import { PageSection } from "@/components/ui/workspace-layout";
 import { useAdminQueryFilters } from "@/hooks/use-admin-query-filters";
-import { useViewMode } from "@/hooks/use-view-mode";
 import { filterCompanies as applyCompanyQueryFilters, type CompanyQueryFilters } from "@/lib/ui/query-filters";
-import { getCompanyWorkspaceHref } from "@/lib/ui/drilldown-links";
+
+type ViewMode = "kanban" | "grid" | "list";
 
 function formatReviewStatus(status: string | null) {
   if (!status) return "Unknown";
@@ -46,8 +37,8 @@ function AdminCompaniesModuleViewsInner({
   loadError: string | null;
   pendingCount: number;
 }>) {
-  const { viewMode, density, query, setViewMode, setDensity, setQuery, allowedModes } =
-    useViewMode("admin-companies");
+  const [query, setQuery] = useState("");
+  const [view, setView] = useState<ViewMode>("kanban");
   const { filters } = useAdminQueryFilters("companies");
   const companyFilters = filters as CompanyQueryFilters;
 
@@ -77,25 +68,34 @@ function AdminCompaniesModuleViewsInner({
     }));
   }, [filtered]);
 
-  const timelineRows = useMemo(
-    () => [...filtered].sort((a, b) => b.created_at.localeCompare(a.created_at)),
-    [filtered],
-  );
-
   return (
     <>
       <AdminQueryFilterBar page="companies" className="mb-4" />
-      <ViewToolbar
-        viewMode={viewMode}
-        allowedModes={allowedModes}
-        onViewModeChange={setViewMode}
-        density={density}
-        onDensityChange={setDensity}
-        query={query}
-        onQueryChange={setQuery}
-        searchPlaceholder="Search companies, founders, or status…"
-        sticky
-      />
+      <div className="mb-4 flex flex-wrap items-center gap-3 justify-between">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search companies, founders, or status…"
+          className="flex-1 min-w-[200px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+        />
+        <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
+          {(["kanban", "grid", "list"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setView(v)}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                view === v
+                  ? "bg-white text-slate-950 shadow-sm border border-slate-200"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {v === "kanban" ? "⊞ Kanban" : v === "grid" ? "⊟ Grid" : "≡ List"}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <PageSection
         title="Company submissions"
@@ -111,60 +111,51 @@ function AdminCompaniesModuleViewsInner({
           </div>
         ) : filtered.length === 0 ? (
           <ModuleEmptyState title="No matching companies" description="Try a different search term or clear filters." />
-        ) : viewMode === "card" ? (
-          <div className={`grid gap-4 ${density === "compact" ? "gap-3" : "gap-4"}`}>
+        ) : view === "kanban" ? (
+          <PipelineBoard columns={pipelineColumns} density="comfortable" />
+        ) : view === "grid" ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((company) => (
               <AdminCompanyCard key={company.id} company={company} />
             ))}
           </div>
-        ) : viewMode === "table" ? (
-          <div className="overflow-x-auto">
-            <DataTable density={density}>
-          <DataTableHead>
-            <DataTableHeaderCell>Company</DataTableHeaderCell>
-            <DataTableHeaderCell>Founder</DataTableHeaderCell>
-            <DataTableHeaderCell>Industry</DataTableHeaderCell>
-            <DataTableHeaderCell>Review</DataTableHeaderCell>
-            <DataTableHeaderCell>Published</DataTableHeaderCell>
-            <DataTableHeaderCell>Onboarding</DataTableHeaderCell>
-            <DataTableHeaderCell>Submitted</DataTableHeaderCell>
-          </DataTableHead>
-          <DataTableBody>
-            {filtered.map((company) => (
-              <DataTableRow key={company.id}>
-                <DataTableCell>
-                  <Link href={getCompanyWorkspaceHref(company.id)} className="font-medium text-indigo-700 hover:text-indigo-900">
-                    {company.company_name}
-                  </Link>
-                </DataTableCell>
-                <DataTableCell>
-                  <p>{company.founder_name}</p>
-                  <p className="text-xs text-slate-500">{company.founder_email}</p>
-                </DataTableCell>
-                <DataTableCell>{company.industry ?? "—"}</DataTableCell>
-                <DataTableCell>{formatReviewStatus(company.review_status)}</DataTableCell>
-                <DataTableCell>{company.is_published ? "Yes" : "No"}</DataTableCell>
-                <DataTableCell>{company.founder_onboarding_percent}%</DataTableCell>
-                <DataTableCell>{new Date(company.created_at).toLocaleDateString("en-US")}</DataTableCell>
-              </DataTableRow>
-            ))}
-          </DataTableBody>
-            </DataTable>
-          </div>
-        ) : viewMode === "pipeline" ? (
-          <PipelineBoard columns={pipelineColumns} density={density} />
         ) : (
-          <ol className="space-y-3">
-            {timelineRows.map((company) => (
-              <li key={company.id} className="rounded-lg border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
-                <p className="text-xs text-slate-500">{new Date(company.created_at).toLocaleDateString("en-US")}</p>
-                <p className="text-sm font-semibold text-slate-950">{company.company_name}</p>
-                <p className="text-xs text-slate-600">
-                  {formatReviewStatus(company.review_status)} · {company.founder_name}
-                </p>
-              </li>
-            ))}
-          </ol>
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 text-left text-xs font-semibold text-slate-500">
+                  <th className="px-4 py-3">Company</th>
+                  <th className="px-4 py-3">Founder</th>
+                  <th className="px-4 py-3">Industry</th>
+                  <th className="px-4 py-3">Review</th>
+                  <th className="px-4 py-3">Published</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.map((company) => (
+                  <tr key={company.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-medium text-slate-900">{company.company_name}</td>
+                    <td className="px-4 py-3 text-slate-600">{company.founder_name}</td>
+                    <td className="px-4 py-3 text-slate-500">{company.industry ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        company.review_status === "approved"
+                          ? "bg-emerald-50 text-emerald-800"
+                          : company.review_status === "rejected"
+                          ? "bg-red-50 text-red-700"
+                          : "bg-amber-50 text-amber-800"
+                      }`}>
+                        {formatReviewStatus(company.review_status)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-500">
+                      {company.is_published ? "Published" : "Draft"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </PageSection>
     </>

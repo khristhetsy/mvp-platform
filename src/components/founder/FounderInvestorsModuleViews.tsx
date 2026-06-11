@@ -1,21 +1,14 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-} from "@/components/ui/DataTable";
-import { ModuleEmptyState, PipelineBoard, ViewToolbar } from "@/components/ui/ViewToolbar";
+import { ModuleEmptyState, PipelineBoard } from "@/components/ui/ViewToolbar";
 import { MetricGrid, PageSection } from "@/components/ui/workspace-layout";
-import { useViewMode } from "@/hooks/use-view-mode";
 import type { FounderInvestorCrmView, FounderInvestorRelationRow } from "@/lib/data/investor-crm";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
+
+type ViewMode = "kanban" | "grid" | "list";
 
 function formatActivityDate(value: string) {
   return new Date(value).toLocaleDateString("en-US", {
@@ -94,25 +87,22 @@ function filterRows(rows: FounderInvestorRelationRow[], query: string) {
   );
 }
 
+const PIPELINE_GROUPS = [
+  { id: "interested", title: "Interested", actionTypes: ["interested", "saved_deal"] },
+  { id: "pledged", title: "Pledged / Indicative", actionTypes: ["pledged", "indicative_interest"] },
+  { id: "intro", title: "Intro Requested", actionTypes: ["intro_requested"] },
+  { id: "follow_up", title: "Follow-up", actionTypes: ["follow_up"] },
+] as const;
+
 function FounderInvestorsModuleViewsInner({
   crmView,
   companyName,
 }: Readonly<{ crmView: FounderInvestorCrmView; companyName: string }>) {
-  const { viewMode, density, query, setViewMode, setDensity, setQuery, allowedModes } =
-    useViewMode("founder-investors");
+  const [query, setQuery] = useState("");
+  const [view, setView] = useState<ViewMode>("kanban");
 
   const allRows = useMemo(() => collectAllRows(crmView), [crmView]);
   const filteredRows = useMemo(() => filterRows(allRows, query), [allRows, query]);
-
-  const cardSections = useMemo(
-    () => [
-      { title: "New Interest", subtitle: "Investors who recently expressed interest", rows: crmView.sections.newInterest },
-      { title: "Pledged / Indicative Interest", subtitle: "Investors with pledge or indicative amounts", rows: crmView.sections.pledged },
-      { title: "Intro Requested", subtitle: "Investors requesting a warm introduction", rows: crmView.sections.introRequested },
-      { title: "Follow-up Needed", subtitle: "Investors waiting on follow-up", rows: crmView.sections.followUpNeeded },
-    ],
-    [crmView.sections],
-  );
 
   const pipelineColumns = useMemo(() => {
     const groups: Record<string, FounderInvestorRelationRow[]> = {
@@ -143,24 +133,41 @@ function FounderInvestorsModuleViewsInner({
     ];
   }, [filteredRows]);
 
-  const timelineRows = useMemo(
-    () => [...filteredRows].sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt)),
-    [filteredRows],
-  );
+  const groupedForGrid = useMemo(() => {
+    return PIPELINE_GROUPS.map((group) => ({
+      id: group.id,
+      title: group.title,
+      rows: filteredRows.filter((r) => (group.actionTypes as readonly string[]).includes(r.actionType)),
+    })).filter((g) => g.rows.length > 0);
+  }, [filteredRows]);
 
   return (
     <>
-      <ViewToolbar
-        viewMode={viewMode}
-        allowedModes={allowedModes}
-        onViewModeChange={setViewMode}
-        density={density}
-        onDensityChange={setDensity}
-        query={query}
-        onQueryChange={setQuery}
-        searchPlaceholder="Search investors, status, or activity…"
-        sticky
-      />
+      <div className="mb-4 flex flex-wrap items-center gap-3 justify-between">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search investors, status, or activity…"
+          className="flex-1 min-w-[200px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+        />
+        <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
+          {(["kanban", "grid", "list"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setView(v)}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                view === v
+                  ? "bg-white text-slate-950 shadow-sm border border-slate-200"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {v === "kanban" ? "⊞ Kanban" : v === "grid" ? "⊟ Grid" : "≡ List"}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <PageSection title="Pipeline summary" subtitle={companyName}>
         <MetricGrid>
@@ -200,78 +207,53 @@ function FounderInvestorsModuleViewsInner({
       </PageSection>
 
       <PageSection>
-        {viewMode === "table" ? (
-          filteredRows.length === 0 ? (
-            <ModuleEmptyState title="No matching investors" description="Try adjusting your search or check back when platform activity arrives." />
-          ) : (
-            <DataTable density={density}>
-              <DataTableHead>
-                <DataTableHeaderCell>Investor</DataTableHeaderCell>
-                <DataTableHeaderCell>Activity</DataTableHeaderCell>
-                <DataTableHeaderCell>Status</DataTableHeaderCell>
-                <DataTableHeaderCell>Stage</DataTableHeaderCell>
-                <DataTableHeaderCell>Amount</DataTableHeaderCell>
-                <DataTableHeaderCell>Last activity</DataTableHeaderCell>
-              </DataTableHead>
-              <DataTableBody>
-                {filteredRows.map((row) => (
-                  <DataTableRow key={row.id}>
-                    <DataTableCell>
-                      <p className="font-medium text-slate-900">{row.investorName}</p>
-                      {row.investorEmail ? <p className="text-xs text-slate-500">{row.investorEmail}</p> : null}
-                    </DataTableCell>
-                    <DataTableCell>{row.actionLabel}</DataTableCell>
-                    <DataTableCell>{row.status ?? "—"}</DataTableCell>
-                    <DataTableCell>{formatPipelineStage(row.pipelineStage)}</DataTableCell>
-                    <DataTableCell>{formatAmountRow(row)}</DataTableCell>
-                    <DataTableCell>{formatActivityDate(row.lastActivityAt)}</DataTableCell>
-                  </DataTableRow>
-                ))}
-              </DataTableBody>
-            </DataTable>
-          )
-        ) : null}
-
-        {viewMode === "card" ? (
-          <div className="grid gap-6 xl:grid-cols-2">
-            {cardSections.map((section) => (
-              <WorkspacePanel key={section.title} title={section.title} subtitle={section.subtitle}>
-                {section.rows.length === 0 ? (
-                  <p className="text-sm text-slate-500">No records in this section yet.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {section.rows.map((row) => (
-                      <FounderInvestorRelationCard key={row.id} row={row} />
-                    ))}
-                  </div>
-                )}
+        {filteredRows.length === 0 ? (
+          <ModuleEmptyState title="No matching investors" description="Try adjusting your search or check back when platform activity arrives." />
+        ) : view === "kanban" ? (
+          <PipelineBoard columns={pipelineColumns} density="comfortable" />
+        ) : view === "grid" ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {groupedForGrid.map((group) => (
+              <WorkspacePanel key={group.id} title={group.title} subtitle={`${group.rows.length} investor${group.rows.length !== 1 ? "s" : ""}`}>
+                <div className="space-y-2">
+                  {group.rows.map((row) => (
+                    <FounderInvestorRelationCard key={row.id} row={row} />
+                  ))}
+                </div>
               </WorkspacePanel>
             ))}
           </div>
-        ) : null}
-
-        {viewMode === "pipeline" ? (
-          <PipelineBoard columns={pipelineColumns} density={density} />
-        ) : null}
-
-        {viewMode === "timeline" ? (
-          filteredRows.length === 0 ? (
-            <ModuleEmptyState title="No activity yet" description={`Investor timeline for ${companyName} will populate as engagement grows.`} />
-          ) : (
-            <WorkspacePanel title="Activity timeline" subtitle="Chronological investor engagement">
-              <ol className="relative border-l border-slate-200 pl-4">
-                {timelineRows.map((row) => (
-                  <li key={row.id} className={`${density === "compact" ? "mb-4" : "mb-6"} ml-2`}>
-                    <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border-2 border-white bg-[var(--gold)]" />
-                    <p className="text-xs font-medium text-slate-500">{formatActivityDate(row.lastActivityAt)}</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-950">{row.investorName}</p>
-                    <p className="text-sm text-slate-700">{row.actionLabel}</p>
-                  </li>
+        ) : (
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 text-left text-xs font-semibold text-slate-500">
+                  <th className="px-4 py-3">Investor</th>
+                  <th className="px-4 py-3">Activity</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Stage</th>
+                  <th className="px-4 py-3">Amount</th>
+                  <th className="px-4 py-3">Last activity</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredRows.map((row) => (
+                  <tr key={row.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-slate-900">{row.investorName}</p>
+                      {row.investorEmail ? <p className="text-xs text-slate-400">{row.investorEmail}</p> : null}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{row.actionLabel}</td>
+                    <td className="px-4 py-3 text-slate-500">{row.status ?? "—"}</td>
+                    <td className="px-4 py-3 text-slate-500">{row.pipelineStage ? formatPipelineStage(row.pipelineStage) : "—"}</td>
+                    <td className="px-4 py-3 text-slate-700">{formatAmountRow(row)}</td>
+                    <td className="px-4 py-3 text-slate-400 text-xs">{formatActivityDate(row.lastActivityAt)}</td>
+                  </tr>
                 ))}
-              </ol>
-            </WorkspacePanel>
-          )
-        ) : null}
+              </tbody>
+            </table>
+          </div>
+        )}
       </PageSection>
     </>
   );
