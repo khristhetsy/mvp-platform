@@ -2,8 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
-import { WorkspacePanel } from "@/components/WorkspacePanel";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { getPublishedAdminCourse, getPublishedCourseQuiz, listPublishedAdminCourseModules, listPublishedAdminLessonsForModule } from "@/lib/learning/admin-courses";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { requireRole } from "@/lib/supabase/auth";
@@ -31,7 +29,6 @@ export default async function FounderAdminCoursePage({ params }: PageProps) {
 
   const lessonsByModule = new Map<string, Awaited<ReturnType<typeof listPublishedAdminLessonsForModule>>>();
   for (const m of modules) {
-    // sequential is fine at Phase 2 scale; avoids large fanout.
     lessonsByModule.set(m.slug, await listPublishedAdminLessonsForModule(m.slug));
   }
 
@@ -71,105 +68,139 @@ export default async function FounderAdminCoursePage({ params }: PageProps) {
   }, 0);
   const percent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
+  // Find first incomplete lesson to continue
+  let firstLessonId: string | null = null;
+  outer: for (const m of modules) {
+    const lessons = lessonsByModule.get(m.slug) ?? [];
+    for (const l of lessons) {
+      if (!completedSet.has(`${m.slug}:${l.lesson_key}`)) {
+        firstLessonId = l.id;
+        break outer;
+      }
+    }
+  }
+  // Fallback: first lesson overall
+  if (!firstLessonId) {
+    for (const m of modules) {
+      const lessons = lessonsByModule.get(m.slug) ?? [];
+      if (lessons[0]) { firstLessonId = lessons[0].id; break; }
+    }
+  }
+
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle={company.company_name}>
       <FounderFeatureGate featureKey="elearning">
-        <div className="space-y-6">
-          <PageHeader
-            eyebrow="Admin-authored course"
-            title={course.title}
-            description={course.description}
-            metadata={`Educational content only · ${percent}% lessons complete`}
-            actions={
-              <Link
-                href="/founder/learning"
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Back to learning
-              </Link>
-            }
-          />
+        <div className="space-y-8">
 
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Educational content only. No investment, legal, or tax advice. No guarantee of funding outcomes.
+          {/* Hero banner */}
+          <div className="rounded-xl bg-gradient-to-br from-indigo-600 to-slate-900 p-8 text-white">
+            <Link href="/founder/learning" className="text-xs font-medium text-white/80 hover:text-white">
+              ← Course catalog
+            </Link>
+            <p className="mt-4 text-xs uppercase tracking-wide text-white/70">
+              {course.category ?? "Course"} · {course.difficulty ?? "All levels"}
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold">{course.title}</h1>
+            <p className="mt-2 max-w-2xl text-sm text-white/90">{course.description}</p>
+            <div className="mt-4 flex flex-wrap gap-3 text-xs text-white/80">
+              <span>{totalLessons} lessons</span>
+            </div>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              {firstLessonId ? (
+                <Link
+                  href={`/founder/learning/courses/${courseId}/lessons/${firstLessonId}`}
+                  className="rounded-md bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+                >
+                  {percent > 0 ? "Continue course" : "Start course"}
+                </Link>
+              ) : null}
+              {quiz ? (
+                <Link
+                  href={`/founder/learning/courses/${courseId}/quiz`}
+                  className="rounded-md border border-white/30 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
+                >
+                  Take quiz
+                </Link>
+              ) : null}
+              <span className="text-sm text-white/90">{percent}% complete</span>
+            </div>
+            {totalLessons > 0 ? (
+              <div className="mt-3 h-2 max-w-md overflow-hidden rounded-full bg-white/20">
+                <div className="h-full rounded-full bg-white" style={{ width: `${percent}%` }} />
+              </div>
+            ) : null}
           </div>
 
-          {quiz ? (
-            <WorkspacePanel title="Course quiz" subtitle="Optional if present; required for certificate if published">
-              <p className="text-sm text-slate-700">{quiz.title}</p>
-              <Link
-                href={`/founder/learning/courses/${courseId}/quiz`}
-                className="mt-3 inline-flex rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-              >
-                Take quiz
-              </Link>
-            </WorkspacePanel>
-          ) : null}
-
-          <WorkspacePanel title="Modules" subtitle={`${modules.length} modules · ${totalLessons} lessons`}>
-            {modules.length === 0 ? (
-              <p className="text-sm text-slate-600">No published modules are linked to this course yet.</p>
-            ) : (
-              <div className="space-y-4">
-                {modules.map((m) => {
+          {/* Curriculum */}
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">Course content</h2>
+            <p className="mt-1 text-sm text-slate-500">Educational content only — not legal, tax, or investment advice.</p>
+            <div className="mt-4 space-y-4">
+              {modules.length === 0 ? (
+                <p className="text-sm text-slate-500">No published modules yet.</p>
+              ) : (
+                modules.map((m) => {
                   const lessons = lessonsByModule.get(m.slug) ?? [];
                   return (
-                    <div key={m.id} className="rounded-lg border border-slate-200 bg-white p-4">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{m.category}</p>
-                      <h2 className="mt-1 text-lg font-semibold text-slate-950">{m.title}</h2>
-                      <p className="mt-1 text-sm text-slate-600">{m.description}</p>
-                      <div className="mt-3 space-y-2">
+                    <div key={m.id} className="rounded-xl border border-slate-200 bg-white">
+                      <div className="border-b border-slate-100 px-5 py-4">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{m.category}</p>
+                        <h3 className="mt-1 text-base font-semibold text-slate-950">{m.title}</h3>
+                        <p className="mt-0.5 text-sm text-slate-500">{m.description}</p>
+                      </div>
+                      <ul className="divide-y divide-slate-100">
                         {lessons.length === 0 ? (
-                          <p className="text-xs text-slate-500">No published lessons yet.</p>
+                          <li className="px-5 py-3 text-sm text-slate-400">No published lessons yet.</li>
                         ) : (
                           lessons.map((l, idx) => {
                             const done = completedSet.has(`${m.slug}:${l.lesson_key}`);
                             return (
-                              <Link
-                                key={l.id}
-                                href={`/founder/learning/courses/${courseId}/lessons/${l.id}`}
-                                className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm hover:bg-slate-100"
-                              >
-                                <span className="min-w-0 truncate">
-                                  Lesson {idx + 1}: {l.title}
-                                </span>
-                                <span className={`text-xs font-semibold ${done ? "text-emerald-700" : "text-slate-600"}`}>
-                                  {done ? "Completed" : "Open"}
-                                </span>
-                              </Link>
+                              <li key={l.id}>
+                                <Link
+                                  href={`/founder/learning/courses/${courseId}/lessons/${l.id}`}
+                                  className="flex items-center justify-between gap-3 px-5 py-3 text-sm hover:bg-slate-50"
+                                >
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-xs font-medium text-slate-500">
+                                      {done ? "✓" : idx + 1}
+                                    </span>
+                                    <span className={`truncate ${done ? "text-slate-400 line-through" : "text-slate-800"}`}>
+                                      {l.title}
+                                    </span>
+                                  </div>
+                                  <span className="shrink-0 text-xs text-slate-400">{l.estimated_time_minutes}m</span>
+                                </Link>
+                              </li>
                             );
                           })
                         )}
-                      </div>
+                      </ul>
                     </div>
                   );
-                })}
-              </div>
-            )}
-          </WorkspacePanel>
+                })
+              )}
+            </div>
+          </div>
 
-          <WorkspacePanel title="Progress & certificates" subtitle="Certificate of Completion only">
-            <p className="text-sm text-slate-700">
-              Course status: <span className="font-semibold">{courseProgress?.status ?? "not_started"}</span>
-            </p>
-            {(certificates ?? []).length ? (
-              <div className="mt-3 space-y-2">
-                {(certificates ?? []).map((c) => (
-                  <div key={c.id} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
-                    <p className="font-semibold text-slate-900">{c.certificate_title}</p>
-                    <p className="text-xs text-slate-500">
-                      Code: <span className="font-mono">{c.certificate_code}</span> · status: {c.status}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-2 text-sm text-slate-600">No certificate issued yet.</p>
-            )}
-          </WorkspacePanel>
+          {/* Certificates */}
+          {(certificates ?? []).length > 0 ? (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+              <h2 className="text-sm font-semibold text-emerald-900">Certificate of Completion</h2>
+              {(certificates ?? []).map((c) => (
+                <div key={c.id} className="mt-2">
+                  <p className="font-semibold text-emerald-800">{c.certificate_title}</p>
+                  <p className="text-xs text-emerald-600">Code: <span className="font-mono">{c.certificate_code}</span> · {c.status}</p>
+                </div>
+              ))}
+            </div>
+          ) : courseProgress?.status === "completed" ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+              <p className="text-sm text-slate-600">Course completed. No certificate issued for this course.</p>
+            </div>
+          ) : null}
+
         </div>
       </FounderFeatureGate>
     </FounderAppShell>
   );
 }
-
