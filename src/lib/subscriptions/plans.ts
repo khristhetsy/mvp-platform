@@ -3,6 +3,8 @@ export type PlanType =
   | "founder_basic"
   | "founder_professional"
   | "investor_free"
+  | "investor_pro"
+  | "investor_premium"
   | "admin_internal";
 
 export type SubscriptionStatus =
@@ -44,17 +46,21 @@ export type SubscriptionRecord = {
 
 export const PLAN_LABELS: Record<PlanType, string> = {
   founder_trial: "Free Trial",
-  founder_basic: "Founder Basic",
-  founder_professional: "Founder Professional",
+  founder_basic: "Founder Pro",
+  founder_professional: "Founder Premium",
   investor_free: "Investor Free",
+  investor_pro: "Investor Pro",
+  investor_premium: "Investor Premium",
   admin_internal: "Admin Internal",
 };
 
 export const PLAN_PRICES: Record<PlanType, number> = {
   founder_trial: 0,
-  founder_basic: 49900,
+  founder_basic: 50000,
   founder_professional: 100000,
   investor_free: 0,
+  investor_pro: 50000,
+  investor_premium: 100000,
   admin_internal: 0,
 };
 
