@@ -46,7 +46,7 @@ export function MarketingNav() {
 
         <div className="hidden items-center gap-2 sm:flex">
           <Link
-            href="https://mvp-platform-theta.vercel.app/login"
+            href="https://icapos.com/login"
             className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-950"
           >
             Login
@@ -91,7 +91,7 @@ export function MarketingNav() {
           </ul>
           <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3">
             <Link
-              href="https://mvp-platform-theta.vercel.app/login"
+              href="https://icapos.com/login"
               onClick={() => setMobileOpen(false)}
               className="rounded-lg border border-slate-200 px-3 py-2.5 text-center text-sm font-medium text-slate-700"
             >
