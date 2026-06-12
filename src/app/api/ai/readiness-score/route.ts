@@ -69,7 +69,7 @@ export async function POST(request: Request) {
   // Don't persist demo scores — require a real API key
   if (result.isDemo) {
     return NextResponse.json(
-      { error: "OPENAI_API_KEY is not configured. Scoring requires a valid API key." },
+      { error: "ANTHROPIC_API_KEY is not configured or the API call failed. Check Vercel environment variables." },
       { status: 503 },
     );
   }
