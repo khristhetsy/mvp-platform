@@ -66,6 +66,14 @@ export async function POST(request: Request) {
     uploadedDocumentTypes,
   });
 
+  // Don't persist demo scores — require a real API key
+  if (result.isDemo) {
+    return NextResponse.json(
+      { error: "OPENAI_API_KEY is not configured. Scoring requires a valid API key." },
+      { status: 503 },
+    );
+  }
+
   const outreachUnlocked = result.totalScore >= 65;
 
   // Persist

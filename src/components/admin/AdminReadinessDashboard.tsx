@@ -448,6 +448,7 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
   } | null>(null);
   const [rescoring, setRescoring] = useState<string | null>(null);
   const [rescoreError, setRescoreError] = useState<string | null>(null);
+  const [rescoreAllProgress, setRescoreAllProgress] = useState<{ done: number; total: number } | null>(null);
 
   const filtered = rows.filter((r) => {
     const matchSearch =
@@ -467,6 +468,41 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
 
     return matchSearch && matchFilter;
   });
+
+  async function rescoreAll() {
+    // Re-score companies that are unscored or have a demo/unconfigured score
+    const targets = rows.filter(
+      (r) => r.score === null || r.score.scoredBy === "unconfigured",
+    );
+    if (targets.length === 0) return;
+
+    setRescoreAllProgress({ done: 0, total: targets.length });
+    setRescoreError(null);
+
+    for (let i = 0; i < targets.length; i++) {
+      try {
+        const res = await fetch("/api/ai/readiness-score", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ companyId: targets[i].companyId }),
+        });
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          setRescoreError(j.error ?? "Re-score All failed.");
+          setRescoreAllProgress(null);
+          return;
+        }
+      } catch {
+        setRescoreError("Network error during Re-score All.");
+        setRescoreAllProgress(null);
+        return;
+      }
+      setRescoreAllProgress({ done: i + 1, total: targets.length });
+    }
+
+    setRescoreAllProgress(null);
+    window.location.reload();
+  }
 
   async function rescore(companyId: string) {
     setRescoring(companyId);
@@ -539,6 +575,15 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
               <option value="locked">Outreach locked</option>
               <option value="overridden">Admin overridden</option>
             </select>
+            <button
+              onClick={rescoreAll}
+              disabled={rescoreAllProgress !== null}
+              className="ml-auto rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+            >
+              {rescoreAllProgress
+                ? `Scoring ${rescoreAllProgress.done} / ${rescoreAllProgress.total}…`
+                : "Re-score All"}
+            </button>
           </div>
 
           {rescoreError && (
