@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { UpgradeRequestActions } from "@/components/UpgradeRequestActions";
+import { CheckoutButton, ManageSubscriptionButton } from "@/components/billing/CheckoutButton";
 import {
   getBillingLifecycleLabel,
   getBillingLifecycleStatus,
@@ -99,43 +100,49 @@ export default async function BillingPage() {
           {getBillingStatusMessage(subscription, lifecycle, requestedPlan)}
         </p>
 
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link
-            href={getUpgradeUrl()}
-            className="rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-3 text-sm font-semibold text-white hover:from-indigo-500 hover:to-violet-500"
-          >
-            View upgrade options
-          </Link>
-          <Link
-            href="/pricing"
-            className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Compare plans
-          </Link>
-          <Link
-            href="/founder/settings"
-            className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Account settings
-          </Link>
-        </div>
-
-        <div className="mt-10 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-xs text-slate-500">
-          <p className="font-semibold text-slate-700">Payment integration</p>
-          <p className="mt-2">
-            {isPaymentsEnabled()
-              ? "Stripe is configured and ready for a future checkout release."
-              : "Stripe checkout is not connected yet. Upgrade requests are queued until billing goes live."}
-          </p>
-        </div>
-
-        <div className="mt-10 border-t border-slate-200 pt-8">
-          <h2 className="text-base font-semibold text-slate-950">Upgrade requests</h2>
-          <p className="mt-1 text-sm text-slate-600">Submit a request — no payment will be processed yet.</p>
-          <div className="mt-4">
-            <UpgradeRequestActions requestedPlan={requestedPlan} />
+        {isPaymentsEnabled() && subscription.subscription_status !== "active" ? (
+          <div className="mt-8">
+            <h2 className="text-base font-semibold text-slate-950">Upgrade your plan</h2>
+            <p className="mt-1 text-sm text-slate-600">Choose a plan to unlock full access.</p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <CheckoutButton planType="founder_basic" label="Upgrade to Founder Pro — $500/mo" />
+              <CheckoutButton planType="founder_professional" label="Upgrade to Founder Premium — $1,000/mo" recommended />
+            </div>
           </div>
-        </div>
+        ) : null}
+
+        {isPaymentsEnabled() && subscription.subscription_status === "active" ? (
+          <div className="mt-8 flex flex-wrap gap-3">
+            <ManageSubscriptionButton />
+            <Link
+              href="/founder/settings"
+              className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Account settings
+            </Link>
+          </div>
+        ) : null}
+
+        {!isPaymentsEnabled() ? (
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link
+              href={getUpgradeUrl()}
+              className="rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-3 text-sm font-semibold text-white hover:from-indigo-500 hover:to-violet-500"
+            >
+              View upgrade options
+            </Link>
+          </div>
+        ) : null}
+
+        {!isPaymentsEnabled() ? (
+          <div className="mt-10 border-t border-slate-200 pt-8">
+            <h2 className="text-base font-semibold text-slate-950">Upgrade requests</h2>
+            <p className="mt-1 text-sm text-slate-600">Submit a request — no payment will be processed yet.</p>
+            <div className="mt-4">
+              <UpgradeRequestActions requestedPlan={requestedPlan} />
+            </div>
+          </div>
+        ) : null}
       </section>
     </FounderAppShell>
   );
