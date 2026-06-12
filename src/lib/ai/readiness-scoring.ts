@@ -1,12 +1,14 @@
 /**
- * Investable Readiness Scoring — Claude AI engine
+ * Investable Readiness Scoring — OpenAI engine
  *
  * Scores a company across 8 investor-facing factors (100 pts total)
  * using document AI summaries as inputs.
- * Calls the Anthropic Messages API via fetch (no SDK dependency).
+ * Uses the existing OpenAI client (gpt-4.1-mini) — no new API key needed.
  *
  * IMPORTANT: Score is investor/admin-only — never surfaced to founders.
  */
+
+import OpenAI from "openai";
 
 // ─── Factor definitions ──────────────────────────────────────────────────────
 
@@ -54,7 +56,7 @@ export type FactorScore = {
 export type ReadinessScoreResult = {
   totalScore: number;
   factorScores: Record<FactorKey, FactorScore>;
-  generatedBy: "claude" | "unconfigured";
+  generatedBy: "openai" | "unconfigured";
   isDemo: boolean;
 };
 
@@ -85,7 +87,7 @@ function buildDemoScore(): ReadinessScoreResult {
       evidence: [
         {
           icon: "⚠️",
-          text: "AI scoring requires ANTHROPIC_API_KEY to be configured.",
+          text: "AI scoring requires OPENAI_API_KEY to be configured.",
           src: "System",
         },
       ],
@@ -111,9 +113,11 @@ export async function scoreCompanyReadiness(input: {
   documentSummaries: Array<{ type: string; summary: string }>;
   uploadedDocumentTypes: string[];
 }): Promise<ReadinessScoreResult> {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.OPENAI_API_KEY) {
     return buildDemoScore();
   }
+
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   const systemPrompt = `You are an institutional-grade investment analyst producing structured readiness scores for investor due diligence.
 
@@ -124,7 +128,7 @@ RULES:
 - Never invent evidence or fabricate document contents.
 - If a document is missing, reflect that as lower scores and flags.
 - Scores must sum to the per-factor maximum shown.
-- Return ONLY valid JSON matching the schema below — no prose, no markdown.
+- Return ONLY valid JSON matching the schema below — no prose, no markdown, no code fences.
 
 OUTPUT SCHEMA (return as raw JSON only):
 {
@@ -140,7 +144,7 @@ OUTPUT SCHEMA (return as raw JSON only):
   }
 }`;
 
-  const userPrompt = JSON.stringify({
+  const userContent = JSON.stringify({
     company: {
       name: input.companyName,
       industry: input.industry,
@@ -158,37 +162,22 @@ OUTPUT SCHEMA (return as raw JSON only):
     ].filter((t) => !input.uploadedDocumentTypes.includes(t)),
   });
 
-  // Call Anthropic Messages API via fetch — no SDK dependency
-  const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": process.env.ANTHROPIC_API_KEY!,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "claude-opus-4-5",
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-    }),
-  });
-
-  if (!anthropicRes.ok) {
-    console.error("[readiness-scoring] Anthropic API error", anthropicRes.status);
+  let rawText = "";
+  try {
+    const response = await client.responses.create({
+      model: "gpt-4.1-mini",
+      input: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent },
+      ],
+    });
+    rawText = response.output_text ?? "";
+  } catch (err) {
+    console.error("[readiness-scoring] OpenAI error", err);
     return buildDemoScore();
   }
 
-  const anthropicJson = (await anthropicRes.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-
-  const rawText =
-    anthropicJson.content?.[0]?.type === "text"
-      ? (anthropicJson.content[0].text ?? "")
-      : "";
-
-  // Strip any markdown code fences if Claude added them
+  // Strip any markdown code fences
   const jsonText = rawText
     .replace(/^```json\s*/i, "")
     .replace(/^```\s*/i, "")
@@ -199,8 +188,7 @@ OUTPUT SCHEMA (return as raw JSON only):
   try {
     parsed = JSON.parse(jsonText);
   } catch {
-    // Parsing failed — return demo score rather than crashing
-    console.error("[readiness-scoring] Failed to parse Claude response", rawText.slice(0, 200));
+    console.error("[readiness-scoring] Failed to parse OpenAI response", rawText.slice(0, 200));
     return buildDemoScore();
   }
 
@@ -225,7 +213,7 @@ OUTPUT SCHEMA (return as raw JSON only):
   return {
     totalScore: Math.min(100, total),
     factorScores,
-    generatedBy: "claude",
+    generatedBy: "openai",
     isDemo: false,
   };
 }
