@@ -36,11 +36,14 @@ export async function POST(request: Request) {
     .eq("id", user.id)
     .single();
 
+  const customerParams = existingCustomerId
+    ? { customer: existingCustomerId }
+    : { customer_email: profile?.email ?? user.email ?? undefined };
+
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     payment_method_types: ["card"],
-    customer: existingCustomerId,
-    customer_email: existingCustomerId ? undefined : (profile?.email ?? user.email),
+    ...customerParams,
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${APP_URL}/billing?session_id={CHECKOUT_SESSION_ID}&success=1`,
     cancel_url: `${APP_URL}/billing?canceled=1`,
