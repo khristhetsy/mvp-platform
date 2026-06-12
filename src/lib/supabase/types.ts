@@ -1378,6 +1378,28 @@ export type Database = {
         };
         Relationships: [];
       };
+      company_readiness_scores: {
+        Row: {
+          id: string;
+          company_id: string;
+          total_score: number;
+          factor_scores: Record<string, unknown>;
+          override_score: number | null;
+          override_reason: string | null;
+          overridden_by: string | null;
+          overridden_at: string | null;
+          effective_score: number;
+          scored_by: string;
+          score_version: number;
+          document_count: number;
+          outreach_unlocked: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: Record<string, unknown>;
+        Relationships: [];
+      };
       diligence_reports: {
         Row: {
           id: string;

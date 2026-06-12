@@ -8,6 +8,7 @@ import {
 } from "@/lib/data/marketplace";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { DocumentRecord } from "@/lib/supabase/types";
+import type { FactorKey, FactorScore } from "@/lib/ai/readiness-scoring";
 
 export type InvestorCompanyReportSnapshot = {
   listing: MarketplaceListing;
@@ -56,6 +57,14 @@ export type InvestorCompanyReportSnapshot = {
     readinessScore: number | null;
     generatedAt: string | null;
   };
+  investableReadiness: {
+    scoreId: string | null;
+    totalScore: number | null;
+    effectiveScore: number | null;
+    isOverridden: boolean;
+    factorScores: Record<FactorKey, FactorScore> | null;
+    scoredAt: string | null;
+  };
   learning: {
     modulesCompleted: number;
     modulesInProgress: number;
@@ -103,6 +112,7 @@ export async function loadInvestorCompanyReport(
     meetingsCount,
     learningRes,
     pitchDeckDocumentId,
+    readinessScoreRes,
   ] = await Promise.all([
     admin
       .from("companies")
@@ -146,12 +156,20 @@ export async function loadInvestorCompanyReport(
       .select("status")
       .eq("company_id", companyId),
     getPitchDeckDocumentId(admin, companyId),
+    admin
+      .from("company_readiness_scores")
+      .select("id, total_score, effective_score, override_score, factor_scores, scored_by, created_at")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const company = companyRes.data;
   const documents = (documentsRes.data ?? []) as DocumentRecord[];
   const diligenceReports = diligenceRes.data ?? [];
   const latestDiligence = diligenceReports[0];
+  const latestReadinessScore = readinessScoreRes.data ?? null;
 
   const checklist = buildDocumentChecklist(documents);
   const missingRequiredLabels = checklist
@@ -234,6 +252,14 @@ export async function loadInvestorCompanyReport(
         latestDiligence?.executive_summary ?? listing.diligenceSummary ?? listing.overview,
       readinessScore: latestDiligence?.readiness_score ?? null,
       generatedAt: latestDiligence?.created_at ?? null,
+    },
+    investableReadiness: {
+      scoreId: latestReadinessScore?.id ?? null,
+      totalScore: latestReadinessScore?.total_score ?? null,
+      effectiveScore: latestReadinessScore?.effective_score ?? null,
+      isOverridden: latestReadinessScore?.override_score != null,
+      factorScores: (latestReadinessScore?.factor_scores as Record<FactorKey, FactorScore> | null) ?? null,
+      scoredAt: latestReadinessScore?.created_at ?? null,
     },
     learning: {
       modulesCompleted,

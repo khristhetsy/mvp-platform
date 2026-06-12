@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { InvestorDealActions } from "@/components/InvestorDealActions";
+import { InvestableReadinessPanel } from "@/components/investor/InvestableReadinessPanel";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import type { InvestorCompanyReportSnapshot } from "@/lib/investor/load-company-report";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
+import type { FactorKey, FactorScore } from "@/lib/ai/readiness-scoring";
 
 export function InvestorCompanyReportView({
   report,
@@ -38,6 +40,18 @@ export function InvestorCompanyReportView({
           Published marketplace listing · Not a securities offering or legal opinion
         </p>
       </section>
+
+      {/* Investable Readiness Score — investor-only */}
+      {report.investableReadiness.totalScore !== null && report.investableReadiness.factorScores ? (
+        <InvestableReadinessPanel
+          companyName={listing.companyName}
+          totalScore={report.investableReadiness.totalScore}
+          factorScores={report.investableReadiness.factorScores as Record<FactorKey, FactorScore>}
+          effectiveScore={report.investableReadiness.effectiveScore}
+          isOverridden={report.investableReadiness.isOverridden}
+          scoredAt={report.investableReadiness.scoredAt}
+        />
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <WorkspacePanel title="Company overview" subtitle="Public marketplace profile">
