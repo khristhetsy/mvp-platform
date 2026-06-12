@@ -34,6 +34,11 @@ function trialDaysRemaining(trialEndsAt: string | null) {
 
 export default async function BillingPage() {
   const profile = await requireRole(["founder"]);
+
+  if (profile.role !== "founder") {
+    redirect("/upgrade");
+  }
+
   const subscription =
     (await getSubscriptionForProfile(profile.id)) ??
     (await ensureSubscriptionForProfile({ profileId: profile.id, role: profile.role }));
@@ -42,9 +47,15 @@ export default async function BillingPage() {
   const daysLeft =
     subscription.plan_type === "founder_trial" ? trialDaysRemaining(subscription.trial_ends_at) : null;
 
-  if (profile.role !== "founder") {
-    redirect("/upgrade");
-  }
+  // Check if user has a real Stripe customer (vs backfill record)
+  const { createServerSupabaseClient } = await import("@/lib/supabase/server");
+  const supabase = await createServerSupabaseClient();
+  const { data: subRaw } = await supabase
+    .from("subscriptions")
+    .select("stripe_customer_id")
+    .eq("profile_id", profile.id)
+    .single();
+  const hasStripeCustomer = Boolean((subRaw as Record<string, unknown> | null)?.stripe_customer_id);
 
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"}>
@@ -100,18 +111,18 @@ export default async function BillingPage() {
           {getBillingStatusMessage(subscription, lifecycle, requestedPlan)}
         </p>
 
-        {isPaymentsEnabled() && subscription.subscription_status !== "active" ? (
+        {isPaymentsEnabled() && !hasStripeCustomer ? (
           <div className="mt-8">
-            <h2 className="text-base font-semibold text-slate-950">Upgrade your plan</h2>
-            <p className="mt-1 text-sm text-slate-600">Choose a plan to unlock full access.</p>
+            <h2 className="text-base font-semibold text-slate-950">Choose a plan</h2>
+            <p className="mt-1 text-sm text-slate-600">Select a plan to activate your subscription.</p>
             <div className="mt-4 flex flex-wrap gap-3">
-              <CheckoutButton planType="founder_basic" label="Upgrade to Founder Pro — $500/mo" />
-              <CheckoutButton planType="founder_professional" label="Upgrade to Founder Premium — $1,000/mo" recommended />
+              <CheckoutButton planType="founder_basic" label="Founder Pro — $500/mo" />
+              <CheckoutButton planType="founder_professional" label="Founder Premium — $1,000/mo" recommended />
             </div>
           </div>
         ) : null}
 
-        {isPaymentsEnabled() && subscription.subscription_status === "active" ? (
+        {isPaymentsEnabled() && hasStripeCustomer ? (
           <div className="mt-8 flex flex-wrap gap-3">
             <ManageSubscriptionButton />
             <Link
