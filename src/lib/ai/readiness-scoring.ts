@@ -8,7 +8,7 @@
  * IMPORTANT: Score is investor/admin-only — never surfaced to founders.
  */
 
-import OpenAI from "openai";
+// Uses Anthropic Messages API via fetch — no SDK required
 
 // ─── Factor definitions ──────────────────────────────────────────────────────
 
@@ -56,7 +56,7 @@ export type FactorScore = {
 export type ReadinessScoreResult = {
   totalScore: number;
   factorScores: Record<FactorKey, FactorScore>;
-  generatedBy: "openai" | "unconfigured";
+  generatedBy: "claude" | "unconfigured";
   isDemo: boolean;
 };
 
@@ -113,11 +113,9 @@ export async function scoreCompanyReadiness(input: {
   documentSummaries: Array<{ type: string; summary: string }>;
   uploadedDocumentTypes: string[];
 }): Promise<ReadinessScoreResult> {
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.ANTHROPIC_API_KEY) {
     return buildDemoScore();
   }
-
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   const systemPrompt = `You are an institutional-grade investment analyst producing structured readiness scores for investor due diligence.
 
@@ -164,16 +162,31 @@ OUTPUT SCHEMA (return as raw JSON only):
 
   let rawText = "";
   try {
-    const response = await client.responses.create({
-      model: "gpt-4.1-mini",
-      input: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userContent },
-      ],
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userContent }],
+      }),
     });
-    rawText = response.output_text ?? "";
+
+    if (!res.ok) {
+      const errBody = await res.text();
+      console.error("[readiness-scoring] Anthropic API error", res.status, errBody);
+      return buildDemoScore();
+    }
+
+    const json = await res.json() as { content: Array<{ type: string; text: string }> };
+    rawText = json.content?.[0]?.text ?? "";
   } catch (err) {
-    console.error("[readiness-scoring] OpenAI error", err);
+    console.error("[readiness-scoring] Anthropic fetch error", err);
     return buildDemoScore();
   }
 
@@ -188,7 +201,7 @@ OUTPUT SCHEMA (return as raw JSON only):
   try {
     parsed = JSON.parse(jsonText);
   } catch {
-    console.error("[readiness-scoring] Failed to parse OpenAI response", rawText.slice(0, 200));
+    console.error("[readiness-scoring] Failed to parse Claude response", rawText.slice(0, 200));
     return buildDemoScore();
   }
 
@@ -213,7 +226,7 @@ OUTPUT SCHEMA (return as raw JSON only):
   return {
     totalScore: Math.min(100, total),
     factorScores,
-    generatedBy: "openai",
+    generatedBy: "claude",
     isDemo: false,
   };
 }
