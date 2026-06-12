@@ -33,6 +33,7 @@ export const adminOperationsNav: WorkspaceNavItem[] = [
     ],
   },
   { href: "/admin/matching", label: "Matching", requiredPermission: "manage_matching" },
+  { href: "/admin/readiness", label: "Readiness Scores", requiredPermission: "manage_companies" },
 ];
 
 export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
