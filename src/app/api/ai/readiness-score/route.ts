@@ -68,8 +68,14 @@ export async function POST(request: Request) {
 
   // Don't persist demo scores — require a real API key
   if (result.isDemo) {
+    const hasKey = !!process.env.ANTHROPIC_API_KEY;
+    console.error("[readiness-score] isDemo=true, hasKey=", hasKey, "companyId=", companyId);
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY is not configured or the API call failed. Check Vercel environment variables." },
+      {
+        error: hasKey
+          ? "Anthropic API call failed — check Vercel logs for details."
+          : "ANTHROPIC_API_KEY is not set in Vercel environment variables.",
+      },
       { status: 503 },
     );
   }
