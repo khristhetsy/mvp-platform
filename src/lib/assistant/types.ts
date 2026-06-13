@@ -6,6 +6,16 @@ export const ASSISTANT_MODES = [
   "spv_guidance",
   "compliance_guidance",
   "reports_guidance",
+  // Page-specific modes
+  "crm",
+  "tasks",
+  "billing",
+  "deal_room",
+  "capital_raise",
+  "cmo_marketing",
+  "investor_pipeline",
+  "investor_portfolio",
+  "investor_matching",
 ] as const;
 
 export type AssistantMode = (typeof ASSISTANT_MODES)[number];

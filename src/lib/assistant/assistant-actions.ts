@@ -199,23 +199,39 @@ export function buildRelatedLinks(ctx: SanitizedAssistantContext): AssistantRela
 }
 
 export function suggestedPromptChips(ctx: SanitizedAssistantContext): string[] {
-  if (ctx.mode === "spv_guidance") {
-    return ["What is blocking this SPV?", "What requirements are pending?", "What are the next SPV steps?"];
+  switch (ctx.mode) {
+    case "crm":
+      return ["How do I add a contact?", "Create a contact list", "Filter contacts by tag", "Import from CSV"];
+    case "tasks":
+      return ["What's overdue?", "Create a task", "Show high priority tasks", "How do I assign a task?"];
+    case "billing":
+      return ["What plan am I on?", "How do I upgrade?", "What's included in my plan?", "How do billing cycles work?"];
+    case "deal_room":
+      return ["What documents do I need?", "Due diligence checklist", "How do I organize my data room?", "What do investors look for?"];
+    case "capital_raise":
+      return ["Where do I start fundraising?", "How do I set a valuation?", "What materials do investors need?", "How long does a raise take?"];
+    case "cmo_marketing":
+      return ["Draft a campaign email", "Best subject line tips", "Plan a drip sequence", "Analyze my open rates"];
+    case "investor_pipeline":
+      return ["Summarize my pipeline", "Which deals to prioritize?", "What's in my watchlist?", "How do I track deal stages?"];
+    case "investor_portfolio":
+      return ["Portfolio health summary", "Compare my investments", "Identify portfolio risks", "Performance overview"];
+    case "investor_matching":
+      return ["Best matches for me", "Filter by sector", "How is match score calculated?", "New opportunities this week"];
+    case "spv_guidance":
+      return ["What is blocking this SPV?", "What requirements are pending?", "What are the next SPV steps?"];
+    case "compliance_guidance":
+      return ["What needs compliance review?", "What escalations are open?", "What should admin review next?"];
+    case "reports_guidance":
+      return ["How do I improve my score?", "What documents are missing?", "What's capping my readiness?"];
+    case "learning":
+      return ["What course should I take next?", "Explain investor readiness basics", "How does learning tie to readiness?"];
+    case "admin_operations":
+      return ["What needs attention?", "What is in the review queue?", "Summarize SPV blockers"];
+    case "investor_workflow":
+      return ["What should I do next?", "Why can't I access SPVs?", "How do I request an intro?"];
+    case "founder_workflow":
+    default:
+      return ["What should I do next?", "Why is this locked?", "What documents are pending?"];
   }
-  if (ctx.mode === "compliance_guidance") {
-    return ["What needs compliance review?", "What escalations are open?", "What should admin review next?"];
-  }
-  if (ctx.mode === "reports_guidance") {
-    return ["How do I improve readiness?", "What is missing from my report?", "What documents are still pending?"];
-  }
-  if (ctx.mode === "learning") {
-    return ["What course should I take next?", "Explain investor readiness basics", "How does learning tie to readiness?"];
-  }
-  if (ctx.role === "admin" || ctx.role === "analyst") {
-    return ["What needs attention?", "What is in the review queue?", "Summarize SPV blockers"];
-  }
-  if (ctx.role === "investor") {
-    return ["What should I do next?", "Why can't I access SPVs?", "How do I request an intro?"];
-  }
-  return ["What should I do next?", "Why is this locked?", "What documents are pending?"];
 }

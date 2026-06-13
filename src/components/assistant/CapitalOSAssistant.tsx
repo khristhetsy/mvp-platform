@@ -15,12 +15,33 @@ type ChatEntry = {
   text: string;
 };
 
+const HISTORY_WINDOW = 20;
+
 function inferClientMode(pathname: string, workspace: ReturnType<typeof resolveWorkspaceFromPath>): AssistantMode {
+  // Founder pages
   if (pathname.startsWith("/founder/learning")) return "learning";
   if (pathname.startsWith("/founder/readiness") || pathname.startsWith("/founder/report")) return "reports_guidance";
+  if (pathname.startsWith("/founder/capital-raise")) return "capital_raise";
+  if (pathname.startsWith("/founder/deal-room")) return "deal_room";
+  if (pathname.startsWith("/founder/contacts") || pathname.startsWith("/admin/marketing/contacts")) return "crm";
+  if (pathname.startsWith("/billing")) return "billing";
+  if (pathname.startsWith("/admin/tasks") || pathname.startsWith("/founder/tasks")) return "tasks";
+  // SPV / compliance / reports
   if (pathname.includes("/spv") || pathname.startsWith("/investor/spvs")) return "spv_guidance";
   if (pathname.startsWith("/admin/compliance")) return "compliance_guidance";
   if (pathname.startsWith("/admin/reports")) return "reports_guidance";
+  // Admin marketing → CMO AI
+  if (pathname.startsWith("/admin/marketing")) return "cmo_marketing";
+  // Investor pages
+  if (
+    pathname.startsWith("/investor/watchlist") ||
+    pathname.startsWith("/investor/opportunities") ||
+    pathname.startsWith("/investor/interest-pipeline")
+  ) return "investor_pipeline";
+  if (pathname.startsWith("/investor/portfolio") || pathname.startsWith("/investor/deals")) return "investor_portfolio";
+  if (pathname.startsWith("/deals") || pathname.startsWith("/investor/matching")) return "investor_matching";
+  if (pathname.startsWith("/investor/deal-room")) return "deal_room";
+
   if (workspace === "admin") return "admin_operations";
   if (workspace === "investor") return "investor_workflow";
   return "founder_workflow";
@@ -36,8 +57,11 @@ export function CapitalOSAssistant() {
   const [error, setError] = useState<string | null>(null);
   const [lastResponse, setLastResponse] = useState<AssistantChatResponse | null>(null);
   const [openAiAvailable, setOpenAiAvailable] = useState<boolean | null>(null);
+  const [agentRequested, setAgentRequested] = useState(false);
+  const [agentLoading, setAgentLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const openedLoggedRef = useRef(false);
+  const prevModeRef = useRef<string | null>(null);
 
   const mode = useMemo(() => inferClientMode(pathname, workspace), [pathname, workspace]);
   const promptChips = useMemo(
@@ -78,6 +102,47 @@ export function CapitalOSAssistant() {
     });
   }, [open, mode, pathname]);
 
+  // Reset chat when page context changes
+  useEffect(() => {
+    if (prevModeRef.current !== null && prevModeRef.current !== mode) {
+      setMessages([]);
+      setLastResponse(null);
+      setError(null);
+      openedLoggedRef.current = false;
+    }
+    prevModeRef.current = mode;
+  }, [mode]);
+
+  const clearChat = useCallback(() => {
+    setMessages([]);
+    setLastResponse(null);
+    setError(null);
+    openedLoggedRef.current = false;
+  }, []);
+
+  const requestLiveAgent = useCallback(async () => {
+    setAgentLoading(true);
+    try {
+      await fetch("/api/assistant/live-agent-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPath: pathname }),
+      });
+      setAgentRequested(true);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: "Your request has been sent. Someone from our team will reach out via Messages shortly. I'm still here if you have questions in the meantime.",
+        },
+      ]);
+    } catch {
+      // silently fail — don't interrupt the user
+    } finally {
+      setAgentLoading(false);
+    }
+  }, [pathname]);
+
   const sendMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
@@ -88,7 +153,8 @@ export function CapitalOSAssistant() {
       setLoading(true);
       setError(null);
 
-      const history = messages.map((entry) => ({
+      // Sliding window — keep last HISTORY_WINDOW messages
+      const history = messages.slice(-HISTORY_WINDOW).map((entry) => ({
         role: entry.role,
         content: entry.text.split("\n\n")[0] ?? entry.text,
       }));
@@ -161,16 +227,26 @@ export function CapitalOSAssistant() {
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[var(--gold)]" strokeWidth={1.75} aria-hidden />
                 <p id="capitalos-assistant-title" className="text-sm font-semibold">
-                  CapitalOS Assistant
+                  {mode === "cmo_marketing" ? "CapitalOS CMO AI" : mode === "investor_pipeline" || mode === "investor_portfolio" || mode === "investor_matching" ? "CapitalOS Analysis AI" : "CapitalOS AI"}
                 </p>
               </div>
-              <p className="mt-1 text-[11px] leading-4 text-slate-300">Workflow guidance · Next best action</p>
+              <p className="mt-1 text-[11px] leading-4 text-slate-300">{intro}</p>
             </div>
             <div className="flex shrink-0 items-center gap-1">
               {openAiAvailable === false ? (
                 <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-medium text-amber-100">
                   Guided
                 </span>
+              ) : null}
+              {messages.length > 0 ? (
+                <button
+                  type="button"
+                  aria-label="Clear chat"
+                  onClick={clearChat}
+                  className="rounded p-1.5 text-slate-300 hover:bg-white/10 hover:text-white text-[11px]"
+                >
+                  Clear
+                </button>
               ) : null}
               <button
                 type="button"
@@ -235,12 +311,22 @@ export function CapitalOSAssistant() {
                   key={prompt}
                   type="button"
                   disabled={loading}
-                  onClick={() => sendMessage(prompt)}
+                  onClick={() => void sendMessage(prompt)}
                   className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-medium text-slate-700 hover:bg-white disabled:opacity-50"
                 >
                   {prompt}
                 </button>
               ))}
+              {mode === "crm" && workspace === "founder" ? (
+                <button
+                  type="button"
+                  disabled={agentLoading || agentRequested}
+                  onClick={() => void requestLiveAgent()}
+                  className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-medium text-slate-700 hover:bg-white disabled:opacity-50"
+                >
+                  {agentRequested ? "✓ Agent requested" : agentLoading ? "Requesting…" : "Request a live agent"}
+                </button>
+              ) : null}
             </div>
           </div>
 

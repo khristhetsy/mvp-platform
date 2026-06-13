@@ -537,6 +537,15 @@ export const assistantChatSchema = z.object({
       "spv_guidance",
       "compliance_guidance",
       "reports_guidance",
+      "crm",
+      "tasks",
+      "billing",
+      "deal_room",
+      "capital_raise",
+      "cmo_marketing",
+      "investor_pipeline",
+      "investor_portfolio",
+      "investor_matching",
     ])
     .optional(),
   currentPath: z.string().max(500).optional(),
@@ -551,7 +560,7 @@ export const assistantChatSchema = z.object({
         content: z.string().max(4000),
       }),
     )
-    .max(12)
+    .max(20)
     .optional(),
 });
 

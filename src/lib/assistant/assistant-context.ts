@@ -15,12 +15,32 @@ export function inferAssistantMode(input: {
 
   const path = input.currentPath ?? "";
 
+  // Founder pages
   if (path.startsWith("/founder/learning")) return "learning";
   if (path.startsWith("/founder/readiness") || path.startsWith("/founder/report")) return "reports_guidance";
+  if (path.startsWith("/founder/capital-raise")) return "capital_raise";
+  if (path.startsWith("/founder/deal-room")) return "deal_room";
+  if (path.startsWith("/founder/contacts") || path.startsWith("/admin/marketing/contacts")) return "crm";
+  if (path.startsWith("/billing")) return "billing";
+  if (path.startsWith("/admin/tasks") || path.startsWith("/founder/tasks")) return "tasks";
+
+  // SPV / compliance / reports
   if (path.includes("/spv") || path.startsWith("/investor/spvs")) return "spv_guidance";
   if (path.startsWith("/admin/compliance")) return "compliance_guidance";
   if (path.startsWith("/admin/reports")) return "reports_guidance";
-  if (path.startsWith("/founder/capital-raise")) return "founder_workflow";
+
+  // Admin marketing → CMO AI
+  if (path.startsWith("/admin/marketing")) return "cmo_marketing";
+
+  // Investor pages
+  if (
+    path.startsWith("/investor/watchlist") ||
+    path.startsWith("/investor/opportunities") ||
+    path.startsWith("/investor/interest-pipeline")
+  ) return "investor_pipeline";
+  if (path.startsWith("/investor/portfolio") || path.startsWith("/investor/deals")) return "investor_portfolio";
+  if (path.startsWith("/deals") || path.startsWith("/investor/matching")) return "investor_matching";
+  if (path.startsWith("/investor/deal-room")) return "deal_room";
 
   if (input.role === "admin" || input.role === "analyst") return "admin_operations";
   if (input.role === "investor") return "investor_workflow";
