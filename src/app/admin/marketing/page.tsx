@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/supabase/auth";
 import { marketingDb } from "@/lib/marketing/db";
 import Link from "next/link";
+import { MarketingStatCards } from "@/components/marketing/MarketingStatCards";
 
 export const dynamic = "force-dynamic";
 
@@ -66,32 +67,23 @@ export default async function MarketingDashboardPage() {
   const openRate  = sent > 0 ? (opened  / sent) * 100 : 0;
   const clickRate = sent > 0 ? (clicked / sent) * 100 : 0;
 
-  const statCards = [
-    {
-      label: "Total contacts",
-      value: (totalContacts ?? 0).toLocaleString(),
-      delta: `+${newContacts7d ?? 0} this week`,
-      good: (newContacts7d ?? 0) > 0,
-    },
-    {
-      label: "Emails sent (30d)",
-      value: sent.toLocaleString(),
-      delta: `${(campaigns.data ?? []).length} active campaigns`,
-      good: true,
-    },
-    {
-      label: "Open rate",
-      value: `${openRate.toFixed(1)}%`,
-      delta: openRate >= 21 ? "Above 21% benchmark" : `${(21 - openRate).toFixed(1)}pts below`,
-      good: openRate >= 21,
-    },
-    {
-      label: "Click rate",
-      value: `${clickRate.toFixed(1)}%`,
-      delta: clickRate >= 3.5 ? "Above 3.5% target" : `${(3.5 - clickRate).toFixed(1)}pts below`,
-      good: clickRate >= 3.5,
-    },
-  ];
+  const statCardData = {
+    totalContacts: totalContacts ?? 0,
+    newContacts7d: newContacts7d ?? 0,
+    sent,
+    opened,
+    clicked,
+    openRate,
+    clickRate,
+    activeCampaigns: (campaigns.data ?? []).length,
+    campaigns: (campaigns.data ?? []).map((c: { id: string; name: string; status: string; stat_sent: number; stat_opened: number; stat_clicked: number; list: { name: string } | null }) => ({
+      id: c.id,
+      name: c.name,
+      stat_sent: c.stat_sent,
+      stat_opened: c.stat_opened,
+      stat_clicked: c.stat_clicked,
+    })),
+  };
 
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
@@ -109,18 +101,8 @@ export default async function MarketingDashboardPage() {
         </Link>
       </div>
 
-      {/* Stat cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10, marginBottom: 16 }}>
-        {statCards.map((s) => (
-          <div key={s.label} style={{ ...card, padding: "14px 16px" }}>
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 6 }}>{s.label}</div>
-            <div style={{ fontSize: 24, fontWeight: 500, color: "var(--foreground)" }}>{s.value}</div>
-            <div style={{ fontSize: 11, marginTop: 4, color: s.good ? "#0F6E56" : "#993C1D" }}>
-              {s.good ? "↑" : "↓"} {s.delta}
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Clickable stat cards */}
+      <MarketingStatCards data={statCardData} />
 
       {/* Campaigns + Sequences */}
       <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14, marginBottom: 14 }}>
