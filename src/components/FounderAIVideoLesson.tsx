@@ -83,7 +83,7 @@ export function FounderAIVideoLesson({
       asset?: FounderLessonVideoAssetRecord;
       error?: string;
       warning?: string;
-      openAiConfigured?: boolean;
+      claudeConfigured?: boolean;
     } | null;
     if (!response.ok || !body?.asset) {
       setError(body?.error ?? "Script generation failed.");
