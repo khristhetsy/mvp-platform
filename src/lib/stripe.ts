@@ -1,17 +1,16 @@
 /**
- * Stripe is not active — billing is handled manually.
- * This stub keeps imports across the codebase compiling without a live key.
- * Replace with real Stripe integration when ready to charge.
+ * Stripe is replaced by LemonSqueezy. This stub keeps any remaining
+ * Stripe imports compiling. Do not add new Stripe usage.
  */
 
-export const BILLING_ENABLED = false;
+export const BILLING_ENABLED = Boolean(process.env.LEMONSQUEEZY_API_KEY);
 
-// Stub so existing imports don't break
+// Stub — not used
 export const stripe = null as unknown as import("stripe").default;
 
 export const PLAN_PRICE_IDS: Record<string, string | undefined> = {
-  founder_basic:        undefined,
-  founder_professional: undefined,
+  founder_basic:        process.env.LEMONSQUEEZY_VARIANT_ID_BASIC,
+  founder_professional: process.env.LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL,
   investor_pro:         undefined,
   investor_premium:     undefined,
 };

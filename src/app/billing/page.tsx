@@ -47,15 +47,15 @@ export default async function BillingPage() {
   const daysLeft =
     subscription.plan_type === "founder_trial" ? trialDaysRemaining(subscription.trial_ends_at) : null;
 
-  // Check if user has a real Stripe customer (vs backfill record)
+  // Check if user has a LemonSqueezy subscription
   const { createServerSupabaseClient } = await import("@/lib/supabase/server");
   const supabase = await createServerSupabaseClient();
   const { data: subRaw } = await supabase
     .from("subscriptions")
-    .select("stripe_customer_id")
+    .select("ls_customer_id")
     .eq("profile_id", profile.id)
     .single();
-  const hasStripeCustomer = Boolean((subRaw as Record<string, unknown> | null)?.stripe_customer_id);
+  const hasStripeCustomer = Boolean((subRaw as Record<string, unknown> | null)?.ls_customer_id);
 
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"}>

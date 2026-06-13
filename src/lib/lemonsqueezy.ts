@@ -1,0 +1,142 @@
+/**
+ * LemonSqueezy API client.
+ * Docs: https://docs.lemonsqueezy.com/api
+ *
+ * Required env vars:
+ *   LEMONSQUEEZY_API_KEY
+ *   LEMONSQUEEZY_STORE_ID
+ *   LEMONSQUEEZY_WEBHOOK_SECRET
+ *   LEMONSQUEEZY_VARIANT_ID_BASIC
+ *   LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL
+ */
+
+import crypto from "crypto";
+
+const LS_API = "https://api.lemonsqueezy.com/v1";
+
+function headers() {
+  return {
+    Accept: "application/vnd.api+json",
+    "Content-Type": "application/vnd.api+json",
+    Authorization: `Bearer ${process.env.LEMONSQUEEZY_API_KEY}`,
+  };
+}
+
+// ─── Checkout ─────────────────────────────────────────────────────────────────
+
+export async function createCheckoutUrl({
+  variantId,
+  email,
+  profileId,
+  successUrl,
+}: {
+  variantId: string;
+  email: string;
+  profileId: string;
+  successUrl: string;
+}): Promise<string> {
+  const storeId = process.env.LEMONSQUEEZY_STORE_ID;
+  if (!storeId) throw new Error("LEMONSQUEEZY_STORE_ID not set");
+
+  const res = await fetch(`${LS_API}/checkouts`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({
+      data: {
+        type: "checkouts",
+        attributes: {
+          checkout_options: { embed: false, media: false, logo: true },
+          checkout_data: {
+            email,
+            custom: { profile_id: profileId },
+          },
+          product_options: {
+            redirect_url: successUrl,
+          },
+        },
+        relationships: {
+          store:   { data: { type: "stores",   id: String(storeId) } },
+          variant: { data: { type: "variants", id: String(variantId) } },
+        },
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`LemonSqueezy checkout error ${res.status}: ${body}`);
+  }
+
+  const json = await res.json() as { data: { attributes: { url: string } } };
+  return json.data.attributes.url;
+}
+
+// ─── Customer portal ──────────────────────────────────────────────────────────
+
+export async function getCustomerPortalUrl(lsSubscriptionId: string): Promise<string> {
+  const res = await fetch(`${LS_API}/subscriptions/${lsSubscriptionId}`, {
+    headers: headers(),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`LemonSqueezy subscription fetch error ${res.status}: ${body}`);
+  }
+
+  const json = await res.json() as { data: { attributes: { urls: { customer_portal: string } } } };
+  return json.data.attributes.urls.customer_portal;
+}
+
+// ─── Webhook verification ─────────────────────────────────────────────────────
+
+export function verifyWebhookSignature(rawBody: string, signature: string): boolean {
+  const secret = process.env.LEMONSQUEEZY_WEBHOOK_SECRET;
+  if (!secret) return false;
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(rawBody)
+    .digest("hex");
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+}
+
+// ─── Webhook payload types ────────────────────────────────────────────────────
+
+export type LsEventName =
+  | "subscription_created"
+  | "subscription_updated"
+  | "subscription_cancelled"
+  | "subscription_resumed"
+  | "subscription_expired"
+  | "subscription_paused"
+  | "subscription_unpaused"
+  | "order_created";
+
+export type LsSubscriptionStatus =
+  | "on_trial"
+  | "active"
+  | "paused"
+  | "past_due"
+  | "unpaid"
+  | "cancelled"
+  | "expired";
+
+export interface LsWebhookPayload {
+  meta: {
+    event_name: LsEventName;
+    custom_data?: { profile_id?: string };
+  };
+  data: {
+    id: string;
+    type: string;
+    attributes: {
+      status:              LsSubscriptionStatus;
+      variant_id:          number;
+      customer_id:         number;
+      user_email:          string;
+      renews_at:           string | null;
+      ends_at:             string | null;
+      trial_ends_at:       string | null;
+      current_period_end?: string | null;
+    };
+  };
+}

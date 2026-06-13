@@ -1,4 +1,9 @@
-/** Returns true only when Stripe checkout is wired. Always false in this phase. */
+/** Returns true when LemonSqueezy checkout is wired. */
 export function isPaymentsEnabled() {
-  return Boolean(process.env.STRIPE_SECRET_KEY && process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+  return Boolean(
+    process.env.LEMONSQUEEZY_API_KEY &&
+    process.env.LEMONSQUEEZY_STORE_ID &&
+    process.env.LEMONSQUEEZY_VARIANT_ID_BASIC &&
+    process.env.LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL
+  );
 }

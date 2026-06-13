@@ -1,10 +1,10 @@
 import type { FeatureKey, PlanType } from "@/lib/subscriptions/plans";
 import { FOUNDER_BASIC_FEATURES, FOUNDER_PROFESSIONAL_FEATURES, PLAN_PRICES } from "@/lib/subscriptions/plans";
 
-/** Placeholder Stripe price IDs — wire when payment integration ships. */
-export const STRIPE_PRICE_IDS = {
-  founder_basic: process.env.STRIPE_PRICE_ID_BASIC ?? "price_placeholder_founder_basic",
-  founder_professional: process.env.STRIPE_PRICE_ID_PROFESSIONAL ?? "price_placeholder_founder_professional",
+/** LemonSqueezy variant IDs — set in env. */
+export const LS_VARIANT_IDS = {
+  founder_basic:        process.env.LEMONSQUEEZY_VARIANT_ID_BASIC        ?? "",
+  founder_professional: process.env.LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL ?? "",
 } as const;
 
 export type PricingPlanCard = {

@@ -42,6 +42,14 @@ export type SubscriptionRecord = {
   currency: string;
   created_at: string;
   updated_at: string;
+  // LemonSqueezy
+  ls_customer_id:     string | null;
+  ls_subscription_id: string | null;
+  ls_variant_id:      string | null;
+  // Stripe (legacy, kept for audit)
+  stripe_customer_id:     string | null;
+  stripe_subscription_id: string | null;
+  stripe_price_id:        string | null;
 };
 
 export const PLAN_LABELS: Record<PlanType, string> = {

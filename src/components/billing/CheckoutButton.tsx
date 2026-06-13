@@ -16,10 +16,10 @@ export function CheckoutButton({
   async function handleClick() {
     setLoading(true);
     try {
-      const res = await fetch("/api/billing/checkout", {
-        method: "POST",
+      const res  = await fetch("/api/billing/checkout", {
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planType }),
+        body:    JSON.stringify({ planType }),
       });
       const data = await res.json() as { url?: string; error?: string };
       if (data.url) {
@@ -39,11 +39,17 @@ export function CheckoutButton({
       type="button"
       onClick={handleClick}
       disabled={loading}
-      className={`rounded-full px-5 py-3 text-sm font-semibold transition-opacity disabled:opacity-60 ${
-        recommended
-          ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-500 hover:to-violet-500"
-          : "border border-slate-300 text-slate-700 hover:bg-slate-50"
-      }`}
+      style={{
+        fontSize: 13,
+        padding: "8px 20px",
+        borderRadius: 8,
+        border: recommended ? "none" : "0.5px solid #e2e6ed",
+        background: recommended ? "#534AB7" : "transparent",
+        color: recommended ? "#EEEDFE" : "#0c2340",
+        cursor: "pointer",
+        opacity: loading ? 0.6 : 1,
+        fontWeight: 500,
+      }}
     >
       {loading ? "Redirecting…" : label}
     </button>
@@ -56,7 +62,7 @@ export function ManageSubscriptionButton() {
   async function handleClick() {
     setLoading(true);
     try {
-      const res = await fetch("/api/billing/portal", { method: "POST" });
+      const res  = await fetch("/api/billing/portal", { method: "POST" });
       const data = await res.json() as { url?: string; error?: string };
       if (data.url) {
         window.location.href = data.url;
@@ -75,7 +81,17 @@ export function ManageSubscriptionButton() {
       type="button"
       onClick={handleClick}
       disabled={loading}
-      className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+      style={{
+        fontSize: 13,
+        padding: "8px 20px",
+        borderRadius: 8,
+        border: "0.5px solid #e2e6ed",
+        background: "transparent",
+        color: "#0c2340",
+        cursor: "pointer",
+        opacity: loading ? 0.6 : 1,
+        fontWeight: 500,
+      }}
     >
       {loading ? "Loading…" : "Manage subscription"}
     </button>
