@@ -7,7 +7,7 @@ import { InvestorActivityTimeline } from "@/components/InvestorActivityTimeline"
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { InvestorApprovalBanner } from "@/components/InvestorApprovalBanner";
 import { investorCompanyLabel, loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
-import { InvestorMatchOpportunityCard } from "@/components/InvestorMatchOpportunityCard";
+import { InvestorMatchOpportunityCardCompact } from "@/components/InvestorMatchOpportunityCardCompact";
 import { loadInvestorRecommendedMatches } from "@/lib/matching/load-investor-recommendations";
 import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
@@ -106,13 +106,12 @@ export default async function InvestorDashboardPage() {
           {topMatches.length === 0 ? (
             <p className="text-sm text-slate-600">No published listings yet. Complete onboarding to improve matches.</p>
           ) : (
-            <div className="grid gap-3">
+            <div className="grid gap-2 sm:grid-cols-2">
               {topMatches.map((row) => (
-                <InvestorMatchOpportunityCard
+                <InvestorMatchOpportunityCardCompact
                   key={row.company.id}
                   companyId={row.company.id}
                   companyName={row.company.companyName}
-                  slug={row.company.slug}
                   industry={row.company.industry}
                   stage={row.company.stage}
                   location={row.company.geography}
@@ -126,8 +125,6 @@ export default async function InvestorDashboardPage() {
                       : null
                   }
                   matchScore={row.matchScore}
-                  matchReasons={row.matchReasons}
-                  missingFitReasons={row.missingFitReasons}
                 />
               ))}
             </div>
