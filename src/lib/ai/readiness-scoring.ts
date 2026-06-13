@@ -1,7 +1,7 @@
 /**
- * Investable Readiness Scoring — rule-based engine v2
+ * Investable Readiness Scoring — rule-based engine v3
  *
- * 10 factors, 100 pts total. Scored from uploaded document metadata
+ * 13 factors, 100 pts total. Scored from uploaded document metadata
  * and existing AI summaries. No external API required.
  *
  * IMPORTANT: Score is investor/admin-only — never surfaced to founders.
@@ -10,19 +10,22 @@
 // ─── Factor definitions ──────────────────────────────────────────────────────
 
 export const READINESS_FACTORS = [
-  { key: "revenue_cashflow",   label: "Revenue & Cash Flow Trajectory",        max: 18, tag: "Financial"   },
-  { key: "founder_team",       label: "Founder Integrity & Team Depth",         max: 15, tag: "Team"        },
-  { key: "governance_legal",   label: "Governance & Legal Cleanliness",         max: 12, tag: "Legal"       },
-  { key: "market_evidence",    label: "Market & Competitive Evidence",          max: 13, tag: "Market"      },
-  { key: "ip_moat",            label: "IP Protection & Competitive Moat",       max: 10, tag: "Moat"        },
-  { key: "burn_runway",        label: "Burn Rate & Runway",                     max: 10, tag: "Financial"   },
-  { key: "pitch_quality",      label: "Pitch Deck & Business Plan Quality",     max: 8,  tag: "Documents"   },
-  { key: "deal_structure",     label: "Deal Structure & Use of Funds",          max: 8,  tag: "Deal Terms"  },
-  { key: "industry_alignment", label: "Industry & Stage Alignment",             max: 3,  tag: "Fit"         },
-  { key: "impact_esg",         label: "Impact / ESG Alignment",                 max: 3,  tag: "ESG"         },
+  { key: "revenue_cashflow",   label: "Revenue & Cash Flow Trajectory",        max: 15, tag: "Financial"   },
+  { key: "customer_traction",  label: "Customer Traction & LOIs",              max: 13, tag: "Traction"    },
+  { key: "founder_team",       label: "Founder Integrity & Team Depth",         max: 11, tag: "Team"        },
+  { key: "market_evidence",    label: "Market & Competitive Evidence",          max: 10, tag: "Market"      },
+  { key: "unit_economics",     label: "Unit Economics & Scalability",           max: 10, tag: "Economics"   },
+  { key: "governance_legal",   label: "Governance & Legal Cleanliness",         max: 9,  tag: "Legal"       },
+  { key: "ip_moat",            label: "IP Protection & Competitive Moat",       max: 8,  tag: "Moat"        },
+  { key: "burn_runway",        label: "Burn Rate & Runway",                     max: 8,  tag: "Financial"   },
+  { key: "exit_strategy",      label: "Exit Strategy & Investor Returns",       max: 7,  tag: "Strategy"    },
+  { key: "pitch_quality",      label: "Pitch Deck & Business Plan Quality",     max: 4,  tag: "Documents"   },
+  { key: "deal_structure",     label: "Deal Structure & Use of Funds",          max: 3,  tag: "Deal Terms"  },
+  { key: "industry_alignment", label: "Industry & Stage Alignment",             max: 1,  tag: "Fit"         },
+  { key: "impact_esg",         label: "Impact / ESG Alignment",                 max: 1,  tag: "ESG"         },
 ] as const;
 
-// Sanity check: sum of max = 100
+// Sanity check: 15+13+11+10+10+9+8+8+7+4+3+1+1 = 100 ✓
 // 18+15+12+13+10+10+8+8+3+3 = 100 ✓
 
 export type FactorKey = (typeof READINESS_FACTORS)[number]["key"];
@@ -156,7 +159,80 @@ function scoreRevenueCashflow(
     ? "Financial documents uploaded but AI summaries not yet generated. Score is discounted — re-score after summaries are available."
     : "No financial documents uploaded. This is the highest-weight factor. Upload financial statements immediately.";
 
-  return { pts, max: 18, rating: rating(pts, 18), aiSummary, subScores, evidence, flags };
+  return { pts, max: 15, rating: rating(pts, 15), aiSummary, subScores, evidence, flags };
+}
+
+function scoreCustomerTraction(
+  has: (t: string) => boolean,
+  getSummary: (t: string) => string | null,
+  revenueStage: string | null,
+): FactorScore {
+  const hasPitch = has("PITCH_DECK");
+  const hasBizPlan = has("BUSINESS_PLAN");
+  const hasFinancials = has("FINANCIAL_STATEMENTS");
+  const pitchSummary = getSummary("PITCH_DECK");
+  const bizSummary = getSummary("BUSINESS_PLAN");
+  const financialSummary = getSummary("FINANCIAL_STATEMENTS");
+
+  const combinedSummary = [pitchSummary, bizSummary, financialSummary].filter(Boolean).join(" ");
+
+  const LOI_KEYWORDS = ["letter of intent", "loi", "signed contract", "purchase order", "pilot agreement", "master service agreement", "msa", "committed", "binding"];
+  const PAYING_KEYWORDS = ["paying customer", "paid customer", "revenue from", "annual contract", "arr", "mrr", "monthly recurring", "annual recurring", "subscription"];
+  const GENERAL_CUSTOMER = ["customer", "users", "clients", "accounts", "traction", "adoption", "retention", "churn", "nps"];
+  const METRIC_KEYWORDS = ["%", "$", "thousand", "million", "k users", "k customers", "growth", "month-over-month", "mom", "yoy", "year-over-year"];
+
+  const hasLoi = containsKeywords(combinedSummary, LOI_KEYWORDS);
+  const hasPayingCustomers = containsKeywords(combinedSummary, PAYING_KEYWORDS);
+  const hasGeneralCustomers = containsKeywords(combinedSummary, GENERAL_CUSTOMER);
+  const hasMetrics = containsKeywords(combinedSummary, METRIC_KEYWORDS);
+  const isPreRevenue = revenueStage?.toLowerCase().includes("pre") ?? false;
+
+  // LOI / contract evidence: 0–6
+  const loiPts = hasLoi ? 6 : hasPayingCustomers ? 4 : hasGeneralCustomers ? 2 : 0;
+  // Revenue / MRR figures: 0–4
+  const revPts = hasPayingCustomers && hasMetrics ? 4 : hasPayingCustomers ? 2 : hasMetrics ? 1 : 0;
+  // Retention / growth metrics: 0–3
+  const metricPts = hasMetrics && hasGeneralCustomers ? (hasLoi || hasPayingCustomers ? 3 : 2) : 0;
+
+  const subScores: FactorSubScore[] = [
+    { label: "LOIs / signed contracts / pilots", pts: loiPts, max: 6 },
+    { label: "MRR / ARR / revenue figures", pts: revPts, max: 4 },
+    { label: "Retention / growth metrics", pts: metricPts, max: 3 },
+  ];
+
+  let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 13);
+  if (!hasPitch && !hasBizPlan && !hasFinancials) pts = 0;
+  else if (!pitchSummary && !bizSummary && !financialSummary) pts = Math.min(pts, 2);
+  else if (isPreRevenue && !hasLoi) pts = Math.min(pts, 5); // pre-revenue without LOIs capped
+
+  const evidence: FactorEvidence[] = [];
+  if (hasLoi) evidence.push({ icon: "✅", text: "Letters of Intent, signed contracts, or pilot agreements referenced — strongest possible traction signal", src: "AI summaries" });
+  else if (hasPayingCustomers) evidence.push({ icon: "✅", text: "Paying customers or recurring revenue (MRR/ARR) confirmed", src: "AI summaries" });
+  else if (hasGeneralCustomers) evidence.push({ icon: "⚠️", text: "Customer or user references found — no paying customers or LOIs confirmed", src: "AI summaries" });
+  else evidence.push({ icon: "❌", text: "No customer traction evidence found in documents", src: "AI summaries" });
+
+  if (hasMetrics) evidence.push({ icon: "✅", text: "Specific traction metrics (numbers, percentages, growth rates) found", src: "AI summaries" });
+  else evidence.push({ icon: "⚠️", text: "No specific traction metrics — investors expect numbers, not narratives", src: "AI summaries" });
+
+  if (isPreRevenue && !hasLoi) evidence.push({ icon: "⚠️", text: "Pre-revenue company — LOIs or pilots are critical to demonstrate demand", src: "Risk assessment" });
+
+  const flags: FactorFlag[] = [];
+  if (!hasGeneralCustomers && !hasLoi) flags.push({ severity: "red", label: "No customer evidence", detail: "No customer, user, or traction evidence found. This is the question every investor asks first. Upload pitch or biz plan with customer data." });
+  else if (!hasPayingCustomers && !hasLoi) flags.push({ severity: "amber", label: "No paying customers or LOIs", detail: "User/customer references found but no paying customers or signed LOIs. These are table stakes for most investors." });
+  if (!hasMetrics) flags.push({ severity: "amber", label: "No traction metrics", detail: "Replace narrative language ('strong growth') with numbers (e.g. '120 paying customers, 15% MoM growth')." });
+  if (isPreRevenue && !hasLoi) flags.push({ severity: "red", label: "Pre-revenue without LOIs", detail: "For pre-revenue companies, signed LOIs or pilot agreements are the minimum acceptable evidence of demand." });
+
+  const aiSummary = hasLoi
+    ? "Strong: signed LOIs or contracts referenced — real demand confirmed."
+    : hasPayingCustomers
+    ? "Paying customers or recurring revenue confirmed in documents."
+    : hasGeneralCustomers
+    ? "Customer references found but no confirmed paying customers or LOIs."
+    : hasPitch || hasBizPlan
+    ? "Documents uploaded but no customer traction found in summaries. Add customer evidence to your pitch."
+    : "No documents uploaded. Customer traction cannot be assessed.";
+
+  return { pts, max: 13, rating: rating(pts, 13), aiSummary, subScores, evidence, flags };
 }
 
 function scoreFounderTeam(
@@ -246,7 +322,7 @@ function scoreFounderTeam(
     ? "Pitch deck uploaded. AI summary not yet generated — score discounted until summaries are available."
     : "No pitch deck uploaded. Founder integrity and team depth cannot be assessed.";
 
-  return { pts, max: 15, rating: rating(pts, 15), aiSummary, subScores, evidence, flags };
+  return { pts, max: 11, rating: rating(pts, 11), aiSummary, subScores, evidence, flags };
 }
 
 function scoreGovernanceLegal(
@@ -259,19 +335,19 @@ function scoreGovernanceLegal(
   const incorpSummary = getSummary("INCORPORATION_DOCS");
   const capSummary = getSummary("CAP_TABLE");
 
-  const incorpPts = hasIncorp ? (incorpSummary ? 6 : 3) : 0;
-  const capPts = hasCapTable ? (capSummary ? 5 : 2) : 0;
+  const incorpPts = hasIncorp ? (incorpSummary ? 5 : 2) : 0;
+  const capPts = hasCapTable ? (capSummary ? 3 : 1) : 0;
   const profilePts = industry ? 1 : 0;
 
   const subScores: FactorSubScore[] = [
-    { label: "Incorporation docs (+ AI review)", pts: incorpPts, max: 6 },
-    { label: "Cap table (+ AI review)", pts: capPts, max: 5 },
+    { label: "Incorporation docs (+ AI review)", pts: incorpPts, max: 5 },
+    { label: "Cap table (+ AI review)", pts: capPts, max: 3 },
     { label: "Company profile (industry set)", pts: profilePts, max: 1 },
   ];
 
-  // Hard cap: missing either = max 5
-  let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 12);
-  if (!hasIncorp || !hasCapTable) pts = Math.min(pts, 5);
+  // Hard cap: missing either = max 4
+  let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 9);
+  if (!hasIncorp || !hasCapTable) pts = Math.min(pts, 4);
 
   const evidence: FactorEvidence[] = [];
   if (hasIncorp) {
@@ -298,7 +374,7 @@ function scoreGovernanceLegal(
     ? "Legal documents uploaded. AI review pending — score is discounted."
     : "Both critical governance documents are missing. Score cannot exceed 5/12 until uploaded.";
 
-  return { pts, max: 12, rating: rating(pts, 12), aiSummary, subScores, evidence, flags };
+  return { pts, max: 9, rating: rating(pts, 9), aiSummary, subScores, evidence, flags };
 }
 
 function scoreMarketEvidence(
@@ -363,7 +439,80 @@ function scoreMarketEvidence(
     ? "Market documents uploaded but AI summaries unavailable. Score heavily discounted."
     : "No market evidence documents found.";
 
-  return { pts, max: 13, rating: rating(pts, 13), aiSummary, subScores, evidence, flags };
+  return { pts, max: 10, rating: rating(pts, 10), aiSummary, subScores, evidence, flags };
+}
+
+function scoreUnitEconomics(
+  has: (t: string) => boolean,
+  getSummary: (t: string) => string | null,
+  revenueStage: string | null,
+): FactorScore {
+  const hasFinancials = has("FINANCIAL_STATEMENTS");
+  const hasBizPlan = has("BUSINESS_PLAN");
+  const hasPitch = has("PITCH_DECK");
+  const financialSummary = getSummary("FINANCIAL_STATEMENTS");
+  const bizSummary = getSummary("BUSINESS_PLAN");
+  const pitchSummary = getSummary("PITCH_DECK");
+
+  const combinedSummary = [financialSummary, bizSummary, pitchSummary].filter(Boolean).join(" ");
+
+  const UNIT_ECON_KEYWORDS = ["ltv", "cac", "lifetime value", "customer acquisition cost", "unit economics", "payback period", "contribution margin", "arpu", "average revenue per user", "revenue per customer"];
+  const MARGIN_KEYWORDS = ["gross margin", "gross profit", "cogs", "cost of goods", "cost of revenue", "net margin", "ebitda", "operating margin"];
+  const SCALE_KEYWORDS = ["economies of scale", "margins improving", "margin expansion", "scalable", "leverage", "fixed cost", "variable cost", "breakeven", "break-even", "profitable at scale"];
+
+  const hasUnitEcon = containsKeywords(combinedSummary, UNIT_ECON_KEYWORDS);
+  const hasMargins = containsKeywords(combinedSummary, MARGIN_KEYWORDS);
+  const hasScaleEvidence = containsKeywords(combinedSummary, SCALE_KEYWORDS);
+  const isPreRevenue = revenueStage?.toLowerCase().includes("pre") ?? false;
+
+  // Unit economics explicitly mentioned: 0–5
+  const unitPts = hasUnitEcon ? 5 : hasMargins ? 3 : 0;
+  // Gross margin present: 0–3
+  const marginPts = hasMargins ? (financialSummary ? 3 : 2) : hasFinancials ? 1 : 0;
+  // Scalability evidence: 0–2
+  const scalePts = hasScaleEvidence ? 2 : 0;
+
+  const subScores: FactorSubScore[] = [
+    { label: "LTV / CAC / unit economics stated", pts: unitPts, max: 5 },
+    { label: "Gross margin data present", pts: marginPts, max: 3 },
+    { label: "Scalability / margin improvement", pts: scalePts, max: 2 },
+  ];
+
+  let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 10);
+  if (!hasFinancials && !hasBizPlan && !hasPitch) pts = 0;
+  else if (!financialSummary && !bizSummary && !pitchSummary) pts = Math.min(pts, 1);
+  else if (!hasUnitEcon && !hasMargins) pts = Math.min(pts, 3);
+  // Pre-revenue: unit economics are projections, not actuals — partial cap
+  if (isPreRevenue && !hasUnitEcon) pts = Math.min(pts, 4);
+
+  const evidence: FactorEvidence[] = [];
+  if (hasUnitEcon) evidence.push({ icon: "✅", text: "Unit economics (LTV, CAC, payback period) explicitly stated — strong investor signal", src: "AI summaries" });
+  else if (hasMargins) evidence.push({ icon: "⚠️", text: "Gross margin data found — unit economics (LTV/CAC) not explicitly stated", src: "AI summaries" });
+  else evidence.push({ icon: "❌", text: "No unit economics or margin data found — investors need to know the business model works at scale", src: "AI summaries" });
+
+  if (hasScaleEvidence) evidence.push({ icon: "✅", text: "Scalability or margin improvement trajectory described", src: "AI summaries" });
+  else evidence.push({ icon: "⚠️", text: "No scalability narrative found", src: "AI summaries" });
+
+  if (hasFinancials) evidence.push({ icon: "✅", text: financialSummary ? "Financial statements with margin data reviewed" : "Financial statements uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" });
+  else evidence.push({ icon: "⚠️", text: "No financial statements — unit economics derived from projections only", src: "Document checklist" });
+
+  if (isPreRevenue) evidence.push({ icon: "⚠️", text: "Pre-revenue company — unit economics are projections, not actuals. Investors will discount accordingly.", src: "Risk assessment" });
+
+  const flags: FactorFlag[] = [];
+  if (!hasUnitEcon && !hasMargins) flags.push({ severity: "red", label: "No unit economics", detail: "LTV:CAC ratio and gross margin are fundamental business model metrics. Include them in your pitch or business plan." });
+  else if (!hasUnitEcon) flags.push({ severity: "amber", label: "No LTV/CAC stated", detail: "Gross margin found but LTV:CAC ratio not stated. This ratio is the most-asked unit economics question from investors." });
+  if (!hasScaleEvidence) flags.push({ severity: "amber", label: "No scalability narrative", detail: "Describe how margins improve as the company scales. Fixed vs. variable cost structure helps investors model returns." });
+  if (isPreRevenue) flags.push({ severity: "amber", label: "Pre-revenue projections only", detail: "Unit economics are projections, not actuals. Investors will apply a significant discount — include assumptions clearly." });
+
+  const aiSummary = hasUnitEcon
+    ? `Unit economics data found: ${(financialSummary ?? bizSummary ?? pitchSummary ?? "").slice(0, 250)}…`
+    : hasMargins
+    ? "Gross margin data present but LTV/CAC not explicitly stated. Add unit economics to strengthen investor confidence."
+    : hasFinancials || hasBizPlan
+    ? "Financial documents uploaded but no unit economics or margin data found in summaries. Add LTV, CAC, and gross margin figures."
+    : "No documents uploaded. Unit economics cannot be assessed.";
+
+  return { pts, max: 10, rating: rating(pts, 10), aiSummary, subScores, evidence, flags };
 }
 
 function scoreIpMoat(
@@ -482,7 +631,7 @@ function scoreIpMoat(
     ? `Documents uploaded but no IP or moat signals found in summaries.${industryNote} Add defensibility context to your pitch.`
     : `No documents uploaded. IP and competitive moat cannot be assessed.${industryNote}`;
 
-  return { pts, max: 10, rating: rating(pts, 10), aiSummary, subScores, evidence, flags };
+  return { pts, max: 8, rating: rating(pts, 8), aiSummary, subScores, evidence, flags };
 }
 
 function scoreBurnRunway(
@@ -568,7 +717,7 @@ function scoreBurnRunway(
     ? "Financial documents uploaded but AI summaries not yet generated. Score discounted until available."
     : "No financial documents uploaded. Burn rate and runway cannot be assessed — a critical investor concern.";
 
-  return { pts, max: 10, rating: rating(pts, 10), aiSummary, subScores, evidence, flags };
+  return { pts, max: 8, rating: rating(pts, 8), aiSummary, subScores, evidence, flags };
 }
 
 function scorePitchQuality(
@@ -610,7 +759,67 @@ function scorePitchQuality(
     ? "Documents uploaded. AI summaries pending — score reflects document presence only."
     : "No pitch or business plan uploaded.";
 
-  return { pts, max: 8, rating: rating(pts, 8), aiSummary, subScores, evidence, flags };
+  return { pts, max: 4, rating: rating(pts, 4), aiSummary, subScores, evidence, flags };
+}
+
+function scoreExitStrategy(
+  has: (t: string) => boolean,
+  getSummary: (t: string) => string | null,
+): FactorScore {
+  const hasPitch = has("PITCH_DECK");
+  const hasBizPlan = has("BUSINESS_PLAN");
+  const pitchSummary = getSummary("PITCH_DECK");
+  const bizSummary = getSummary("BUSINESS_PLAN");
+
+  const combinedSummary = [pitchSummary, bizSummary].filter(Boolean).join(" ");
+
+  const EXIT_SPECIFIC = ["acquisition", "ipo", "initial public offering", "strategic buyer", "trade sale", "buyout", "liquidity event", "exit multiple", "strategic acquisition"];
+  const EXIT_GENERAL = ["exit", "exit strategy", "returns", "investor returns", "path to liquidity", "return on investment", "exit plan"];
+  const RETURN_PROJECTIONS = ["multiple", "irr", "internal rate of return", "5x", "10x", "3x", "exit valuation", "projected valuation", "comparable acquisition", "comparable exit"];
+
+  const hasSpecificExit = containsKeywords(combinedSummary, EXIT_SPECIFIC);
+  const hasGeneralExit = containsKeywords(combinedSummary, EXIT_GENERAL);
+  const hasReturnProjections = containsKeywords(combinedSummary, RETURN_PROJECTIONS);
+
+  // Exit strategy: 0–4
+  const exitPts = hasSpecificExit ? 4 : hasGeneralExit ? 2 : 0;
+  // Return projections: 0–2
+  const returnPts = hasReturnProjections ? 2 : hasSpecificExit ? 1 : 0;
+  // Timeline: 0–1
+  const timelinePts = containsKeywords(combinedSummary, ["year", "timeline", "horizon", "5 year", "3 year", "7 year"]) && hasGeneralExit ? 1 : 0;
+
+  const subScores: FactorSubScore[] = [
+    { label: "Exit type explicitly stated", pts: exitPts, max: 4 },
+    { label: "Investor return projections", pts: returnPts, max: 2 },
+    { label: "Exit timeline indicated", pts: timelinePts, max: 1 },
+  ];
+
+  let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 7);
+  if (!hasPitch && !hasBizPlan) pts = 0;
+  else if (!pitchSummary && !bizSummary) pts = Math.min(pts, 1);
+
+  const evidence: FactorEvidence[] = [];
+  if (hasSpecificExit) evidence.push({ icon: "✅", text: `Specific exit path stated (acquisition, IPO, or trade sale)`, src: "AI summaries" });
+  else if (hasGeneralExit) evidence.push({ icon: "⚠️", text: "Exit strategy mentioned but no specific exit type stated", src: "AI summaries" });
+  else evidence.push({ icon: "❌", text: "No exit strategy found — investors need to know how they get returns", src: "AI summaries" });
+
+  if (hasReturnProjections) evidence.push({ icon: "✅", text: "Investor return projections or exit multiples referenced", src: "AI summaries" });
+  else evidence.push({ icon: "⚠️", text: "No return projections stated — include expected exit multiple or IRR", src: "AI summaries" });
+
+  const flags: FactorFlag[] = [];
+  if (!hasGeneralExit) flags.push({ severity: "red", label: "No exit strategy", detail: "Every investor needs to know how they get their money back. Add an exit strategy slide to your pitch deck." });
+  else if (!hasSpecificExit) flags.push({ severity: "amber", label: "Vague exit strategy", detail: "General exit language found but no specific path (acquisition target, IPO timeline, etc.). Be specific." });
+  if (!hasReturnProjections) flags.push({ severity: "amber", label: "No return projections", detail: "Include expected exit multiple (e.g. 5–10x), comparable acquisitions in your sector, or projected IRR." });
+
+  const aiSummary = hasSpecificExit
+    ? `Exit strategy found: ${combinedSummary.slice(0, 250)}…`
+    : hasGeneralExit
+    ? "Exit referenced but not specific. Add a clear exit path and investor return projections to your pitch."
+    : hasPitch || hasBizPlan
+    ? "Documents uploaded but no exit strategy found. Add an exit slide — investors pass on deals with no clear liquidity path."
+    : "No documents uploaded. Exit strategy cannot be assessed.";
+
+  return { pts, max: 7, rating: rating(pts, 7), aiSummary, subScores, evidence, flags };
 }
 
 function scoreDealStructure(
@@ -629,13 +838,12 @@ function scoreDealStructure(
   const hasUseOfFunds = containsKeywords(combinedSummary, ["use of funds", "allocation", "% ", "hiring", "marketing", "r&d", "product development", "operations budget", "proceeds"]);
 
   const subScores: FactorSubScore[] = [
-    { label: "Funding amount declared", pts: fundingAmount ? 2 : 0, max: 2 },
-    { label: "Deal structure terms in docs", pts: hasDealKeywords ? 3 : hasBizPlan || hasPitch ? 1 : 0, max: 3 },
-    { label: "Use of funds breakdown", pts: hasUseOfFunds ? 2 : 0, max: 2 },
-    { label: "Stage appropriate for raise", pts: revenueStage ? 1 : 0, max: 1 },
+    { label: "Funding amount declared", pts: fundingAmount ? 1 : 0, max: 1 },
+    { label: "Deal structure terms in docs", pts: hasDealKeywords ? 1 : 0, max: 1 },
+    { label: "Use of funds breakdown", pts: hasUseOfFunds ? 1 : 0, max: 1 },
   ];
 
-  const pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 8);
+  const pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 3);
 
   const evidence: FactorEvidence[] = [];
   if (fundingAmount) evidence.push({ icon: "✅", text: `Raise target: $${fundingAmount.toLocaleString()}`, src: "Company profile" });
@@ -656,7 +864,7 @@ function scoreDealStructure(
     ? "Business plan uploaded. AI summary pending."
     : "No deal structure documents found. Declare funding amount and upload a business plan with specific use of funds.";
 
-  return { pts, max: 8, rating: rating(pts, 8), aiSummary, subScores, evidence, flags };
+  return { pts, max: 3, rating: rating(pts, 3), aiSummary, subScores, evidence, flags };
 }
 
 function scoreIndustryAlignment(
@@ -667,11 +875,10 @@ function scoreIndustryAlignment(
   const industryMatch = industry ? FOCUS_INDUSTRIES.some((f) => industry.toLowerCase().includes(f)) : false;
 
   const subScores: FactorSubScore[] = [
-    { label: "Industry in platform focus areas", pts: industryMatch ? 2 : industry ? 1 : 0, max: 2 },
-    { label: "Stage declared", pts: revenueStage ? 1 : 0, max: 1 },
+    { label: "Industry & stage declared", pts: industry && revenueStage ? 1 : industry || revenueStage ? 1 : 0, max: 1 },
   ];
 
-  const pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 3);
+  const pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 1);
 
   const evidence: FactorEvidence[] = [];
   if (industry) {
@@ -692,7 +899,7 @@ function scoreIndustryAlignment(
     ? `Industry: ${industry}. Revenue stage not set.`
     : "Industry and stage not declared. Complete your company profile.";
 
-  return { pts, max: 3, rating: rating(pts, 3), aiSummary, subScores, evidence, flags };
+  return { pts, max: 1, rating: rating(pts, 1), aiSummary, subScores, evidence, flags };
 }
 
 function scoreImpactEsg(
@@ -710,8 +917,7 @@ function scoreImpactEsg(
   const hasBizPlan = has("BUSINESS_PLAN");
 
   const subScores: FactorSubScore[] = [
-    { label: "ESG/impact keywords in docs", pts: hasEsgKeywords ? 2 : 0, max: 2 },
-    { label: "Core documents present", pts: hasPitch && hasBizPlan ? 1 : 0, max: 1 },
+    { label: "ESG/impact keywords in docs", pts: hasEsgKeywords ? 1 : 0, max: 1 },
   ];
 
   const pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 3);
@@ -727,7 +933,7 @@ function scoreImpactEsg(
     ? "Document summaries reference impact or ESG-related themes."
     : "No explicit ESG or impact references found. This is informational — a low score here does not exclude investors.";
 
-  return { pts, max: 3, rating: rating(pts, 3), aiSummary, subScores, evidence, flags };
+  return { pts, max: 1, rating: rating(pts, 1), aiSummary, subScores, evidence, flags };
 }
 
 // ─── Main scoring function ────────────────────────────────────────────────────
@@ -746,11 +952,14 @@ export async function scoreCompanyReadiness(input: {
 
   const factors: Record<FactorKey, FactorScore> = {
     revenue_cashflow:   scoreRevenueCashflow(has, getSummary, input.revenueStage, input.fundingAmount),
+    customer_traction:  scoreCustomerTraction(has, getSummary, input.revenueStage),
     founder_team:       scoreFounderTeam(has, getSummary, input.companyName, input.industry),
-    governance_legal:   scoreGovernanceLegal(has, getSummary, input.industry),
     market_evidence:    scoreMarketEvidence(has, getSummary, input.industry),
+    unit_economics:     scoreUnitEconomics(has, getSummary, input.revenueStage),
+    governance_legal:   scoreGovernanceLegal(has, getSummary, input.industry),
     ip_moat:            scoreIpMoat(has, getSummary, input.industry),
     burn_runway:        scoreBurnRunway(has, getSummary, input.fundingAmount, input.revenueStage),
+    exit_strategy:      scoreExitStrategy(has, getSummary),
     pitch_quality:      scorePitchQuality(has, getSummary),
     deal_structure:     scoreDealStructure(has, getSummary, input.fundingAmount, input.revenueStage),
     industry_alignment: scoreIndustryAlignment(input.industry, input.revenueStage),

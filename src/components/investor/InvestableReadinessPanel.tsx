@@ -26,12 +26,15 @@ type Props = {
 
 const FACTOR_COLORS: Record<string, string> = {
   revenue_cashflow:   "#378ADD",
+  customer_traction:  "#10B981",
   founder_team:       "#1D9E75",
-  governance_legal:   "#E8922A",
   market_evidence:    "#378ADD",
+  unit_economics:     "#F59E0B",
+  governance_legal:   "#E8922A",
   ip_moat:            "#8B5CF6",
   burn_runway:        "#EF4444",
-  pitch_quality:      "#6366F1",
+  exit_strategy:      "#6366F1",
+  pitch_quality:      "#94A3B8",
   deal_structure:     "#A78BFA",
   industry_alignment: "#1D9E75",
   impact_esg:         "#1D9E75",
@@ -39,10 +42,13 @@ const FACTOR_COLORS: Record<string, string> = {
 
 const FACTOR_TAGS: Record<string, { bg: string; text: string }> = {
   Financial:    { bg: "#E6F1FB", text: "#185FA5" },
+  Traction:     { bg: "#ECFDF5", text: "#065F46" },
   Team:         { bg: "#EAF3DE", text: "#3B6D11" },
-  Legal:        { bg: "#FAEEDA", text: "#854F0B" },
   Market:       { bg: "#E6F1FB", text: "#185FA5" },
+  Economics:    { bg: "#FFFBEB", text: "#92400E" },
+  Legal:        { bg: "#FAEEDA", text: "#854F0B" },
   Moat:         { bg: "#F5F3FF", text: "#5B21B6" },
+  Strategy:     { bg: "#EEF2FF", text: "#3730A3" },
   Documents:    { bg: "#EEF0FF", text: "#4338CA" },
   "Deal Terms": { bg: "#F3F0FE", text: "#5B2EAA" },
   Fit:          { bg: "#EAF3DE", text: "#3B6D11" },
