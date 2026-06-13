@@ -1,42 +1,24 @@
 import { listInvestorOwnCrmActivityForAuthenticatedInvestor, type InvestorActivityRow } from "@/lib/data/investor-crm";
 import { resolveInvestorIdFromSession } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-
-function formatActivityLabel(type: string) {
-  return type
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: "UTC",
-  });
-}
+import { InvestorActivityTimelineClient } from "@/components/InvestorActivityTimelineClient";
 
 export function InvestorActivityTimelineSkeleton() {
   return (
-    <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
-      <div className="mb-5 border-b border-slate-100 pb-4">
-        <div className="h-5 w-36 animate-pulse rounded bg-slate-200" />
-        <div className="mt-2 h-4 w-56 animate-pulse rounded bg-slate-100" />
-      </div>
-      <div className="space-y-4">
-        {[0, 1, 2].map((key) => (
-          <div key={key} className="space-y-2 border-b border-slate-100 pb-4 last:border-b-0">
-            <div className="h-4 w-32 animate-pulse rounded bg-slate-100" />
-            <div className="h-4 w-56 animate-pulse rounded bg-slate-100" />
-            <div className="h-3 w-24 animate-pulse rounded bg-slate-100" />
+    <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 3px rgba(12,35,64,.06)", padding: 24 }}>
+      <div style={{ width: 140, height: 16, background: "#f1f5f9", borderRadius: 6, marginBottom: 8, animation: "pulse 1.5s ease-in-out infinite" }} />
+      <div style={{ width: 200, height: 12, background: "#f8fafc", borderRadius: 6, marginBottom: 24 }} />
+      {[0, 1, 2].map((k) => (
+        <div key={k} style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+          <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#f1f5f9", flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ width: 100, height: 11, background: "#f1f5f9", borderRadius: 4, marginBottom: 6 }} />
+            <div style={{ width: 160, height: 13, background: "#f8fafc", borderRadius: 4, marginBottom: 4 }} />
+            <div style={{ width: 80, height: 10, background: "#f8fafc", borderRadius: 4 }} />
           </div>
-        ))}
-      </div>
-    </section>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -47,38 +29,7 @@ export function InvestorActivityTimeline({
   activities: InvestorActivityRow[];
   error?: string | null;
 }) {
-  return (
-    <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
-      <div className="mb-5 border-b border-slate-100 pb-4">
-        <h2 className="text-base font-semibold text-slate-950">Recent Activity</h2>
-        <p className="mt-1 text-sm text-slate-500">A timeline of your marketplace actions.</p>
-      </div>
-
-      {error ? (
-        <p className="py-3 text-sm text-red-700">Unable to load CRM activity: {error}</p>
-      ) : (
-        <div className="divide-y divide-slate-100">
-          {activities.length === 0 ? (
-            <p className="py-3 text-sm text-slate-500">
-              No activity yet. Save a deal or express interest to see your timeline here.
-            </p>
-          ) : (
-            activities.map((row) => (
-              <div key={row.id} className="py-3 text-sm">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-800">
-                    {formatActivityLabel(row.activity_type)}
-                  </span>
-                </div>
-                <p className="mt-1 font-medium text-slate-900">{row.company_name ?? "Unknown company"}</p>
-                <p className="mt-1 text-xs text-slate-500">{formatDate(row.created_at)}</p>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-    </section>
-  );
+  return <InvestorActivityTimelineClient activities={activities} error={error} />;
 }
 
 export async function InvestorActivityTimelineSection() {
