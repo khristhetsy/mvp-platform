@@ -90,6 +90,21 @@ function countKeywordMatches(text: string | null, keywords: string[]): number {
   return keywords.filter((k) => lower.includes(k)).length;
 }
 
+// ─── Industry detection ───────────────────────────────────────────────────────
+
+const LIFE_SCIENCE_INDUSTRIES = [
+  "biotech", "biotechnology", "medtech", "medical device", "medical technology",
+  "pharmaceutical", "pharma", "biopharma", "biopharmaceutical",
+  "life science", "clinical", "therapeutics", "diagnostics", "genomics",
+  "drug discovery", "drug development", "healthtech", "health tech",
+];
+
+function isLifeScience(industry: string | null): boolean {
+  return industry
+    ? LIFE_SCIENCE_INDUSTRIES.some((s) => industry.toLowerCase().includes(s))
+    : false;
+}
+
 // ─── Per-factor scorers ───────────────────────────────────────────────────────
 
 function scoreRevenueCashflow(
@@ -97,13 +112,81 @@ function scoreRevenueCashflow(
   getSummary: (t: string) => string | null,
   revenueStage: string | null,
   fundingAmount: number | null,
+  industry: string | null,
 ): FactorScore {
   const hasFinancials = has("FINANCIAL_STATEMENTS");
   const hasBizPlan = has("BUSINESS_PLAN");
   const hasPitch = has("PITCH_DECK");
   const financialSummary = getSummary("FINANCIAL_STATEMENTS");
   const bizPlanSummary = getSummary("BUSINESS_PLAN");
+  const combinedSummary = [financialSummary, bizPlanSummary].filter(Boolean).join(" ");
 
+  // ── LIFE SCIENCE PATH ─────────────────────────────────────────────────────
+  // Biotech/medtech/pharma companies are structurally pre-revenue during R&D —
+  // scoring them on commercial revenue is inappropriate. Instead, score on
+  // grant funding, milestone-based revenue, and development cost documentation.
+  if (isLifeScience(industry)) {
+    const GRANT_REVENUE_KEYWORDS = [
+      "nih", "sbir", "sttr", "grant", "government funding", "non-dilutive",
+      "research grant", "award", "milestone payment", "upfront payment",
+      "licensing revenue", "out-license", "royalty", "research contract",
+    ];
+    const COST_PLAN_KEYWORDS = [
+      "cost per patient", "development cost", "clinical cost", "trial cost",
+      "cogs", "manufacturing cost", "cost of goods", "burn", "runway",
+      "monthly spend", "operating expenses", "r&d expense", "research expense",
+    ];
+    const FINANCIAL_PLAN_KEYWORDS = [
+      "financial model", "financial projection", "budget", "forecast",
+      "three-year", "5-year", "capital plan", "milestone-based", "tranche",
+    ];
+
+    const hasGrantRevenue   = containsKeywords(combinedSummary, GRANT_REVENUE_KEYWORDS);
+    const hasCostPlan       = containsKeywords(combinedSummary, COST_PLAN_KEYWORDS);
+    const hasFinancialPlan  = containsKeywords(combinedSummary, FINANCIAL_PLAN_KEYWORDS);
+
+    const financialPts = hasFinancials ? (financialSummary ? 8 : 4) : 0;
+    const grantPts     = hasGrantRevenue ? 4 : 0;
+    const costPts      = hasCostPlan ? 2 : 0;
+    const planPts      = hasFinancialPlan || hasBizPlan ? (bizPlanSummary ? 2 : 1) : 0;
+    const fundingPts   = fundingAmount ? 1 : 0;
+
+    const subScores: FactorSubScore[] = [
+      { label: "Financial statements / development cost documentation", pts: financialPts, max: 8 },
+      { label: "Grant revenue, milestone payments, or licensing income",  pts: grantPts,     max: 4 },
+      { label: "Clinical / development cost breakdown",                   pts: costPts,       max: 2 },
+      { label: "Financial model or capital plan (milestone-based)",        pts: planPts,       max: 2 },
+      { label: "Funding target declared",                                  pts: fundingPts,    max: 1 },
+    ];
+
+    // For life science, pre-revenue is expected — no hard cap for that
+    let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 15);
+    if (!hasFinancials) pts = Math.min(pts, 7);
+
+    const evidence: FactorEvidence[] = [];
+    evidence.push(hasFinancials
+      ? { icon: "✅", text: financialSummary ? "Financial / cost documentation uploaded and reviewed" : "Financial documents uploaded — AI summary pending", src: "FINANCIAL_STATEMENTS" }
+      : { icon: "❌", text: "Financial statements missing — development costs and burn rate unknown", src: "Document checklist" });
+    if (hasGrantRevenue) evidence.push({ icon: "✅", text: "Grant revenue, milestone payments, or licensing income referenced — key life science revenue signal", src: "AI summaries" });
+    else evidence.push({ icon: "⚠️", text: "No grant/milestone revenue documented — include NIH, SBIR, STTR grants or licensing milestones", src: "AI summaries" });
+    if (hasCostPlan) evidence.push({ icon: "✅", text: "Development/clinical cost breakdown found", src: "AI summaries" });
+    if (fundingAmount) evidence.push({ icon: "✅", text: `Funding target: $${fundingAmount.toLocaleString()}`, src: "Company profile" });
+
+    const flags: FactorFlag[] = [];
+    if (!hasFinancials) flags.push({ severity: "red", label: "Missing financials", detail: "Development cost documentation and burn rate are critical investor questions even for pre-revenue life science companies." });
+    if (!hasGrantRevenue) flags.push({ severity: "amber", label: "No grant or milestone revenue", detail: "Document any non-dilutive funding (NIH, SBIR, STTR) or licensing/milestone payments. These are the primary revenue signals for biotech investors." });
+    if (!hasBizPlan) flags.push({ severity: "amber", label: "No financial model", detail: "A milestone-based financial model showing cost-to-next-milestone is expected by life science investors." });
+
+    const aiSummary = financialSummary ?? bizPlanSummary
+      ? `Life science financial context: ${(financialSummary ?? bizPlanSummary ?? "").slice(0, 300)}…`
+      : hasFinancials || hasBizPlan
+      ? "Financial documents uploaded but AI summaries not yet generated. Score is discounted — re-score after summaries are available."
+      : "No financial documents uploaded. Development cost documentation is critical even for pre-revenue biotech/medtech.";
+
+    return { pts, max: 15, rating: rating(pts, 15), aiSummary, subScores, evidence, flags };
+  }
+
+  // ── STANDARD PATH ─────────────────────────────────────────────────────────
   const isPreRevenue = revenueStage?.toLowerCase().includes("pre") ?? false;
   const isEarlyRevenue = revenueStage?.toLowerCase().includes("early") ?? false;
 
@@ -359,10 +442,29 @@ function scoreFounderTeam(
   const DEPTH_KEYWORDS = ["co-founder", "cto", "cfo", "vp ", "director", "advisory", "advisor", "board", "employees", "team of", "hire", "leadership"];
   const EXPERIENCE_KEYWORDS = ["exit", "acquired", "sold", "ipo", "previous startup", "founded", "serial entrepreneur", "prior company", "raised", "venture"];
 
+  // Life science founders are often PhD scientists, clinicians, or PIs — not serial entrepreneurs.
+  // Augment the depth/experience detection with academic and clinical credentials.
+  const LS_DEPTH_KEYWORDS = [
+    "phd", "md", "m.d.", "ph.d.", "principal investigator", "pi ", "postdoc",
+    "professor", "research director", "chief medical officer", "cmo",
+    "scientific advisory board", "medical advisory board", "clinical advisor",
+    "key opinion leader", "kol", "attending physician", "chief scientific officer", "cso",
+  ];
+  const LS_EXPERIENCE_KEYWORDS = [
+    "published", "peer-reviewed", "publication", "patent", "licensed technology",
+    "university spin-out", "spin-off", "technology transfer", "clinical stage",
+    "fda approval", "clinical trial", "phase i", "phase ii", "nda", "bla",
+    "drug development", "device development",
+  ];
+
   const combinedSummary = [pitchSummary, bizSummary].filter(Boolean).join(" ");
   const hasTeamEvidence = containsKeywords(combinedSummary, TEAM_KEYWORDS);
-  const hasTeamDepth = containsKeywords(combinedSummary, DEPTH_KEYWORDS);
-  const hasPriorExperience = containsKeywords(combinedSummary, EXPERIENCE_KEYWORDS);
+  const hasTeamDepth = isLifeScience(industry)
+    ? containsKeywords(combinedSummary, [...DEPTH_KEYWORDS, ...LS_DEPTH_KEYWORDS])
+    : containsKeywords(combinedSummary, DEPTH_KEYWORDS);
+  const hasPriorExperience = isLifeScience(industry)
+    ? containsKeywords(combinedSummary, [...EXPERIENCE_KEYWORDS, ...LS_EXPERIENCE_KEYWORDS])
+    : containsKeywords(combinedSummary, EXPERIENCE_KEYWORDS);
 
   // Pitch: up to 7 pts — requires team keywords + depth for full credit
   const pitchPts = hasPitch
@@ -413,8 +515,8 @@ function scoreFounderTeam(
   } else {
     evidence.push({ icon: "⚠️", text: "Business plan missing — secondary team evidence unavailable", src: "Document checklist" });
   }
-  if (hasPriorExperience) evidence.push({ icon: "✅", text: "Prior exits, venture experience, or founded companies referenced", src: "AI summaries" });
-  else evidence.push({ icon: "⚠️", text: "No prior exit or venture experience detected in documents", src: "AI summaries" });
+  if (hasPriorExperience) evidence.push({ icon: "✅", text: isLifeScience(industry) ? "Scientific credentials, publications, patents, or prior clinical/device development experience found" : "Prior exits, venture experience, or founded companies referenced", src: "AI summaries" });
+  else evidence.push({ icon: "⚠️", text: isLifeScience(industry) ? "No scientific credentials or prior clinical/biotech experience detected — include PhD, publications, patents, or clinical advisory roles" : "No prior exit or venture experience detected in documents", src: "AI summaries" });
   if (industry) evidence.push({ icon: "✅", text: `Industry declared: ${industry}`, src: "Company profile" });
   else evidence.push({ icon: "⚠️", text: "Industry not set on profile", src: "Company profile" });
 
@@ -497,9 +599,28 @@ function scoreMarketEvidence(
   const bizSummary = getSummary("BUSINESS_PLAN");
 
   const combinedSummary = [pitchSummary, bizSummary].filter(Boolean).join(" ");
-  const hasTractionEvidence = containsKeywords(combinedSummary, ["traction", "revenue", "mrr", "arr", "growth", "paying", "contracts", "signed", "pilot", "customers", "%", "$", "million", "thousand"]);
-  const hasBasicMarketWords = containsKeywords(combinedSummary, ["market", "customer", "users", "clients"]);
-  const hasCompetitiveAnalysis = containsKeywords(combinedSummary, ["competitor", "competition", "vs ", "versus", "alternative", "differentiat", "market leader"]);
+
+  // Life science market evidence signals — clinical validation replaces commercial traction
+  const LS_TRACTION_KEYWORDS = [
+    "unmet need", "unmet medical need", "burden of disease", "prevalence", "incidence",
+    "patient population", "addressable patient", "orphan disease", "rare disease",
+    "standard of care", "current treatment", "treatment gap", "clinical validation",
+    "proof of concept", "efficacy data", "safety data", "clinical evidence",
+    "fda designation", "breakthrough", "fast track", "orphan drug", "rare pediatric",
+    "eua", "emergency use", "regulatory validation",
+  ];
+  const LS_MARKET_SIZE_KEYWORDS = [
+    "peak sales", "addressable market", "tam", "sam", "market size", "revenue potential",
+    "out-licensing", "royalty rate", "milestone", "upfront", "deal value",
+    "comparable deal", "precedent transaction",
+  ];
+
+  // For life science, use clinical validation signals; for others use commercial traction
+  const hasTractionEvidence = isLifeScience(industry)
+    ? containsKeywords(combinedSummary, [...LS_TRACTION_KEYWORDS, ...LS_MARKET_SIZE_KEYWORDS])
+    : containsKeywords(combinedSummary, ["traction", "revenue", "mrr", "arr", "growth", "paying", "contracts", "signed", "pilot", "customers", "%", "$", "million", "thousand"]);
+  const hasBasicMarketWords = containsKeywords(combinedSummary, ["market", "customer", "users", "clients", "patient", "clinical"]);
+  const hasCompetitiveAnalysis = containsKeywords(combinedSummary, ["competitor", "competition", "vs ", "versus", "alternative", "differentiat", "market leader", "standard of care", "current treatment"]);
 
   const pitchPts = hasPitch
     ? (hasTractionEvidence ? 6 : hasBasicMarketWords ? 3 : pitchSummary ? 2 : 2)
@@ -539,8 +660,20 @@ function scoreMarketEvidence(
 
   const flags: FactorFlag[] = [];
   if (!hasPitch && !hasBizPlan) flags.push({ severity: "red", label: "No market documents", detail: "Score is 0 without a pitch deck or business plan." });
-  else if (!hasTractionEvidence) flags.push({ severity: "red", label: "No traction evidence", detail: "No specific metrics, customer numbers, or revenue figures. Score capped at 8/13." });
-  if (!hasCompetitiveAnalysis) flags.push({ severity: "amber", label: "No competitive analysis", detail: "Investors distrust founders who claim no competition. Acknowledge competitors and differentiate." });
+  else if (!hasTractionEvidence) flags.push({
+    severity: "red",
+    label: "No traction evidence",
+    detail: isLifeScience(industry)
+      ? "No clinical validation, unmet need data, or market size evidence found. Document patient population, burden of disease, or regulatory designations."
+      : "No specific metrics, customer numbers, or revenue figures. Score capped at 8/13.",
+  });
+  if (!hasCompetitiveAnalysis) flags.push({
+    severity: "amber",
+    label: "No competitive analysis",
+    detail: isLifeScience(industry)
+      ? "Describe the current standard of care and how your solution compares. Investors need to understand differentiation from existing treatments."
+      : "Investors distrust founders who claim no competition. Acknowledge competitors and differentiate.",
+  });
 
   const aiSummary = pitchSummary ?? bizSummary
     ? `Market context: ${(pitchSummary ?? bizSummary ?? "").slice(0, 300)}…`
@@ -555,6 +688,7 @@ function scoreUnitEconomics(
   has: (t: string) => boolean,
   getSummary: (t: string) => string | null,
   revenueStage: string | null,
+  industry: string | null,
 ): FactorScore {
   const hasFinancials = has("FINANCIAL_STATEMENTS");
   const hasBizPlan = has("BUSINESS_PLAN");
@@ -565,6 +699,81 @@ function scoreUnitEconomics(
 
   const combinedSummary = [financialSummary, bizSummary, pitchSummary].filter(Boolean).join(" ");
 
+  if (isLifeScience(industry)) {
+    // ── Life science path ──────────────────────────────────────────────────────
+    // Replace LTV/CAC with: cost per milestone, grant leverage, licensing economics, peak sales
+    const LS_DEV_COST_KEYWORDS = [
+      "cost per milestone", "development cost", "cost to next", "cost to ind", "cost to phase",
+      "phase i cost", "phase ii cost", "clinical cost", "r&d cost", "preclinical cost",
+      "cost of goods", "cogs", "manufacturing cost", "cost of manufacture",
+    ];
+    const LS_GRANT_LEVERAGE_KEYWORDS = [
+      "grant", "sbir", "sttr", "nih", "nci", "darpa", "barda", "dilution-free", "non-dilutive",
+      "grant leverage", "funded by", "award", "government funding",
+    ];
+    const LS_LICENSING_KEYWORDS = [
+      "licensing", "out-licensing", "royalty", "milestone payment", "upfront payment",
+      "deal economics", "licensing revenue", "collaboration revenue", "partnership economics",
+      "co-development", "licensing deal", "commercialization rights",
+    ];
+    const LS_SCALE_KEYWORDS = [
+      "peak sales", "peak revenue", "addressable revenue", "revenue potential",
+      "margin at scale", "commercial margin", "net present value", "npv", "risk-adjusted npv",
+      "rNPV", "breakeven", "path to profitability",
+    ];
+
+    const hasDevCost = containsKeywords(combinedSummary, LS_DEV_COST_KEYWORDS);
+    const hasGrantLeverage = containsKeywords(combinedSummary, LS_GRANT_LEVERAGE_KEYWORDS);
+    const hasLicensing = containsKeywords(combinedSummary, LS_LICENSING_KEYWORDS);
+    const hasPeakSales = containsKeywords(combinedSummary, LS_SCALE_KEYWORDS);
+
+    // Cost transparency: 0–4
+    const devCostPts = hasDevCost ? 4 : hasFinancials && financialSummary ? 2 : hasFinancials ? 1 : 0;
+    // Non-dilutive leverage: 0–3
+    const grantPts = hasGrantLeverage ? 3 : 0;
+    // Revenue/licensing model: 0–2
+    const licensingPts = hasLicensing ? 2 : hasPeakSales ? 1 : 0;
+    // Path to value / scale: 0–1
+    const scalePts = hasPeakSales ? 1 : 0;
+
+    const subScores: FactorSubScore[] = [
+      { label: "Development cost per milestone documented", pts: devCostPts, max: 4 },
+      { label: "Non-dilutive funding / grant leverage", pts: grantPts, max: 3 },
+      { label: "Licensing / revenue model economics", pts: licensingPts, max: 2 },
+      { label: "Peak sales / NPV projection", pts: scalePts, max: 1 },
+    ];
+
+    let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 10);
+    if (!hasFinancials && !hasBizPlan && !hasPitch) pts = 0;
+    else if (!financialSummary && !bizSummary && !pitchSummary) pts = Math.min(pts, 1);
+    else if (!hasDevCost && !hasGrantLeverage && !hasLicensing) pts = Math.min(pts, 3);
+
+    const evidence: FactorEvidence[] = [];
+    if (hasDevCost) evidence.push({ icon: "✅", text: "Development cost per milestone or R&D cost structure documented", src: "AI summaries" });
+    else evidence.push({ icon: "❌", text: "No cost-per-milestone or R&D cost data found — investors need to know what it costs to reach key value inflection points", src: "AI summaries" });
+    if (hasGrantLeverage) evidence.push({ icon: "✅", text: "Non-dilutive funding (grants, SBIR, BARDA) referenced — strong capital efficiency signal", src: "AI summaries" });
+    else evidence.push({ icon: "⚠️", text: "No grant or non-dilutive funding leverage described", src: "AI summaries" });
+    if (hasLicensing) evidence.push({ icon: "✅", text: "Licensing or collaboration economics described", src: "AI summaries" });
+    if (hasPeakSales) evidence.push({ icon: "✅", text: "Peak sales or NPV projections referenced", src: "AI summaries" });
+    if (hasFinancials) evidence.push({ icon: "✅", text: financialSummary ? "Financial statements reviewed" : "Financial statements uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" });
+
+    const flags: FactorFlag[] = [];
+    if (!hasDevCost) flags.push({ severity: "red", label: "No development cost breakdown", detail: "Life science investors need cost-per-milestone data — how much capital is required to reach IND filing, Phase I, Phase II, etc. Include this in your pitch or financials." });
+    if (!hasGrantLeverage) flags.push({ severity: "amber", label: "No non-dilutive funding leverage", detail: "SBIR, STTR, NIH, BARDA, and other grants reduce dilution. If you have or plan to apply for grants, document this — investors view it as capital efficiency." });
+    if (!hasLicensing && !hasPeakSales) flags.push({ severity: "amber", label: "No revenue model economics", detail: "Describe your commercialization path: licensing deal economics, royalty rates, co-development terms, or peak sales projections with comparable precedent transactions." });
+
+    const aiSummary = hasDevCost
+      ? `Life science development economics found: ${(financialSummary ?? bizSummary ?? pitchSummary ?? "").slice(0, 250)}…`
+      : hasGrantLeverage
+      ? "Grant/non-dilutive funding referenced but detailed cost-per-milestone not stated. Add R&D cost breakdown by clinical stage."
+      : hasFinancials || hasBizPlan
+      ? "Financial documents present but no life science cost structure or grant leverage found. Add development cost by milestone and licensing economics."
+      : "No documents uploaded. Life science development economics cannot be assessed.";
+
+    return { pts, max: 10, rating: rating(pts, 10), aiSummary, subScores, evidence, flags };
+  }
+
+  // ── Standard path ──────────────────────────────────────────────────────────
   const UNIT_ECON_KEYWORDS = ["ltv", "cac", "lifetime value", "customer acquisition cost", "unit economics", "payback period", "contribution margin", "arpu", "average revenue per user", "revenue per customer"];
   const MARGIN_KEYWORDS = ["gross margin", "gross profit", "cogs", "cost of goods", "cost of revenue", "net margin", "ebitda", "operating margin"];
   const SCALE_KEYWORDS = ["economies of scale", "margins improving", "margin expansion", "scalable", "leverage", "fixed cost", "variable cost", "breakeven", "break-even", "profitable at scale"];
@@ -748,17 +957,101 @@ function scoreBurnRunway(
   getSummary: (t: string) => string | null,
   fundingAmount: number | null,
   revenueStage: string | null,
+  industry: string | null,
 ): FactorScore {
   const hasFinancials = has("FINANCIAL_STATEMENTS");
   const hasBizPlan = has("BUSINESS_PLAN");
   const financialSummary = getSummary("FINANCIAL_STATEMENTS");
   const bizSummary = getSummary("BUSINESS_PLAN");
 
+  const combinedSummary = [financialSummary, bizSummary].filter(Boolean).join(" ");
+
+  if (isLifeScience(industry)) {
+    // ── Life science path ──────────────────────────────────────────────────────
+    // Replace burn/runway with milestone-based funding tranches and clinical trial cost
+    const LS_MILESTONE_KEYWORDS = [
+      "milestone", "milestone funding", "tranche", "funding tranche", "next milestone",
+      "ind filing", "phase i", "phase ii", "phase iii", "clinical milestone",
+      "regulatory milestone", "nda filing", "bla filing", "510k", "pma",
+    ];
+    const LS_GRANT_RUNWAY_KEYWORDS = [
+      "grant runway", "sbir", "sttr", "nih funding", "barda", "non-dilutive runway",
+      "grant funded", "award funded", "funded through", "extending runway through grants",
+    ];
+    const LS_CLINICAL_COST_KEYWORDS = [
+      "clinical trial cost", "trial cost", "cost of trial", "phase cost",
+      "cro cost", "site cost", "patient enrollment cost", "trial budget",
+      "burn through", "cash to milestone", "capital to milestone",
+    ];
+    const LS_RUNWAY_GENERAL = [
+      "runway", "months of cash", "cash runway", "18 months", "24 months",
+      "sufficient capital", "fund operations", "fund through",
+    ];
+
+    const hasMilestoneData = containsKeywords(combinedSummary, LS_MILESTONE_KEYWORDS);
+    const hasGrantRunway = containsKeywords(combinedSummary, LS_GRANT_RUNWAY_KEYWORDS);
+    const hasClinicalCost = containsKeywords(combinedSummary, LS_CLINICAL_COST_KEYWORDS);
+    const hasRunwayData = containsKeywords(combinedSummary, LS_RUNWAY_GENERAL);
+
+    // Milestone-based planning: 0–4
+    const milestonePts = hasMilestoneData
+      ? 4 : hasFinancials && financialSummary ? 2 : hasFinancials ? 1 : 0;
+    // Grant/non-dilutive runway extension: 0–2
+    const grantPts = hasGrantRunway ? 2 : 0;
+    // Clinical trial cost breakdown: 0–2
+    const clinicalCostPts = hasClinicalCost ? 2 : hasRunwayData ? 1 : 0;
+    // Funding target declared: 0–1
+    const fundingPts = fundingAmount ? 1 : 0;
+
+    const subScores: FactorSubScore[] = [
+      { label: "Milestone-linked funding plan", pts: milestonePts, max: 4 },
+      { label: "Non-dilutive / grant runway documented", pts: grantPts, max: 2 },
+      { label: "Clinical trial cost or cash-to-milestone", pts: clinicalCostPts, max: 2 },
+      { label: "Funding target declared", pts: fundingPts, max: 1 },
+    ];
+
+    let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 8);
+    if (!hasFinancials) pts = Math.min(pts, 3);
+    if (hasFinancials && !financialSummary) pts = Math.min(pts, 5);
+
+    const evidence: FactorEvidence[] = [];
+    if (hasFinancials) {
+      if (hasMilestoneData) {
+        evidence.push({ icon: "✅", text: "Milestone-linked funding tranches documented in financials", src: "FINANCIAL_STATEMENTS" });
+      } else if (financialSummary) {
+        evidence.push({ icon: "⚠️", text: "Financial statements reviewed — no milestone-based runway structure identified", src: "FINANCIAL_STATEMENTS" });
+      } else {
+        evidence.push({ icon: "⚠️", text: "Financial statements uploaded — AI review pending (partial credit)", src: "FINANCIAL_STATEMENTS" });
+      }
+    } else {
+      evidence.push({ icon: "❌", text: "Financial statements missing — cash-to-next-milestone unknown. Score capped at 3/8.", src: "Document checklist" });
+    }
+    if (hasGrantRunway) evidence.push({ icon: "✅", text: "Non-dilutive funding extends runway — strong capital efficiency signal", src: "AI summaries" });
+    else evidence.push({ icon: "⚠️", text: "No grant runway documented — consider SBIR/STTR or NIH funding to extend runway non-dilutively", src: "AI summaries" });
+    if (hasClinicalCost) evidence.push({ icon: "✅", text: "Clinical trial cost breakdown or cash-to-milestone figure found", src: "AI summaries" });
+    if (hasBizPlan) evidence.push({ icon: hasRunwayData ? "✅" : "⚠️", text: hasRunwayData ? "Business plan includes milestone-based runway projection" : "Business plan present — no runway projections detected", src: "BUSINESS_PLAN" });
+
+    const flags: FactorFlag[] = [];
+    if (!hasFinancials) flags.push({ severity: "red", label: "No financial statements", detail: "Life science investors need to see cash-to-next-milestone. Without financials, this factor is capped at 3/8." });
+    else if (!hasMilestoneData && !hasRunwayData) flags.push({ severity: "amber", label: "No milestone runway plan", detail: "Structure your runway around clinical milestones (IND, Phase I start, interim data readout). Show how the current raise funds through a specific milestone." });
+    if (!hasGrantRunway) flags.push({ severity: "amber", label: "No non-dilutive funding documented", detail: "SBIR, STTR, NIH, BARDA, and similar grants extend runway without dilution. If applicable, document this — it materially improves the capital efficiency narrative." });
+    if (!hasClinicalCost && !hasMilestoneData) flags.push({ severity: "amber", label: "No clinical cost breakdown", detail: "Provide estimated cost per clinical stage or cost to reach the next major value inflection point. Investors need this to evaluate raise sizing." });
+
+    const summaryText = financialSummary ?? bizSummary;
+    const aiSummary = summaryText
+      ? `Life science burn/runway context: ${summaryText.slice(0, 300)}${summaryText.length > 300 ? "…" : ""}`
+      : hasFinancials || hasBizPlan
+      ? "Financial documents uploaded but AI summaries not yet generated. Score discounted until available."
+      : "No financial documents uploaded. Cash-to-next-milestone cannot be assessed — critical for life science investors.";
+
+    return { pts, max: 8, rating: rating(pts, 8), aiSummary, subScores, evidence, flags };
+  }
+
+  // ── Standard path ──────────────────────────────────────────────────────────
   const BURN_KEYWORDS = ["burn", "runway", "monthly spend", "operating expenses", "cash negative", "cash flow negative", "rate of spend", "monthly cost"];
   const RUNWAY_KEYWORDS = ["runway", "months of cash", "12 months", "18 months", "24 months", "sufficient cash", "fund operations", "extend runway"];
   const POSITIVE_CASHFLOW = ["cash flow positive", "profitable", "self-sustaining", "break-even", "breakeven", "positive margin"];
 
-  const combinedSummary = [financialSummary, bizSummary].filter(Boolean).join(" ");
   const hasBurnData = containsKeywords(combinedSummary, BURN_KEYWORDS);
   const hasRunwayData = containsKeywords(combinedSummary, RUNWAY_KEYWORDS);
   const isPositiveCashflow = containsKeywords(combinedSummary, POSITIVE_CASHFLOW);
@@ -874,6 +1167,7 @@ function scorePitchQuality(
 function scoreExitStrategy(
   has: (t: string) => boolean,
   getSummary: (t: string) => string | null,
+  industry: string | null,
 ): FactorScore {
   const hasPitch = has("PITCH_DECK");
   const hasBizPlan = has("BUSINESS_PLAN");
@@ -882,6 +1176,93 @@ function scoreExitStrategy(
 
   const combinedSummary = [pitchSummary, bizSummary].filter(Boolean).join(" ");
 
+  if (isLifeScience(industry)) {
+    // ── Life science path ──────────────────────────────────────────────────────
+    // Primary exits: pharma/medtech acquisition, out-licensing, royalty deal; IPO less common at early stage
+    const LS_EXIT_SPECIFIC = [
+      "acquisition", "pharma acquisition", "medtech acquisition", "strategic acquisition",
+      "strategic buyer", "out-licensing", "licensing deal", "royalty deal", "royalty stream",
+      "co-development deal", "partnership exit", "ipo", "trade sale", "buyout",
+    ];
+    const LS_EXIT_GENERAL = [
+      "exit", "exit strategy", "returns", "investor returns", "path to liquidity",
+      "return on investment", "exit plan", "acquisition target", "licensing strategy",
+    ];
+    const LS_COMPARABLE_KEYWORDS = [
+      "comparable deal", "precedent transaction", "deal value", "upfront payment",
+      "milestone payment", "royalty rate", "comparable acquisition", "strategic premium",
+      "deal comparable", "recent deal", "m&a comparable",
+    ];
+    const LS_BUYER_KEYWORDS = [
+      "strategic buyer", "pharma buyer", "big pharma", "strategic partner",
+      "potential acquirer", "acquirer", "licensing partner", "co-development partner",
+    ];
+
+    const hasSpecificExit = containsKeywords(combinedSummary, LS_EXIT_SPECIFIC);
+    const hasGeneralExit = containsKeywords(combinedSummary, LS_EXIT_GENERAL);
+    const hasComparables = containsKeywords(combinedSummary, LS_COMPARABLE_KEYWORDS);
+    const hasBuyerStrategy = containsKeywords(combinedSummary, LS_BUYER_KEYWORDS);
+    const hasReturnProjections = containsKeywords(combinedSummary, ["multiple", "irr", "5x", "10x", "exit valuation", "deal value", "royalty", "milestone"]);
+
+    // Exit type: 0–4 (pharma/out-licensing exits are first-class, same weight as acquisition/IPO)
+    const exitPts = hasSpecificExit ? 4 : hasGeneralExit ? 2 : 0;
+    // Comparable deals / return evidence: 0–2
+    const comparablePts = hasComparables ? 2 : hasReturnProjections ? 1 : 0;
+    // Identified strategic buyers: 0–1
+    const buyerPts = hasBuyerStrategy ? 1 : 0;
+
+    const subScores: FactorSubScore[] = [
+      { label: "Exit path stated (acquisition, out-licensing, royalty)", pts: exitPts, max: 4 },
+      { label: "Comparable deals or return projections", pts: comparablePts, max: 2 },
+      { label: "Strategic buyers or partners identified", pts: buyerPts, max: 1 },
+    ];
+
+    let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 7);
+    if (!hasPitch && !hasBizPlan) pts = 0;
+    else if (!pitchSummary && !bizSummary) pts = Math.min(pts, 1);
+
+    const evidence: FactorEvidence[] = [];
+    if (hasSpecificExit) evidence.push({ icon: "✅", text: "Specific exit path stated (pharma acquisition, out-licensing, royalty deal, or IPO)", src: "AI summaries" });
+    else if (hasGeneralExit) evidence.push({ icon: "⚠️", text: "Exit strategy mentioned but no specific life science exit path stated", src: "AI summaries" });
+    else evidence.push({ icon: "❌", text: "No exit strategy found — life science investors need to see an acquisition or licensing path", src: "AI summaries" });
+    if (hasComparables) evidence.push({ icon: "✅", text: "Comparable precedent transactions or deal economics referenced", src: "AI summaries" });
+    else evidence.push({ icon: "⚠️", text: "No comparable deals cited — include precedent transactions to anchor return expectations", src: "AI summaries" });
+    if (hasBuyerStrategy) evidence.push({ icon: "✅", text: "Potential strategic buyers or licensing partners identified", src: "AI summaries" });
+
+    const flags: FactorFlag[] = [];
+    if (!hasGeneralExit) flags.push({
+      severity: "red",
+      label: "No exit strategy",
+      detail: "Life science investors typically exit via pharma/medtech acquisition, out-licensing, or royalty deals. Add an explicit exit strategy with at least one specific path.",
+    });
+    else if (!hasSpecificExit) flags.push({
+      severity: "amber",
+      label: "Vague exit strategy",
+      detail: "General exit language found. Be specific: name the exit type (strategic acquisition, out-licensing), identify potential acquirers or licensees, and include comparable deal values.",
+    });
+    if (!hasComparables) flags.push({
+      severity: "amber",
+      label: "No comparable transactions",
+      detail: "Cite 2–3 recent precedent transactions in your therapeutic area or device category. Include upfront payment, milestones, and royalty rate to anchor investor return expectations.",
+    });
+    if (!hasBuyerStrategy) flags.push({
+      severity: "amber",
+      label: "No strategic buyers identified",
+      detail: "Name the likely strategic acquirers or licensing partners (large pharma, medtech incumbents). Investors want to know who the likely exit counterparty is.",
+    });
+
+    const aiSummary = hasSpecificExit
+      ? `Life science exit strategy found: ${combinedSummary.slice(0, 250)}…`
+      : hasGeneralExit
+      ? "Exit referenced but not specific to life science context. Add acquisition targets, out-licensing strategy, or comparable precedent transactions."
+      : hasPitch || hasBizPlan
+      ? "Documents uploaded but no life science exit path found. Add a slide identifying pharma/medtech acquirers and comparable deal economics."
+      : "No documents uploaded. Exit strategy cannot be assessed.";
+
+    return { pts, max: 7, rating: rating(pts, 7), aiSummary, subScores, evidence, flags };
+  }
+
+  // ── Standard path ──────────────────────────────────────────────────────────
   const EXIT_SPECIFIC = ["acquisition", "ipo", "initial public offering", "strategic buyer", "trade sale", "buyout", "liquidity event", "exit multiple", "strategic acquisition"];
   const EXIT_GENERAL = ["exit", "exit strategy", "returns", "investor returns", "path to liquidity", "return on investment", "exit plan"];
   const RETURN_PROJECTIONS = ["multiple", "irr", "internal rate of return", "5x", "10x", "3x", "exit valuation", "projected valuation", "comparable acquisition", "comparable exit"];
@@ -1060,15 +1441,15 @@ export async function scoreCompanyReadiness(input: {
     input.documentSummaries.find((d) => d.type === type)?.summary ?? null;
 
   const factors: Record<FactorKey, FactorScore> = {
-    revenue_cashflow:   scoreRevenueCashflow(has, getSummary, input.revenueStage, input.fundingAmount),
+    revenue_cashflow:   scoreRevenueCashflow(has, getSummary, input.revenueStage, input.fundingAmount, input.industry),
     customer_traction:  scoreCustomerTraction(has, getSummary, input.revenueStage, input.industry),
     founder_team:       scoreFounderTeam(has, getSummary, input.companyName, input.industry),
     market_evidence:    scoreMarketEvidence(has, getSummary, input.industry),
-    unit_economics:     scoreUnitEconomics(has, getSummary, input.revenueStage),
+    unit_economics:     scoreUnitEconomics(has, getSummary, input.revenueStage, input.industry),
     governance_legal:   scoreGovernanceLegal(has, getSummary, input.industry),
     ip_moat:            scoreIpMoat(has, getSummary, input.industry),
-    burn_runway:        scoreBurnRunway(has, getSummary, input.fundingAmount, input.revenueStage),
-    exit_strategy:      scoreExitStrategy(has, getSummary),
+    burn_runway:        scoreBurnRunway(has, getSummary, input.fundingAmount, input.revenueStage, input.industry),
+    exit_strategy:      scoreExitStrategy(has, getSummary, input.industry),
     pitch_quality:      scorePitchQuality(has, getSummary),
     deal_structure:     scoreDealStructure(has, getSummary, input.fundingAmount, input.revenueStage),
     industry_alignment: scoreIndustryAlignment(input.industry, input.revenueStage),
