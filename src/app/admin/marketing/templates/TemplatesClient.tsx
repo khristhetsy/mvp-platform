@@ -11,9 +11,10 @@ const STATUS_MAP: Record<string, { bg: string; color: string }> = {
 };
 
 const card: React.CSSProperties = {
-  background: "var(--background)",
-  border: "0.5px solid var(--border)",
+  background: "#ffffff",
+  border: "0.5px solid #e2e6ed",
   borderRadius: 12,
+  boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)",
 };
 
 function stripHtml(html: string): string {
@@ -214,7 +215,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
       {preview && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
           onClick={() => setPreview(null)}>
-          <div style={{ background: "var(--background)", borderRadius: 14, padding: 24, maxWidth: 660, width: "100%", maxHeight: "90vh", overflow: "auto" }}
+          <div style={{ background: "#ffffff", borderRadius: 14, padding: 24, maxWidth: 660, width: "100%", maxHeight: "90vh", overflow: "auto" }}
             onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div>

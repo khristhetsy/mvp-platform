@@ -169,7 +169,7 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
       </div>
 
       {showImport && (
-        <div style={{ background: "var(--background)", border: "0.5px solid var(--border)", borderRadius: 12, padding: "16px 18px", marginBottom: 14 }}>
+        <div style={{ background: "#ffffff", border: "0.5px solid #e2e6ed", borderRadius: 12, padding: "16px 18px", marginBottom: 14, boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)" }}>
           <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 6 }}>Import contacts from CSV</div>
           <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 10 }}>
             Columns: <code style={{ fontSize: 11, background: "var(--muted)", padding: "1px 5px", borderRadius: 4 }}>email, first_name, last_name, company, title, source</code>
@@ -214,8 +214,8 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
       </div>
 
       {/* Table */}
-      <div style={{ background: "var(--background)", border: "0.5px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "36px 2fr 1.3fr 1.2fr 90px 80px", padding: "8px 16px", background: "var(--muted)", borderBottom: "0.5px solid var(--border)" }}>
+      <div style={{ background: "#ffffff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "36px 2fr 1.3fr 1.2fr 90px 80px", padding: "8px 16px", background: "var(--muted)", borderBottom: "0.5px solid #e2e6ed" }}>
           {["", "Contact", "Company", "Tags", "Source", ""].map((h, i) => (
             <div key={i} style={{ fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)" }}>{h}</div>
           ))}
@@ -411,7 +411,7 @@ function AddContactForm({ lists, onDone }: { lists: MarketingList[]; onDone: () 
     setSaving(false);
   }
   return (
-    <form onSubmit={handleSubmit} style={{ background: "var(--background)", border: "0.5px solid var(--border)", borderRadius: 12, padding: "16px 18px", marginBottom: 14 }}>
+    <form onSubmit={handleSubmit} style={{ background: "#ffffff", border: "0.5px solid #e2e6ed", borderRadius: 12, padding: "16px 18px", marginBottom: 14, boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)" }}>
       <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 12 }}>Add contact</div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
         {[

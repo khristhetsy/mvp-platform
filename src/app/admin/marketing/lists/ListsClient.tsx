@@ -7,9 +7,10 @@ import type { MarketingList } from "@/lib/marketing/types";
 type ListWithCount = MarketingList & { contact_count: number };
 
 const card: React.CSSProperties = {
-  background: "var(--background)",
-  border: "0.5px solid var(--border)",
+  background: "#ffffff",
+  border: "0.5px solid #e2e6ed",
   borderRadius: 12,
+  boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)",
 };
 
 export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] }) {
@@ -112,7 +113,7 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
       {/* Create / Edit modal */}
       {(showCreate || editId) && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
-          <div style={{ background: "var(--background)", border: "1px solid var(--border)", borderRadius: 14, padding: 24, width: 420, maxWidth: "90vw" }}>
+          <div style={{ background: "#ffffff", border: "1px solid #e2e6ed", borderRadius: 14, padding: 24, width: 420, maxWidth: "90vw" }}>
             <h3 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 16px" }}>
               {editId ? "Edit list" : "New list"}
             </h3>

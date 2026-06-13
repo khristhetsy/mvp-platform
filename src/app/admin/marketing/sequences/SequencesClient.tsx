@@ -21,9 +21,10 @@ const statusColors: Record<string, { bg: string; color: string }> = {
 };
 
 const card: React.CSSProperties = {
-  background: "var(--background)",
-  border: "0.5px solid var(--border)",
+  background: "#ffffff",
+  border: "0.5px solid #e2e6ed",
   borderRadius: 12,
+  boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)",
 };
 
 export function SequencesClient({ sequences, templates }: Props) {

@@ -103,7 +103,7 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
 
       {/* Create form */}
       {showCreate && (
-        <div style={{ background: "var(--background)", border: "0.5px solid var(--border)", borderRadius: 12, padding: "18px 20px", marginBottom: 20 }}>
+        <div style={{ background: "#ffffff", border: "0.5px solid #e2e6ed", borderRadius: 12, padding: "18px 20px", marginBottom: 20, boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)" }}>
           <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 14 }}>New campaign</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {[
@@ -148,7 +148,7 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
           <div style={{ marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button onClick={() => handleCreate(false)}
               disabled={saving || !form.name || !form.list_id || !form.template_id}
-              style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", cursor: "pointer", opacity: (!form.name || !form.list_id || !form.template_id) ? 0.5 : 1 }}>
+              style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid #e2e6ed", background: "transparent", color: "var(--foreground)", cursor: "pointer", opacity: (!form.name || !form.list_id || !form.template_id) ? 0.5 : 1 }}>
               {saving ? "Saving…" : form.scheduled_at ? "Save as scheduled" : "Save as draft"}
             </button>
             {!form.scheduled_at && (
@@ -177,7 +177,7 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
             const sc = STATUS_MAP[c.status] ?? STATUS_MAP.draft;
             const scheduledAt = (c as Record<string, unknown>).scheduled_at as string | null | undefined;
             return (
-              <div key={c.id} style={{ background: "var(--background)", border: "0.5px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+              <div key={c.id} style={{ background: "#ffffff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)" }}>
                 {/* Card header */}
                 <div style={{ padding: "14px 16px 12px", borderBottom: "0.5px solid var(--border)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
