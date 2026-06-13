@@ -133,7 +133,7 @@ Server-only:
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `CRON_SECRET` (required for cron orchestration on staging/production)
 - `TOKEN_ENCRYPTION_SECRET` (required if Google OAuth is enabled)
-- `OPENAI_API_KEY` (optional; assistant runs in fallback mode without it)
+- `ANTHROPIC_API_KEY` (optional; assistant runs in fallback mode without it)
 
 Google OAuth (if used):
 - `GOOGLE_CLIENT_ID`

@@ -15,8 +15,8 @@ export function useFounderPersonalCoachChat({
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<CoachChatEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"openai" | "fallback" | "guardrail" | null>(null);
-  const [openAiAvailable, setOpenAiAvailable] = useState<boolean | null>(null);
+  const [mode, setMode] = useState<"claude" | "fallback" | "guardrail" | null>(null);
+  const [claudeAvailable, setClaudeAvailable] = useState<boolean | null>(null);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -59,12 +59,12 @@ export function useFounderPersonalCoachChat({
       const body = (await response.json()) as {
         reply: string;
         disclaimer?: string;
-        mode?: "openai" | "fallback" | "guardrail";
-        openAiAvailable?: boolean;
+        mode?: "claude" | "fallback" | "guardrail";
+        claudeAvailable?: boolean;
       };
 
       setMode(body.mode ?? null);
-      setOpenAiAvailable(body.openAiAvailable ?? null);
+      setClaudeAvailable(body.claudeAvailable ?? null);
 
       const disclaimer = body.disclaimer ?? COACH_DISCLAIMER;
       setMessages((prev) => [...prev, { role: "assistant", text: `${body.reply}\n\n${disclaimer}` }]);
@@ -82,7 +82,7 @@ export function useFounderPersonalCoachChat({
     messages,
     loading,
     mode,
-    openAiAvailable,
+    claudeAvailable,
     send,
     sendMessage,
     sendPrompt,

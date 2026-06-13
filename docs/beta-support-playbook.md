@@ -12,7 +12,7 @@ Staff guide for supporting CapitalOS private beta users.
 |-------|--------|
 | Stuck in onboarding | Open company workspace → review onboarding steps; use **Remind onboarding** |
 | Documents not uploading | Check system health failed uploads; verify storage buckets |
-| No diligence report | Expected if OpenAI unconfigured; use honest empty state on `/founder/report` |
+| No diligence report | Expected if Claude AI unconfigured; use honest empty state on `/founder/report` |
 | Deal room doc request pending | Open deal room from admin; nudge founder via notification reminder |
 
 ## Common investor issues

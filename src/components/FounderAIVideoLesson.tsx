@@ -92,8 +92,8 @@ export function FounderAIVideoLesson({
     setAsset(body.asset);
     setTab("script");
     if (body.warning) setNotice(body.warning);
-    else if (!body.openAiConfigured) {
-      setNotice("Guided script mode — OpenAI not configured. Rule-based script generated.");
+    else if (!body.claudeConfigured) {
+      setNotice("Guided script mode — Claude not configured. Rule-based script generated.");
     }
   }, [courseSlug, lessonSlug]);
 

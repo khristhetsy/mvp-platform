@@ -86,7 +86,7 @@ const snapshot = {
       envPresent("GOOGLE_CLIENT_SECRET") &&
       envPresent("GOOGLE_REDIRECT_URI") &&
       envPresent("TOKEN_ENCRYPTION_SECRET"),
-    openAiConfigured: envPresent("OPENAI_API_KEY"),
+    claudeConfigured: envPresent("ANTHROPIC_API_KEY"),
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? null,
     googleRedirectHost: hostFromUrl(process.env.GOOGLE_REDIRECT_URI),
   },

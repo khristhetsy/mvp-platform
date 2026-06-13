@@ -26,7 +26,7 @@ Use this checklist after migrations or major feature merges. This is **not** a f
 - [ ] `/admin/beta-operations` loads — activation tables, inactivity flags, feedback queue
 - [ ] Beta invite + feedback review actions work (staff only)
 - [ ] Migration warning banner absent when floor 0056 is applied
-- [ ] Launch readiness panel shows env, cron, OpenAI, Stripe, Google OAuth, beta mode status
+- [ ] Launch readiness panel shows env, cron, Claude AI, Stripe, Google OAuth, beta mode status
 - [ ] `/admin/beta-operations` loads; activation tables and feedback queue visible
 - [ ] `/admin/dashboard` loads
 - [ ] `/admin/queues` loads and does not crash when empty

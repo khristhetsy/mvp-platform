@@ -193,7 +193,7 @@ See [backup-and-recovery.md](./backup-and-recovery.md) for database/storage back
 | `GOOGLE_REDIRECT_URI` | Vercel (server) | Production URL, e.g. `https://your-domain.com/api/integrations/google/callback` |
 | `TOKEN_ENCRYPTION_SECRET` | Vercel (server) | 32+ chars; `openssl rand -base64 32` |
 
-Optional: `OPENAI_API_KEY` (server) if AI diligence/draft features are enabled.
+Optional: `ANTHROPIC_API_KEY` (server) if AI diligence/draft features are enabled.
 
 If `NEXT_PUBLIC_SUPABASE_*` is missing in production, the app **fails closed**: protected routes redirect to `/configuration-error` instead of allowing anonymous access.
 

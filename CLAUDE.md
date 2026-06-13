@@ -30,7 +30,7 @@ npm run ops:export-metadata
 - **Vitest** for unit tests (`src/**/*.test.ts`)
 - **Sentry** (`sentry.client.config.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`)
 - **PostHog** for product analytics
-- **OpenAI** (`gpt-4.1-mini`) for AI diligence reports — gracefully degrades without `OPENAI_API_KEY`
+- **Anthropic Claude** (`claude-haiku-4-5-20251001` / `claude-sonnet-4-6`) for all AI features — gracefully degrades without `ANTHROPIC_API_KEY`
 - `pdfkit` and `exceljs` for report generation (server-only)
 - `@dnd-kit` for drag-and-drop in admin UIs
 
@@ -88,7 +88,7 @@ Each subdirectory maps to a platform domain. Key ones:
 | `marketplace/` | Campaign publication, deal discovery |
 | `deal-rooms/` | Deal room phase 1 |
 | `rbac/` | Internal role/permission system |
-| `ai.ts` | OpenAI diligence report generation |
+| `ai.ts` | Claude AI diligence report generation |
 | `env.ts` | Environment helpers (`getAppEnv()`, `validateRequiredEnv()`, etc.) |
 
 ### Environment Tiers
@@ -103,7 +103,7 @@ Copy the appropriate `.env.*.example` file:
 
 Required vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_APP_URL`, `SUPABASE_SERVICE_ROLE_KEY` (server, non-local), `CRON_SECRET` (staging/production).
 
-Optional: `OPENAI_API_KEY` (AI features degrade gracefully without it), `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI` + `TOKEN_ENCRYPTION_SECRET` (Google Calendar/Meet integration).
+Optional: `ANTHROPIC_API_KEY` (AI features degrade gracefully without it), `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI` + `TOKEN_ENCRYPTION_SECRET` (Google Calendar/Meet integration).
 
 ### Database Migrations
 
@@ -117,7 +117,7 @@ Migrations live in `supabase/migrations/` (currently `0001` through `0068`), app
 
 - `src/proxy.ts` is the Next.js middleware (exported with `config.matcher`)
 - `SUPABASE_SERVICE_ROLE_KEY` is server-only — never import `admin.ts` from client components or `NEXT_PUBLIC_*`
-- AI features use `gpt-4.1-mini` and return a demo/fallback response when `OPENAI_API_KEY` is absent
+- AI features use Anthropic Claude (`src/lib/claude.ts`) and return a fallback response when `ANTHROPIC_API_KEY` is absent
 - Admin environment status (non-secret) visible at `/admin/system-health`
 - Test files follow `src/**/*.test.ts` naming; mock Supabase client at `src/test/mock-supabase.ts`
 

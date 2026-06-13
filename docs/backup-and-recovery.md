@@ -85,7 +85,7 @@ Store a **redacted checklist** in your password manager; store **actual values**
 | `GOOGLE_CLIENT_SECRET` | Server | OAuth |
 | `GOOGLE_REDIRECT_URI` | Server | Must match production domain |
 | `TOKEN_ENCRYPTION_SECRET` | Server | 32+ chars |
-| `OPENAI_API_KEY` | Server optional | AI features |
+| `ANTHROPIC_API_KEY` | Server optional | AI features |
 | `NEXT_PUBLIC_SITE_URL` | Public optional | Production URL consistency |
 
 Export Vercel env:

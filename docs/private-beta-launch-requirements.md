@@ -24,7 +24,7 @@ Use this checklist before inviting external founders and investors.
 ## Environment
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` server-only (never `NEXT_PUBLIC_*`)
 - [ ] `DATABASE_URL` set on server for migration + security verification on `/admin/system-health`
-- [ ] `OPENAI_API_KEY` set in production if AI diligence generation is offered; otherwise staff know reports are summary-only
+- [ ] `ANTHROPIC_API_KEY` set in production if AI diligence generation is offered; otherwise staff know reports are summary-only
 - [ ] `CRON_SECRET` set if orchestration cron is enabled
 - [ ] `PRIVATE_BETA_MODE=true` for curated beta (optional; pair with `NEXT_PUBLIC_PRIVATE_BETA_MODE=true` for signup UI)
 

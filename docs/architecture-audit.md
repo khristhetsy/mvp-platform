@@ -622,7 +622,7 @@ Current state is approximately **60% functional depth, 30% information architect
 
 | Area | Implementation |
 |------|----------------|
-| Diligence reports | `/api/ai/reports`, OpenAI |
+| Diligence reports | `/api/ai/reports`, Anthropic Claude |
 | Learning | Class assistant, video script generation |
 | Founder coach | `FloatingFounderAICoach` |
 | Outreach | Social draft generation, templates |
@@ -824,7 +824,7 @@ Impact ▲
 | UI | React 19, Tailwind 4 |
 | Backend | Supabase Auth + Postgres + Storage |
 | Validation | Zod 4 |
-| AI | OpenAI |
+| AI | Anthropic Claude |
 | Documents | PDFKit, XLSX |
 | DnD | @dnd-kit |
 

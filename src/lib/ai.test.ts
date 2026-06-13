@@ -2,33 +2,31 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { generateDiligenceReport } from "@/lib/ai";
 import { requiredDocumentTypes } from "@/lib/mock-data";
 
-vi.mock("openai", () => ({
-  default: class MockOpenAI {
-    responses = {
-      create: vi.fn().mockResolvedValue({
-        output_text: "Strong market positioning with moderate execution risk.",
-      }),
-    };
-  },
+// Mock the claude helper so tests don't make real API calls
+vi.mock("@/lib/claude", () => ({
+  claudeComplete: vi.fn().mockResolvedValue("Strong market positioning with moderate execution risk."),
+  isClaudeConfigured: vi.fn(() => Boolean(process.env.ANTHROPIC_API_KEY?.trim())),
+  CLAUDE_HAIKU: "claude-haiku-4-5-20251001",
+  CLAUDE_SONNET: "claude-sonnet-4-6",
 }));
 
 describe("generateDiligenceReport", () => {
-  const originalOpenAiKey = process.env.OPENAI_API_KEY;
+  const originalKey = process.env.ANTHROPIC_API_KEY;
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   afterEach(() => {
-    if (originalOpenAiKey === undefined) {
-      delete process.env.OPENAI_API_KEY;
+    if (originalKey === undefined) {
+      delete process.env.ANTHROPIC_API_KEY;
     } else {
-      process.env.OPENAI_API_KEY = originalOpenAiKey;
+      process.env.ANTHROPIC_API_KEY = originalKey;
     }
   });
 
-  it("returns an unconfigured demo report when OPENAI_API_KEY is missing", async () => {
-    delete process.env.OPENAI_API_KEY;
+  it("returns an unconfigured demo report when ANTHROPIC_API_KEY is missing", async () => {
+    delete process.env.ANTHROPIC_API_KEY;
 
     const report = await generateDiligenceReport({
       companyName: "Acme Corp",
@@ -43,8 +41,8 @@ describe("generateDiligenceReport", () => {
     expect(report.executiveSummary).toContain("not configured");
   });
 
-  it("returns an OpenAI-generated summary when OPENAI_API_KEY is set", async () => {
-    process.env.OPENAI_API_KEY = "test-key";
+  it("returns a Claude-generated summary when ANTHROPIC_API_KEY is set", async () => {
+    process.env.ANTHROPIC_API_KEY = "test-key";
 
     const report = await generateDiligenceReport({
       companyName: "Acme Corp",
@@ -52,7 +50,7 @@ describe("generateDiligenceReport", () => {
       uploadedDocumentTypes: [requiredDocumentTypes[0] ?? "pitch_deck"],
     });
 
-    expect(report.generatedBy).toBe("openai");
+    expect(report.generatedBy).toBe("claude");
     expect(report.isDemo).toBe(false);
     expect(report.executiveSummary).toContain("Strong market positioning");
     expect(report.missingDocuments.length).toBe(requiredDocumentTypes.length - 1);

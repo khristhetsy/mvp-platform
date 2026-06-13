@@ -22,7 +22,7 @@ export function FloatingFounderAICoach({
     messages,
     loading,
     mode,
-    openAiAvailable,
+    claudeAvailable,
     send,
     sendPrompt,
   } = useFounderPersonalCoachChat({ courseSlug, lessonSlug });
@@ -59,11 +59,11 @@ export function FloatingFounderAICoach({
               <p className="mt-1 text-[10px] leading-4 text-slate-300">{COACH_DISCLAIMER}</p>
             </div>
             <div className="flex shrink-0 items-center gap-1">
-              {openAiAvailable === false ? (
+              {claudeAvailable === false ? (
                 <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-medium text-amber-100">
                   Guided
                 </span>
-              ) : mode === "openai" ? (
+              ) : mode === "claude" ? (
                 <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-medium text-emerald-100">
                   Live
                 </span>
@@ -79,9 +79,9 @@ export function FloatingFounderAICoach({
             </div>
           </header>
 
-          {openAiAvailable === false && messages.length === 0 ? (
+          {claudeAvailable === false && messages.length === 0 ? (
             <p className="shrink-0 border-b border-amber-100 bg-amber-50 px-4 py-2 text-[11px] text-amber-950">
-              Guided educational mode (OpenAI not configured). Quiz answers are never provided.
+              Guided educational mode (Claude not configured). Quiz answers are never provided.
             </p>
           ) : null}
 

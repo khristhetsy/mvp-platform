@@ -421,7 +421,7 @@ Built deterministically from sanitized summary counts (remediation, pending revi
 
 - Read-only policy; no legal/investment advice prompts
 - Sanitized context (no secrets, limited fields)
-- OpenAI with template fallback
+- Claude AI with template fallback
 - Operational logging: `assistant_opened`, `assistant_question_asked` (service role)
 
 ### 6.5 NBA integration assessment

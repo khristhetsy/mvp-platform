@@ -36,8 +36,8 @@ record(
   tokenSecret ? `length=${tokenSecret.length}` : "missing",
 );
 
-const openai = process.env.OPENAI_API_KEY?.trim();
-record("OPENAI_API_KEY (optional)", true, openai ? "set" : "not set");
+const claude = process.env.ANTHROPIC_API_KEY?.trim();
+record("ANTHROPIC_API_KEY (optional)", true, claude ? "set" : "not set");
 
 const isProd =
   process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";

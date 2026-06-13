@@ -56,7 +56,7 @@ export function AdminBetaOperationsDashboard({ snapshot }: { snapshot: BetaOpera
           <ul className="space-y-2">
             <ReliabilityRow label="Migrations verified" ok={reliability.migrationsVerified} />
             <ReliabilityRow label="Private beta mode" ok={reliability.privateBetaMode} detail={reliability.privateBetaMode ? "ON" : "OFF"} />
-            <ReliabilityRow label="OpenAI" ok={reliability.openAiConfigured} detail={reliability.openAiConfigured ? "Configured" : "Unconfigured"} />
+            <ReliabilityRow label="Claude AI" ok={reliability.claudeConfigured} detail={reliability.claudeConfigured ? "Configured" : "Unconfigured"} />
             <ReliabilityRow label="Stripe" ok={reliability.stripeConfigured} detail={reliability.stripeConfigured ? "Enabled" : "Disabled"} />
             <ReliabilityRow label="Google OAuth" ok={reliability.googleOAuthConfigured} />
             <ReliabilityRow label="Cron / orchestration" ok={reliability.cronOperational} />

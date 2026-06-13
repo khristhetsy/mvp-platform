@@ -15,7 +15,7 @@ This checklist is a **deployment aid** for applying Supabase migrations safely a
 ## Optional / integration environment
 - `CRON_SECRET` (required for `/api/cron/run-orchestration` in staging/production)
 - `TOKEN_ENCRYPTION_SECRET` (required for Google OAuth integration flows)
-- `OPENAI_API_KEY` (optional; assistant runs in fallback mode without it)
+- `ANTHROPIC_API_KEY` (optional; assistant runs in fallback mode without it)
 
 ---
 

@@ -128,7 +128,7 @@ export function AdminLaunchReadinessPanel({
             <StatusRow label="Env validation" ok={environment.envValidationOk} />
             <StatusRow label="Service role configured" ok={environment.serviceRoleConfigured} />
             <StatusRow label="Cron secret (orchestration)" ok={environment.cronConfigured} />
-            <StatusRow label="OpenAI configured" ok={environment.openAiConfigured} />
+            <StatusRow label="Claude AI configured" ok={environment.claudeConfigured} />
             <StatusRow
               label="Stripe payments"
               ok={environment.stripeConfigured}

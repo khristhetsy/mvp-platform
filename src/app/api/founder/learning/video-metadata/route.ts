@@ -112,7 +112,7 @@ export async function POST(request: Request) {
         remotion: isRemotionConfigured(),
         heygen: isHeyGenConfigured(),
         elevenlabs: Boolean(process.env.ELEVENLABS_API_KEY?.trim()),
-        openai: Boolean(process.env.OPENAI_API_KEY?.trim()),
+        claude: isClaudeConfigured(),
       },
     });
   } catch (error) {

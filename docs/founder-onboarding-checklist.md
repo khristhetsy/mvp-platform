@@ -13,7 +13,7 @@
 ## Staff — review
 - [ ] Review company in `/admin/companies/[companyId]`
 - [ ] Approve or request changes before marketplace publication
-- [ ] Generate diligence report only when appropriate (`OPENAI_API_KEY` configured or accept summary-only)
+- [ ] Generate diligence report only when appropriate (`ANTHROPIC_API_KEY` configured or accept summary-only)
 
 ## Optional beta flows
 - [ ] Founder learning (`/founder/learning`) if enabled for cohort
