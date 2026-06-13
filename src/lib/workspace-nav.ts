@@ -87,6 +87,24 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       { href: "/admin/users/permissions", label: "User Permissions", requiredPermission: "manage_users" },
     ],
   },
+  {
+    title: "Marketing",
+    items: [
+      {
+        href: "/admin/marketing",
+        label: "Marketing Hub",
+        requiredPermission: "view_admin_dashboard",
+        children: [
+          { href: "/admin/marketing", label: "Dashboard" },
+          { href: "/admin/marketing/contacts", label: "Contacts" },
+          { href: "/admin/marketing/campaigns", label: "Campaigns" },
+          { href: "/admin/marketing/sequences", label: "Sequences" },
+          { href: "/admin/marketing/templates", label: "Templates" },
+          { href: "/admin/marketing/analytics", label: "Analytics" },
+        ],
+      },
+    ],
+  },
 ];
 
 export const founderWorkspaceNav: WorkspaceNavItem[] = [
