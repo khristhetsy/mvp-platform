@@ -20,6 +20,13 @@ const SEQ_STATUS_MAP: Record<string, { bg: string; color: string }> = {
   archived: { bg: "#FCEBEB", color: "#A32D2D" },
 };
 
+// Shared white card style
+const card = {
+  background: "var(--background)",
+  border: "0.5px solid var(--border)",
+  borderRadius: 12,
+} as React.CSSProperties;
+
 export default async function MarketingDashboardPage() {
   await requireRole(["admin"]);
   const supabase = await marketingDb();
@@ -32,7 +39,6 @@ export default async function MarketingDashboardPage() {
     { count: totalSent30d },
     { count: totalOpened30d },
     { count: totalClicked30d },
-    { count: totalReplies30d },
     campaigns,
     sequences,
   ] = await Promise.all([
@@ -41,7 +47,6 @@ export default async function MarketingDashboardPage() {
     supabase.from("marketing_events").select("*", { count: "exact", head: true }).eq("event_type", "sent").gte("occurred_at", since30d),
     supabase.from("marketing_events").select("*", { count: "exact", head: true }).eq("event_type", "opened").gte("occurred_at", since30d),
     supabase.from("marketing_events").select("*", { count: "exact", head: true }).eq("event_type", "clicked").gte("occurred_at", since30d),
-    supabase.from("marketing_events").select("*", { count: "exact", head: true }).eq("event_type", "replied").gte("occurred_at", since30d),
     supabase.from("marketing_campaigns")
       .select("id, name, status, stat_sent, stat_opened, stat_clicked, list:marketing_lists(name)")
       .in("status", ["sending", "sent", "scheduled", "paused"])
@@ -54,30 +59,36 @@ export default async function MarketingDashboardPage() {
       .limit(4),
   ]);
 
-  const sent = totalSent30d ?? 0;
+  const sent   = totalSent30d ?? 0;
   const opened = totalOpened30d ?? 0;
   const clicked = totalClicked30d ?? 0;
-  const openRate = sent > 0 ? (opened / sent) * 100 : 0;
+  const openRate  = sent > 0 ? (opened  / sent) * 100 : 0;
   const clickRate = sent > 0 ? (clicked / sent) * 100 : 0;
 
   const statCards = [
     {
-      icon: "👥", label: "Total contacts", value: (totalContacts ?? 0).toLocaleString(),
-      delta: `+${newContacts7d ?? 0} this week`, deltaGood: (newContacts7d ?? 0) > 0,
+      label: "Total contacts",
+      value: (totalContacts ?? 0).toLocaleString(),
+      delta: `+${newContacts7d ?? 0} this week`,
+      good: (newContacts7d ?? 0) > 0,
     },
     {
-      icon: "📤", label: "Emails sent (30d)", value: sent.toLocaleString(),
-      delta: `${(campaigns.data ?? []).length} active campaigns`, deltaGood: true,
+      label: "Emails sent (30d)",
+      value: sent.toLocaleString(),
+      delta: `${(campaigns.data ?? []).length} active campaigns`,
+      good: true,
     },
     {
-      icon: "📬", label: "Open rate", value: `${openRate.toFixed(1)}%`,
-      delta: openRate >= 21 ? "Above 21% benchmark" : `${(21 - openRate).toFixed(1)}pts below benchmark`,
-      deltaGood: openRate >= 21,
+      label: "Open rate",
+      value: `${openRate.toFixed(1)}%`,
+      delta: openRate >= 21 ? "Above 21% benchmark" : `${(21 - openRate).toFixed(1)}pts below`,
+      good: openRate >= 21,
     },
     {
-      icon: "🖱️", label: "Click rate", value: `${clickRate.toFixed(1)}%`,
-      delta: clickRate >= 3.5 ? "Above 3.5% target" : `${(3.5 - clickRate).toFixed(1)}pts below target`,
-      deltaGood: clickRate >= 3.5,
+      label: "Click rate",
+      value: `${clickRate.toFixed(1)}%`,
+      delta: clickRate >= 3.5 ? "Above 3.5% target" : `${(3.5 - clickRate).toFixed(1)}pts below`,
+      good: clickRate >= 3.5,
     },
   ];
 
@@ -91,34 +102,35 @@ export default async function MarketingDashboardPage() {
         </div>
         <Link
           href="/admin/marketing/campaigns"
-          style={{ display: "flex", alignItems: "center", gap: 6, background: "#534AB7", color: "#EEEDFE", padding: "7px 14px", borderRadius: 8, fontSize: 13, textDecoration: "none", fontWeight: 500 }}
+          style={{ display: "flex", alignItems: "center", gap: 6, background: "#534AB7", color: "#EEEDFE", padding: "7px 14px", borderRadius: 8, fontSize: 12, textDecoration: "none", fontWeight: 500 }}
         >
-          <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> New campaign
+          + New campaign
         </Link>
       </div>
 
       {/* Stat cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10, marginBottom: 18 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10, marginBottom: 16 }}>
         {statCards.map((s) => (
-          <div key={s.label} style={{ background: "var(--background)", border: "0.5px solid var(--border)", borderRadius: 12, padding: "14px 16px" }}>
+          <div key={s.label} style={{ ...card, padding: "14px 16px" }}>
             <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 6 }}>{s.label}</div>
             <div style={{ fontSize: 24, fontWeight: 500, color: "var(--foreground)" }}>{s.value}</div>
-            <div style={{ fontSize: 11, marginTop: 4, color: s.deltaGood ? "#0F6E56" : "#993C1D" }}>
-              {s.deltaGood ? "↑" : "↓"} {s.delta}
+            <div style={{ fontSize: 11, marginTop: 4, color: s.good ? "#0F6E56" : "#993C1D" }}>
+              {s.good ? "↑" : "↓"} {s.delta}
             </div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14 }}>
+      {/* Campaigns + Sequences */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14, marginBottom: 14 }}>
         {/* Active campaigns */}
-        <div style={{ background: "var(--background)", border: "0.5px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ ...card, overflow: "hidden" }}>
           <div style={{ padding: "12px 16px", borderBottom: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ fontSize: 13, fontWeight: 500 }}>Active campaigns</span>
             <Link href="/admin/marketing/campaigns" style={{ fontSize: 12, color: "#534AB7", textDecoration: "none" }}>View all →</Link>
           </div>
           {(campaigns.data ?? []).length === 0 ? (
-            <div style={{ padding: 20, fontSize: 13, color: "var(--muted-foreground)" }}>No active campaigns yet.</div>
+            <div style={{ padding: "24px 16px", fontSize: 13, color: "var(--muted-foreground)", textAlign: "center" }}>No active campaigns yet.</div>
           ) : (
             (campaigns.data ?? []).map((c: { id: string; name: string; status: string; stat_sent: number; stat_opened: number; stat_clicked: number; list: { name: string } | null }) => {
               const sc = STATUS_MAP[c.status] ?? STATUS_MAP.draft;
@@ -149,19 +161,19 @@ export default async function MarketingDashboardPage() {
         </div>
 
         {/* Active sequences */}
-        <div style={{ background: "var(--background)", border: "0.5px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ ...card, overflow: "hidden" }}>
           <div style={{ padding: "12px 16px", borderBottom: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ fontSize: 13, fontWeight: 500 }}>Active sequences</span>
             <Link href="/admin/marketing/sequences" style={{ fontSize: 12, color: "#534AB7", textDecoration: "none" }}>View all →</Link>
           </div>
           {(sequences.data ?? []).length === 0 ? (
-            <div style={{ padding: 20, fontSize: 13, color: "var(--muted-foreground)" }}>No active sequences yet.</div>
+            <div style={{ padding: "24px 16px", fontSize: 13, color: "var(--muted-foreground)", textAlign: "center" }}>No active sequences yet.</div>
           ) : (
             (sequences.data ?? []).map((s: { id: string; name: string; status: string }) => {
               const sc = SEQ_STATUS_MAP[s.status] ?? SEQ_STATUS_MAP.draft;
               return (
                 <div key={s.id} style={{ padding: "12px 16px", borderBottom: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)" }}>{s.name}</div>
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>{s.name}</div>
                   <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500 }}>
                     {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
                   </span>
@@ -169,6 +181,33 @@ export default async function MarketingDashboardPage() {
               );
             })
           )}
+        </div>
+      </div>
+
+      {/* Funnel overview */}
+      <div style={{ ...card, padding: "16px 18px" }}>
+        <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 14 }}>30-day funnel</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10 }}>
+          {[
+            { label: "Sent",      val: sent,   color: "var(--muted-foreground)", bg: "var(--muted)" },
+            { label: "Opened",    val: opened,  color: "#534AB7",                bg: "#EEEDFE" },
+            { label: "Clicked",   val: clicked, color: "#0F6E56",                bg: "#E1F5EE" },
+          ].map((s) => (
+            <div key={s.label} style={{ background: s.bg, borderRadius: 8, padding: "10px 14px" }}>
+              <div style={{ fontSize: 18, fontWeight: 500, color: s.color }}>{s.val.toLocaleString()}</div>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{s.label}</div>
+              {sent > 0 && s.label !== "Sent" && (
+                <div style={{ fontSize: 10, color: s.color, marginTop: 2 }}>
+                  {((s.val / sent) * 100).toFixed(1)}% of sent
+                </div>
+              )}
+            </div>
+          ))}
+          <div style={{ background: "var(--muted)", borderRadius: 8, padding: "10px 14px" }}>
+            <div style={{ fontSize: 18, fontWeight: 500, color: "var(--muted-foreground)" }}>{(totalContacts ?? 0).toLocaleString()}</div>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>Total contacts</div>
+            <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 2 }}>+{newContacts7d ?? 0} this week</div>
+          </div>
         </div>
       </div>
     </div>

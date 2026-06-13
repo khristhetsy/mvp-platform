@@ -6,22 +6,10 @@ import type { MarketingList } from "@/lib/marketing/types";
 
 type ListWithCount = MarketingList & { contact_count: number };
 
-const S = {
-  page: { padding: 24, maxWidth: 900 } as React.CSSProperties,
-  header: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 } as React.CSSProperties,
-  title: { fontSize: 16, fontWeight: 600, color: "var(--foreground)", margin: 0 } as React.CSSProperties,
-  btn: (variant: "primary" | "ghost" | "danger") => ({
-    padding: "6px 14px", fontSize: 12, fontWeight: 500, borderRadius: 6, border: "none", cursor: "pointer",
-    background: variant === "primary" ? "#534AB7" : variant === "danger" ? "#A32D2D" : "var(--muted)",
-    color: variant === "ghost" ? "var(--foreground)" : "#fff",
-  } as React.CSSProperties),
-  card: { background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 } as React.CSSProperties,
-  input: { width: "100%", padding: "7px 10px", fontSize: 13, borderRadius: 6, border: "1px solid var(--border)", background: "var(--input)", color: "var(--foreground)", outline: "none", boxSizing: "border-box" } as React.CSSProperties,
-  label: { fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)", marginBottom: 4, display: "block" } as React.CSSProperties,
-  modal: { position: "fixed" as const, inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 },
-  modalBox: { background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: 24, width: 400, maxWidth: "90vw" } as React.CSSProperties,
-  badge: { padding: "2px 8px", borderRadius: 20, fontSize: 11, fontWeight: 500, background: "#E6F1FB", color: "#185FA5" } as React.CSSProperties,
-  empty: { textAlign: "center" as const, color: "var(--muted-foreground)", fontSize: 13, padding: "48px 0" },
+const card: React.CSSProperties = {
+  background: "var(--background)",
+  border: "0.5px solid var(--border)",
+  borderRadius: 12,
 };
 
 export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] }) {
@@ -60,9 +48,7 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
       }
       closeModal();
       router.refresh();
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   }
 
   async function del(id: string) {
@@ -74,74 +60,81 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
   }
 
   return (
-    <div style={S.page}>
-      <div style={S.header}>
+    <div style={{ padding: 24, maxWidth: 900 }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
-          <h2 style={S.title}>Contact lists</h2>
-          <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "2px 0 0" }}>
-            Group contacts into lists to target campaigns
-          </p>
+          <h1 style={{ fontSize: 16, fontWeight: 500, color: "var(--foreground)", marginBottom: 2 }}>Contact lists</h1>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Group contacts into lists to target campaigns</div>
         </div>
-        <button style={S.btn("primary")} onClick={openCreate}>+ New list</button>
+        <button onClick={openCreate}
+          style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer" }}>
+          + New list
+        </button>
       </div>
 
+      {/* List rows inside white card */}
       {lists.length === 0 ? (
-        <div style={S.empty}>No lists yet — create one to start grouping contacts.</div>
+        <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--muted-foreground)", fontSize: 13 }}>
+          No lists yet — create one to start grouping contacts.
+        </div>
       ) : (
-        lists.map((list) => (
-          <div key={list.id} style={S.card}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)" }}>{list.name}</div>
-              {list.description && (
-                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{list.description}</div>
-              )}
-              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 4 }}>
-                Created {new Date(list.created_at).toLocaleDateString()}
+        <div style={{ ...card, overflow: "hidden" }}>
+          {lists.map((list, i) => (
+            <div key={list.id} style={{ padding: "14px 18px", borderBottom: i < lists.length - 1 ? "0.5px solid var(--border)" : "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)" }}>{list.name}</div>
+                {list.description && (
+                  <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{list.description}</div>
+                )}
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 3 }}>
+                  Created {new Date(list.created_at).toLocaleDateString()}
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 11, fontWeight: 500, padding: "2px 10px", borderRadius: 20, background: "#E6F1FB", color: "#0C447C" }}>
+                  {list.contact_count} contacts
+                </span>
+                <button onClick={() => openEdit(list)}
+                  style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
+                  Edit
+                </button>
+                <button onClick={() => del(list.id)} disabled={deleting === list.id}
+                  style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer", opacity: deleting === list.id ? 0.5 : 1 }}>
+                  Delete
+                </button>
               </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={S.badge}>{list.contact_count} contacts</span>
-              <button style={S.btn("ghost")} onClick={() => openEdit(list)}>Edit</button>
-              <button
-                style={{ ...S.btn("ghost"), color: "#A32D2D", opacity: deleting === list.id ? 0.5 : 1 }}
-                onClick={() => del(list.id)}
-                disabled={deleting === list.id}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        ))
+          ))}
+        </div>
       )}
 
+      {/* Create / Edit modal */}
       {(showCreate || editId) && (
-        <div style={S.modal}>
-          <div style={S.modalBox}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
+          <div style={{ background: "var(--background)", border: "1px solid var(--border)", borderRadius: 14, padding: 24, width: 420, maxWidth: "90vw" }}>
             <h3 style={{ fontSize: 14, fontWeight: 600, margin: "0 0 16px" }}>
               {editId ? "Edit list" : "New list"}
             </h3>
             <div style={{ marginBottom: 12 }}>
-              <label style={S.label}>List name *</label>
-              <input
-                style={S.input}
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="e.g. Family offices, Cold prospects"
-                autoFocus
-              />
+              <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>List name *</label>
+              <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="e.g. Family offices, Cold prospects" autoFocus
+                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)", boxSizing: "border-box" }} />
             </div>
             <div style={{ marginBottom: 20 }}>
-              <label style={S.label}>Description (optional)</label>
-              <input
-                style={S.input}
-                value={form.description}
-                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Description (optional)</label>
+              <input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                 placeholder="Who is in this list?"
-              />
+                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)", boxSizing: "border-box" }} />
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button style={S.btn("ghost")} onClick={closeModal}>Cancel</button>
-              <button style={{ ...S.btn("primary"), opacity: saving || !form.name.trim() ? 0.6 : 1 }} onClick={save} disabled={saving || !form.name.trim()}>
+              <button onClick={closeModal}
+                style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
+                Cancel
+              </button>
+              <button onClick={save} disabled={saving || !form.name.trim()}
+                style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer", opacity: saving || !form.name.trim() ? 0.6 : 1 }}>
                 {saving ? "Saving…" : editId ? "Save changes" : "Create list"}
               </button>
             </div>
