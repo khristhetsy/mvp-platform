@@ -1,26 +1,43 @@
 import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { InvestorPortfolioPageClient } from "@/components/investor/InvestorPortfolioPageClient";
+import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
+import { InvestorPortfolioSections } from "@/components/InvestorPortfolioSections";
+import { canInvestorPerformSensitiveActions } from "@/lib/investor/access";
+import { loadInvestorPortfolio } from "@/lib/investor/load-portfolio";
+import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function InvestorPortfolioPage() {
-  const { profile } = await requireInvestorWorkspaceSession();
+  const { profile, investorId } = await requireInvestorWorkspaceSession();
+  const { investorProfile } = await loadInvestorWorkspaceContext(profile);
+
+  if (!canInvestorPerformSensitiveActions(investorProfile?.approval_status)) {
+    redirect("/investor/dashboard");
+  }
+
+  const portfolio = await loadInvestorPortfolio(investorId);
 
   return (
     <AppShell
       role="INVESTOR"
       workspace="investor"
       profileName={profile.full_name ?? profile.email ?? "Investor"}
-      profileSubtitle="Portfolio & deals"
+      profileSubtitle="Portfolio & updates"
     >
-      <PageHeader
-        eyebrow="Investor workspace"
-        title="Portfolio & deals"
-        description="Track your startup investments. Valuations are self-reported or synced from active deal rooms — not a securities ownership record."
-      />
-      <InvestorPortfolioPageClient />
+      <div className="mb-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Portfolio</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+          Watchlist, pending indicative commitments, relationship tracking, and company updates. Not a legal
+          investment account or securities ownership record.
+        </p>
+      </div>
+
+      <InvestorFeatureGate>
+        <InvestorPortfolioSections portfolio={portfolio} />
+      </InvestorFeatureGate>
     </AppShell>
   );
 }
