@@ -83,7 +83,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         })}
       </div>
 
-      <div style={{ flex: 1, overflow: "auto", background: "var(--muted)" }}>{children}</div>
+      <div style={{ flex: 1, overflow: "auto", background: "var(--background)" }}>{children}</div>
     </div>
   );
 }

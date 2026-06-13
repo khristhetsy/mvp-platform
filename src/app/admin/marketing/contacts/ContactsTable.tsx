@@ -309,7 +309,7 @@ function AddContactForm({ lists, onDone }: { lists: MarketingList[]; onDone: () 
             <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>{f.label}</label>
             <input
               name={f.name} type={f.type} required={f.required}
-              style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}
+              style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }}
             />
           </div>
         ))}
