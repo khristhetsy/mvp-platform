@@ -5,7 +5,12 @@ import OpenAI from "openai";
 
 export const dynamic = "force-dynamic";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Lazy getter — initializes only at request time, never at build/module load.
+function getOpenAI() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
+  return new OpenAI({ apiKey });
+}
 
 const CMO_SYSTEM_PROMPT = `You are a world-class B2B SaaS Chief Marketing Officer (CMO) advising CapitalOS — an investor-readiness and deal management platform for family offices, VCs, and angel investors.
 
@@ -93,7 +98,7 @@ export async function POST(request: Request) {
     ? `\n\nLive metrics (last 30 days):\n- Sent: ${liveMetrics.sent}\n- Delivered: ${liveMetrics.delivered}\n- Opened: ${liveMetrics.opened} (${liveMetrics.openRate}%)\n- Clicked: ${liveMetrics.clicked} (${liveMetrics.clickRate}%)\n- Replied: ${liveMetrics.replied}\n- Bounced: ${liveMetrics.bounced}\n- Unsubscribed: ${liveMetrics.unsubscribed} (${liveMetrics.unsubRate}%)\n- Deliverability: ${liveMetrics.deliverability}%`
     : "";
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       { role: "system", content: CMO_SYSTEM_PROMPT + metricsContext },
