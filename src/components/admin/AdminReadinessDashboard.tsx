@@ -470,10 +470,8 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
   });
 
   async function rescoreAll() {
-    // Re-score companies that are unscored or have a demo/unconfigured score
-    const targets = rows.filter(
-      (r) => r.score === null || r.score.scoredBy === "unconfigured" || r.score.scoredBy === "claude",
-    );
+    // Re-score all companies (replaces existing scores with latest engine)
+    const targets = rows;
     if (targets.length === 0) return;
 
     setRescoreAllProgress({ done: 0, total: targets.length });
