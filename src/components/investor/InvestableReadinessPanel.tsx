@@ -237,13 +237,31 @@ type Recommendation = {
   analystNote: string;
   steps: string[];
   resources: { label: string; url?: string }[];
+  courses: { slug: string; title: string }[];
 };
+
+// eLearning course catalog (slugs → titles, URLs = /founder/learning/[slug])
+const COURSES: Record<string, string> = {
+  "investor-readiness-masterclass":  "Investor Readiness Masterclass",
+  "investor-ready-pitch-deck":       "Building an Investor-Ready Pitch Deck",
+  "startup-financial-forecasting":   "Startup Financial Forecasting",
+  "data-room-preparation":           "Data Room Preparation",
+  "founder-governance-basics":       "Founder Governance Basics",
+  "fundraising-communication":       "Fundraising Communication",
+  "how-investors-evaluate-startups": "How Investors Evaluate Startups",
+  "capital-strategy-foundations":    "Capital Strategy Foundations",
+};
+
+function resolveCourses(slugs: string[]) {
+  return slugs.map((slug) => ({ slug, title: COURSES[slug] ?? slug }));
+}
 
 // Deep playbook — maps flag label → analyst-grade guidance
 const ANALYST_PLAYBOOK: Record<string, {
   analystNote: string;
   steps: string[];
   resources: { label: string; url?: string }[];
+  courses?: string[];
 }> = {
   "Missing financials": {
     analystNote: "Financial statements are the single most important document in any investor due diligence process. Without them, cash position, burn rate, and revenue trajectory are completely unknown — most investors will not proceed past initial screening.",
@@ -259,6 +277,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "QuickBooks Online", url: "https://quickbooks.intuit.com" },
       { label: "Wave (free for small business)", url: "https://www.waveapps.com" },
     ],
+    courses: ["startup-financial-forecasting", "data-room-preparation"],
   },
   "Pre-revenue": {
     analystNote: "Pre-revenue status is a significant risk multiplier. Investors will apply a heavy discount to the valuation and require stronger evidence of demand (LOIs, pilots, waitlists) to compensate. Every dollar of revenue — even $1,000/month — dramatically changes investor perception.",
@@ -273,6 +292,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "LOI template (Y Combinator)", url: "https://www.ycombinator.com/documents" },
       { label: "First Round Capital's fundraising guide", url: "https://firstround.com/review/fundraising" },
     ],
+    courses: ["investor-readiness-masterclass", "startup-financial-forecasting"],
   },
   "No customer evidence": {
     analystNote: "Customer evidence is the most powerful de-risking signal available to early-stage investors. Even informal customer discovery interviews documented as quotes are better than nothing. Investors are evaluating whether real humans will pay for this solution.",
@@ -287,6 +307,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "Mom Test (customer interview framework)", url: "https://www.momtestbook.com" },
       { label: "DocuSign (for LOI/pilot agreements)", url: "https://www.docusign.com" },
     ],
+    courses: ["investor-readiness-masterclass", "how-investors-evaluate-startups"],
   },
   "No paying customers or LOIs": {
     analystNote: "The gap between 'interested users' and 'paying customers' is where most startups stall. Investors have seen thousands of companies with enthusiastic waitlists that never converted. A single signed LOI carries more weight than 500 email sign-ups.",
@@ -302,6 +323,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "Stripe (payments/MRR tracking)", url: "https://stripe.com" },
       { label: "Baremetrics (MRR analytics)", url: "https://baremetrics.com" },
     ],
+    courses: ["investor-readiness-masterclass"],
   },
   "No traction metrics": {
     analystNote: "Narrative language ('strong growth', 'rapidly expanding customer base') is meaningless without numbers. Investors hear hundreds of pitches with the same language. A single concrete number — '87 paying customers, 23% month-over-month growth' — cuts through instantly.",
@@ -316,6 +338,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "Chartmogul (subscription analytics)", url: "https://chartmogul.com" },
       { label: "ProfitWell (MRR tracking, free)", url: "https://www.profitwell.com" },
     ],
+    courses: ["investor-readiness-masterclass", "how-investors-evaluate-startups"],
   },
   "Pre-revenue without LOIs": {
     analystNote: "For pre-revenue companies, LOIs are the minimum evidence standard. They demonstrate that real buyers, with real budgets, have committed in writing to purchasing your solution. Without them, the investment thesis rests entirely on the founders' assertions.",
@@ -330,6 +353,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "Simple LOI template (Google Docs)", url: "https://docs.google.com" },
       { label: "Stripe for pre-orders / deposits", url: "https://stripe.com" },
     ],
+    courses: ["investor-readiness-masterclass"],
   },
   "No team evidence": {
     analystNote: "At the early stage, investors are fundamentally betting on the team. A pitch deck without a team slide is incomplete by definition. Investors need to understand who the founders are, what they've done, and why they are uniquely positioned to solve this problem.",
@@ -344,6 +368,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "Sequoia pitch deck template", url: "https://www.sequoiacap.com/article/how-to-present-to-investors" },
       { label: "DocSend pitch deck best practices", url: "https://docsend.com/pitch-deck-best-practices" },
     ],
+    courses: ["investor-readiness-masterclass", "how-investors-evaluate-startups"],
   },
   "Solo founder risk": {
     analystNote: "Solo founder risk is one of the most frequently cited reasons early-stage deals don't close. Investors worry about key-person dependency, execution capacity, and the signal that no one else was willing to quit their job to join. A strong advisory board partially mitigates this, but a co-founder is the ideal solution.",
@@ -359,6 +384,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "YC co-founder matching", url: "https://www.ycombinator.com/cofounder-matching" },
       { label: "Advisors equity calculator (Carta)", url: "https://carta.com" },
     ],
+    courses: ["investor-readiness-masterclass", "how-investors-evaluate-startups"],
   },
   "No prior experience evidence": {
     analystNote: "Prior startup, domain, or exit experience is a strong credibility signal. Investors pattern-match: founders who have navigated a company from early stage to exit (even a small one) carry significantly lower execution risk in investors' mental models.",
@@ -372,6 +398,7 @@ const ANALYST_PLAYBOOK: Record<string, {
     resources: [
       { label: "LinkedIn (credential documentation)", url: "https://linkedin.com" },
     ],
+    courses: ["investor-readiness-masterclass", "how-investors-evaluate-startups"],
   },
   "No incorporation docs": {
     analystNote: "Without verified legal entity status, an investor cannot legally execute a term sheet, transfer funds, or take an equity position. This is a hard blocker — no investor can proceed without it, regardless of how compelling the opportunity appears.",
@@ -387,6 +414,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "Clerky (startup legal docs)", url: "https://clerky.com" },
       { label: "Australian Business Register (ABN)", url: "https://www.abr.gov.au" },
     ],
+    courses: ["founder-governance-basics", "data-room-preparation"],
   },
   "No cap table": {
     analystNote: "The cap table tells an investor exactly what they're buying and what the ownership structure looks like post-investment. Missing or incorrect cap tables are one of the top causes of deal delays and failures. Investors need to model their ownership %, anti-dilution rights, and exit scenarios.",
@@ -402,6 +430,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "Pulley (startup equity)", url: "https://pulley.com" },
       { label: "Captable.io (free for startups)", url: "https://captable.io" },
     ],
+    courses: ["founder-governance-basics", "data-room-preparation"],
   },
   "No market documents": {
     analystNote: "Investors need evidence that you understand your market deeply — not just that a market exists. The market slide is often the first filter: if your TAM/SAM/SOM analysis is credible, it signals rigorous thinking. If it's a generic '$5 trillion global market' claim, it signals the opposite.",
@@ -417,6 +446,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "IBISWorld (industry reports)", url: "https://www.ibisworld.com" },
       { label: "Google Trends (demand signals)", url: "https://trends.google.com" },
     ],
+    courses: ["investor-readiness-masterclass", "how-investors-evaluate-startups"],
   },
   "No traction evidence": {
     analystNote: "Investors cannot underwrite a market size claim without evidence that real customers will pay for your solution. Traction — even early, small-scale traction — transforms a thesis into a de-risked opportunity. The quality of your traction evidence directly determines the valuation discussion.",
@@ -431,6 +461,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "Chartmogul (MRR/ARR tracking)", url: "https://chartmogul.com" },
       { label: "Mixpanel (product analytics)", url: "https://mixpanel.com" },
     ],
+    courses: ["investor-readiness-masterclass", "how-investors-evaluate-startups"],
   },
   "No competitive analysis": {
     analystNote: "Investors conduct their own competitive research before every meeting. Arriving without a competitive landscape analysis signals either a lack of market knowledge or intellectual dishonesty. Acknowledging competitors and articulating specific differentiation demonstrates market maturity.",
@@ -446,6 +477,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "SimilarWeb (competitor traffic)", url: "https://www.similarweb.com" },
       { label: "Crunchbase (competitor funding)", url: "https://www.crunchbase.com" },
     ],
+    courses: ["how-investors-evaluate-startups", "investor-readiness-masterclass"],
   },
   "No unit economics": {
     analystNote: "Unit economics are the proof that your business model works at scale. LTV:CAC above 3:1 with a payback period under 18 months is the benchmark most Series A investors apply. Without this data, investors cannot model their return and will either pass or significantly discount the valuation.",
@@ -461,6 +493,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "a16z unit economics framework", url: "https://a16z.com/2015/08/21/16-metrics" },
       { label: "Baremetrics (MRR/LTV tracking)", url: "https://baremetrics.com" },
     ],
+    courses: ["startup-financial-forecasting", "how-investors-evaluate-startups"],
   },
   "No LTV/CAC stated": {
     analystNote: "Gross margin data without LTV:CAC is incomplete. The ratio between customer lifetime value and acquisition cost is the single most-asked unit economics question in investor meetings. Investors who can't see this ratio will estimate it themselves — usually pessimistically.",
@@ -475,6 +508,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "SaaS metrics benchmark report (KeyBanc)", url: "https://www.key.com/businesses-institutions/industry-expertise/technology/saas-survey.jsp" },
       { label: "OpenView SaaS benchmarks", url: "https://openviewpartners.com/saas-benchmarks-report" },
     ],
+    courses: ["startup-financial-forecasting"],
   },
   "No scalability narrative": {
     analystNote: "Investors are buying future value, not current revenue. The scalability narrative explains how margins improve, costs decrease, or revenue accelerates as the company grows. Without it, investors cannot model the returns that justify their risk.",
@@ -488,6 +522,7 @@ const ANALYST_PLAYBOOK: Record<string, {
     resources: [
       { label: "a16z scaling frameworks", url: "https://a16z.com/scaling" },
     ],
+    courses: ["startup-financial-forecasting", "capital-strategy-foundations"],
   },
   "No IP evidence": {
     analystNote: "Defensibility is a core investor concern. Without any IP or proprietary asset claims, investors will question whether the business can be replicated by a well-funded competitor. Even informal trade secrets or proprietary data assets should be documented.",
@@ -503,6 +538,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "IP Australia", url: "https://www.ipaustralia.gov.au" },
       { label: "LegalZoom (trademarks)", url: "https://www.legalzoom.com" },
     ],
+    courses: ["data-room-preparation", "how-investors-evaluate-startups"],
   },
   "No proprietary assets described": {
     analystNote: "For SaaS companies, the moat is rarely a patent — it's proprietary data, algorithms, network effects, or deep integrations that create switching costs. Investors expect you to articulate specifically what you've built that competitors can't quickly replicate.",
@@ -517,6 +553,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "Hamilton Helmer's '7 Powers' (moat framework)", url: "https://www.amazon.com/7-Powers-Foundations-Business-Strategy/dp/0998116343" },
       { label: "Bessemer's cloud computing benchmarks", url: "https://www.bvp.com/atlas/road-to-repvenue" },
     ],
+    courses: ["how-investors-evaluate-startups", "capital-strategy-foundations"],
   },
   "No patents or formal IP": {
     analystNote: "For hardware, biotech, medtech, and cleantech companies, patents are not optional — they are a prerequisite for serious investor conversations. Without patent protection, any well-funded competitor can replicate your product the moment it gains traction.",
@@ -532,6 +569,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "European Patent Office", url: "https://www.epo.org" },
       { label: "Patent filing via LexisNexis TotalPatent One", url: "https://www.lexisnexis.com" },
     ],
+    courses: ["data-room-preparation"],
   },
   "Weak IP": {
     analystNote: "Proprietary language without formal IP protection is a medium-term vulnerability. Investors may accept it at seed stage but will expect formal protection in place before Series A. Begin the process now — patents take 2–4 years to grant, and the provisional filing date is what matters.",
@@ -546,6 +584,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "USPTO provisional application", url: "https://www.uspto.gov/patents/basics/types-patent-applications/provisional-application-patent" },
       { label: "Clerky (startup IP agreements)", url: "https://clerky.com" },
     ],
+    courses: ["data-room-preparation", "founder-governance-basics"],
   },
   "No moat articulated": {
     analystNote: "Investors will always ask 'what stops a well-funded competitor from copying you in 6 months?' If you don't have a prepared answer, the meeting ends there. The moat doesn't need to be impenetrable — it needs to be real, documented, and sufficient to maintain a 12–18 month lead.",
@@ -560,6 +599,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "7 Powers framework summary", url: "https://medium.com/@chrisstonehouse/7-powers-the-foundations-of-business-strategy-50bfce5f4a85" },
       { label: "Andreessen Horowitz competitive moat guide", url: "https://a16z.com/2011/08/20/why-software-is-eating-the-world" },
     ],
+    courses: ["how-investors-evaluate-startups", "capital-strategy-foundations"],
   },
   "No financial statements": {
     analystNote: "Burn rate and runway are the first questions every investor asks after seeing the ask amount. 'How much runway does this give you?' and 'What's your current monthly burn?' are standard opening questions in any due diligence process. Without financials, these questions cannot be answered.",
@@ -574,6 +614,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "Xero (cloud accounting)", url: "https://www.xero.com" },
       { label: "KPMG startup financial model templates", url: "https://home.kpmg/au/en/home/insights.html" },
     ],
+    courses: ["startup-financial-forecasting", "data-room-preparation"],
   },
   "No burn/runway data": {
     analystNote: "Financial statements are uploaded but investors can't find explicit burn and runway figures. Investors look for a simple statement: 'Current burn: $X/month. Current cash: $Y. Runway: Z months. Post-raise runway: A months.' If it's not stated clearly, investors assume the numbers are bad.",
@@ -588,6 +629,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "Baremetrics cash flow forecasting", url: "https://baremetrics.com" },
       { label: "Float (cash flow forecasting)", url: "https://floatapp.com" },
     ],
+    courses: ["startup-financial-forecasting"],
   },
   "No exit strategy": {
     analystNote: "Investors are buying future liquidity, not just equity. Every investor — from angels to VCs — needs to understand how and when they get their money back. A company without a clear exit path is essentially asking investors to park capital indefinitely, which is not an investable proposition.",
@@ -603,6 +645,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "PitchBook comparable transactions", url: "https://pitchbook.com" },
       { label: "CB Insights M&A reports", url: "https://www.cbinsights.com" },
     ],
+    courses: ["capital-strategy-foundations", "how-investors-evaluate-startups"],
   },
   "Vague exit strategy": {
     analystNote: "Vague exit language ('we'll be acquired or IPO eventually') signals that the founders haven't done the homework on exit pathways. Investors need to see that you understand who the likely acquirers are, what they pay for companies like yours, and how that creates their return.",
@@ -617,6 +660,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "Crunchbase acquisition data", url: "https://www.crunchbase.com/discover/acquisitions" },
       { label: "PitchBook (sector M&A multiples)", url: "https://pitchbook.com" },
     ],
+    courses: ["capital-strategy-foundations", "how-investors-evaluate-startups"],
   },
   "No return projections": {
     analystNote: "Investors think in multiples and IRR, not in revenue figures. A $2M ARR business at a 5x multiple returns $10M — but whether that's attractive depends entirely on the investment terms, dilution path, and time to exit. Founders who can speak fluently about investor returns are taken far more seriously.",
@@ -631,6 +675,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "SaaS Capital revenue multiples report", url: "https://www.saas-capital.com/research/private-company-saas-valuations" },
       { label: "Bessemer Venture cloud index", url: "https://www.bvp.com/atlas" },
     ],
+    courses: ["capital-strategy-foundations", "startup-financial-forecasting"],
   },
   "No pitch deck": {
     analystNote: "A pitch deck is not optional — it is the primary communication vehicle for raising capital. Investors receive hundreds of opportunities per month; without a deck, yours will not receive serious consideration. A mediocre deck is infinitely better than no deck.",
@@ -646,6 +691,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "Airbnb original pitch deck (reference)", url: "https://www.slideshare.net/ryangum/airbnb-pitch-deck-from-2008" },
       { label: "DocSend pitch deck analytics", url: "https://docsend.com" },
     ],
+    courses: ["investor-ready-pitch-deck", "investor-readiness-masterclass"],
   },
   "No business plan": {
     analystNote: "While pitch decks are the initial filter, a business plan provides the depth investors need during due diligence. It demonstrates strategic thinking, financial rigour, and operational planning. Investors who are serious about a company will always ask for supporting documentation beyond the deck.",
@@ -660,6 +706,7 @@ const ANALYST_PLAYBOOK: Record<string, {
       { label: "Bplans business plan templates", url: "https://www.bplans.com" },
       { label: "SCORE business plan guide", url: "https://www.score.org/resource/business-plan-template-startup-business" },
     ],
+    courses: ["investor-ready-pitch-deck", "investor-readiness-masterclass"],
   },
 };
 
@@ -685,6 +732,7 @@ function buildRecommendations(factorScores: Record<FactorKey, FactorScore>): Rec
           analystNote: playbook?.analystNote ?? "This factor requires attention before investor meetings.",
           steps: playbook?.steps ?? ["Review this factor and upload supporting documentation."],
           resources: playbook?.resources ?? [],
+          courses: resolveCourses(playbook?.courses ?? []),
         });
       }
     }
@@ -831,6 +879,27 @@ function RecommendationCard({ rec, index }: { rec: Recommendation; index: number
                     </span>
                   )
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* eLearning courses */}
+          {rec.courses.length > 0 && (
+            <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-4 py-3">
+              <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-2">📚 Recommended courses on CapitalOS</p>
+              <div className="flex flex-col gap-1.5">
+                {rec.courses.map((c) => (
+                  <a
+                    key={c.slug}
+                    href={`/founder/learning/${c.slug}`}
+                    className="flex items-center gap-2 text-xs font-medium text-emerald-800 hover:text-emerald-600 transition-colors group"
+                  >
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white text-[9px] font-bold group-hover:bg-emerald-500 transition-colors">
+                      ▶
+                    </span>
+                    {c.title}
+                  </a>
+                ))}
               </div>
             </div>
           )}
