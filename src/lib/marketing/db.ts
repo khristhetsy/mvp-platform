@@ -1,4 +1,3 @@
-"use server";
 /**
  * Returns the Supabase client cast to `any` so we can query the new
  * marketing tables before the generated Database types are updated

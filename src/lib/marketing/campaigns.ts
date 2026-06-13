@@ -1,5 +1,3 @@
-"use server";
-
 import { marketingDb } from "./db";
 import { makeUnsubscribeToken, sendMarketingEmail } from "./send";
 import { isUnsubscribed } from "./contacts";

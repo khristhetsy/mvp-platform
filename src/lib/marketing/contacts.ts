@@ -1,5 +1,3 @@
-"use server";
-
 import { marketingDb } from "./db";
 import type { MarketingContact, MarketingList } from "./types";
 
