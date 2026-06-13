@@ -65,12 +65,6 @@ export function MarketingSidebar({ onNavigate }: Readonly<{ onNavigate?: () => v
           <LogIn className="h-4 w-4 text-slate-400" strokeWidth={1.75} />
           Sign in
         </Link>
-        <div className="mt-2 rounded-xl border border-slate-200/80 bg-[var(--surface-sunken)] p-3">
-          <p className="text-xs font-semibold text-[var(--navy)]">CapitalOS AI</p>
-          <p className="mt-1 text-[10px] leading-4 text-slate-500">
-            Diligence guidance and readiness coaching for founders.
-          </p>
-        </div>
       </div>
     </aside>
   );

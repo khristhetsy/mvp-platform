@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, Sparkles } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { InternalPermission } from "@/lib/rbac/constants";
 import type { WorkspaceId, WorkspaceNavItem } from "@/lib/workspace-nav";
@@ -261,19 +261,6 @@ export function WorkspaceSidebar({
       <div className="space-y-2 border-t border-slate-200/80 bg-[var(--surface-sidebar)] p-3">
         {planBadge ? <div>{planBadge}</div> : null}
         <LanguageSwitcher />
-        <div className="rounded-xl border border-slate-200/80 bg-[var(--surface-sunken)] p-3">
-          <div className="flex items-start gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--blue)] text-white">
-              <Sparkles className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
-            </span>
-            <div>
-              <p className="text-xs font-semibold text-slate-950">CapitalOS AI</p>
-              <p className="mt-0.5 text-[10px] leading-4 text-slate-500">
-                Educational readiness coach for your workspace.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     </>
   );
