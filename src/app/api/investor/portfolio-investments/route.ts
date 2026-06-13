@@ -6,7 +6,7 @@ import type { CreateInvestmentInput } from "@/lib/portfolio/types";
 /** GET /api/investor/portfolio-investments — investor's own investments */
 export async function GET(): Promise<NextResponse> {
   const auth = await requireApiProfile(["investor"]);
-  if ("error" in auth) return auth.error;
+  if ("error" in auth) return auth.error as NextResponse;
 
   try {
     const investments = await listInvestments();
@@ -19,7 +19,7 @@ export async function GET(): Promise<NextResponse> {
 /** POST /api/investor/portfolio-investments — create new investment */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const auth = await requireApiProfile(["investor"]);
-  if ("error" in auth) return auth.error;
+  if ("error" in auth) return auth.error as NextResponse;
 
   try {
     const body: CreateInvestmentInput = await req.json();
