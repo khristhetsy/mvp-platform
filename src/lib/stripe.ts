@@ -1,15 +1,17 @@
-import Stripe from "stripe";
+/**
+ * Stripe is not active — billing is handled manually.
+ * This stub keeps imports across the codebase compiling without a live key.
+ * Replace with real Stripe integration when ready to charge.
+ */
 
-const key = process.env.STRIPE_SECRET_KEY;
-if (!key) throw new Error("STRIPE_SECRET_KEY is not set");
+export const BILLING_ENABLED = false;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const stripe = new (Stripe as any)(key) as Stripe;
+// Stub so existing imports don't break
+export const stripe = null as unknown as import("stripe").default;
 
-/** Map plan_type → Stripe price ID */
 export const PLAN_PRICE_IDS: Record<string, string | undefined> = {
-  founder_basic: process.env.STRIPE_PRICE_CAPITALOS_FOUNDER_PRO,
-  founder_professional: process.env.STRIPE_PRICE_CAPITALOS_FOUNDER_PREMIUM,
-  investor_pro: process.env.STRIPE_PRICE_CAPITALOS_INVESTOR_PRO,
-  investor_premium: process.env.STRIPE_PRICE_CAPITALOS_INVESTOR_PREMIUM,
+  founder_basic:        undefined,
+  founder_professional: undefined,
+  investor_pro:         undefined,
+  investor_premium:     undefined,
 };
