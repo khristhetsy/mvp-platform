@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
-import { MetricCard } from "@/components/MetricCard";
 import { InvestorPipelineStages } from "@/components/ui/InvestorPipelineStages";
-import { MetricRow } from "@/components/ui/OperationalMetric";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { DashboardInsightPanel } from "@/components/ui/DashboardInsightPanel";
 import { InvestorActivityTimeline } from "@/components/InvestorActivityTimeline";
@@ -15,6 +13,7 @@ import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-works
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
+import { InvestorMetricCards } from "@/components/investor/InvestorMetricCards";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +46,17 @@ export default async function InvestorDashboardPage() {
 
       <InvestorApprovalBanner investorProfile={investorProfile} />
 
+      <InvestorMetricCards
+        data={{
+          matchCount: matches.length,
+          watchlistCount: savedDeals.length,
+          interestCount: interests.length,
+          introRequestCount: introRequests.length,
+          watchlistNames: savedDeals.slice(0, 4).map(investorCompanyLabel),
+          interestNames: interests.slice(0, 4).map(investorCompanyLabel),
+        }}
+      />
+
       <div className="mb-6">
         <NextBestActionsPanel
           role="investor"
@@ -63,41 +73,6 @@ export default async function InvestorDashboardPage() {
           introCount={introRequests.length}
         />
       </section>
-
-      <MetricRow title="Workspace metrics" subtitle="Non-binding indicators only">
-        <MetricCard
-          label="Active Opportunities"
-          value={String(matches.length)}
-          detail="Published listings ranked for your profile"
-          accent="indigo"
-          sparklineValues={[1, 2, 3, matches.length, matches.length, matches.length, matches.length]}
-          href="/investor/opportunities"
-        />
-        <MetricCard
-          label="Watchlist"
-          value={String(savedDeals.length)}
-          detail={savedDeals.slice(0, 2).map(investorCompanyLabel).join(", ") || "No saved deals yet"}
-          accent="violet"
-          sparklineValues={[0, 1, 1, savedDeals.length, savedDeals.length, savedDeals.length, savedDeals.length]}
-          href="/investor/portfolio"
-        />
-        <MetricCard
-          label="Expressed Interest"
-          value={String(interests.length)}
-          detail={interests.slice(0, 2).map(investorCompanyLabel).join(", ") || "None yet"}
-          accent="blue"
-          sparklineValues={[0, 0, 1, interests.length, interests.length, interests.length, interests.length]}
-          href="/investor/portfolio"
-        />
-        <MetricCard
-          label="Portfolio"
-          value={String(savedDeals.length + interests.length)}
-          detail="Watchlist, commitments, and company updates"
-          accent="slate"
-          sparklineValues={[0, 1, 2, savedDeals.length + interests.length, savedDeals.length + interests.length, savedDeals.length + interests.length, savedDeals.length + interests.length]}
-          href="/investor/portfolio"
-        />
-      </MetricRow>
 
       <section className="mb-5">
         <DashboardInsightPanel title="Pipeline momentum" subtitle="Watchlist and interest activity" />
