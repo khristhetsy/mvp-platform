@@ -317,7 +317,7 @@ export function CapitalOSAssistant() {
                   {prompt}
                 </button>
               ))}
-              {mode === "crm" && workspace === "founder" ? (
+              {workspace === "founder" ? (
                 <button
                   type="button"
                   disabled={agentLoading || agentRequested}
