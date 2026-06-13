@@ -105,6 +105,12 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       },
     ],
   },
+  {
+    title: "Team",
+    items: [
+      { href: "/admin/tasks", label: "Tasks", requiredPermission: "view_admin_dashboard" },
+    ],
+  },
 ];
 
 export const founderWorkspaceNav: WorkspaceNavItem[] = [
