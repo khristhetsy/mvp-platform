@@ -7,16 +7,15 @@ async function tasksDb(): Promise<any> {
   return createServerSupabaseClient();
 }
 
-/** List tasks visible to the current user (RLS applies). */
+/** List tasks visible to the current user (RLS applies).
+ *  No joins — created_by → auth.users (not profiles), so we skip server-side
+ *  joins and resolve names in the UI from the internalUsers list.
+ */
 export async function listTasks(): Promise<Task[]> {
   const db = await tasksDb();
   const { data, error } = await db
     .from("tasks")
-    .select(`
-      *,
-      assignee:profiles!tasks_assigned_to_fkey(id, full_name, email),
-      creator:profiles!tasks_created_by_fkey(id, full_name, email)
-    `)
+    .select("*")
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);

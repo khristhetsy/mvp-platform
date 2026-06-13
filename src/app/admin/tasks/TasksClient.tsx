@@ -45,11 +45,13 @@ function relativeDate(iso: string | null): string {
 function Column({
   status,
   tasks,
+  internalUsers,
   onStatusChange,
   onDelete,
 }: {
   status: TaskStatus;
   tasks: Task[];
+  internalUsers: InternalUser[];
   onStatusChange: (id: string, s: TaskStatus) => void;
   onDelete: (id: string) => void;
 }) {
@@ -70,7 +72,10 @@ function Column({
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {tasks.map((task) => {
           const pc = PRIORITY_MAP[task.priority];
-          const assignee = task.assignee;
+          // Resolve assignee from the internalUsers list (no DB join needed)
+          const assignee = task.assigned_to
+            ? internalUsers.find((u) => u.id === task.assigned_to) ?? null
+            : null;
           return (
             <div
               key={task.id}
@@ -342,6 +347,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId }: Prop
             key={s}
             status={s}
             tasks={byStatus(s)}
+            internalUsers={internalUsers}
             onStatusChange={handleStatusChange}
             onDelete={handleDelete}
           />

@@ -15,9 +15,6 @@ export interface Task {
   context_id:   string | null;
   created_at:   string;
   updated_at:   string;
-  /** joined — only present when fetched with profile info */
-  assignee?: { id: string; full_name: string | null; email: string | null } | null;
-  creator?: { id: string; full_name: string | null; email: string | null } | null;
 }
 
 export interface CreateTaskInput {

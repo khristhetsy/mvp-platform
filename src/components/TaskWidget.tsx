@@ -222,7 +222,7 @@ export function TaskWidget() {
           visible.map((task) => {
             const pc = PRIORITY_MAP[task.priority];
             const isDone = task.status === "done";
-            const isAssigned = task.assigned_to && task.assignee;
+            const isAssigned = !!task.assigned_to;
             return (
               <div
                 key={task.id}
@@ -264,7 +264,7 @@ export function TaskWidget() {
                     {/* Assigned badge */}
                     {isAssigned && (
                       <span style={{ fontSize: 10, color: "#534AB7", background: "#EEEDFE", padding: "1px 6px", borderRadius: 10 }}>
-                        → {task.assignee?.full_name?.split(" ")[0] ?? "Assigned"}
+                        → Assigned
                       </span>
                     )}
                     {/* Status */}
