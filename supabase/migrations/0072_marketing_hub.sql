@@ -164,8 +164,12 @@ alter table marketing_events                 enable row level security;
 create or replace function is_admin()
 returns boolean language sql security definer as $$
   select exists (
-    select 1 from internal_roles
-    where user_id = auth.uid() and role = 'admin'
+    select 1
+    from public.internal_user_roles ur
+    join public.internal_roles r on r.id = ur.role_id
+    where ur.user_id = auth.uid()
+      and r.slug = 'admin'
+      and ur.is_active = true
   )
 $$;
 
