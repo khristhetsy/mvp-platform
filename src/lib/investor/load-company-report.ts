@@ -64,6 +64,9 @@ export type InvestorCompanyReportSnapshot = {
     isOverridden: boolean;
     factorScores: Record<FactorKey, FactorScore> | null;
     scoredAt: string | null;
+    scoreHistory: Array<{ score: number; scoredAt: string }>;
+    platformAvg: number | null;
+    percentile: number | null;
   };
   learning: {
     modulesCompleted: number;
@@ -161,15 +164,41 @@ export async function loadInvestorCompanyReport(
       .select("id, total_score, effective_score, override_score, factor_scores, scored_by, created_at")
       .eq("company_id", companyId)
       .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+      .limit(10),
   ]);
 
   const company = companyRes.data;
   const documents = (documentsRes.data ?? []) as DocumentRecord[];
   const diligenceReports = diligenceRes.data ?? [];
   const latestDiligence = diligenceReports[0];
-  const latestReadinessScore = readinessScoreRes.data ?? null;
+  const readinessScores = readinessScoreRes.data ?? [];
+  const latestReadinessScore = readinessScores[0] ?? null;
+
+  // Platform avg + percentile (across all scored companies)
+  const { data: allScores } = await admin
+    .from("company_readiness_scores")
+    .select("company_id, total_score, created_at")
+    .order("created_at", { ascending: false });
+
+  // Deduplicate — keep only the latest score per company
+  const latestByCompany = new Map<string, number>();
+  for (const row of allScores ?? []) {
+    if (!latestByCompany.has(row.company_id)) {
+      latestByCompany.set(row.company_id, row.total_score);
+    }
+  }
+  const allLatestScores = Array.from(latestByCompany.values());
+  const platformAvg =
+    allLatestScores.length > 0
+      ? Math.round(allLatestScores.reduce((a, b) => a + b, 0) / allLatestScores.length)
+      : null;
+  const thisScore = latestReadinessScore?.effective_score ?? latestReadinessScore?.total_score ?? null;
+  const percentile =
+    thisScore !== null && allLatestScores.length > 0
+      ? Math.round(
+          (allLatestScores.filter((s) => s <= thisScore).length / allLatestScores.length) * 100,
+        )
+      : null;
 
   const checklist = buildDocumentChecklist(documents);
   const missingRequiredLabels = checklist
@@ -260,6 +289,12 @@ export async function loadInvestorCompanyReport(
       isOverridden: latestReadinessScore?.override_score != null,
       factorScores: (latestReadinessScore?.factor_scores as Record<FactorKey, FactorScore> | null) ?? null,
       scoredAt: latestReadinessScore?.created_at ?? null,
+      scoreHistory: readinessScores.map((r) => ({
+        score: r.effective_score ?? r.total_score,
+        scoredAt: r.created_at,
+      })),
+      platformAvg,
+      percentile,
     },
     learning: {
       modulesCompleted,

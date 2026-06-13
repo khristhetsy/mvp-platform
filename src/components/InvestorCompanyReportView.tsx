@@ -50,6 +50,9 @@ export function InvestorCompanyReportView({
           effectiveScore={report.investableReadiness.effectiveScore}
           isOverridden={report.investableReadiness.isOverridden}
           scoredAt={report.investableReadiness.scoredAt}
+          scoreHistory={report.investableReadiness.scoreHistory}
+          platformAvg={report.investableReadiness.platformAvg}
+          percentile={report.investableReadiness.percentile}
         />
       ) : null}
 
