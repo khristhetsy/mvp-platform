@@ -26,12 +26,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
-import dynamicImport from "next/dynamic";
-
-const TaskWidget = dynamicImport(
-  () => import("@/components/TaskWidget").then((m) => m.TaskWidget),
-  { ssr: false, loading: () => null }
-);
+import { TaskWidgetLoader } from "@/components/TaskWidgetLoader";
 
 export const dynamic = "force-dynamic";
 
@@ -262,7 +257,7 @@ export default async function FounderDashboardPage() {
       </section>
 
       <section className="mt-5">
-        <TaskWidget />
+        <TaskWidgetLoader />
       </section>
 
       </FounderFeatureGate>
