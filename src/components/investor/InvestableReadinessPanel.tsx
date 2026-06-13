@@ -708,6 +708,74 @@ const ANALYST_PLAYBOOK: Record<string, {
     ],
     courses: ["investor-ready-pitch-deck", "investor-readiness-masterclass"],
   },
+
+  // ── Life science (biotech / medtech) traction flags ───────────────────────
+  "No clinical or R&D traction evidence": {
+    analystNote: "For biotech and medtech companies, clinical and R&D milestones replace commercial traction as the primary investor signal. No trial stage, partnership, or grant evidence means investors have no way to assess where the company is in its development journey — the most fundamental due diligence question in life sciences.",
+    steps: [
+      "Document your current R&D stage explicitly: preclinical, IND-enabling studies, Phase I, II, or III",
+      "List any research partnerships, sponsored research agreements, or co-development deals",
+      "Summarise non-dilutive funding: NIH, SBIR, STTR, or government grants received",
+      "Include a development timeline with completed milestones and upcoming catalysts",
+      "Add a scientific advisory board section with KOL names and institutional affiliations",
+    ],
+    resources: [
+      { label: "NIH grant search (ClinicalTrials.gov)", url: "https://clinicaltrials.gov" },
+      { label: "SBIR/STTR program", url: "https://www.sbir.gov" },
+      { label: "FDA breakthrough device program", url: "https://www.fda.gov/medical-devices/how-study-and-market-your-device/breakthrough-devices-program" },
+    ],
+    courses: ["how-investors-evaluate-startups", "investor-readiness-masterclass"],
+  },
+
+  "No clinical trial stage documented": {
+    analystNote: "In life sciences investing, the clinical stage is the single most important piece of information. It determines valuation, risk profile, timeline to exit, and which investor class is appropriate. Preclinical, Phase I, II, and III represent entirely different risk/return propositions — without this information, investors cannot evaluate the opportunity.",
+    steps: [
+      "State your exact development stage in the first paragraph of your pitch deck and business plan",
+      "Describe completed preclinical studies: animal models, POC data, safety profile",
+      "If in clinical trials, report: number of sites, patients enrolled, primary endpoint, expected readout date",
+      "Include a clear development roadmap: current stage → Phase II → Phase III → regulatory submission → commercialisation",
+      "Reference comparable companies that have completed the same stage to anchor your timeline",
+    ],
+    resources: [
+      { label: "ClinicalTrials.gov (trial registration)", url: "https://clinicaltrials.gov" },
+      { label: "FDA IND process overview", url: "https://www.fda.gov/drugs/investigational-new-drug-ind-application" },
+      { label: "EMA clinical trial guidance", url: "https://www.ema.europa.eu/en/human-regulatory/research-development/clinical-trials" },
+    ],
+    courses: ["how-investors-evaluate-startups", "investor-readiness-masterclass"],
+  },
+
+  "No regulatory milestones documented": {
+    analystNote: "Regulatory designations (Breakthrough Device, Orphan Drug, Fast Track, 510k clearance) are powerful investor signals because they represent FDA/EMA validation of the unmet need and can significantly accelerate the path to market. Even planned regulatory interactions should be documented — it shows strategic awareness of the regulatory pathway.",
+    steps: [
+      "Document any regulatory designations already received (Breakthrough Device, Orphan Drug, Fast Track, PRIME)",
+      "Describe your planned regulatory pathway: 510(k), PMA, NDA, BLA — and why you've chosen it",
+      "Include your pre-IND or pre-submission meeting outcomes if completed",
+      "List key regulatory milestones on your development timeline with target dates",
+      "Engage a regulatory consultant to formalise your regulatory strategy if you haven't already",
+    ],
+    resources: [
+      { label: "FDA device regulatory pathways", url: "https://www.fda.gov/medical-devices/how-study-and-market-your-device" },
+      { label: "FDA drug approval process", url: "https://www.fda.gov/patients/drug-development-process" },
+      { label: "EMA regulatory guidance", url: "https://www.ema.europa.eu/en/human-regulatory/research-development" },
+    ],
+    courses: ["how-investors-evaluate-startups", "capital-strategy-foundations"],
+  },
+
+  "No clinical data or efficacy metrics": {
+    analystNote: "Life science investors evaluate efficacy and safety data the way commercial investors evaluate MRR — it is the core quantitative signal. Even early preclinical data (in vitro, animal model results) should be presented numerically. Narrative-only descriptions ('promising results', 'strong safety profile') are red flags that suggest data may not support the story.",
+    steps: [
+      "Present your best efficacy data numerically: % response rate, fold-change, p-value, confidence interval",
+      "Include a safety summary: adverse events observed, tolerability profile, NOAEL if applicable",
+      "Show a data table or chart comparing your results to the standard of care or competitors",
+      "Reference the study design: n=X animals/patients, dose, route of administration, duration",
+      "If data is preliminary, label it honestly and explain the next study that will confirm it",
+    ],
+    resources: [
+      { label: "PubMed (scientific literature reference)", url: "https://pubmed.ncbi.nlm.nih.gov" },
+      { label: "FDA guidance on clinical endpoints", url: "https://www.fda.gov/regulatory-information/search-fda-guidance-documents" },
+    ],
+    courses: ["how-investors-evaluate-startups"],
+  },
 };
 
 function buildRecommendations(factorScores: Record<FactorKey, FactorScore>): Recommendation[] {

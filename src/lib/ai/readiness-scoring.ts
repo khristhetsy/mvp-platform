@@ -166,6 +166,7 @@ function scoreCustomerTraction(
   has: (t: string) => boolean,
   getSummary: (t: string) => string | null,
   revenueStage: string | null,
+  industry: string | null,
 ): FactorScore {
   const hasPitch = has("PITCH_DECK");
   const hasBizPlan = has("BUSINESS_PLAN");
@@ -176,6 +177,114 @@ function scoreCustomerTraction(
 
   const combinedSummary = [pitchSummary, bizSummary, financialSummary].filter(Boolean).join(" ");
 
+  // Biotech / medtech / pharma companies have entirely different traction signals —
+  // no LOIs or MRR is expected; clinical, regulatory, and partnership milestones are the standard.
+  const LIFE_SCIENCE_INDUSTRIES = [
+    "biotech", "biotechnology", "medtech", "medical device", "medical technology",
+    "pharmaceutical", "pharma", "biopharma", "biopharmaceutical",
+    "life science", "clinical", "therapeutics", "diagnostics", "genomics",
+    "drug discovery", "drug development", "healthtech", "health tech",
+  ];
+  const isLifeScience = industry
+    ? LIFE_SCIENCE_INDUSTRIES.some((s) => industry.toLowerCase().includes(s))
+    : false;
+
+  // ── LIFE SCIENCE PATH ────────────────────────────────────────────────────────
+  if (isLifeScience) {
+    const TRIAL_KEYWORDS = [
+      "phase 1", "phase i", "phase 2", "phase ii", "phase 3", "phase iii",
+      "clinical trial", "ind ", "investigational new drug", "first-in-human",
+      "irb", "institutional review board", "cohort", "enrolled", "dosing",
+      "preclinical", "pre-clinical", "in vivo", "in vitro", "animal model",
+    ];
+    const REGULATORY_KEYWORDS = [
+      "fda", "ema", "tga", "ce mark", "510k", "510(k)", "pma", "de novo",
+      "breakthrough device", "fast track", "orphan drug", "rare disease designation",
+      "regulatory approval", "cleared", "approved", "submission",
+    ];
+    const PARTNERSHIP_KEYWORDS = [
+      "partnership", "collaboration", "license", "licensing", "co-development",
+      "strategic partner", "pharma partner", "hospital partner", "university partnership",
+      "sponsored research", "research agreement", "distribution agreement",
+      "out-license", "in-license", "mou", "memorandum of understanding",
+    ];
+    const GRANT_KEYWORDS = [
+      "grant", "nih", "sbir", "sttr", "nih funded", "darpa", "arc grant",
+      "government funding", "non-dilutive", "research grant", "award",
+      "bill & melinda gates", "wellcome trust", "medical research council",
+    ];
+    const KOL_KEYWORDS = [
+      "key opinion leader", "kol", "physician endorsement", "clinical advisor",
+      "advisory board", "clinical expert", "published", "peer-reviewed",
+      "publication", "journal", "nature", "lancet", "nejm", "jama",
+    ];
+    const METRIC_KEYWORDS = [
+      "patients enrolled", "patient", "efficacy", "safety data", "response rate",
+      "primary endpoint", "secondary endpoint", "biomarker", "outcome",
+      "%", "fold", "reduction", "improvement", "significance",
+    ];
+
+    const hasTrial       = containsKeywords(combinedSummary, TRIAL_KEYWORDS);
+    const hasRegulatory  = containsKeywords(combinedSummary, REGULATORY_KEYWORDS);
+    const hasPartnership = containsKeywords(combinedSummary, PARTNERSHIP_KEYWORDS);
+    const hasGrant       = containsKeywords(combinedSummary, GRANT_KEYWORDS);
+    const hasKol         = containsKeywords(combinedSummary, KOL_KEYWORDS);
+    const hasMetrics     = containsKeywords(combinedSummary, METRIC_KEYWORDS);
+
+    // Clinical progress: 0–5
+    const trialPts = hasTrial ? 5 : 0;
+    // Regulatory milestones: 0–3
+    const regPts = hasRegulatory ? 3 : 0;
+    // Partnerships / grants / KOLs: 0–3
+    const partnerPts = (hasPartnership ? 1 : 0) + (hasGrant ? 1 : 0) + (hasKol ? 1 : 0);
+    // Supporting data / metrics: 0–2
+    const metricPts = hasMetrics ? 2 : 0;
+
+    const subScores: FactorSubScore[] = [
+      { label: "Clinical trial progress (preclinical → Phase I/II/III)", pts: trialPts, max: 5 },
+      { label: "Regulatory milestones (FDA / EMA / TGA / 510k)",         pts: regPts,   max: 3 },
+      { label: "Partnerships, grants & KOL endorsements",                pts: partnerPts, max: 3 },
+      { label: "Clinical data & efficacy metrics",                       pts: metricPts, max: 2 },
+    ];
+
+    let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 13);
+    if (!hasPitch && !hasBizPlan) pts = 0;
+    else if (!pitchSummary && !bizSummary) pts = Math.min(pts, 2);
+
+    const evidence: FactorEvidence[] = [];
+    if (hasTrial) evidence.push({ icon: "✅", text: "Clinical trial stage evidence found (preclinical / Phase I / II / III)", src: "AI summaries" });
+    else evidence.push({ icon: "⚠️", text: "No clinical trial stage mentioned — document your R&D or trial progress", src: "AI summaries" });
+    if (hasRegulatory) evidence.push({ icon: "✅", text: "Regulatory milestone or designation referenced (FDA, EMA, 510k, etc.)", src: "AI summaries" });
+    if (hasPartnership) evidence.push({ icon: "✅", text: "Strategic partnership or collaboration agreement referenced", src: "AI summaries" });
+    if (hasGrant) evidence.push({ icon: "✅", text: "Grant or non-dilutive funding (NIH, SBIR, STTR, etc.) confirmed", src: "AI summaries" });
+    if (hasKol) evidence.push({ icon: "✅", text: "KOL endorsement, advisory board, or peer-reviewed publication referenced", src: "AI summaries" });
+    if (hasMetrics) evidence.push({ icon: "✅", text: "Clinical data, efficacy metrics, or patient outcomes referenced", src: "AI summaries" });
+    else evidence.push({ icon: "⚠️", text: "No quantitative clinical data found — investors expect efficacy or safety numbers", src: "AI summaries" });
+
+    const flags: FactorFlag[] = [];
+    if (!hasTrial && !hasPartnership && !hasGrant)
+      flags.push({ severity: "red", label: "No clinical or R&D traction evidence", detail: "No trial stage, partnership, or grant evidence found. Upload pitch or business plan documenting your R&D progress, trial status, or partnerships." });
+    else if (!hasTrial)
+      flags.push({ severity: "amber", label: "No clinical trial stage documented", detail: "Document your current R&D stage (preclinical, Phase I, etc.) — this is the primary traction signal for biotech/medtech investors." });
+    if (!hasRegulatory)
+      flags.push({ severity: "amber", label: "No regulatory milestones documented", detail: "FDA/EMA designations, IND filings, or 510(k) submissions are key de-risking signals. Document any regulatory progress or planned submissions." });
+    if (!hasMetrics)
+      flags.push({ severity: "amber", label: "No clinical data or efficacy metrics", detail: "Investors need quantitative evidence: efficacy %, safety data, patient outcomes, or biomarker results. Add data to your pitch." });
+
+    const aiSummary = hasTrial && hasRegulatory
+      ? "Clinical trial progress and regulatory milestones documented — strong life science traction signals."
+      : hasTrial
+      ? "Clinical trial or R&D progress documented. Add regulatory milestones to strengthen the profile."
+      : hasPartnership || hasGrant
+      ? "Partnership or grant evidence found but no clinical trial stage documented. Add R&D progress details."
+      : hasPitch || hasBizPlan
+      ? "Documents uploaded but no clinical, regulatory, or partnership traction found. Add R&D progress to your pitch."
+      : "No documents uploaded. Life science traction cannot be assessed.";
+
+    return { pts, max: 13, rating: rating(pts, 13), aiSummary, subScores, evidence, flags };
+  }
+
+  // ── STANDARD (non-life-science) PATH ─────────────────────────────────────────
   const LOI_KEYWORDS = ["letter of intent", "loi", "signed contract", "purchase order", "pilot agreement", "master service agreement", "msa", "committed", "binding"];
   const PAYING_KEYWORDS = ["paying customer", "paid customer", "revenue from", "annual contract", "arr", "mrr", "monthly recurring", "annual recurring", "subscription"];
   const GENERAL_CUSTOMER = ["customer", "users", "clients", "accounts", "traction", "adoption", "retention", "churn", "nps"];
@@ -952,7 +1061,7 @@ export async function scoreCompanyReadiness(input: {
 
   const factors: Record<FactorKey, FactorScore> = {
     revenue_cashflow:   scoreRevenueCashflow(has, getSummary, input.revenueStage, input.fundingAmount),
-    customer_traction:  scoreCustomerTraction(has, getSummary, input.revenueStage),
+    customer_traction:  scoreCustomerTraction(has, getSummary, input.revenueStage, input.industry),
     founder_team:       scoreFounderTeam(has, getSummary, input.companyName, input.industry),
     market_evidence:    scoreMarketEvidence(has, getSummary, input.industry),
     unit_economics:     scoreUnitEconomics(has, getSummary, input.revenueStage),
