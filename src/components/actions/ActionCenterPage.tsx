@@ -186,20 +186,22 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
 
       <ActionFilters filters={filters} onChange={setFilters} onClear={clearFilters} />
 
-      <ViewToolbar
-        viewMode={viewMode}
-        allowedModes={allowedModes}
-        onViewModeChange={setViewMode}
-        density={density}
-        onDensityChange={setDensity}
-        query={query}
-        onQueryChange={setQuery}
-        searchPlaceholder="Search actions, entities, or categories…"
-        showViewMode={false}
-        showDensity={false}
-        showSavedViews={false}
-        sticky
-      />
+      {role !== "investor" ? (
+        <ViewToolbar
+          viewMode={viewMode}
+          allowedModes={allowedModes}
+          onViewModeChange={setViewMode}
+          density={density}
+          onDensityChange={setDensity}
+          query={query}
+          onQueryChange={setQuery}
+          searchPlaceholder="Search actions, entities, or categories…"
+          showViewMode={false}
+          showDensity={false}
+          showSavedViews={false}
+          sticky
+        />
+      ) : null}
 
       <ActionBulkToolbar
         selectedCount={selectedIds.size}
