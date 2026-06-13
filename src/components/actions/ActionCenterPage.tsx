@@ -188,6 +188,7 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
         query={query}
         onQueryChange={setQuery}
         searchPlaceholder="Search actions, entities, or categories…"
+        showViewMode={false}
         showSavedViews={false}
         sticky
       />

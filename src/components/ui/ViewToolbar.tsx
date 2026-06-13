@@ -17,6 +17,7 @@ export function ViewToolbar({
   onQueryChange,
   searchPlaceholder,
   children,
+  showViewMode = true,
   showDensity = true,
   showSearch = true,
   showSavedViews = true,
@@ -31,6 +32,7 @@ export function ViewToolbar({
   onQueryChange?: (query: string) => void;
   searchPlaceholder?: string;
   children?: ReactNode;
+  showViewMode?: boolean;
   showDensity?: boolean;
   showSearch?: boolean;
   showSavedViews?: boolean;
@@ -46,8 +48,12 @@ export function ViewToolbar({
       aria-label="View controls"
     >
       <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">View</span>
-        <ViewModeToggle value={viewMode} allowedModes={allowedModes} onChange={onViewModeChange} />
+        {showViewMode ? (
+          <>
+            <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">View</span>
+            <ViewModeToggle value={viewMode} allowedModes={allowedModes} onChange={onViewModeChange} />
+          </>
+        ) : null}
         {showDensity ? <ViewDensityToggle value={density} onChange={onDensityChange} /> : null}
         {showSavedViews ? <SavedViewPlaceholder /> : null}
         {children}
