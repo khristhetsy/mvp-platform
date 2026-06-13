@@ -31,91 +31,126 @@ export function GoogleCalendarConnectionCard({
   async function disconnect() {
     setLoading(true);
     setError(null);
-
     const response = await fetch("/api/integrations/google/disconnect", { method: "POST" });
     const body = (await response.json().catch(() => null)) as { error?: string } | null;
     setLoading(false);
-
     if (!response.ok) {
       setError(body?.error ?? "Unable to disconnect Google account.");
       return;
     }
-
     router.refresh();
   }
 
   if (!status.configured) {
     return (
-      <section className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6">
-        <h2 className="text-lg font-semibold text-slate-950">Google Calendar</h2>
-        <p className="mt-2 text-sm text-amber-900">
-          Google connection is not available yet. An administrator must configure Google OAuth environment
-          variables.
-        </p>
-      </section>
+      <div style={{
+        background: "#ffffff",
+        border: "0.5px solid #e2e6ed",
+        borderRadius: 12,
+        padding: "18px 20px",
+        boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)",
+        marginTop: 16,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#534AB7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <span style={{ fontSize: 14, fontWeight: 500, color: "#0c2340" }}>Google Calendar</span>
+        </div>
+        <div style={{ fontSize: 12, padding: "8px 12px", borderRadius: 8, background: "#FAEEDA", color: "#854F0B", lineHeight: 1.6 }}>
+          Google Calendar is not available yet. An administrator must configure Google OAuth environment variables.
+        </div>
+      </div>
     );
   }
 
   return (
-    <section className="mt-8 rounded-2xl border border-slate-200 bg-slate-50/80 p-6">
-      <h2 className="text-lg font-semibold text-slate-950">Google Calendar</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-600">
-        Used for future Google Calendar and Google Meet scheduling. When you accept a meeting, your connected
-        Google account will host the calendar event; both parties can be added as attendees in a later phase.
-      </p>
-
-      {flash ? (
-        <p
-          className={`mt-3 rounded-xl px-3 py-2 text-sm ${
-            flash.type === "success"
-              ? "border border-emerald-200 bg-emerald-50 text-emerald-900"
-              : "border border-red-200 bg-red-50 text-red-800"
-          }`}
-        >
-          {flash.message}
-        </p>
-      ) : null}
-
-      {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
-
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
-            status.connected ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-700"
-          }`}
-        >
-          {status.connected ? "Connected" : "Not connected"}
-        </span>
-        {status.connected && status.email ? (
-          <span className="text-sm text-slate-700">{status.email}</span>
-        ) : null}
+    <div style={{
+      background: "#ffffff",
+      border: "0.5px solid #e2e6ed",
+      borderRadius: 12,
+      padding: "18px 20px",
+      boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)",
+      marginTop: 16,
+    }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#534AB7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <span style={{ fontSize: 14, fontWeight: 500, color: "#0c2340" }}>Google Calendar</span>
       </div>
 
-      {status.connected && status.connectedAt ? (
-        <p className="mt-2 text-xs text-slate-500">
+      <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.7, margin: "0 0 14px" }}>
+        Used for Google Calendar and Google Meet scheduling. When you accept a meeting, your connected
+        account will host the calendar event.
+      </p>
+
+      {/* Flash message */}
+      {flash && (
+        <div style={{
+          fontSize: 12, padding: "8px 12px", borderRadius: 8, marginBottom: 12, lineHeight: 1.5,
+          background: flash.type === "success" ? "#E1F5EE" : "#FCEBEB",
+          color: flash.type === "success" ? "#0F6E56" : "#A32D2D",
+        }}>
+          {flash.message}
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div style={{ fontSize: 12, padding: "8px 12px", borderRadius: 8, marginBottom: 12, background: "#FCEBEB", color: "#A32D2D" }}>
+          {error}
+        </div>
+      )}
+
+      {/* Status badge + email */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+        <span style={{
+          fontSize: 11, padding: "2px 10px", borderRadius: 20, fontWeight: 500,
+          background: status.connected ? "#E1F5EE" : "#F1EFE8",
+          color: status.connected ? "#0F6E56" : "#5F5E5A",
+        }}>
+          {status.connected ? "● Connected" : "● Not connected"}
+        </span>
+        {status.connected && status.email && (
+          <span style={{ fontSize: 12, color: "#64748b" }}>{status.email}</span>
+        )}
+      </div>
+
+      {status.connected && status.connectedAt && (
+        <p style={{ fontSize: 11, color: "#94a3b8", margin: "0 0 14px" }}>
           Connected {new Date(status.connectedAt).toLocaleString("en-US", { timeZone: "UTC" })}
         </p>
-      ) : null}
+      )}
 
-      <div className="mt-5 flex flex-wrap gap-3">
+      {/* Action */}
+      <div style={{ marginTop: 14 }}>
         {status.connected ? (
           <button
             type="button"
             disabled={loading}
             onClick={() => void disconnect()}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 disabled:opacity-50"
+            style={{
+              fontSize: 12, padding: "6px 14px", borderRadius: 8,
+              border: "0.5px solid #e2e6ed", background: "transparent",
+              color: "#0c2340", cursor: "pointer", opacity: loading ? 0.5 : 1,
+            }}
           >
-            {loading ? "Disconnecting…" : "Disconnect Google"}
+            {loading ? "Disconnecting…" : "Disconnect"}
           </button>
         ) : (
           <a
             href={`/api/integrations/google/connect?returnTo=${encodeURIComponent(returnPath)}`}
-            className="inline-flex rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+            style={{
+              display: "inline-block", fontSize: 12, padding: "6px 14px", borderRadius: 8,
+              border: "none", background: "#534AB7", color: "#EEEDFE", textDecoration: "none",
+            }}
           >
             Connect Google account
           </a>
         )}
       </div>
-    </section>
+    </div>
   );
 }

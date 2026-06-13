@@ -41,6 +41,258 @@ function relativeDate(iso: string | null): string {
   return `${Math.abs(diff)}d ago`;
 }
 
+const cardBase: React.CSSProperties = {
+  background: "#ffffff",
+  border: "0.5px solid #e2e6ed",
+  borderRadius: 10,
+  padding: "12px 14px",
+  boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)",
+};
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  fontSize: 12,
+  padding: "5px 8px",
+  borderRadius: 6,
+  border: "0.5px solid #e2e6ed",
+  background: "#f5f6f8",
+  color: "#0c2340",
+  boxSizing: "border-box" as const,
+};
+
+// ─── TaskCard ─────────────────────────────────────────────────────────────────
+function TaskCard({
+  task,
+  internalUsers,
+  onStatusChange,
+  onDelete,
+  onSave,
+}: {
+  task: Task;
+  internalUsers: InternalUser[];
+  onStatusChange: (id: string, s: TaskStatus) => void;
+  onDelete: (id: string) => void;
+  onSave: (id: string, patch: Partial<Task>) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    title:       task.title,
+    description: task.description ?? "",
+    priority:    task.priority,
+    due_date:    task.due_date ? task.due_date.slice(0, 10) : "",
+    assigned_to: task.assigned_to ?? "",
+  });
+
+  const pc = PRIORITY_MAP[task.priority];
+  const assignee = task.assigned_to
+    ? internalUsers.find((u) => u.id === task.assigned_to) ?? null
+    : null;
+
+  async function handleSave() {
+    if (!form.title.trim()) return;
+    setSaving(true);
+    await onSave(task.id, {
+      title:       form.title.trim(),
+      description: form.description.trim() || null,
+      priority:    form.priority,
+      due_date:    form.due_date || null,
+      assigned_to: form.assigned_to || null,
+    } as Partial<Task>);
+    setSaving(false);
+    setEditing(false);
+  }
+
+  function handleCancel() {
+    setForm({
+      title:       task.title,
+      description: task.description ?? "",
+      priority:    task.priority,
+      due_date:    task.due_date ? task.due_date.slice(0, 10) : "",
+      assigned_to: task.assigned_to ?? "",
+    });
+    setEditing(false);
+  }
+
+  // ── Edit mode ──────────────────────────────────────────────────────────────
+  if (editing) {
+    return (
+      <div style={{ ...cardBase, border: "0.5px solid #534AB7" }}>
+        {/* Title */}
+        <div style={{ marginBottom: 8 }}>
+          <input
+            autoFocus
+            type="text"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            onKeyDown={(e) => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") handleCancel(); }}
+            style={{ ...inputStyle, fontSize: 13, fontWeight: 500, padding: "6px 8px" }}
+          />
+        </div>
+
+        {/* Description */}
+        <div style={{ marginBottom: 8 }}>
+          <textarea
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            placeholder="Description (optional)"
+            rows={2}
+            style={{ ...inputStyle, resize: "vertical" as const, lineHeight: 1.5 }}
+          />
+        </div>
+
+        {/* Priority + Due date */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
+          <select
+            value={form.priority}
+            onChange={(e) => setForm({ ...form, priority: e.target.value as TaskPriority })}
+            style={inputStyle}
+          >
+            <option value="high">🔴 High</option>
+            <option value="medium">🟡 Medium</option>
+            <option value="low">🟢 Low</option>
+          </select>
+          <input
+            type="date"
+            value={form.due_date}
+            onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+            style={inputStyle}
+          />
+        </div>
+
+        {/* Assignee */}
+        <div style={{ marginBottom: 10 }}>
+          <select
+            value={form.assigned_to}
+            onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
+            style={inputStyle}
+          >
+            <option value="">— Unassigned —</option>
+            {internalUsers.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.full_name ?? u.email ?? u.id}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Actions */}
+        <div style={{ display: "flex", gap: 6 }}>
+          <button
+            onClick={handleSave}
+            disabled={saving || !form.title.trim()}
+            style={{
+              fontSize: 11, padding: "4px 12px", borderRadius: 6, border: "none",
+              background: "#534AB7", color: "#EEEDFE", cursor: "pointer",
+              opacity: !form.title.trim() ? 0.5 : 1,
+            }}
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+          <button
+            onClick={handleCancel}
+            style={{
+              fontSize: 11, padding: "4px 10px", borderRadius: 6,
+              border: "0.5px solid #e2e6ed", background: "transparent",
+              cursor: "pointer", color: "#64748b",
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── View mode ──────────────────────────────────────────────────────────────
+  return (
+    <div style={cardBase}>
+      {/* Title row */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 6, marginBottom: 6 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: "#0c2340", lineHeight: 1.4, flex: 1 }}>
+          {task.title}
+        </div>
+        <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+          <button
+            onClick={() => setEditing(true)}
+            title="Edit task"
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", fontSize: 13, opacity: 0.65, padding: "0 2px" }}
+          >
+            ✎
+          </button>
+          <button
+            onClick={() => onDelete(task.id)}
+            title="Delete task"
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", fontSize: 11, opacity: 0.55, padding: "0 2px" }}
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      {/* Description */}
+      {task.description && (
+        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8, lineHeight: 1.5 }}>
+          {task.description}
+        </div>
+      )}
+
+      {/* Badges */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center", marginBottom: 8 }}>
+        <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 10, background: pc.bg, color: pc.color, fontWeight: 500 }}>
+          {task.priority}
+        </span>
+        {task.due_date && (
+          <span style={{ fontSize: 10, color: "#64748b" }}>📅 {relativeDate(task.due_date)}</span>
+        )}
+      </div>
+
+      {/* Assignee */}
+      {assignee ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+          <div style={{
+            width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
+            background: avatarColor(assignee.id),
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 9, fontWeight: 700, color: "#fff",
+          }}>
+            {initials(assignee.full_name, assignee.email)}
+          </div>
+          <span style={{ fontSize: 11, color: "#64748b" }}>
+            {assignee.full_name ?? assignee.email ?? "Assignee"}
+          </span>
+        </div>
+      ) : (
+        <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8, fontStyle: "italic" }}>
+          Unassigned
+        </div>
+      )}
+
+      {/* Move buttons */}
+      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+        {(["todo", "in_progress", "done", "cancelled"] as TaskStatus[])
+          .filter((s) => s !== task.status)
+          .map((s) => {
+            const ssc = STATUS_MAP[s];
+            return (
+              <button
+                key={s}
+                onClick={() => onStatusChange(task.id, s)}
+                style={{
+                  fontSize: 10, padding: "2px 7px", borderRadius: 6,
+                  border: `0.5px solid ${ssc.color}30`,
+                  background: ssc.bg, color: ssc.color, cursor: "pointer",
+                }}
+              >
+                → {ssc.label}
+              </button>
+            );
+          })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Column ───────────────────────────────────────────────────────────────────
 function Column({
   status,
@@ -48,17 +300,18 @@ function Column({
   internalUsers,
   onStatusChange,
   onDelete,
+  onSave,
 }: {
   status: TaskStatus;
   tasks: Task[];
   internalUsers: InternalUser[];
   onStatusChange: (id: string, s: TaskStatus) => void;
   onDelete: (id: string) => void;
+  onSave: (id: string, patch: Partial<Task>) => Promise<void>;
 }) {
   const sc = STATUS_MAP[status];
   return (
     <div style={{ flex: 1, minWidth: 240 }}>
-      {/* Column header */}
       <div style={{
         display: "flex", alignItems: "center", gap: 6, marginBottom: 10,
         padding: "6px 10px", borderRadius: 8, background: sc.bg,
@@ -70,98 +323,16 @@ function Column({
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {tasks.map((task) => {
-          const pc = PRIORITY_MAP[task.priority];
-          // Resolve assignee from the internalUsers list (no DB join needed)
-          const assignee = task.assigned_to
-            ? internalUsers.find((u) => u.id === task.assigned_to) ?? null
-            : null;
-          return (
-            <div
-              key={task.id}
-              style={{
-                background: "var(--background)",
-                border: "0.5px solid var(--border)",
-                borderRadius: 10,
-                padding: "12px 14px",
-              }}
-            >
-              {/* Title + delete */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 6, marginBottom: 6 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)", lineHeight: 1.4, flex: 1 }}>
-                  {task.title}
-                </div>
-                <button
-                  onClick={() => onDelete(task.id)}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 11, flexShrink: 0, opacity: 0.6 }}
-                  title="Delete task"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Description */}
-              {task.description && (
-                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 8, lineHeight: 1.5 }}>
-                  {task.description}
-                </div>
-              )}
-
-              {/* Badges row */}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center", marginBottom: 8 }}>
-                <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 10, background: pc.bg, color: pc.color, fontWeight: 500 }}>
-                  {task.priority}
-                </span>
-                {task.due_date && (
-                  <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>📅 {relativeDate(task.due_date)}</span>
-                )}
-              </div>
-
-              {/* Assignee */}
-              {assignee ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                  <div style={{
-                    width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
-                    background: avatarColor(assignee.id),
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 9, fontWeight: 700, color: "#fff",
-                  }}>
-                    {initials(assignee.full_name, assignee.email)}
-                  </div>
-                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                    {assignee.full_name ?? assignee.email ?? "Assignee"}
-                  </span>
-                </div>
-              ) : (
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 8, fontStyle: "italic" }}>
-                  Unassigned
-                </div>
-              )}
-
-              {/* Move to status */}
-              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                {(["todo", "in_progress", "done", "cancelled"] as TaskStatus[])
-                  .filter((s) => s !== status)
-                  .map((s) => {
-                    const ssc = STATUS_MAP[s];
-                    return (
-                      <button
-                        key={s}
-                        onClick={() => onStatusChange(task.id, s)}
-                        style={{
-                          fontSize: 10, padding: "2px 7px", borderRadius: 6,
-                          border: `0.5px solid ${ssc.color}20`,
-                          background: ssc.bg, color: ssc.color, cursor: "pointer",
-                        }}
-                      >
-                        → {ssc.label}
-                      </button>
-                    );
-                  })}
-              </div>
-            </div>
-          );
-        })}
+        {tasks.map((task) => (
+          <TaskCard
+            key={task.id}
+            task={task}
+            internalUsers={internalUsers}
+            onStatusChange={onStatusChange}
+            onDelete={onDelete}
+            onSave={onSave}
+          />
+        ))}
       </div>
     </div>
   );
@@ -222,6 +393,15 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId }: Prop
     reload();
   }
 
+  async function handleSave(id: string, patch: Partial<Task>) {
+    await fetch(`/api/tasks/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    reload();
+  }
+
   async function handleDelete(id: string) {
     if (!confirm("Delete this task?")) return;
     await fetch(`/api/tasks/${id}`, { method: "DELETE" });
@@ -230,19 +410,21 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId }: Prop
 
   const byStatus = (s: TaskStatus) => tasks.filter((t) => t.status === s);
 
-  // Stats
-  const total   = tasks.length;
-  const todo    = byStatus("todo").length;
-  const inProg  = byStatus("in_progress").length;
-  const done    = byStatus("done").length;
+  const total  = tasks.length;
+  const todo   = byStatus("todo").length;
+  const inProg = byStatus("in_progress").length;
+  const done   = byStatus("done").length;
+
+  // suppress unused var warning
+  void currentUserId;
 
   return (
     <div style={{ padding: 24 }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 16, fontWeight: 500, color: "var(--foreground)", marginBottom: 4 }}>Team Tasks</h1>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+          <h1 style={{ fontSize: 16, fontWeight: 500, color: "#0c2340", marginBottom: 4 }}>Team Tasks</h1>
+          <div style={{ fontSize: 12, color: "#64748b" }}>
             {total} total · {todo} to-do · {inProg} in progress · {done} done
           </div>
         </div>
@@ -254,71 +436,62 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId }: Prop
         </button>
       </div>
 
-      {/* Create / Assign form */}
+      {/* Create form */}
       {showForm && (
-        <div style={{ background: "var(--background)", border: "0.5px solid var(--border)", borderRadius: 12, padding: "18px 20px", marginBottom: 24 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 14 }}>Create & assign task</div>
+        <div style={{ background: "#ffffff", border: "0.5px solid #e2e6ed", borderRadius: 12, padding: "18px 20px", marginBottom: 24, boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)" }}>
+          <div style={{ fontSize: 14, fontWeight: 500, color: "#0c2340", marginBottom: 14 }}>Create & assign task</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {/* Title */}
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Task title *</label>
+              <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 4 }}>Task title *</label>
               <input
-                autoFocus
-                type="text"
-                value={form.title}
+                autoFocus type="text" value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 placeholder="What needs to be done?"
-                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}
+                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #e2e6ed", background: "#f5f6f8", color: "#0c2340", boxSizing: "border-box" }}
               />
             </div>
-            {/* Description */}
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Description (optional)</label>
+              <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 4 }}>Description (optional)</label>
               <textarea
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
-                rows={2}
-                placeholder="Additional context…"
-                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)", resize: "vertical" }}
+                rows={2} placeholder="Additional context…"
+                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #e2e6ed", background: "#f5f6f8", color: "#0c2340", resize: "vertical", boxSizing: "border-box" }}
               />
             </div>
-            {/* Assign to */}
             <div>
-              <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Assign to</label>
+              <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 4 }}>Assign to</label>
               <select
                 value={form.assigned_to}
                 onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
-                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}
+                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #e2e6ed", background: "#f5f6f8", color: "#0c2340" }}
               >
                 <option value="">— Unassigned —</option>
                 {internalUsers.map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.full_name ?? u.email ?? u.id}{u.id === currentUserId ? " (me)" : ""}
+                    {u.full_name ?? u.email ?? u.id}
                   </option>
                 ))}
               </select>
             </div>
-            {/* Priority */}
             <div>
-              <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Priority</label>
+              <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 4 }}>Priority</label>
               <select
                 value={form.priority}
                 onChange={(e) => setForm({ ...form, priority: e.target.value as TaskPriority })}
-                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}
+                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #e2e6ed", background: "#f5f6f8", color: "#0c2340" }}
               >
                 <option value="high">🔴 High</option>
                 <option value="medium">🟡 Medium</option>
                 <option value="low">🟢 Low</option>
               </select>
             </div>
-            {/* Due date */}
             <div>
-              <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Due date (optional)</label>
+              <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 4 }}>Due date (optional)</label>
               <input
-                type="date"
-                value={form.due_date}
+                type="date" value={form.due_date}
                 onChange={(e) => setForm({ ...form, due_date: e.target.value })}
-                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}
+                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #e2e6ed", background: "#f5f6f8", color: "#0c2340" }}
               />
             </div>
           </div>
@@ -332,7 +505,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId }: Prop
             </button>
             <button
               onClick={() => setShowForm(false)}
-              style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}
+              style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid #e2e6ed", background: "transparent", cursor: "pointer", color: "#0c2340" }}
             >
               Cancel
             </button>
@@ -350,6 +523,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId }: Prop
             internalUsers={internalUsers}
             onStatusChange={handleStatusChange}
             onDelete={handleDelete}
+            onSave={handleSave}
           />
         ))}
       </div>
