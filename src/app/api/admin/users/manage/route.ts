@@ -5,7 +5,7 @@ import { requireManageUsersApi } from "@/lib/api/permissions";
 import { writeAuditLog } from "@/lib/data/audit";
 import type { UserRole } from "@/lib/supabase/types";
 
-const ROLES: UserRole[] = ["founder", "investor", "admin", "analyst", "sale"];
+const ROLES: UserRole[] = ["founder", "investor", "admin", "analyst"];
 
 function formatLastSeen(ts: string | null | undefined): string {
   if (!ts) return "Never";
@@ -78,7 +78,7 @@ export async function GET() {
 // PATCH — update role or is_active
 const patchSchema = z.object({
   userId: z.string().uuid(),
-  role: z.enum(["founder", "investor", "admin", "analyst", "sale"]).optional(),
+  role: z.enum(["founder", "investor", "admin", "analyst"]).optional(),
   is_active: z.boolean().optional(),
 });
 

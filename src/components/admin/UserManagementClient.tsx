@@ -26,21 +26,19 @@ type AuditEntry = {
   actor_name: string;
 };
 
-const ROLES: UserRole[] = ["founder", "investor", "admin", "sale"];
+const ROLES: UserRole[] = ["founder", "investor", "admin", "analyst"];
 
 const ROLE_LABELS: Record<string, string> = {
   founder: "Founder",
   investor: "Investor",
   admin: "Admin",
   analyst: "Analyst",
-  sale: "Sale",
 };
 
 const ROLE_COLORS: Record<string, string> = {
   admin: "bg-[#EEEDFE] text-[#3C3489]",
   founder: "bg-[#E1F5EE] text-[#085041]",
   investor: "bg-[#E6F1FB] text-[#0C447C]",
-  sale: "bg-[#FAEEDA] text-[#633806]",
   analyst: "bg-[#FAEEDA] text-[#633806]",
 };
 
@@ -66,7 +64,6 @@ function avatarColor(role: string) {
     admin: "bg-[#EEEDFE] text-[#3C3489]",
     founder: "bg-[#E1F5EE] text-[#085041]",
     investor: "bg-[#E6F1FB] text-[#0C447C]",
-    sale: "bg-[#FAEEDA] text-[#633806]",
     analyst: "bg-[#FAEEDA] text-[#633806]",
     inactive: "bg-[#F1EFE8] text-[#444441]",
   };
