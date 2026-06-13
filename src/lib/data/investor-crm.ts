@@ -139,6 +139,7 @@ export type InvestorActivityRow = {
   activity_type: string;
   created_at: string;
   company_name: string | null;
+  company_id: string | null;
 };
 
 export type InvestorOwnCrmActivityResult = {
@@ -159,6 +160,7 @@ export async function listInvestorOwnCrmActivity(
       id,
       activity_type,
       created_at,
+      company_id,
       companies:company_id ( company_name )
     `,
     )
@@ -178,6 +180,7 @@ export async function listInvestorOwnCrmActivity(
     id: string;
     activity_type: string;
     created_at: string;
+    company_id: string | null;
     companies: { company_name?: string | null } | { company_name?: string | null }[] | null;
   };
 
@@ -192,6 +195,7 @@ export async function listInvestorOwnCrmActivity(
       id: row.id,
       activity_type: row.activity_type,
       created_at: row.created_at,
+      company_id: row.company_id ?? null,
       company_name: company?.company_name ?? null,
     };
   });

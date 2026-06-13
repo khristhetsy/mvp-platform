@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { InvestorActivityRow } from "@/lib/data/investor-crm";
 
@@ -290,9 +291,20 @@ export function InvestorActivityTimelineClient({
                           {relativeTime(row.created_at)}
                         </span>
                       </div>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: "#0f172a", marginTop: 4 }}>
-                        {row.company_name ?? "Unknown company"}
-                      </div>
+                      {row.company_id ? (
+                        <Link
+                          href={`/investor/opportunities/${row.company_id}/report`}
+                          style={{ fontSize: 13, fontWeight: 500, color: "#4f46e5", marginTop: 4, display: "block", textDecoration: "none" }}
+                          onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = "underline"; }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.textDecoration = "none"; }}
+                        >
+                          {row.company_name ?? "Unknown company"} →
+                        </Link>
+                      ) : (
+                        <div style={{ fontSize: 13, fontWeight: 500, color: "#0f172a", marginTop: 4 }}>
+                          {row.company_name ?? "Unknown company"}
+                        </div>
+                      )}
                       <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 1 }}>
                         {fullTime(row.created_at)}
                       </div>
