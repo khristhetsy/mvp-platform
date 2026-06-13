@@ -1,19 +1,14 @@
-import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
-import { InvestorPipelineStages } from "@/components/ui/InvestorPipelineStages";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { DashboardInsightPanel } from "@/components/ui/DashboardInsightPanel";
-import { InvestorActivityTimeline } from "@/components/InvestorActivityTimeline";
-import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { InvestorApprovalBanner } from "@/components/InvestorApprovalBanner";
 import { investorCompanyLabel, loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
-import { InvestorMatchOpportunityCardCompact } from "@/components/InvestorMatchOpportunityCardCompact";
 import { loadInvestorRecommendedMatches } from "@/lib/matching/load-investor-recommendations";
 import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 import { InvestorMetricCards } from "@/components/investor/InvestorMetricCards";
+import { InvestorDashboardCondensedGrid } from "@/components/investor/InvestorDashboardCondensedGrid";
 
 export const dynamic = "force-dynamic";
 
@@ -66,74 +61,14 @@ export default async function InvestorDashboardPage() {
         />
       </div>
 
-      <section className="mb-6">
-        <InvestorPipelineStages
+      <section className="mt-2">
+        <InvestorDashboardCondensedGrid
           watchlistCount={savedDeals.length}
           interestCount={interests.length}
           introCount={introRequests.length}
+          topMatches={topMatches}
+          recentActivity={crmActivity.rows}
         />
-      </section>
-
-      <section className="mb-5">
-        <DashboardInsightPanel title="Pipeline momentum" subtitle="Watchlist and interest activity" />
-      </section>
-
-      <section className="mt-8 grid gap-6 xl:grid-cols-2">
-        <WorkspacePanel title="Portfolio" subtitle="Watchlist, pipeline, and company updates">
-          <p className="text-sm text-slate-600">
-            Review saved deals, expressed interest, SPV participations, and founder updates in one place.
-          </p>
-          <Link
-            href="/investor/portfolio"
-            className="mt-3 inline-flex min-h-11 items-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white"
-          >
-            Open portfolio
-          </Link>
-          <p className="mt-3 rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-            {introRequests.length} intro {introRequests.length === 1 ? "request" : "requests"} pending follow-up.
-          </p>
-        </WorkspacePanel>
-
-        <WorkspacePanel
-          title="Recommended for you"
-          subtitle="Match score from your onboarding preferences"
-          action={
-            <Link href="/investor/opportunities" className="text-sm font-semibold text-indigo-700 hover:text-indigo-900">
-              View all matches
-            </Link>
-          }
-        >
-          {topMatches.length === 0 ? (
-            <p className="text-sm text-slate-600">No published listings yet. Complete onboarding to improve matches.</p>
-          ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
-              {topMatches.map((row) => (
-                <InvestorMatchOpportunityCardCompact
-                  key={row.company.id}
-                  companyId={row.company.id}
-                  companyName={row.company.companyName}
-                  industry={row.company.industry}
-                  stage={row.company.stage}
-                  location={row.company.geography}
-                  fundingTarget={
-                    row.company.fundingAmount != null
-                      ? new Intl.NumberFormat("en-US", {
-                          style: "currency",
-                          currency: "USD",
-                          maximumFractionDigits: 0,
-                        }).format(row.company.fundingAmount)
-                      : null
-                  }
-                  matchScore={row.matchScore}
-                />
-              ))}
-            </div>
-          )}
-        </WorkspacePanel>
-      </section>
-
-      <section className="mt-8">
-        <InvestorActivityTimeline activities={crmActivity.rows} error={crmActivity.error} />
       </section>
     </AppShell>
   );
