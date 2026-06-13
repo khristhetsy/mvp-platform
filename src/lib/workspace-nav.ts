@@ -84,6 +84,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/beta-operations", label: "Beta Operations" },
         ],
       },
+      { href: "/admin/users/manage", label: "User Management", requiredPermission: "manage_users" },
       { href: "/admin/users/permissions", label: "User Permissions", requiredPermission: "manage_users" },
     ],
   },

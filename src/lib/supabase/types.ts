@@ -1,4 +1,4 @@
-export type UserRole = "founder" | "investor" | "admin" | "analyst";
+export type UserRole = "founder" | "investor" | "admin" | "analyst" | "sale";
 
 export type Profile = {
   id: string;
@@ -6,6 +6,8 @@ export type Profile = {
   email: string | null;
   role: UserRole;
   is_super_admin?: boolean;
+  is_active: boolean;
+  last_seen_at: string | null;
   created_at: string;
 };
 
