@@ -27,7 +27,7 @@ export type OperationalSystemSnapshot = {
     serviceRoleConfigured: boolean;
     databaseUrlConfigured: boolean;
     googleOAuthConfigured: boolean;
-    openAiConfigured: boolean;
+    claudeConfigured: boolean;
     siteUrl: string | null;
     googleRedirectHost: string | null;
   };
