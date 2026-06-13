@@ -105,6 +105,35 @@ function isLifeScience(industry: string | null): boolean {
     : false;
 }
 
+const HARDWARE_INDUSTRIES = [
+  "hardware", "deep tech", "deeptech", "semiconductor", "chip", "robotics", "drone",
+  "unmanned aerial", "manufacturing", "iot", "internet of things", "electronics",
+  "3d printing", "additive manufacturing", "space tech", "satellite",
+  "autonomous vehicle", "self-driving", "lidar", "sensor", "wearable",
+  "consumer electronics", "industrial tech", "industrial iot",
+];
+
+function isHardware(industry: string | null): boolean {
+  return industry
+    ? HARDWARE_INDUSTRIES.some((s) => industry.toLowerCase().includes(s))
+    : false;
+}
+
+const CLEANTECH_INDUSTRIES = [
+  "cleantech", "clean tech", "climate tech", "climatetech", "renewable energy",
+  "solar", "wind energy", "wind power", "energy storage", "battery tech",
+  "electric vehicle", "ev tech", "carbon capture", "carbon removal", "carbon offset",
+  "hydrogen", "clean energy", "sustainability", "green tech", "greentech",
+  "environmental tech", "energy efficiency", "smart grid", "grid tech",
+  "bioenergy", "biomass", "geothermal", "climate", "net zero", "decarbonization",
+];
+
+function isCleantech(industry: string | null): boolean {
+  return industry
+    ? CLEANTECH_INDUSTRIES.some((s) => industry.toLowerCase().includes(s))
+    : false;
+}
+
 // ─── Per-factor scorers ───────────────────────────────────────────────────────
 
 function scoreRevenueCashflow(
@@ -182,6 +211,135 @@ function scoreRevenueCashflow(
       : hasFinancials || hasBizPlan
       ? "Financial documents uploaded but AI summaries not yet generated. Score is discounted — re-score after summaries are available."
       : "No financial documents uploaded. Development cost documentation is critical even for pre-revenue biotech/medtech.";
+
+    return { pts, max: 15, rating: rating(pts, 15), aiSummary, subScores, evidence, flags };
+  }
+
+  // ── HARDWARE / DEEP TECH PATH ─────────────────────────────────────────────
+  // Hardware companies are typically pre-revenue during development — scoring on
+  // MRR/ARR is inappropriate. Score on dev contracts, pilot orders, BOM cost plan.
+  if (isHardware(industry)) {
+    const HW_CONTRACT_KEYWORDS = [
+      "development contract", "customer-funded", "nre", "non-recurring engineering",
+      "darpa", "nsf", "dod", "doe", "sbir", "sttr", "grant", "government contract",
+      "pilot order", "purchase order", "po", "letter of intent", "loi",
+      "design win", "supply agreement",
+    ];
+    const HW_COST_KEYWORDS = [
+      "bill of materials", "bom", "unit cost", "manufacturing cost", "cogs",
+      "cost of goods", "production cost", "tooling cost", "unit economics at scale",
+      "cost reduction", "yield", "cost per unit",
+    ];
+    const HW_FINANCIAL_KEYWORDS = [
+      "financial model", "financial projection", "budget", "forecast",
+      "capital plan", "milestone", "development timeline", "production ramp",
+    ];
+
+    const hasDevContracts   = containsKeywords(combinedSummary, HW_CONTRACT_KEYWORDS);
+    const hasCostPlan       = containsKeywords(combinedSummary, HW_COST_KEYWORDS);
+    const hasFinancialPlan  = containsKeywords(combinedSummary, HW_FINANCIAL_KEYWORDS);
+
+    const financialPts  = hasFinancials ? (financialSummary ? 8 : 4) : 0;
+    const contractPts   = hasDevContracts ? 4 : 0;
+    const costPts       = hasCostPlan ? 2 : 0;
+    const planPts       = hasFinancialPlan || hasBizPlan ? (bizPlanSummary ? 2 : 1) : 0;
+    const fundingPts    = fundingAmount ? 1 : 0;
+
+    const subScores: FactorSubScore[] = [
+      { label: "Financial statements / development cost documentation", pts: financialPts, max: 8 },
+      { label: "Dev contracts, pilot orders, or NRE funding",           pts: contractPts,  max: 4 },
+      { label: "BOM / unit cost at scale documented",                   pts: costPts,      max: 2 },
+      { label: "Financial model or production ramp plan",               pts: planPts,      max: 2 },
+      { label: "Funding target declared",                               pts: fundingPts,   max: 1 },
+    ];
+
+    let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 15);
+    if (!hasFinancials) pts = Math.min(pts, 7);
+
+    const evidence: FactorEvidence[] = [];
+    evidence.push(hasFinancials
+      ? { icon: "✅", text: financialSummary ? "Financial / cost documentation reviewed" : "Financial documents uploaded — AI summary pending", src: "FINANCIAL_STATEMENTS" }
+      : { icon: "❌", text: "Financial statements missing — development costs unknown", src: "Document checklist" });
+    if (hasDevContracts) evidence.push({ icon: "✅", text: "Development contracts, pilot orders, or NRE funding referenced — strong hardware revenue signal", src: "AI summaries" });
+    else evidence.push({ icon: "⚠️", text: "No development contracts or pilot orders documented — include any NRE deals, government contracts, or LOIs", src: "AI summaries" });
+    if (hasCostPlan) evidence.push({ icon: "✅", text: "BOM or unit manufacturing cost data found", src: "AI summaries" });
+    if (fundingAmount) evidence.push({ icon: "✅", text: `Funding target: $${fundingAmount.toLocaleString()}`, src: "Company profile" });
+
+    const flags: FactorFlag[] = [];
+    if (!hasFinancials) flags.push({ severity: "red", label: "Missing financials", detail: "Hardware investors need development cost and burn documentation. Upload financial statements even for pre-revenue stage." });
+    if (!hasDevContracts) flags.push({ severity: "amber", label: "No development contracts or orders", detail: "Document any customer-funded development (NRE), pilot purchase orders, LOIs, design wins, or government contracts (DARPA, NSF, DOE, SBIR). These are the primary traction signals for hardware investors." });
+    if (!hasCostPlan) flags.push({ severity: "amber", label: "No BOM or unit cost data", detail: "Investors in hardware companies expect to see bill of materials cost, target unit cost at volume, and cost reduction roadmap." });
+
+    const aiSummary = financialSummary ?? bizPlanSummary
+      ? `Hardware financial context: ${(financialSummary ?? bizPlanSummary ?? "").slice(0, 300)}…`
+      : hasFinancials || hasBizPlan
+      ? "Financial documents uploaded but AI summaries not yet generated. Score is discounted."
+      : "No financial documents uploaded. Development cost and BOM documentation are critical for hardware investors.";
+
+    return { pts, max: 15, rating: rating(pts, 15), aiSummary, subScores, evidence, flags };
+  }
+
+  // ── CLEANTECH / CLIMATE TECH PATH ─────────────────────────────────────────
+  // Cleantech companies often pre-revenue during development/permitting. Score on
+  // off-take agreements, government incentives, project economics (LCOE/CapEx/MW).
+  if (isCleantech(industry)) {
+    const CT_REVENUE_KEYWORDS = [
+      "power purchase agreement", "ppa", "off-take agreement", "offtake", "energy sales",
+      "project revenue", "capacity payment", "rec", "renewable energy credit",
+      "carbon credit", "carbon offset", "credit revenue",
+      "government contract", "doe award", "arpa-e", "grant", "loan guarantee",
+    ];
+    const CT_ECON_KEYWORDS = [
+      "capex", "capital cost", "cost per mw", "cost per kwh", "lcoe",
+      "levelized cost", "opex", "o&m cost", "operations and maintenance",
+      "project irr", "project economics", "irr", "net present value", "npv",
+    ];
+    const CT_PLAN_KEYWORDS = [
+      "financial model", "financial projection", "project finance", "pro forma",
+      "construction cost", "development budget", "permitting", "interconnection",
+      "commercial operation", "cod", "commercial operation date",
+    ];
+
+    const hasCTRevenue  = containsKeywords(combinedSummary, CT_REVENUE_KEYWORDS);
+    const hasCTEcon     = containsKeywords(combinedSummary, CT_ECON_KEYWORDS);
+    const hasCTPlan     = containsKeywords(combinedSummary, CT_PLAN_KEYWORDS);
+
+    const financialPts  = hasFinancials ? (financialSummary ? 8 : 4) : 0;
+    const revenuePts    = hasCTRevenue ? 4 : 0;
+    const econPts       = hasCTEcon ? 2 : 0;
+    const planPts       = hasCTPlan || hasBizPlan ? (bizPlanSummary ? 2 : 1) : 0;
+    const fundingPts    = fundingAmount ? 1 : 0;
+
+    const subScores: FactorSubScore[] = [
+      { label: "Financial statements / project cost documentation", pts: financialPts, max: 8 },
+      { label: "PPAs, off-take agreements, or government awards",   pts: revenuePts,   max: 4 },
+      { label: "LCOE / CapEx per MW / project IRR documented",      pts: econPts,      max: 2 },
+      { label: "Project finance model or development plan",         pts: planPts,      max: 2 },
+      { label: "Funding target declared",                           pts: fundingPts,   max: 1 },
+    ];
+
+    let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 15);
+    if (!hasFinancials) pts = Math.min(pts, 7);
+
+    const evidence: FactorEvidence[] = [];
+    evidence.push(hasFinancials
+      ? { icon: "✅", text: financialSummary ? "Financial / project cost documentation reviewed" : "Financial documents uploaded — AI summary pending", src: "FINANCIAL_STATEMENTS" }
+      : { icon: "❌", text: "Financial statements missing — project economics unknown", src: "Document checklist" });
+    if (hasCTRevenue) evidence.push({ icon: "✅", text: "PPAs, off-take agreements, or government awards referenced — strong cleantech revenue signal", src: "AI summaries" });
+    else evidence.push({ icon: "⚠️", text: "No PPAs, off-take agreements, or government awards documented", src: "AI summaries" });
+    if (hasCTEcon) evidence.push({ icon: "✅", text: "Project economics (LCOE, CapEx/MW, IRR) found", src: "AI summaries" });
+    if (fundingAmount) evidence.push({ icon: "✅", text: `Funding target: $${fundingAmount.toLocaleString()}`, src: "Company profile" });
+
+    const flags: FactorFlag[] = [];
+    if (!hasFinancials) flags.push({ severity: "red", label: "Missing financials", detail: "Cleantech investors need project cost documentation (CapEx, OpEx, development budget). Upload financials even in pre-revenue stage." });
+    if (!hasCTRevenue) flags.push({ severity: "amber", label: "No PPAs or off-take agreements", detail: "Power purchase agreements and off-take contracts are the primary revenue validation for cleantech. Document any signed or LOI-stage agreements. Government awards (DOE, ARPA-E, ITC/PTC eligibility) also count." });
+    if (!hasCTEcon) flags.push({ severity: "amber", label: "No project economics documented", detail: "Include LCOE (levelized cost of energy), CapEx per MW, project IRR, and comparisons to grid parity or incumbent technology. These are the cleantech unit economics equivalents." });
+
+    const aiSummary = financialSummary ?? bizPlanSummary
+      ? `Cleantech financial context: ${(financialSummary ?? bizPlanSummary ?? "").slice(0, 300)}…`
+      : hasFinancials || hasBizPlan
+      ? "Financial documents uploaded but AI summaries not yet generated. Score is discounted."
+      : "No financial documents uploaded. Project economics (LCOE, CapEx, PPAs) are critical for cleantech investors.";
 
     return { pts, max: 15, rating: rating(pts, 15), aiSummary, subScores, evidence, flags };
   }
@@ -367,6 +525,153 @@ function scoreCustomerTraction(
     return { pts, max: 13, rating: rating(pts, 13), aiSummary, subScores, evidence, flags };
   }
 
+  // ── HARDWARE / DEEP TECH PATH ─────────────────────────────────────────────
+  if (isHardware(industry)) {
+    const HW_PROTOTYPE_KEYWORDS = [
+      "prototype", "mvp", "proof of concept", "poc", "bench prototype", "alpha unit",
+      "beta unit", "pilot unit", "engineering sample", "working prototype", "demo unit",
+    ];
+    const HW_ORDER_KEYWORDS = [
+      "purchase order", "po", "letter of intent", "loi", "design win",
+      "customer qualified", "qualification", "pilot order", "supply agreement",
+      "distribution agreement", "production order", "pre-order",
+    ];
+    const HW_DEPLOYMENT_KEYWORDS = [
+      "deployed", "installed", "shipped", "units in field", "pilot deployment",
+      "customer trial", "beta customer", "beta deployment", "field trial",
+      "pilot program", "customer pilot", "production run",
+    ];
+    const HW_PARTNER_KEYWORDS = [
+      "manufacturing partner", "cm", "contract manufacturer", "ems",
+      "strategic partner", "distribution partner", "oem agreement", "supply chain partner",
+      "development contract", "nre", "non-recurring engineering",
+    ];
+
+    const hasPrototype   = containsKeywords(combinedSummary, HW_PROTOTYPE_KEYWORDS);
+    const hasOrders      = containsKeywords(combinedSummary, HW_ORDER_KEYWORDS);
+    const hasDeployments = containsKeywords(combinedSummary, HW_DEPLOYMENT_KEYWORDS);
+    const hasPartners    = containsKeywords(combinedSummary, HW_PARTNER_KEYWORDS);
+    const hasMetrics     = containsKeywords(combinedSummary, ["%", "$", "units", "million", "thousand", "k units", "growth"]);
+
+    // Design wins / orders: 0–5 (equivalent of LOI for hardware)
+    const orderPts = hasOrders ? 5 : hasDeployments ? 3 : hasPrototype ? 2 : 0;
+    // Customer deployments: 0–4
+    const deployPts = hasDeployments && hasMetrics ? 4 : hasDeployments ? 2 : hasPrototype ? 1 : 0;
+    // Supply chain / manufacturing partnerships: 0–3
+    const partnerPts = hasPartners ? 3 : 0;
+    // Metrics (units, output, performance data): 0–1
+    const metricPts = hasMetrics ? 1 : 0;
+
+    const subScores: FactorSubScore[] = [
+      { label: "Design wins, POs, or LOIs",              pts: orderPts,  max: 5 },
+      { label: "Prototype or field deployments",         pts: deployPts, max: 4 },
+      { label: "Manufacturing / supply chain partners",  pts: partnerPts, max: 3 },
+      { label: "Units shipped or performance metrics",   pts: metricPts, max: 1 },
+    ];
+
+    let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 13);
+    if (!hasPitch && !hasBizPlan) pts = 0;
+    else if (!pitchSummary && !bizSummary && !financialSummary) pts = Math.min(pts, 2);
+
+    const evidence: FactorEvidence[] = [];
+    if (hasOrders) evidence.push({ icon: "✅", text: "Design wins, purchase orders, or LOIs referenced — strong hardware demand signal", src: "AI summaries" });
+    else if (hasDeployments) evidence.push({ icon: "✅", text: "Prototype deployed or beta customers mentioned", src: "AI summaries" });
+    else if (hasPrototype) evidence.push({ icon: "⚠️", text: "Prototype exists but no customer deployments or orders documented", src: "AI summaries" });
+    else evidence.push({ icon: "❌", text: "No prototype, deployment, or order evidence found", src: "AI summaries" });
+    if (hasPartners) evidence.push({ icon: "✅", text: "Manufacturing or supply chain partners referenced — de-risks production", src: "AI summaries" });
+    else evidence.push({ icon: "⚠️", text: "No manufacturing partner documented — investors want to see CM or supply chain strategy", src: "AI summaries" });
+    if (hasMetrics) evidence.push({ icon: "✅", text: "Hardware performance metrics or unit figures found", src: "AI summaries" });
+
+    const flags: FactorFlag[] = [];
+    if (!hasPrototype && !hasOrders && !hasDeployments) flags.push({ severity: "red", label: "No hardware traction", detail: "No prototype, deployment, or order evidence found. Document your current hardware development stage, any customer pilots, and design wins or LOIs." });
+    else if (!hasOrders) flags.push({ severity: "amber", label: "No design wins or orders", detail: "Hardware investors look for design wins (customer qualification), purchase orders, or pilot LOIs as demand proof. Even a single confirmed design win or LOI significantly de-risks the investment." });
+    if (!hasPartners) flags.push({ severity: "amber", label: "No manufacturing partner", detail: "Identify a contract manufacturer (CM) or manufacturing partner. Hardware investors want confidence you have a path to production — not just a prototype." });
+
+    const aiSummary = hasOrders && hasDeployments
+      ? "Design wins or orders and prototype deployments documented — strong hardware traction."
+      : hasOrders
+      ? "Hardware demand signals (design wins/LOIs) found. Add deployment or field trial evidence."
+      : hasPrototype
+      ? "Prototype referenced but no customer deployments or orders. Hardware investors need demand evidence."
+      : hasPitch || hasBizPlan
+      ? "Documents uploaded but no hardware traction signals found. Add prototype stage, design wins, or customer pilot data."
+      : "No documents uploaded. Hardware traction cannot be assessed.";
+
+    return { pts, max: 13, rating: rating(pts, 13), aiSummary, subScores, evidence, flags };
+  }
+
+  // ── CLEANTECH / CLIMATE TECH PATH ─────────────────────────────────────────
+  if (isCleantech(industry)) {
+    const CT_OFFTAKE_KEYWORDS = [
+      "power purchase agreement", "ppa", "off-take agreement", "offtake",
+      "energy supply agreement", "capacity agreement", "feed-in tariff",
+      "virtual ppa", "vppa", "long-term contract", "energy contract",
+    ];
+    const CT_PROJECT_KEYWORDS = [
+      "project deployed", "project online", "commercial operation", "cod",
+      "mwh delivered", "kwh delivered", "energy generated", "capacity installed",
+      "mw installed", "pilot project", "demonstration project", "field pilot",
+    ];
+    const CT_PARTNER_KEYWORDS = [
+      "utility partner", "utility offtake", "corporate offtake", "municipality",
+      "grid operator", "interconnection", "strategic partner", "government contract",
+      "doe", "arpa-e", "department of energy", "epa", "ercot", "iso",
+    ];
+    const CT_METRIC_KEYWORDS = [
+      "mwh", "kwh", "mw", "kw", "capacity factor", "yield", "co2 avoided",
+      "tonnes", "carbon", "emissions reduced", "lcoe", "$", "irr", "npv",
+    ];
+
+    const hasOfftake  = containsKeywords(combinedSummary, CT_OFFTAKE_KEYWORDS);
+    const hasProject  = containsKeywords(combinedSummary, CT_PROJECT_KEYWORDS);
+    const hasPartners = containsKeywords(combinedSummary, CT_PARTNER_KEYWORDS);
+    const hasMetrics  = containsKeywords(combinedSummary, CT_METRIC_KEYWORDS);
+
+    // PPAs / off-take agreements: 0–5
+    const offtakePts = hasOfftake ? 5 : hasPartners ? 2 : 0;
+    // Project deployments / energy output: 0–4
+    const projectPts = hasProject && hasMetrics ? 4 : hasProject ? 2 : 0;
+    // Utility / government partners: 0–3
+    const partnerPts = hasPartners ? 3 : 0;
+    // Output / performance metrics: 0–1
+    const metricPts = hasMetrics ? 1 : 0;
+
+    const subScores: FactorSubScore[] = [
+      { label: "PPAs or off-take agreements",            pts: offtakePts,  max: 5 },
+      { label: "Projects deployed / energy delivered",   pts: projectPts,  max: 4 },
+      { label: "Utility, government, or corporate partners", pts: partnerPts, max: 3 },
+      { label: "Energy output or carbon metrics",        pts: metricPts,   max: 1 },
+    ];
+
+    let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 13);
+    if (!hasPitch && !hasBizPlan) pts = 0;
+    else if (!pitchSummary && !bizSummary && !financialSummary) pts = Math.min(pts, 2);
+
+    const evidence: FactorEvidence[] = [];
+    if (hasOfftake) evidence.push({ icon: "✅", text: "PPAs or off-take agreements referenced — primary cleantech traction signal", src: "AI summaries" });
+    else if (hasPartners) evidence.push({ icon: "⚠️", text: "Utility or government partners referenced but no signed PPA/off-take found", src: "AI summaries" });
+    else evidence.push({ icon: "❌", text: "No PPAs, off-take agreements, or project deployments found", src: "AI summaries" });
+    if (hasProject) evidence.push({ icon: "✅", text: "Cleantech project deployed or pilot operational", src: "AI summaries" });
+    if (hasMetrics) evidence.push({ icon: "✅", text: "Energy output, LCOE, or carbon impact metrics referenced", src: "AI summaries" });
+
+    const flags: FactorFlag[] = [];
+    if (!hasOfftake && !hasProject) flags.push({ severity: "red", label: "No cleantech traction", detail: "No PPAs, off-take agreements, or project deployments found. Document any signed or LOI-stage off-take agreements, pilot deployments, or government project awards." });
+    else if (!hasOfftake) flags.push({ severity: "amber", label: "No PPAs or off-take agreements", detail: "Power purchase agreements and off-take contracts are the primary traction signal for cleantech investors. Even LOI-stage agreements count — document them." });
+    if (!hasMetrics) flags.push({ severity: "amber", label: "No energy/impact metrics", detail: "Include project capacity (MW/kW), energy output (MWh), LCOE, or CO₂ avoided. Cleantech investors expect measurable output metrics." });
+
+    const aiSummary = hasOfftake && hasProject
+      ? "Strong cleantech traction: PPAs/off-take agreements and project deployments documented."
+      : hasOfftake
+      ? "Off-take or PPA agreements found. Add project deployment or energy output metrics."
+      : hasProject
+      ? "Project deployments found but no PPAs or off-take contracts. Cleantech investors need demand contracts."
+      : hasPitch || hasBizPlan
+      ? "Documents uploaded but no cleantech traction signals (PPAs, deployments) found."
+      : "No documents uploaded. Cleantech traction cannot be assessed.";
+
+    return { pts, max: 13, rating: rating(pts, 13), aiSummary, subScores, evidence, flags };
+  }
+
   // ── STANDARD (non-life-science) PATH ─────────────────────────────────────────
   const LOI_KEYWORDS = ["letter of intent", "loi", "signed contract", "purchase order", "pilot agreement", "master service agreement", "msa", "committed", "binding"];
   const PAYING_KEYWORDS = ["paying customer", "paid customer", "revenue from", "annual contract", "arr", "mrr", "monthly recurring", "annual recurring", "subscription"];
@@ -457,13 +762,51 @@ function scoreFounderTeam(
     "drug development", "device development",
   ];
 
+  // Hardware founders are often engineers — EE/ME credentials, manufacturing experience
+  const HW_DEPTH_KEYWORDS = [
+    "electrical engineer", "mechanical engineer", "systems engineer", "embedded engineer",
+    "hardware engineer", "ee ", "me ", "pe ", " phd", "msee", "bsee",
+    "chief hardware officer", "vp hardware", "vp engineering", "director of engineering",
+    "manufacturing director", "supply chain director", "operations lead",
+    "technical advisor", "engineering advisory",
+  ];
+  const HW_EXPERIENCE_KEYWORDS = [
+    "hardware company", "hardware startup", "prior hardware", "shipped product",
+    "mass production", "manufacturing experience", "supply chain experience",
+    "fpga", "asic", "embedded systems", "firmware", "pcb", "prototype to production",
+    "design win", "product launch", "consumer electronics", "industrial product",
+    "darpa", "defense contract", "space program", "nasa",
+  ];
+
+  // Cleantech founders signal through energy industry + project development experience
+  const CT_DEPTH_KEYWORDS = [
+    "energy industry", "utility experience", "project developer", "project development",
+    "power plant", "grid operator", "energy advisor", "energy engineer",
+    "environmental engineer", "climate scientist", "policy advisor",
+    "doe experience", "nrel", "lbl", "national lab", "arpa-e fellow",
+  ];
+  const CT_EXPERIENCE_KEYWORDS = [
+    "energy project", "renewable project", "solar project", "wind project",
+    "project finance", "infrastructure finance", "power sector",
+    "grid-scale", "utility-scale", "commissioned", "installed capacity",
+    "carbon project", "emissions reduction", "clean energy", "epc",
+  ];
+
   const combinedSummary = [pitchSummary, bizSummary].filter(Boolean).join(" ");
   const hasTeamEvidence = containsKeywords(combinedSummary, TEAM_KEYWORDS);
   const hasTeamDepth = isLifeScience(industry)
     ? containsKeywords(combinedSummary, [...DEPTH_KEYWORDS, ...LS_DEPTH_KEYWORDS])
+    : isHardware(industry)
+    ? containsKeywords(combinedSummary, [...DEPTH_KEYWORDS, ...HW_DEPTH_KEYWORDS])
+    : isCleantech(industry)
+    ? containsKeywords(combinedSummary, [...DEPTH_KEYWORDS, ...CT_DEPTH_KEYWORDS])
     : containsKeywords(combinedSummary, DEPTH_KEYWORDS);
   const hasPriorExperience = isLifeScience(industry)
     ? containsKeywords(combinedSummary, [...EXPERIENCE_KEYWORDS, ...LS_EXPERIENCE_KEYWORDS])
+    : isHardware(industry)
+    ? containsKeywords(combinedSummary, [...EXPERIENCE_KEYWORDS, ...HW_EXPERIENCE_KEYWORDS])
+    : isCleantech(industry)
+    ? containsKeywords(combinedSummary, [...EXPERIENCE_KEYWORDS, ...CT_EXPERIENCE_KEYWORDS])
     : containsKeywords(combinedSummary, EXPERIENCE_KEYWORDS);
 
   // Pitch: up to 7 pts — requires team keywords + depth for full credit
@@ -515,8 +858,28 @@ function scoreFounderTeam(
   } else {
     evidence.push({ icon: "⚠️", text: "Business plan missing — secondary team evidence unavailable", src: "Document checklist" });
   }
-  if (hasPriorExperience) evidence.push({ icon: "✅", text: isLifeScience(industry) ? "Scientific credentials, publications, patents, or prior clinical/device development experience found" : "Prior exits, venture experience, or founded companies referenced", src: "AI summaries" });
-  else evidence.push({ icon: "⚠️", text: isLifeScience(industry) ? "No scientific credentials or prior clinical/biotech experience detected — include PhD, publications, patents, or clinical advisory roles" : "No prior exit or venture experience detected in documents", src: "AI summaries" });
+  if (hasPriorExperience) evidence.push({
+    icon: "✅",
+    text: isLifeScience(industry)
+      ? "Scientific credentials, publications, patents, or prior clinical/device development experience found"
+      : isHardware(industry)
+      ? "Hardware engineering credentials, manufacturing experience, or prior shipped products referenced"
+      : isCleantech(industry)
+      ? "Energy industry experience, project development background, or cleantech track record referenced"
+      : "Prior exits, venture experience, or founded companies referenced",
+    src: "AI summaries",
+  });
+  else evidence.push({
+    icon: "⚠️",
+    text: isLifeScience(industry)
+      ? "No scientific credentials or prior clinical/biotech experience detected — include PhD, publications, patents, or clinical advisory roles"
+      : isHardware(industry)
+      ? "No hardware engineering credentials or manufacturing experience detected — include EE/ME background, prior shipped products, or supply chain expertise"
+      : isCleantech(industry)
+      ? "No energy industry or project development experience detected — include prior energy projects, utility background, or DOE/NREL credentials"
+      : "No prior exit or venture experience detected in documents",
+    src: "AI summaries",
+  });
   if (industry) evidence.push({ icon: "✅", text: `Industry declared: ${industry}`, src: "Company profile" });
   else evidence.push({ icon: "⚠️", text: "Industry not set on profile", src: "Company profile" });
 
@@ -524,7 +887,17 @@ function scoreFounderTeam(
   if (!hasPitch) flags.push({ severity: "red", label: "No team evidence", detail: "Pitch deck with a team slide is required. Score capped at 8/15 without it." });
   else if (!hasTeamDepth) flags.push({ severity: "amber", label: "Solo founder risk", detail: "No team depth detected — advisors, co-founders, or a leadership team are expected by investors. Score capped at 10/15." });
   else if (!hasTeamEvidence) flags.push({ severity: "amber", label: "No team section detected", detail: "Pitch deck uploaded but AI summary contains no founder/team references." });
-  if (!hasPriorExperience) flags.push({ severity: "amber", label: "No prior experience evidence", detail: "Prior exits or venture experience significantly strengthens investor confidence. Include in pitch or biz plan." });
+  if (!hasPriorExperience) flags.push({
+    severity: "amber",
+    label: "No prior experience evidence",
+    detail: isLifeScience(industry)
+      ? "Scientific credentials (PhD, publications, patents) and prior clinical/biotech experience are critical for life science teams. Include in pitch."
+      : isHardware(industry)
+      ? "Hardware investors look for engineers who have shipped products before. Include EE/ME credentials, prior hardware roles, or any products taken to production."
+      : isCleantech(industry)
+      ? "Cleantech investors value energy industry track records. Include prior project development experience, utility background, or government energy program involvement."
+      : "Prior exits or venture experience significantly strengthens investor confidence. Include in pitch or biz plan.",
+  });
   if (!hasBizPlan) flags.push({ severity: "amber", label: "No business plan", detail: "A business plan with founder background is a secondary integrity signal." });
 
   const aiSummary = pitchSummary
@@ -615,12 +988,41 @@ function scoreMarketEvidence(
     "comparable deal", "precedent transaction",
   ];
 
-  // For life science, use clinical validation signals; for others use commercial traction
+  // Hardware market evidence — design wins, market pull, technology readiness
+  const HW_TRACTION_KEYWORDS = [
+    "design win", "purchase order", "pilot order", "prototype deployed", "customer pilot",
+    "field trial", "beta customer", "letter of intent", "loi", "supply agreement",
+    "technology readiness", "trl", "manufacturing ready", "production ready",
+  ];
+  const HW_MARKET_SIZE_KEYWORDS = [
+    "units", "unit volume", "market size", "tam", "sam", "device market",
+    "hardware market", "bill of materials", "bom", "asps", "average selling price",
+    "comparable product", "competitive price", "market share",
+  ];
+
+  // Cleantech market evidence — energy demand, policy tailwinds, off-take signals
+  const CT_TRACTION_KEYWORDS = [
+    "power purchase agreement", "ppa", "off-take", "energy demand", "grid demand",
+    "interconnection", "capacity market", "rec", "renewable energy certificate",
+    "carbon credit", "carbon market", "pilot project", "installed capacity",
+    "mwh", "mw deployed", "energy output", "kwh generated",
+  ];
+  const CT_MARKET_SIZE_KEYWORDS = [
+    "tam", "sam", "market size", "energy market", "power market", "gw", "tw",
+    "ira", "inflation reduction act", "itc", "investment tax credit", "ptc",
+    "grid parity", "lcoe", "energy transition", "electrification",
+  ];
+
+  // Route traction detection by industry type
   const hasTractionEvidence = isLifeScience(industry)
     ? containsKeywords(combinedSummary, [...LS_TRACTION_KEYWORDS, ...LS_MARKET_SIZE_KEYWORDS])
+    : isHardware(industry)
+    ? containsKeywords(combinedSummary, [...HW_TRACTION_KEYWORDS, ...HW_MARKET_SIZE_KEYWORDS])
+    : isCleantech(industry)
+    ? containsKeywords(combinedSummary, [...CT_TRACTION_KEYWORDS, ...CT_MARKET_SIZE_KEYWORDS])
     : containsKeywords(combinedSummary, ["traction", "revenue", "mrr", "arr", "growth", "paying", "contracts", "signed", "pilot", "customers", "%", "$", "million", "thousand"]);
-  const hasBasicMarketWords = containsKeywords(combinedSummary, ["market", "customer", "users", "clients", "patient", "clinical"]);
-  const hasCompetitiveAnalysis = containsKeywords(combinedSummary, ["competitor", "competition", "vs ", "versus", "alternative", "differentiat", "market leader", "standard of care", "current treatment"]);
+  const hasBasicMarketWords = containsKeywords(combinedSummary, ["market", "customer", "users", "clients", "patient", "clinical", "energy", "units", "capacity"]);
+  const hasCompetitiveAnalysis = containsKeywords(combinedSummary, ["competitor", "competition", "vs ", "versus", "alternative", "differentiat", "market leader", "standard of care", "current treatment", "incumbent", "legacy solution"]);
 
   const pitchPts = hasPitch
     ? (hasTractionEvidence ? 6 : hasBasicMarketWords ? 3 : pitchSummary ? 2 : 2)
@@ -665,6 +1067,10 @@ function scoreMarketEvidence(
     label: "No traction evidence",
     detail: isLifeScience(industry)
       ? "No clinical validation, unmet need data, or market size evidence found. Document patient population, burden of disease, or regulatory designations."
+      : isHardware(industry)
+      ? "No design wins, prototype deployments, or market size data found. Include design wins, LOIs, hardware market TAM, or technology readiness level (TRL)."
+      : isCleantech(industry)
+      ? "No PPAs, off-take agreements, or energy market evidence found. Include any signed agreements, installed capacity, energy output metrics, or policy tailwinds (IRA, ITC)."
       : "No specific metrics, customer numbers, or revenue figures. Score capped at 8/13.",
   });
   if (!hasCompetitiveAnalysis) flags.push({
@@ -672,6 +1078,10 @@ function scoreMarketEvidence(
     label: "No competitive analysis",
     detail: isLifeScience(industry)
       ? "Describe the current standard of care and how your solution compares. Investors need to understand differentiation from existing treatments."
+      : isHardware(industry)
+      ? "Compare your hardware to incumbent solutions on key specs (cost, performance, size, power). Hardware investors want to understand why existing solutions fall short."
+      : isCleantech(industry)
+      ? "Compare your technology to incumbent energy sources on LCOE, CapEx, or carbon impact. Describe what gives you a cost or performance advantage."
       : "Investors distrust founders who claim no competition. Acknowledge competitors and differentiate.",
   });
 
@@ -769,6 +1179,124 @@ function scoreUnitEconomics(
       : hasFinancials || hasBizPlan
       ? "Financial documents present but no life science cost structure or grant leverage found. Add development cost by milestone and licensing economics."
       : "No documents uploaded. Life science development economics cannot be assessed.";
+
+    return { pts, max: 10, rating: rating(pts, 10), aiSummary, subScores, evidence, flags };
+  }
+
+  // ── Hardware / Deep Tech path ─────────────────────────────────────────────
+  if (isHardware(industry)) {
+    const HW_BOM_KEYWORDS = [
+      "bill of materials", "bom", "unit cost", "cost per unit", "manufacturing cost",
+      "cogs", "cost of goods", "production cost", "tooling", "yield",
+      "average selling price", "asp", "gross margin per unit", "margin per unit",
+    ];
+    const HW_SCALE_KEYWORDS = [
+      "cost reduction", "cost down", "volume pricing", "economies of scale",
+      "cost at volume", "unit cost at scale", "production ramp", "yield improvement",
+      "contract manufacturing", "cm cost", "supply chain cost",
+    ];
+    const HW_GRANT_KEYWORDS = [
+      "grant", "sbir", "sttr", "darpa", "nsf", "doe", "nre", "non-recurring engineering",
+      "customer-funded development", "development contract", "government funded",
+    ];
+
+    const hasBom         = containsKeywords(combinedSummary, HW_BOM_KEYWORDS);
+    const hasScalePlan   = containsKeywords(combinedSummary, HW_SCALE_KEYWORDS);
+    const hasGrantFunding = containsKeywords(combinedSummary, HW_GRANT_KEYWORDS);
+
+    const bomPts    = hasBom ? 5 : hasFinancials && financialSummary ? 2 : hasFinancials ? 1 : 0;
+    const scalePts  = hasScalePlan ? 3 : 0;
+    const grantPts  = hasGrantFunding ? 2 : 0;
+
+    const subScores: FactorSubScore[] = [
+      { label: "BOM / unit cost at target volume documented", pts: bomPts,   max: 5 },
+      { label: "Cost reduction roadmap / scale economics",    pts: scalePts, max: 3 },
+      { label: "NRE / grant funding to reduce unit economics risk", pts: grantPts, max: 2 },
+    ];
+
+    let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 10);
+    if (!hasFinancials && !hasBizPlan && !hasPitch) pts = 0;
+    else if (!financialSummary && !bizSummary && !pitchSummary) pts = Math.min(pts, 1);
+    else if (!hasBom && !hasScalePlan) pts = Math.min(pts, 3);
+
+    const evidence: FactorEvidence[] = [];
+    if (hasBom) evidence.push({ icon: "✅", text: "BOM or unit manufacturing cost documented — strong hardware economics signal", src: "AI summaries" });
+    else evidence.push({ icon: "❌", text: "No BOM or unit cost data found — hardware investors need per-unit economics before committing capital", src: "AI summaries" });
+    if (hasScalePlan) evidence.push({ icon: "✅", text: "Cost reduction roadmap or volume pricing strategy referenced", src: "AI summaries" });
+    else evidence.push({ icon: "⚠️", text: "No cost reduction roadmap — show how unit cost improves at volume", src: "AI summaries" });
+    if (hasGrantFunding) evidence.push({ icon: "✅", text: "NRE or grant funding reduces capital risk — efficiency signal", src: "AI summaries" });
+    if (hasFinancials) evidence.push({ icon: "✅", text: financialSummary ? "Financial statements reviewed" : "Financial statements uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" });
+
+    const flags: FactorFlag[] = [];
+    if (!hasBom) flags.push({ severity: "red", label: "No BOM or unit cost data", detail: "Hardware investors require bill of materials cost, target ASP (average selling price), and gross margin per unit at volume. Include current BOM cost and projected cost at 10k/100k units." });
+    if (!hasScalePlan) flags.push({ severity: "amber", label: "No cost reduction roadmap", detail: "Show how unit cost decreases with volume (e.g., BOM goes from $X at 1k units to $Y at 100k units). Hardware investors need a credible path to target gross margins." });
+    if (!hasGrantFunding) flags.push({ severity: "amber", label: "No NRE or grant funding documented", detail: "Customer-funded NRE (non-recurring engineering) and government grants (SBIR, DARPA, NSF) reduce the capital needed to get to first production. Document any such arrangements." });
+
+    const aiSummary = hasBom
+      ? `Hardware unit economics found: ${(financialSummary ?? bizSummary ?? pitchSummary ?? "").slice(0, 250)}…`
+      : hasFinancials || hasBizPlan
+      ? "Financial documents present but no hardware unit cost (BOM) or cost reduction plan found. Add manufacturing economics to your pitch."
+      : "No documents uploaded. Hardware unit economics cannot be assessed.";
+
+    return { pts, max: 10, rating: rating(pts, 10), aiSummary, subScores, evidence, flags };
+  }
+
+  // ── Cleantech / Climate Tech path ─────────────────────────────────────────
+  if (isCleantech(industry)) {
+    const CT_LCOE_KEYWORDS = [
+      "lcoe", "levelized cost", "cost per mwh", "cost per kwh", "cost of energy",
+      "capex per mw", "capex per kw", "capital cost per mw", "$/mw", "$/kw",
+      "project irr", "irr", "net present value", "npv", "project economics",
+      "opex", "operations and maintenance", "o&m",
+    ];
+    const CT_SCALE_KEYWORDS = [
+      "cost reduction", "learning curve", "price decline", "grid parity",
+      "cost competitive", "margin improvement", "economies of scale",
+      "capacity factor", "performance improvement", "efficiency gain",
+    ];
+    const CT_INCENTIVE_KEYWORDS = [
+      "ira", "inflation reduction act", "itc", "investment tax credit",
+      "ptc", "production tax credit", "doe loan", "loan guarantee",
+      "grant", "arpa-e", "government incentive", "subsidy", "tax incentive",
+    ];
+
+    const hasLcoe      = containsKeywords(combinedSummary, CT_LCOE_KEYWORDS);
+    const hasScalePlan = containsKeywords(combinedSummary, CT_SCALE_KEYWORDS);
+    const hasIncentive = containsKeywords(combinedSummary, CT_INCENTIVE_KEYWORDS);
+
+    const lcoePts      = hasLcoe ? 5 : hasFinancials && financialSummary ? 2 : hasFinancials ? 1 : 0;
+    const scalePts     = hasScalePlan ? 3 : 0;
+    const incentivePts = hasIncentive ? 2 : 0;
+
+    const subScores: FactorSubScore[] = [
+      { label: "LCOE / CapEx per MW / project IRR documented", pts: lcoePts,      max: 5 },
+      { label: "Cost reduction roadmap / grid parity path",    pts: scalePts,     max: 3 },
+      { label: "Government incentives / IRA / ITC / grants",   pts: incentivePts, max: 2 },
+    ];
+
+    let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 10);
+    if (!hasFinancials && !hasBizPlan && !hasPitch) pts = 0;
+    else if (!financialSummary && !bizSummary && !pitchSummary) pts = Math.min(pts, 1);
+    else if (!hasLcoe && !hasScalePlan) pts = Math.min(pts, 3);
+
+    const evidence: FactorEvidence[] = [];
+    if (hasLcoe) evidence.push({ icon: "✅", text: "LCOE, CapEx/MW, or project IRR documented — strong cleantech economics signal", src: "AI summaries" });
+    else evidence.push({ icon: "❌", text: "No project economics (LCOE, CapEx/MW, IRR) found — cleantech investors need these to evaluate the investment case", src: "AI summaries" });
+    if (hasScalePlan) evidence.push({ icon: "✅", text: "Cost reduction roadmap or path to grid parity referenced", src: "AI summaries" });
+    else evidence.push({ icon: "⚠️", text: "No cost reduction roadmap — show how economics improve as the technology scales", src: "AI summaries" });
+    if (hasIncentive) evidence.push({ icon: "✅", text: "Government incentives (IRA, ITC, PTC, grants) documented — improves project economics", src: "AI summaries" });
+    if (hasFinancials) evidence.push({ icon: "✅", text: financialSummary ? "Financial statements reviewed" : "Financial statements uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" });
+
+    const flags: FactorFlag[] = [];
+    if (!hasLcoe) flags.push({ severity: "red", label: "No project economics documented", detail: "LCOE (levelized cost of energy), CapEx per MW, and project IRR are the cleantech equivalents of LTV/CAC. Include these in your pitch or financial model — they are the first metrics cleantech investors check." });
+    if (!hasScalePlan) flags.push({ severity: "amber", label: "No cost reduction roadmap", detail: "Show how your technology improves on the cost curve over time. Compare to incumbent technologies (grid parity, fossil fuel benchmarks) and document expected improvements with scale." });
+    if (!hasIncentive) flags.push({ severity: "amber", label: "No government incentives documented", detail: "IRA, ITC, PTC, DOE loan guarantees, and grants can materially improve project economics. Document any applicable incentives — they directly affect investor returns." });
+
+    const aiSummary = hasLcoe
+      ? `Cleantech project economics found: ${(financialSummary ?? bizSummary ?? pitchSummary ?? "").slice(0, 250)}…`
+      : hasFinancials || hasBizPlan
+      ? "Financial documents present but no cleantech project economics (LCOE, CapEx/MW, IRR) found. Add project economics to your pitch."
+      : "No documents uploaded. Cleantech unit economics cannot be assessed.";
 
     return { pts, max: 10, rating: rating(pts, 10), aiSummary, subScores, evidence, flags };
   }
@@ -1047,6 +1575,147 @@ function scoreBurnRunway(
     return { pts, max: 8, rating: rating(pts, 8), aiSummary, subScores, evidence, flags };
   }
 
+  // ── Hardware / Deep Tech path ─────────────────────────────────────────────
+  if (isHardware(industry)) {
+    const HW_MILESTONE_KEYWORDS = [
+      "milestone", "development milestone", "engineering milestone",
+      "prototype milestone", "trl", "technology readiness level",
+      "production milestone", "first article", "qualification",
+      "next milestone", "milestone-based", "funding tranche",
+    ];
+    const HW_GRANT_RUNWAY_KEYWORDS = [
+      "grant", "sbir", "sttr", "darpa", "nsf", "doe", "government funding",
+      "nre", "non-recurring engineering", "customer-funded", "development contract",
+      "non-dilutive", "extend runway",
+    ];
+    const HW_CAPEX_KEYWORDS = [
+      "tooling cost", "capex", "capital equipment", "manufacturing setup",
+      "production line", "pilot run cost", "first article cost",
+      "equipment cost", "facility cost",
+    ];
+    const HW_RUNWAY_GENERAL = [
+      "runway", "months of cash", "cash runway", "18 months", "24 months",
+      "fund through", "fund operations", "sufficient capital",
+    ];
+
+    const hasMilestoneData = containsKeywords(combinedSummary, HW_MILESTONE_KEYWORDS);
+    const hasGrantRunway   = containsKeywords(combinedSummary, HW_GRANT_RUNWAY_KEYWORDS);
+    const hasCapex         = containsKeywords(combinedSummary, HW_CAPEX_KEYWORDS);
+    const hasRunwayData    = containsKeywords(combinedSummary, HW_RUNWAY_GENERAL);
+
+    const milestonePts = hasMilestoneData ? 4 : hasFinancials && financialSummary ? 2 : hasFinancials ? 1 : 0;
+    const grantPts     = hasGrantRunway ? 2 : 0;
+    const capexPts     = hasCapex ? 1 : 0;
+    const runwayPts    = hasRunwayData ? 1 : 0;
+    const fundingPts   = fundingAmount ? 1 : 0;
+
+    const subScores: FactorSubScore[] = [
+      { label: "Milestone-linked development funding plan", pts: milestonePts, max: 4 },
+      { label: "NRE / grant runway extension",             pts: grantPts,     max: 2 },
+      { label: "CapEx / tooling cost breakdown",           pts: capexPts,     max: 1 },
+      { label: "Cash runway stated",                       pts: runwayPts,    max: 1 },
+      { label: "Funding target declared",                  pts: fundingPts,   max: 1 },
+    ];
+
+    let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 8);
+    if (!hasFinancials) pts = Math.min(pts, 3);
+    if (hasFinancials && !financialSummary) pts = Math.min(pts, 5);
+
+    const evidence: FactorEvidence[] = [];
+    evidence.push(hasFinancials
+      ? { icon: "✅", text: financialSummary ? "Financial/cost documentation reviewed" : "Financial documents uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" }
+      : { icon: "❌", text: "Financial statements missing — development cost and runway unknown. Score capped at 3/8.", src: "Document checklist" });
+    if (hasMilestoneData) evidence.push({ icon: "✅", text: "Milestone-linked funding plan documented", src: "AI summaries" });
+    else evidence.push({ icon: "⚠️", text: "No milestone-based funding plan — hardware investors expect funding tied to TRL or development milestones", src: "AI summaries" });
+    if (hasGrantRunway) evidence.push({ icon: "✅", text: "NRE or government grant runway extension documented", src: "AI summaries" });
+    if (hasCapex) evidence.push({ icon: "✅", text: "CapEx or tooling cost breakdown referenced", src: "AI summaries" });
+
+    const flags: FactorFlag[] = [];
+    if (!hasFinancials) flags.push({ severity: "red", label: "No financial statements", detail: "Hardware investors need to see development cost, CapEx plan, and cash runway. Upload financials even for pre-revenue stage." });
+    else if (!hasMilestoneData && !hasRunwayData) flags.push({ severity: "amber", label: "No milestone runway plan", detail: "Structure your raise around hardware development milestones (prototype → pilot → production). Show how the current raise funds through a specific milestone (e.g., first 100 units shipped)." });
+    if (!hasGrantRunway) flags.push({ severity: "amber", label: "No NRE or grant runway", detail: "Customer-funded NRE (non-recurring engineering), SBIR/STTR grants, and DARPA contracts extend runway without dilution. Document any such arrangements." });
+    if (!hasCapex) flags.push({ severity: "amber", label: "No CapEx breakdown", detail: "Include tooling cost, capital equipment, and manufacturing setup cost. Hardware CapEx is a material part of the raise — investors need to understand it." });
+
+    const summaryText = financialSummary ?? bizSummary;
+    const aiSummary = summaryText
+      ? `Hardware burn/runway context: ${summaryText.slice(0, 300)}${summaryText.length > 300 ? "…" : ""}`
+      : hasFinancials || hasBizPlan
+      ? "Financial documents uploaded but AI summaries not yet generated. Score discounted until available."
+      : "No financial documents uploaded. Hardware development cost and CapEx are critical for investors.";
+
+    return { pts, max: 8, rating: rating(pts, 8), aiSummary, subScores, evidence, flags };
+  }
+
+  // ── Cleantech / Climate Tech path ─────────────────────────────────────────
+  if (isCleantech(industry)) {
+    const CT_DEVELOPMENT_KEYWORDS = [
+      "permitting", "interconnection", "grid connection", "development stage",
+      "construction timeline", "epc", "construction cost", "development budget",
+      "project development", "cod", "commercial operation date",
+    ];
+    const CT_INCENTIVE_RUNWAY = [
+      "ira", "inflation reduction act", "itc", "investment tax credit",
+      "ptc", "production tax credit", "doe loan", "loan guarantee",
+      "arpa-e", "grant funded", "government grant", "non-dilutive",
+    ];
+    const CT_PROJECT_FINANCE_KEYWORDS = [
+      "project finance", "tax equity", "debt financing", "construction loan",
+      "ppa revenue", "project revenue", "offtake revenue",
+      "construction financing", "project capital",
+    ];
+    const CT_RUNWAY_GENERAL = [
+      "runway", "months of cash", "cash runway", "bridge", "fund through",
+      "fund to cod", "fund to commercial", "development capital",
+    ];
+
+    const hasDevelopmentPlan = containsKeywords(combinedSummary, CT_DEVELOPMENT_KEYWORDS);
+    const hasIncentiveRunway = containsKeywords(combinedSummary, CT_INCENTIVE_RUNWAY);
+    const hasProjectFinance  = containsKeywords(combinedSummary, CT_PROJECT_FINANCE_KEYWORDS);
+    const hasRunwayData      = containsKeywords(combinedSummary, CT_RUNWAY_GENERAL);
+
+    const devPts     = hasDevelopmentPlan ? 4 : hasFinancials && financialSummary ? 2 : hasFinancials ? 1 : 0;
+    const incentPts  = hasIncentiveRunway ? 2 : 0;
+    const financePts = hasProjectFinance ? 1 : 0;
+    const runwayPts  = hasRunwayData ? 1 : 0;
+    const fundingPts = fundingAmount ? 1 : 0;
+
+    const subScores: FactorSubScore[] = [
+      { label: "Project development timeline and cost plan", pts: devPts,     max: 4 },
+      { label: "Government incentives extend runway (IRA/ITC)", pts: incentPts, max: 2 },
+      { label: "Project finance structure outlined",          pts: financePts, max: 1 },
+      { label: "Cash runway to next milestone stated",        pts: runwayPts,  max: 1 },
+      { label: "Funding target declared",                     pts: fundingPts, max: 1 },
+    ];
+
+    let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 8);
+    if (!hasFinancials) pts = Math.min(pts, 3);
+    if (hasFinancials && !financialSummary) pts = Math.min(pts, 5);
+
+    const evidence: FactorEvidence[] = [];
+    evidence.push(hasFinancials
+      ? { icon: "✅", text: financialSummary ? "Financial/project cost documentation reviewed" : "Financial documents uploaded — AI review pending", src: "FINANCIAL_STATEMENTS" }
+      : { icon: "❌", text: "Financial statements missing — project development cost and runway unknown. Score capped at 3/8.", src: "Document checklist" });
+    if (hasDevelopmentPlan) evidence.push({ icon: "✅", text: "Project development timeline and cost plan referenced", src: "AI summaries" });
+    else evidence.push({ icon: "⚠️", text: "No project development timeline or permitting/interconnection cost plan found", src: "AI summaries" });
+    if (hasIncentiveRunway) evidence.push({ icon: "✅", text: "Government incentives (IRA, ITC, PTC, grants) improve runway economics", src: "AI summaries" });
+    if (hasProjectFinance) evidence.push({ icon: "✅", text: "Project finance structure or construction financing referenced", src: "AI summaries" });
+
+    const flags: FactorFlag[] = [];
+    if (!hasFinancials) flags.push({ severity: "red", label: "No financial statements", detail: "Cleantech investors need to see project development cost, permitting/interconnection timeline, and construction financing plan. Upload financials even in pre-operational stage." });
+    else if (!hasDevelopmentPlan && !hasRunwayData) flags.push({ severity: "amber", label: "No project development plan", detail: "Structure your funding around project development milestones: permitting, interconnection, construction financing, and commercial operation date (COD). Show the capital required to reach each stage." });
+    if (!hasIncentiveRunway) flags.push({ severity: "amber", label: "No government incentives documented", detail: "IRA, ITC/PTC, DOE loan guarantees, and grants materially improve project economics and reduce capital needed. Document applicable incentives — they directly affect investor returns." });
+    if (!hasProjectFinance) flags.push({ severity: "amber", label: "No project finance structure", detail: "Describe your financing plan: equity raise, tax equity, debt, PPA revenue bridge. Cleantech investors want to understand the full capital stack, not just the equity ask." });
+
+    const summaryText = financialSummary ?? bizSummary;
+    const aiSummary = summaryText
+      ? `Cleantech burn/runway context: ${summaryText.slice(0, 300)}${summaryText.length > 300 ? "…" : ""}`
+      : hasFinancials || hasBizPlan
+      ? "Financial documents uploaded but AI summaries not yet generated. Score discounted until available."
+      : "No financial documents uploaded. Project development cost and financing plan are critical for cleantech investors.";
+
+    return { pts, max: 8, rating: rating(pts, 8), aiSummary, subScores, evidence, flags };
+  }
+
   // ── Standard path ──────────────────────────────────────────────────────────
   const BURN_KEYWORDS = ["burn", "runway", "monthly spend", "operating expenses", "cash negative", "cash flow negative", "rate of spend", "monthly cost"];
   const RUNWAY_KEYWORDS = ["runway", "months of cash", "12 months", "18 months", "24 months", "sufficient cash", "fund operations", "extend runway"];
@@ -1257,6 +1926,137 @@ function scoreExitStrategy(
       ? "Exit referenced but not specific to life science context. Add acquisition targets, out-licensing strategy, or comparable precedent transactions."
       : hasPitch || hasBizPlan
       ? "Documents uploaded but no life science exit path found. Add a slide identifying pharma/medtech acquirers and comparable deal economics."
+      : "No documents uploaded. Exit strategy cannot be assessed.";
+
+    return { pts, max: 7, rating: rating(pts, 7), aiSummary, subScores, evidence, flags };
+  }
+
+  // ── Hardware / Deep Tech path ─────────────────────────────────────────────
+  if (isHardware(industry)) {
+    const HW_EXIT_SPECIFIC = [
+      "acquisition", "strategic acquisition", "oem acquisition", "corporate acquisition",
+      "ipo", "trade sale", "buyout", "licensing deal", "ip licensing",
+      "technology licensing", "joint venture", "strategic partnership exit",
+    ];
+    const HW_EXIT_GENERAL = [
+      "exit", "exit strategy", "returns", "investor returns", "path to liquidity",
+      "acquisition target", "strategic buyer", "strategic value",
+    ];
+    const HW_BUYER_KEYWORDS = [
+      "strategic acquirer", "oem", "tier 1", "tier one", "incumbent",
+      "large manufacturer", "defense contractor", "industrial company",
+      "strategic partner", "corporate buyer", "potential acquirer",
+    ];
+    const HW_COMPARABLE_KEYWORDS = [
+      "comparable acquisition", "precedent", "deal value", "acquisition multiple",
+      "hardware acquisition", "exit multiple", "comparable exit", "strategic premium",
+    ];
+
+    const hasSpecificExit   = containsKeywords(combinedSummary, HW_EXIT_SPECIFIC);
+    const hasGeneralExit    = containsKeywords(combinedSummary, HW_EXIT_GENERAL);
+    const hasBuyerStrategy  = containsKeywords(combinedSummary, HW_BUYER_KEYWORDS);
+    const hasComparables    = containsKeywords(combinedSummary, HW_COMPARABLE_KEYWORDS);
+    const hasReturnProj     = containsKeywords(combinedSummary, ["multiple", "irr", "5x", "10x", "exit valuation", "return"]);
+
+    const exitPts       = hasSpecificExit ? 4 : hasGeneralExit ? 2 : 0;
+    const comparablePts = hasComparables ? 2 : hasReturnProj ? 1 : 0;
+    const buyerPts      = hasBuyerStrategy ? 1 : 0;
+
+    const subScores: FactorSubScore[] = [
+      { label: "Exit path stated (acquisition, IP licensing, IPO)", pts: exitPts,       max: 4 },
+      { label: "Comparable acquisitions or return projections",      pts: comparablePts, max: 2 },
+      { label: "Strategic buyers / OEMs identified",                 pts: buyerPts,      max: 1 },
+    ];
+
+    let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 7);
+    if (!hasPitch && !hasBizPlan) pts = 0;
+    else if (!pitchSummary && !bizSummary) pts = Math.min(pts, 1);
+
+    const evidence: FactorEvidence[] = [];
+    if (hasSpecificExit) evidence.push({ icon: "✅", text: "Specific hardware exit path stated (strategic acquisition, OEM deal, IP licensing, or IPO)", src: "AI summaries" });
+    else if (hasGeneralExit) evidence.push({ icon: "⚠️", text: "Exit strategy mentioned but no specific hardware exit path stated", src: "AI summaries" });
+    else evidence.push({ icon: "❌", text: "No exit strategy found — hardware investors need to see the strategic acquisition or licensing path", src: "AI summaries" });
+    if (hasComparables) evidence.push({ icon: "✅", text: "Comparable hardware acquisitions or deal multiples referenced", src: "AI summaries" });
+    if (hasBuyerStrategy) evidence.push({ icon: "✅", text: "Potential strategic buyers or OEM partners identified", src: "AI summaries" });
+
+    const flags: FactorFlag[] = [];
+    if (!hasGeneralExit) flags.push({ severity: "red", label: "No exit strategy", detail: "Hardware investors typically exit via strategic acquisition by OEMs or incumbent manufacturers, IP licensing, or IPO. Add a clear exit strategy identifying likely acquirers." });
+    else if (!hasSpecificExit) flags.push({ severity: "amber", label: "Vague exit strategy", detail: "Name the specific exit path: strategic acquisition (by whom?), IP licensing (to whom?), or IPO. Hardware acquirers are typically large OEMs, defense primes, or industrial companies." });
+    if (!hasComparables) flags.push({ severity: "amber", label: "No comparable transactions", detail: "Cite 2–3 hardware acquisitions in your category. Include acquisition multiple (revenue or EBITDA) to anchor investor return expectations." });
+    if (!hasBuyerStrategy) flags.push({ severity: "amber", label: "No strategic buyers identified", detail: "Name the likely acquirers. For hardware, these are typically Tier 1 OEMs, large industrials, or defense contractors who would benefit from your technology." });
+
+    const aiSummary = hasSpecificExit
+      ? `Hardware exit strategy found: ${combinedSummary.slice(0, 250)}…`
+      : hasGeneralExit
+      ? "Exit referenced. Add a specific path — name the OEM/strategic acquirer category and cite comparable hardware acquisitions."
+      : hasPitch || hasBizPlan
+      ? "Documents uploaded but no hardware exit path found. Add a slide naming likely acquirers and comparable deal values."
+      : "No documents uploaded. Exit strategy cannot be assessed.";
+
+    return { pts, max: 7, rating: rating(pts, 7), aiSummary, subScores, evidence, flags };
+  }
+
+  // ── Cleantech / Climate Tech path ─────────────────────────────────────────
+  if (isCleantech(industry)) {
+    const CT_EXIT_SPECIFIC = [
+      "asset sale", "project sale", "project acquisition", "portfolio sale",
+      "acquisition", "strategic acquisition", "utility acquisition", "ipo",
+      "infrastructure fund", "infrastructure investor", "yieldco", "trade sale",
+    ];
+    const CT_EXIT_GENERAL = [
+      "exit", "exit strategy", "returns", "investor returns", "path to liquidity",
+      "asset monetization", "project monetization", "exit plan",
+    ];
+    const CT_BUYER_KEYWORDS = [
+      "utility buyer", "infrastructure fund", "pension fund", "sovereign wealth",
+      "corporate buyer", "energy company", "strategic acquirer", "asset buyer",
+      "clean energy fund", "climate fund", "project buyer",
+    ];
+    const CT_COMPARABLE_KEYWORDS = [
+      "comparable project", "precedent transaction", "project sale", "asset deal",
+      "comparable acquisition", "infrastructure multiple", "ev/ebitda",
+      "$/mw", "deal value", "project value", "comparable exit",
+    ];
+
+    const hasSpecificExit  = containsKeywords(combinedSummary, CT_EXIT_SPECIFIC);
+    const hasGeneralExit   = containsKeywords(combinedSummary, CT_EXIT_GENERAL);
+    const hasBuyerStrategy = containsKeywords(combinedSummary, CT_BUYER_KEYWORDS);
+    const hasComparables   = containsKeywords(combinedSummary, CT_COMPARABLE_KEYWORDS);
+    const hasReturnProj    = containsKeywords(combinedSummary, ["irr", "multiple", "return", "5x", "10x", "project irr", "equity irr"]);
+
+    const exitPts       = hasSpecificExit ? 4 : hasGeneralExit ? 2 : 0;
+    const comparablePts = hasComparables ? 2 : hasReturnProj ? 1 : 0;
+    const buyerPts      = hasBuyerStrategy ? 1 : 0;
+
+    const subScores: FactorSubScore[] = [
+      { label: "Exit path stated (asset sale, acquisition, IPO)", pts: exitPts,       max: 4 },
+      { label: "Comparable transactions or return projections",   pts: comparablePts, max: 2 },
+      { label: "Infrastructure buyers / strategic acquirers identified", pts: buyerPts, max: 1 },
+    ];
+
+    let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 7);
+    if (!hasPitch && !hasBizPlan) pts = 0;
+    else if (!pitchSummary && !bizSummary) pts = Math.min(pts, 1);
+
+    const evidence: FactorEvidence[] = [];
+    if (hasSpecificExit) evidence.push({ icon: "✅", text: "Specific cleantech exit path stated (project sale, asset acquisition, IPO, infrastructure fund)", src: "AI summaries" });
+    else if (hasGeneralExit) evidence.push({ icon: "⚠️", text: "Exit strategy mentioned but no specific cleantech exit path stated", src: "AI summaries" });
+    else evidence.push({ icon: "❌", text: "No exit strategy found — cleantech investors need to see an asset sale, acquisition, or project monetization path", src: "AI summaries" });
+    if (hasComparables) evidence.push({ icon: "✅", text: "Comparable clean energy project transactions or IRR projections referenced", src: "AI summaries" });
+    if (hasBuyerStrategy) evidence.push({ icon: "✅", text: "Infrastructure funds, utilities, or strategic buyers identified as exit counterparties", src: "AI summaries" });
+
+    const flags: FactorFlag[] = [];
+    if (!hasGeneralExit) flags.push({ severity: "red", label: "No exit strategy", detail: "Cleantech investors typically exit via project/asset sale to infrastructure funds, utility acquisition, or IPO. Add a clear exit strategy with the likely buyer category." });
+    else if (!hasSpecificExit) flags.push({ severity: "amber", label: "Vague exit strategy", detail: "Name the specific exit path: project sale (to infrastructure funds, pension funds?), corporate acquisition (by which utilities or energy companies?), or IPO. Be specific." });
+    if (!hasComparables) flags.push({ severity: "amber", label: "No comparable transactions", detail: "Cite 2–3 comparable clean energy project sales or acquisitions. Include $/MW or project IRR multiples to anchor return expectations for infrastructure investors." });
+    if (!hasBuyerStrategy) flags.push({ severity: "amber", label: "No buyers identified", detail: "Name the likely acquirers or investors: infrastructure funds (Brookfield, BlackRock, Macquarie), utilities, or corporate energy buyers. This tells investors the exit is realistic." });
+
+    const aiSummary = hasSpecificExit
+      ? `Cleantech exit strategy found: ${combinedSummary.slice(0, 250)}…`
+      : hasGeneralExit
+      ? "Exit referenced. Add specific cleantech exit path — name buyer category (infrastructure fund, utility, corporate) and cite comparable project transactions."
+      : hasPitch || hasBizPlan
+      ? "Documents uploaded but no cleantech exit path found. Add a slide naming likely asset buyers and comparable deal values."
       : "No documents uploaded. Exit strategy cannot be assessed.";
 
     return { pts, max: 7, rating: rating(pts, 7), aiSummary, subScores, evidence, flags };
