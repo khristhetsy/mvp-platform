@@ -182,7 +182,7 @@ export function getEnvironmentStatusSummary() {
         trimEnv("TOKEN_ENCRYPTION_SECRET"),
     ),
     cronConfigured: Boolean(trimEnv("CRON_SECRET")),
-    openAiConfigured: Boolean(trimEnv("OPENAI_API_KEY")),
+    claudeConfigured: Boolean(trimEnv("ANTHROPIC_API_KEY")),
     envValidationOk: validation.ok,
     missingEnvKeys: validation.missing,
     warnings: validation.warnings,

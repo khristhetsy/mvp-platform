@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isClaudeConfigured } from "@/lib/claude";
 import { requireApiProfile } from "@/lib/api/auth";
 import {
   buildCatalogCoachContext,
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
       reply: result.reply,
       disclaimer: result.disclaimer ?? COACH_DISCLAIMER,
       mode: result.mode,
-      openAiAvailable: Boolean(process.env.OPENAI_API_KEY?.trim()),
+      claudeAvailable: isClaudeConfigured(),
     });
   }
 
@@ -102,6 +103,6 @@ export async function POST(request: Request) {
     reply: result.reply,
     disclaimer: result.disclaimer ?? COACH_DISCLAIMER,
     mode: result.mode,
-    openAiAvailable: Boolean(process.env.OPENAI_API_KEY?.trim()),
+    claudeAvailable: isClaudeConfigured(),
   });
 }

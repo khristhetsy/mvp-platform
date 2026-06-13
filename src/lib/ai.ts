@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { claudeComplete, isClaudeConfigured, CLAUDE_SONNET } from "./claude";
 import { requiredDocumentTypes } from "./mock-data";
 
 type AnalysisInput = {
@@ -14,7 +14,7 @@ export type GeneratedDiligenceReport = {
   missingDocuments: string[];
   recommendedNextSteps: string[];
   readinessScore: number | null;
-  generatedBy: "unconfigured" | "openai";
+  generatedBy: "unconfigured" | "claude";
   isDemo: boolean;
 };
 
@@ -28,10 +28,10 @@ export async function generateDiligenceReport(input: AnalysisInput): Promise<Gen
       ? [`Upload missing documents: ${missingDocuments.join(", ")}`]
       : ["Upload required diligence documents for review."];
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!isClaudeConfigured()) {
     return {
       executiveSummary:
-        "AI diligence generation is not configured in this environment. This output is not a completed diligence report. Configure OPENAI_API_KEY or request staff-assisted review.",
+        "AI diligence generation is not configured. Add ANTHROPIC_API_KEY to your environment variables or request staff-assisted review.",
       sections: [],
       riskFlags: [],
       missingDocuments,
@@ -42,16 +42,8 @@ export async function generateDiligenceReport(input: AnalysisInput): Promise<Gen
     };
   }
 
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-  const response = await client.responses.create({
-    model: "gpt-4.1-mini",
-    input: [
-      {
-        role: "system",
-        content:
-          "You produce conservative startup due diligence summaries. Do not provide investment advice or guarantee funding. Do not invent numeric readiness scores.",
-      },
+  const text = await claudeComplete(
+    [
       {
         role: "user",
         content: JSON.stringify({
@@ -62,16 +54,22 @@ export async function generateDiligenceReport(input: AnalysisInput): Promise<Gen
         }),
       },
     ],
-  });
+    {
+      model:     CLAUDE_SONNET,
+      maxTokens: 1024,
+      system:
+        "You produce conservative startup due diligence summaries. Do not provide investment advice or guarantee funding. Do not invent numeric readiness scores.",
+    }
+  );
 
   return {
-    executiveSummary: response.output_text,
+    executiveSummary: text,
     sections: [],
     riskFlags: [],
     missingDocuments,
     recommendedNextSteps: documentNextSteps,
     readinessScore: null,
-    generatedBy: "openai",
+    generatedBy: "claude",
     isDemo: false,
   };
 }

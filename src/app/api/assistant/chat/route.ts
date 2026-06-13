@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isClaudeConfigured } from "@/lib/claude";
 import { requireApiProfile } from "@/lib/api/auth";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { suggestedPromptChips } from "@/lib/assistant/assistant-actions";
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
       mode,
       provider: "fallback",
       suggestedPrompts: suggestedPromptChips(ctx),
-      openAiAvailable: Boolean(process.env.OPENAI_API_KEY?.trim()),
+      claudeAvailable: isClaudeConfigured(),
     });
   }
 
@@ -112,6 +113,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ...response,
-    openAiAvailable: Boolean(process.env.OPENAI_API_KEY?.trim()),
+    claudeAvailable: isClaudeConfigured(),
   });
 }

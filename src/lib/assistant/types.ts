@@ -63,5 +63,5 @@ export type AssistantChatResponse = {
   safetyNotes: string[];
   contextUsed: string[];
   mode: AssistantMode;
-  provider: "openai" | "fallback" | "guardrail" | "learning";
+  provider: "claude" | "fallback" | "guardrail" | "learning";
 };

@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { claudeComplete, isClaudeConfigured, CLAUDE_HAIKU } from "@/lib/claude";
 import {
   COACH_DISCLAIMER,
   isQuizAnswerRequest,
@@ -39,7 +39,7 @@ export type PersonalCoachContext = {
 export type PersonalCoachResult = {
   reply: string;
   disclaimer: string;
-  mode: "openai" | "fallback" | "guardrail";
+  mode: "claude" | "fallback" | "guardrail";
 };
 
 export function buildCatalogCoachContext(input: {
@@ -254,20 +254,17 @@ export function buildFallbackCoachReply(input: {
   return `This course (${input.ctx.courseTitle}) covers: ${input.ctx.whatYouWillLearn.slice(0, 3).join("; ")}. Ask about a specific topic — pitch deck, data room, financials, governance, or your next lesson.`;
 }
 
-async function callOpenAICoach(ctx: PersonalCoachContext, message: string, history: CoachMessage[]) {
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const input = [
-    { role: "system" as const, content: buildSystemPrompt(ctx) },
-    ...history.slice(-6).map((m) => ({ role: m.role, content: m.content })),
+async function callClaudeCoach(ctx: PersonalCoachContext, message: string, history: CoachMessage[]) {
+  const messages: Array<{ role: "user" | "assistant"; content: string }> = [
+    ...history.slice(-6).map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
     { role: "user" as const, content: message },
   ];
 
-  const response = await client.responses.create({
-    model: "gpt-4.1-mini",
-    input,
+  return claudeComplete(messages, {
+    model: CLAUDE_HAIKU,
+    maxTokens: 1024,
+    system: buildSystemPrompt(ctx),
   });
-
-  return response.output_text?.trim() ?? "";
 }
 
 export async function runPersonalCoach(input: {
@@ -299,8 +296,7 @@ export async function runPersonalCoach(input: {
     };
   }
 
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) {
+  if (!isClaudeConfigured()) {
     return {
       reply: buildFallbackCoachReply({ message: input.message, ctx: input.ctx }),
       disclaimer,
@@ -309,9 +305,9 @@ export async function runPersonalCoach(input: {
   }
 
   try {
-    const raw = await callOpenAICoach(input.ctx, input.message, input.history ?? []);
+    const raw = await callClaudeCoach(input.ctx, input.message, input.history ?? []);
     const reply = sanitizeCoachReply(raw || buildFallbackCoachReply({ message: input.message, ctx: input.ctx }), input.ctx);
-    return { reply, disclaimer, mode: "openai" };
+    return { reply, disclaimer, mode: "claude" };
   } catch {
     return {
       reply: buildFallbackCoachReply({ message: input.message, ctx: input.ctx }),

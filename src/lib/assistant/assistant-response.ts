@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { claudeComplete, isClaudeConfigured, CLAUDE_HAIKU } from "@/lib/claude";
 import {
   buildCatalogCoachContext,
   buildPersonalCoachContext,
@@ -139,21 +139,20 @@ function buildFallbackAnswer(message: string, ctx: SanitizedAssistantContext): s
   return `${highlights} Use operational queues, compliance, and reports modules for structured admin review.`;
 }
 
-async function callOpenAIAssistant(
+async function callClaudeAssistant(
   ctx: SanitizedAssistantContext,
   message: string,
   history: Array<{ role: "user" | "assistant"; content: string }>,
 ) {
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const response = await client.responses.create({
-    model: "gpt-4.1-mini",
-    input: [
-      { role: "system", content: buildAssistantSystemPrompt(ctx) },
-      ...history.map((entry) => ({ role: entry.role, content: entry.content })),
-      { role: "user", content: message },
-    ],
+  const messages = [
+    ...history.map((entry) => ({ role: entry.role, content: entry.content })),
+    { role: "user" as const, content: message },
+  ];
+  return claudeComplete(messages, {
+    model: CLAUDE_HAIKU,
+    maxTokens: 1024,
+    system: buildAssistantSystemPrompt(ctx),
   });
-  return response.output_text?.trim() ?? "";
 }
 
 async function runLearningMode(
@@ -211,7 +210,7 @@ async function runLearningMode(
     safetyNotes: [COACH_DISCLAIMER, ...ASSISTANT_SAFETY_NOTES],
     contextUsed: ["learningProgress"],
     mode: "learning",
-    provider: coachResult.mode === "openai" ? "openai" : coachResult.mode === "guardrail" ? "guardrail" : "learning",
+    provider: coachResult.mode === "claude" ? "claude" : coachResult.mode === "guardrail" ? "guardrail" : "learning",
   };
 }
 
@@ -438,13 +437,12 @@ export async function runAssistantChat(input: {
   }
   let provider: AssistantChatResponse["provider"] = "fallback";
 
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (apiKey) {
+  if (isClaudeConfigured()) {
     try {
-      const raw = await callOpenAIAssistant({ ...ctx, mode: resolvedMode }, message, history);
+      const raw = await callClaudeAssistant({ ...ctx, mode: resolvedMode }, message, history);
       if (raw) {
         answer = raw;
-        provider = "openai";
+        provider = "claude";
       }
     } catch {
       answer = buildFallbackAnswer(message, ctx);

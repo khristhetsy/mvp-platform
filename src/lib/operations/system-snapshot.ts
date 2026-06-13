@@ -171,7 +171,7 @@ export async function buildOperationalSnapshot(): Promise<OperationalSystemSnaps
       serviceRoleConfigured: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
       databaseUrlConfigured: Boolean(process.env.DATABASE_URL?.trim()),
       googleOAuthConfigured: isGoogleOAuthConfigured(),
-      openAiConfigured: Boolean(process.env.OPENAI_API_KEY?.trim()),
+      claudeConfigured: Boolean(process.env.ANTHROPIC_API_KEY?.trim()),
       siteUrl: process.env.NEXT_PUBLIC_SITE_URL?.trim() ?? null,
       googleRedirectHost: hostFromUrl(process.env.GOOGLE_REDIRECT_URI),
     },

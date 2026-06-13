@@ -1,3 +1,4 @@
+import { isClaudeConfigured } from "@/lib/claude";
 import type { Course, CourseLesson } from "@/lib/learning/course-types";
 import { generateScriptWithOpenAI, type LessonScriptInput } from "@/lib/learning/video/providers/openai-script";
 import type { VideoScriptBundle, VideoSlide } from "@/lib/learning/video/video-types";
@@ -117,7 +118,7 @@ export async function generateLessonVideoScript(
 ): Promise<VideoScriptBundle> {
   const input = buildLessonScriptInput(course, lesson);
 
-  if (process.env.OPENAI_API_KEY?.trim()) {
+  if (isClaudeConfigured()) {
     try {
       const bundle = await generateScriptWithOpenAI(input);
       return sanitizeVideoBundle(bundle);

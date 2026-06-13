@@ -109,7 +109,7 @@ async function loadOperationalSnapshotSafe(): Promise<OperationalSystemSnapshot>
         serviceRoleConfigured: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
         databaseUrlConfigured: Boolean(process.env.DATABASE_URL?.trim()),
         googleOAuthConfigured: isGoogleOAuthConfigured(),
-        openAiConfigured: Boolean(process.env.OPENAI_API_KEY?.trim()),
+        claudeConfigured: Boolean(process.env.ANTHROPIC_API_KEY?.trim()),
         siteUrl: null,
         googleRedirectHost: null,
       },

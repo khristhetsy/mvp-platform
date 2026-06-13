@@ -1,6 +1,6 @@
 export type VideoRenderStatus = "draft" | "script_ready" | "rendering" | "ready" | "failed";
 
-export type VideoProvider = "manual" | "openai" | "remotion" | "elevenlabs" | "heygen";
+export type VideoProvider = "manual" | "openai" | "claude" | "remotion" | "elevenlabs" | "heygen";
 
 export type VideoSlide = {
   id: string;

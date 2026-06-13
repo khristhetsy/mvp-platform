@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
 import { requireStaffApi } from "@/lib/api/admin";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { claudeComplete, isClaudeConfigured, CLAUDE_HAIKU } from "@/lib/claude";
 
 function fallbackSummary(input: {
   roomTitle: string;
@@ -44,23 +44,14 @@ export async function GET(_: Request, { params }: Readonly<{ params: Promise<{ r
   const unresolvedQuestions = (questions ?? []).filter((q) => q.status !== "resolved").length;
   const unresolvedDocs = (docs ?? []).filter((d) => d.status !== "fulfilled" && d.status !== "cancelled").length;
 
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) {
+  if (!isClaudeConfigured()) {
     return NextResponse.json({
       summary: fallbackSummary({ roomTitle: room.title, unresolvedQuestions, unresolvedDocs }),
       mode: "fallback",
     });
   }
 
-  const client = new OpenAI({ apiKey });
   const prompt = [
-    "You summarize a private deal-room diligence workspace for admin oversight.",
-    "STRICT RULES:",
-    "- No legal, tax, securities, or investment advice.",
-    "- No funding promises or commitment language.",
-    "- Do not invent facts not present in inputs.",
-    "- Focus on unresolved concerns, themes, and next steps.",
-    "",
     `Room: ${room.title}`,
     "",
     "Questions:",
@@ -70,18 +61,15 @@ export async function GET(_: Request, { params }: Readonly<{ params: Promise<{ r
     ...(docs ?? []).map((d) => `- [${d.request_type}] (${d.status}) ${d.custom_request ?? ""}${d.founder_note ? ` | note: ${d.founder_note}` : ""}`),
   ].join("\n");
 
-  const completion = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      { role: "system", content: "You produce concise compliance-safe summaries." },
-      { role: "user", content: prompt },
-    ],
-    temperature: 0.2,
-    max_tokens: 350,
-  });
+  const summary = await claudeComplete(
+    [{ role: "user", content: prompt }],
+    {
+      model:       CLAUDE_HAIKU,
+      maxTokens:   350,
+      temperature: 0.2,
+      system:      "You summarize a private deal-room diligence workspace for admin oversight. RULES: No legal, tax, securities, or investment advice. No funding promises. Do not invent facts. Focus on unresolved concerns, themes, and next steps. Be concise.",
+    }
+  ).catch(() => fallbackSummary({ roomTitle: room.title, unresolvedQuestions, unresolvedDocs }));
 
-  const summary = completion.choices[0]?.message?.content?.trim() || fallbackSummary({ roomTitle: room.title, unresolvedQuestions, unresolvedDocs });
-
-  return NextResponse.json({ summary, mode: "openai" });
+  return NextResponse.json({ summary, mode: "claude" });
 }
-

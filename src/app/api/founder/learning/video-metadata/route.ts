@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isClaudeConfigured } from "@/lib/claude";
 import { requireApiProfile } from "@/lib/api/auth";
 import { findCourseLesson, getCourseBySlug } from "@/lib/learning/courses";
 import {
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
         providers: {
           remotion: isRemotionConfigured(),
           heygen: isHeyGenConfigured(),
-          openai: Boolean(process.env.OPENAI_API_KEY?.trim()),
+          claude: isClaudeConfigured(),
         },
       });
     }

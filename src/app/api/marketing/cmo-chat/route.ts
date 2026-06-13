@@ -1,16 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { marketingDb } from "@/lib/marketing/db";
-import OpenAI from "openai";
+import { claudeComplete, isClaudeConfigured, CLAUDE_HAIKU } from "@/lib/claude";
 
 export const dynamic = "force-dynamic";
-
-// Lazy getter — initializes only at request time, never at build/module load.
-function getOpenAI() {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
-  return new OpenAI({ apiKey });
-}
 
 const CMO_SYSTEM_PROMPT = `You are a world-class B2B SaaS Chief Marketing Officer (CMO) advising CapitalOS — an investor-readiness and deal management platform for family offices, VCs, and angel investors.
 
@@ -57,6 +50,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Message required" }, { status: 400 });
   }
 
+  if (!isClaudeConfigured()) {
+    return NextResponse.json(
+      { error: "AI is not configured. Add ANTHROPIC_API_KEY to Vercel environment variables." },
+      { status: 503 }
+    );
+  }
+
   // Fetch fresh 30-day metrics if not provided
   let liveMetrics = metrics;
   if (!liveMetrics) {
@@ -98,16 +98,14 @@ export async function POST(request: Request) {
     ? `\n\nLive metrics (last 30 days):\n- Sent: ${liveMetrics.sent}\n- Delivered: ${liveMetrics.delivered}\n- Opened: ${liveMetrics.opened} (${liveMetrics.openRate}%)\n- Clicked: ${liveMetrics.clicked} (${liveMetrics.clickRate}%)\n- Replied: ${liveMetrics.replied}\n- Bounced: ${liveMetrics.bounced}\n- Unsubscribed: ${liveMetrics.unsubscribed} (${liveMetrics.unsubRate}%)\n- Deliverability: ${liveMetrics.deliverability}%`
     : "";
 
-  const completion = await getOpenAI().chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      { role: "system", content: CMO_SYSTEM_PROMPT + metricsContext },
-      { role: "user", content: message },
-    ],
-    max_tokens: 400,
-    temperature: 0.7,
-  });
+  const reply = await claudeComplete(
+    [{ role: "user", content: message }],
+    {
+      model:     CLAUDE_HAIKU,
+      maxTokens: 400,
+      system:    CMO_SYSTEM_PROMPT + metricsContext,
+    }
+  );
 
-  const reply = completion.choices[0]?.message?.content ?? "Sorry, I couldn't generate a response.";
   return NextResponse.json({ reply });
 }

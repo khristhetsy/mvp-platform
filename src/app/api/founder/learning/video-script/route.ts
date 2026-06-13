@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isClaudeConfigured } from "@/lib/claude";
 import { requireApiProfile } from "@/lib/api/auth";
 import { findCourseLesson, getCourseBySlug } from "@/lib/learning/courses";
 import { generateLessonVideoScript } from "@/lib/learning/video/generate-script";
@@ -62,8 +63,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       asset,
       disclaimer: VIDEO_LESSON_DISCLAIMER,
-      openAiUsed: bundle.provider === "openai",
-      openAiConfigured: Boolean(process.env.OPENAI_API_KEY?.trim()),
+      claudeUsed: bundle.provider === "claude",
+      claudeConfigured: isClaudeConfigured(),
     });
   } catch (error) {
     const existing = await getLessonVideoAsset({
