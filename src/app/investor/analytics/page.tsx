@@ -1,21 +1,18 @@
 import Link from "next/link";
 import { AnalyticsBreakdownPanel } from "@/components/AnalyticsBreakdownPanel";
 import { AppShell } from "@/components/AppShell";
-import { InvestorActivityTimeline } from "@/components/InvestorActivityTimeline";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { loadInvestorAnalytics } from "@/lib/analytics/investor-analytics";
-import { loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function InvestorAnalyticsPage() {
   const { profile, investorId } = await requireInvestorWorkspaceSession();
-  const [analytics, { crmActivity }] = await Promise.all([
+  const [analytics] = await Promise.all([
     loadInvestorAnalytics(investorId, 30),
-    loadInvestorWorkspacePageData(investorId, 30),
   ]);
 
   return (
@@ -119,10 +116,6 @@ export default async function InvestorAnalyticsPage() {
               View portfolio
             </Link>
           </WorkspacePanel>
-        </section>
-
-        <section className="mt-8">
-          <InvestorActivityTimeline activities={crmActivity.rows} error={crmActivity.error} />
         </section>
 
         <p className="mt-6 text-sm text-slate-600">
