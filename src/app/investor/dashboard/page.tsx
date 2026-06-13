@@ -9,6 +9,7 @@ import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 import { InvestorMetricCards } from "@/components/investor/InvestorMetricCards";
 import { InvestorDashboardCondensedGrid } from "@/components/investor/InvestorDashboardCondensedGrid";
+import { TaskReminderToast } from "@/components/investor/TaskReminderToast";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,8 @@ export default async function InvestorDashboardPage() {
           viewAllHref="/investor/actions"
         />
       </div>
+
+      <TaskReminderToast />
 
       <section className="mt-2">
         <InvestorDashboardCondensedGrid
