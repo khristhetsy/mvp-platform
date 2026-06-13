@@ -158,6 +158,7 @@ export const investorWorkspaceNav: WorkspaceNavItem[] = [
       { href: "/investor/opportunities", label: "Opportunities" },
       { href: "/investor/watchlist", label: "Watchlist" },
       { href: "/investor/interest-pipeline", label: "Interest Pipeline" },
+      { href: "/investor/activity", label: "Recent Activity" },
     ],
   },
   {
