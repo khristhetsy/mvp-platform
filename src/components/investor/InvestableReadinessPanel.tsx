@@ -891,7 +891,7 @@ function RecommendationCard({ rec, index }: { rec: Recommendation; index: number
                 {rec.courses.map((c) => (
                   <a
                     key={c.slug}
-                    href={`/founder/learning/${c.slug}`}
+                    href={`/investor/learning/${c.slug}`}
                     className="flex items-center gap-2 text-xs font-medium text-emerald-800 hover:text-emerald-600 transition-colors group"
                   >
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white text-[9px] font-bold group-hover:bg-emerald-500 transition-colors">
