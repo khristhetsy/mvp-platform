@@ -9,7 +9,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
   const auth = await requireApiProfile(["investor"]);
-  if ("error" in auth) return auth.error;
+  if ("error" in auth) return auth.error as NextResponse;
 
   const { id } = await params;
   try {
@@ -27,7 +27,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
   const auth = await requireApiProfile(["investor"]);
-  if ("error" in auth) return auth.error;
+  if ("error" in auth) return auth.error as NextResponse;
 
   const { id } = await params;
   try {
