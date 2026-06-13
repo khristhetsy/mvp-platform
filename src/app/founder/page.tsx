@@ -26,7 +26,6 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
-import { TaskWidget } from "@/components/TaskWidget";
 
 export const dynamic = "force-dynamic";
 
@@ -256,10 +255,6 @@ export default async function FounderDashboardPage() {
         </WorkspacePanel>
       </section>
 
-      {/* My Tasks widget */}
-      <section className="mt-5">
-        <TaskWidget />
-      </section>
       </FounderFeatureGate>
     </FounderAppShell>
   );
