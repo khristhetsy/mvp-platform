@@ -25,7 +25,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   const adminEmail =
     process.env.ADMIN_SUPPORT_EMAIL?.trim() ??
     process.env.TRANSACTIONAL_EMAIL_FROM?.replace(/.*<(.+)>/, "$1").trim() ??
-    "support@myicfos.com";
+    "info@myicfos.com";
 
   const apiKey = process.env.RESEND_API_KEY?.trim();
 
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.TRANSACTIONAL_EMAIL_FROM?.trim() ?? "CapitalOS <notifications@mail.myicfos.com>",
+        from: process.env.TRANSACTIONAL_EMAIL_FROM?.trim() ?? "CapitalOS <info@myicfos.com>",
         to: [adminEmail],
         subject: `Live agent requested — ${founderName}`,
         text: [
