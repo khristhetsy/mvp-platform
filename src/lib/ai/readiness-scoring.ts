@@ -369,6 +369,7 @@ function scoreMarketEvidence(
 function scoreIpMoat(
   has: (t: string) => boolean,
   getSummary: (t: string) => string | null,
+  industry: string | null,
 ): FactorScore {
   const hasPitch = has("PITCH_DECK");
   const hasBizPlan = has("BUSINESS_PLAN");
@@ -377,58 +378,109 @@ function scoreIpMoat(
   const bizSummary = getSummary("BUSINESS_PLAN");
   const incorpSummary = getSummary("INCORPORATION_DOCS");
 
-  const IP_HARD = ["patent", "trademark", "trade secret", "copyright", "intellectual property", "ip assignment", "exclusive license"];
-  const IP_SOFT = ["proprietary", "proprietary technology", "unique technology", "licensed"];
-  const MOAT_KEYWORDS = ["moat", "defensible", "network effect", "switching cost", "data advantage", "barrier to entry", "first mover", "exclusive"];
-
   const combinedSummary = [pitchSummary, bizSummary, incorpSummary].filter(Boolean).join(" ");
 
-  const hasHardIp = containsKeywords(combinedSummary, IP_HARD);
-  const hasSoftIp = containsKeywords(combinedSummary, IP_SOFT);
-  const hasMoat = containsKeywords(combinedSummary, MOAT_KEYWORDS);
-  const ipMatchCount = countKeywordMatches(combinedSummary, [...IP_HARD, ...IP_SOFT]);
+  // Determine if this is a software/digital industry where patents are not the norm
+  const SOFTWARE_INDUSTRIES = ["saas", "software", "fintech", "edtech", "marketplace", "platform", "app", "digital", "insurtech", "proptech"];
+  const PATENT_INDUSTRIES = ["medtech", "healthtech", "biotech", "hardware", "manufacturing", "cleantech", "agritech", "pharmaceutical", "medical device", "energy"];
+  const isSoftwareIndustry = industry ? SOFTWARE_INDUSTRIES.some((s) => industry.toLowerCase().includes(s)) : false;
+  const isPatentIndustry = industry ? PATENT_INDUSTRIES.some((s) => industry.toLowerCase().includes(s)) : false;
 
-  // IP evidence in summaries: 0–6
-  const ipPts = hasHardIp ? (ipMatchCount >= 2 ? 6 : 5) : hasSoftIp ? 3 : 0;
-  // Moat / defensibility: 0–3
-  const moatPts = hasMoat ? 3 : hasSoftIp ? 1 : 0;
-  // Formal IP documentation (incorporation docs referencing IP): 0–1
-  const formalPts = hasIncorp && containsKeywords(incorpSummary, [...IP_HARD, "assignment"]) ? 1 : 0;
+  // Formal IP: patents, trademarks, trade secrets — expected in hardware/biotech, optional in SaaS
+  const IP_FORMAL = ["patent", "trademark", "trade secret", "copyright", "ip assignment", "exclusive license", "intellectual property"];
+  // Software/digital moat signals — primary for SaaS
+  const IP_SOFTWARE = ["proprietary", "proprietary technology", "proprietary algorithm", "proprietary data", "codebase", "trade secret", "licensed technology"];
+  // Moat / defensibility signals — relevant for all industries
+  const MOAT_ALL = ["moat", "defensible", "network effect", "switching cost", "data advantage", "barrier to entry", "first mover", "exclusive", "lock-in", "retention", "sticky", "churn"];
+
+  const hasFormalIp = containsKeywords(combinedSummary, IP_FORMAL);
+  const hasSoftwareIp = containsKeywords(combinedSummary, IP_SOFTWARE);
+  const hasMoat = containsKeywords(combinedSummary, MOAT_ALL);
+  const formalMatchCount = countKeywordMatches(combinedSummary, IP_FORMAL);
+
+  let ipPts: number;
+  let moatPts: number;
+  let formalPts: number;
+  let ipLabel: string;
+  let ipMax: number;
+
+  if (isSoftwareIndustry) {
+    // SaaS/software: proprietary tech + moat signals are primary; patents not required
+    ipLabel = "Proprietary tech / data assets";
+    ipMax = 6;
+    ipPts = hasFormalIp ? 6 : hasSoftwareIp ? 5 : 0; // proprietary code = full credit
+    moatPts = hasMoat ? 3 : hasSoftwareIp ? 1 : 0;
+    formalPts = hasIncorp && containsKeywords(incorpSummary, [...IP_FORMAL, "assignment"]) ? 1 : 0;
+  } else if (isPatentIndustry) {
+    // Hardware/biotech: formal IP (patents) is critical, not optional
+    ipLabel = "Patents / formal IP protection";
+    ipMax = 6;
+    ipPts = hasFormalIp ? (formalMatchCount >= 2 ? 6 : 5) : hasSoftwareIp ? 2 : 0;
+    moatPts = hasMoat ? 3 : hasSoftwareIp ? 1 : 0;
+    formalPts = hasIncorp && containsKeywords(incorpSummary, [...IP_FORMAL, "assignment"]) ? 1 : 0;
+  } else {
+    // Unknown industry: give credit for either formal IP or proprietary signals
+    ipLabel = "IP evidence in documents";
+    ipMax = 6;
+    ipPts = hasFormalIp ? (formalMatchCount >= 2 ? 6 : 5) : hasSoftwareIp ? 4 : 0;
+    moatPts = hasMoat ? 3 : hasSoftwareIp ? 1 : 0;
+    formalPts = hasIncorp && containsKeywords(incorpSummary, [...IP_FORMAL, "assignment"]) ? 1 : 0;
+  }
 
   const subScores: FactorSubScore[] = [
-    { label: "IP evidence in documents", pts: ipPts, max: 6 },
+    { label: ipLabel, pts: ipPts, max: ipMax },
     { label: "Competitive moat articulated", pts: moatPts, max: 3 },
-    { label: "Formal IP documentation", pts: formalPts, max: 1 },
+    { label: "IP / ownership documented legally", pts: formalPts, max: 1 },
   ];
 
   let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 10);
-  // No docs at all = 0; docs but no summaries = max 2
   if (!hasPitch && !hasBizPlan) pts = Math.min(pts, 1);
   else if (!pitchSummary && !bizSummary) pts = Math.min(pts, 2);
 
   const evidence: FactorEvidence[] = [];
-  if (hasHardIp) evidence.push({ icon: "✅", text: `Strong IP evidence: patents, trademarks, or trade secrets referenced`, src: "AI summaries" });
-  else if (hasSoftIp) evidence.push({ icon: "⚠️", text: "Proprietary technology mentioned — no formal IP (patents/trademarks) detected", src: "AI summaries" });
-  else evidence.push({ icon: "❌", text: "No IP or proprietary technology referenced in documents", src: "AI summaries" });
+  if (isSoftwareIndustry) {
+    // Software-specific evidence messaging
+    if (hasFormalIp) evidence.push({ icon: "✅", text: "Formal IP (patents/trademarks) referenced — strong for a software company", src: "AI summaries" });
+    else if (hasSoftwareIp) evidence.push({ icon: "✅", text: "Proprietary technology or data assets referenced — appropriate for SaaS/software", src: "AI summaries" });
+    else evidence.push({ icon: "⚠️", text: "No proprietary technology or data assets mentioned — describe what makes the software defensible", src: "AI summaries" });
+  } else if (isPatentIndustry) {
+    if (hasFormalIp) evidence.push({ icon: "✅", text: "Patents or formal IP protection referenced — critical for this industry", src: "AI summaries" });
+    else evidence.push({ icon: "❌", text: "No patents or formal IP found — expected for hardware/biotech/medtech companies", src: "AI summaries" });
+  } else {
+    if (hasFormalIp) evidence.push({ icon: "✅", text: "Formal IP (patents, trademarks, trade secrets) referenced", src: "AI summaries" });
+    else if (hasSoftwareIp) evidence.push({ icon: "⚠️", text: "Proprietary technology mentioned — formal IP not confirmed", src: "AI summaries" });
+    else evidence.push({ icon: "❌", text: "No IP or proprietary assets referenced in documents", src: "AI summaries" });
+  }
 
   if (hasMoat) evidence.push({ icon: "✅", text: "Competitive moat or defensibility strategy articulated", src: "AI summaries" });
-  else evidence.push({ icon: "⚠️", text: "No moat or defensibility strategy detected — investors will probe this heavily", src: "AI summaries" });
+  else evidence.push({ icon: "⚠️", text: "No moat or defensibility strategy detected — investors will probe this", src: "AI summaries" });
 
-  if (formalPts) evidence.push({ icon: "✅", text: "IP assignment or formal IP referenced in legal documents", src: "INCORPORATION_DOCS" });
+  if (formalPts) evidence.push({ icon: "✅", text: "IP ownership documented in legal/incorporation docs", src: "INCORPORATION_DOCS" });
   if (!hasPitch && !hasBizPlan) evidence.push({ icon: "❌", text: "No documents uploaded to assess IP", src: "Document checklist" });
 
   const flags: FactorFlag[] = [];
-  if (!hasHardIp && !hasSoftIp) flags.push({ severity: "red", label: "No IP evidence", detail: "No patents, trademarks, or proprietary technology referenced. Investors need to know the business is defensible." });
-  else if (!hasHardIp) flags.push({ severity: "amber", label: "Weak IP", detail: "Proprietary language detected but no formal IP (patents, trademarks). File IP protection to strengthen this factor." });
-  if (!hasMoat) flags.push({ severity: "amber", label: "No moat articulated", detail: "No clear competitive moat described. Include network effects, switching costs, or data advantages in your pitch." });
+  if (isSoftwareIndustry) {
+    if (!hasSoftwareIp && !hasFormalIp) flags.push({ severity: "red", label: "No proprietary assets described", detail: "SaaS investors look for proprietary algorithms, data assets, or strong switching costs — not necessarily patents. Describe what makes your software hard to replicate." });
+    else if (!hasMoat) flags.push({ severity: "amber", label: "No moat articulated", detail: "For SaaS, moat signals include: network effects, switching costs, data lock-in, integrations, or low churn. Include these in your pitch." });
+  } else if (isPatentIndustry) {
+    if (!hasFormalIp) flags.push({ severity: "red", label: "No patents or formal IP", detail: "Formal IP protection (patents, trademarks) is critical for hardware/biotech/medtech companies. Investors will not fund without it." });
+    else if (!hasMoat) flags.push({ severity: "amber", label: "No moat articulated", detail: "Patents alone are not enough. Describe how IP creates a defensible market position." });
+  } else {
+    if (!hasFormalIp && !hasSoftwareIp) flags.push({ severity: "red", label: "No IP evidence", detail: "No IP or proprietary assets referenced. Describe what makes the business defensible." });
+    if (!hasMoat) flags.push({ severity: "amber", label: "No moat articulated", detail: "Include network effects, switching costs, exclusive partnerships, or data advantages in your pitch." });
+  }
 
-  const aiSummary = hasHardIp
-    ? `Formal IP evidence found in documents. ${hasMoat ? "Competitive moat is articulated." : "No moat strategy described."}`
-    : hasSoftIp
-    ? "Proprietary technology referenced but no formal IP protection documented. Consider patenting or trademarking key innovations."
+  const industryNote = isSoftwareIndustry
+    ? " (Software/SaaS industry — proprietary tech and switching costs assessed instead of patents.)"
+    : isPatentIndustry
+    ? " (Patent-critical industry — formal IP protection is required.)"
+    : "";
+
+  const aiSummary = (hasFormalIp || hasSoftwareIp)
+    ? `IP/moat context: ${(pitchSummary ?? bizSummary ?? "").slice(0, 250)}…${industryNote}`
     : hasPitch || hasBizPlan
-    ? "Documents uploaded but no IP or proprietary technology references found in summaries. This is a significant investor concern — add IP context to your pitch."
-    : "No documents uploaded. IP and competitive moat cannot be assessed.";
+    ? `Documents uploaded but no IP or moat signals found in summaries.${industryNote} Add defensibility context to your pitch.`
+    : `No documents uploaded. IP and competitive moat cannot be assessed.${industryNote}`;
 
   return { pts, max: 10, rating: rating(pts, 10), aiSummary, subScores, evidence, flags };
 }
@@ -697,7 +749,7 @@ export async function scoreCompanyReadiness(input: {
     founder_team:       scoreFounderTeam(has, getSummary, input.companyName, input.industry),
     governance_legal:   scoreGovernanceLegal(has, getSummary, input.industry),
     market_evidence:    scoreMarketEvidence(has, getSummary, input.industry),
-    ip_moat:            scoreIpMoat(has, getSummary),
+    ip_moat:            scoreIpMoat(has, getSummary, input.industry),
     burn_runway:        scoreBurnRunway(has, getSummary, input.fundingAmount, input.revenueStage),
     pitch_quality:      scorePitchQuality(has, getSummary),
     deal_structure:     scoreDealStructure(has, getSummary, input.fundingAmount, input.revenueStage),
