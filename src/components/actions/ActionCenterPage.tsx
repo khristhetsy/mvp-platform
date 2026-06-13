@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { ActionAnalyticsStrip } from "@/components/actions/ActionAnalyticsStrip";
+import { InvestorActionAnalyticsCards } from "@/components/actions/InvestorActionAnalyticsCards";
 import { ActionBulkToolbar } from "@/components/actions/ActionBulkToolbar";
 import { ActionCard } from "@/components/actions/ActionCard";
 import { ActionDetailDrawer } from "@/components/actions/ActionDetailDrawer";
@@ -148,7 +149,13 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
         description={description ?? "Cross-workflow operational actions with lifecycle tracking."}
       />
 
-      {analytics ? <ActionAnalyticsStrip analytics={analytics} role={role} /> : null}
+      {analytics ? (
+        role === "investor" ? (
+          <InvestorActionAnalyticsCards analytics={analytics} actions={actions} />
+        ) : (
+          <ActionAnalyticsStrip analytics={analytics} role={role} />
+        )
+      ) : null}
 
       {scheduled ? <ActionCenterScheduledStrip scheduled={scheduled} /> : null}
 
@@ -189,6 +196,7 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
         onQueryChange={setQuery}
         searchPlaceholder="Search actions, entities, or categories…"
         showViewMode={false}
+        showDensity={false}
         showSavedViews={false}
         sticky
       />
