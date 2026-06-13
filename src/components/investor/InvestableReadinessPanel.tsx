@@ -26,9 +26,11 @@ type Props = {
 
 const FACTOR_COLORS: Record<string, string> = {
   revenue_cashflow:   "#378ADD",
-  founder_integrity:  "#1D9E75",
+  founder_team:       "#1D9E75",
   governance_legal:   "#E8922A",
   market_evidence:    "#378ADD",
+  ip_moat:            "#8B5CF6",
+  burn_runway:        "#EF4444",
   pitch_quality:      "#6366F1",
   deal_structure:     "#A78BFA",
   industry_alignment: "#1D9E75",
@@ -40,6 +42,7 @@ const FACTOR_TAGS: Record<string, { bg: string; text: string }> = {
   Team:         { bg: "#EAF3DE", text: "#3B6D11" },
   Legal:        { bg: "#FAEEDA", text: "#854F0B" },
   Market:       { bg: "#E6F1FB", text: "#185FA5" },
+  Moat:         { bg: "#F5F3FF", text: "#5B21B6" },
   Documents:    { bg: "#EEF0FF", text: "#4338CA" },
   "Deal Terms": { bg: "#F3F0FE", text: "#5B2EAA" },
   Fit:          { bg: "#EAF3DE", text: "#3B6D11" },
