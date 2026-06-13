@@ -4,6 +4,7 @@ import type { MarketingContact, MarketingList } from "./types";
 export async function getContacts(opts?: {
   search?: string;
   list_id?: string;
+  tag?: string;
   limit?: number;
   offset?: number;
 }): Promise<{ contacts: MarketingContact[]; total: number }> {
@@ -28,6 +29,10 @@ export async function getContacts(opts?: {
     const ids = (members ?? []).map((m: { contact_id: string }) => m.contact_id);
     if (ids.length === 0) return { contacts: [], total: 0 };
     query = query.in("id", ids);
+  }
+
+  if (opts?.tag) {
+    query = query.contains("tags", [opts.tag]);
   }
 
   query = query.range(opts?.offset ?? 0, (opts?.offset ?? 0) + (opts?.limit ?? 50) - 1);

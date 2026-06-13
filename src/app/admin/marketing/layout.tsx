@@ -4,12 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV = [
-  { label: "Dashboard", href: "/admin/marketing" },
-  { label: "Contacts",  href: "/admin/marketing/contacts" },
-  { label: "Campaigns", href: "/admin/marketing/campaigns" },
-  { label: "Sequences", href: "/admin/marketing/sequences" },
-  { label: "Templates", href: "/admin/marketing/templates" },
-  { label: "Analytics", href: "/admin/marketing/analytics" },
+  { label: "Dashboard",    href: "/admin/marketing" },
+  { label: "Contacts",     href: "/admin/marketing/contacts" },
+  { label: "Lists",        href: "/admin/marketing/lists" },
+  { label: "Campaigns",    href: "/admin/marketing/campaigns" },
+  { label: "Sequences",    href: "/admin/marketing/sequences" },
+  { label: "Templates",    href: "/admin/marketing/templates" },
+  { label: "Analytics",    href: "/admin/marketing/analytics" },
+  { label: "Suppressions", href: "/admin/marketing/suppressions" },
 ];
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
