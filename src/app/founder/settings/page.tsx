@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { GoogleCalendarConnectionCard } from "@/components/GoogleCalendarConnectionCard";
 import { FounderSubscriptionSettingsCard } from "@/components/SubscriptionPanel";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
@@ -28,22 +29,50 @@ export default async function FounderSettingsPage() {
       profileName={profile.full_name ?? profile.email ?? "Founder"}
       profileSubtitle={company?.company_name ?? "Your company"}
     >
-      <section className="cap-surface-card p-6 lg:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Company settings</h1>
-        <p className="mt-3 text-sm leading-7 text-slate-600">Update your company profile details used across the platform.</p>
+      <PageHeader
+        eyebrow="Founder workspace"
+        title="Company settings"
+        description="Manage your company profile, billing, integrations, and feedback."
+      />
 
-        <CompanySettingsForm company={company} />
-        {company ? (
-          <div className="mt-8">
-            <CollaborationDiscussionPanel
-              entityType="company"
-              entityId={company.id}
-              title="Company discussion"
-            />
-          </div>
-        ) : null}
-        <FounderSubscriptionSettingsCard subscription={subscription} requestedPlan={requestedPlan} />
-        <div className="mt-8">
+      {/* Section: Company profile */}
+      <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
+          <h2 className="text-sm font-semibold text-slate-900">🏢 Company profile</h2>
+          <p className="mt-0.5 text-xs text-slate-500">Edit your public listing and company details</p>
+        </div>
+        <div className="p-6">
+          <CompanySettingsForm company={company} />
+          {company ? (
+            <div className="mt-8">
+              <CollaborationDiscussionPanel
+                entityType="company"
+                entityId={company.id}
+                title="Company discussion"
+              />
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      {/* Section: Billing & subscription */}
+      <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
+          <h2 className="text-sm font-semibold text-slate-900">💳 Billing &amp; subscription</h2>
+          <p className="mt-0.5 text-xs text-slate-500">Plan, payment method, and usage</p>
+        </div>
+        <div className="p-6">
+          <FounderSubscriptionSettingsCard subscription={subscription} requestedPlan={requestedPlan} />
+        </div>
+      </section>
+
+      {/* Section: Integrations */}
+      <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
+          <h2 className="text-sm font-semibold text-slate-900">🔗 Integrations</h2>
+          <p className="mt-0.5 text-xs text-slate-500">Connected accounts and tools</p>
+        </div>
+        <div className="p-6 space-y-6">
           <DraftEmailPanel
             role="founder"
             entityType={company ? "company" : undefined}
@@ -51,11 +80,21 @@ export default async function FounderSettingsPage() {
             defaultTemplate="founder_investor_intro_followup"
             googleConnected={googleStatus.connected}
           />
+          <Suspense fallback={<p className="text-sm text-slate-500">Loading Google connection…</p>}>
+            <GoogleCalendarConnectionCard status={googleStatus} returnPath="/founder/settings" />
+          </Suspense>
         </div>
-        <Suspense fallback={<p className="mt-8 text-sm text-slate-500">Loading Google connection…</p>}>
-          <GoogleCalendarConnectionCard status={googleStatus} returnPath="/founder/settings" />
-        </Suspense>
-        <BetaFeedbackForm />
+      </section>
+
+      {/* Section: Feedback */}
+      <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
+          <h2 className="text-sm font-semibold text-slate-900">💬 Feedback</h2>
+          <p className="mt-0.5 text-xs text-slate-500">Help us improve CapitalOS</p>
+        </div>
+        <div className="p-6">
+          <BetaFeedbackForm />
+        </div>
       </section>
     </FounderAppShell>
   );

@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { FounderSpvStatusPanel } from "@/components/FounderSpvStatusPanel";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { formatError } from "@/lib/errors/format-error";
 import { listFounderChecklistSummary } from "@/lib/spv/checklist";
 import { listFounderClosingSummaries } from "@/lib/spv/closing-reviews";
@@ -91,15 +93,11 @@ export default async function FounderSpvsPage() {
       profileSubtitle={company?.company_name ?? "Your company"}
     >
       <FounderFeatureGate featureKey="capital_raise">
-        <div className="mb-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">
-            Founder Workspace
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">SPVs</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Track your SPV opportunities, investor participation, and closing readiness.
-          </p>
-        </div>
+        <PageHeader
+          eyebrow="Founder workspace"
+          title="SPVs"
+          description="Special Purpose Vehicles created by CapitalOS admin to pool investor capital."
+        />
 
         {companyError ? (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
@@ -112,14 +110,65 @@ export default async function FounderSpvsPage() {
             No company profile found. Complete onboarding to access SPV features.
           </div>
         ) : (
-          <FounderSpvStatusPanel
-            opportunities={spvOpportunities}
-            participations={spvParticipations}
-            checklistSummaryBySpv={spvChecklistSummaryBySpv ?? {}}
-            packageSummaryBySpv={spvPackageSummaryBySpv ?? {}}
-            closingSummaryBySpv={spvClosingSummaryBySpv ?? {}}
-            executionSummaryBySpv={spvExecutionSummaryBySpv}
-          />
+          <>
+            {/* Stat boxes */}
+            <section className="mb-6 grid gap-3 sm:grid-cols-3">
+              {[
+                {
+                  label: "Active SPVs",
+                  value: spvOpportunities.filter((s) => !["closed", "canceled"].includes(s.status)).length,
+                },
+                {
+                  label: "Total target",
+                  value: spvOpportunities.length > 0
+                    ? `$${(spvOpportunities.reduce((sum, s) => sum + (s.target_amount ?? 0), 0) / 1000).toFixed(0)}K`
+                    : "—",
+                },
+                {
+                  label: "Investors across SPVs",
+                  value: spvParticipations.filter((p) => !["declined", "canceled"].includes(p.status)).length,
+                },
+              ].map((stat) => (
+                <div key={stat.label} className="rounded-2xl border border-slate-200 bg-white px-5 py-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{stat.label}</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-950">{stat.value}</p>
+                </div>
+              ))}
+            </section>
+
+            {/* Explainer */}
+            <section className="mb-6 rounded-2xl border border-indigo-100 bg-indigo-50 p-5">
+              <h2 className="text-sm font-semibold text-indigo-900">What is an SPV?</h2>
+              <p className="mt-1.5 text-xs leading-5 text-indigo-700">
+                A Special Purpose Vehicle (SPV) is a legal entity created by CapitalOS admin to pool multiple investors
+                into a single line on your cap table. When an SPV is formed for your company, you&apos;ll see it here
+                with the total capital, investor count, and closing status.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link
+                  href="/founder/capital-raise"
+                  className="rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:border-indigo-400"
+                >
+                  → View capital raise
+                </Link>
+                <Link
+                  href="/founder/learning"
+                  className="rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:border-indigo-400"
+                >
+                  → Learn about SPVs
+                </Link>
+              </div>
+            </section>
+
+            <FounderSpvStatusPanel
+              opportunities={spvOpportunities}
+              participations={spvParticipations}
+              checklistSummaryBySpv={spvChecklistSummaryBySpv ?? {}}
+              packageSummaryBySpv={spvPackageSummaryBySpv ?? {}}
+              closingSummaryBySpv={spvClosingSummaryBySpv ?? {}}
+              executionSummaryBySpv={spvExecutionSummaryBySpv}
+            />
+          </>
         )}
       </FounderFeatureGate>
     </FounderAppShell>

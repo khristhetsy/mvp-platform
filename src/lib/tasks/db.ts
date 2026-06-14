@@ -53,6 +53,7 @@ export async function createTask(
       context_type:  input.context_type ?? "personal",
       context_id:    input.context_id ?? null,
       task_category: input.task_category ?? null,
+      task_type:     input.task_type ?? null,
     })
     .select("*")
     .single();
@@ -74,6 +75,7 @@ export async function updateTask(id: string, input: UpdateTaskInput): Promise<Ta
       ...(input.priority                 !== undefined && { priority:                 input.priority }),
       ...(input.due_date                !== undefined && { due_date:                input.due_date }),
       ...(input.task_category           !== undefined && { task_category:           input.task_category }),
+      ...(input.task_type               !== undefined && { task_type:               input.task_type }),
       ...(input.google_calendar_event_id !== undefined && { google_calendar_event_id: input.google_calendar_event_id }),
     })
     .eq("id", id)

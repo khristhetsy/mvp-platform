@@ -2,7 +2,7 @@
 
 import { Suspense } from "react";
 import { useState, useEffect, useCallback } from "react";
-import type { Task, TaskStatus, TaskPriority, InternalUser } from "@/lib/tasks/types";
+import type { Task, TaskStatus, TaskPriority, TaskType, InternalUser } from "@/lib/tasks/types";
 import type { GoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { GoogleCalendarConnectionCard } from "@/components/GoogleCalendarConnectionCard";
 
@@ -126,31 +126,42 @@ type EditForm = {
 
 /* ─── main component ────────────────────────────────────────────── */
 
+const TASK_TYPES: { value: TaskType; label: string; icon: string; pill: string; text: string }[] = [
+  { value: "learning",          label: "Learning",          icon: "📚", pill: "bg-[#0C2340]", text: "text-[#AFA9EC]" },
+  { value: "operations",        label: "Operations",        icon: "⚙️", pill: "bg-[#1E3A5F]", text: "text-[#93C5FD]" },
+  { value: "investor_outreach", label: "Investor outreach", icon: "🤝", pill: "bg-[#2D1B5E]", text: "text-[#C4B5FD]" },
+  { value: "deal_diligence",    label: "Deal & diligence",  icon: "🔍", pill: "bg-[#1A2E1A]", text: "text-[#86EFAC]" },
+];
+
 export function InvestorTasksPageClient({
   googleConnected = false,
   googleStatus,
   calendarReturnPath = "/investor/tasks",
   internalUsers = [],
   currentUserId = "",
+  showTaskTypeFilter = false,
 }: Readonly<{
   googleConnected?: boolean;
   googleStatus?: GoogleConnectionStatus;
   calendarReturnPath?: "/investor/tasks" | "/founder/tasks";
   internalUsers?: InternalUser[];
   currentUserId?: string;
+  showTaskTypeFilter?: boolean;
 }>) {
 
-  const [tasks, setTasks]     = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [view, setView]       = useState<ViewMode>("list");
-  const [tab, setTab]         = useState<TabKey>("active");
-  const [query, setQuery]     = useState("");
+  const [tasks, setTasks]         = useState<Task[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [view, setView]           = useState<ViewMode>("list");
+  const [tab, setTab]             = useState<TabKey>("active");
+  const [query, setQuery]         = useState("");
+  const [taskTypeFilter, setTaskTypeFilter] = useState<TaskType | null>(null);
 
   /* quick-add */
   const [showForm, setShowForm]         = useState(false);
   const [newTitle, setNewTitle]         = useState("");
   const [newPriority, setNewPriority]   = useState<TaskPriority>("medium");
   const [newDueDate, setNewDueDate]     = useState("");
+  const [newTaskType, setNewTaskType]   = useState<TaskType | null>(null);
   const [saving, setSaving]             = useState(false);
 
   /* inline edit */
@@ -185,10 +196,11 @@ export function InvestorTasksPageClient({
         priority: newPriority,
         due_date: newDueDate || null,
         context_type: "personal",
+        task_type: newTaskType ?? undefined,
       }),
     });
     setSaving(false);
-    setNewTitle(""); setNewPriority("medium"); setNewDueDate(""); setShowForm(false);
+    setNewTitle(""); setNewPriority("medium"); setNewDueDate(""); setNewTaskType(null); setShowForm(false);
     void load();
   }
 
@@ -262,7 +274,8 @@ export function InvestorTasksPageClient({
     tab === "done"   ? doneTasks   : tasks;
 
   const visible = tabFiltered
-    .filter((t) => !query.trim() || t.title.toLowerCase().includes(query.toLowerCase()));
+    .filter((t) => !query.trim() || t.title.toLowerCase().includes(query.toLowerCase()))
+    .filter((t) => !taskTypeFilter || t.task_type === taskTypeFilter);
 
   /* ── shared toolbar + filters ── */
   const toolbar = (
@@ -281,6 +294,37 @@ export function InvestorTasksPageClient({
           </div>
         ))}
       </div>
+
+      {/* task type filter chips — founder only */}
+      {showTaskTypeFilter && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setTaskTypeFilter(null)}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+              taskTypeFilter === null
+                ? "bg-slate-900 text-white"
+                : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+            }`}
+          >
+            All tasks
+          </button>
+          {TASK_TYPES.map((tt) => (
+            <button
+              key={tt.value}
+              type="button"
+              onClick={() => setTaskTypeFilter(taskTypeFilter === tt.value ? null : tt.value)}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                taskTypeFilter === tt.value
+                  ? `${tt.pill} ${tt.text}`
+                  : "border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+              }`}
+            >
+              {tt.icon} {tt.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* toolbar row */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -339,6 +383,15 @@ export function InvestorTasksPageClient({
               <option value="medium">Medium</option>
               <option value="low">Low</option>
             </select>
+            {showTaskTypeFilter && (
+              <select value={newTaskType ?? ""} onChange={(e) => setNewTaskType((e.target.value as TaskType) || null)}
+                className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 focus:outline-none">
+                <option value="">No type</option>
+                {TASK_TYPES.map((tt) => (
+                  <option key={tt.value} value={tt.value}>{tt.icon} {tt.label}</option>
+                ))}
+              </select>
+            )}
             <input type="date" value={newDueDate} onChange={(e) => setNewDueDate(e.target.value)}
               className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 focus:outline-none" />
             <button type="button" onClick={() => void handleCreate()} disabled={saving || !newTitle.trim()}

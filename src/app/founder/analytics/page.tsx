@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AnalyticsBreakdownPanel } from "@/components/AnalyticsBreakdownPanel";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
-import { MetricCard } from "@/components/MetricCard";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { loadFounderAnalytics } from "@/lib/analytics/founder-analytics";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
@@ -29,14 +29,11 @@ export default async function FounderAnalyticsPage() {
       profileSubtitle={company?.company_name ?? "Your company"}
     >
       <FounderFeatureGate featureKey="analytics">
-        <div className="mb-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Founder Workspace</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Analytics</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Command center snapshot from your company profile, readiness, outreach, and investor engagement. Current
-            values only — no external analytics tracking.
-          </p>
-        </div>
+        <PageHeader
+          eyebrow="Founder workspace"
+          title="Analytics"
+          description="Overview of your readiness, outreach, funding, and learning progress. Current snapshot — no external tracking."
+        />
 
         {!analytics ? (
           <WorkspacePanel title="Company required" subtitle="Complete setup to view analytics">
@@ -49,73 +46,97 @@ export default async function FounderAnalyticsPage() {
           </WorkspacePanel>
         ) : (
           <>
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <MetricCard
-                label="Onboarding progress"
-                value={`${analytics.onboardingPercent}%`}
-                detail={
-                  analytics.onboardingCompletedAt
+            <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                {
+                  label: "Onboarding progress",
+                  value: `${analytics.onboardingPercent}%`,
+                  detail: analytics.onboardingCompletedAt
                     ? `Completed ${new Date(analytics.onboardingCompletedAt).toLocaleDateString("en-US")}`
-                    : "Current snapshot"
-                }
-                accent="indigo"
-                href="/founder/onboarding"
-              />
-              <MetricCard
-                label="Readiness score"
-                value={analytics.readinessScore != null ? String(analytics.readinessScore) : "—"}
-                detail="Latest diligence report"
-                accent="violet"
-                href="/founder/readiness"
-              />
-              <MetricCard
-                label="Private contacts"
-                value={String(analytics.privateContactCount)}
-                detail="Founder CRM contacts"
-                accent="blue"
-                href="/founder/investors"
-              />
-              <MetricCard
-                label="Investor pledges"
-                value={analytics.pledgeTotalDisplay}
-                detail={`${analytics.pledgeInvestorCount} investors · platform activity`}
-                accent="slate"
-                href="/founder/investors"
-              />
+                    : "Current snapshot",
+                  href: "/founder/onboarding",
+                  linkText: "Go to onboarding →",
+                },
+                {
+                  label: "Readiness score",
+                  value: analytics.readinessScore != null ? `${analytics.readinessScore}` : "—",
+                  detail: "Latest diligence report",
+                  href: "/founder/readiness",
+                  linkText: "Go to readiness →",
+                },
+                {
+                  label: "Private contacts",
+                  value: String(analytics.privateContactCount),
+                  detail: "Founder CRM contacts",
+                  href: "/founder/investors",
+                  linkText: "View contacts →",
+                },
+                {
+                  label: "Investor pledges",
+                  value: analytics.pledgeTotalDisplay,
+                  detail: `${analytics.pledgeInvestorCount} investors · platform activity`,
+                  href: "/founder/investors",
+                  linkText: "See pledges →",
+                },
+              ].map((card) => (
+                <Link
+                  key={card.label}
+                  href={card.href}
+                  className="block rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-indigo-300 hover:shadow-sm"
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{card.label}</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-950">{card.value}</p>
+                  <p className="mt-1 text-xs text-slate-500">{card.detail}</p>
+                  <p className="mt-3 text-xs font-semibold text-indigo-700">{card.linkText}</p>
+                </Link>
+              ))}
             </section>
 
-            <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <MetricCard
-                label="Remediation active"
-                value={String(analytics.remediation.active)}
-                detail={`${analytics.remediation.completed} completed · ${analytics.remediation.open} open`}
-                accent="slate"
-                href="/founder/readiness"
-              />
-              <MetricCard
-                label="Learning progress"
-                value={`${analytics.learningPercent}%`}
-                detail={`${analytics.learningModulesCompleted}/${analytics.learningModulesPublished} modules completed`}
-                accent="indigo"
-                href="/founder/learning"
-              />
-              <MetricCard
-                label="Message threads"
-                value={String(analytics.messageThreadCount)}
-                detail={`${analytics.meetingsScheduled} meetings scheduled`}
-                accent="blue"
-                href="/founder/messages"
-              />
-              <MetricCard
-                label="Queued outreach"
-                value={String(analytics.queuedMessageCount)}
-                detail={`${analytics.campaignDraftCount} draft · ${analytics.campaignQueuedCount} queued campaigns`}
-                accent="violet"
-                href="/founder/capital-raise"
-              />
+            <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                {
+                  label: "Remediation active",
+                  value: String(analytics.remediation.active),
+                  detail: `${analytics.remediation.completed} completed · ${analytics.remediation.open} open`,
+                  href: "/founder/readiness",
+                  linkText: "View tasks →",
+                },
+                {
+                  label: "Learning progress",
+                  value: `${analytics.learningPercent}%`,
+                  detail: `${analytics.learningModulesCompleted}/${analytics.learningModulesPublished} modules`,
+                  href: "/founder/learning",
+                  linkText: "Continue →",
+                },
+                {
+                  label: "Message threads",
+                  value: String(analytics.messageThreadCount),
+                  detail: `${analytics.meetingsScheduled} meetings scheduled`,
+                  href: "/founder/messages",
+                  linkText: "Open inbox →",
+                },
+                {
+                  label: "Queued outreach",
+                  value: String(analytics.queuedMessageCount),
+                  detail: `${analytics.campaignDraftCount} draft · ${analytics.campaignQueuedCount} queued`,
+                  href: "/founder/capital-raise",
+                  linkText: "View queue →",
+                },
+              ].map((card) => (
+                <Link
+                  key={card.label}
+                  href={card.href}
+                  className="block rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-indigo-300 hover:shadow-sm"
+                >
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{card.label}</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-950">{card.value}</p>
+                  <p className="mt-1 text-xs text-slate-500">{card.detail}</p>
+                  <p className="mt-3 text-xs font-semibold text-indigo-700">{card.linkText}</p>
+                </Link>
+              ))}
             </section>
 
-            <section className="mt-8 grid gap-6 xl:grid-cols-2">
+            <section className="mt-6 grid gap-6 xl:grid-cols-2">
               <AnalyticsBreakdownPanel
                 title="Outreach pipeline"
                 subtitle="By status (current snapshot)"

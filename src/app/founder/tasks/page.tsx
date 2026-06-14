@@ -33,6 +33,7 @@ export default async function FounderTasksPage() {
         calendarReturnPath="/founder/tasks"
         internalUsers={internalUsers}
         currentUserId={profile.id}
+        showTaskTypeFilter
       />
     </FounderAppShell>
   );

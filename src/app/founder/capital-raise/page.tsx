@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
-import { MetricCard } from "@/components/MetricCard";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { formatError } from "@/lib/errors/format-error";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listFounderCompanyUpdates } from "@/lib/company-updates/company-updates";
@@ -126,13 +127,11 @@ export default async function FounderCapitalRaisePage() {
       profileSubtitle={company?.company_name ?? "Your company"}
     >
       <FounderFeatureGate featureKey="capital_raise">
-      <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Founder Workspace</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Capital Raise</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Track indicative interest, pledge totals, and marketplace raise status.
-        </p>
-      </div>
+        <PageHeader
+          eyebrow="Founder workspace"
+          title="Capital raise"
+          description="Track indicative interest, pledge totals, and marketplace raise status."
+        />
 
       {companyError ? (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
@@ -152,28 +151,46 @@ export default async function FounderCapitalRaisePage() {
         </WorkspacePanel>
       ) : (
         <>
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <MetricCard
-              label="Indicative Interest"
-              value={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
-              detail={`From ${pledgeSummary.investorCount} ${pledgeSummary.investorCount === 1 ? "investor" : "investors"}`}
-              accent="indigo"
+          <section className="grid gap-3 md:grid-cols-3">
+            <Link
               href="/founder/investors"
-            />
-            <MetricCard
-              label="Raise Status"
-              value={raiseStatus}
-              detail={company.is_published ? "Live on marketplace" : "Not yet published"}
-              accent="violet"
+              className="group block rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-indigo-300 hover:shadow-sm"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Indicative interest</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">
+                {formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                From {pledgeSummary.investorCount} {pledgeSummary.investorCount === 1 ? "investor" : "investors"}
+              </p>
+              <p className="mt-3 text-xs font-semibold text-indigo-700">View investors →</p>
+            </Link>
+            <Link
               href="/founder/capital-raise"
-            />
-            <MetricCard
-              label="Funding Target"
-              value={company.funding_amount ? formatPledgeTotal(Number(company.funding_amount)) : "TBD"}
-              detail="Company funding goal"
-              accent="blue"
+              className="group block rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-indigo-300 hover:shadow-sm"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Raise status</p>
+              <p className={`mt-2 text-2xl font-semibold ${company.is_published ? "text-emerald-700" : "text-slate-950"}`}>
+                {raiseStatus}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                {company.is_published ? "Live on marketplace" : "Not yet published"}
+              </p>
+              <p className={`mt-3 text-xs font-semibold ${company.is_published ? "text-emerald-700" : "text-indigo-700"}`}>
+                {company.is_published ? "Fully live" : "Publish listing →"}
+              </p>
+            </Link>
+            <Link
               href="/founder/settings"
-            />
+              className="group block rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-indigo-300 hover:shadow-sm"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Funding target</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">
+                {company.funding_amount ? formatPledgeTotal(Number(company.funding_amount)) : "TBD"}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">Company funding goal</p>
+              <p className="mt-3 text-xs font-semibold text-indigo-700">Update in settings →</p>
+            </Link>
           </section>
 
           <section className="mt-8 grid gap-6 xl:grid-cols-2">

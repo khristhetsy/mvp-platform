@@ -2,6 +2,7 @@ export type TaskStatus   = "todo" | "in_progress" | "done" | "cancelled";
 export type TaskPriority = "low" | "medium" | "high";
 export type TaskContext  = "personal" | "company" | "deal" | "internal";
 export type TaskCategory = "marketing" | "ir_dept" | "admin_dept" | "sales_dept";
+export type TaskType     = "learning" | "operations" | "investor_outreach" | "deal_diligence";
 
 export interface Task {
   id:                      string;
@@ -15,6 +16,7 @@ export interface Task {
   context_type:            TaskContext | null;
   context_id:              string | null;
   task_category:           TaskCategory | null;
+  task_type:               TaskType | null;
   google_calendar_event_id: string | null;
   created_at:              string;
   updated_at:              string;
@@ -29,6 +31,7 @@ export interface CreateTaskInput {
   context_type?: TaskContext;
   context_id?:   string;
   task_category?: TaskCategory | null;
+  task_type?:     TaskType | null;
 }
 
 export interface UpdateTaskInput {
@@ -39,6 +42,7 @@ export interface UpdateTaskInput {
   priority?:                 TaskPriority;
   due_date?:                 string | null;
   task_category?:            TaskCategory | null;
+  task_type?:                TaskType | null;
   google_calendar_event_id?: string | null;
 }
 
