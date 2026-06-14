@@ -7,9 +7,12 @@ import {
   cancelCalendarEvent,
 } from "@/lib/integrations/google-calendar";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import type { Task } from "@/lib/tasks/types";
 
-async function getTask(id: string, userId: string) {
-  const admin = createServiceRoleClient();
+async function getTask(id: string, userId: string): Promise<Task | null> {
+  // Cast to any — generated types don't yet include google_calendar_event_id
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin = createServiceRoleClient() as any;
   const { data, error } = await admin
     .from("tasks")
     .select("*")
@@ -17,7 +20,7 @@ async function getTask(id: string, userId: string) {
     .or(`created_by.eq.${userId},assigned_to.eq.${userId}`)
     .maybeSingle();
   if (error || !data) return null;
-  return data;
+  return data as Task;
 }
 
 /** POST /api/tasks/[id]/calendar — sync task to Google Calendar as an all-day event */
