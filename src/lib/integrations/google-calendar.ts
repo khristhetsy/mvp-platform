@@ -151,6 +151,48 @@ export async function updateCalendarEvent(
   };
 }
 
+/**
+ * Create an all-day calendar event (for tasks — no specific time, just a date).
+ * Google Calendar uses exclusive end dates, so end = date + 1 day.
+ */
+export async function createAllDayCalendarEvent(
+  input: { title: string; date: string; notes?: string | null },
+  accessToken: string,
+): Promise<{ eventId: string }> {
+  if (!isGoogleCalendarConfigured()) {
+    throw new Error("Google Calendar integration is not configured.");
+  }
+
+  const endDate = new Date(input.date);
+  endDate.setDate(endDate.getDate() + 1);
+  const endDateStr = endDate.toISOString().slice(0, 10);
+
+  const body = {
+    summary: input.title,
+    description: input.notes ?? undefined,
+    start: { date: input.date },
+    end: { date: endDateStr },
+    reminders: { useDefault: true },
+  };
+
+  const response = await fetch(CALENDAR_EVENTS_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const payload = (await response.json().catch(() => null)) as GoogleCalendarEventResponse | null;
+
+  if (!response.ok || !payload?.id) {
+    throw new Error(payload?.error?.message ?? "Unable to create Google Calendar event.");
+  }
+
+  return { eventId: payload.id };
+}
+
 export async function cancelCalendarEvent(eventId: string, accessToken: string): Promise<void> {
   const url = `${CALENDAR_EVENTS_URL}/${encodeURIComponent(eventId)}?sendUpdates=all`;
 

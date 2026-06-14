@@ -3,18 +3,19 @@ export type TaskPriority = "low" | "medium" | "high";
 export type TaskContext  = "personal" | "company" | "deal" | "internal";
 
 export interface Task {
-  id:           string;
-  title:        string;
-  description:  string | null;
-  created_by:   string;
-  assigned_to:  string | null;
-  status:       TaskStatus;
-  priority:     TaskPriority;
-  due_date:     string | null;
-  context_type: TaskContext | null;
-  context_id:   string | null;
-  created_at:   string;
-  updated_at:   string;
+  id:                      string;
+  title:                   string;
+  description:             string | null;
+  created_by:              string;
+  assigned_to:             string | null;
+  status:                  TaskStatus;
+  priority:                TaskPriority;
+  due_date:                string | null;
+  context_type:            TaskContext | null;
+  context_id:              string | null;
+  google_calendar_event_id: string | null;
+  created_at:              string;
+  updated_at:              string;
 }
 
 export interface CreateTaskInput {
@@ -28,12 +29,13 @@ export interface CreateTaskInput {
 }
 
 export interface UpdateTaskInput {
-  title?:       string;
-  description?: string | null;
-  assigned_to?: string | null;
-  status?:      TaskStatus;
-  priority?:    TaskPriority;
-  due_date?:    string | null;
+  title?:                    string;
+  description?:              string | null;
+  assigned_to?:              string | null;
+  status?:                   TaskStatus;
+  priority?:                 TaskPriority;
+  due_date?:                 string | null;
+  google_calendar_event_id?: string | null;
 }
 
 /** Lightweight profile used in assignee dropdowns */

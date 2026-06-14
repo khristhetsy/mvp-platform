@@ -2,11 +2,16 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { InvestorTasksPageClient } from "@/components/investor/InvestorTasksPageClient";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
+import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
 export default async function InvestorTasksPage() {
   const { profile } = await requireInvestorWorkspaceSession();
+
+  const admin = createServiceRoleClient();
+  const googleStatus = await getGoogleConnectionStatus(admin, profile.id);
 
   return (
     <AppShell
@@ -20,7 +25,7 @@ export default async function InvestorTasksPage() {
         title="My Tasks"
         description="Track follow-ups, due diligence, and deal pipeline to-dos."
       />
-      <InvestorTasksPageClient />
+      <InvestorTasksPageClient googleConnected={googleStatus.connected} />
     </AppShell>
   );
 }

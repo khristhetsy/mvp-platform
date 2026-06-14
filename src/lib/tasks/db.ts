@@ -70,8 +70,9 @@ export async function updateTask(id: string, input: UpdateTaskInput): Promise<Ta
       ...(input.description !== undefined && { description: input.description }),
       ...(input.assigned_to !== undefined && { assigned_to: input.assigned_to }),
       ...(input.status      !== undefined && { status:      input.status }),
-      ...(input.priority    !== undefined && { priority:    input.priority }),
-      ...(input.due_date    !== undefined && { due_date:    input.due_date }),
+      ...(input.priority                !== undefined && { priority:                input.priority }),
+      ...(input.due_date               !== undefined && { due_date:               input.due_date }),
+      ...(input.google_calendar_event_id !== undefined && { google_calendar_event_id: input.google_calendar_event_id }),
     })
     .eq("id", id)
     .select("*")

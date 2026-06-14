@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Task, TaskStatus, TaskPriority } from "@/lib/tasks/types";
 
-const PRIORITY_MAP: Record<TaskPriority, { bg: string; color: string }> = {
-  high:   { bg: "#FCEBEB", color: "#A32D2D" },
-  medium: { bg: "#FAEEDA", color: "#854F0B" },
-  low:    { bg: "#E1F5EE", color: "#0F6E56" },
+const PRIORITY_STYLES: Record<TaskPriority, { bg: string; color: string; label: string }> = {
+  high:   { bg: "bg-red-50",    color: "text-red-700",    label: "High" },
+  medium: { bg: "bg-amber-50",  color: "text-amber-700",  label: "Medium" },
+  low:    { bg: "bg-emerald-50", color: "text-emerald-700", label: "Low" },
 };
 
 function relativeDate(iso: string | null): string {
@@ -27,12 +27,12 @@ function isOverdue(iso: string | null): boolean {
 
 type TabKey = "active" | "all" | "done";
 
-function CheckIcon({ done }: { done: boolean }) {
+function CheckCircle({ done }: { done: boolean }) {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
       <circle
         cx="9" cy="9" r="8"
-        stroke={done ? "#534AB7" : "#e2e6ed"}
+        stroke={done ? "#534AB7" : "#cbd5e1"}
         strokeWidth="1.5"
         fill={done ? "#534AB7" : "transparent"}
       />
@@ -43,15 +43,36 @@ function CheckIcon({ done }: { done: boolean }) {
   );
 }
 
-export function InvestorTasksPageClient() {
-  const [tasks, setTasks]       = useState<Task[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [tab, setTab]           = useState<TabKey>("active");
-  const [query, setQuery]       = useState("");
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm]         = useState({ title: "", priority: "medium" as TaskPriority, due_date: "" });
-  const [saving, setSaving]     = useState(false);
-  const [toggling, setToggling] = useState<string | null>(null);
+/* ────────────────────────────────────── */
+export function InvestorTasksPageClient({
+  googleConnected = false,
+}: Readonly<{ googleConnected?: boolean }>) {
+  const [tasks, setTasks]             = useState<Task[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [tab, setTab]                 = useState<TabKey>("active");
+  const [query, setQuery]             = useState("");
+
+  /* quick-add form */
+  const [showForm, setShowForm]       = useState(false);
+  const [newTitle, setNewTitle]       = useState("");
+  const [newPriority, setNewPriority] = useState<TaskPriority>("medium");
+  const [newDueDate, setNewDueDate]   = useState("");
+  const [saving, setSaving]           = useState(false);
+
+  /* inline edit */
+  const [expandedId, setExpandedId]   = useState<string | null>(null);
+  const [editForm, setEditForm]       = useState<{
+    title: string;
+    description: string;
+    priority: TaskPriority;
+    due_date: string;
+  } | null>(null);
+  const [editSaving, setEditSaving]   = useState(false);
+
+  /* per-task actions */
+  const [calSyncing, setCalSyncing]   = useState<string | null>(null);
+  const [toggling, setToggling]       = useState<string | null>(null);
+  const [deleting, setDeleting]       = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -65,20 +86,29 @@ export function InvestorTasksPageClient() {
 
   useEffect(() => { void load(); }, [load]);
 
+  /* ── quick create ── */
   async function handleCreate() {
-    if (!form.title.trim()) return;
+    if (!newTitle.trim()) return;
     setSaving(true);
     await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: form.title.trim(), priority: form.priority, due_date: form.due_date || null, context_type: "personal" }),
+      body: JSON.stringify({
+        title: newTitle.trim(),
+        priority: newPriority,
+        due_date: newDueDate || null,
+        context_type: "personal",
+      }),
     });
     setSaving(false);
-    setForm({ title: "", priority: "medium", due_date: "" });
+    setNewTitle("");
+    setNewPriority("medium");
+    setNewDueDate("");
     setShowForm(false);
     void load();
   }
 
+  /* ── toggle done ── */
   async function toggleDone(task: Task) {
     setToggling(task.id);
     const next: TaskStatus = task.status === "done" ? "todo" : "done";
@@ -91,12 +121,69 @@ export function InvestorTasksPageClient() {
     void load();
   }
 
+  /* ── delete ── */
   async function handleDelete(id: string) {
+    setDeleting(id);
     await fetch(`/api/tasks/${id}`, { method: "DELETE" });
+    setDeleting(null);
+    if (expandedId === id) setExpandedId(null);
     void load();
   }
 
-  // Derived counts
+  /* ── expand / collapse row ── */
+  function toggleExpand(task: Task) {
+    if (expandedId === task.id) {
+      setExpandedId(null);
+      setEditForm(null);
+      return;
+    }
+    setExpandedId(task.id);
+    setEditForm({
+      title:       task.title,
+      description: task.description ?? "",
+      priority:    task.priority,
+      due_date:    task.due_date?.slice(0, 10) ?? "",
+    });
+  }
+
+  /* ── save edits ── */
+  async function handleEditSave(taskId: string) {
+    if (!editForm || !editForm.title.trim()) return;
+    setEditSaving(true);
+    const res = await fetch(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title:       editForm.title.trim(),
+        description: editForm.description || null,
+        priority:    editForm.priority,
+        due_date:    editForm.due_date || null,
+      }),
+    });
+    setEditSaving(false);
+    if (res.ok) {
+      setExpandedId(null);
+      setEditForm(null);
+      void load();
+    }
+  }
+
+  /* ── Google Calendar sync ── */
+  async function syncToCalendar(task: Task) {
+    setCalSyncing(task.id);
+    await fetch(`/api/tasks/${task.id}/calendar`, { method: "POST" });
+    setCalSyncing(null);
+    void load();
+  }
+
+  async function unsyncFromCalendar(task: Task) {
+    setCalSyncing(task.id);
+    await fetch(`/api/tasks/${task.id}/calendar`, { method: "DELETE" });
+    setCalSyncing(null);
+    void load();
+  }
+
+  /* ── derived lists ── */
   const activeTasks  = tasks.filter((t) => t.status !== "done" && t.status !== "cancelled");
   const doneTasks    = tasks.filter((t) => t.status === "done");
   const overdueTasks = activeTasks.filter((t) => isOverdue(t.due_date));
@@ -110,179 +197,339 @@ export function InvestorTasksPageClient() {
     ? tabFiltered.filter((t) => t.title.toLowerCase().includes(query.toLowerCase()))
     : tabFiltered;
 
-  const stats = [
-    { label: "Active",  val: activeTasks.length,  color: "#534AB7" },
-    { label: "Overdue", val: overdueTasks.length,  color: "#E05252" },
-    { label: "Done",    val: doneTasks.length,     color: "#1D9E75" },
-    { label: "Total",   val: tasks.length,          color: "#0f172a" },
-  ];
-
+  /* ── render ── */
   return (
     <div>
       {/* Stat row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 20 }}>
-        {stats.map((s) => (
-          <div key={s.label} style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 10, padding: "12px 14px", textAlign: "center", boxShadow: "0 1px 3px rgba(12,35,64,.04)" }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.val}</div>
-            <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>{s.label}</div>
+      <div className="mb-5 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-slate-200 pb-5">
+        {[
+          { label: "Active",  value: activeTasks.length,  extra: "" },
+          { label: "Overdue", value: overdueTasks.length, extra: overdueTasks.length > 0 ? "text-red-600" : "" },
+          { label: "Done",    value: doneTasks.length,    extra: "text-emerald-600" },
+          { label: "Total",   value: tasks.length,        extra: "" },
+        ].map((s) => (
+          <div key={s.label} className="flex flex-col gap-0.5">
+            <span className={`text-xl font-semibold leading-none text-slate-900 ${s.extra}`}>{s.value}</span>
+            <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">{s.label}</span>
           </div>
         ))}
       </div>
 
-      {/* Main card */}
-      <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 3px rgba(12,35,64,.05)" }}>
-
-        {/* Toolbar */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "0.5px solid #f1f5f9", gap: 10, flexWrap: "wrap" }}>
-          {/* Tabs */}
-          <div style={{ display: "flex", gap: 2 }}>
-            {(["active", "all", "done"] as TabKey[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                style={{
-                  fontSize: 12, padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer",
-                  background: tab === t ? "#534AB7" : "transparent",
-                  color: tab === t ? "#fff" : "#94a3b8",
-                  fontWeight: tab === t ? 600 : 400,
-                }}
-              >
-                {t === "active" ? "Active" : t === "done" ? "Done" : "All"}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            {/* Search */}
-            <input
-              type="search"
-              placeholder="Search tasks…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              style={{ fontSize: 12, padding: "6px 12px", borderRadius: 8, border: "0.5px solid #e2e6ed", background: "#f8fafc", color: "#475569", outline: "none", width: 200 }}
-            />
-            {/* Add task */}
+      {/* Toolbar */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
+          {(["active", "all", "done"] as TabKey[]).map((t) => (
             <button
-              onClick={() => setShowForm(!showForm)}
-              style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#534AB7", color: "#fff", cursor: "pointer", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                tab === t
+                  ? "border border-slate-200 bg-white text-slate-950 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
             >
-              <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Add task
+              {t === "active" ? "Active" : t === "done" ? "Done" : "All"}
+            </button>
+          ))}
+        </div>
+        <input
+          type="search"
+          placeholder="Search tasks…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="min-w-[160px] flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => setShowForm(!showForm)}
+          className="rounded-lg border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700"
+        >
+          + Add task
+        </button>
+      </div>
+
+      {/* Quick-add form */}
+      {showForm && (
+        <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <input
+            autoFocus
+            type="text"
+            placeholder="Task title…"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void handleCreate();
+              if (e.key === "Escape") setShowForm(false);
+            }}
+            className="mb-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
+          />
+          <div className="flex gap-2">
+            <select
+              value={newPriority}
+              onChange={(e) => setNewPriority(e.target.value as TaskPriority)}
+              className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 focus:outline-none"
+            >
+              <option value="high">High priority</option>
+              <option value="medium">Medium priority</option>
+              <option value="low">Low priority</option>
+            </select>
+            <input
+              type="date"
+              value={newDueDate}
+              onChange={(e) => setNewDueDate(e.target.value)}
+              className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => void handleCreate()}
+              disabled={saving || !newTitle.trim()}
+              className="rounded-lg border border-slate-900 bg-slate-900 px-4 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+            >
+              {saving ? "…" : "Save"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100"
+            >
+              ✕
             </button>
           </div>
         </div>
+      )}
 
-        {/* Inline create form */}
-        {showForm && (
-          <div style={{ padding: "12px 16px", borderBottom: "0.5px solid #f1f5f9", background: "#f8fafc" }}>
-            <input
-              autoFocus
-              type="text"
-              placeholder="Task title…"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              onKeyDown={(e) => { if (e.key === "Enter") void handleCreate(); if (e.key === "Escape") setShowForm(false); }}
-              style={{ width: "100%", fontSize: 13, padding: "8px 12px", borderRadius: 8, border: "0.5px solid #e2e6ed", background: "#fff", marginBottom: 8, boxSizing: "border-box" }}
-            />
-            <div style={{ display: "flex", gap: 8 }}>
-              <select
-                value={form.priority}
-                onChange={(e) => setForm({ ...form, priority: e.target.value as TaskPriority })}
-                style={{ fontSize: 12, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #e2e6ed", background: "#fff", flex: 1 }}
-              >
-                <option value="high">🔴 High</option>
-                <option value="medium">🟡 Medium</option>
-                <option value="low">🟢 Low</option>
-              </select>
-              <input
-                type="date"
-                value={form.due_date}
-                onChange={(e) => setForm({ ...form, due_date: e.target.value })}
-                style={{ fontSize: 12, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #e2e6ed", background: "#fff", flex: 1 }}
-              />
-              <button
-                onClick={() => void handleCreate()}
-                disabled={saving || !form.title.trim()}
-                style={{ fontSize: 12, padding: "6px 16px", borderRadius: 6, border: "none", background: "#534AB7", color: "#fff", cursor: "pointer", opacity: !form.title.trim() ? 0.5 : 1 }}
-              >
-                {saving ? "…" : "Save"}
-              </button>
-              <button
-                onClick={() => setShowForm(false)}
-                style={{ fontSize: 12, padding: "6px 10px", borderRadius: 6, border: "0.5px solid #e2e6ed", background: "transparent", color: "#94a3b8", cursor: "pointer" }}
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
+      {/* Section label */}
+      <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+        {tab === "active" ? "Active" : tab === "done" ? "Completed" : "All"} · {visible.length} task{visible.length !== 1 ? "s" : ""}
+      </p>
 
-        {/* Task list */}
-        {loading ? (
-          <div style={{ padding: "32px 16px", textAlign: "center", fontSize: 13, color: "#94a3b8" }}>Loading…</div>
-        ) : visible.length === 0 ? (
-          <div style={{ padding: "40px 16px", textAlign: "center", fontSize: 13, color: "#94a3b8" }}>
+      {/* Task list */}
+      {loading ? (
+        <div className="rounded-xl border border-slate-200 bg-white px-6 py-10 text-center">
+          <p className="text-sm text-slate-500">Loading…</p>
+        </div>
+      ) : visible.length === 0 ? (
+        <div className="rounded-xl border border-slate-200 bg-white px-6 py-10 text-center">
+          <p className="text-sm text-slate-500">
             {tab === "active" ? "All caught up — no active tasks." : "No tasks found."}
-          </div>
-        ) : (
-          visible.map((task) => {
-            const pc = PRIORITY_MAP[task.priority];
-            const isDone = task.status === "done";
-            const overdue = !isDone && isOverdue(task.due_date);
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          {visible.map((task, idx) => {
+            const isDone   = task.status === "done";
+            const overdue  = !isDone && isOverdue(task.due_date);
+            const pc       = PRIORITY_STYLES[task.priority];
+            const isOpen   = expandedId === task.id;
+            const isSynced = !!task.google_calendar_event_id;
+            const hasDue   = !!(editForm?.due_date || task.due_date);
+
             return (
-              <div
-                key={task.id}
-                style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 16px", borderBottom: "0.5px solid #f8fafc", opacity: isDone ? 0.55 : 1 }}
-              >
-                <button
-                  onClick={() => void toggleDone(task)}
-                  disabled={toggling === task.id}
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 1, flexShrink: 0 }}
+              <div key={task.id} className={idx > 0 ? "border-t border-slate-100" : ""}>
+                {/* ── Row ── */}
+                <div
+                  className={`flex items-start gap-3 px-4 py-3 transition-colors ${isOpen ? "bg-slate-50" : "hover:bg-slate-50/60"} ${isDone ? "opacity-55" : ""}`}
                 >
-                  <CheckIcon done={isDone} />
-                </button>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: "#0f172a", textDecoration: isDone ? "line-through" : "none", lineHeight: 1.4 }}>
-                    {task.title}
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 5, alignItems: "center" }}>
-                    <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 99, background: pc.bg, color: pc.color, fontWeight: 500 }}>
-                      {task.priority}
-                    </span>
-                    {task.due_date && (
-                      <span style={{ fontSize: 10, color: overdue ? "#E05252" : "#94a3b8" }}>
-                        📅 {relativeDate(task.due_date)}
+                  {/* Check */}
+                  <button
+                    type="button"
+                    onClick={() => void toggleDone(task)}
+                    disabled={toggling === task.id}
+                    className="mt-0.5 shrink-0 cursor-pointer border-none bg-transparent p-0"
+                    aria-label={isDone ? "Mark incomplete" : "Mark complete"}
+                  >
+                    <CheckCircle done={isDone} />
+                  </button>
+
+                  {/* Title + meta */}
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 cursor-pointer border-none bg-transparent p-0 text-left"
+                    onClick={() => toggleExpand(task)}
+                  >
+                    <p className={`text-sm font-medium leading-snug text-slate-900 ${isDone ? "line-through" : ""}`}>
+                      {task.title}
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${pc.bg} ${pc.color}`}>
+                        {pc.label}
                       </span>
-                    )}
-                    {isDone && (
-                      <span style={{ fontSize: 10, color: "#94a3b8" }}>Done</span>
+                      {task.due_date && (
+                        <span className={`text-[11px] ${overdue ? "text-red-500" : "text-slate-400"}`}>
+                          📅 {relativeDate(task.due_date)}
+                        </span>
+                      )}
+                      {isSynced && (
+                        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600">
+                          📆 In Google Calendar
+                        </span>
+                      )}
+                      {task.description && !isOpen && (
+                        <span className="max-w-[200px] truncate text-[10.5px] italic text-slate-400">
+                          {task.description}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Chevron + delete */}
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleExpand(task)}
+                      className="rounded-md p-1 text-slate-300 hover:bg-slate-100 hover:text-slate-500"
+                      aria-label={isOpen ? "Collapse" : "Expand"}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                        <path
+                          d={isOpen ? "M3 9l4-4 4 4" : "M3 5l4 4 4-4"}
+                          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+                    {deleting === task.id ? (
+                      <span className="px-1 text-xs text-slate-300">…</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(task.id)}
+                        className="rounded-md p-1 text-slate-300 hover:bg-red-50 hover:text-red-500"
+                        aria-label="Delete task"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                          <path d="M2 2l9 9M11 2l-9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                        </svg>
+                      </button>
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => void handleDelete(task.id)}
-                  title="Delete"
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "#cbd5e1", fontSize: 13, padding: "0 2px", flexShrink: 0 }}
-                >
-                  ✕
-                </button>
+
+                {/* ── Inline detail panel ── */}
+                {isOpen && editForm && (
+                  <div className="border-t border-slate-100 bg-slate-50/80 px-4 py-4">
+                    <div className="mb-3 grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <label className="mb-1 block text-[10.5px] font-medium text-slate-500">Title</label>
+                        <input
+                          type="text"
+                          value={editForm.title}
+                          onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[10.5px] font-medium text-slate-500">Priority</label>
+                        <select
+                          value={editForm.priority}
+                          onChange={(e) => setEditForm({ ...editForm, priority: e.target.value as TaskPriority })}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none"
+                        >
+                          <option value="high">High</option>
+                          <option value="medium">Medium</option>
+                          <option value="low">Low</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[10.5px] font-medium text-slate-500">Due date</label>
+                        <input
+                          type="date"
+                          value={editForm.due_date}
+                          onChange={(e) => setEditForm({ ...editForm, due_date: e.target.value })}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="mb-1 block text-[10.5px] font-medium text-slate-500">Notes</label>
+                        <textarea
+                          rows={3}
+                          value={editForm.description}
+                          onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                          placeholder="Add context, links, or next steps…"
+                          className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Google Calendar row */}
+                    <div className="mb-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <rect x="3" y="4" width="18" height="18" rx="2" stroke="#185FA5" strokeWidth="1.5"/>
+                            <path d="M16 2v4M8 2v4M3 10h18" stroke="#185FA5" strokeWidth="1.5" strokeLinecap="round"/>
+                          </svg>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[12.5px] font-medium text-slate-900">Google Calendar</p>
+                          <p className="mt-0.5 text-[10.5px] text-slate-400">
+                            {!googleConnected
+                              ? "Connect Google in Settings to enable"
+                              : !hasDue
+                              ? "Set a due date to add to calendar"
+                              : isSynced
+                              ? "Event added — Google will send reminders"
+                              : "Adds an all-day event with Google's built-in reminders"}
+                          </p>
+                        </div>
+                        {googleConnected && hasDue && !isDone && (
+                          isSynced ? (
+                            <button
+                              type="button"
+                              onClick={() => void unsyncFromCalendar(task)}
+                              disabled={calSyncing === task.id}
+                              className="rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-medium text-red-600 hover:bg-red-100 disabled:opacity-50"
+                            >
+                              {calSyncing === task.id ? "…" : "Remove"}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => void syncToCalendar(task)}
+                              disabled={calSyncing === task.id}
+                              className="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-600 hover:bg-blue-100 disabled:opacity-50"
+                            >
+                              {calSyncing === task.id ? "Adding…" : "Add to Calendar"}
+                            </button>
+                          )
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Save / cancel */}
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { setExpandedId(null); setEditForm(null); }}
+                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleEditSave(task.id)}
+                        disabled={editSaving || !editForm.title.trim()}
+                        className="rounded-lg border border-slate-900 bg-slate-900 px-4 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+                      >
+                        {editSaving ? "Saving…" : "Save changes"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
-          })
-        )}
+          })}
 
-        {/* Footer */}
-        {tasks.length > 0 && (
-          <div style={{ padding: "10px 16px", borderTop: "0.5px solid #f1f5f9", display: "flex", gap: 10, fontSize: 11, color: "#94a3b8" }}>
+          {/* Footer */}
+          <div className="flex gap-3 border-t border-slate-100 px-4 py-2.5 text-[11px] text-slate-400">
             <span>{activeTasks.length} active</span>
             <span>·</span>
             <span>{overdueTasks.length} overdue</span>
             <span>·</span>
             <span>{doneTasks.length} done</span>
-            <span>·</span>
-            <span>{tasks.length} total</span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
