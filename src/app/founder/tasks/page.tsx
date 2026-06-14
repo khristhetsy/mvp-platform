@@ -29,6 +29,8 @@ export default async function FounderTasksPage() {
       />
       <InvestorTasksPageClient
         googleConnected={googleStatus.connected}
+        googleStatus={googleStatus}
+        calendarReturnPath="/founder/tasks"
         internalUsers={internalUsers}
         currentUserId={profile.id}
       />

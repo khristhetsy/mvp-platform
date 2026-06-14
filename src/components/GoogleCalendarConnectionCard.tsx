@@ -9,7 +9,7 @@ export function GoogleCalendarConnectionCard({
   returnPath,
 }: Readonly<{
   status: GoogleConnectionStatus;
-  returnPath: "/founder/settings" | "/investor/settings" | "/admin/tasks";
+  returnPath: "/founder/settings" | "/investor/settings" | "/admin/tasks" | "/investor/tasks" | "/founder/tasks";
 }>) {
   const router = useRouter();
   const searchParams = useSearchParams();

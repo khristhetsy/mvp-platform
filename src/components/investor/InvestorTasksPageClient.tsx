@@ -1,7 +1,10 @@
 "use client";
 
+import { Suspense } from "react";
 import { useState, useEffect, useCallback } from "react";
 import type { Task, TaskStatus, TaskPriority, InternalUser } from "@/lib/tasks/types";
+import type { GoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
+import { GoogleCalendarConnectionCard } from "@/components/GoogleCalendarConnectionCard";
 
 /* ─── constants ─────────────────────────────────────────────────── */
 
@@ -125,10 +128,14 @@ type EditForm = {
 
 export function InvestorTasksPageClient({
   googleConnected = false,
+  googleStatus,
+  calendarReturnPath = "/investor/tasks",
   internalUsers = [],
   currentUserId = "",
 }: Readonly<{
   googleConnected?: boolean;
+  googleStatus?: GoogleConnectionStatus;
+  calendarReturnPath?: "/investor/tasks" | "/founder/tasks";
   internalUsers?: InternalUser[];
   currentUserId?: string;
 }>) {
@@ -759,6 +766,13 @@ export function InvestorTasksPageClient({
 
   return (
     <div>
+      {!googleConnected && googleStatus && (
+        <div className="mb-4 max-w-md">
+          <Suspense fallback={null}>
+            <GoogleCalendarConnectionCard status={googleStatus} returnPath={calendarReturnPath} />
+          </Suspense>
+        </div>
+      )}
       {toolbar}
       {view === "list"     && ListView()}
       {view === "kanban"   && KanbanView()}
