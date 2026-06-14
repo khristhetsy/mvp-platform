@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { AppShell } from "@/components/AppShell";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -34,7 +35,9 @@ export default async function InvestorPortfolioPage() {
           description="Track your pledges, investments, and returns across all deals — linked and self-reported."
         />
         <InvestorFeatureGate>
-          <InvestorPortfolioPageClient />
+          <Suspense fallback={null}>
+            <InvestorPortfolioPageClient />
+          </Suspense>
         </InvestorFeatureGate>
       </WorkspacePageContainer>
     </AppShell>

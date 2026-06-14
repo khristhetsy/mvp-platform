@@ -26,7 +26,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (!body.company_name?.trim()) {
       return NextResponse.json({ error: "company_name is required" }, { status: 400 });
     }
-    if (!body.amount_invested || body.amount_invested <= 0) {
+    // tracking / committed entries can have 0 amount
+    if (body.status === "tracking" || body.status === "committed") {
+      body.amount_invested = body.amount_invested ?? 0;
+    } else if (!body.amount_invested || body.amount_invested <= 0) {
       return NextResponse.json({ error: "amount_invested must be positive" }, { status: 400 });
     }
     if (!body.invested_at) {

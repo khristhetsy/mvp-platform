@@ -9,6 +9,7 @@ export type InvestmentStage =
   | "written_off";
 
 export type InvestmentSource = "deal_room" | "self_reported";
+export type PortfolioStatus  = "invested" | "committed" | "tracking";
 
 export interface PortfolioInvestment {
   id: string;
@@ -21,7 +22,10 @@ export interface PortfolioInvestment {
   entry_valuation: number | null;
   current_valuation: number | null;
   stage: InvestmentStage | null;
+  status: PortfolioStatus;
   source: InvestmentSource;
+  company_slug: string | null;
+  interest_id: string | null;
   invested_at: string;
   notes: string | null;
   val_updated_at: string | null;
@@ -38,6 +42,9 @@ export interface CreateInvestmentInput {
   entry_valuation?: number | null;
   current_valuation?: number | null;
   stage?: InvestmentStage | null;
+  status?: PortfolioStatus;
+  company_slug?: string | null;
+  interest_id?: string | null;
   invested_at: string;
   notes?: string | null;
 }
@@ -49,8 +56,21 @@ export interface UpdateInvestmentInput {
   entry_valuation?: number | null;
   current_valuation?: number | null;
   stage?: InvestmentStage | null;
+  status?: PortfolioStatus;
   invested_at?: string;
   notes?: string | null;
+}
+
+/** A pledge from investor_interests shown in the Committed tab */
+export interface PledgeRecord {
+  id: string;
+  company_id: string | null;
+  company_name: string;
+  company_slug: string | null;
+  pledge_amount: number | null;
+  pledge_currency: string | null;
+  status: string | null;
+  created_at: string;
 }
 
 /** Shape returned by the admin overview endpoint — includes investor name */

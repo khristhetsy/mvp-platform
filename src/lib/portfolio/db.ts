@@ -5,6 +5,7 @@ import type {
   CreateInvestmentInput,
   UpdateInvestmentInput,
   AdminPortfolioRow,
+  PledgeRecord,
 } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -20,7 +21,12 @@ export async function listInvestments(): Promise<PortfolioInvestment[]> {
     .select("*")
     .order("invested_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return data as PortfolioInvestment[];
+  return (data ?? []).map((r: PortfolioInvestment) => ({
+    ...r,
+    status:       r.status ?? "invested",
+    company_slug: r.company_slug ?? null,
+    interest_id:  r.interest_id ?? null,
+  })) as PortfolioInvestment[];
 }
 
 /** Create a new investment for the current user. */
@@ -42,6 +48,9 @@ export async function createInvestment(
       entry_valuation:   input.entry_valuation ?? null,
       current_valuation: input.current_valuation ?? null,
       stage:             input.stage ?? null,
+      status:            input.status ?? "invested",
+      company_slug:      input.company_slug ?? null,
+      interest_id:       input.interest_id ?? null,
       source,
       invested_at:       input.invested_at,
       notes:             input.notes ?? null,
@@ -69,6 +78,7 @@ export async function updateInvestment(
     patch.val_updated_at    = new Date().toISOString();
   }
   if (input.stage              !== undefined) patch.stage              = input.stage;
+  if (input.status             !== undefined) patch.status             = input.status;
   if (input.invested_at        !== undefined) patch.invested_at        = input.invested_at;
   if (input.notes              !== undefined) patch.notes              = input.notes;
 
@@ -89,6 +99,29 @@ export async function deleteInvestment(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/** List investor's pledges from investor_interests (for Committed tab). */
+export async function listPledges(userId: string): Promise<PledgeRecord[]> {
+  const db = await portfolioDb();
+  const { data, error } = await db
+    .from("investor_interests")
+    .select("id, company_id, pledge_amount, pledge_currency, status, created_at, companies(company_name, slug)")
+    .eq("investor_id", userId)
+    .not("pledge_amount", "is", null)
+    .order("created_at", { ascending: false });
+  if (error) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data ?? []).map((r: any) => ({
+    id:               r.id,
+    company_id:       r.company_id ?? null,
+    company_name:     r.companies?.company_name ?? "Unknown company",
+    company_slug:     r.companies?.slug ?? null,
+    pledge_amount:    r.pledge_amount,
+    pledge_currency:  r.pledge_currency ?? "USD",
+    status:           r.status ?? null,
+    created_at:       r.created_at,
+  })) as PledgeRecord[];
+}
+
 /** Admin: list ALL investments with investor name + email (service role). */
 export async function listAllInvestmentsAdmin(): Promise<AdminPortfolioRow[]> {
   const admin = createServiceRoleClient();
@@ -99,7 +132,6 @@ export async function listAllInvestmentsAdmin(): Promise<AdminPortfolioRow[]> {
     .limit(500);
 
   if (error) {
-    // Fallback without join if FK alias doesn't resolve
     const { data: plain, error: e2 } = await admin
       .from("portfolio_investments")
       .select("*")

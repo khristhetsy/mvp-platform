@@ -201,19 +201,25 @@ function OpportunitiesTable({ rows }: { rows: InvestorOpportunityRow[] }) {
                   >
                     View report
                   </Link>
+                  <Link
+                    href={`/investor/portfolio?add_company_id=${row.companyId}&company_name=${encodeURIComponent(row.companyName)}${row.slug ? `&slug=${row.slug}` : ""}`}
+                    className="rounded-md border border-[#534AB7] bg-[#EEEDFE] px-2.5 py-1 text-[11px] font-medium text-[#534AB7] transition-colors hover:bg-[#534AB7] hover:text-white"
+                  >
+                    + Track
+                  </Link>
                   {row.slug ? (
                     <Link
                       href={`/deals/${row.slug}`}
                       className="rounded-md border border-slate-900 bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-white transition-colors hover:bg-slate-700"
                     >
-                      View opportunity →
+                      View →
                     </Link>
                   ) : (
                     <Link
                       href={`/investor/opportunities/${row.companyId}/report`}
                       className="rounded-md border border-slate-900 bg-slate-900 px-2.5 py-1 text-[11px] font-medium text-white transition-colors hover:bg-slate-700"
                     >
-                      View opportunity →
+                      View →
                     </Link>
                   )}
                 </div>
