@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/supabase/auth";
 import { listTasks, listInternalUsers } from "@/lib/tasks/db";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
+import type { GoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { TasksClient } from "./TasksClient";
 
@@ -22,6 +23,9 @@ export default async function AdminTasksPage() {
       internalUsers={users}
       currentUserId={profile.id}
       googleConnected={googleStatus.connected}
+      googleStatus={googleStatus}
     />
   );
 }
+
+export type { GoogleConnectionStatus };

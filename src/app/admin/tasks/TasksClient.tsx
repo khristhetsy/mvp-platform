@@ -1,7 +1,10 @@
 "use client";
 
+import { Suspense } from "react";
 import { useState, useCallback } from "react";
 import type { Task, TaskStatus, TaskPriority, InternalUser } from "@/lib/tasks/types";
+import type { GoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
+import { GoogleCalendarConnectionCard } from "@/components/GoogleCalendarConnectionCard";
 
 const GCAL_PURPLE = "#534AB7";
 const GCAL_LIGHT  = "#EEEDFE";
@@ -394,9 +397,10 @@ interface Props {
   internalUsers: InternalUser[];
   currentUserId: string;
   googleConnected: boolean;
+  googleStatus: GoogleConnectionStatus;
 }
 
-export function TasksClient({ initialTasks, internalUsers, currentUserId, googleConnected }: Props) {
+export function TasksClient({ initialTasks, internalUsers, currentUserId, googleConnected, googleStatus }: Props) {
   const [tasks, setTasks]       = useState<Task[]>(initialTasks);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving]     = useState(false);
@@ -492,6 +496,15 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
           <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Assign task
         </button>
       </div>
+
+      {/* Google Calendar connect banner */}
+      {!googleConnected && (
+        <div style={{ marginBottom: 20, maxWidth: 420 }}>
+          <Suspense fallback={null}>
+            <GoogleCalendarConnectionCard status={googleStatus} returnPath="/admin/tasks" />
+          </Suspense>
+        </div>
+      )}
 
       {/* Create form */}
       {showForm && (
