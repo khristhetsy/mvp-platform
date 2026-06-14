@@ -63,12 +63,20 @@ export default async function AdminIntegrationsPage() {
           title="External integrations"
           description="Enterprise connectivity foundation — Slack and signed webhooks with sanitized outbound events, delivery logs, and audit visibility."
         />
-        <EmailFoundationSection status={emailFoundation} />
-        <DocuSignFoundationSection />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 hover:border-indigo-300 transition-colors">
+            <EmailFoundationSection status={emailFoundation} />
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-5 hover:border-indigo-300 transition-colors">
+            <DocuSignFoundationSection />
+          </div>
+        </div>
         {loadError ? (
           <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">{loadError}</p>
         ) : payload ? (
-          <AdminIntegrationsConsole payload={payload} isAdmin={profile.role === "admin"} />
+          <div className="rounded-xl border border-slate-200 bg-white p-5">
+            <AdminIntegrationsConsole payload={payload} isAdmin={profile.role === "admin"} />
+          </div>
         ) : null}
       </WorkspacePageContainer>
     </AppShell>

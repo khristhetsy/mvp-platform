@@ -245,16 +245,47 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
           onOpen={(action) => setDetailId(action.persistedId ?? null)}
         />
       ) : (
-        <div className="grid gap-3">
-          {actions.map((action) => (
-            <ActionCard
-              key={action.persistedId ?? action.id}
-              action={action}
-              selected={action.persistedId ? selectedIds.has(action.persistedId) : false}
-              onSelect={(checked) => action.persistedId && toggleSelect(action.persistedId, checked)}
-              onOpen={() => setDetailId(action.persistedId ?? null)}
-            />
-          ))}
+        <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+          {actions.map((action) => {
+            const dotColor =
+              action.priority === "critical" ? "#A32D2D" :
+              action.priority === "high"     ? "#854F0B" :
+              action.priority === "medium"   ? "#534AB7" : "#888780";
+            const ctaLabel =
+              action.priority === "critical" ? "Resolve →" :
+              action.priority === "high"     ? "Review →"  : "Open →";
+            return (
+              <div
+                key={action.persistedId ?? action.id}
+                className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 cursor-pointer"
+                onClick={() => setDetailId(action.persistedId ?? null)}
+              >
+                <span
+                  className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full"
+                  style={{ background: dotColor }}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-slate-900">{action.title}</p>
+                  <p className="text-xs text-slate-500">
+                    {action.category.replace(/_/g, " ")}
+                    {action.entityType ? ` · ${action.entityType.replace(/_/g, " ")}` : ""}
+                    {action.status === "overdue" ? " · overdue" : ""}
+                    {action.status === "escalated" ? " · escalated" : ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="flex-shrink-0 text-xs font-semibold text-indigo-700 hover:text-indigo-900"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDetailId(action.persistedId ?? null);
+                  }}
+                >
+                  {ctaLabel}
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 

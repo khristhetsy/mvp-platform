@@ -263,6 +263,9 @@ export function AdminPortfolioPageClient() {
                       {h}
                     </th>
                   ))}
+                  <th style={{ textAlign: "center", padding: "8px 10px", color: "var(--color-text-secondary)", fontWeight: 500, fontSize: 11 }}>
+                    Detail
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -277,7 +280,9 @@ export function AdminPortfolioPageClient() {
                       style={{
                         borderTop: "0.5px solid var(--color-border-tertiary)",
                         background: stale ? "#FFFBEB" : undefined,
+                        cursor: "pointer",
                       }}
+                      onClick={() => setFilterInvestor(prev => prev === inv.investor_user_id ? "" : inv.investor_user_id)}
                     >
                       {/* Company */}
                       <td style={{ padding: "10px 16px" }}>
@@ -352,6 +357,9 @@ export function AdminPortfolioPageClient() {
                             {m >= 1 ? "+" : ""}{m.toFixed(2)}×
                           </span>
                         ) : <span style={{ color: "var(--color-text-secondary)" }}>—</span>}
+                      </td>
+                      <td style={{ textAlign: "center", padding: "10px 10px" }}>
+                        <span style={{ color: "#534AB7", fontSize: 11, cursor: "pointer", fontWeight: 500 }}>View →</span>
                       </td>
                     </tr>
                   );

@@ -42,9 +42,9 @@ export function AdminDashboardShell({
       <WorkspacePageContainer>
         <AdminCommandHeader pendingCount={pendingCount} loadedAt={loadedAt} />
 
-        <AdminKpiGrid metrics={metrics} snapshot={snapshot} serviceRoleConfigured={serviceRoleConfigured} />
-
         <AdminOperationsControl queueSummary={queueSummary} serviceRoleOk={serviceRoleConfigured} />
+
+        <AdminKpiGrid metrics={metrics} snapshot={snapshot} serviceRoleConfigured={serviceRoleConfigured} />
 
         {orchestrationCounts ? (
           <AdminOrchestrationVisibility

@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { auditEntityHref } from "@/lib/audit-compliance/filters";
 import { auditSourceLabel, formatAuditTimestamp, severityBadgeStatus } from "@/lib/audit-compliance/display";
 import type {
+  AuditEvidenceEntityType,
   AuditRiskSummary,
   AuditTimelineEntry,
   ComplianceEvidencePack,
@@ -29,6 +30,16 @@ function RiskCard({ label, value, status }: Readonly<{ label: string; value: num
   );
 }
 
+function getEntryHref(entry: AuditTimelineEntry): string {
+  if (entry.companyId) return `/admin/companies/${entry.companyId}`;
+  if (entry.investorId) return `/admin/investors/${entry.investorId}`;
+  if (entry.spvId) return `/admin/spvs`;
+  if (entry.entityType && entry.entityId) {
+    return auditEntityHref(entry.entityType as AuditEvidenceEntityType, entry.entityId);
+  }
+  return `/admin/audit?module=${encodeURIComponent(entry.sourceModule)}`;
+}
+
 function TimelineTable({ entries }: Readonly<{ entries: AuditTimelineEntry[] }>) {
   if (!entries.length) {
     return <p className="text-sm text-slate-600">No timeline events match these filters.</p>;
@@ -43,11 +54,12 @@ function TimelineTable({ entries }: Readonly<{ entries: AuditTimelineEntry[] }>)
             <th className="px-3 py-2">Event</th>
             <th className="px-3 py-2">Severity</th>
             <th className="px-3 py-2">Module</th>
+            <th className="px-3 py-2">Detail</th>
           </tr>
         </thead>
         <tbody>
           {entries.map((entry) => (
-            <tr key={entry.id} className="border-b border-slate-100">
+            <tr key={entry.id} className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => { window.location.href = getEntryHref(entry); }}>
               <td className="px-3 py-2 whitespace-nowrap text-slate-600">{formatAuditTimestamp(entry.createdAt)}</td>
               <td className="px-3 py-2">{auditSourceLabel(entry.source)}</td>
               <td className="px-3 py-2">
@@ -58,6 +70,15 @@ function TimelineTable({ entries }: Readonly<{ entries: AuditTimelineEntry[] }>)
                 <StatusBadge label={entry.severity} status={severityBadgeStatus(entry.severity)} />
               </td>
               <td className="px-3 py-2 text-slate-600">{entry.sourceModule}</td>
+              <td className="px-3 py-2">
+                <a
+                  href={getEntryHref(entry)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="font-semibold text-indigo-700 hover:text-indigo-900"
+                >
+                  View →
+                </a>
+              </td>
             </tr>
           ))}
         </tbody>

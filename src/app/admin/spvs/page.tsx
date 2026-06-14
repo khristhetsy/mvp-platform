@@ -268,6 +268,26 @@ export default async function AdminSpvsPage() {
           </WorkspacePanel>
         ) : (
           <>
+            {/* Command center stats overview */}
+            <div className="mb-6 grid grid-cols-4 gap-4">
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Active SPVs</p>
+                <p className="mt-1 text-2xl font-semibold" style={{ color: "#534AB7" }}>{opportunities.length}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Blocked</p>
+                <p className="mt-1 text-2xl font-semibold text-red-700">{primarySpvDelaySignals.length}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Readiness signals</p>
+                <p className="mt-1 text-2xl font-semibold text-amber-700">{Object.keys(data?.closingReadinessBySpv ?? {}).length}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Companies</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-900">{companies.length}</p>
+              </div>
+            </div>
+
             <NextBestActionsPanel
               role={adminRole}
               initialActions={nextBestActions.actions}
@@ -275,6 +295,22 @@ export default async function AdminSpvsPage() {
               className="mb-6"
               showEscalate
             />
+
+            {primarySpvDelaySignals.length > 0 ? (
+              <div className="mb-6">
+                <WorkspacePanel
+                  title="Predictive insights"
+                  subtitle="Rules-based SPV delay risk signals (Phase 1)"
+                >
+                  <RiskSignalsPanel
+                    signals={primarySpvDelaySignals}
+                    maxItems={2}
+                    title="SPV delay risk"
+                    subtitle="Deterministic rules — no auto-execution or workflow changes"
+                  />
+                </WorkspacePanel>
+              </div>
+            ) : null}
 
             {spvDependencies.length > 0 ? (
               <div className="mb-6">
@@ -292,22 +328,6 @@ export default async function AdminSpvsPage() {
                   subtitle="Phase 1 — readiness only, DocuSign not connected"
                 >
                   <SpvExecutionReadinessPanel summary={primaryExecutionSummary} />
-                </WorkspacePanel>
-              </div>
-            ) : null}
-
-            {primarySpvDelaySignals.length > 0 ? (
-              <div className="mb-6">
-                <WorkspacePanel
-                  title="Predictive insights"
-                  subtitle="Rules-based SPV delay risk signals (Phase 1)"
-                >
-                  <RiskSignalsPanel
-                    signals={primarySpvDelaySignals}
-                    maxItems={2}
-                    title="SPV delay risk"
-                    subtitle="Deterministic rules — no auto-execution or workflow changes"
-                  />
                 </WorkspacePanel>
               </div>
             ) : null}

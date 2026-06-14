@@ -19,7 +19,6 @@ import { getScheduledOperationalCounts } from "@/lib/notifications/scheduled/sum
 import { getAutomationDailySummary } from "@/lib/automation/automation-log";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
-import { TaskWidgetLoader } from "@/components/TaskWidgetLoader";
 
 export const dynamic = "force-dynamic";
 
@@ -115,6 +114,17 @@ export default async function AdminDashboardPage() {
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role}
           profileEmail={profile.email ?? undefined}>
+      <div className="mb-6 rounded-xl px-5 py-4" style={{ background: "#0c2340" }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium" style={{ color: "#AFA9EC" }}>CapitalOS admin</p>
+            <h1 className="text-lg font-medium text-white">Dashboard</h1>
+          </div>
+          <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: "#534AB7", color: "#EEEDFE" }}>
+            {profile.role}
+          </span>
+        </div>
+      </div>
       <div className="mb-6 px-1">
         <NextBestActionsPanel
           role={adminRole}
@@ -123,9 +133,6 @@ export default async function AdminDashboardPage() {
           showEscalate
           viewAllHref="/admin/actions?priority=critical"
         />
-      </div>
-      <div className="mb-6 px-1">
-        <TaskWidgetLoader />
       </div>
       <AdminDashboardShell
         userId={profile.id}

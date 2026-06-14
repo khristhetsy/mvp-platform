@@ -73,16 +73,44 @@ export function AdminBetaOperationsDashboard({ snapshot }: { snapshot: BetaOpera
 
         <WorkspacePanel title="Operations queue" subtitle="Failures and unresolved items">
           <ul className="space-y-2 text-sm text-slate-700">
-            <li>Unresolved deal room questions: {operations.unresolvedDealRoomQuestions}</li>
-            <li>Unresolved doc requests: {operations.unresolvedDealRoomDocRequests}</li>
-            <li>Failed automations: {operations.failedAutomationRuns}</li>
-            <li>Failed orchestration: {operations.failedOrchestrationRuns}</li>
-            <li>Failed notifications (30d): {operations.failedNotifications}</li>
-            <li>Failed uploads (30d): {operations.failedUploads}</li>
-            <li>Deal room activity (7d): {operations.dealRoomActivityLast7d}</li>
-            <li>Inactive founders: {summary.inactiveFounders} · Inactive investors: {summary.inactiveInvestors}</li>
-            <li>Avg founder activation: {summary.averageFounderActivationDays ?? "—"} days</li>
-            <li>Avg investor activation: {summary.averageInvestorActivationDays ?? "—"} days</li>
+            <li className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 hover:bg-slate-50">
+              <span>Unresolved deal room questions: {operations.unresolvedDealRoomQuestions}</span>
+              <Link href="/admin/companies" className="text-xs font-semibold text-indigo-700 hover:underline">View →</Link>
+            </li>
+            <li className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 hover:bg-slate-50">
+              <span>Unresolved doc requests: {operations.unresolvedDealRoomDocRequests}</span>
+              <Link href="/admin/companies" className="text-xs font-semibold text-indigo-700 hover:underline">View →</Link>
+            </li>
+            <li className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 hover:bg-slate-50">
+              <span>Failed automations: {operations.failedAutomationRuns}</span>
+              <Link href="/admin/audit?module=workflow_automation" className="text-xs font-semibold text-indigo-700 hover:underline">View logs →</Link>
+            </li>
+            <li className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 hover:bg-slate-50">
+              <span>Failed orchestration: {operations.failedOrchestrationRuns}</span>
+              <Link href="/admin/audit?module=orchestration" className="text-xs font-semibold text-indigo-700 hover:underline">View logs →</Link>
+            </li>
+            <li className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 hover:bg-slate-50">
+              <span>Failed notifications (30d): {operations.failedNotifications}</span>
+              <Link href="/admin/audit?module=notification" className="text-xs font-semibold text-indigo-700 hover:underline">View →</Link>
+            </li>
+            <li className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 hover:bg-slate-50">
+              <span>Failed uploads (30d): {operations.failedUploads}</span>
+              <Link href="/admin/audit?module=import" className="text-xs font-semibold text-indigo-700 hover:underline">View →</Link>
+            </li>
+            <li className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 hover:bg-slate-50">
+              <span>Deal room activity (7d): {operations.dealRoomActivityLast7d}</span>
+              <Link href="/admin/companies" className="text-xs font-semibold text-indigo-700 hover:underline">View →</Link>
+            </li>
+            <li className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 hover:bg-slate-50">
+              <span>Inactive founders: {summary.inactiveFounders} · Inactive investors: {summary.inactiveInvestors}</span>
+              <Link href="/admin/companies" className="text-xs font-semibold text-indigo-700 hover:underline">View →</Link>
+            </li>
+            <li className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2">
+              <span>Avg founder activation: {summary.averageFounderActivationDays ?? "—"} days</span>
+            </li>
+            <li className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2">
+              <span>Avg investor activation: {summary.averageInvestorActivationDays ?? "—"} days</span>
+            </li>
           </ul>
         </WorkspacePanel>
       </div>

@@ -38,7 +38,7 @@ function AdminCompaniesModuleViewsInner({
   pendingCount: number;
 }>) {
   const [query, setQuery] = useState("");
-  const [view, setView] = useState<ViewMode>("kanban");
+  const [view, setView] = useState<ViewMode>("list");
   const { filters } = useAdminQueryFilters("companies");
   const companyFilters = filters as CompanyQueryFilters;
 
@@ -129,11 +129,16 @@ function AdminCompaniesModuleViewsInner({
                   <th className="px-4 py-3">Industry</th>
                   <th className="px-4 py-3">Review</th>
                   <th className="px-4 py-3">Published</th>
+                  <th className="px-4 py-3">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.map((company) => (
-                  <tr key={company.id} className="hover:bg-slate-50">
+                  <tr
+                    key={company.id}
+                    className="hover:bg-slate-50 cursor-pointer"
+                    onClick={() => { window.location.href = `/admin/companies/${company.id}`; }}
+                  >
                     <td className="px-4 py-3 font-medium text-slate-900">{company.company_name}</td>
                     <td className="px-4 py-3 text-slate-600">{company.founder_name}</td>
                     <td className="px-4 py-3 text-slate-500">{company.industry ?? "—"}</td>
@@ -150,6 +155,28 @@ function AdminCompaniesModuleViewsInner({
                     </td>
                     <td className="px-4 py-3 text-slate-500">
                       {company.is_published ? "Published" : "Draft"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {company.review_status === "pending" ? (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); window.location.href = `/admin/companies/${company.id}`; }}
+                            className="rounded-md bg-indigo-600 px-2 py-1 text-[10px] font-semibold text-white hover:bg-indigo-700"
+                          >
+                            Approve
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); window.location.href = `/admin/companies/${company.id}`; }}
+                            className="rounded-md border border-slate-200 px-2 py-1 text-[10px] font-semibold text-slate-700 hover:bg-slate-50"
+                          >
+                            Review
+                          </button>
+                        )}
+                        <span className="text-xs text-indigo-600">→</span>
+                      </div>
                     </td>
                   </tr>
                 ))}
