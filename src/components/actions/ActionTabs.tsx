@@ -13,27 +13,53 @@ const TABS: { id: ActionCenterTab; label: string }[] = [
 export function ActionTabs({
   active,
   onChange,
-}: Readonly<{ active: ActionCenterTab; onChange: (tab: ActionCenterTab) => void }>) {
+  counts,
+}: Readonly<{
+  active: ActionCenterTab;
+  onChange: (tab: ActionCenterTab) => void;
+  counts?: Partial<Record<ActionCenterTab, number>>;
+}>) {
   return (
     <div
       role="tablist"
       aria-label="Action status"
-      className="flex flex-wrap gap-1 rounded-lg border border-slate-200/80 bg-slate-50 p-1"
+      className="grid grid-cols-5 gap-2"
     >
-      {TABS.map((tab) => (
-        <button
-          key={tab.id}
-          type="button"
-          role="tab"
-          aria-selected={active === tab.id}
-          onClick={() => onChange(tab.id)}
-          className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-            active === tab.id ? "bg-white text-slate-950 shadow-sm" : "text-slate-600 hover:text-slate-950"
-          }`}
-        >
-          {tab.label}
-        </button>
-      ))}
+      {TABS.map((tab) => {
+        const isActive = active === tab.id;
+        const count = counts?.[tab.id];
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onChange(tab.id)}
+            className={`flex flex-col gap-1 rounded-lg border px-3 py-2.5 text-left transition-all ${
+              isActive
+                ? "border-2 border-slate-900 bg-slate-50"
+                : "border border-slate-200 bg-white hover:border-slate-400"
+            }`}
+          >
+            <span
+              className={`text-[10px] font-semibold uppercase tracking-wide ${
+                isActive ? "text-slate-900" : "text-slate-500"
+              }`}
+            >
+              {tab.label}
+            </span>
+            {count !== undefined ? (
+              <span
+                className={`text-xl font-semibold leading-none ${
+                  isActive ? "text-slate-900" : "text-slate-400"
+                }`}
+              >
+                {count}
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
     </div>
   );
 }

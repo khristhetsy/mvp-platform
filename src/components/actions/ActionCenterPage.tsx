@@ -163,7 +163,21 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
         <WorkflowDependencyPanel dependencies={workflowDependencies} title="Workflow blockers" />
       ) : null}
 
-      <ActionTabs active={filters.tab} onChange={setTab} />
+      <ActionTabs
+        active={filters.tab}
+        onChange={setTab}
+        counts={
+          analytics
+            ? {
+                active: analytics.open,
+                overdue: analytics.overdue,
+                escalated: analytics.escalated,
+                completed: analytics.completedThisWeek,
+                snoozed: analytics.snoozed,
+              }
+            : undefined
+        }
+      />
 
       {needsAttention.length > 0 && filters.tab === "active" ? (
         <section className="rounded-xl border border-rose-200/80 bg-rose-50/30 p-4">
