@@ -1,13 +1,10 @@
 import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
-import { MetricCard } from "@/components/MetricCard";
-import { MetricRow } from "@/components/ui/OperationalMetric";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingProgressCard";
 import { FounderRemediationActionPlan } from "@/components/FounderRemediationActionPlan";
-import { listCompanyDocuments } from "@/lib/data/documents";
 import { computeReadinessScore, getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { FounderLearningPreviewCard } from "@/components/FounderLearningPreviewCard";
 import { loadFounderLearningWorkspace } from "@/lib/learning/load-founder-learning";
@@ -26,7 +23,8 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
-import { TaskWidgetLoader } from "@/components/TaskWidgetLoader";
+import { listCompanyDocuments } from "@/lib/data/documents";
+import { CapitalReadinessSection } from "@/components/founder/CapitalReadinessSection";
 
 export const dynamic = "force-dynamic";
 
@@ -61,10 +59,10 @@ export default async function FounderDashboardPage() {
   }
 
   const companyName = company?.company_name ?? "Your company";
-  const pitchDeck = documents?.find((document) => document.document_type === "PITCH_DECK");
+  const pitchDeck = documents?.find((d) => d.document_type === "PITCH_DECK");
   const documentStatus = pitchDeck ? "Pitch deck uploaded" : "No pitch deck uploaded";
-  const uploadedTypeCodes = (documents ?? []).flatMap((document) =>
-    document.document_type ? [document.document_type] : [],
+  const uploadedTypeCodes = (documents ?? []).flatMap((d) =>
+    d.document_type ? [d.document_type] : [],
   );
   const checklistReadinessScore = computeReadinessScore(uploadedTypeCodes);
   const readinessScore = diligenceReport?.readiness_score ?? checklistReadinessScore;
@@ -77,189 +75,253 @@ export default async function FounderDashboardPage() {
     (investorActivity?.savedDeals.length ?? 0);
   const raiseProgress = company?.is_published ? "Published" : "Not published";
 
+  // Investor pipeline list (up to 5 most recent interactions)
+  const pipelineItems: { name: string; type: string; variant: "medium" | "high" | "neutral" }[] = [
+    ...(investorActivity?.interests.slice(0, 3).map((i) => {
+      const p = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles;
+      return { name: p?.full_name ?? p?.email ?? "Investor", type: "Expressed interest", variant: "medium" as const };
+    }) ?? []),
+    ...(investorActivity?.introRequests.slice(0, 2).map((i) => {
+      const p = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles;
+      return { name: p?.full_name ?? p?.email ?? "Investor", type: `Intro · ${i.status ?? "requested"}`, variant: "high" as const };
+    }) ?? []),
+    ...(investorActivity?.savedDeals.slice(0, 2).map((i) => {
+      const p = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles;
+      return { name: p?.full_name ?? p?.email ?? "Investor", type: "Saved deal", variant: "neutral" as const };
+    }) ?? []),
+  ].slice(0, 5);
+
+  const badgeCls = {
+    medium: "bg-[#EEEDFE] text-[#3C3489]",
+    high: "bg-[#FAEEDA] text-[#854F0B]",
+    neutral: "bg-slate-100 text-slate-600",
+  };
+
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
       profileSubtitle={companyName}
     >
       <FounderFeatureGate featureKey="dashboard">
-      <PageHeader
-        eyebrow="Founder terminal"
-        title={companyName}
-        description="Readiness, capital raise, investor engagement, and marketplace publication."
-        actions={
-          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-            <Link
-              href="/founder/settings"
-              className="cap-btn-primary inline-flex w-full justify-center rounded-lg px-4 py-2.5 text-sm font-medium sm:w-auto"
-            >
-              Company settings
-            </Link>
-            <Link
-              href="/founder/onboarding"
-              className="cap-btn-secondary inline-flex w-full justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-[var(--navy)] sm:w-auto"
-            >
-              Continue onboarding
-            </Link>
-          </div>
-        }
-      />
-
-      {onboardingProgress ? <FounderOnboardingProgressCard progress={onboardingProgress} /> : null}
-
-      <div className="mb-8">
-        <NextBestActionsPanel
-          role="founder"
-          initialActions={nextBestActions.actions}
-          limit={5}
-          viewAllHref="/founder/actions?tab=overdue&overdue=true"
-        />
-      </div>
-
-      {remediation.tasks.length > 0 ? (
-        <div className="mb-8">
-          <FounderRemediationActionPlan
-            tasks={remediation.tasks}
-            summary={remediation.summary}
-            learningLinks={remediation.learningLinks}
-            compact
-            title="Priority remediation tasks"
-          />
-        </div>
-      ) : null}
-
-      {investorFit ? (
-        <div className="mb-8">
-          <FounderInvestorFitSignals
-            signals={buildFounderInvestorFitSignals({
-              company: investorFit.companyProfile,
-              approvedInvestorMatchCount: investorFit.approvedInvestorCount,
-              strongMatchCount: investorFit.strongMatchCount,
-            })}
-          />
-        </div>
-      ) : null}
-
-      {learning ? (
-        <div className="mb-8">
-          <FounderLearningPreviewCard
-            overallPercent={learning.overallPercent}
-            currentMilestone={learning.currentMilestone}
-            nextMilestone={learning.nextMilestone}
-            continueModules={learning.continueModules}
-            recommendations={learning.recommendations}
-          />
-        </div>
-      ) : null}
-
-      <MetricRow title="Capital readiness" subtitle="Operational indicators — not investment advice">
-        <MetricCard
-          label="Readiness Score"
-          value={`${readinessScore}/100`}
-          detail={readinessDetail}
-          accent="indigo"
-          trend={diligenceReport ? "up" : "flat"}
-          sparklineValues={[readinessScore, readinessScore, readinessScore, readinessScore, readinessScore, readinessScore, readinessScore]}
-          href="/founder/readiness"
-        />
-        <MetricCard
-          label="Raise Progress"
-          value={raiseProgress}
-          detail={company?.status ?? "Pending"}
-          accent="violet"
-          sparklineValues={[1, 2, 2, 3, 3, 4, 4]}
-          href="/founder/capital-raise"
-        />
-        <MetricCard
-          label="Indicative Interest"
-          value={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
-          detail={`From ${pledgeSummary.investorCount} ${pledgeSummary.investorCount === 1 ? "investor" : "investors"}`}
-          accent="blue"
-          sparklineValues={[0, 1, 1, 2, pledgeSummary.investorCount, pledgeSummary.investorCount, pledgeSummary.investorCount]}
-          href="/founder/investors"
-        />
-        <MetricCard
-          label="Investor Activity"
-          value={String(investorActivityTotal)}
-          detail="Interest, intros, and saved deals"
-          accent="slate"
-          sparklineValues={[0, 1, 2, investorActivityTotal, investorActivityTotal, investorActivityTotal, investorActivityTotal]}
-          href="/founder/investors"
-        />
-      </MetricRow>
-
-      <section className="mt-5">
-        <DashboardInsightPanel title="Engagement trend" subtitle="Workspace activity snapshot" />
-      </section>
-
-      <section className="mt-5 grid gap-5 xl:grid-cols-2">
-        <WorkspacePanel title="Capital Raise Overview" subtitle="Non-binding marketplace interest">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl bg-[var(--navy-muted)] p-4 ring-1 ring-slate-200">
-              <p className="text-sm font-medium text-[var(--navy)]">Total pledged</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-950">
-                {formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
-              </p>
+        <PageHeader
+          eyebrow="Founder terminal"
+          title={companyName}
+          description="Readiness, capital raise, investor engagement, and marketplace publication."
+          actions={
+            <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+              <Link
+                href="/founder/settings"
+                className="cap-btn-primary inline-flex w-full justify-center rounded-lg px-4 py-2.5 text-sm font-medium sm:w-auto"
+              >
+                Company settings
+              </Link>
+              <Link
+                href="/founder/onboarding"
+                className="cap-btn-secondary inline-flex w-full justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-[var(--navy)] sm:w-auto"
+              >
+                Continue onboarding
+              </Link>
             </div>
-            <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
-              <p className="text-sm font-medium text-slate-600">Funding target</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-950">
-                {company?.funding_amount ? formatPledgeTotal(Number(company.funding_amount)) : "TBD"}
-              </p>
-            </div>
-          </div>
-          <p className="mt-4 text-xs leading-5 text-slate-500">
-            Pledges are indicative and not legally committed investment.
-          </p>
-        </WorkspacePanel>
-
-        <WorkspacePanel title="Investor Pipeline" subtitle="Read-only activity on your listing">
-          {investorActivity ? (
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-              {[
-                ["Expressed interest", investorActivity.interests.length],
-                ["Intro requests", investorActivity.introRequests.length],
-                ["Saved deals", investorActivity.savedDeals.length],
-              ].map(([title, count]) => (
-                <div key={title as string} className="rounded-xl border border-slate-200/80 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{title as string}</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-950">{count as number}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-slate-600">Investor activity will appear once your company is linked.</p>
-          )}
-        </WorkspacePanel>
-
-        <WorkspacePanel
-          title="Recent Activity"
-          subtitle="Documents and data room status"
-          action={
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{documentStatus}</span>
           }
-        >
-          <div className="divide-y divide-slate-100">
-            {(documents ?? []).length > 0 ? (
-              documents?.slice(0, 5).map((document) => (
-                <div key={document.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-                  <span className="min-w-0 flex-1 truncate font-medium text-slate-800">{document.file_name ?? document.document_type}</span>
-                  <span className="shrink-0 rounded-full bg-[var(--navy-muted)] px-2.5 py-1 text-xs font-medium text-[var(--navy)]">
-                    {document.status ?? "uploaded"}
+        />
+
+        {onboardingProgress ? <FounderOnboardingProgressCard progress={onboardingProgress} /> : null}
+
+        {/* 1. Capital readiness — FIRST */}
+        <div className="mb-8">
+          <CapitalReadinessSection
+            readinessScore={readinessScore}
+            readinessDetail={readinessDetail}
+            raiseProgress={raiseProgress}
+            companyStatus={company?.status ?? null}
+            companyFundingAmount={company?.funding_amount ? Number(company.funding_amount) : null}
+            pledgeSummary={pledgeSummary}
+            investorActivityTotal={investorActivityTotal}
+            investorActivity={investorActivity}
+            documents={documents ?? []}
+          />
+        </div>
+
+        {/* 2. What to do next */}
+        <div className="mb-8">
+          <NextBestActionsPanel
+            role="founder"
+            initialActions={nextBestActions.actions}
+            limit={5}
+            viewAllHref="/founder/actions?tab=overdue&overdue=true"
+          />
+        </div>
+
+        {/* 3. Priority remediation tasks */}
+        {remediation.tasks.length > 0 ? (
+          <div className="mb-8">
+            <FounderRemediationActionPlan
+              tasks={remediation.tasks}
+              summary={remediation.summary}
+              learningLinks={remediation.learningLinks}
+              compact
+              title="Priority remediation tasks"
+            />
+          </div>
+        ) : null}
+
+        {/* 4. Investor fit signals */}
+        {investorFit ? (
+          <div className="mb-8">
+            <FounderInvestorFitSignals
+              signals={buildFounderInvestorFitSignals({
+                company: investorFit.companyProfile,
+                approvedInvestorMatchCount: investorFit.approvedInvestorCount,
+                strongMatchCount: investorFit.strongMatchCount,
+              })}
+              approvedCount={investorFit.approvedInvestorCount}
+              strongCount={investorFit.strongMatchCount}
+            />
+          </div>
+        ) : null}
+
+        {/* 5. Institutional readiness learning */}
+        {learning ? (
+          <div className="mb-8">
+            <FounderLearningPreviewCard
+              overallPercent={learning.overallPercent}
+              currentMilestone={learning.currentMilestone}
+              nextMilestone={learning.nextMilestone}
+              continueModules={learning.continueModules}
+              recommendations={learning.recommendations}
+            />
+          </div>
+        ) : null}
+
+        {/* 6. Engagement trend */}
+        <section className="mb-8">
+          <DashboardInsightPanel
+            title="Engagement trend"
+            subtitle="Workspace activity snapshot — last 7 days"
+            introRequests={investorActivity?.introRequests.length ?? 0}
+          />
+        </section>
+
+        {/* 7. Capital Raise Overview + Investor Pipeline */}
+        <section className="mb-8 grid gap-5 xl:grid-cols-2">
+          <WorkspacePanel title="Capital raise overview" subtitle="Non-binding marketplace interest">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg px-4 py-3 ring-1 ring-[#EEEDFE]" style={{ background: "#EEEDFE" }}>
+                <p className="text-xs font-medium" style={{ color: "#534AB7" }}>Total pledged</p>
+                <p className="mt-1.5 font-mono text-2xl font-semibold" style={{ color: "#3C3489" }}>
+                  {formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
+                </p>
+                <p className="mt-1 text-[11px]" style={{ color: "#534AB7" }}>
+                  {pledgeSummary.investorCount} investor{pledgeSummary.investorCount === 1 ? "" : "s"}
+                </p>
+              </div>
+              <div className="rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+                <p className="text-xs font-medium text-slate-600">Funding target</p>
+                <p className="mt-1.5 font-mono text-2xl font-semibold text-slate-950">
+                  {company?.funding_amount ? formatPledgeTotal(Number(company.funding_amount)) : "TBD"}
+                </p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  {raiseProgress}
+                </p>
+              </div>
+            </div>
+            {company?.funding_amount && Number(company.funding_amount) > 0 ? (
+              <div className="mt-4">
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-[11px] text-slate-500">Raise progress</span>
+                  <span className="text-[11px] font-semibold" style={{ color: "#534AB7" }}>
+                    {Math.round(Math.min(100, (pledgeSummary.totalPledged / Number(company.funding_amount)) * 100))}%
                   </span>
                 </div>
-              ))
+                <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.min(100, (pledgeSummary.totalPledged / Number(company.funding_amount)) * 100)}%`,
+                      background: "#534AB7",
+                    }}
+                  />
+                </div>
+              </div>
+            ) : null}
+            <p className="mt-4 text-xs leading-5 text-slate-500">
+              Pledges are indicative and not legally committed investment.
+            </p>
+          </WorkspacePanel>
+
+          <WorkspacePanel title="Investor pipeline" subtitle="Read-only activity on your listing">
+            {investorActivity ? (
+              <>
+                <div className="mb-4 grid grid-cols-3 gap-3">
+                  {[
+                    ["Expressed interest", investorActivity.interests.length],
+                    ["Intro requests", investorActivity.introRequests.length],
+                    ["Saved deals", investorActivity.savedDeals.length],
+                  ].map(([title, count]) => (
+                    <div key={title as string} className="rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-slate-100 text-center">
+                      <p className="font-mono text-xl font-semibold text-slate-950">{count as number}</p>
+                      <p className="mt-0.5 text-[11px] text-slate-500">{title as string}</p>
+                    </div>
+                  ))}
+                </div>
+                {pipelineItems.length > 0 ? (
+                  <div className="divide-y divide-slate-100">
+                    {pipelineItems.map((item, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 text-xs">
+                        <span className="font-medium text-slate-800">{item.name}</span>
+                        <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${badgeCls[item.variant]}`}>
+                          {item.type}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">No investor interactions yet. Publish your listing to receive activity.</p>
+                )}
+              </>
             ) : (
-              <p className="py-3 text-sm text-slate-600">No documents uploaded yet.</p>
+              <p className="text-sm text-slate-600">Investor activity will appear once your company is linked.</p>
             )}
-          </div>
-        </WorkspacePanel>
-      </section>
+          </WorkspacePanel>
+        </section>
 
-      <section className="mt-5">
-        <TaskWidgetLoader />
-      </section>
-
+        {/* 8. Recent Activity */}
+        <section className="mb-8">
+          <WorkspacePanel
+            title="Recent activity"
+            subtitle="Documents and data room status"
+            action={
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                {documentStatus}
+              </span>
+            }
+          >
+            <div className="divide-y divide-slate-100">
+              {(documents ?? []).length > 0 ? (
+                documents?.slice(0, 5).map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                    <span className="min-w-0 flex-1 truncate font-medium text-slate-800">
+                      {doc.file_name ?? doc.document_type}
+                    </span>
+                    <span
+                      className={`shrink-0 rounded px-2.5 py-1 text-[10px] font-semibold ${
+                        doc.status === "approved"
+                          ? "bg-[#EAF3DE] text-[#3B6D11]"
+                          : doc.status === "rejected"
+                          ? "bg-[#FCEBEB] text-[#A32D2D]"
+                          : "bg-[#EEEDFE] text-[#3C3489]"
+                      }`}
+                    >
+                      {doc.status ?? "uploaded"}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="py-3 text-sm text-slate-600">No documents uploaded yet.</p>
+              )}
+            </div>
+          </WorkspacePanel>
+        </section>
       </FounderFeatureGate>
     </FounderAppShell>
   );
