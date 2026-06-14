@@ -9,6 +9,7 @@ import { AdminLearningAtRisk } from "@/components/admin/learning/AdminLearningAt
 import { WorkspaceModulePlaceholder } from "@/components/ui/WorkspaceModulePlaceholder";
 import { isAdminModuleComingSoon } from "@/lib/admin/module-flags";
 import { requireRole } from "@/lib/supabase/auth";
+import { CAPITAL_STAGE_MODULES, CAPITAL_STAGE_META, type CapitalStage } from "@/lib/learning/capital-stages";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,15 @@ export default async function AdminLearningDashboardPage() {
   }
 
   const supabase = createServiceRoleClient();
+
+  // Fetch all DB learning_programs slugs (any status) to detect which static modules are linked
+  type SlimProgram = { id: string; slug: string; title: string; content_status: string };
+  const { data: rawPrograms } = await supabase
+    .from("learning_programs")
+    .select("id, slug, title, content_status")
+    .limit(500);
+  const allPrograms = (rawPrograms ?? []) as SlimProgram[];
+  const programBySlug = new Map(allPrograms.map((p) => [p.slug, p]));
 
   const [
     coursesTotal,
@@ -70,6 +80,13 @@ export default async function AdminLearningDashboardPage() {
     { href: "/admin/learning/certificates", label: "Certificates" },
     { href: "/admin/learning/analytics", label: "Analytics" },
   ];
+
+  const stageColors: Record<string, { bg: string; text: string }> = {
+    stage_0: { bg: "#EFF6FF", text: "#1D4ED8" },
+    stage_1: { bg: "#F0FDF4", text: "#15803D" },
+    stage_2: { bg: "#FFF7ED", text: "#C2410C" },
+    stage_3: { bg: "#FAF5FF", text: "#7E22CE" },
+  };
 
   return (
     <AppShell
@@ -128,7 +145,7 @@ export default async function AdminLearningDashboardPage() {
                 Approval workflow: draft → pending_review → approved → published → archived.
               </li>
               <li>
-                Certificates are “Certificate of Completion” only. No regulatory or qualification claims.
+                Certificates are "Certificate of Completion" only. No regulatory or qualification claims.
               </li>
             </ul>
           </WorkspacePanel>
@@ -138,6 +155,107 @@ export default async function AdminLearningDashboardPage() {
               <li>Founder-facing learning experience remains unchanged in Phase 1.</li>
             </ul>
           </WorkspacePanel>
+        </section>
+
+        {/* Capital stage modules panel */}
+        <section className="mt-8">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">Capital stage modules</h2>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  13 built-in static modules — link an admin course to enrich with video &amp; custom content
+                </p>
+              </div>
+              <Link
+                href="/admin/learning/courses/new"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition"
+              >
+                + New course
+              </Link>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/60">
+                    <th className="px-6 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400">Module</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400">Stage</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400">Lessons</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400">DB linked</th>
+                    <th className="px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-slate-400">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {CAPITAL_STAGE_MODULES.map((mod) => {
+                    const linked = programBySlug.get(mod.slug);
+                    const stageMeta = CAPITAL_STAGE_META[mod.stage as CapitalStage];
+                    const sc = stageColors[mod.stage] ?? { bg: "#F1F5F9", text: "#475569" };
+                    // Encode pre-fill params for the new course form
+                    const createParams = new URLSearchParams({
+                      slug: mod.slug,
+                      stage: mod.stage,
+                      title: mod.title,
+                    });
+                    return (
+                      <tr key={mod.slug} className="hover:bg-slate-50 transition">
+                        <td className="px-6 py-3">
+                          <p className="font-medium text-slate-800">{mod.title}</p>
+                          <code className="text-[10px] text-slate-400">{mod.slug}</code>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                            style={{ background: sc.bg, color: sc.text }}
+                          >
+                            {stageMeta.label.split(" — ")[0]}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-500">{mod.lessons.length}</td>
+                        <td className="px-4 py-3">
+                          {linked ? (
+                            <span className="flex items-center gap-1.5">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
+                              <span className="text-xs font-medium text-green-700">
+                                {linked.content_status === "published" ? "Published" : linked.content_status}
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1.5">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-300" />
+                              <span className="text-xs text-slate-400">Unlinked</span>
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {linked ? (
+                            <Link
+                              href={`/admin/learning/courses/${linked.id}`}
+                              className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition"
+                            >
+                              Edit course
+                            </Link>
+                          ) : (
+                            <Link
+                              href={`/admin/learning/courses/new?${createParams}`}
+                              className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:border-indigo-300 hover:text-indigo-700 transition"
+                            >
+                              Create &amp; link
+                            </Link>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="border-t border-slate-100 px-6 py-3">
+              <p className="text-[11px] text-slate-400">
+                To link: create a course and set its <strong>slug</strong> to match the module slug above.
+                Linked courses can add video, custom lessons, and modules — all visible on the founder lesson page.
+              </p>
+            </div>
+          </div>
         </section>
       </WorkspacePageContainer>
     </AppShell>

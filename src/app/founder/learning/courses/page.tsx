@@ -6,14 +6,15 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { listPublishedAdminCourses } from "@/lib/learning/admin-courses";
+import { CAPITAL_STAGE_MODULES, CAPITAL_STAGE_META, type CapitalStage } from "@/lib/learning/capital-stages";
 
 export const dynamic = "force-dynamic";
 
-const STAGE_LABELS: Record<string, { label: string; bg: string; text: string }> = {
-  stage_0: { label: "Stage 0 — Foundation", bg: "#EFF6FF", text: "#1D4ED8" },
-  stage_1: { label: "Stage 1 — Seed Round", bg: "#F0FDF4", text: "#15803D" },
-  stage_2: { label: "Stage 2 — Series A", bg: "#FFF7ED", text: "#C2410C" },
-  stage_3: { label: "Stage 3 — Exit", bg: "#FAF5FF", text: "#7E22CE" },
+const STAGE_BADGE: Record<string, { label: string; bg: string; text: string }> = {
+  stage_0: { label: "Stage 0", bg: "#EFF6FF", text: "#1D4ED8" },
+  stage_1: { label: "Stage 1", bg: "#F0FDF4", text: "#15803D" },
+  stage_2: { label: "Stage 2", bg: "#FFF7ED", text: "#C2410C" },
+  stage_3: { label: "Stage 3", bg: "#FAF5FF", text: "#7E22CE" },
   general: { label: "General", bg: "#F1F5F9", text: "#475569" },
 };
 
@@ -33,6 +34,19 @@ const FILTER_DIFFICULTY = [
   { value: "advanced", label: "Advanced" },
 ];
 
+type BrowseCourse = {
+  key: string;
+  title: string;
+  description: string;
+  difficulty: string | null;
+  readiness_focus: string;
+  banner_image_url: string | null;
+  video_url: string | null;
+  href: string;
+  isStatic: boolean;
+  isLinked: boolean;
+};
+
 type PageProps = {
   searchParams: Promise<{ stage?: string; difficulty?: string }>;
 };
@@ -42,9 +56,53 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
   const company = await ensureFounderCompanyForUser(profile);
   const { stage: stageFilter = "", difficulty: difficultyFilter = "" } = await searchParams;
 
-  const allCourses = await listPublishedAdminCourses();
+  // DB courses
+  const dbCourses = await listPublishedAdminCourses();
+  const dbBySlug = new Map(dbCourses.map((c) => [c.slug, c]));
+  const dbSlugs = new Set(dbCourses.map((c) => c.slug));
 
-  const courses = allCourses.filter((c) => {
+  // Build merged list: static modules first, then pure-DB courses (no matching static slug)
+  const combined: BrowseCourse[] = [];
+
+  for (const mod of CAPITAL_STAGE_MODULES) {
+    const db = dbBySlug.get(mod.slug);
+    const stageMeta = CAPITAL_STAGE_META[mod.stage as CapitalStage];
+    combined.push({
+      key: mod.slug,
+      title: db?.title ?? mod.title,
+      description: db?.description ?? stageMeta.subtitle,
+      difficulty: db?.difficulty ?? stageMeta.level.toLowerCase(),
+      readiness_focus: mod.stage,
+      banner_image_url: db?.banner_image_url ?? null,
+      video_url: db?.video_url ?? null,
+      href: `/founder/learning/courses/${mod.slug}/${mod.lessons[0]?.id ?? ""}`,
+      isStatic: true,
+      isLinked: !!db,
+    });
+  }
+
+  // Pure admin courses (no matching capital stage slug)
+  for (const c of dbCourses) {
+    if (!dbSlugs.has(c.slug) || CAPITAL_STAGE_MODULES.every((m) => m.slug !== c.slug)) {
+      if (!CAPITAL_STAGE_MODULES.some((m) => m.slug === c.slug)) {
+        combined.push({
+          key: c.id,
+          title: c.title,
+          description: c.description,
+          difficulty: c.difficulty,
+          readiness_focus: c.readiness_focus ?? "general",
+          banner_image_url: c.banner_image_url,
+          video_url: c.video_url,
+          href: `/founder/learning/courses/${c.id}`,
+          isStatic: false,
+          isLinked: true,
+        });
+      }
+    }
+  }
+
+  // Apply filters
+  const courses = combined.filter((c) => {
     if (stageFilter && c.readiness_focus !== stageFilter) return false;
     if (difficultyFilter && c.difficulty !== difficultyFilter) return false;
     return true;
@@ -60,10 +118,9 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
           <PageHeader
             eyebrow="Learning"
             title="Browse all courses"
-            description="Curated by the CapitalOS team — available at any stage."
+            description="Capital stage lessons and curated courses — all in one place."
           />
 
-          {/* Back link */}
           <div className="mb-6">
             <Link href="/founder/learning" className="text-sm text-indigo-600 hover:underline">
               ← Learning hub
@@ -71,8 +128,7 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
           </div>
 
           {/* Filters */}
-          <div className="mb-6 flex flex-wrap gap-4">
-            {/* Stage filter */}
+          <div className="mb-6 flex flex-wrap items-center gap-4">
             <div className="flex flex-wrap gap-1.5">
               {FILTER_STAGES.map((s) => {
                 const active = stageFilter === s.value;
@@ -86,7 +142,7 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
                     className={`rounded-full px-3 py-1 text-xs font-medium transition ${
                       active
                         ? "bg-indigo-600 text-white"
-                        : "bg-white border border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600"
+                        : "border border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:text-indigo-600"
                     }`}
                   >
                     {s.label}
@@ -94,10 +150,7 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
                 );
               })}
             </div>
-
-            <div className="h-auto w-px bg-slate-200" />
-
-            {/* Difficulty filter */}
+            <div className="h-5 w-px bg-slate-200" />
             <div className="flex flex-wrap gap-1.5">
               {FILTER_DIFFICULTY.map((d) => {
                 const active = difficultyFilter === d.value;
@@ -111,7 +164,7 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
                     className={`rounded-full px-3 py-1 text-xs font-medium transition ${
                       active
                         ? "bg-slate-800 text-white"
-                        : "bg-white border border-slate-200 text-slate-600 hover:border-slate-400"
+                        : "border border-slate-200 bg-white text-slate-600 hover:border-slate-400"
                     }`}
                   >
                     {d.label}
@@ -121,18 +174,20 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
             </div>
           </div>
 
-          {/* Results count */}
           <p className="mb-4 text-xs text-slate-400">
             {courses.length} {courses.length === 1 ? "course" : "courses"}
             {(stageFilter || difficultyFilter) && " matching your filters"}
+            {" · "}
+            <span className="text-slate-400">
+              Static = built-in lessons &nbsp;·&nbsp; Admin-linked = enriched with video &amp; modules
+            </span>
           </p>
 
-          {/* Card grid */}
           {courses.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white px-8 py-16 text-center">
               <p className="text-3xl">📚</p>
               <p className="mt-3 text-sm font-medium text-slate-700">No courses found</p>
-              <p className="mt-1 text-xs text-slate-400">Try removing a filter or check back soon.</p>
+              <p className="mt-1 text-xs text-slate-400">Try removing a filter.</p>
               <Link
                 href="/founder/learning/courses"
                 className="mt-4 inline-block text-xs font-semibold text-indigo-600 hover:underline"
@@ -143,12 +198,16 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
           ) : (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {courses.map((course) => {
-                const stageBadge = STAGE_LABELS[course.readiness_focus ?? "general"] ?? STAGE_LABELS.general;
+                const badge = STAGE_BADGE[course.readiness_focus] ?? STAGE_BADGE.general;
                 return (
                   <Link
-                    key={course.id}
-                    href={`/founder/learning/courses/${course.id}`}
-                    className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:border-indigo-200 hover:shadow-sm"
+                    key={course.key}
+                    href={course.href}
+                    className={`group flex flex-col overflow-hidden rounded-2xl border bg-white transition hover:shadow-sm ${
+                      course.isLinked
+                        ? "border-indigo-200 hover:border-indigo-400"
+                        : "border-slate-200 hover:border-slate-300"
+                    }`}
                   >
                     {/* Banner */}
                     <div className="relative h-28 flex-shrink-0 bg-slate-100">
@@ -160,11 +219,13 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-full items-center justify-center bg-gradient-to-br from-indigo-50 to-slate-100 text-3xl">
+                        <div
+                          className="flex h-full items-center justify-center text-3xl"
+                          style={{ background: badge.bg }}
+                        >
                           📚
                         </div>
                       )}
-                      {/* Video badge */}
                       {course.video_url && (
                         <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
                           ▶ Video
@@ -173,16 +234,25 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
                     </div>
 
                     {/* Body */}
-                    <div className="flex flex-1 flex-col gap-2.5 p-4">
+                    <div className="flex flex-1 flex-col gap-2 p-4">
                       <div className="flex flex-wrap gap-1.5">
                         <span
                           className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                          style={{ background: stageBadge.bg, color: stageBadge.text }}
+                          style={{ background: badge.bg, color: badge.text }}
                         >
-                          {stageBadge.label}
+                          {badge.label}
                         </span>
+                        {course.isLinked ? (
+                          <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
+                            Admin-linked
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                            Static
+                          </span>
+                        )}
                         {course.difficulty && (
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium capitalize text-slate-500">
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] capitalize text-slate-400">
                             {course.difficulty}
                           </span>
                         )}
@@ -194,7 +264,7 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
                         </p>
                       )}
                       <span className="mt-1 text-xs font-semibold text-indigo-600 group-hover:underline">
-                        View course →
+                        {course.isStatic ? "View lessons →" : "View course →"}
                       </span>
                     </div>
                   </Link>
