@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import type { Task, TaskStatus, TaskPriority, InternalUser } from "@/lib/tasks/types";
+import type { Task, TaskStatus, TaskPriority, TaskCategory, InternalUser } from "@/lib/tasks/types";
 import type { GoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 
 const GCAL_PURPLE = "#534AB7";
 const GCAL_LIGHT  = "#EEEDFE";
 
 type ViewMode = "kanban" | "list";
+type ActiveCat = TaskCategory | "all";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 const PRIORITY_MAP: Record<TaskPriority, { bg: string; color: string }> = {
@@ -22,6 +23,15 @@ const STATUS_MAP: Record<TaskStatus, { bg: string; color: string; label: string 
   done:        { bg: "#E1F5EE", color: "#0F6E56", label: "Done" },
   cancelled:   { bg: "#FCEBEB", color: "#A32D2D", label: "Cancelled" },
 };
+
+const DEPT_MAP: Record<TaskCategory, { bg: string; color: string; dot: string; label: string }> = {
+  marketing: { bg: "#EEEDFE", color: "#3C3489", dot: "#534AB7", label: "Marketing"  },
+  ir_dept:   { bg: "#E6F1FB", color: "#0C447C", dot: "#185FA5", label: "IR Dept"    },
+  admin_dept:{ bg: "#F1EFE8", color: "#444441", dot: "#5F5E5A", label: "Admin Dept" },
+  sales_dept:{ bg: "#E1F5EE", color: "#085041", dot: "#0F6E56", label: "Sales Dept" },
+};
+
+const DEPT_KEYS: TaskCategory[] = ["marketing", "ir_dept", "admin_dept", "sales_dept"];
 
 function initials(name: string | null | undefined, email: string | null | undefined): string {
   if (name) return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
@@ -88,11 +98,12 @@ function TaskCard({
   const [saving, setSaving] = useState(false);
   const [calLoading, setCalLoading] = useState(false);
   const [form, setForm] = useState({
-    title:       task.title,
-    description: task.description ?? "",
-    priority:    task.priority,
-    due_date:    task.due_date ? task.due_date.slice(0, 10) : "",
-    assigned_to: task.assigned_to ?? "",
+    title:         task.title,
+    description:   task.description ?? "",
+    priority:      task.priority,
+    due_date:      task.due_date ? task.due_date.slice(0, 10) : "",
+    assigned_to:   task.assigned_to ?? "",
+    task_category: task.task_category ?? ("" as TaskCategory | ""),
   });
 
   const pc = PRIORITY_MAP[task.priority];
@@ -105,11 +116,12 @@ function TaskCard({
     if (!form.title.trim()) return;
     setSaving(true);
     await onSave(task.id, {
-      title:       form.title.trim(),
-      description: form.description.trim() || null,
-      priority:    form.priority,
-      due_date:    form.due_date || null,
-      assigned_to: form.assigned_to || null,
+      title:         form.title.trim(),
+      description:   form.description.trim() || null,
+      priority:      form.priority,
+      due_date:      form.due_date || null,
+      assigned_to:   form.assigned_to || null,
+      task_category: (form.task_category || null) as TaskCategory | null,
     } as Partial<Task>);
     setSaving(false);
     setEditing(false);
@@ -117,11 +129,12 @@ function TaskCard({
 
   function handleCancel() {
     setForm({
-      title:       task.title,
-      description: task.description ?? "",
-      priority:    task.priority,
-      due_date:    task.due_date ? task.due_date.slice(0, 10) : "",
-      assigned_to: task.assigned_to ?? "",
+      title:         task.title,
+      description:   task.description ?? "",
+      priority:      task.priority,
+      due_date:      task.due_date ? task.due_date.slice(0, 10) : "",
+      assigned_to:   task.assigned_to ?? "",
+      task_category: task.task_category ?? "",
     });
     setEditing(false);
   }
@@ -185,7 +198,7 @@ function TaskCard({
             style={inputStyle}
           />
         </div>
-        <div style={{ marginBottom: 10 }}>
+        <div style={{ marginBottom: 8 }}>
           <select
             value={form.assigned_to}
             onChange={(e) => setForm({ ...form, assigned_to: e.target.value })}
@@ -198,6 +211,32 @@ function TaskCard({
               </option>
             ))}
           </select>
+        </div>
+        {/* Department picker */}
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 10, color: "#64748b", marginBottom: 5 }}>Department</div>
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" as const }}>
+            {DEPT_KEYS.map((k) => {
+              const d = DEPT_MAP[k];
+              const active = form.task_category === k;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setForm({ ...form, task_category: active ? "" : k })}
+                  style={{
+                    fontSize: 10, padding: "3px 9px", borderRadius: 5, cursor: "pointer",
+                    fontWeight: 500,
+                    background: active ? d.bg : "transparent",
+                    color: active ? d.color : "#64748b",
+                    border: active ? `1px solid ${d.dot}` : "0.5px solid #e2e6ed",
+                  }}
+                >
+                  {d.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
           <button
@@ -267,6 +306,18 @@ function TaskCard({
           </button>
         </div>
       </div>
+
+      {/* Department badge */}
+      {task.task_category && (() => {
+        const d = DEPT_MAP[task.task_category];
+        return (
+          <div style={{ marginBottom: 5 }}>
+            <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: d.bg, color: d.color, fontWeight: 500 }}>
+              {d.label}
+            </span>
+          </div>
+        );
+      })()}
 
       {task.description && (
         <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8, lineHeight: 1.5 }}>
@@ -412,17 +463,18 @@ function ListView({
     <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" as const }}>
         <colgroup>
-          <col style={{ width: "32%" }} />
-          <col style={{ width: "13%" }} />
-          <col style={{ width: "10%" }} />
-          <col style={{ width: "16%" }} />
+          <col style={{ width: "26%" }} />
           <col style={{ width: "11%" }} />
+          <col style={{ width: "11%" }} />
+          <col style={{ width: "9%" }} />
+          <col style={{ width: "14%" }} />
           <col style={{ width: "10%" }} />
-          <col style={{ width: "8%" }} />
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "9%" }} />
         </colgroup>
         <thead>
           <tr style={{ background: "#f8f9fb", borderBottom: "0.5px solid #e2e6ed" }}>
-            {["Task", "Status", "Priority", "Assignee", "Due", "Calendar", ""].map((h) => (
+            {["Task", "Dept", "Status", "Priority", "Assignee", "Due", "Calendar", ""].map((h) => (
               <th key={h} style={{ fontSize: 11, fontWeight: 500, color: "#64748b", padding: "8px 12px", textAlign: "left" }}>
                 {h}
               </th>
@@ -467,6 +519,16 @@ function ListView({
               >
                 <td style={{ padding: "10px 12px", fontSize: 12, fontWeight: 500, color: "#0c2340", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }} title={task.title}>
                   {task.title}
+                </td>
+                <td style={{ padding: "10px 12px" }}>
+                  {task.task_category ? (() => {
+                    const d = DEPT_MAP[task.task_category];
+                    return (
+                      <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: d.bg, color: d.color, fontWeight: 500, whiteSpace: "nowrap" as const }}>
+                        {d.label}
+                      </span>
+                    );
+                  })() : <span style={{ fontSize: 11, color: "#94a3b8" }}>—</span>}
                 </td>
                 <td style={{ padding: "10px 12px" }}>
                   <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 10, background: sc.bg, color: sc.color, fontWeight: 500, whiteSpace: "nowrap" as const }}>
@@ -588,24 +650,26 @@ interface Props {
 }
 
 export function TasksClient({ initialTasks, internalUsers, currentUserId, googleConnected, googleStatus }: Props) {
-  const [tasks, setTasks]       = useState<Task[]>(initialTasks);
-  const [viewMode, setViewMode] = useState<ViewMode>("kanban");
-  const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving]     = useState(false);
+  const [tasks, setTasks]         = useState<Task[]>(initialTasks);
+  const [viewMode, setViewMode]   = useState<ViewMode>("kanban");
+  const [activeCat, setActiveCat] = useState<ActiveCat>("all");
+  const [showForm, setShowForm]   = useState(false);
+  const [saving, setSaving]       = useState(false);
 
   // Filters
-  const [search,          setSearch]          = useState("");
-  const [filterAssignee,  setFilterAssignee]  = useState("");
-  const [filterPriority,  setFilterPriority]  = useState("");
-  const [filterDue,       setFilterDue]       = useState("");
+  const [search,         setSearch]         = useState("");
+  const [filterAssignee, setFilterAssignee] = useState("");
+  const [filterPriority, setFilterPriority] = useState("");
+  const [filterDue,      setFilterDue]      = useState("");
 
   const [form, setForm] = useState({
-    title:        "",
-    description:  "",
-    assigned_to:  "",
-    priority:     "medium" as TaskPriority,
-    due_date:     "",
-    context_type: "internal" as const,
+    title:         "",
+    description:   "",
+    assigned_to:   "",
+    priority:      "medium" as TaskPriority,
+    due_date:      "",
+    task_category: "" as TaskCategory | "",
+    context_type:  "internal" as const,
   });
 
   const reload = useCallback(async () => {
@@ -620,16 +684,17 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title:        form.title.trim(),
-        description:  form.description.trim() || null,
-        assigned_to:  form.assigned_to || null,
-        priority:     form.priority,
-        due_date:     form.due_date || null,
-        context_type: "internal",
+        title:         form.title.trim(),
+        description:   form.description.trim() || null,
+        assigned_to:   form.assigned_to || null,
+        priority:      form.priority,
+        due_date:      form.due_date || null,
+        task_category: form.task_category || null,
+        context_type:  "internal",
       }),
     });
     setSaving(false);
-    setForm({ title: "", description: "", assigned_to: "", priority: "medium", due_date: "", context_type: "internal" });
+    setForm({ title: "", description: "", assigned_to: "", priority: "medium", due_date: "", task_category: "", context_type: "internal" });
     setShowForm(false);
     reload();
   }
@@ -667,6 +732,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
   // ── Filtered tasks ──────────────────────────────────────────────────────────
   const filteredTasks = useMemo(() => {
     return tasks.filter((t) => {
+      if (activeCat !== "all" && t.task_category !== activeCat) return false;
       if (search && !t.title.toLowerCase().includes(search.toLowerCase())) return false;
       if (filterAssignee && t.assigned_to !== filterAssignee) return false;
       if (filterPriority && t.priority !== filterPriority) return false;
@@ -680,7 +746,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
       }
       return true;
     });
-  }, [tasks, search, filterAssignee, filterPriority, filterDue]);
+  }, [tasks, activeCat, search, filterAssignee, filterPriority, filterDue]);
 
   const byStatus = (s: TaskStatus) => filteredTasks.filter((t) => t.status === s);
 
@@ -748,13 +814,59 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
         </div>
       </div>
 
+      {/* ── Department tabs ── */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+        {/* All tasks tab */}
+        <button
+          onClick={() => setActiveCat("all")}
+          style={{
+            fontSize: 12, padding: "5px 14px", borderRadius: 20, cursor: "pointer",
+            border: activeCat === "all" ? "1.5px solid #94a3b8" : "0.5px solid #e2e6ed",
+            background: activeCat === "all" ? "#f1f5f9" : "#fff",
+            color: activeCat === "all" ? "#0c2340" : "#64748b",
+            fontWeight: activeCat === "all" ? 500 : 400,
+            display: "flex", alignItems: "center", gap: 6,
+          }}
+        >
+          All tasks
+          <span style={{ fontSize: 10, padding: "1px 5px", borderRadius: 8, background: "rgba(0,0,0,0.07)" }}>
+            {tasks.length}
+          </span>
+        </button>
+        {DEPT_KEYS.map((k) => {
+          const d = DEPT_MAP[k];
+          const isActive = activeCat === k;
+          const count = tasks.filter((t) => t.task_category === k).length;
+          return (
+            <button
+              key={k}
+              onClick={() => setActiveCat(k)}
+              style={{
+                fontSize: 12, padding: "5px 14px", borderRadius: 20, cursor: "pointer",
+                border: isActive ? `1.5px solid ${d.dot}` : "0.5px solid #e2e6ed",
+                background: isActive ? d.bg : "#fff",
+                color: isActive ? d.color : "#64748b",
+                fontWeight: isActive ? 500 : 400,
+                display: "flex", alignItems: "center", gap: 6,
+              }}
+            >
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: d.dot, flexShrink: 0, display: "inline-block" }} />
+              {d.label}
+              <span style={{ fontSize: 10, padding: "1px 5px", borderRadius: 8, background: "rgba(0,0,0,0.07)" }}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* ── Stats row ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
         {[
-          { label: "Total tasks",  value: total,  color: "#0c2340" },
-          { label: "To-do",        value: todo,   color: "#534AB7" },
-          { label: "In progress",  value: inProg, color: "#185FA5" },
-          { label: "Done",         value: done,   color: "#0F6E56" },
+          { label: "Total tasks", value: total,  color: "#0c2340" },
+          { label: "To-do",       value: todo,   color: "#534AB7" },
+          { label: "In progress", value: inProg, color: "#185FA5" },
+          { label: "Done",        value: done,   color: "#0F6E56" },
         ].map(({ label, value, color }) => (
           <div key={label} style={{ background: "#fff", borderRadius: 8, padding: "12px 14px", border: "0.5px solid #e2e6ed" }}>
             <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>{label}</div>
@@ -824,6 +936,31 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
                 rows={2} placeholder="Additional context…"
                 style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #e2e6ed", background: "#f5f6f8", color: "#0c2340", resize: "vertical", boxSizing: "border-box" }}
               />
+            </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 6 }}>Department</label>
+              <div style={{ display: "flex", gap: 7, flexWrap: "wrap" as const }}>
+                {DEPT_KEYS.map((k) => {
+                  const d = DEPT_MAP[k];
+                  const active = form.task_category === k;
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => setForm({ ...form, task_category: active ? "" : k })}
+                      style={{
+                        fontSize: 12, padding: "5px 13px", borderRadius: 6, cursor: "pointer",
+                        fontWeight: 500,
+                        background: active ? d.bg : "transparent",
+                        color: active ? d.color : "#64748b",
+                        border: active ? `1.5px solid ${d.dot}` : "0.5px solid #e2e6ed",
+                      }}
+                    >
+                      {d.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div>
               <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 4 }}>Assign to</label>
