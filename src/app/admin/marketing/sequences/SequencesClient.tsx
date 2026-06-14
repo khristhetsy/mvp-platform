@@ -44,34 +44,48 @@ export function SequencesClient({ sequences, templates }: Props) {
   async function handleCreateSequence() {
     if (!newName.trim()) return;
     setSaving(true);
-    await fetch("/api/marketing/sequences", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName }),
-    });
-    setSaving(false);
-    setShowCreate(false);
-    setNewName("");
-    router.refresh();
+    try {
+      await fetch("/api/marketing/sequences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName }),
+      });
+      setShowCreate(false);
+      setNewName("");
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to create sequence:", err);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleAddStep(sequenceId: string, stepOrder: number) {
-    await fetch("/api/marketing/sequences/steps", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sequence_id: sequenceId, step_order: stepOrder, ...stepForm, delay_days: Number(stepForm.delay_days) }),
-    });
-    setAddingStep(null);
-    router.refresh();
+    try {
+      await fetch("/api/marketing/sequences/steps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sequence_id: sequenceId, step_order: stepOrder, ...stepForm, delay_days: Number(stepForm.delay_days) }),
+      });
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to add sequence step:", err);
+    } finally {
+      setAddingStep(null);
+    }
   }
 
   async function handleStatusChange(sequenceId: string, status: string) {
-    await fetch("/api/marketing/sequences", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sequence_id: sequenceId, status }),
-    });
-    router.refresh();
+    try {
+      await fetch("/api/marketing/sequences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sequence_id: sequenceId, status }),
+      });
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to update sequence status:", err);
+    }
   }
 
   return (

@@ -41,36 +41,37 @@ export default async function AdminLearningFoundersPage() {
   const founders = (rawFounders ?? []) as ProfileRow[];
   const founderIds = founders.map((f) => f.id);
 
-  // Load lesson progress for all founders
-  const { data: rawProgress } = founderIds.length
-    ? await admin
-        .from("founder_lesson_progress")
-        .select("founder_id, module_slug, lesson_id, status")
-        .in("founder_id", founderIds)
-        .eq("status", "completed")
-    : { data: [] };
+  // Load progress, overrides, and company names in parallel
+  type UcRow = { user_id: string; company_id: string; companies: { company_name: string } | null };
+
+  const [
+    { data: rawProgress },
+    { data: rawOverrides },
+    { data: userCompaniesRaw },
+  ] = await Promise.all([
+    founderIds.length
+      ? admin
+          .from("founder_lesson_progress")
+          .select("founder_id, module_slug, lesson_id, status")
+          .in("founder_id", founderIds)
+          .eq("status", "completed")
+      : Promise.resolve({ data: [] }),
+    founderIds.length
+      ? (admin as unknown as { from: (t: string) => { select: (s: string) => { in: (col: string, vals: string[]) => Promise<{ data: unknown[] | null }> } } })
+          .from("admin_learning_stage_overrides")
+          .select("founder_id, capital_stage, is_unlocked")
+          .in("founder_id", founderIds)
+      : Promise.resolve({ data: [] }),
+    founderIds.length
+      ? admin
+          .from("user_companies")
+          .select("user_id, company_id, companies(company_name)")
+          .in("user_id", founderIds)
+      : Promise.resolve({ data: [] }),
+  ]);
 
   const allProgress = (rawProgress ?? []) as ProgressRow[];
-
-  // Load stage overrides
-  const { data: rawOverrides } = founderIds.length
-    ? await (admin as unknown as { from: (t: string) => { select: (s: string) => { in: (col: string, vals: string[]) => Promise<{ data: unknown[] | null }> } } })
-        .from("admin_learning_stage_overrides")
-        .select("founder_id, capital_stage, is_unlocked")
-        .in("founder_id", founderIds)
-    : { data: [] };
-
   const allOverrides = (rawOverrides ?? []) as OverrideRow[];
-
-  // Load company names via user_companies
-  const { data: userCompaniesRaw } = founderIds.length
-    ? await admin
-        .from("user_companies")
-        .select("user_id, company_id, companies(company_name)")
-        .in("user_id", founderIds)
-    : { data: [] };
-
-  type UcRow = { user_id: string; company_id: string; companies: { company_name: string } | null };
   const userCompanies = (userCompaniesRaw ?? []) as unknown as UcRow[];
   const companyByFounder = new Map(
     userCompanies.map((uc) => [uc.user_id, uc.companies?.company_name ?? "—"]),

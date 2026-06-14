@@ -97,22 +97,31 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
   async function handleSave() {
     if (!editing) return;
     setSaving(true);
-    const isNew = !editing.id;
-    const url = isNew ? "/api/marketing/templates" : `/api/marketing/templates/${editing.id}`;
-    await fetch(url, {
-      method: isNew ? "POST" : "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editing),
-    });
-    setSaving(false);
-    setEditing(null);
-    router.refresh();
+    try {
+      const isNew = !editing.id;
+      const url = isNew ? "/api/marketing/templates" : `/api/marketing/templates/${editing.id}`;
+      await fetch(url, {
+        method: isNew ? "POST" : "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editing),
+      });
+      setEditing(null);
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to save template:", err);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this template?")) return;
-    await fetch(`/api/marketing/templates/${id}`, { method: "DELETE" });
-    router.refresh();
+    try {
+      await fetch(`/api/marketing/templates/${id}`, { method: "DELETE" });
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to delete template:", err);
+    }
   }
 
   return (

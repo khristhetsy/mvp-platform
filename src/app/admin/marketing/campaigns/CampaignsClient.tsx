@@ -47,39 +47,54 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
 
   async function handleCreate(sendNow = false) {
     setSaving(true);
-    const body: Record<string, string> = { ...form, status: "draft" };
-    if (sendNow) body.action = "send";
-    else if (form.scheduled_at) body.action = "schedule";
-    await fetch("/api/marketing/campaigns", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    setSaving(false);
-    setShowCreate(false);
-    router.refresh();
+    try {
+      const body: Record<string, string> = { ...form, status: "draft" };
+      if (sendNow) body.action = "send";
+      else if (form.scheduled_at) body.action = "schedule";
+      await fetch("/api/marketing/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      setShowCreate(false);
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to create campaign:", err);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleAction(campaignId: string, action: "send" | "pause" | "cancel" | "schedule", scheduledAt?: string) {
     setActing(campaignId + action);
-    const body: Record<string, string> = { action, campaign_id: campaignId };
-    if (scheduledAt) body.scheduled_at = scheduledAt;
-    await fetch("/api/marketing/campaigns", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    setActing(null);
-    router.refresh();
+    try {
+      const body: Record<string, string> = { action, campaign_id: campaignId };
+      if (scheduledAt) body.scheduled_at = scheduledAt;
+      await fetch("/api/marketing/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to perform campaign action:", err);
+    } finally {
+      setActing(null);
+    }
   }
 
   async function openAnalytics(campaignId: string) {
     setAnalyticsId(campaignId);
     setLoadingAnalytics(true);
     setAnalyticsData(null);
-    const res = await fetch(`/api/marketing/campaigns/${campaignId}`);
-    if (res.ok) setAnalyticsData(await res.json());
-    setLoadingAnalytics(false);
+    try {
+      const res = await fetch(`/api/marketing/campaigns/${campaignId}`);
+      if (res.ok) setAnalyticsData(await res.json());
+    } catch (err) {
+      console.error("Failed to load campaign analytics:", err);
+    } finally {
+      setLoadingAnalytics(false);
+    }
   }
 
   const rate = (num: number, denom: number) =>

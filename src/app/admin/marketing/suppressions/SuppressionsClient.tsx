@@ -51,25 +51,35 @@ export function SuppressionsClient({ suppressions: initial }: { suppressions: Su
   async function add() {
     if (!addEmail.includes("@")) return;
     setSaving(true);
-    const res = await fetch("/api/marketing/suppressions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: addEmail }),
-    });
-    if (res.ok) {
-      setRows((prev) => [{ email: addEmail, reason: "manual_admin", unsubscribed_at: new Date().toISOString() }, ...prev]);
-      setAddEmail("");
-      setShowAdd(false);
+    try {
+      const res = await fetch("/api/marketing/suppressions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: addEmail }),
+      });
+      if (res.ok) {
+        setRows((prev) => [{ email: addEmail, reason: "manual_admin", unsubscribed_at: new Date().toISOString() }, ...prev]);
+        setAddEmail("");
+        setShowAdd(false);
+      }
+    } catch (err) {
+      console.error("Failed to add suppression:", err);
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   async function remove(email: string) {
     if (!confirm(`Remove ${email} from suppression list? They will be eligible to receive emails again.`)) return;
     setRemoving(email);
-    await fetch(`/api/marketing/suppressions?email=${encodeURIComponent(email)}`, { method: "DELETE" });
-    setRows((prev) => prev.filter((r) => r.email !== email));
-    setRemoving(null);
+    try {
+      await fetch(`/api/marketing/suppressions?email=${encodeURIComponent(email)}`, { method: "DELETE" });
+      setRows((prev) => prev.filter((r) => r.email !== email));
+    } catch (err) {
+      console.error("Failed to remove suppression:", err);
+    } finally {
+      setRemoving(null);
+    }
   }
 
   return (

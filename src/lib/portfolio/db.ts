@@ -8,8 +8,9 @@ import type {
   PledgeRecord,
 } from "./types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function portfolioDb(): Promise<any> {
+type SupabaseClient = Awaited<ReturnType<typeof createServerSupabaseClient>>;
+
+async function portfolioDb(): Promise<SupabaseClient> {
   return createServerSupabaseClient();
 }
 

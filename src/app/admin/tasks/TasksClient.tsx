@@ -673,54 +673,75 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
   });
 
   const reload = useCallback(async () => {
-    const res = await fetch("/api/tasks");
-    if (res.ok) setTasks(await res.json());
+    try {
+      const res = await fetch("/api/tasks");
+      if (res.ok) setTasks(await res.json());
+    } catch (err) {
+      console.error("Failed to reload tasks:", err);
+    }
   }, []);
 
   async function handleCreate() {
     if (!form.title.trim()) return;
     setSaving(true);
-    await fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title:         form.title.trim(),
-        description:   form.description.trim() || null,
-        assigned_to:   form.assigned_to || null,
-        priority:      form.priority,
-        due_date:      form.due_date || null,
-        task_category: form.task_category || null,
-        context_type:  "internal",
-      }),
-    });
-    setSaving(false);
-    setForm({ title: "", description: "", assigned_to: "", priority: "medium", due_date: "", task_category: "", context_type: "internal" });
-    setShowForm(false);
-    reload();
+    try {
+      await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title:         form.title.trim(),
+          description:   form.description.trim() || null,
+          assigned_to:   form.assigned_to || null,
+          priority:      form.priority,
+          due_date:      form.due_date || null,
+          task_category: form.task_category || null,
+          context_type:  "internal",
+        }),
+      });
+      setForm({ title: "", description: "", assigned_to: "", priority: "medium", due_date: "", task_category: "", context_type: "internal" });
+      setShowForm(false);
+      reload();
+    } catch (err) {
+      console.error("Failed to create task:", err);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleStatusChange(id: string, status: TaskStatus) {
-    await fetch(`/api/tasks/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    reload();
+    try {
+      await fetch(`/api/tasks/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      reload();
+    } catch (err) {
+      console.error("Failed to update task status:", err);
+    }
   }
 
   async function handleSave(id: string, patch: Partial<Task>) {
-    await fetch(`/api/tasks/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
-    });
-    reload();
+    try {
+      await fetch(`/api/tasks/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      reload();
+    } catch (err) {
+      console.error("Failed to save task:", err);
+    }
   }
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this task?")) return;
-    await fetch(`/api/tasks/${id}`, { method: "DELETE" });
-    reload();
+    try {
+      await fetch(`/api/tasks/${id}`, { method: "DELETE" });
+      reload();
+    } catch (err) {
+      console.error("Failed to delete task:", err);
+    }
   }
 
   function handleCalendarUpdate(id: string, eventId: string | null) {

@@ -1,13 +1,13 @@
 /**
- * Returns the Supabase client cast to `any` so we can query the new
- * marketing tables before the generated Database types are updated
- * (run `supabase gen types` after applying migration 0072).
+ * Returns the Supabase service-role client for marketing table access.
+ * Marketing tables are not yet in generated types — call sites use
+ * `as unknown as T` casts until `supabase gen types` is re-run.
+ * Access control is enforced at the API layer via requireRole(["admin"]).
  */
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
-// Use service role to bypass RLS on marketing tables.
-// Access control is enforced at the API layer via requireRole(["admin"]).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function marketingDb(): Promise<any> {
+type ServiceRoleClient = ReturnType<typeof createServiceRoleClient>;
+
+export async function marketingDb(): Promise<ServiceRoleClient> {
   return createServiceRoleClient();
 }

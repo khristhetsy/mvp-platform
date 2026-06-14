@@ -1,9 +1,11 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Task, CreateTaskInput, UpdateTaskInput, InternalUser } from "./types";
 
-// Cast to any to bypass generated type gaps (same pattern as marketingDb)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function tasksDb(): Promise<any> {
+// Returns the Supabase client. Tables not yet in generated types are accessed
+// via type-cast at the call site (tasks, google_calendar_event_id etc.).
+type SupabaseClient = Awaited<ReturnType<typeof createServerSupabaseClient>>;
+
+async function tasksDb(): Promise<SupabaseClient> {
   return createServerSupabaseClient();
 }
 

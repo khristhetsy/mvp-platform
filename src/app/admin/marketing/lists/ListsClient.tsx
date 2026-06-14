@@ -49,15 +49,22 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
       }
       closeModal();
       router.refresh();
+    } catch (err) {
+      console.error("Failed to save list:", err);
     } finally { setSaving(false); }
   }
 
   async function del(id: string) {
     if (!confirm("Delete this list? Contacts are not deleted.")) return;
     setDeleting(id);
-    await fetch(`/api/marketing/lists/${id}`, { method: "DELETE" });
-    setLists((prev) => prev.filter((l) => l.id !== id));
-    setDeleting(null);
+    try {
+      await fetch(`/api/marketing/lists/${id}`, { method: "DELETE" });
+      setLists((prev) => prev.filter((l) => l.id !== id));
+    } catch (err) {
+      console.error("Failed to delete list:", err);
+    } finally {
+      setDeleting(null);
+    }
   }
 
   return (
