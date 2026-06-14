@@ -101,11 +101,17 @@ function OpportunitiesTable({ rows }: { rows: InvestorOpportunityRow[] }) {
 
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-      <table className="w-full min-w-[720px] text-sm">
+      <table className="w-full min-w-[900px] text-sm">
         <thead>
           <tr className="border-b border-slate-100 bg-slate-50">
             <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-400">
               Company
+            </th>
+            <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+              Industry
+            </th>
+            <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+              Stage
             </th>
             <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-400">
               Date listed
@@ -139,11 +145,33 @@ function OpportunitiesTable({ rows }: { rows: InvestorOpportunityRow[] }) {
                       <span className="font-semibold text-slate-900">{row.companyName}</span>
                       <MatchPill score={row.matchScore} />
                     </div>
-                    <p className="mt-0.5 text-[11px] text-slate-400">
-                      {[row.industry, row.stage, row.location].filter(Boolean).join(" · ")}
-                    </p>
+                    {row.location ? (
+                      <p className="mt-0.5 text-[11px] text-slate-400">{row.location}</p>
+                    ) : null}
                   </div>
                 </div>
+              </td>
+
+              {/* Industry */}
+              <td className="px-4 py-3">
+                {row.industry ? (
+                  <span className="inline-block rounded-md bg-slate-100 px-2 py-0.5 text-[10.5px] text-slate-600">
+                    {row.industry}
+                  </span>
+                ) : (
+                  <span className="text-slate-300 text-xs">—</span>
+                )}
+              </td>
+
+              {/* Stage */}
+              <td className="px-4 py-3">
+                {row.stage ? (
+                  <span className="inline-block rounded-md bg-slate-100 px-2 py-0.5 text-[10.5px] text-slate-600">
+                    {row.stage}
+                  </span>
+                ) : (
+                  <span className="text-slate-300 text-xs">—</span>
+                )}
               </td>
 
               {/* Date */}
@@ -157,7 +185,7 @@ function OpportunitiesTable({ rows }: { rows: InvestorOpportunityRow[] }) {
               </td>
 
               {/* Pledge amount */}
-              <td className="px-4 py-3 text-xs text-slate-400">—</td>
+              <td className="px-4 py-3 text-xs text-slate-300">—</td>
 
               {/* Readiness score */}
               <td className="px-4 py-3">
