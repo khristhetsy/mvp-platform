@@ -49,7 +49,15 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
   },
   {
     items: [
-      { href: "/admin/learning", label: "Learning", requiredPermission: "manage_learning" },
+      {
+        href: "/admin/learning",
+        label: "Learning",
+        requiredPermission: "manage_learning",
+        children: [
+          { href: "/admin/learning", label: "Overview" },
+          { href: "/admin/learning/founders", label: "Founder roster" },
+        ],
+      },
       { href: "/admin/billing", label: "Billing", requiredPermission: "manage_billing" },
       {
         href: "/admin/analytics",
@@ -148,7 +156,20 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/founder/messages", label: "Messages" },
   { href: "/founder/capital-raise", label: "Capital Raise" },
   { href: "/founder/spvs", label: "SPVs" },
-  { href: "/founder/learning", label: "Learning" },
+  {
+    href: "/founder/learning",
+    label: "Learning",
+    children: [
+      { href: "/founder/learning", label: "Overview" },
+      { href: "/founder/learning/plan", label: "My learning plan" },
+      { href: "/founder/learning/schedule", label: "Schedule" },
+      { href: "/founder/learning/progress", label: "My progress" },
+      { href: "/founder/learning/stages/stage_0", label: "Stage 0 — Foundation" },
+      { href: "/founder/learning/stages/stage_1", label: "Stage 1 — Seed Round" },
+      { href: "/founder/learning/stages/stage_2", label: "Stage 2 — Series A" },
+      { href: "/founder/learning/stages/stage_3", label: "Stage 3 — Exit" },
+    ],
+  },
   { href: "/founder/analytics", label: "Analytics" },
   { href: "/founder/tasks", label: "Tasks" },
   { href: "/founder/settings", label: "Settings" },
