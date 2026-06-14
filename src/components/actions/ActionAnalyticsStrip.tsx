@@ -1,11 +1,30 @@
 import type { ActionCenterAnalytics } from "@/lib/actions/types";
 import type { NextBestActionRole } from "@/lib/next-best-actions/types";
 
-function Stat({ label, value, tone }: Readonly<{ label: string; value: number; tone?: string }>) {
+function Stat({
+  label,
+  value,
+  accentColor,
+  valueColor,
+}: Readonly<{
+  label: string;
+  value: number;
+  accentColor?: string;
+  valueColor?: string;
+}>) {
   return (
-    <div className={`rounded-lg border px-3 py-2 ${tone ?? "border-slate-200/80 bg-white"}`}>
+    <div
+      className="rounded-xl border border-slate-200/80 bg-white py-3 pl-4 pr-3"
+      style={
+        accentColor
+          ? { borderLeft: `3px solid ${accentColor}`, borderRadius: "0 0.75rem 0.75rem 0" }
+          : undefined
+      }
+    >
       <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-slate-950">{value}</p>
+      <p className="mt-1 text-xl font-semibold" style={{ color: valueColor ?? "#0f172a" }}>
+        {value}
+      </p>
     </div>
   );
 }
@@ -17,10 +36,10 @@ export function ActionAnalyticsStrip({
   if (role === "founder") {
     return (
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Open" value={analytics.open} />
-        <Stat label="Overdue" value={analytics.overdue} tone="border-red-200/80 bg-red-50/50" />
-        <Stat label="Completed this week" value={analytics.completedThisWeek} tone="border-emerald-200/80 bg-emerald-50/40" />
-        <Stat label="Readiness impact" value={analytics.readinessImpact ?? 0} />
+        <Stat label="Active" value={analytics.open} accentColor="#534AB7" valueColor="#3C3489" />
+        <Stat label="Overdue" value={analytics.overdue} accentColor="#A32D2D" valueColor="#A32D2D" />
+        <Stat label="Escalated" value={analytics.escalated} accentColor="#854F0B" valueColor="#854F0B" />
+        <Stat label="Completed this week" value={analytics.completedThisWeek} accentColor="#3B6D11" valueColor="#3B6D11" />
       </div>
     );
   }
@@ -28,9 +47,9 @@ export function ActionAnalyticsStrip({
   if (role === "investor") {
     return (
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Pending requirements" value={analytics.pendingRequirements ?? 0} />
-        <Stat label="Overdue" value={analytics.overdue} tone="border-red-200/80 bg-red-50/50" />
-        <Stat label="Completed this week" value={analytics.completedThisWeek} />
+        <Stat label="Pending requirements" value={analytics.pendingRequirements ?? 0} accentColor="#534AB7" valueColor="#3C3489" />
+        <Stat label="Overdue" value={analytics.overdue} accentColor="#A32D2D" valueColor="#A32D2D" />
+        <Stat label="Completed this week" value={analytics.completedThisWeek} accentColor="#3B6D11" valueColor="#3B6D11" />
         <Stat label="Active opportunities" value={analytics.activeOpportunities ?? 0} />
       </div>
     );
@@ -38,11 +57,11 @@ export function ActionAnalyticsStrip({
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-      <Stat label="Critical" value={analytics.critical} tone="border-red-200/80 bg-red-50/50" />
-      <Stat label="Escalated" value={analytics.escalated} tone="border-amber-200/80 bg-amber-50/40" />
-      <Stat label="Overdue" value={analytics.overdue} tone="border-red-200/80 bg-red-50/50" />
-      <Stat label="Blocked" value={analytics.blocked} tone="border-orange-200/80 bg-orange-50/40" />
-      <Stat label="Completed today" value={analytics.completedToday} />
+      <Stat label="Critical" value={analytics.critical} accentColor="#A32D2D" valueColor="#A32D2D" />
+      <Stat label="Escalated" value={analytics.escalated} accentColor="#854F0B" valueColor="#854F0B" />
+      <Stat label="Overdue" value={analytics.overdue} accentColor="#A32D2D" valueColor="#A32D2D" />
+      <Stat label="Blocked" value={analytics.blocked} accentColor="#854F0B" />
+      <Stat label="Completed today" value={analytics.completedToday} accentColor="#3B6D11" valueColor="#3B6D11" />
     </div>
   );
 }

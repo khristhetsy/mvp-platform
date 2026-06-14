@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
-import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -16,6 +15,7 @@ import {
   getLatestDiligenceReport,
 } from "@/lib/data/founder-readiness";
 import { FounderRemediationActionPlan } from "@/components/FounderRemediationActionPlan";
+import { FounderReadinessDonutCards } from "@/components/founder/FounderReadinessDonutCards";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { loadFounderRemediationPlan } from "@/lib/remediation/load-founder-remediation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -85,38 +85,23 @@ export default async function FounderReadinessPage() {
             </WorkspacePanel>
           ) : (
             <>
-              <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <MetricCard
-                  label="Readiness Score"
-                  value={`${readinessScore}/100`}
-                  detail={
+              <section>
+                <FounderReadinessDonutCards
+                  readinessScore={readinessScore}
+                  readinessDetail={
                     diligenceReport?.readiness_score != null
                       ? "From latest AI diligence report"
                       : "Estimated from document checklist"
                   }
-                  accent="indigo"
-                  href="/founder/readiness"
-                />
-                <MetricCard
-                  label="Profile Completion"
-                  value={`${profileCompletion.percent}%`}
-                  detail={`${profileCompletion.items.filter((item) => item.complete).length} of ${profileCompletion.items.length} fields complete`}
-                  accent="violet"
-                  href="/founder/settings"
-                />
-                <MetricCard
-                  label="Documents Uploaded"
-                  value={`${uploadedCount}/${checklist.length}`}
-                  detail={`${missingDocuments.length} key ${missingDocuments.length === 1 ? "document" : "documents"} missing`}
-                  accent="blue"
-                  href="/founder/readiness/documents"
-                />
-                <MetricCard
-                  label="Diligence Review"
-                  value={formatReviewStatus(reviewStatus ? String(reviewStatus) : null)}
-                  detail={company.is_published ? "Published to marketplace" : "Admin review and publication pending"}
-                  accent="slate"
-                  href="/founder/readiness/diligence"
+                  profilePercent={profileCompletion.percent}
+                  profileItems={profileCompletion.items}
+                  uploadedCount={uploadedCount}
+                  checklistTotal={checklist.length}
+                  checklist={checklist}
+                  missingCount={missingDocuments.length}
+                  reviewStatusFormatted={formatReviewStatus(reviewStatus ? String(reviewStatus) : null)}
+                  isPublished={Boolean(company.is_published)}
+                  reviewFeedback={reviewNotes}
                 />
               </section>
 
