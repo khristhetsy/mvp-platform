@@ -97,9 +97,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       .eq("id", originalEvent.campaign_id)
       .single();
     if (camp) {
+      const campRow = camp as unknown as Record<string, unknown>;
       await db
         .from("marketing_campaigns")
-        .update({ [col]: (camp[col] ?? 0) + 1 })
+        .update({ [col]: ((campRow[col] as number) ?? 0) + 1 })
         .eq("id", originalEvent.campaign_id);
     }
   }

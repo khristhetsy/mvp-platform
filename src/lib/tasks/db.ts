@@ -1,12 +1,15 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Task, CreateTaskInput, UpdateTaskInput, InternalUser } from "./types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-// Returns the Supabase client. Tables not yet in generated types are accessed
-// via type-cast at the call site (tasks, google_calendar_event_id etc.).
-type SupabaseClient = Awaited<ReturnType<typeof createServerSupabaseClient>>;
+// Tasks table is not yet in the generated Supabase types — cast to any
+// so .from("tasks") resolves without `never`. Re-run `supabase gen types`.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type TasksClient = SupabaseClient<any>;
 
-async function tasksDb(): Promise<SupabaseClient> {
-  return createServerSupabaseClient();
+async function tasksDb(): Promise<TasksClient> {
+  const db = await createServerSupabaseClient();
+  return db as unknown as TasksClient;
 }
 
 /** List tasks visible to the current user (RLS applies).

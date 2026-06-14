@@ -12,7 +12,9 @@ export async function GET(
     const { id } = await params;
     const db = await marketingDb();
 
-    const [{ data: campaign }, { data: events }] = await Promise.all([
+    type MarketingEvent = { id: string; event_type: string; occurred_at: string; email: string | null; metadata: Record<string, unknown> };
+
+    const [{ data: rawCampaign }, { data: rawEvents }] = await Promise.all([
       db
         .from("marketing_campaigns")
         .select("*, marketing_lists(name), marketing_templates(name,subject)")
@@ -26,15 +28,18 @@ export async function GET(
         .limit(500),
     ]);
 
+    const campaign = rawCampaign as unknown as Record<string, unknown> | null;
+    const events = (rawEvents ?? []) as unknown as MarketingEvent[];
+
     if (!campaign) return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
 
     // Event type breakdown
     const breakdown: Record<string, number> = {};
-    for (const e of events ?? []) {
+    for (const e of events) {
       breakdown[e.event_type] = (breakdown[e.event_type] ?? 0) + 1;
     }
 
-    return NextResponse.json({ campaign, events: events ?? [], breakdown });
+    return NextResponse.json({ campaign, events, breakdown });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }

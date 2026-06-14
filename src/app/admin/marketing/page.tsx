@@ -76,7 +76,8 @@ export default async function MarketingDashboardPage() {
     openRate,
     clickRate,
     activeCampaigns: (campaigns.data ?? []).length,
-    campaigns: (campaigns.data ?? []).map((c: { id: string; name: string; status: string; stat_sent: number; stat_opened: number; stat_clicked: number; list: { name: string } | null }) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    campaigns: (campaigns.data ?? []).map((c: any) => ({
       id: c.id,
       name: c.name,
       stat_sent: c.stat_sent,
@@ -115,7 +116,8 @@ export default async function MarketingDashboardPage() {
           {(campaigns.data ?? []).length === 0 ? (
             <div style={{ padding: "24px 16px", fontSize: 13, color: "var(--muted-foreground)", textAlign: "center" }}>No active campaigns yet.</div>
           ) : (
-            (campaigns.data ?? []).map((c: { id: string; name: string; status: string; stat_sent: number; stat_opened: number; stat_clicked: number; list: { name: string } | null }) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (campaigns.data ?? []).map((c: any) => {
               const sc = STATUS_MAP[c.status] ?? STATUS_MAP.draft;
               const openR = c.stat_sent > 0 ? ((c.stat_opened / c.stat_sent) * 100).toFixed(1) : "—";
               const prog = c.stat_sent > 0 ? Math.min((c.stat_sent / Math.max(c.stat_sent, 500)) * 100, 100) : 0;

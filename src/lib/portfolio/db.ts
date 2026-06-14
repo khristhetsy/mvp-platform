@@ -7,11 +7,16 @@ import type {
   AdminPortfolioRow,
   PledgeRecord,
 } from "./types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-type SupabaseClient = Awaited<ReturnType<typeof createServerSupabaseClient>>;
+// portfolio_investments is not yet in the generated Supabase types — cast to
+// any so .from("portfolio_investments") resolves without `never`.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type PortfolioClient = SupabaseClient<any>;
 
-async function portfolioDb(): Promise<SupabaseClient> {
-  return createServerSupabaseClient();
+async function portfolioDb(): Promise<PortfolioClient> {
+  const db = await createServerSupabaseClient();
+  return db as unknown as PortfolioClient;
 }
 
 /** List investments for the current user (RLS applies). */
