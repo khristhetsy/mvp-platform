@@ -32,11 +32,10 @@ export async function POST(request: Request) {
     if (!company) return NextResponse.json({ error: "No company" }, { status: 400 });
 
     const body = (await request.json()) as {
-      studyDays: number[];
+      studyDays: string[];
       sessionMinutes: number;
       preferredTime: string;
-      reminderEmail: boolean;
-      reminderPush: boolean;
+      remindersOn: boolean;
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -46,10 +45,10 @@ export async function POST(request: Request) {
         founder_id: profile.id,
         company_id: company.id,
         study_days: body.studyDays,
+        days_per_week: body.studyDays.length,
         session_minutes: body.sessionMinutes,
         preferred_time: body.preferredTime,
-        reminder_email: body.reminderEmail,
-        reminder_push: body.reminderPush,
+        reminders_on: body.remindersOn,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "founder_id,company_id" },
