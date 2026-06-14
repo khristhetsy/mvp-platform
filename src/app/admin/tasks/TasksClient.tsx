@@ -1,13 +1,13 @@
 "use client";
 
-import { Suspense } from "react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type { Task, TaskStatus, TaskPriority, InternalUser } from "@/lib/tasks/types";
 import type { GoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
-import { GoogleCalendarConnectionCard } from "@/components/GoogleCalendarConnectionCard";
 
 const GCAL_PURPLE = "#534AB7";
 const GCAL_LIGHT  = "#EEEDFE";
+
+type ViewMode = "kanban" | "list";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 const PRIORITY_MAP: Record<TaskPriority, { bg: string; color: string }> = {
@@ -36,15 +36,15 @@ function avatarColor(str: string): string {
   return palette[n % palette.length];
 }
 
-function relativeDate(iso: string | null): string {
-  if (!iso) return "";
+function relativeDate(iso: string | null): { label: string; overdue: boolean } {
+  if (!iso) return { label: "", overdue: false };
   const d = new Date(iso);
   const diff = Math.round((d.getTime() - Date.now()) / 86400000);
-  if (diff === 0) return "Today";
-  if (diff === 1) return "Tomorrow";
-  if (diff === -1) return "Yesterday";
-  if (diff > 0) return `In ${diff}d`;
-  return `${Math.abs(diff)}d ago`;
+  if (diff === 0) return { label: "Today", overdue: true };
+  if (diff === 1) return { label: "Tomorrow", overdue: false };
+  if (diff === -1) return { label: "Yesterday", overdue: true };
+  if (diff > 0) return { label: `In ${diff}d`, overdue: false };
+  return { label: `${Math.abs(diff)}d ago`, overdue: true };
 }
 
 const cardBase: React.CSSProperties = {
@@ -99,6 +99,7 @@ function TaskCard({
   const assignee = task.assigned_to
     ? internalUsers.find((u) => u.id === task.assigned_to) ?? null
     : null;
+  const { label: dateLabel, overdue } = relativeDate(task.due_date);
 
   async function handleSave() {
     if (!form.title.trim()) return;
@@ -148,7 +149,6 @@ function TaskCard({
   if (editing) {
     return (
       <div style={{ ...cardBase, border: "0.5px solid #534AB7" }}>
-        {/* Title */}
         <div style={{ marginBottom: 8 }}>
           <input
             autoFocus
@@ -159,8 +159,6 @@ function TaskCard({
             style={{ ...inputStyle, fontSize: 13, fontWeight: 500, padding: "6px 8px" }}
           />
         </div>
-
-        {/* Description */}
         <div style={{ marginBottom: 8 }}>
           <textarea
             value={form.description}
@@ -170,8 +168,6 @@ function TaskCard({
             style={{ ...inputStyle, resize: "vertical" as const, lineHeight: 1.5 }}
           />
         </div>
-
-        {/* Priority + Due date */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
           <select
             value={form.priority}
@@ -189,8 +185,6 @@ function TaskCard({
             style={inputStyle}
           />
         </div>
-
-        {/* Assignee */}
         <div style={{ marginBottom: 10 }}>
           <select
             value={form.assigned_to}
@@ -205,8 +199,6 @@ function TaskCard({
             ))}
           </select>
         </div>
-
-        {/* Actions */}
         <div style={{ display: "flex", gap: 6 }}>
           <button
             onClick={handleSave}
@@ -237,7 +229,6 @@ function TaskCard({
   // ── View mode ──────────────────────────────────────────────────────────────
   return (
     <div style={cardBase}>
-      {/* Title row */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 6, marginBottom: 6 }}>
         <div style={{ fontSize: 13, fontWeight: 500, color: "#0c2340", lineHeight: 1.4, flex: 1 }}>
           {task.title}
@@ -277,24 +268,23 @@ function TaskCard({
         </div>
       </div>
 
-      {/* Description */}
       {task.description && (
         <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8, lineHeight: 1.5 }}>
           {task.description}
         </div>
       )}
 
-      {/* Badges */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center", marginBottom: 8 }}>
         <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 10, background: pc.bg, color: pc.color, fontWeight: 500 }}>
           {task.priority}
         </span>
         {task.due_date && (
-          <span style={{ fontSize: 10, color: "#64748b" }}>📅 {relativeDate(task.due_date)}</span>
+          <span style={{ fontSize: 10, color: overdue ? "#A32D2D" : "#64748b", fontWeight: overdue ? 500 : 400 }}>
+            📅 {dateLabel}
+          </span>
         )}
       </div>
 
-      {/* Assignee */}
       {assignee ? (
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
           <div style={{
@@ -315,7 +305,6 @@ function TaskCard({
         </div>
       )}
 
-      {/* Move buttons */}
       <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
         {(["todo", "in_progress", "done", "cancelled"] as TaskStatus[])
           .filter((s) => s !== task.status)
@@ -372,7 +361,6 @@ function Column({
           {tasks.length}
         </span>
       </div>
-
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {tasks.map((task) => (
           <TaskCard
@@ -391,6 +379,205 @@ function Column({
   );
 }
 
+// ─── ListView ─────────────────────────────────────────────────────────────────
+function ListView({
+  tasks,
+  internalUsers,
+  googleConnected,
+  onStatusChange,
+  onDelete,
+  onSave,
+  onCalendarUpdate,
+}: {
+  tasks: Task[];
+  internalUsers: InternalUser[];
+  googleConnected: boolean;
+  onStatusChange: (id: string, s: TaskStatus) => void;
+  onDelete: (id: string) => void;
+  onSave: (id: string, patch: Partial<Task>) => Promise<void>;
+  onCalendarUpdate: (id: string, eventId: string | null) => void;
+}) {
+  // Editing state for inline row edit
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  if (tasks.length === 0) {
+    return (
+      <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8", fontSize: 13 }}>
+        No tasks found.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" as const }}>
+        <colgroup>
+          <col style={{ width: "32%" }} />
+          <col style={{ width: "13%" }} />
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "16%" }} />
+          <col style={{ width: "11%" }} />
+          <col style={{ width: "10%" }} />
+          <col style={{ width: "8%" }} />
+        </colgroup>
+        <thead>
+          <tr style={{ background: "#f8f9fb", borderBottom: "0.5px solid #e2e6ed" }}>
+            {["Task", "Status", "Priority", "Assignee", "Due", "Calendar", ""].map((h) => (
+              <th key={h} style={{ fontSize: 11, fontWeight: 500, color: "#64748b", padding: "8px 12px", textAlign: "left" }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {tasks.map((task, i) => {
+            const sc = STATUS_MAP[task.status];
+            const pc = PRIORITY_MAP[task.priority];
+            const assignee = task.assigned_to
+              ? internalUsers.find((u) => u.id === task.assigned_to) ?? null
+              : null;
+            const { label: dateLabel, overdue } = relativeDate(task.due_date);
+            const isDone = task.status === "done" || task.status === "cancelled";
+
+            if (editingId === task.id) {
+              return (
+                <tr key={task.id} style={{ borderBottom: i < tasks.length - 1 ? "0.5px solid #e2e6ed" : undefined }}>
+                  <td colSpan={7} style={{ padding: "10px 12px" }}>
+                    <TaskCard
+                      task={task}
+                      internalUsers={internalUsers}
+                      googleConnected={googleConnected}
+                      onStatusChange={(id, s) => { onStatusChange(id, s); setEditingId(null); }}
+                      onDelete={(id) => { onDelete(id); setEditingId(null); }}
+                      onSave={async (id, patch) => { await onSave(id, patch); setEditingId(null); }}
+                      onCalendarUpdate={onCalendarUpdate}
+                    />
+                  </td>
+                </tr>
+              );
+            }
+
+            return (
+              <tr
+                key={task.id}
+                style={{
+                  borderBottom: i < tasks.length - 1 ? "0.5px solid #e2e6ed" : undefined,
+                  opacity: isDone ? 0.6 : 1,
+                }}
+              >
+                <td style={{ padding: "10px 12px", fontSize: 12, fontWeight: 500, color: "#0c2340", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }} title={task.title}>
+                  {task.title}
+                </td>
+                <td style={{ padding: "10px 12px" }}>
+                  <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 10, background: sc.bg, color: sc.color, fontWeight: 500, whiteSpace: "nowrap" as const }}>
+                    {sc.label}
+                  </span>
+                </td>
+                <td style={{ padding: "10px 12px" }}>
+                  <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 10, background: pc.bg, color: pc.color, fontWeight: 500 }}>
+                    {task.priority}
+                  </span>
+                </td>
+                <td style={{ padding: "10px 12px" }}>
+                  {assignee ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{
+                        width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
+                        background: avatarColor(assignee.id),
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 9, fontWeight: 700, color: "#fff",
+                      }}>
+                        {initials(assignee.full_name, assignee.email)}
+                      </div>
+                      <span style={{ fontSize: 11, color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                        {assignee.full_name ?? assignee.email}
+                      </span>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: 11, color: "#94a3b8", fontStyle: "italic" }}>Unassigned</span>
+                  )}
+                </td>
+                <td style={{ padding: "10px 12px" }}>
+                  {task.due_date ? (
+                    <span style={{ fontSize: 11, color: overdue ? "#A32D2D" : "#64748b", fontWeight: overdue ? 500 : 400 }}>
+                      {dateLabel}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 11, color: "#94a3b8" }}>—</span>
+                  )}
+                </td>
+                <td style={{ padding: "10px 12px" }}>
+                  {googleConnected && task.due_date ? (
+                    <CalendarCellButton task={task} onCalendarUpdate={onCalendarUpdate} />
+                  ) : (
+                    <span style={{ fontSize: 11, color: "#94a3b8" }}>—</span>
+                  )}
+                </td>
+                <td style={{ padding: "10px 12px", textAlign: "right" as const }}>
+                  <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
+                    <button
+                      onClick={() => setEditingId(task.id)}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", fontSize: 13, opacity: 0.65, padding: "0 2px" }}
+                      title="Edit"
+                    >
+                      ✎
+                    </button>
+                    <button
+                      onClick={() => onDelete(task.id)}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", fontSize: 11, opacity: 0.55, padding: "0 2px" }}
+                      title="Delete"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// Small inline calendar toggle button for list view
+function CalendarCellButton({ task, onCalendarUpdate }: { task: Task; onCalendarUpdate: (id: string, eventId: string | null) => void }) {
+  const [loading, setLoading] = useState(false);
+  async function toggle() {
+    setLoading(true);
+    try {
+      if (task.google_calendar_event_id) {
+        await fetch(`/api/tasks/${task.id}/calendar`, { method: "DELETE" });
+        onCalendarUpdate(task.id, null);
+      } else {
+        const res = await fetch(`/api/tasks/${task.id}/calendar`, { method: "POST" });
+        if (res.ok) {
+          const data = await res.json();
+          onCalendarUpdate(task.id, data.google_calendar_event_id ?? null);
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <button
+      onClick={() => void toggle()}
+      disabled={loading}
+      style={{
+        fontSize: 10, padding: "2px 6px", borderRadius: 5, cursor: "pointer", fontWeight: 500,
+        background: task.google_calendar_event_id ? GCAL_PURPLE : GCAL_LIGHT,
+        border: `0.5px solid ${GCAL_PURPLE}`,
+        color: task.google_calendar_event_id ? GCAL_LIGHT : GCAL_PURPLE,
+        opacity: loading ? 0.5 : 1,
+        whiteSpace: "nowrap" as const,
+      }}
+    >
+      {loading ? "…" : task.google_calendar_event_id ? "📅 Synced" : "📅 Add"}
+    </button>
+  );
+}
+
 // ─── TasksClient (main) ───────────────────────────────────────────────────────
 interface Props {
   initialTasks: Task[];
@@ -402,14 +589,22 @@ interface Props {
 
 export function TasksClient({ initialTasks, internalUsers, currentUserId, googleConnected, googleStatus }: Props) {
   const [tasks, setTasks]       = useState<Task[]>(initialTasks);
+  const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving]     = useState(false);
-  const [form, setForm]         = useState({
-    title:       "",
-    description: "",
-    assigned_to: "",
-    priority:    "medium" as TaskPriority,
-    due_date:    "",
+
+  // Filters
+  const [search,          setSearch]          = useState("");
+  const [filterAssignee,  setFilterAssignee]  = useState("");
+  const [filterPriority,  setFilterPriority]  = useState("");
+  const [filterDue,       setFilterDue]       = useState("");
+
+  const [form, setForm] = useState({
+    title:        "",
+    description:  "",
+    assigned_to:  "",
+    priority:     "medium" as TaskPriority,
+    due_date:     "",
     context_type: "internal" as const,
   });
 
@@ -469,46 +664,146 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
     );
   }
 
-  const byStatus = (s: TaskStatus) => tasks.filter((t) => t.status === s);
+  // ── Filtered tasks ──────────────────────────────────────────────────────────
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((t) => {
+      if (search && !t.title.toLowerCase().includes(search.toLowerCase())) return false;
+      if (filterAssignee && t.assigned_to !== filterAssignee) return false;
+      if (filterPriority && t.priority !== filterPriority) return false;
+      if (filterDue) {
+        if (!t.due_date) return false;
+        const diff = Math.round((new Date(t.due_date).getTime() - Date.now()) / 86400000);
+        if (filterDue === "overdue" && diff >= 0) return false;
+        if (filterDue === "today" && diff !== 0) return false;
+        if (filterDue === "week" && (diff < 0 || diff > 7)) return false;
+        if (filterDue === "month" && (diff < 0 || diff > 30)) return false;
+      }
+      return true;
+    });
+  }, [tasks, search, filterAssignee, filterPriority, filterDue]);
+
+  const byStatus = (s: TaskStatus) => filteredTasks.filter((t) => t.status === s);
 
   const total  = tasks.length;
-  const todo   = byStatus("todo").length;
-  const inProg = byStatus("in_progress").length;
-  const done   = byStatus("done").length;
+  const todo   = tasks.filter((t) => t.status === "todo").length;
+  const inProg = tasks.filter((t) => t.status === "in_progress").length;
+  const done   = tasks.filter((t) => t.status === "done").length;
 
-  // suppress unused var warning
   void currentUserId;
+
+  // Shared card props
+  const sharedCardProps = {
+    internalUsers,
+    googleConnected,
+    onStatusChange: handleStatusChange,
+    onDelete: handleDelete,
+    onSave: handleSave,
+    onCalendarUpdate: handleCalendarUpdate,
+  };
+
+  const filterSelectStyle: React.CSSProperties = {
+    fontSize: 12, padding: "5px 8px", borderRadius: 7,
+    border: "0.5px solid #e2e6ed", background: "#f5f6f8",
+    color: "#0c2340", cursor: "pointer",
+  };
 
   return (
     <div style={{ padding: 24 }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
+
+      {/* ── Header ── */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
         <div>
-          <h1 style={{ fontSize: 16, fontWeight: 500, color: "#0c2340", marginBottom: 4 }}>Team Tasks</h1>
-          <div style={{ fontSize: 12, color: "#64748b" }}>
-            {total} total · {todo} to-do · {inProg} in progress · {done} done
-          </div>
+          <h1 style={{ fontSize: 18, fontWeight: 500, color: "#0c2340", marginBottom: 3 }}>Team Tasks</h1>
+          <div style={{ fontSize: 12, color: "#64748b" }}>Manage and assign tasks across your team</div>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer" }}
-        >
-          <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Assign task
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* View toggle */}
+          <div style={{ display: "flex", border: "0.5px solid #e2e6ed", borderRadius: 8, overflow: "hidden" }}>
+            {(["kanban", "list"] as ViewMode[]).map((v) => (
+              <button
+                key={v}
+                onClick={() => setViewMode(v)}
+                style={{
+                  padding: "5px 12px", fontSize: 12, border: "none", cursor: "pointer",
+                  background: viewMode === v ? "#534AB7" : "transparent",
+                  color: viewMode === v ? "#EEEDFE" : "#64748b",
+                  display: "flex", alignItems: "center", gap: 5,
+                }}
+              >
+                {v === "kanban" ? "⊞" : "≡"} {v.charAt(0).toUpperCase() + v.slice(1)}
+              </button>
+            ))}
+          </div>
+          {/* Assign button */}
+          <button
+            onClick={() => setShowForm(!showForm)}
+            style={{
+              display: "flex", alignItems: "center", gap: 5, fontSize: 12,
+              padding: "6px 14px", borderRadius: 8, border: "none",
+              background: "#534AB7", color: "#EEEDFE", cursor: "pointer",
+            }}
+          >
+            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Assign task
+          </button>
+        </div>
       </div>
 
-      {/* Google Calendar connect banner */}
-      {!googleConnected && (
-        <div style={{ marginBottom: 20, maxWidth: 420 }}>
-          <Suspense fallback={null}>
-            <GoogleCalendarConnectionCard status={googleStatus} returnPath="/admin/tasks" />
-          </Suspense>
-        </div>
-      )}
+      {/* ── Stats row ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
+        {[
+          { label: "Total tasks",  value: total,  color: "#0c2340" },
+          { label: "To-do",        value: todo,   color: "#534AB7" },
+          { label: "In progress",  value: inProg, color: "#185FA5" },
+          { label: "Done",         value: done,   color: "#0F6E56" },
+        ].map(({ label, value, color }) => (
+          <div key={label} style={{ background: "#fff", borderRadius: 8, padding: "12px 14px", border: "0.5px solid #e2e6ed" }}>
+            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>{label}</div>
+            <div style={{ fontSize: 20, fontWeight: 500, color }}>{value}</div>
+          </div>
+        ))}
+      </div>
 
-      {/* Create form */}
+      {/* ── Filter bar ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search tasks…"
+          style={{ ...filterSelectStyle, width: 180 }}
+        />
+        <select value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)} style={filterSelectStyle}>
+          <option value="">All assignees</option>
+          {internalUsers.map((u) => (
+            <option key={u.id} value={u.id}>{u.full_name ?? u.email}</option>
+          ))}
+        </select>
+        <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} style={filterSelectStyle}>
+          <option value="">All priorities</option>
+          <option value="high">🔴 High</option>
+          <option value="medium">🟡 Medium</option>
+          <option value="low">🟢 Low</option>
+        </select>
+        <select value={filterDue} onChange={(e) => setFilterDue(e.target.value)} style={filterSelectStyle}>
+          <option value="">All due dates</option>
+          <option value="overdue">Overdue</option>
+          <option value="today">Today</option>
+          <option value="week">This week</option>
+          <option value="month">This month</option>
+        </select>
+        {(search || filterAssignee || filterPriority || filterDue) && (
+          <button
+            onClick={() => { setSearch(""); setFilterAssignee(""); setFilterPriority(""); setFilterDue(""); }}
+            style={{ fontSize: 11, color: "#64748b", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
+
+      {/* ── Create form ── */}
       {showForm && (
-        <div style={{ background: "#ffffff", border: "0.5px solid #e2e6ed", borderRadius: 12, padding: "18px 20px", marginBottom: 24, boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)" }}>
+        <div style={{ background: "#ffffff", border: "0.5px solid #e2e6ed", borderRadius: 12, padding: "18px 20px", marginBottom: 20, boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)" }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: "#0c2340", marginBottom: 14 }}>Create & assign task</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div style={{ gridColumn: "1 / -1" }}>
@@ -516,6 +811,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
               <input
                 autoFocus type="text" value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
+                onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); if (e.key === "Escape") setShowForm(false); }}
                 placeholder="What needs to be done?"
                 style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #e2e6ed", background: "#f5f6f8", color: "#0c2340", boxSizing: "border-box" }}
               />
@@ -538,9 +834,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
               >
                 <option value="">— Unassigned —</option>
                 {internalUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.full_name ?? u.email ?? u.id}
-                  </option>
+                  <option key={u.id} value={u.id}>{u.full_name ?? u.email ?? u.id}</option>
                 ))}
               </select>
             </div>
@@ -583,22 +877,65 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
         </div>
       )}
 
-      {/* Kanban board */}
-      <div style={{ display: "flex", gap: 16, alignItems: "flex-start", overflowX: "auto", paddingBottom: 8 }}>
+      {/* ── Kanban board ── */}
+      <div style={{ display: viewMode === "kanban" ? "flex" : "none", gap: 16, alignItems: "flex-start", overflowX: "auto", paddingBottom: 8 }}>
         {(["todo", "in_progress", "done", "cancelled"] as TaskStatus[]).map((s) => (
           <Column
             key={s}
             status={s}
             tasks={byStatus(s)}
-            internalUsers={internalUsers}
-            googleConnected={googleConnected}
-            onStatusChange={handleStatusChange}
-            onDelete={handleDelete}
-            onSave={handleSave}
-            onCalendarUpdate={handleCalendarUpdate}
+            {...sharedCardProps}
           />
         ))}
       </div>
+
+      {/* ── List view ── */}
+      <div style={{ display: viewMode === "list" ? "block" : "none" }}>
+        <ListView tasks={filteredTasks} {...sharedCardProps} />
+      </div>
+
+      {/* ── Google Calendar connector — bottom ── */}
+      <div style={{
+        marginTop: 24, border: "0.5px solid #e2e6ed", borderRadius: 12,
+        padding: "13px 18px", background: "#ffffff",
+        display: "flex", alignItems: "center", gap: 14,
+      }}>
+        <div style={{
+          width: 34, height: 34, borderRadius: 8, background: GCAL_LIGHT,
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 18 }}>📅</span>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: "#0c2340", marginBottom: 2 }}>
+            {googleConnected ? "Google Calendar connected" : "Connect Google Calendar"}
+          </div>
+          <div style={{ fontSize: 11, color: "#64748b" }}>
+            {googleConnected
+              ? "Task due dates sync automatically to your calendar."
+              : "Sync task due dates to your calendar for automatic reminders."}
+          </div>
+        </div>
+        {!googleConnected && (
+          <a
+            href="/api/integrations/google/connect?returnTo=/admin/tasks"
+            style={{
+              fontSize: 12, padding: "6px 14px", borderRadius: 8,
+              border: `0.5px solid ${GCAL_PURPLE}`, background: GCAL_LIGHT,
+              color: GCAL_PURPLE, textDecoration: "none", flexShrink: 0,
+              fontWeight: 500,
+            }}
+          >
+            Connect Google Calendar
+          </a>
+        )}
+        {googleConnected && (
+          <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 6, background: "#E1F5EE", color: "#0F6E56", fontWeight: 500, flexShrink: 0 }}>
+            ✓ Connected
+          </span>
+        )}
+      </div>
+
     </div>
   );
 }
