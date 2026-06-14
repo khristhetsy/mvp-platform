@@ -55,6 +55,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         requiredPermission: "manage_learning",
         children: [
           { href: "/admin/learning", label: "Overview" },
+          { href: "/admin/learning/courses", label: "Courses" },
           { href: "/admin/learning/founders", label: "Founder roster" },
         ],
       },
