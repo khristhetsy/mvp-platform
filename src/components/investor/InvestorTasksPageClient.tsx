@@ -496,7 +496,7 @@ export function InvestorTasksPageClient({
               )}
             </div>
           </div>
-          {isOpen && editForm && <DetailPanel task={task} />}
+          {isOpen && editForm && DetailPanel({ task })}
         </div>
       );
     };
@@ -574,7 +574,7 @@ export function InvestorTasksPageClient({
                       )}
                       {expandedId === task.id && editForm && (
                         <div onClick={(e) => e.stopPropagation()}>
-                          <DetailPanel task={task} />
+                          {DetailPanel({ task })}
                         </div>
                       )}
                     </div>
@@ -632,7 +632,7 @@ export function InvestorTasksPageClient({
               <span className={`shrink-0 text-[11px] ${overdue ? "text-red-500" : "text-slate-400"}`}>{fmt(task.due_date)}</span>
             )}
           </div>
-          {isOpen && editForm && <DetailPanel task={task} />}
+          {isOpen && editForm && DetailPanel({ task })}
         </div>
       );
     };
@@ -744,7 +744,7 @@ export function InvestorTasksPageClient({
                   <p className="mt-1.5 line-clamp-2 text-[11px] italic text-slate-400">{task.description}</p>
                 )}
               </div>
-              {isOpen && editForm && <DetailPanel task={task} />}
+              {isOpen && editForm && DetailPanel({ task })}
             </div>
           );
         })}
@@ -760,10 +760,10 @@ export function InvestorTasksPageClient({
   return (
     <div>
       {toolbar}
-      {view === "list"     && <ListView />}
-      {view === "kanban"   && <KanbanView />}
-      {view === "timeline" && <TimelineView />}
-      {view === "grid"     && <GridView />}
+      {view === "list"     && ListView()}
+      {view === "kanban"   && KanbanView()}
+      {view === "timeline" && TimelineView()}
+      {view === "grid"     && GridView()}
     </div>
   );
 }
