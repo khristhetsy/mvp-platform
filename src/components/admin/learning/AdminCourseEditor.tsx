@@ -31,6 +31,14 @@ type Props = {
 const STATUS: LearningContentStatus[] = ["draft", "pending_review", "approved", "published", "archived"];
 const DIFFICULTY: LearningDifficulty[] = ["introductory", "intermediate", "advanced"];
 
+const READINESS_FOCUS_OPTIONS = [
+  { value: "stage_0", label: "Stage 0 — Foundation (Pre-fundraise basics)" },
+  { value: "stage_1", label: "Stage 1 — Seed Round (Early-stage fundraising)" },
+  { value: "stage_2", label: "Stage 2 — Series A (Institutional fundraising)" },
+  { value: "stage_3", label: "Stage 3 — Exit (Exit planning & execution)" },
+  { value: "general", label: "General (not tied to a specific stage)" },
+];
+
 export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
   const router = useRouter();
   const [form, setForm] = useState<ProgramRow>(initial);
@@ -158,12 +166,18 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
 
       <div className="grid gap-3 md:grid-cols-3">
         <label className="block text-sm">
-          <span className="text-slate-600">Readiness focus</span>
-          <input
+          <span className="text-slate-600">Capital stage</span>
+          <select
             className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
             value={form.readiness_focus}
             onChange={(e) => setForm((v) => ({ ...v, readiness_focus: e.target.value }))}
-          />
+          >
+            {READINESS_FOCUS_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="block text-sm">
           <span className="text-slate-600">Category</span>

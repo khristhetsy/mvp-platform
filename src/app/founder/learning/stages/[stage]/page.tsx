@@ -87,6 +87,16 @@ export default async function StageContentPage({
     0,
   );
 
+  // Load admin-created courses tagged to this stage
+  type AdminCourse = { id: string; title: string; description: string; difficulty: string | null };
+  const { data: rawAdminCourses } = await admin
+    .from("learning_programs")
+    .select("id, title, description, difficulty")
+    .eq("readiness_focus", stage)
+    .eq("is_published", true)
+    .order("order_index", { ascending: true });
+  const adminCourses = (rawAdminCourses ?? []) as AdminCourse[];
+
   const prevStage = PREV_STAGE[stage];
   const prevMeta = prevStage ? CAPITAL_STAGE_META[prevStage] : null;
   const prevPct = prevStage ? computeCapitalStagePercent(prevStage, completedKeys) : 100;
@@ -320,6 +330,39 @@ export default async function StageContentPage({
                     )}
                   </div>
                 </div>
+
+                {/* Admin-created courses for this stage */}
+                {adminCourses.length > 0 && (
+                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                    <div className="border-b border-slate-100 bg-slate-50 px-5 py-3.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+                        {meta.icon} Additional courses
+                      </p>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                      {adminCourses.map((course) => (
+                        <Link
+                          key={course.id}
+                          href={`/founder/learning/courses/${course.id}`}
+                          className="flex items-start gap-3 px-5 py-4 transition hover:bg-slate-50"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold text-slate-900">{course.title}</p>
+                            {course.description && (
+                              <p className="mt-0.5 line-clamp-2 text-[11px] text-slate-400">{course.description}</p>
+                            )}
+                          </div>
+                          <span
+                            className="mt-0.5 flex-shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold capitalize"
+                            style={{ background: meta.bgColor, color: meta.color }}
+                          >
+                            {course.difficulty ?? "course"}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Navigation to other stages */}
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
