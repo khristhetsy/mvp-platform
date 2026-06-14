@@ -181,7 +181,7 @@ export function InvestorTasksPageClient({
       }),
     });
     setSaving(false);
-    setNewTitle(""); setNewPriority("medium"); setNewDueDate(""); setNewCategory(""); setShowForm(false);
+    setNewTitle(""); setNewPriority("medium"); setNewDueDate(""); setShowForm(false);
     void load();
   }
 
