@@ -20,6 +20,7 @@ export type ProgramRow = {
   is_published?: boolean | null;
   order_index?: number | null;
   banner_image_url?: string | null;
+  video_url?: string | null;
 };
 
 type Props = {
@@ -69,6 +70,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
       is_published: isPublishedDerived,
       order_index: typeof form.order_index === "number" ? form.order_index : 0,
       banner_image_url: form.banner_image_url ?? null,
+      video_url: form.video_url?.trim() || null,
     };
 
     const path =
@@ -161,6 +163,17 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
           className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
           value={form.description}
           onChange={(e) => setForm((v) => ({ ...v, description: e.target.value }))}
+        />
+      </label>
+
+      <label className="block text-sm">
+        <span className="text-slate-600">Course video URL</span>
+        <p className="mb-1 text-xs text-slate-400">YouTube, Vimeo, or direct .mp4 URL. Shown on lesson pages for this course.</p>
+        <input
+          className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          placeholder="https://www.youtube.com/watch?v=..."
+          value={form.video_url ?? ""}
+          onChange={(e) => setForm((v) => ({ ...v, video_url: e.target.value }))}
         />
       </label>
 

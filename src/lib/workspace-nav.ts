@@ -162,6 +162,7 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
     label: "Learning",
     children: [
       { href: "/founder/learning", label: "Overview" },
+      { href: "/founder/learning/courses", label: "Browse courses" },
       { href: "/founder/learning/plan", label: "My learning plan" },
       { href: "/founder/learning/schedule", label: "Schedule" },
       { href: "/founder/learning/progress", label: "My progress" },

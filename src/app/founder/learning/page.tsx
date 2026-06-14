@@ -276,18 +276,23 @@ export default async function FounderLearningPage() {
               </div>
             </div>
           </div>
-          {/* Browse all courses */}
+          {/* Course library teaser */}
           {publishedCourses.length > 0 && (
-            <div className="mt-8">
-              <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                Library
+            <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Library</p>
+                  <h2 className="mt-0.5 text-sm font-semibold text-slate-900">Course catalog</h2>
+                </div>
+                <Link
+                  href="/founder/learning/courses"
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition"
+                >
+                  Browse all {publishedCourses.length} courses →
+                </Link>
               </div>
-              <h2 className="text-base font-semibold text-slate-900">Browse all courses</h2>
-              <p className="mt-0.5 mb-5 text-xs text-slate-500">
-                Curated by the CapitalOS team — available at any stage.
-              </p>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {publishedCourses.map((course) => {
+              <div className="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                {publishedCourses.slice(0, 3).map((course) => {
                   const stageBadge: Record<string, { label: string; bg: string; text: string }> = {
                     stage_0: { label: "Stage 0", bg: "#EFF6FF", text: "#1D4ED8" },
                     stage_1: { label: "Stage 1", bg: "#F0FDF4", text: "#15803D" },
@@ -295,55 +300,30 @@ export default async function FounderLearningPage() {
                     stage_3: { label: "Stage 3", bg: "#FAF5FF", text: "#7E22CE" },
                   };
                   const badge = course.readiness_focus ? stageBadge[course.readiness_focus] : null;
-
                   return (
                     <Link
                       key={course.id}
                       href={`/founder/learning/courses/${course.id}`}
-                      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:border-indigo-200 hover:shadow-sm"
+                      className="group flex flex-col gap-2 px-5 py-4 transition hover:bg-slate-50"
                     >
-                      {/* Banner */}
-                      <div className="h-24 flex-shrink-0 bg-slate-100">
-                        {course.banner_image_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={course.banner_image_url}
-                            alt=""
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center bg-gradient-to-br from-indigo-50 to-slate-100 text-2xl">
-                            📚
-                          </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {badge && (
+                          <span
+                            className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                            style={{ background: badge.bg, color: badge.text }}
+                          >
+                            {badge.label}
+                          </span>
+                        )}
+                        {course.difficulty && (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] capitalize text-slate-500">
+                            {course.difficulty}
+                          </span>
                         )}
                       </div>
-                      {/* Body */}
-                      <div className="flex flex-1 flex-col gap-2 p-4">
-                        <div className="flex flex-wrap gap-1.5">
-                          {badge && (
-                            <span
-                              className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                              style={{ background: badge.bg, color: badge.text }}
-                            >
-                              {badge.label}
-                            </span>
-                          )}
-                          {course.difficulty && (
-                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium capitalize text-slate-500">
-                              {course.difficulty}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm font-semibold text-slate-900 leading-snug">{course.title}</p>
-                        {course.description && (
-                          <p className="line-clamp-2 text-xs text-slate-500 leading-relaxed flex-1">
-                            {course.description}
-                          </p>
-                        )}
-                        <span className="mt-1 text-xs font-semibold text-indigo-600 group-hover:underline">
-                          View course →
-                        </span>
-                      </div>
+                      <p className="text-sm font-semibold leading-snug text-slate-900">{course.title}</p>
+                      <p className="line-clamp-2 text-xs leading-relaxed text-slate-500">{course.description}</p>
+                      <span className="text-[11px] font-semibold text-indigo-600 group-hover:underline">View →</span>
                     </Link>
                   );
                 })}

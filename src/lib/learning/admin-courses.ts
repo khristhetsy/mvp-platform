@@ -12,6 +12,8 @@ export type AdminPublishedCourse = {
   is_published: boolean;
   order_index: number;
   created_at: string;
+  video_url: string | null;
+  banner_image_url: string | null;
 };
 
 export type AdminPublishedModule = {
@@ -67,14 +69,14 @@ export async function listPublishedAdminCourses(): Promise<AdminPublishedCourse[
   const { data } = await supabase
     .from("learning_programs")
     .select(
-      "id, slug, title, description, readiness_focus, category, difficulty, content_status, is_published, order_index, created_at",
+      "id, slug, title, description, readiness_focus, category, difficulty, content_status, is_published, order_index, created_at, video_url, banner_image_url",
     )
     .eq("is_published", true)
     .order("order_index", { ascending: true })
     .order("created_at", { ascending: false })
     .limit(200);
 
-  return (data ?? []) as AdminPublishedCourse[];
+  return (data ?? []) as unknown as AdminPublishedCourse[];
 }
 
 export async function getPublishedAdminCourse(courseId: string): Promise<AdminPublishedCourse | null> {
@@ -82,13 +84,27 @@ export async function getPublishedAdminCourse(courseId: string): Promise<AdminPu
   const { data } = await supabase
     .from("learning_programs")
     .select(
-      "id, slug, title, description, readiness_focus, category, difficulty, content_status, is_published, order_index, created_at",
+      "id, slug, title, description, readiness_focus, category, difficulty, content_status, is_published, order_index, created_at, video_url, banner_image_url",
     )
     .eq("id", courseId)
     .eq("is_published", true)
     .maybeSingle();
 
-  return (data as AdminPublishedCourse | null) ?? null;
+  return (data as unknown as AdminPublishedCourse | null) ?? null;
+}
+
+export async function getPublishedAdminCourseBySlug(slug: string): Promise<AdminPublishedCourse | null> {
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("learning_programs")
+    .select(
+      "id, slug, title, description, readiness_focus, category, difficulty, content_status, is_published, order_index, created_at, video_url, banner_image_url",
+    )
+    .eq("slug", slug)
+    .eq("is_published", true)
+    .maybeSingle();
+
+  return (data as unknown as AdminPublishedCourse | null) ?? null;
 }
 
 export async function listPublishedAdminCourseModules(courseId: string): Promise<AdminPublishedModule[]> {
