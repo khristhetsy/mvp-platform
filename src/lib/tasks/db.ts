@@ -44,14 +44,15 @@ export async function createTask(
   const { data, error } = await db
     .from("tasks")
     .insert({
-      title:        input.title,
-      description:  input.description ?? null,
-      created_by:   userId,
-      assigned_to:  input.assigned_to ?? null,
-      priority:     input.priority ?? "medium",
-      due_date:     input.due_date ?? null,
-      context_type: input.context_type ?? "personal",
-      context_id:   input.context_id ?? null,
+      title:         input.title,
+      description:   input.description ?? null,
+      created_by:    userId,
+      assigned_to:   input.assigned_to ?? null,
+      priority:      input.priority ?? "medium",
+      due_date:      input.due_date ?? null,
+      context_type:  input.context_type ?? "personal",
+      context_id:    input.context_id ?? null,
+      task_category: input.task_category ?? null,
     })
     .select("*")
     .single();
@@ -70,8 +71,9 @@ export async function updateTask(id: string, input: UpdateTaskInput): Promise<Ta
       ...(input.description !== undefined && { description: input.description }),
       ...(input.assigned_to !== undefined && { assigned_to: input.assigned_to }),
       ...(input.status      !== undefined && { status:      input.status }),
-      ...(input.priority                !== undefined && { priority:                input.priority }),
-      ...(input.due_date               !== undefined && { due_date:               input.due_date }),
+      ...(input.priority                 !== undefined && { priority:                 input.priority }),
+      ...(input.due_date                !== undefined && { due_date:                input.due_date }),
+      ...(input.task_category           !== undefined && { task_category:           input.task_category }),
       ...(input.google_calendar_event_id !== undefined && { google_calendar_event_id: input.google_calendar_event_id }),
     })
     .eq("id", id)
