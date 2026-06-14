@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { Task, TaskStatus, TaskPriority, TaskCategory, InternalUser } from "@/lib/tasks/types";
+import type { Task, TaskStatus, TaskPriority, InternalUser } from "@/lib/tasks/types";
 
 /* ─── constants ─────────────────────────────────────────────────── */
 
@@ -11,14 +11,6 @@ const PRIORITY_STYLES: Record<TaskPriority, { pill: string; label: string }> = {
   low:    { pill: "bg-emerald-50 text-emerald-700", label: "Low" },
 };
 
-const CATEGORY_META: Record<TaskCategory, { label: string; pill: string; dot: string }> = {
-  marketing:  { label: "Marketing",  pill: "bg-pink-50 text-pink-800",   dot: "bg-pink-400" },
-  ir_dept:    { label: "IR Dept",    pill: "bg-blue-50 text-blue-800",   dot: "bg-blue-400" },
-  admin_dept: { label: "Admin Dept", pill: "bg-purple-50 text-purple-800", dot: "bg-purple-400" },
-  sales_dept: { label: "Sales Dept", pill: "bg-teal-50 text-teal-800",   dot: "bg-teal-500" },
-};
-
-const ALL_CATEGORIES = Object.keys(CATEGORY_META) as TaskCategory[];
 
 type ViewMode = "list" | "kanban" | "timeline" | "grid";
 type TabKey   = "active" | "all" | "done";
@@ -114,15 +106,6 @@ function CheckCircle({ done }: { done: boolean }) {
   );
 }
 
-function CategoryPill({ cat }: { cat: TaskCategory | null }) {
-  if (!cat) return null;
-  const m = CATEGORY_META[cat];
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${m.pill}`}>
-      {m.label}
-    </span>
-  );
-}
 
 function PriorityPill({ priority }: { priority: TaskPriority }) {
   const s = PRIORITY_STYLES[priority];
@@ -136,8 +119,6 @@ type EditForm = {
   description: string;
   priority: TaskPriority;
   due_date: string;
-  task_category: TaskCategory | "";
-  assigned_to: string;
 };
 
 /* ─── main component ────────────────────────────────────────────── */
@@ -157,15 +138,12 @@ export function InvestorTasksPageClient({
   const [view, setView]       = useState<ViewMode>("list");
   const [tab, setTab]         = useState<TabKey>("active");
   const [query, setQuery]     = useState("");
-  const [catFilter, setCatFilter] = useState<TaskCategory | null>(null);
 
   /* quick-add */
   const [showForm, setShowForm]         = useState(false);
   const [newTitle, setNewTitle]         = useState("");
   const [newPriority, setNewPriority]   = useState<TaskPriority>("medium");
   const [newDueDate, setNewDueDate]     = useState("");
-  const [newCategory, setNewCategory]   = useState<TaskCategory | "">("");
-  const [newAssignee, setNewAssignee]   = useState("");
   const [saving, setSaving]             = useState(false);
 
   /* inline edit */
@@ -199,13 +177,11 @@ export function InvestorTasksPageClient({
         title: newTitle.trim(),
         priority: newPriority,
         due_date: newDueDate || null,
-        task_category: newCategory || null,
-        assigned_to: newAssignee || null,
         context_type: "personal",
       }),
     });
     setSaving(false);
-    setNewTitle(""); setNewPriority("medium"); setNewDueDate(""); setNewCategory(""); setNewAssignee(""); setShowForm(false);
+    setNewTitle(""); setNewPriority("medium"); setNewDueDate(""); setNewCategory(""); setShowForm(false);
     void load();
   }
 
@@ -237,8 +213,6 @@ export function InvestorTasksPageClient({
       description:   task.description ?? "",
       priority:      task.priority,
       due_date:      task.due_date?.slice(0, 10) ?? "",
-      task_category: task.task_category ?? "",
-      assigned_to:   task.assigned_to ?? "",
     });
   }
 
@@ -253,8 +227,6 @@ export function InvestorTasksPageClient({
         description:   editForm.description || null,
         priority:      editForm.priority,
         due_date:      editForm.due_date || null,
-        task_category: editForm.task_category || null,
-        assigned_to:   editForm.assigned_to || null,
       }),
     });
     setEditSaving(false);
@@ -283,7 +255,6 @@ export function InvestorTasksPageClient({
     tab === "done"   ? doneTasks   : tasks;
 
   const visible = tabFiltered
-    .filter((t) => !catFilter || t.task_category === catFilter)
     .filter((t) => !query.trim() || t.title.toLowerCase().includes(query.toLowerCase()));
 
   /* ── shared toolbar + filters ── */
@@ -347,26 +318,6 @@ export function InvestorTasksPageClient({
         </button>
       </div>
 
-      {/* category filter pills */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => setCatFilter(null)}
-          className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
-            !catFilter ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 text-slate-500 hover:border-slate-400 hover:text-slate-700"
-          }`}>All</button>
-        {ALL_CATEGORIES.map((cat) => {
-          const m = CATEGORY_META[cat];
-          const active = catFilter === cat;
-          return (
-            <button key={cat} type="button" onClick={() => setCatFilter(active ? null : cat)}
-              className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${
-                active ? `${m.pill} border-transparent` : "border-slate-200 text-slate-500 hover:border-slate-300"
-              }`}>
-              {m.label}
-            </button>
-          );
-        })}
-      </div>
-
       {/* quick-add form */}
       {showForm && (
         <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -375,20 +326,6 @@ export function InvestorTasksPageClient({
             onKeyDown={(e) => { if (e.key === "Enter") void handleCreate(); if (e.key === "Escape") setShowForm(false); }}
             className="mb-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none" />
           <div className="flex flex-wrap gap-2">
-            <select value={newAssignee} onChange={(e) => setNewAssignee(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 focus:outline-none">
-              <option value="">Assign to…</option>
-              {internalUsers.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.full_name ?? u.email ?? u.id}{u.id === currentUserId ? " (you)" : ""}
-                </option>
-              ))}
-            </select>
-            <select value={newCategory} onChange={(e) => setNewCategory(e.target.value as TaskCategory | "")}
-              className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 focus:outline-none">
-              <option value="">Category</option>
-              {ALL_CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_META[c].label}</option>)}
-            </select>
             <select value={newPriority} onChange={(e) => setNewPriority(e.target.value as TaskPriority)}
               className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 focus:outline-none">
               <option value="high">High</option>
@@ -422,26 +359,6 @@ export function InvestorTasksPageClient({
             <label className="mb-1 block text-[10.5px] font-medium text-slate-500">Title</label>
             <input type="text" value={editForm?.title ?? ""} onChange={(e) => setEditForm(f => f ? { ...f, title: e.target.value } : f)}
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none" />
-          </div>
-          <div>
-            <label className="mb-1 block text-[10.5px] font-medium text-slate-500">Assign to</label>
-            <select value={editForm?.assigned_to ?? ""} onChange={(e) => setEditForm(f => f ? { ...f, assigned_to: e.target.value } : f)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none">
-              <option value="">Unassigned</option>
-              {internalUsers.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.full_name ?? u.email ?? u.id}{u.id === currentUserId ? " (you)" : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-[10.5px] font-medium text-slate-500">Category</label>
-            <select value={editForm?.task_category ?? ""} onChange={(e) => setEditForm(f => f ? { ...f, task_category: e.target.value as TaskCategory | "" } : f)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none">
-              <option value="">None</option>
-              {ALL_CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_META[c].label}</option>)}
-            </select>
           </div>
           <div>
             <label className="mb-1 block text-[10.5px] font-medium text-slate-500">Priority</label>
@@ -535,7 +452,6 @@ export function InvestorTasksPageClient({
               className="min-w-0 flex-1 cursor-pointer border-none bg-transparent p-0 text-left">
               <p className={`text-sm font-medium leading-snug text-slate-900 ${isDone ? "line-through" : ""}`}>{task.title}</p>
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                <CategoryPill cat={task.task_category} />
                 <PriorityPill priority={task.priority} />
                 {task.due_date && (
                   <span className={`text-[11px] ${overdue ? "text-red-500" : "text-slate-400"}`}>
@@ -646,7 +562,6 @@ export function InvestorTasksPageClient({
                       className={`cursor-pointer rounded-lg border border-slate-200 bg-white p-3 transition-shadow hover:shadow-sm ${isDone ? "opacity-60" : ""}`}>
                       <p className={`mb-2 text-[13px] font-medium leading-snug text-slate-900 ${isDone ? "line-through" : ""}`}>{task.title}</p>
                       <div className="flex flex-wrap gap-1">
-                        <CategoryPill cat={task.task_category} />
                         <PriorityPill priority={task.priority} />
                       </div>
                       {task.due_date && (
@@ -684,12 +599,11 @@ export function InvestorTasksPageClient({
   function TimelineView() {
     const { days, today } = buildDateStrip();
 
-    // dot colors per task due on that day
-    function dotsForDay(d: Date): string[] {
+    // dot indicators per task due on that day
+    function dotsForDay(d: Date): number {
       return visible
         .filter((t) => t.due_date && new Date(t.due_date).setHours(0,0,0,0) === d.getTime())
-        .map((t) => t.task_category ? CATEGORY_META[t.task_category].dot : "bg-slate-400")
-        .slice(0, 3);
+        .length;
     }
 
     const groups = groupByDate(visible.filter((t) => t.status !== "done"));
@@ -710,7 +624,6 @@ export function InvestorTasksPageClient({
             <div className="min-w-0 flex-1">
               <p className={`text-sm font-medium text-slate-900 ${isDone ? "line-through" : ""}`}>{task.title}</p>
               <div className="mt-1 flex flex-wrap gap-1.5">
-                <CategoryPill cat={task.task_category} />
                 <PriorityPill priority={task.priority} />
                 {task.google_calendar_event_id && <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600">In Calendar</span>}
               </div>
@@ -738,7 +651,9 @@ export function InvestorTasksPageClient({
                 <span className={`text-[10px] font-medium ${isToday ? "text-white/70" : "text-slate-400"}`}>{d.label}</span>
                 <span className={`text-sm font-semibold ${isToday ? "text-white" : "text-slate-700"}`}>{d.num}</span>
                 <div className="mt-1 flex gap-0.5">
-                  {dots.map((cls, i) => <span key={i} className={`h-1.5 w-1.5 rounded-full ${cls}`} />)}
+                  {Array.from({ length: Math.min(dots, 3) }).map((_, i) => (
+                    <span key={i} className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                  ))}
                 </div>
               </div>
             );
@@ -817,7 +732,6 @@ export function InvestorTasksPageClient({
                   {task.title}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
-                  <CategoryPill cat={task.task_category} />
                   <PriorityPill priority={task.priority} />
                 </div>
                 {task.due_date && (
