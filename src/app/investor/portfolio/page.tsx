@@ -1,5 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { InvestorPortfolioPageClient } from "@/components/investor/InvestorPortfolioPageClient";
 import { canInvestorPerformSensitiveActions } from "@/lib/investor/access";
 import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
@@ -23,20 +25,18 @@ export default async function InvestorPortfolioPage() {
       role="INVESTOR"
       workspace="investor"
       profileName={profile.full_name ?? profile.email ?? "Investor"}
-      profileSubtitle="Portfolio & deals"
+      profileSubtitle="Investor account"
     >
-      <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Portfolio</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Track your pledges, investments, and returns across all deals — linked and self-reported.
-          Not a legal investment account or securities ownership record.
-        </p>
-      </div>
-
-      <InvestorFeatureGate>
-        <InvestorPortfolioPageClient />
-      </InvestorFeatureGate>
+      <WorkspacePageContainer>
+        <PageHeader
+          eyebrow="Investor workspace"
+          title="Portfolio"
+          description="Track your pledges, investments, and returns across all deals — linked and self-reported."
+        />
+        <InvestorFeatureGate>
+          <InvestorPortfolioPageClient />
+        </InvestorFeatureGate>
+      </WorkspacePageContainer>
     </AppShell>
   );
 }
