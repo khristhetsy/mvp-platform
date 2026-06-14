@@ -18,13 +18,13 @@ export async function getCampaigns(): Promise<MarketingCampaign[]> {
 }
 
 export async function createCampaign(
-  input: Partial<MarketingCampaign>
+  input: Partial<MarketingCampaign>,
+  createdBy?: string
 ): Promise<MarketingCampaign> {
   const db = await marketingDb();
-  const { data: { user } } = await db.auth.getUser();
   const { data, error } = await db
     .from("marketing_campaigns")
-    .insert({ ...input, created_by: user?.id })
+    .insert({ ...input, ...(createdBy ? { created_by: createdBy } : {}) })
     .select()
     .single();
   if (error) throw error;

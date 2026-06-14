@@ -16,12 +16,11 @@ export async function getSequences(): Promise<MarketingSequence[]> {
   return (data ?? []) as MarketingSequence[];
 }
 
-export async function createSequence(name: string): Promise<MarketingSequence> {
+export async function createSequence(name: string, createdBy?: string): Promise<MarketingSequence> {
   const db = await marketingDb();
-  const { data: { user } } = await db.auth.getUser();
   const { data, error } = await db
     .from("marketing_sequences")
-    .insert({ name, created_by: user?.id })
+    .insert({ name, ...(createdBy ? { created_by: createdBy } : {}) })
     .select()
     .single();
   if (error) throw error;

@@ -4,7 +4,7 @@ import { createCampaign, sendCampaign, updateCampaignStatus } from "@/lib/market
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    await requireRole(["admin"]);
+    const profile = await requireRole(["admin"]);
     const body = await req.json();
     const { action, campaign_id, ...rest } = body;
 
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     // Create campaign (optionally pre-scheduled)
-    const campaign = await createCampaign(rest);
+    const campaign = await createCampaign(rest, profile.id);
     // If scheduled_at provided at creation, set status to scheduled
     if (rest.scheduled_at) {
       const { createServiceRoleClient } = await import("@/lib/supabase/admin");

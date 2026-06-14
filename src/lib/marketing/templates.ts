@@ -22,13 +22,13 @@ export async function getTemplate(id: string): Promise<MarketingTemplate | null>
 }
 
 export async function createTemplate(
-  input: Partial<MarketingTemplate>
+  input: Partial<MarketingTemplate>,
+  createdBy?: string
 ): Promise<MarketingTemplate> {
   const db = await marketingDb();
-  const { data: { user } } = await db.auth.getUser();
   const { data, error } = await db
     .from("marketing_templates")
-    .insert({ ...input, created_by: user?.id })
+    .insert({ ...input, ...(createdBy ? { created_by: createdBy } : {}) })
     .select()
     .single();
   if (error) throw error;

@@ -4,9 +4,9 @@ import { createSequence, updateSequenceStatus } from "@/lib/marketing/sequences"
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    await requireRole(["admin"]);
+    const profile = await requireRole(["admin"]);
     const { name } = await req.json();
-    const seq = await createSequence(name);
+    const seq = await createSequence(name, profile.id);
     return NextResponse.json(seq, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
