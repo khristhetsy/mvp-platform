@@ -66,6 +66,22 @@ export default async function FounderLearningPage() {
 
   const firstIncompleteIdx = weekLessons.findIndex((l) => !l.done);
 
+  // Browse all courses — published admin courses from learning_programs
+  type PublishedCourse = {
+    id: string;
+    title: string;
+    description: string;
+    difficulty: string | null;
+    readiness_focus: string | null;
+    banner_image_url: string | null;
+  };
+  const { data: rawPublishedCourses } = await admin
+    .from("learning_programs")
+    .select("id, title, description, difficulty, readiness_focus, banner_image_url")
+    .eq("is_published", true)
+    .order("order_index", { ascending: true });
+  const publishedCourses = (rawPublishedCourses ?? []) as PublishedCourse[];
+
   const rating = Math.round(
     stagePercents.stage_0 * 0.25 +
     stagePercents.stage_1 * 0.35 +
@@ -260,6 +276,80 @@ export default async function FounderLearningPage() {
               </div>
             </div>
           </div>
+          {/* Browse all courses */}
+          {publishedCourses.length > 0 && (
+            <div className="mt-8">
+              <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                Library
+              </div>
+              <h2 className="text-base font-semibold text-slate-900">Browse all courses</h2>
+              <p className="mt-0.5 mb-5 text-xs text-slate-500">
+                Curated by the CapitalOS team — available at any stage.
+              </p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {publishedCourses.map((course) => {
+                  const stageBadge: Record<string, { label: string; bg: string; text: string }> = {
+                    stage_0: { label: "Stage 0", bg: "#EFF6FF", text: "#1D4ED8" },
+                    stage_1: { label: "Stage 1", bg: "#F0FDF4", text: "#15803D" },
+                    stage_2: { label: "Stage 2", bg: "#FFF7ED", text: "#C2410C" },
+                    stage_3: { label: "Stage 3", bg: "#FAF5FF", text: "#7E22CE" },
+                  };
+                  const badge = course.readiness_focus ? stageBadge[course.readiness_focus] : null;
+
+                  return (
+                    <Link
+                      key={course.id}
+                      href={`/founder/learning/courses/${course.id}`}
+                      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:border-indigo-200 hover:shadow-sm"
+                    >
+                      {/* Banner */}
+                      <div className="h-24 flex-shrink-0 bg-slate-100">
+                        {course.banner_image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={course.banner_image_url}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center bg-gradient-to-br from-indigo-50 to-slate-100 text-2xl">
+                            📚
+                          </div>
+                        )}
+                      </div>
+                      {/* Body */}
+                      <div className="flex flex-1 flex-col gap-2 p-4">
+                        <div className="flex flex-wrap gap-1.5">
+                          {badge && (
+                            <span
+                              className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                              style={{ background: badge.bg, color: badge.text }}
+                            >
+                              {badge.label}
+                            </span>
+                          )}
+                          {course.difficulty && (
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium capitalize text-slate-500">
+                              {course.difficulty}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm font-semibold text-slate-900 leading-snug">{course.title}</p>
+                        {course.description && (
+                          <p className="line-clamp-2 text-xs text-slate-500 leading-relaxed flex-1">
+                            {course.description}
+                          </p>
+                        )}
+                        <span className="mt-1 text-xs font-semibold text-indigo-600 group-hover:underline">
+                          View course →
+                        </span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </WorkspacePageContainer>
       </FounderFeatureGate>
     </FounderAppShell>
