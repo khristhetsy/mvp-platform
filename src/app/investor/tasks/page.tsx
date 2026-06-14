@@ -4,6 +4,7 @@ import { InvestorTasksPageClient } from "@/components/investor/InvestorTasksPage
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { listInternalUsers } from "@/lib/tasks/db";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,10 @@ export default async function InvestorTasksPage() {
   const { profile } = await requireInvestorWorkspaceSession();
 
   const admin = createServiceRoleClient();
-  const googleStatus = await getGoogleConnectionStatus(admin, profile.id);
+  const [googleStatus, internalUsers] = await Promise.all([
+    getGoogleConnectionStatus(admin, profile.id),
+    listInternalUsers(),
+  ]);
 
   return (
     <AppShell
@@ -25,7 +29,11 @@ export default async function InvestorTasksPage() {
         title="My Tasks"
         description="Track follow-ups, due diligence, and deal pipeline to-dos."
       />
-      <InvestorTasksPageClient googleConnected={googleStatus.connected} />
+      <InvestorTasksPageClient
+        googleConnected={googleStatus.connected}
+        internalUsers={internalUsers}
+        currentUserId={profile.id}
+      />
     </AppShell>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { Task, TaskStatus, TaskPriority, TaskCategory } from "@/lib/tasks/types";
+import type { Task, TaskStatus, TaskPriority, TaskCategory, InternalUser } from "@/lib/tasks/types";
 
 /* ─── constants ─────────────────────────────────────────────────── */
 
@@ -71,6 +71,38 @@ function buildDateStrip() {
 
 /* ─── sub-components ────────────────────────────────────────────── */
 
+const AVATAR_COLORS = [
+  "bg-purple-100 text-purple-800",
+  "bg-teal-100 text-teal-800",
+  "bg-blue-100 text-blue-800",
+  "bg-pink-100 text-pink-800",
+  "bg-amber-100 text-amber-800",
+];
+
+function initials(name: string | null, email: string | null): string {
+  const src = name ?? email ?? "?";
+  const parts = src.split(/[\s@.]+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return src.slice(0, 2).toUpperCase();
+}
+
+function avatarColor(id: string): string {
+  const n = id.charCodeAt(0) + (id.charCodeAt(1) ?? 0);
+  return AVATAR_COLORS[n % AVATAR_COLORS.length];
+}
+
+function UserAvatar({ user, size = 22 }: { user: InternalUser; size?: number }) {
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${avatarColor(user.id)}`}
+      style={{ width: size, height: size }}
+      title={user.full_name ?? user.email ?? ""}
+    >
+      {initials(user.full_name, user.email)}
+    </span>
+  );
+}
+
 function CheckCircle({ done }: { done: boolean }) {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true" className="shrink-0">
@@ -105,13 +137,20 @@ type EditForm = {
   priority: TaskPriority;
   due_date: string;
   task_category: TaskCategory | "";
+  assigned_to: string;
 };
 
 /* ─── main component ────────────────────────────────────────────── */
 
 export function InvestorTasksPageClient({
   googleConnected = false,
-}: Readonly<{ googleConnected?: boolean }>) {
+  internalUsers = [],
+  currentUserId = "",
+}: Readonly<{
+  googleConnected?: boolean;
+  internalUsers?: InternalUser[];
+  currentUserId?: string;
+}>) {
 
   const [tasks, setTasks]     = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,6 +165,7 @@ export function InvestorTasksPageClient({
   const [newPriority, setNewPriority]   = useState<TaskPriority>("medium");
   const [newDueDate, setNewDueDate]     = useState("");
   const [newCategory, setNewCategory]   = useState<TaskCategory | "">("");
+  const [newAssignee, setNewAssignee]   = useState("");
   const [saving, setSaving]             = useState(false);
 
   /* inline edit */
@@ -160,11 +200,12 @@ export function InvestorTasksPageClient({
         priority: newPriority,
         due_date: newDueDate || null,
         task_category: newCategory || null,
+        assigned_to: newAssignee || null,
         context_type: "personal",
       }),
     });
     setSaving(false);
-    setNewTitle(""); setNewPriority("medium"); setNewDueDate(""); setNewCategory(""); setShowForm(false);
+    setNewTitle(""); setNewPriority("medium"); setNewDueDate(""); setNewCategory(""); setNewAssignee(""); setShowForm(false);
     void load();
   }
 
@@ -197,6 +238,7 @@ export function InvestorTasksPageClient({
       priority:      task.priority,
       due_date:      task.due_date?.slice(0, 10) ?? "",
       task_category: task.task_category ?? "",
+      assigned_to:   task.assigned_to ?? "",
     });
   }
 
@@ -212,6 +254,7 @@ export function InvestorTasksPageClient({
         priority:      editForm.priority,
         due_date:      editForm.due_date || null,
         task_category: editForm.task_category || null,
+        assigned_to:   editForm.assigned_to || null,
       }),
     });
     setEditSaving(false);
@@ -332,6 +375,15 @@ export function InvestorTasksPageClient({
             onKeyDown={(e) => { if (e.key === "Enter") void handleCreate(); if (e.key === "Escape") setShowForm(false); }}
             className="mb-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none" />
           <div className="flex flex-wrap gap-2">
+            <select value={newAssignee} onChange={(e) => setNewAssignee(e.target.value)}
+              className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 focus:outline-none">
+              <option value="">Assign to…</option>
+              {internalUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.full_name ?? u.email ?? u.id}{u.id === currentUserId ? " (you)" : ""}
+                </option>
+              ))}
+            </select>
             <select value={newCategory} onChange={(e) => setNewCategory(e.target.value as TaskCategory | "")}
               className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 focus:outline-none">
               <option value="">Category</option>
@@ -370,6 +422,18 @@ export function InvestorTasksPageClient({
             <label className="mb-1 block text-[10.5px] font-medium text-slate-500">Title</label>
             <input type="text" value={editForm?.title ?? ""} onChange={(e) => setEditForm(f => f ? { ...f, title: e.target.value } : f)}
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none" />
+          </div>
+          <div>
+            <label className="mb-1 block text-[10.5px] font-medium text-slate-500">Assign to</label>
+            <select value={editForm?.assigned_to ?? ""} onChange={(e) => setEditForm(f => f ? { ...f, assigned_to: e.target.value } : f)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none">
+              <option value="">Unassigned</option>
+              {internalUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.full_name ?? u.email ?? u.id}{u.id === currentUserId ? " (you)" : ""}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="mb-1 block text-[10.5px] font-medium text-slate-500">Category</label>
@@ -486,6 +550,19 @@ export function InvestorTasksPageClient({
                 )}
               </div>
             </button>
+            {/* Assignee avatar */}
+            {task.assigned_to && (() => {
+              const u = internalUsers.find((u) => u.id === task.assigned_to);
+              return u ? (
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <UserAvatar user={u} />
+                  <span className="hidden text-[11px] text-slate-400 sm:inline">
+                    {u.id === currentUserId ? "You" : (u.full_name?.split(" ")[0] ?? u.email ?? "")}
+                  </span>
+                </div>
+              ) : null;
+            })()}
+
             <div className="flex shrink-0 items-center gap-1">
               <button type="button" onClick={() => toggleExpand(task)}
                 className="rounded-md p-1 text-slate-300 hover:bg-slate-100 hover:text-slate-500" aria-label={isOpen ? "Collapse" : "Expand"}>
