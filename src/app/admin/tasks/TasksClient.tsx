@@ -3,6 +3,9 @@
 import { useState, useCallback } from "react";
 import type { Task, TaskStatus, TaskPriority, InternalUser } from "@/lib/tasks/types";
 
+const GCAL_PURPLE = "#534AB7";
+const GCAL_LIGHT  = "#EEEDFE";
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 const PRIORITY_MAP: Record<TaskPriority, { bg: string; color: string }> = {
   high:   { bg: "#FCEBEB", color: "#A32D2D" },
@@ -64,18 +67,23 @@ const inputStyle: React.CSSProperties = {
 function TaskCard({
   task,
   internalUsers,
+  googleConnected,
   onStatusChange,
   onDelete,
   onSave,
+  onCalendarUpdate,
 }: {
   task: Task;
   internalUsers: InternalUser[];
+  googleConnected: boolean;
   onStatusChange: (id: string, s: TaskStatus) => void;
   onDelete: (id: string) => void;
   onSave: (id: string, patch: Partial<Task>) => Promise<void>;
+  onCalendarUpdate: (id: string, eventId: string | null) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [calLoading, setCalLoading] = useState(false);
   const [form, setForm] = useState({
     title:       task.title,
     description: task.description ?? "",
@@ -112,6 +120,25 @@ function TaskCard({
       assigned_to: task.assigned_to ?? "",
     });
     setEditing(false);
+  }
+
+  async function handleCalendarToggle() {
+    if (!task.due_date) return;
+    setCalLoading(true);
+    try {
+      if (task.google_calendar_event_id) {
+        await fetch(`/api/tasks/${task.id}/calendar`, { method: "DELETE" });
+        onCalendarUpdate(task.id, null);
+      } else {
+        const res = await fetch(`/api/tasks/${task.id}/calendar`, { method: "POST" });
+        if (res.ok) {
+          const data = await res.json();
+          onCalendarUpdate(task.id, data.google_calendar_event_id ?? null);
+        }
+      }
+    } finally {
+      setCalLoading(false);
+    }
   }
 
   // ── Edit mode ──────────────────────────────────────────────────────────────
@@ -212,7 +239,24 @@ function TaskCard({
         <div style={{ fontSize: 13, fontWeight: 500, color: "#0c2340", lineHeight: 1.4, flex: 1 }}>
           {task.title}
         </div>
-        <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+        <div style={{ display: "flex", gap: 3, flexShrink: 0, alignItems: "center" }}>
+          {googleConnected && task.due_date && (
+            <button
+              onClick={() => void handleCalendarToggle()}
+              disabled={calLoading}
+              title={task.google_calendar_event_id ? "Remove from Google Calendar" : "Add to Google Calendar"}
+              style={{
+                background: task.google_calendar_event_id ? GCAL_PURPLE : "none",
+                border: task.google_calendar_event_id ? "none" : `0.5px solid ${GCAL_PURPLE}`,
+                borderRadius: 4, cursor: "pointer", padding: "1px 5px",
+                fontSize: 10, fontWeight: 500,
+                color: task.google_calendar_event_id ? GCAL_LIGHT : GCAL_PURPLE,
+                opacity: calLoading ? 0.5 : 1,
+              }}
+            >
+              {calLoading ? "…" : task.google_calendar_event_id ? "📅 Synced" : "📅 Add"}
+            </button>
+          )}
           <button
             onClick={() => setEditing(true)}
             title="Edit task"
@@ -298,16 +342,20 @@ function Column({
   status,
   tasks,
   internalUsers,
+  googleConnected,
   onStatusChange,
   onDelete,
   onSave,
+  onCalendarUpdate,
 }: {
   status: TaskStatus;
   tasks: Task[];
   internalUsers: InternalUser[];
+  googleConnected: boolean;
   onStatusChange: (id: string, s: TaskStatus) => void;
   onDelete: (id: string) => void;
   onSave: (id: string, patch: Partial<Task>) => Promise<void>;
+  onCalendarUpdate: (id: string, eventId: string | null) => void;
 }) {
   const sc = STATUS_MAP[status];
   return (
@@ -328,9 +376,11 @@ function Column({
             key={task.id}
             task={task}
             internalUsers={internalUsers}
+            googleConnected={googleConnected}
             onStatusChange={onStatusChange}
             onDelete={onDelete}
             onSave={onSave}
+            onCalendarUpdate={onCalendarUpdate}
           />
         ))}
       </div>
@@ -343,9 +393,10 @@ interface Props {
   initialTasks: Task[];
   internalUsers: InternalUser[];
   currentUserId: string;
+  googleConnected: boolean;
 }
 
-export function TasksClient({ initialTasks, internalUsers, currentUserId }: Props) {
+export function TasksClient({ initialTasks, internalUsers, currentUserId, googleConnected }: Props) {
   const [tasks, setTasks]       = useState<Task[]>(initialTasks);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving]     = useState(false);
@@ -406,6 +457,12 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId }: Prop
     if (!confirm("Delete this task?")) return;
     await fetch(`/api/tasks/${id}`, { method: "DELETE" });
     reload();
+  }
+
+  function handleCalendarUpdate(id: string, eventId: string | null) {
+    setTasks((prev) =>
+      prev.map((t) => t.id === id ? { ...t, google_calendar_event_id: eventId } : t)
+    );
   }
 
   const byStatus = (s: TaskStatus) => tasks.filter((t) => t.status === s);
@@ -521,9 +578,11 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId }: Prop
             status={s}
             tasks={byStatus(s)}
             internalUsers={internalUsers}
+            googleConnected={googleConnected}
             onStatusChange={handleStatusChange}
             onDelete={handleDelete}
             onSave={handleSave}
+            onCalendarUpdate={handleCalendarUpdate}
           />
         ))}
       </div>
