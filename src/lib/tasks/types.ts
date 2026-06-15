@@ -1,6 +1,6 @@
 export type TaskStatus   = "todo" | "in_progress" | "done" | "cancelled";
 export type TaskPriority = "low" | "medium" | "high";
-export type TaskContext  = "personal" | "company" | "deal" | "internal";
+export type TaskContext  = "personal" | "company" | "deal" | "internal" | "marketing_plan";
 export type TaskCategory = "marketing" | "ir_dept" | "admin_dept" | "sales_dept";
 export type TaskType     = "learning" | "operations" | "investor_outreach" | "deal_diligence";
 
