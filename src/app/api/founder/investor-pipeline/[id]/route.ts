@@ -47,7 +47,8 @@ export async function PATCH(request: Request, { params }: Params) {
 
   const { data, error } = await supabase
     .from("pipeline_investors")
-    .update(patch)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .update(patch as any)
     .eq("id", id)
     .eq("founder_id", profile.id) // enforce ownership
     .select(SAFE_COLUMNS)
