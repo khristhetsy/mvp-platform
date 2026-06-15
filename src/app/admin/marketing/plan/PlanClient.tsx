@@ -137,6 +137,11 @@ export function PlanClient({ plans, aiEnabled }: Props) {
   const [editingItem, setEditingItem] = useState<MarketingPlanItem | null>(null);
   const [editForm, setEditForm]       = useState({ title: "", description: "" });
 
+  // share panel
+  const [shareOpen, setShareOpen]   = useState(false);
+  const [adminUsers, setAdminUsers] = useState<{ id: string; full_name: string | null; email: string | null; role: string }[]>([]);
+  const [copyDone, setCopyDone]     = useState(false);
+
   // add-initiative form
   const [newItem, setNewItem] = useState({
     title: "", description: "",
@@ -332,6 +337,41 @@ export function PlanClient({ plans, aiEnabled }: Props) {
   function openEdit(item: MarketingPlanItem) {
     setEditingItem(item);
     setEditForm({ title: item.title, description: item.description ?? "" });
+  }
+
+  // ── Share helpers ──────────────────────────────────────────────────────────
+  function splitPlanName(name: string): { title: string; subtitle: string | null } {
+    const idx = name.indexOf(":");
+    if (idx === -1) return { title: name, subtitle: null };
+    return { title: name.slice(0, idx).trim(), subtitle: name.slice(idx + 1).trim() };
+  }
+
+  function getQuarterTag(startDate: string | null | undefined): string | null {
+    if (!startDate) return null;
+    const d = new Date(startDate);
+    const q = Math.ceil((d.getMonth() + 1) / 3);
+    return `Q${q} ${d.getFullYear()}`;
+  }
+
+  async function openShare() {
+    setShareOpen(true);
+    if (adminUsers.length === 0) {
+      try {
+        const res = await fetch("/api/admin/users/manage");
+        if (res.ok) {
+          const data = await res.json();
+          setAdminUsers((data.users ?? []).filter((u: { role: string }) => u.role === "admin"));
+        }
+      } catch { /* non-critical */ }
+    }
+  }
+
+  function copyPlanLink() {
+    if (!selectedId) return;
+    const url = `${window.location.origin}/admin/marketing/plan?plan=${selectedId}`;
+    navigator.clipboard.writeText(url).catch(() => {});
+    setCopyDone(true);
+    setTimeout(() => setCopyDone(false), 2000);
   }
 
   async function saveEdit() {
@@ -669,38 +709,122 @@ export function PlanClient({ plans, aiEnabled }: Props) {
       {detail && !loadingDetail && (
         <>
           {/* Plan detail card */}
-          <div style={{ ...card, padding: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <h2 style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{detail.name}</h2>
-              <Badge map={STATUS_MAP} value={detail.status} />
+          <div style={{ ...card, padding: 20, position: "relative" }}>
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 8, background: "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <span style={{ fontSize: 16, color: ACCENT }}>✦</span>
+                </div>
+                <div style={{ flex: 1 }}>
+                  {(() => {
+                    const { title, subtitle } = splitPlanName(detail.name);
+                    return (
+                      <>
+                        <p style={{ fontSize: 14, fontWeight: 500, margin: 0, lineHeight: 1.3 }}>{title}</p>
+                        {subtitle && <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "2px 0 0" }}>{subtitle}</p>}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                <Badge map={STATUS_MAP} value={detail.status} />
+                <button
+                  style={{ ...btnGhost, padding: "5px 10px", fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}
+                  onClick={() => { setShareOpen((v) => !v); if (!shareOpen) openShare(); }}
+                >
+                  ↗ Share
+                </button>
+              </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr repeat(3, auto)", gap: 24, alignItems: "start" }}>
+
+            {/* Share panel */}
+            {shareOpen && (
+              <div style={{ border: "0.5px solid #e2e6ed", borderRadius: 10, padding: 14, marginBottom: 14, background: "#fafafa", display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <p style={{ fontSize: 12, fontWeight: 500, margin: 0 }}>Share plan with Admin team</p>
+                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 15 }} onClick={() => setShareOpen(false)}>✕</button>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    readOnly
+                    value={`${typeof window !== "undefined" ? window.location.origin : ""}/admin/marketing/plan?plan=${selectedId}`}
+                    style={{ ...inputStyle, fontSize: 11, color: "var(--muted-foreground)", background: "#f1f1f1", flex: 1 }}
+                  />
+                  <button style={{ ...btnPrimary, padding: "8px 14px", fontSize: 11, whiteSpace: "nowrap" }} onClick={copyPlanLink}>
+                    {copyDone ? "✓ Copied" : "Copy link"}
+                  </button>
+                </div>
+                {adminUsers.length > 0 && (
+                  <div>
+                    <p style={{ fontSize: 10, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", margin: "0 0 6px" }}>Admin members with access</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {adminUsers.map((u) => (
+                        <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 7, border: "0.5px solid #e2e6ed", background: "#fff" }}>
+                          <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 500, color: ACCENT, flexShrink: 0 }}>
+                            {(u.full_name ?? u.email ?? "?")[0].toUpperCase()}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontSize: 12, fontWeight: 500, margin: 0 }}>{u.full_name ?? u.email}</p>
+                            {u.full_name && <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: 0 }}>{u.email}</p>}
+                          </div>
+                          <span style={{ fontSize: 10, color: "#0F6E56", background: "#E1F5EE", padding: "2px 6px", borderRadius: 5, fontWeight: 500 }}>Has access</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {adminUsers.length === 0 && (
+                  <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: 0 }}>Loading team members…</p>
+                )}
+              </div>
+            )}
+
+            {/* Divider */}
+            <div style={{ borderTop: "0.5px solid #e2e6ed", marginBottom: 14 }} />
+
+            {/* Fields */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: 0, alignItems: "start" }}>
               {detail.objective && (
-                <div>
-                  <p style={{ fontSize: 10, color: "var(--muted-foreground)", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: ".06em" }}>Objective</p>
+                <div style={{ paddingRight: 24 }}>
+                  <p style={{ fontSize: 10, color: "var(--muted-foreground)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Objective</p>
                   <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>{detail.objective}</p>
                 </div>
               )}
               {detail.target_audience && (
-                <div style={{ minWidth: 140 }}>
-                  <p style={{ fontSize: 10, color: "var(--muted-foreground)", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: ".06em" }}>Audience</p>
-                  <p style={{ fontSize: 13, margin: 0 }}>{detail.target_audience}</p>
+                <div style={{ minWidth: 140, borderLeft: "0.5px solid #e2e6ed", paddingLeft: 20, paddingRight: 20 }}>
+                  <p style={{ fontSize: 10, color: "var(--muted-foreground)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Audience</p>
+                  <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>{detail.target_audience}</p>
                 </div>
               )}
               {detail.budget && (
-                <div style={{ minWidth: 100 }}>
-                  <p style={{ fontSize: 10, color: "var(--muted-foreground)", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: ".06em" }}>Budget</p>
-                  <p style={{ fontSize: 13, margin: 0 }}>{detail.budget}</p>
+                <div style={{ minWidth: 90, borderLeft: "0.5px solid #e2e6ed", paddingLeft: 20, paddingRight: 20 }}>
+                  <p style={{ fontSize: 10, color: "var(--muted-foreground)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Budget</p>
+                  <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: ACCENT }}>
+                    {detail.budget.includes("/") ? (
+                      <>
+                        {detail.budget.split("/")[0]}
+                        <span style={{ fontSize: 11, fontWeight: 400, color: "var(--muted-foreground)" }}>/{detail.budget.split("/")[1]}</span>
+                      </>
+                    ) : detail.budget}
+                  </p>
                 </div>
               )}
               {(detail.start_date ?? detail.end_date) && (
-                <div style={{ minWidth: 160 }}>
-                  <p style={{ fontSize: 10, color: "var(--muted-foreground)", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: ".06em" }}>Window</p>
-                  <p style={{ fontSize: 13, margin: 0 }}>{detail.start_date ?? "—"} → {detail.end_date ?? "—"}</p>
+                <div style={{ minWidth: 130, borderLeft: "0.5px solid #e2e6ed", paddingLeft: 20 }}>
+                  <p style={{ fontSize: 10, color: "var(--muted-foreground)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Window</p>
+                  <p style={{ fontSize: 13, margin: 0 }}>{detail.start_date ?? "—"}</p>
+                  <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: "2px 0 0" }}>→ {detail.end_date ?? "—"}</p>
+                  {getQuarterTag(detail.start_date) && (
+                    <span style={{ fontSize: 10, fontWeight: 500, background: "#E6F1FB", color: "#185FA5", padding: "2px 6px", borderRadius: 5, display: "inline-block", marginTop: 6 }}>
+                      {getQuarterTag(detail.start_date)}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
-            {detail.summary && <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "12px 0 0", lineHeight: 1.6 }}>{detail.summary}</p>}
+            {detail.summary && <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "14px 0 0", lineHeight: 1.6, borderTop: "0.5px solid #e2e6ed", paddingTop: 12 }}>{detail.summary}</p>}
           </div>
 
           {/* Initiatives card */}
