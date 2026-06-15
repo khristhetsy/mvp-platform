@@ -38,63 +38,35 @@ export const adminOperationsNav: WorkspaceNavItem[] = [
 
 export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
   {
+    title: "Contacts",
     items: [
-      { href: "/admin/dashboard", label: "Dashboard", requiredPermission: "view_admin_dashboard" },
-      { href: "/admin/actions", label: "Actions", requiredPermission: "view_actions" },
+      { href: "/admin/companies",  label: "Companies",  requiredPermission: "manage_companies" },
+      { href: "/admin/investors",  label: "Investors",  requiredPermission: "manage_investors" },
     ],
   },
   {
-    title: "Operations",
-    items: adminOperationsNav,
+    title: "Sales",
+    items: [
+      { href: "/admin/sales/crm", label: "Sales CRM", requiredPermission: "view_admin_dashboard" },
+    ],
   },
   {
+    title: "Investor Relations",
     items: [
       {
-        href: "/admin/learning",
-        label: "Learning",
-        requiredPermission: "manage_learning",
+        href: "/admin/crm",
+        label: "IR CRM",
+        requiredPermission: "manage_crm",
         children: [
-          { href: "/admin/learning", label: "Overview" },
-          { href: "/admin/learning/courses", label: "Courses" },
-          { href: "/admin/learning/founders", label: "Founder roster" },
+          { href: "/admin/crm",           label: "Activity"  },
+          { href: "/admin/crm/pipeline",  label: "Pipeline"  },
+          { href: "/admin/crm/messages",  label: "Messages"  },
+          { href: "/admin/crm/outreach",  label: "Outreach"  },
         ],
       },
-      { href: "/admin/billing", label: "Billing", requiredPermission: "manage_billing" },
-      {
-        href: "/admin/analytics",
-        label: "Analytics",
-        requiredPermission: "view_analytics",
-        children: [
-          { href: "/admin/analytics", label: "Analytics" },
-          { href: "/admin/reports", label: "Reports" },
-          { href: "/admin/insights", label: "Insights" },
-        ],
-      },
-      {
-        href: "/admin/compliance",
-        label: "Compliance",
-        requiredPermission: "manage_compliance",
-        children: [
-          { href: "/admin/diligence", label: "Diligence" },
-          { href: "/admin/compliance", label: "Compliance" },
-          { href: "/admin/audit", label: "Audit" },
-        ],
-      },
-      {
-        href: "/admin/integrations",
-        label: "System",
-        requiredPermission: "manage_integrations",
-        children: [
-          { href: "/admin/integrations", label: "Integrations" },
-          { href: "/admin/queues", label: "Queues" },
-          { href: "/admin/automation", label: "Automation" },
-          { href: "/admin/system-health", label: "System Health" },
-          { href: "/admin/imports", label: "Import / Export" },
-          { href: "/admin/beta-operations", label: "Beta Operations" },
-        ],
-      },
-      { href: "/admin/users/manage", label: "User Management", requiredPermission: "manage_users" },
-      { href: "/admin/users/permissions", label: "User Permissions", requiredPermission: "manage_users" },
+      { href: "/admin/deal-rooms", label: "Deal Rooms",       requiredPermission: "manage_deal_rooms" },
+      { href: "/admin/spvs",       label: "SPVs",             requiredPermission: "manage_spvs"       },
+      { href: "/admin/matching",   label: "Matching",         requiredPermission: "manage_matching"   },
     ],
   },
   {
@@ -105,13 +77,13 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         label: "Marketing Hub",
         requiredPermission: "view_admin_dashboard",
         children: [
-          { href: "/admin/marketing", label: "Dashboard" },
-          { href: "/admin/marketing/contacts", label: "Contacts" },
-          { href: "/admin/marketing/campaigns", label: "Campaigns" },
-          { href: "/admin/marketing/sequences", label: "Sequences" },
-          { href: "/admin/marketing/templates", label: "Templates" },
-          { href: "/admin/marketing/analytics", label: "Analytics" },
-          { href: "/admin/marketing/plan", label: "Plans" },
+          { href: "/admin/marketing",           label: "Dashboard"  },
+          { href: "/admin/marketing/contacts",  label: "Contacts"   },
+          { href: "/admin/marketing/campaigns", label: "Campaigns"  },
+          { href: "/admin/marketing/sequences", label: "Sequences"  },
+          { href: "/admin/marketing/templates", label: "Templates"  },
+          { href: "/admin/marketing/analytics", label: "Analytics"  },
+          { href: "/admin/marketing/plan",      label: "Plans"      },
         ],
       },
     ],
@@ -123,9 +95,69 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
     ],
   },
   {
-    title: "Portfolio",
+    title: "Operation",
     items: [
-      { href: "/admin/portfolio", label: "Portfolio oversight", requiredPermission: "view_admin_dashboard" },
+      { href: "/admin/dashboard",        label: "Dashboard",       requiredPermission: "view_admin_dashboard" },
+      { href: "/admin/actions",          label: "Actions",         requiredPermission: "view_actions"         },
+      {
+        href: "/admin/learning",
+        label: "Learning",
+        requiredPermission: "manage_learning",
+        children: [
+          { href: "/admin/learning",          label: "Overview"       },
+          { href: "/admin/learning/courses",  label: "Courses"        },
+          { href: "/admin/learning/founders", label: "Founder roster" },
+        ],
+      },
+      { href: "/admin/conference",       label: "Conference",      requiredPermission: "view_admin_dashboard" },
+      { href: "/admin/portfolio",        label: "Portfolio",       requiredPermission: "view_admin_dashboard" },
+      { href: "/admin/readiness",        label: "Readiness Scores",requiredPermission: "manage_companies"    },
+    ],
+  },
+  {
+    title: "Reports",
+    items: [
+      {
+        href: "/admin/analytics",
+        label: "Analytics",
+        requiredPermission: "view_analytics",
+        children: [
+          { href: "/admin/analytics", label: "Analytics" },
+          { href: "/admin/reports",   label: "Reports"   },
+          { href: "/admin/insights",  label: "Insights"  },
+        ],
+      },
+      {
+        href: "/admin/compliance",
+        label: "Compliance",
+        requiredPermission: "manage_compliance",
+        children: [
+          { href: "/admin/diligence",  label: "Diligence"  },
+          { href: "/admin/compliance", label: "Compliance" },
+          { href: "/admin/audit",      label: "Audit"      },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Admin",
+    items: [
+      { href: "/admin/billing",           label: "Billing",          requiredPermission: "manage_billing"      },
+      { href: "/admin/users/manage",      label: "User Management",  requiredPermission: "manage_users"        },
+      { href: "/admin/users/permissions", label: "User Permissions", requiredPermission: "manage_users"        },
+      {
+        href: "/admin/integrations",
+        label: "System",
+        requiredPermission: "manage_integrations",
+        children: [
+          { href: "/admin/integrations",    label: "Integrations"    },
+          { href: "/admin/queues",          label: "Queues"          },
+          { href: "/admin/automation",      label: "Automation"      },
+          { href: "/admin/system-health",   label: "System Health"   },
+          { href: "/admin/imports",         label: "Import / Export" },
+          { href: "/admin/beta-operations", label: "Beta Operations" },
+        ],
+      },
     ],
   },
 ];
