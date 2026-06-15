@@ -341,12 +341,14 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {([
-          { label: "Total Investors", value: stats.total },
-          { label: "Interested", value: stats.interested },
-          { label: "Meetings", value: stats.meetings },
-          { label: "Overdue Follow-ups", value: stats.followUps, warn: stats.followUps > 0 },
-        ] as const).map(({ label, value, warn }) => (
+        {(
+          [
+            { label: "Total Investors", value: stats.total, warn: false },
+            { label: "Interested", value: stats.interested, warn: false },
+            { label: "Meetings", value: stats.meetings, warn: false },
+            { label: "Overdue Follow-ups", value: stats.followUps, warn: stats.followUps > 0 },
+          ] as { label: string; value: number; warn: boolean }[]
+        ).map(({ label, value, warn }) => (
           <div key={label} className="rounded-xl border bg-white p-4" style={{ borderColor: warn ? "#fca5a5" : "var(--border-subtle)", boxShadow: "var(--shadow-panel)" }}>
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>{label}</p>
             <p className="mt-1 text-2xl font-bold tabular-nums" style={{ color: warn ? "#dc2626" : "var(--text-primary)" }}>{value}</p>
