@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FloatingFounderAICoach } from "@/components/FloatingFounderAICoach";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -397,6 +398,7 @@ export default async function StageContentPage({
           )}
         </WorkspacePageContainer>
       </FounderFeatureGate>
+      <FloatingFounderAICoach />
     </FounderAppShell>
   );
 }

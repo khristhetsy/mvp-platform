@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { FloatingFounderAICoach } from "@/components/FloatingFounderAICoach";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import type { FounderLessonProgressRecord, LearningLesson } from "@/lib/learning/types";
@@ -296,6 +297,7 @@ export function FounderLessonViewer({
         Platform readiness progress only — not legal, investment, or compliance certification. Lesson key:{" "}
         {encodeLessonKey(moduleSlug, lesson.id)}
       </p>
+      <FloatingFounderAICoach courseSlug={moduleSlug} lessonSlug={lesson.id} />
     </div>
   );
 }
