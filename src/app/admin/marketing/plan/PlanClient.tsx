@@ -54,10 +54,10 @@ const CHANNELS: MarketingPlanItemChannel[] = [
 ];
 
 const card: React.CSSProperties = {
-  background: "#ffffff",
-  border: "0.5px solid #e2e6ed",
+  background: "var(--surface-raised)",
+  border: "0.5px solid var(--border-subtle)",
   borderRadius: 12,
-  boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)",
+  boxShadow: "var(--shadow-panel)",
 };
 
 const btnPrimary: React.CSSProperties = {
@@ -72,9 +72,9 @@ const btnPrimary: React.CSSProperties = {
 };
 
 const btnGhost: React.CSSProperties = {
-  background: "#fff",
-  color: "var(--foreground)",
-  border: "0.5px solid #e2e6ed",
+  background: "var(--surface-raised)",
+  color: "var(--text-primary)",
+  border: "0.5px solid var(--border-subtle)",
   borderRadius: 8,
   padding: "8px 14px",
   fontSize: 12,
@@ -86,9 +86,9 @@ const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "8px 10px",
   fontSize: 13,
-  border: "0.5px solid #e2e6ed",
+  border: "0.5px solid var(--border-subtle)",
   borderRadius: 8,
-  background: "#fff",
+  background: "var(--surface-raised)",
   boxSizing: "border-box",
 };
 
@@ -96,9 +96,9 @@ const smallInput: React.CSSProperties = {
   width: "100%",
   padding: "6px 8px",
   fontSize: 12,
-  border: "0.5px solid #e2e6ed",
+  border: "0.5px solid var(--border-subtle)",
   borderRadius: 7,
-  background: "#fff",
+  background: "var(--surface-raised)",
   boxSizing: "border-box",
 };
 
@@ -397,21 +397,21 @@ export function PlanClient({ plans, aiEnabled }: Props) {
           const ch = CHANNEL_COLOR_MAP[item.channel] ?? CHANNEL_COLOR_MAP.other;
           const pr = PRIORITY_MAP[item.priority];
           return (
-            <div key={item.id} style={{ border: "0.5px solid #e2e6ed", borderRadius: 10, padding: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div key={item.id} style={{ border: "0.5px solid var(--border-subtle)", borderRadius: 10, padding: 14, display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <span style={{ background: ch.bg, color: ch.color, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 6, textTransform: "capitalize" }}>{item.channel}</span>
                 <div style={{ display: "flex", gap: 2 }}>
-                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: "2px 5px", fontSize: 15 }} onClick={() => openEdit(item)} title="Edit">✎</button>
+                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px 5px", fontSize: 15 }} onClick={() => openEdit(item)} title="Edit">✎</button>
                   <button style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 5px", fontSize: 15 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete">✕</button>
                 </div>
               </div>
               <div style={{ fontSize: 13, fontWeight: 500 }}>{item.title}</div>
-              {item.description && <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.5, flex: 1 }}>{item.description}</div>}
+              {item.description && <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5, flex: 1 }}>{item.description}</div>}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                {item.due_date ? <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Due {item.due_date}</span> : <span />}
+                {item.due_date ? <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Due {item.due_date}</span> : <span />}
                 <span style={{ background: pr.bg, color: pr.color, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 6, textTransform: "capitalize" }}>{item.priority}</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "0.5px solid #e2e6ed", paddingTop: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "0.5px solid var(--border-subtle)", paddingTop: 8 }}>
                 {item.task_id ? (
                   <span style={{ fontSize: 11, color: "#0F6E56", fontWeight: 500 }}>✓ Synced to Tasks</span>
                 ) : (
@@ -435,19 +435,19 @@ export function PlanClient({ plans, aiEnabled }: Props) {
   // ── List view ──────────────────────────────────────────────────────────────
   function renderListView(items: MarketingPlanItem[]) {
     return (
-      <div style={{ border: "0.5px solid #e2e6ed", borderRadius: 10, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 72px 110px 56px", padding: "7px 14px", background: "#f8f9fb", borderBottom: "0.5px solid #e2e6ed" }}>
+      <div style={{ border: "0.5px solid var(--border-subtle)", borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 72px 110px 56px", padding: "7px 14px", background: "#f8f9fb", borderBottom: "0.5px solid var(--border-subtle)" }}>
           {["Initiative", "Channel", "Priority", "Status", ""].map((h) => (
-            <span key={h} style={{ fontSize: 11, color: "var(--muted-foreground)", fontWeight: 500 }}>{h}</span>
+            <span key={h} style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 500 }}>{h}</span>
           ))}
         </div>
         {items.map((item, i) => {
           const ch = CHANNEL_COLOR_MAP[item.channel] ?? CHANNEL_COLOR_MAP.other;
           return (
-            <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr 90px 72px 110px 56px", padding: "10px 14px", borderBottom: i < items.length - 1 ? "0.5px solid #e2e6ed" : "none", alignItems: "center" }}>
+            <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr 90px 72px 110px 56px", padding: "10px 14px", borderBottom: i < items.length - 1 ? "0.5px solid var(--border-subtle)" : "none", alignItems: "center" }}>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 500 }}>{item.title}</div>
-                {item.description && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{item.description}</div>}
+                {item.description && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{item.description}</div>}
               </div>
               <span style={{ background: ch.bg, color: ch.color, fontSize: 11, fontWeight: 500, padding: "2px 7px", borderRadius: 6, textTransform: "capitalize", width: "fit-content" }}>{item.channel}</span>
               <span style={{ background: PRIORITY_MAP[item.priority]?.bg, color: PRIORITY_MAP[item.priority]?.color, fontSize: 11, fontWeight: 500, padding: "2px 7px", borderRadius: 6, textTransform: "capitalize", width: "fit-content" }}>{item.priority}</span>
@@ -457,7 +457,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                 <option value="done">Done</option>
               </select>
               <div style={{ display: "flex", gap: 2 }}>
-                <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: "2px 5px", fontSize: 15 }} onClick={() => openEdit(item)} title="Edit">✎</button>
+                <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px 5px", fontSize: 15 }} onClick={() => openEdit(item)} title="Edit">✎</button>
                 <button style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 5px", fontSize: 15 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete">✕</button>
               </div>
             </div>
@@ -476,16 +476,16 @@ export function PlanClient({ plans, aiEnabled }: Props) {
     }, {});
     const channelKeys = Object.keys(grouped);
     return (
-      <div style={{ border: "0.5px solid #e2e6ed", borderRadius: 10, padding: "16px 16px 12px" }}>
+      <div style={{ border: "0.5px solid var(--border-subtle)", borderRadius: 10, padding: "16px 16px 12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
           <div style={{ width: 34, height: 34, borderRadius: 8, background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 15, flexShrink: 0 }}>✦</div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 500 }}>{plan.name}</div>
-            {plan.objective && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{plan.objective}</div>}
+            {plan.objective && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{plan.objective}</div>}
           </div>
         </div>
-        <div style={{ marginLeft: 17, borderLeft: "1.5px solid #e2e6ed" }}>
-          {channelKeys.length === 0 && <div style={{ marginLeft: 20, fontSize: 12, color: "var(--muted-foreground)" }}>No initiatives yet.</div>}
+        <div style={{ marginLeft: 17, borderLeft: "1.5px solid var(--border-subtle)" }}>
+          {channelKeys.length === 0 && <div style={{ marginLeft: 20, fontSize: 12, color: "var(--text-muted)" }}>No initiatives yet.</div>}
           {channelKeys.map((channel, gi) => {
             const ch = CHANNEL_COLOR_MAP[channel] ?? CHANNEL_COLOR_MAP.other;
             const channelItems = grouped[channel];
@@ -496,18 +496,18 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                   <span style={{ fontSize: 12, fontWeight: 500, color: ch.color, textTransform: "capitalize" }}>{channel}</span>
                   <span style={{ fontSize: 11, color: ch.color, marginLeft: "auto", opacity: 0.8 }}>{channelItems.length} {channelItems.length === 1 ? "initiative" : "initiatives"}</span>
                 </div>
-                <div style={{ marginLeft: 36, borderLeft: "1.5px solid #e2e6ed" }}>
+                <div style={{ marginLeft: 36, borderLeft: "1.5px solid var(--border-subtle)" }}>
                   {channelItems.map((item, ii) => {
                     const pr = PRIORITY_MAP[item.priority];
                     return (
                       <div key={item.id} style={{ position: "relative", marginBottom: ii < channelItems.length - 1 ? 6 : 8 }}>
                         <div style={{ position: "absolute", left: -1, top: "50%", width: 18, height: 1.5, background: "#e2e6ed" }} />
-                        <div style={{ marginLeft: 18, border: "0.5px solid #e2e6ed", borderRadius: 8, padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <div style={{ marginLeft: 18, border: "0.5px solid var(--border-subtle)", borderRadius: 8, padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                           <span style={{ fontSize: 13, fontWeight: 500, flex: 1, minWidth: 120 }}>{item.title}</span>
-                          {item.due_date && <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Due {item.due_date}</span>}
+                          {item.due_date && <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Due {item.due_date}</span>}
                           <span style={{ background: pr.bg, color: pr.color, fontSize: 11, fontWeight: 500, padding: "1px 7px", borderRadius: 6, textTransform: "capitalize" }}>{item.priority}</span>
                           <Badge map={ITEM_STATUS_MAP} value={item.status} />
-                          <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: "2px 4px", fontSize: 14 }} onClick={() => openEdit(item)} title="Edit">✎</button>
+                          <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "2px 4px", fontSize: 14 }} onClick={() => openEdit(item)} title="Edit">✎</button>
                           <button style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 4px", fontSize: 14 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete">✕</button>
                         </div>
                       </div>
@@ -546,7 +546,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
           </div>
 
           {plans.length === 0 && !showCreate && (
-            <div style={{ ...card, padding: 16, fontSize: 12, color: "var(--muted-foreground)" }}>
+            <div style={{ ...card, padding: 16, fontSize: 12, color: "var(--text-muted)" }}>
               No plans yet. Create one manually or generate a draft with the AI CMO.
             </div>
           )}
@@ -565,16 +565,16 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                 /* ── Inline edit form ── */
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <div>
-                    <label style={{ fontSize: 10, color: "var(--muted-foreground)", display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: ".06em" }}>Plan name</label>
+                    <label style={{ fontSize: 10, color: "var(--text-muted)", display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: ".06em" }}>Plan name</label>
                     <input style={smallInput} value={planEditForm.name} onChange={(e) => setPlanEditForm({ ...planEditForm, name: e.target.value })} autoFocus />
                   </div>
                   <div>
-                    <label style={{ fontSize: 10, color: "var(--muted-foreground)", display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: ".06em" }}>Objective</label>
+                    <label style={{ fontSize: 10, color: "var(--text-muted)", display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: ".06em" }}>Objective</label>
                     <textarea rows={2} style={{ ...smallInput, resize: "vertical" }} value={planEditForm.objective} onChange={(e) => setPlanEditForm({ ...planEditForm, objective: e.target.value })} />
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                     <div>
-                      <label style={{ fontSize: 10, color: "var(--muted-foreground)", display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: ".06em" }}>Status</label>
+                      <label style={{ fontSize: 10, color: "var(--text-muted)", display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: ".06em" }}>Status</label>
                       <select style={smallInput} value={planEditForm.status} onChange={(e) => setPlanEditForm({ ...planEditForm, status: e.target.value })}>
                         <option value="draft">Draft</option>
                         <option value="active">Active</option>
@@ -582,12 +582,12 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                       </select>
                     </div>
                     <div>
-                      <label style={{ fontSize: 10, color: "var(--muted-foreground)", display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: ".06em" }}>Budget</label>
+                      <label style={{ fontSize: 10, color: "var(--text-muted)", display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: ".06em" }}>Budget</label>
                       <input style={smallInput} placeholder="e.g. $25k/mo" value={planEditForm.budget} onChange={(e) => setPlanEditForm({ ...planEditForm, budget: e.target.value })} />
                     </div>
                   </div>
                   <div>
-                    <label style={{ fontSize: 10, color: "var(--muted-foreground)", display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: ".06em" }}>Target audience</label>
+                    <label style={{ fontSize: 10, color: "var(--text-muted)", display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: ".06em" }}>Target audience</label>
                     <input style={smallInput} placeholder="e.g. SaaS founders, Series A" value={planEditForm.target_audience} onChange={(e) => setPlanEditForm({ ...planEditForm, target_audience: e.target.value })} />
                   </div>
                   <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
@@ -608,7 +608,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                       <span style={{ fontSize: 13, fontWeight: 500 }}>{p.name}</span>
                       <Badge map={STATUS_MAP} value={p.status} />
                     </div>
-                    <div style={{ display: "flex", gap: 8, marginTop: 7, fontSize: 11, color: "var(--muted-foreground)" }}>
+                    <div style={{ display: "flex", gap: 8, marginTop: 7, fontSize: 11, color: "var(--text-muted)" }}>
                       <span>{p.item_count ?? 0} initiatives</span>
                       {p.generated_by === "claude" && <span style={{ color: ACCENT }}>✦ AI</span>}
                     </div>
@@ -648,7 +648,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
             <div style={{ ...card, padding: 14, display: "flex", flexDirection: "column", gap: 8, borderColor: ACCENT }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <p style={{ fontSize: 12, fontWeight: 500, margin: 0, color: ACCENT }}>✦ AI CMO</p>
-                <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 16 }} onClick={() => { setShowCmo(false); setDraft(null); }}>✕</button>
+                <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 16 }} onClick={() => { setShowCmo(false); setDraft(null); }}>✕</button>
               </div>
               {!draft ? (
                 <>
@@ -669,18 +669,18 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                     </div>
                   )}
                   <div style={{ fontSize: 12, fontWeight: 500 }}>{draft.name}</div>
-                  <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: 0 }}>{draft.objective}</p>
+                  <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>{draft.objective}</p>
                   <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                     {draft.items.slice(0, 4).map((it, i) => {
                       const ch = CHANNEL_COLOR_MAP[it.channel] ?? CHANNEL_COLOR_MAP.other;
                       return (
-                        <div key={i} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 11, color: "var(--muted-foreground)" }}>
+                        <div key={i} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 11, color: "var(--text-muted)" }}>
                           <span style={{ background: ch.bg, color: ch.color, padding: "1px 6px", borderRadius: 20, fontWeight: 500, fontSize: 10, textTransform: "capitalize", flexShrink: 0 }}>{it.channel}</span>
                           {it.title}
                         </div>
                       );
                     })}
-                    {draft.items.length > 4 && <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>+{draft.items.length - 4} more</span>}
+                    {draft.items.length > 4 && <span style={{ fontSize: 11, color: "var(--text-muted)" }}>+{draft.items.length - 4} more</span>}
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button style={{ ...btnGhost, flex: 1, padding: "6px 8px", fontSize: 11 }} onClick={() => setDraft(null)}>Regenerate</button>
@@ -694,14 +694,35 @@ export function PlanClient({ plans, aiEnabled }: Props) {
           )}
         </div>
 
-        {/* Right: hint when nothing selected */}
-        {!selectedId && (
-          <div style={{ ...card, padding: 40, textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
+        {/* Right: hint / loading / quick stats */}
+        {!selectedId && !loadingDetail && (
+          <div style={{ ...card, padding: 40, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>
             Select a plan to view and manage its initiatives.
           </div>
         )}
         {loadingDetail && (
-          <div style={{ ...card, padding: 24, fontSize: 13, color: "var(--muted-foreground)" }}>Loading…</div>
+          <div style={{ ...card, padding: 24, fontSize: 13, color: "var(--text-muted)" }}>Loading…</div>
+        )}
+        {selectedId && !loadingDetail && detail && (
+          <div style={{ ...card, padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+            <p style={{ fontSize: 10, fontWeight: 500, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".06em", margin: 0 }}>Plan summary</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {[
+                { label: "Total initiatives", value: String(detail.items?.length ?? 0) },
+                { label: "Done", value: String(detail.items?.filter(i => i.status === "done").length ?? 0) },
+                { label: "In progress", value: String(detail.items?.filter(i => i.status === "in_progress").length ?? 0) },
+                { label: "Synced to tasks", value: String(detail.items?.filter(i => i.task_id).length ?? 0) },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ background: "var(--surface-sunken)", borderRadius: 8, padding: "10px 12px" }}>
+                  <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 2px", textTransform: "uppercase", letterSpacing: ".04em" }}>{label}</p>
+                  <p style={{ fontSize: 20, fontWeight: 500, color: "var(--text-primary)", margin: 0 }}>{value}</p>
+                </div>
+              ))}
+            </div>
+            {detail.generated_by === "claude" && (
+              <div style={{ fontSize: 11, color: ACCENT, background: "#EEEDFE", borderRadius: 7, padding: "6px 10px" }}>✦ Generated by AI CMO</div>
+            )}
+          </div>
         )}
       </div>
 
@@ -722,7 +743,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                     return (
                       <>
                         <p style={{ fontSize: 14, fontWeight: 500, margin: 0, lineHeight: 1.3 }}>{title}</p>
-                        {subtitle && <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "2px 0 0" }}>{subtitle}</p>}
+                        {subtitle && <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "2px 0 0" }}>{subtitle}</p>}
                       </>
                     );
                   })()}
@@ -741,16 +762,16 @@ export function PlanClient({ plans, aiEnabled }: Props) {
 
             {/* Share panel */}
             {shareOpen && (
-              <div style={{ border: "0.5px solid #e2e6ed", borderRadius: 10, padding: 14, marginBottom: 14, background: "#fafafa", display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ border: "0.5px solid var(--border-subtle)", borderRadius: 10, padding: 14, marginBottom: 14, background: "#fafafa", display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <p style={{ fontSize: 12, fontWeight: 500, margin: 0 }}>Share plan with Admin team</p>
-                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 15 }} onClick={() => setShareOpen(false)}>✕</button>
+                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 15 }} onClick={() => setShareOpen(false)}>✕</button>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <input
                     readOnly
                     value={`${typeof window !== "undefined" ? window.location.origin : ""}/admin/marketing/plan?plan=${selectedId}`}
-                    style={{ ...inputStyle, fontSize: 11, color: "var(--muted-foreground)", background: "#f1f1f1", flex: 1 }}
+                    style={{ ...inputStyle, fontSize: 11, color: "var(--text-muted)", background: "#f1f1f1", flex: 1 }}
                   />
                   <button style={{ ...btnPrimary, padding: "8px 14px", fontSize: 11, whiteSpace: "nowrap" }} onClick={copyPlanLink}>
                     {copyDone ? "✓ Copied" : "Copy link"}
@@ -758,16 +779,16 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                 </div>
                 {adminUsers.length > 0 && (
                   <div>
-                    <p style={{ fontSize: 10, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".06em", margin: "0 0 6px" }}>Admin members with access</p>
+                    <p style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: ".06em", margin: "0 0 6px" }}>Admin members with access</p>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       {adminUsers.map((u) => (
-                        <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 7, border: "0.5px solid #e2e6ed", background: "#fff" }}>
+                        <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 7, border: "0.5px solid var(--border-subtle)", background: "#fff" }}>
                           <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 500, color: ACCENT, flexShrink: 0 }}>
                             {(u.full_name ?? u.email ?? "?")[0].toUpperCase()}
                           </div>
                           <div style={{ flex: 1 }}>
                             <p style={{ fontSize: 12, fontWeight: 500, margin: 0 }}>{u.full_name ?? u.email}</p>
-                            {u.full_name && <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: 0 }}>{u.email}</p>}
+                            {u.full_name && <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>{u.email}</p>}
                           </div>
                           <span style={{ fontSize: 10, color: "#0F6E56", background: "#E1F5EE", padding: "2px 6px", borderRadius: 5, fontWeight: 500 }}>Has access</span>
                         </div>
@@ -776,46 +797,46 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                   </div>
                 )}
                 {adminUsers.length === 0 && (
-                  <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: 0 }}>Loading team members…</p>
+                  <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>Loading team members…</p>
                 )}
               </div>
             )}
 
             {/* Divider */}
-            <div style={{ borderTop: "0.5px solid #e2e6ed", marginBottom: 14 }} />
+            <div style={{ borderTop: "0.5px solid var(--border-subtle)", marginBottom: 14 }} />
 
             {/* Fields */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: 0, alignItems: "start" }}>
               {detail.objective && (
                 <div style={{ paddingRight: 24 }}>
-                  <p style={{ fontSize: 10, color: "var(--muted-foreground)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Objective</p>
+                  <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Objective</p>
                   <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>{detail.objective}</p>
                 </div>
               )}
               {detail.target_audience && (
-                <div style={{ minWidth: 140, borderLeft: "0.5px solid #e2e6ed", paddingLeft: 20, paddingRight: 20 }}>
-                  <p style={{ fontSize: 10, color: "var(--muted-foreground)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Audience</p>
+                <div style={{ minWidth: 140, borderLeft: "0.5px solid var(--border-subtle)", paddingLeft: 20, paddingRight: 20 }}>
+                  <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Audience</p>
                   <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>{detail.target_audience}</p>
                 </div>
               )}
               {detail.budget && (
-                <div style={{ minWidth: 90, borderLeft: "0.5px solid #e2e6ed", paddingLeft: 20, paddingRight: 20 }}>
-                  <p style={{ fontSize: 10, color: "var(--muted-foreground)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Budget</p>
+                <div style={{ minWidth: 90, borderLeft: "0.5px solid var(--border-subtle)", paddingLeft: 20, paddingRight: 20 }}>
+                  <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Budget</p>
                   <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: ACCENT }}>
                     {detail.budget.includes("/") ? (
                       <>
                         {detail.budget.split("/")[0]}
-                        <span style={{ fontSize: 11, fontWeight: 400, color: "var(--muted-foreground)" }}>/{detail.budget.split("/")[1]}</span>
+                        <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text-muted)" }}>/{detail.budget.split("/")[1]}</span>
                       </>
                     ) : detail.budget}
                   </p>
                 </div>
               )}
               {(detail.start_date ?? detail.end_date) && (
-                <div style={{ minWidth: 130, borderLeft: "0.5px solid #e2e6ed", paddingLeft: 20 }}>
-                  <p style={{ fontSize: 10, color: "var(--muted-foreground)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Window</p>
+                <div style={{ minWidth: 130, borderLeft: "0.5px solid var(--border-subtle)", paddingLeft: 20 }}>
+                  <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Window</p>
                   <p style={{ fontSize: 13, margin: 0 }}>{detail.start_date ?? "—"}</p>
-                  <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: "2px 0 0" }}>→ {detail.end_date ?? "—"}</p>
+                  <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "2px 0 0" }}>→ {detail.end_date ?? "—"}</p>
                   {getQuarterTag(detail.start_date) && (
                     <span style={{ fontSize: 10, fontWeight: 500, background: "#E6F1FB", color: "#185FA5", padding: "2px 6px", borderRadius: 5, display: "inline-block", marginTop: 6 }}>
                       {getQuarterTag(detail.start_date)}
@@ -824,7 +845,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                 </div>
               )}
             </div>
-            {detail.summary && <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "14px 0 0", lineHeight: 1.6, borderTop: "0.5px solid #e2e6ed", paddingTop: 12 }}>{detail.summary}</p>}
+            {detail.summary && <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "14px 0 0", lineHeight: 1.6, borderTop: "0.5px solid var(--border-subtle)", paddingTop: 12 }}>{detail.summary}</p>}
           </div>
 
           {/* Initiatives card */}
@@ -836,7 +857,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                   const labels: Record<ViewMode, string> = { card: "⊞ Cards", list: "≡ List", tree: "⌥ Tree" };
                   const active = viewMode === mode;
                   return (
-                    <button key={mode} onClick={() => setViewMode(mode)} style={{ ...btnGhost, padding: "5px 10px", fontSize: 11, background: active ? ACCENT : "#fff", color: active ? "#fff" : "var(--foreground)", borderColor: active ? ACCENT : "#e2e6ed" }}>
+                    <button key={mode} onClick={() => setViewMode(mode)} style={{ ...btnGhost, padding: "5px 10px", fontSize: 11, background: active ? ACCENT : "#fff", color: active ? "#fff" : "var(--text-primary)", borderColor: active ? ACCENT : "#e2e6ed" }}>
                       {labels[mode]}
                     </button>
                   );
@@ -845,13 +866,13 @@ export function PlanClient({ plans, aiEnabled }: Props) {
             </div>
 
             {items.length === 0 ? (
-              <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 12 }}>No initiatives yet — add one below.</div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 12 }}>No initiatives yet — add one below.</div>
             ) : viewMode === "card" ? renderCardView(items)
               : viewMode === "list" ? renderListView(items)
               : renderTreeView(items, detail)}
 
             {/* Add initiative */}
-            <div style={{ marginTop: 16, borderTop: "0.5px solid #e2e6ed", paddingTop: 14, display: "flex", gap: 8 }}>
+            <div style={{ marginTop: 16, borderTop: "0.5px solid var(--border-subtle)", paddingTop: 14, display: "flex", gap: 8 }}>
               <input style={{ ...inputStyle, flex: 1 }} placeholder="New initiative title" value={newItem.title} onChange={(e) => setNewItem({ ...newItem, title: e.target.value })} />
               <select style={{ ...inputStyle, width: "auto" }} value={newItem.channel} onChange={(e) => setNewItem({ ...newItem, channel: e.target.value as MarketingPlanItemChannel })}>
                 {CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -874,14 +895,14 @@ export function PlanClient({ plans, aiEnabled }: Props) {
         <div onClick={() => setEditingItem(null)} style={{ position: "fixed", inset: 0, background: "rgba(12,35,64,0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }}>
           <div onClick={(e) => e.stopPropagation()} style={{ ...card, padding: 24, width: 520 }}>
             <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Edit initiative</h2>
-            <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 14 }}>Changes are saved immediately to the plan.</p>
+            <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 14 }}>Changes are saved immediately to the plan.</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div>
-                <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Title</label>
+                <label style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>Title</label>
                 <input style={inputStyle} value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} autoFocus />
               </div>
               <div>
-                <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Description</label>
+                <label style={{ fontSize: 11, color: "var(--text-muted)", display: "block", marginBottom: 4 }}>Description</label>
                 <textarea style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
               </div>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
