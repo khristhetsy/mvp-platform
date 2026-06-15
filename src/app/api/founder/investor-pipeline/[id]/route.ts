@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
+
+// pipeline_investors is not yet in generated Supabase types.
+// Cast to untyped client so update/insert/select compile without errors.
+function untyped(client: unknown): SupabaseClient {
+  return client as SupabaseClient;
+}
 
 const SAFE_COLUMNS =
   "id,founder_id,name,location,investor_type,investment_size,pledge_amount,interested,meeting_requested,match_score,outreach_status,preferred_stages,focus_sectors,notes,created_at,updated_at";
@@ -45,12 +52,11 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ error: "No updatable fields provided." }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await untyped(supabase)
     .from("pipeline_investors")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .update(patch as any)
+    .update(patch)
     .eq("id", id)
-    .eq("founder_id", profile.id) // enforce ownership
+    .eq("founder_id", profile.id)
     .select(SAFE_COLUMNS)
     .single();
 
@@ -67,7 +73,7 @@ export async function DELETE(_request: Request, { params }: Params) {
 
   const { id } = await params;
 
-  const { error } = await supabase
+  const { error } = await untyped(supabase)
     .from("pipeline_investors")
     .delete()
     .eq("id", id)

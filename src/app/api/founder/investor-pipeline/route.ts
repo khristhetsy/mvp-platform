@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireApiProfile } from "@/lib/api/auth";
+
+// pipeline_investors is not yet in generated Supabase types — use untyped client.
+function untyped(client: unknown): SupabaseClient {
+  return client as SupabaseClient;
+}
 
 // Columns returned to founder — contact_email and contact_phone are EXCLUDED
 const SAFE_COLUMNS =
@@ -10,7 +16,7 @@ export async function GET() {
   if ("error" in auth) return auth.error;
   const { supabase, profile } = auth;
 
-  const { data, error } = await supabase
+  const { data, error } = await untyped(supabase)
     .from("pipeline_investors")
     .select(SAFE_COLUMNS)
     .eq("founder_id", profile.id)
@@ -51,7 +57,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Investor name is required." }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await untyped(supabase)
     .from("pipeline_investors")
     .insert({
       founder_id: profile.id,
