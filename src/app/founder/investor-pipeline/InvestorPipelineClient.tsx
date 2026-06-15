@@ -4,6 +4,7 @@ import { useState } from "react";
 
 type MeetingStatus = "none" | "requested" | "scheduled";
 type OutreachStatus = "not_started" | "contacted" | "in_progress" | "closed";
+type InvestorSource = "manual" | "platform_match";
 
 interface PipelineInvestor {
   id: string;
@@ -17,11 +18,27 @@ interface PipelineInvestor {
   meeting_requested: MeetingStatus;
   match_score: number | null;
   outreach_status: OutreachStatus;
+  source: InvestorSource;
+  platform_investor_id: string | null;
+  last_contact_date: string | null;
+  next_follow_up_date: string | null;
   preferred_stages: string[] | null;
   focus_sectors: string[] | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface PlatformMatch {
+  investorId: string;
+  investorName: string;
+  investorType: string | null;
+  investmentSize: string;
+  focusSectors: string[];
+  geographies: string[];
+  matchScore: number;
+  matchReasons: string[];
+  alreadyImported: boolean;
 }
 
 const INVESTOR_TYPES = [
@@ -50,6 +67,19 @@ const SECTOR_OPTIONS = [
   "AI / ML", "PropTech", "Consumer", "B2B", "Other",
 ];
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso + "T00:00:00");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function isOverdue(iso: string | null): boolean {
+  if (!iso) return false;
+  return new Date(iso + "T00:00:00") < new Date(new Date().toDateString());
+}
+
 // ─── Badge sub-components ────────────────────────────────────────────────────
 
 function TypeBadge({ type }: { type: string }) {
@@ -60,23 +90,13 @@ function TypeBadge({ type }: { type: string }) {
     "Strategic / Corporate": "bg-teal-50 text-teal-700 border-teal-200",
   };
   return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 text-xs font-medium border rounded-md whitespace-nowrap ${colors[type] ?? "bg-slate-50 text-slate-600 border-slate-200"}`}
-    >
+    <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium border rounded-md whitespace-nowrap ${colors[type] ?? "bg-slate-50 text-slate-600 border-slate-200"}`}>
       {type}
     </span>
   );
 }
 
-function OutreachBadge({
-  status,
-  editable,
-  onChange,
-}: {
-  status: OutreachStatus;
-  editable?: boolean;
-  onChange?: (s: OutreachStatus) => void;
-}) {
+function OutreachBadge({ status, editable, onChange }: { status: OutreachStatus; editable?: boolean; onChange?: (s: OutreachStatus) => void }) {
   const colors: Record<OutreachStatus, string> = {
     not_started: "bg-slate-50 text-slate-600 border-slate-200",
     contacted: "bg-blue-50 text-blue-700 border-blue-200",
@@ -85,24 +105,17 @@ function OutreachBadge({
   };
   if (editable && onChange) {
     return (
-      <select
-        value={status}
-        onChange={(e) => onChange(e.target.value as OutreachStatus)}
+      <select value={status} onChange={(e) => onChange(e.target.value as OutreachStatus)}
         className={`inline-flex items-center pl-2 pr-1 py-0.5 text-xs font-medium border rounded-md cursor-pointer ${colors[status]}`}
-        onClick={(e) => e.stopPropagation()}
-      >
+        onClick={(e) => e.stopPropagation()}>
         {(Object.keys(OUTREACH_LABELS) as OutreachStatus[]).map((s) => (
-          <option key={s} value={s}>
-            {OUTREACH_LABELS[s]}
-          </option>
+          <option key={s} value={s}>{OUTREACH_LABELS[s]}</option>
         ))}
       </select>
     );
   }
   return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 text-xs font-medium border rounded-md ${colors[status]}`}
-    >
+    <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium border rounded-md ${colors[status]}`}>
       {OUTREACH_LABELS[status]}
     </span>
   );
@@ -115,38 +128,26 @@ function MeetingBadge({ status }: { status: MeetingStatus }) {
     scheduled: "bg-emerald-50 text-emerald-700 border-emerald-200",
   };
   return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 text-xs font-medium border rounded-md ${colors[status]}`}
-    >
+    <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium border rounded-md ${colors[status]}`}>
       {MEETING_LABELS[status]}
     </span>
   );
 }
 
 function MatchBar({ score }: { score: number | null }) {
-  if (score === null || score === undefined)
-    return <span className="text-xs text-slate-400">—</span>;
-  const color =
-    score >= 70 ? "#059669" : score >= 40 ? "#d97706" : "#94a3b8";
+  if (score === null || score === undefined) return <span className="text-xs text-slate-400">—</span>;
+  const color = score >= 70 ? "#059669" : score >= 40 ? "#d97706" : "#94a3b8";
   return (
     <div className="flex items-center gap-2 min-w-[80px]">
       <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-        <div
-          className="h-full rounded-full"
-          style={{ width: `${score}%`, background: color }}
-        />
+        <div className="h-full rounded-full" style={{ width: `${score}%`, background: color }} />
       </div>
-      <span
-        className="text-xs font-semibold"
-        style={{ color, minWidth: "2rem", textAlign: "right" }}
-      >
-        {score}%
-      </span>
+      <span className="text-xs font-semibold" style={{ color, minWidth: "2rem", textAlign: "right" }}>{score}%</span>
     </div>
   );
 }
 
-// ─── Form blank ──────────────────────────────────────────────────────────────
+// ─── Form blank ───────────────────────────────────────────────────────────────
 
 const EMPTY_FORM = {
   name: "",
@@ -158,6 +159,8 @@ const EMPTY_FORM = {
   meeting_requested: "none" as MeetingStatus,
   match_score: "",
   outreach_status: "not_started" as OutreachStatus,
+  last_contact_date: "",
+  next_follow_up_date: "",
   preferred_stages: [] as string[],
   focus_sectors: [] as string[],
   notes: "",
@@ -165,31 +168,34 @@ const EMPTY_FORM = {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function InvestorPipelineClient({
-  initialData,
-}: {
-  initialData: PipelineInvestor[];
-}) {
+export function InvestorPipelineClient({ initialData }: { initialData: PipelineInvestor[] }) {
   const [investors, setInvestors] = useState<PipelineInvestor[]>(initialData);
   const [search, setSearch] = useState("");
   const [outreachFilter, setOutreachFilter] = useState<OutreachStatus | "all">("all");
+
+  // Add / edit modal
   const [showModal, setShowModal] = useState(false);
-  const [profileOf, setProfileOf] = useState<PipelineInvestor | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // ── Derived ─────────────────────────────────────────────────────────────────
+  // Profile popup
+  const [profileOf, setProfileOf] = useState<PipelineInvestor | null>(null);
+
+  // Import from matches modal
+  const [showImport, setShowImport] = useState(false);
+  const [platformMatches, setPlatformMatches] = useState<PlatformMatch[]>([]);
+  const [matchesLoading, setMatchesLoading] = useState(false);
+  const [matchesError, setMatchesError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [importBusy, setImportBusy] = useState(false);
+
+  // ── Derived ──────────────────────────────────────────────────────────────────
   const filtered = investors.filter((inv) => {
     const q = search.toLowerCase();
-    const matchSearch =
-      !q ||
-      inv.name.toLowerCase().includes(q) ||
-      (inv.location ?? "").toLowerCase().includes(q) ||
-      inv.investor_type.toLowerCase().includes(q);
-    const matchOutreach =
-      outreachFilter === "all" || inv.outreach_status === outreachFilter;
+    const matchSearch = !q || inv.name.toLowerCase().includes(q) || (inv.location ?? "").toLowerCase().includes(q) || inv.investor_type.toLowerCase().includes(q);
+    const matchOutreach = outreachFilter === "all" || inv.outreach_status === outreachFilter;
     return matchSearch && matchOutreach;
   });
 
@@ -197,23 +203,17 @@ export function InvestorPipelineClient({
     total: investors.length,
     interested: investors.filter((i) => i.interested).length,
     meetings: investors.filter((i) => i.meeting_requested !== "none").length,
-    inProgress: investors.filter((i) => i.outreach_status === "in_progress").length,
+    followUps: investors.filter((i) => i.next_follow_up_date && isOverdue(i.next_follow_up_date)).length,
   };
 
-  // ── Actions ──────────────────────────────────────────────────────────────────
+  // ── Data actions ──────────────────────────────────────────────────────────────
   async function refresh() {
     const r = await fetch("/api/founder/investor-pipeline");
-    if (r.ok) {
-      const d = await r.json();
-      setInvestors(d.investors ?? []);
-    }
+    if (r.ok) { const d = await r.json(); setInvestors(d.investors ?? []); }
   }
 
   function openAdd() {
-    setEditingId(null);
-    setForm({ ...EMPTY_FORM });
-    setFormError(null);
-    setShowModal(true);
+    setEditingId(null); setForm({ ...EMPTY_FORM }); setFormError(null); setShowModal(true);
   }
 
   function openEdit(inv: PipelineInvestor) {
@@ -228,28 +228,22 @@ export function InvestorPipelineClient({
       meeting_requested: inv.meeting_requested,
       match_score: inv.match_score != null ? String(inv.match_score) : "",
       outreach_status: inv.outreach_status,
+      last_contact_date: inv.last_contact_date ?? "",
+      next_follow_up_date: inv.next_follow_up_date ?? "",
       preferred_stages: inv.preferred_stages ?? [],
       focus_sectors: inv.focus_sectors ?? [],
       notes: inv.notes ?? "",
     });
-    setFormError(null);
-    setShowModal(true);
+    setFormError(null); setShowModal(true);
   }
 
   function closeModal() {
-    setShowModal(false);
-    setEditingId(null);
-    setForm({ ...EMPTY_FORM });
-    setFormError(null);
+    setShowModal(false); setEditingId(null); setForm({ ...EMPTY_FORM }); setFormError(null);
   }
 
   async function handleSave() {
-    if (!form.name.trim()) {
-      setFormError("Investor name is required.");
-      return;
-    }
-    setBusy(true);
-    setFormError(null);
+    if (!form.name.trim()) { setFormError("Investor name is required."); return; }
+    setBusy(true); setFormError(null);
     const body = {
       name: form.name.trim(),
       location: form.location || null,
@@ -260,154 +254,124 @@ export function InvestorPipelineClient({
       meeting_requested: form.meeting_requested,
       match_score: form.match_score ? parseInt(form.match_score) : null,
       outreach_status: form.outreach_status,
+      last_contact_date: form.last_contact_date || null,
+      next_follow_up_date: form.next_follow_up_date || null,
       preferred_stages: form.preferred_stages,
       focus_sectors: form.focus_sectors,
       notes: form.notes || null,
     };
-    const url = editingId
-      ? `/api/founder/investor-pipeline/${editingId}`
-      : "/api/founder/investor-pipeline";
-    const method = editingId ? "PATCH" : "POST";
-    const r = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const url = editingId ? `/api/founder/investor-pipeline/${editingId}` : "/api/founder/investor-pipeline";
+    const r = await fetch(url, { method: editingId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     setBusy(false);
-    if (!r.ok) {
-      const d = await r.json();
-      setFormError(d.error ?? "Save failed.");
-      return;
-    }
-    closeModal();
-    refresh();
+    if (!r.ok) { const d = await r.json(); setFormError(d.error ?? "Save failed."); return; }
+    closeModal(); refresh();
   }
 
   async function handleOutreachChange(id: string, status: OutreachStatus) {
-    setInvestors((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, outreach_status: status } : i))
-    );
-    await fetch(`/api/founder/investor-pipeline/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ outreach_status: status }),
-    });
+    setInvestors((prev) => prev.map((i) => i.id === id ? { ...i, outreach_status: status } : i));
+    await fetch(`/api/founder/investor-pipeline/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ outreach_status: status }) });
   }
 
+  // ── Import from matches ───────────────────────────────────────────────────────
+  async function openImport() {
+    setShowImport(true); setMatchesLoading(true); setMatchesError(null); setSelectedIds(new Set());
+    const r = await fetch("/api/founder/investor-pipeline/matches");
+    setMatchesLoading(false);
+    if (!r.ok) { setMatchesError("Could not load platform matches."); return; }
+    const d = await r.json();
+    setPlatformMatches(d.matches ?? []);
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  }
+
+  async function handleImport() {
+    if (selectedIds.size === 0) return;
+    setImportBusy(true);
+    const toImport = platformMatches.filter((m) => selectedIds.has(m.investorId));
+    await Promise.all(toImport.map((m) =>
+      fetch("/api/founder/investor-pipeline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: m.investorName,
+          investor_type: m.investorType ?? "Venture Capital",
+          investment_size: m.investmentSize !== "Not set" ? m.investmentSize : null,
+          focus_sectors: m.focusSectors,
+          location: m.geographies[0] ?? null,
+          match_score: m.matchScore,
+          source: "platform_match",
+          platform_investor_id: m.investorId,
+          outreach_status: "not_started",
+        }),
+      })
+    ));
+    setImportBusy(false);
+    setShowImport(false);
+    refresh();
+  }
+
+  // ── CSV export ────────────────────────────────────────────────────────────────
   function exportCSV() {
-    const cols: (keyof PipelineInvestor)[] = [
-      "name", "location", "investor_type", "investment_size",
-      "pledge_amount", "interested", "meeting_requested",
-      "match_score", "outreach_status", "preferred_stages",
-      "focus_sectors", "notes",
-    ];
+    const cols: (keyof PipelineInvestor)[] = ["name", "location", "investor_type", "investment_size", "pledge_amount", "interested", "meeting_requested", "match_score", "outreach_status", "last_contact_date", "next_follow_up_date", "source", "preferred_stages", "focus_sectors", "notes"];
     const header = cols.join(",");
     const rows = investors.map((inv) =>
-      cols
-        .map((c) => {
-          const val = inv[c];
-          if (Array.isArray(val)) return `"${val.join("; ")}"`;
-          if (val === null || val === undefined) return "";
-          if (typeof val === "boolean") return val ? "Yes" : "No";
-          return `"${String(val).replace(/"/g, '""')}"`;
-        })
-        .join(",")
+      cols.map((c) => {
+        const val = inv[c];
+        if (Array.isArray(val)) return `"${val.join("; ")}"`;
+        if (val === null || val === undefined) return "";
+        if (typeof val === "boolean") return val ? "Yes" : "No";
+        return `"${String(val).replace(/"/g, '""')}"`;
+      }).join(",")
     );
     const csv = [header, ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "investor-pipeline.csv";
-    a.click();
+    const a = document.createElement("a"); a.href = url; a.download = "investor-pipeline.csv"; a.click();
     URL.revokeObjectURL(url);
   }
 
-  const toggleStage = (s: string) =>
-    setForm((f) => ({
-      ...f,
-      preferred_stages: f.preferred_stages.includes(s)
-        ? f.preferred_stages.filter((x) => x !== s)
-        : [...f.preferred_stages, s],
-    }));
-
-  const toggleSector = (s: string) =>
-    setForm((f) => ({
-      ...f,
-      focus_sectors: f.focus_sectors.includes(s)
-        ? f.focus_sectors.filter((x) => x !== s)
-        : [...f.focus_sectors, s],
-    }));
+  const toggleStage = (s: string) => setForm((f) => ({ ...f, preferred_stages: f.preferred_stages.includes(s) ? f.preferred_stages.filter((x) => x !== s) : [...f.preferred_stages, s] }));
+  const toggleSector = (s: string) => setForm((f) => ({ ...f, focus_sectors: f.focus_sectors.includes(s) ? f.focus_sectors.filter((x) => x !== s) : [...f.focus_sectors, s] }));
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-5">
-      {/* Stats row */}
+
+      {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {(
-          [
-            { label: "Total Investors", value: stats.total },
-            { label: "Interested", value: stats.interested },
-            { label: "Meetings", value: stats.meetings },
-            { label: "In Progress", value: stats.inProgress },
-          ] as const
-        ).map(({ label, value }) => (
-          <div
-            key={label}
-            className="rounded-xl border bg-white p-4"
-            style={{
-              borderColor: "var(--border-subtle)",
-              boxShadow: "var(--shadow-panel)",
-            }}
-          >
-            <p
-              className="text-xs font-semibold uppercase tracking-wide"
-              style={{ color: "var(--text-muted)" }}
-            >
-              {label}
-            </p>
-            <p
-              className="mt-1 text-2xl font-bold tabular-nums"
-              style={{ color: "var(--text-primary)" }}
-            >
-              {value}
-            </p>
+        {([
+          { label: "Total Investors", value: stats.total },
+          { label: "Interested", value: stats.interested },
+          { label: "Meetings", value: stats.meetings },
+          { label: "Overdue Follow-ups", value: stats.followUps, warn: stats.followUps > 0 },
+        ] as const).map(({ label, value, warn }) => (
+          <div key={label} className="rounded-xl border bg-white p-4" style={{ borderColor: warn ? "#fca5a5" : "var(--border-subtle)", boxShadow: "var(--shadow-panel)" }}>
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>{label}</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums" style={{ color: warn ? "#dc2626" : "var(--text-primary)" }}>{value}</p>
           </div>
         ))}
       </div>
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
-        <input
-          type="text"
-          placeholder="Search investors…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+        <input type="text" placeholder="Search investors…" value={search} onChange={(e) => setSearch(e.target.value)}
           className="w-56 rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-          style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
-        />
-        <select
-          value={outreachFilter}
-          onChange={(e) =>
-            setOutreachFilter(e.target.value as OutreachStatus | "all")
-          }
-          className="rounded-lg border px-3 py-2 text-sm"
-          style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
-        >
+          style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} />
+        <select value={outreachFilter} onChange={(e) => setOutreachFilter(e.target.value as OutreachStatus | "all")}
+          className="rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}>
           <option value="all">All Outreach</option>
           {(Object.keys(OUTREACH_LABELS) as OutreachStatus[]).map((s) => (
-            <option key={s} value={s}>
-              {OUTREACH_LABELS[s]}
-            </option>
+            <option key={s} value={s}>{OUTREACH_LABELS[s]}</option>
           ))}
         </select>
         <div className="flex-1" />
-        <button
-          onClick={exportCSV}
-          className="rounded-lg border px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-50"
-          style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}
-        >
+        <button onClick={exportCSV} className="rounded-lg border px-3 py-2 text-sm font-medium transition-colors hover:bg-slate-50" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>
           Export CSV
+        </button>
+        <button onClick={openImport} className="cap-btn-secondary rounded-lg px-4 py-2 text-sm font-semibold">
+          Import from Matches
         </button>
         <button onClick={openAdd} className="cap-btn-primary rounded-lg px-4 py-2 text-sm font-semibold">
           + Add Investor
@@ -415,114 +379,66 @@ export function InvestorPipelineClient({
       </div>
 
       {/* Table */}
-      <div
-        className="rounded-xl border overflow-hidden"
-        style={{ borderColor: "var(--border-subtle)", boxShadow: "var(--shadow-panel)" }}
-      >
+      <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border-subtle)", boxShadow: "var(--shadow-panel)" }}>
         <div className="overflow-x-auto">
           <table className="enterprise-table enterprise-table--comfortable w-full border-collapse bg-white">
             <thead>
               <tr>
-                {["Investor", "Type", "Investment Size", "Pledged", "Interested", "Meeting", "Match", "Outreach", ""].map((h) => (
-                  <th key={h} className="text-left px-4 py-3">
-                    {h}
-                  </th>
+                {["Investor", "Type", "Investment Size", "Pledged", "Interested", "Meeting", "Last Contact", "Next Follow-up", "Match", "Outreach", ""].map((h) => (
+                  <th key={h} className="text-left px-4 py-3">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={9}
-                    className="text-center py-12 text-sm"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    {investors.length === 0
-                      ? "Add your first investor to get started."
-                      : "No investors match your search."}
+                  <td colSpan={11} className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>
+                    {investors.length === 0 ? "Add your first investor or import from platform matches." : "No investors match your search."}
                   </td>
                 </tr>
-              ) : (
-                filtered.map((inv) => (
-                  <tr
-                    key={inv.id}
-                    className="border-t"
-                    style={{ borderColor: "var(--border-subtle)" }}
-                  >
-                    {/* Investor */}
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => setProfileOf(inv)}
-                        className="text-sm font-semibold text-left hover:underline"
-                        style={{ color: "var(--blue)" }}
-                      >
+              ) : filtered.map((inv) => (
+                <tr key={inv.id} className="border-t" style={{ borderColor: "var(--border-subtle)" }}>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => setProfileOf(inv)} className="text-sm font-semibold text-left hover:underline" style={{ color: "var(--blue)" }}>
                         {inv.name}
                       </button>
-                      {inv.location && (
-                        <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-                          {inv.location}
-                        </p>
+                      {inv.source === "platform_match" && (
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 font-medium">Platform</span>
                       )}
-                    </td>
-                    {/* Type */}
-                    <td className="px-4 py-3">
-                      <TypeBadge type={inv.investor_type} />
-                    </td>
-                    {/* Investment Size */}
-                    <td className="px-4 py-3 text-sm whitespace-nowrap" style={{ color: "var(--text-secondary)" }}>
-                      {inv.investment_size ?? "—"}
-                    </td>
-                    {/* Pledged */}
-                    <td className="px-4 py-3 text-sm font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>
-                      {inv.pledge_amount != null
-                        ? `$${inv.pledge_amount.toLocaleString()}`
-                        : "—"}
-                    </td>
-                    {/* Interested */}
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 text-xs font-medium border rounded-md ${
-                          inv.interested
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-slate-50 text-slate-500 border-slate-200"
-                        }`}
-                      >
-                        {inv.interested ? "Yes" : "No"}
-                      </span>
-                    </td>
-                    {/* Meeting */}
-                    <td className="px-4 py-3">
-                      <MeetingBadge status={inv.meeting_requested} />
-                    </td>
-                    {/* Match */}
-                    <td className="px-4 py-3">
-                      <MatchBar score={inv.match_score} />
-                    </td>
-                    {/* Outreach */}
-                    <td className="px-4 py-3">
-                      <OutreachBadge
-                        status={inv.outreach_status}
-                        editable
-                        onChange={(s) => handleOutreachChange(inv.id, s)}
-                      />
-                    </td>
-                    {/* Edit */}
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => openEdit(inv)}
-                        title="Edit"
-                        className="rounded-md p-1.5 transition-colors hover:bg-slate-100"
-                        style={{ color: "var(--text-muted)" }}
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
+                    </div>
+                    {inv.location && <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>{inv.location}</p>}
+                  </td>
+                  <td className="px-4 py-3"><TypeBadge type={inv.investor_type} /></td>
+                  <td className="px-4 py-3 text-sm whitespace-nowrap" style={{ color: "var(--text-secondary)" }}>{inv.investment_size ?? "—"}</td>
+                  <td className="px-4 py-3 text-sm font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>
+                    {inv.pledge_amount != null ? `$${inv.pledge_amount.toLocaleString()}` : "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium border rounded-md ${inv.interested ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-50 text-slate-500 border-slate-200"}`}>
+                      {inv.interested ? "Yes" : "No"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3"><MeetingBadge status={inv.meeting_requested} /></td>
+                  <td className="px-4 py-3 text-sm whitespace-nowrap" style={{ color: "var(--text-secondary)" }}>
+                    {fmtDate(inv.last_contact_date)}
+                  </td>
+                  <td className="px-4 py-3 text-sm whitespace-nowrap font-medium" style={{ color: isOverdue(inv.next_follow_up_date) ? "#dc2626" : "var(--text-secondary)" }}>
+                    {fmtDate(inv.next_follow_up_date)}
+                  </td>
+                  <td className="px-4 py-3"><MatchBar score={inv.match_score} /></td>
+                  <td className="px-4 py-3">
+                    <OutreachBadge status={inv.outreach_status} editable onChange={(s) => handleOutreachChange(inv.id, s)} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => openEdit(inv)} title="Edit" className="rounded-md p-1.5 transition-colors hover:bg-slate-100" style={{ color: "var(--text-muted)" }}>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -530,41 +446,22 @@ export function InvestorPipelineClient({
 
       {/* ── Profile popup ──────────────────────────────────────────────────────── */}
       {profileOf && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: "rgba(12,35,64,0.35)" }}
-          onClick={() => setProfileOf(null)}
-        >
-          <div
-            className="relative rounded-2xl bg-white w-full max-w-md mx-4 shadow-2xl enterprise-animate-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div
-              className="flex items-start justify-between p-6 border-b"
-              style={{ borderColor: "var(--border-subtle)" }}
-            >
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(12,35,64,0.35)" }} onClick={() => setProfileOf(null)}>
+          <div className="relative rounded-2xl bg-white w-full max-w-md mx-4 shadow-2xl enterprise-animate-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between p-6 border-b" style={{ borderColor: "var(--border-subtle)" }}>
               <div>
-                <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>
-                  {profileOf.name}
-                </h3>
-                {profileOf.location && (
-                  <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>
-                    {profileOf.location}
-                  </p>
-                )}
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>{profileOf.name}</h3>
+                  {profileOf.source === "platform_match" && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 font-medium">Platform match</span>
+                  )}
+                </div>
+                {profileOf.location && <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>{profileOf.location}</p>}
               </div>
-              <button
-                onClick={() => setProfileOf(null)}
-                className="rounded-lg p-1.5 hover:bg-slate-100 transition-colors"
-                style={{ color: "var(--text-muted)" }}
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+              <button onClick={() => setProfileOf(null)} className="rounded-lg p-1.5 hover:bg-slate-100 transition-colors" style={{ color: "var(--text-muted)" }}>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            {/* Body */}
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 {[
@@ -574,64 +471,118 @@ export function InvestorPipelineClient({
                   { label: "Match Score", node: <MatchBar score={profileOf.match_score} /> },
                   { label: "Outreach Status", node: <OutreachBadge status={profileOf.outreach_status} /> },
                   { label: "Meeting Status", node: <MeetingBadge status={profileOf.meeting_requested} /> },
+                  { label: "Last Contact", node: <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{fmtDate(profileOf.last_contact_date)}</span> },
+                  { label: "Next Follow-up", node: <span className="text-sm font-medium" style={{ color: isOverdue(profileOf.next_follow_up_date) ? "#dc2626" : "var(--text-primary)" }}>{fmtDate(profileOf.next_follow_up_date)}</span> },
                 ].map(({ label, node }) => (
                   <div key={label}>
-                    <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>
-                      {label}
-                    </p>
+                    <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>{label}</p>
                     {node}
                   </div>
                 ))}
               </div>
-
               {profileOf.preferred_stages && profileOf.preferred_stages.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--text-muted)" }}>
-                    Preferred Stages
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {profileOf.preferred_stages.map((s) => (
-                      <span key={s} className="px-2 py-0.5 rounded-md text-xs bg-slate-100 text-slate-600 border border-slate-200">
-                        {s}
-                      </span>
-                    ))}
-                  </div>
+                  <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--text-muted)" }}>Preferred Stages</p>
+                  <div className="flex flex-wrap gap-1.5">{profileOf.preferred_stages.map((s) => <span key={s} className="px-2 py-0.5 rounded-md text-xs bg-slate-100 text-slate-600 border border-slate-200">{s}</span>)}</div>
                 </div>
               )}
-
               {profileOf.focus_sectors && profileOf.focus_sectors.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--text-muted)" }}>
-                    Focus Sectors
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {profileOf.focus_sectors.map((s) => (
-                      <span key={s} className="px-2 py-0.5 rounded-md text-xs bg-slate-100 text-slate-600 border border-slate-200">
-                        {s}
-                      </span>
-                    ))}
-                  </div>
+                  <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--text-muted)" }}>Focus Sectors</p>
+                  <div className="flex flex-wrap gap-1.5">{profileOf.focus_sectors.map((s) => <span key={s} className="px-2 py-0.5 rounded-md text-xs bg-slate-100 text-slate-600 border border-slate-200">{s}</span>)}</div>
                 </div>
               )}
-
               {profileOf.notes && (
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Notes</p>
                   <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{profileOf.notes}</p>
                 </div>
               )}
+              <div className="rounded-lg border p-3 flex gap-2.5 items-start" style={{ borderColor: "var(--border-subtle)", background: "var(--surface-sunken)" }}>
+                <svg className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "var(--text-muted)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>Contact details are managed by CapitalOS and are not displayed here. Use the platform&apos;s outreach tools to connect.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-              {/* Security notice */}
-              <div
-                className="rounded-lg border p-3 flex gap-2.5 items-start"
-                style={{ borderColor: "var(--border-subtle)", background: "var(--surface-sunken)" }}
-              >
-                <svg className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "var(--text-muted)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  Contact details are managed by CapitalOS and are not displayed here. Use the platform&apos;s outreach tools to connect with this investor.
-                </p>
+      {/* ── Import from Matches modal ─────────────────────────────────────────── */}
+      {showImport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(12,35,64,0.35)" }} onClick={() => setShowImport(false)}>
+          <div className="relative rounded-2xl bg-white w-full max-w-2xl mx-4 shadow-2xl flex flex-col enterprise-animate-in" style={{ maxHeight: "85vh" }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: "var(--border-subtle)" }}>
+              <div>
+                <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>Import from Platform Matches</h3>
+                <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>Select ranked investors to add to your pipeline. Already-imported investors are disabled.</p>
+              </div>
+              <button onClick={() => setShowImport(false)} className="rounded-lg p-1.5 hover:bg-slate-100 transition-colors" style={{ color: "var(--text-muted)" }}>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {matchesLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                    <p className="text-sm" style={{ color: "var(--text-muted)" }}>Loading platform matches…</p>
+                  </div>
+                </div>
+              ) : matchesError ? (
+                <div className="p-6">
+                  <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{matchesError}</div>
+                </div>
+              ) : platformMatches.length === 0 ? (
+                <div className="flex items-center justify-center py-16 text-sm" style={{ color: "var(--text-muted)" }}>No platform matches available yet.</div>
+              ) : (
+                <table className="enterprise-table enterprise-table--compact w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-3 text-left w-8"></th>
+                      <th className="px-4 py-3 text-left">Investor</th>
+                      <th className="px-4 py-3 text-left">Type</th>
+                      <th className="px-4 py-3 text-left">Check Size</th>
+                      <th className="px-4 py-3 text-left">Match</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {platformMatches.map((m) => {
+                      const already = m.alreadyImported;
+                      const selected = selectedIds.has(m.investorId);
+                      return (
+                        <tr key={m.investorId} className={`border-t ${already ? "opacity-40" : "cursor-pointer"}`}
+                          style={{ borderColor: "var(--border-subtle)", background: selected ? "var(--blue-muted)" : undefined }}
+                          onClick={() => !already && toggleSelect(m.investorId)}>
+                          <td className="px-4 py-2.5">
+                            <input type="checkbox" checked={selected} disabled={already} onChange={() => !already && toggleSelect(m.investorId)}
+                              className="rounded border-slate-300 text-blue-600" onClick={(e) => e.stopPropagation()} />
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{m.investorName}</p>
+                            {m.geographies[0] && <p className="text-xs" style={{ color: "var(--text-muted)" }}>{m.geographies[0]}</p>}
+                            {already && <p className="text-xs text-blue-600 font-medium mt-0.5">Already in pipeline</p>}
+                          </td>
+                          <td className="px-4 py-2.5"><TypeBadge type={m.investorType ?? "Venture Capital"} /></td>
+                          <td className="px-4 py-2.5 text-sm whitespace-nowrap" style={{ color: "var(--text-secondary)" }}>{m.investmentSize}</td>
+                          <td className="px-4 py-2.5"><MatchBar score={m.matchScore} /></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-3 p-6 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                {selectedIds.size > 0 ? `${selectedIds.size} selected` : "Select investors to import"}
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setShowImport(false)} className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-slate-50" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>Cancel</button>
+                <button onClick={handleImport} disabled={selectedIds.size === 0 || importBusy} className="cap-btn-primary rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">
+                  {importBusy ? "Importing…" : `Import ${selectedIds.size > 0 ? selectedIds.size : ""} Investor${selectedIds.size !== 1 ? "s" : ""}`}
+                </button>
               </div>
             </div>
           </div>
@@ -640,243 +591,90 @@ export function InvestorPipelineClient({
 
       {/* ── Add / Edit modal ───────────────────────────────────────────────────── */}
       {showModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: "rgba(12,35,64,0.35)" }}
-          onClick={closeModal}
-        >
-          <div
-            className="relative rounded-2xl bg-white w-full max-w-lg mx-4 shadow-2xl flex flex-col enterprise-animate-in"
-            style={{ maxHeight: "90vh" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal header */}
-            <div
-              className="flex items-center justify-between p-6 border-b"
-              style={{ borderColor: "var(--border-subtle)" }}
-            >
-              <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>
-                {editingId ? "Edit Investor" : "Add Investor"}
-              </h3>
-              <button
-                onClick={closeModal}
-                className="rounded-lg p-1.5 hover:bg-slate-100 transition-colors"
-                style={{ color: "var(--text-muted)" }}
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(12,35,64,0.35)" }} onClick={closeModal}>
+          <div className="relative rounded-2xl bg-white w-full max-w-lg mx-4 shadow-2xl flex flex-col enterprise-animate-in" style={{ maxHeight: "90vh" }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: "var(--border-subtle)" }}>
+              <h3 className="text-lg font-bold" style={{ color: "var(--text-primary)" }}>{editingId ? "Edit Investor" : "Add Investor"}</h3>
+              <button onClick={closeModal} className="rounded-lg p-1.5 hover:bg-slate-100 transition-colors" style={{ color: "var(--text-muted)" }}>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-
-            {/* Modal body */}
             <div className="overflow-y-auto p-6 space-y-4 flex-1">
-              {formError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {formError}
-                </div>
-              )}
-
+              {formError && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</div>}
               <div className="grid grid-cols-2 gap-4">
-                {/* Name */}
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>
-                    Investor Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-                    style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
-                    value={form.name}
-                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                    placeholder="e.g. Sequoia Capital"
-                  />
+                  <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Investor Name <span className="text-red-500">*</span></label>
+                  <input className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Sequoia Capital" />
                 </div>
-
-                {/* Location */}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Location</label>
-                  <input
-                    className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-                    style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
-                    value={form.location}
-                    onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
-                    placeholder="e.g. San Francisco, CA"
-                  />
+                  <input className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} placeholder="e.g. San Francisco, CA" />
                 </div>
-
-                {/* Type */}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Investor Type</label>
-                  <select
-                    className="w-full rounded-lg border px-3 py-2 text-sm"
-                    style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
-                    value={form.investor_type}
-                    onChange={(e) => setForm((f) => ({ ...f, investor_type: e.target.value }))}
-                  >
-                    {INVESTOR_TYPES.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
+                  <select className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.investor_type} onChange={(e) => setForm((f) => ({ ...f, investor_type: e.target.value }))}>
+                    {INVESTOR_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
-
-                {/* Investment Size */}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Investment Size</label>
-                  <input
-                    className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-                    style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
-                    value={form.investment_size}
-                    onChange={(e) => setForm((f) => ({ ...f, investment_size: e.target.value }))}
-                    placeholder="e.g. $250K – $1M"
-                  />
+                  <input className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.investment_size} onChange={(e) => setForm((f) => ({ ...f, investment_size: e.target.value }))} placeholder="e.g. $250K – $1M" />
                 </div>
-
-                {/* Pledge */}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Pledge Amount ($)</label>
-                  <input
-                    type="number"
-                    className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-                    style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
-                    value={form.pledge_amount}
-                    onChange={(e) => setForm((f) => ({ ...f, pledge_amount: e.target.value }))}
-                    placeholder="250000"
-                  />
+                  <input type="number" className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.pledge_amount} onChange={(e) => setForm((f) => ({ ...f, pledge_amount: e.target.value }))} placeholder="250000" />
                 </div>
-
-                {/* Match Score */}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Match Score (0–100)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-                    style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
-                    value={form.match_score}
-                    onChange={(e) => setForm((f) => ({ ...f, match_score: e.target.value }))}
-                    placeholder="75"
-                  />
+                  <input type="number" min={0} max={100} className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.match_score} onChange={(e) => setForm((f) => ({ ...f, match_score: e.target.value }))} placeholder="75" />
                 </div>
-
-                {/* Outreach */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Last Contact Date</label>
+                  <input type="date" className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.last_contact_date} onChange={(e) => setForm((f) => ({ ...f, last_contact_date: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Next Follow-up Date</label>
+                  <input type="date" className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.next_follow_up_date} onChange={(e) => setForm((f) => ({ ...f, next_follow_up_date: e.target.value }))} />
+                </div>
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Outreach Status</label>
-                  <select
-                    className="w-full rounded-lg border px-3 py-2 text-sm"
-                    style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
-                    value={form.outreach_status}
-                    onChange={(e) => setForm((f) => ({ ...f, outreach_status: e.target.value as OutreachStatus }))}
-                  >
-                    {(Object.keys(OUTREACH_LABELS) as OutreachStatus[]).map((s) => (
-                      <option key={s} value={s}>{OUTREACH_LABELS[s]}</option>
-                    ))}
+                  <select className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.outreach_status} onChange={(e) => setForm((f) => ({ ...f, outreach_status: e.target.value as OutreachStatus }))}>
+                    {(Object.keys(OUTREACH_LABELS) as OutreachStatus[]).map((s) => <option key={s} value={s}>{OUTREACH_LABELS[s]}</option>)}
                   </select>
                 </div>
-
-                {/* Meeting */}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Meeting Status</label>
-                  <select
-                    className="w-full rounded-lg border px-3 py-2 text-sm"
-                    style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
-                    value={form.meeting_requested}
-                    onChange={(e) => setForm((f) => ({ ...f, meeting_requested: e.target.value as MeetingStatus }))}
-                  >
-                    {(Object.keys(MEETING_LABELS) as MeetingStatus[]).map((s) => (
-                      <option key={s} value={s}>{MEETING_LABELS[s]}</option>
-                    ))}
+                  <select className="w-full rounded-lg border px-3 py-2 text-sm" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.meeting_requested} onChange={(e) => setForm((f) => ({ ...f, meeting_requested: e.target.value as MeetingStatus }))}>
+                    {(Object.keys(MEETING_LABELS) as MeetingStatus[]).map((s) => <option key={s} value={s}>{MEETING_LABELS[s]}</option>)}
                   </select>
                 </div>
-
-                {/* Interested toggle */}
                 <div className="col-span-2 flex items-center gap-3">
                   <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>Interested</span>
-                  <button
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, interested: !f.interested }))}
-                    className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${form.interested ? "bg-blue-600" : "bg-slate-200"}`}
-                  >
-                    <span
-                      className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${form.interested ? "translate-x-[18px]" : "translate-x-[2px]"}`}
-                    />
+                  <button type="button" onClick={() => setForm((f) => ({ ...f, interested: !f.interested }))} className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${form.interested ? "bg-blue-600" : "bg-slate-200"}`}>
+                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${form.interested ? "translate-x-[18px]" : "translate-x-[2px]"}`} />
                   </button>
                 </div>
-
-                {/* Preferred stages */}
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--text-muted)" }}>Preferred Stages</label>
                   <div className="flex flex-wrap gap-1.5">
-                    {STAGE_OPTIONS.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => toggleStage(s)}
-                        className={`px-2 py-1 rounded-md text-xs font-medium border transition-colors ${
-                          form.preferred_stages.includes(s)
-                            ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    ))}
+                    {STAGE_OPTIONS.map((s) => <button key={s} type="button" onClick={() => toggleStage(s)} className={`px-2 py-1 rounded-md text-xs font-medium border transition-colors ${form.preferred_stages.includes(s) ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"}`}>{s}</button>)}
                   </div>
                 </div>
-
-                {/* Focus sectors */}
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--text-muted)" }}>Focus Sectors</label>
                   <div className="flex flex-wrap gap-1.5">
-                    {SECTOR_OPTIONS.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => toggleSector(s)}
-                        className={`px-2 py-1 rounded-md text-xs font-medium border transition-colors ${
-                          form.focus_sectors.includes(s)
-                            ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    ))}
+                    {SECTOR_OPTIONS.map((s) => <button key={s} type="button" onClick={() => toggleSector(s)} className={`px-2 py-1 rounded-md text-xs font-medium border transition-colors ${form.focus_sectors.includes(s) ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"}`}>{s}</button>)}
                   </div>
                 </div>
-
-                {/* Notes */}
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Notes</label>
-                  <textarea
-                    rows={3}
-                    className="w-full rounded-lg border px-3 py-2 text-sm resize-none outline-none focus:ring-2 focus:ring-blue-200"
-                    style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}
-                    value={form.notes}
-                    onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                    placeholder="Any context about this investor…"
-                  />
+                  <textarea rows={3} className="w-full rounded-lg border px-3 py-2 text-sm resize-none outline-none focus:ring-2 focus:ring-blue-200" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Any context about this investor…" />
                 </div>
               </div>
             </div>
-
-            {/* Modal footer */}
-            <div
-              className="flex items-center justify-end gap-3 p-6 border-t"
-              style={{ borderColor: "var(--border-subtle)" }}
-            >
-              <button
-                onClick={closeModal}
-                className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-slate-50"
-                style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={busy}
-                className="cap-btn-primary rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50"
-              >
+            <div className="flex items-center justify-end gap-3 p-6 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+              <button onClick={closeModal} className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-slate-50" style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>Cancel</button>
+              <button onClick={handleSave} disabled={busy} className="cap-btn-primary rounded-lg px-5 py-2 text-sm font-semibold disabled:opacity-50">
                 {busy ? "Saving…" : editingId ? "Save Changes" : "Add Investor"}
               </button>
             </div>

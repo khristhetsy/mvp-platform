@@ -9,7 +9,7 @@ function untyped(client: unknown): SupabaseClient {
 
 // Columns returned to founder — contact_email and contact_phone are EXCLUDED
 const SAFE_COLUMNS =
-  "id,founder_id,name,location,investor_type,investment_size,pledge_amount,interested,meeting_requested,match_score,outreach_status,preferred_stages,focus_sectors,notes,created_at,updated_at";
+  "id,founder_id,name,location,investor_type,investment_size,pledge_amount,interested,meeting_requested,match_score,outreach_status,source,platform_investor_id,last_contact_date,next_follow_up_date,preferred_stages,focus_sectors,notes,created_at,updated_at";
 
 export async function GET() {
   const auth = await requireApiProfile(["founder"]);
@@ -51,6 +51,10 @@ export async function POST(request: Request) {
     preferred_stages,
     focus_sectors,
     notes,
+    source,
+    platform_investor_id,
+    last_contact_date,
+    next_follow_up_date,
   } = body;
 
   if (!name || typeof name !== "string" || !name.trim()) {
@@ -73,6 +77,10 @@ export async function POST(request: Request) {
       preferred_stages: preferred_stages ?? null,
       focus_sectors: focus_sectors ?? null,
       notes: notes ?? null,
+      source: source ?? "manual",
+      platform_investor_id: platform_investor_id ?? null,
+      last_contact_date: last_contact_date ?? null,
+      next_follow_up_date: next_follow_up_date ?? null,
     })
     .select(SAFE_COLUMNS)
     .single();
