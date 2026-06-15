@@ -103,3 +103,75 @@ export type SendResult = {
   ok: boolean;
   error?: string;
 };
+
+// ---------------------------------------------------------------------------
+// Marketing plan / strategy
+// ---------------------------------------------------------------------------
+
+export type MarketingPlanStatus = "draft" | "active" | "archived";
+
+export type MarketingPlanItemChannel =
+  | "email"
+  | "content"
+  | "social"
+  | "paid"
+  | "events"
+  | "pr"
+  | "seo"
+  | "partnerships"
+  | "other";
+
+export type MarketingPlanItemStatus = "planned" | "in_progress" | "done";
+export type MarketingPlanItemPriority = "low" | "medium" | "high";
+
+export type MarketingPlan = {
+  id: string;
+  name: string;
+  objective: string | null;
+  summary: string | null;
+  target_audience: string | null;
+  budget: string | null;
+  status: MarketingPlanStatus;
+  start_date: string | null;
+  end_date: string | null;
+  generated_by: "manual" | "claude";
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  // joined
+  items?: MarketingPlanItem[];
+  item_count?: number;
+};
+
+export type MarketingPlanItem = {
+  id: string;
+  plan_id: string;
+  title: string;
+  description: string | null;
+  channel: MarketingPlanItemChannel;
+  status: MarketingPlanItemStatus;
+  priority: MarketingPlanItemPriority;
+  start_date: string | null;
+  due_date: string | null;
+  sort_order: number;
+  task_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Shape returned by the AI CMO before it is persisted. */
+export type CmoPlanDraft = {
+  name: string;
+  objective: string;
+  summary: string;
+  target_audience: string;
+  budget: string | null;
+  items: Array<{
+    title: string;
+    description: string;
+    channel: MarketingPlanItemChannel;
+    priority: MarketingPlanItemPriority;
+  }>;
+  generatedBy: "claude" | "unconfigured";
+  isDemo: boolean;
+};

@@ -111,6 +111,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/marketing/sequences", label: "Sequences" },
           { href: "/admin/marketing/templates", label: "Templates" },
           { href: "/admin/marketing/analytics", label: "Analytics" },
+          { href: "/admin/marketing/plan", label: "Plans" },
         ],
       },
     ],
