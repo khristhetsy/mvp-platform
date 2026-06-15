@@ -89,7 +89,8 @@ export default function LearningSchedulePage() {
                 <h2 className="text-sm font-semibold text-slate-900">This week</h2>
                 <p className="mt-0.5 text-xs text-slate-500">Your study days highlighted · today marked</p>
               </div>
-              <div className="grid grid-cols-7 gap-0 divide-x divide-slate-100">
+              <div className="overflow-x-auto">
+              <div className="grid grid-cols-7 gap-0 divide-x divide-slate-100 min-w-[420px]">
                 {dayOrder.map((day, idx) => {
                   const isStudyDay = studyDays.includes(day);
                   const isToday = idx === todayIdx;
@@ -131,6 +132,7 @@ export default function LearningSchedulePage() {
                     </div>
                   );
                 })}
+              </div>
               </div>
               <div className="border-t border-slate-100 px-6 py-3">
                 <p className="text-xs text-slate-400">

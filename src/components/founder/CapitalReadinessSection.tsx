@@ -483,7 +483,7 @@ export function CapitalReadinessSection({
               <p className="mt-0.5 text-xs text-slate-500">{cfg.sub}</p>
 
               {/* Stats row */}
-              <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="mt-4 grid grid-cols-1 min-[360px]:grid-cols-3 gap-3">
                 {cfg.stats.map((s) => (
                   <StatBox key={s.label} label={s.label} value={s.value} />
                 ))}

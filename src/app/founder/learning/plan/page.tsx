@@ -143,7 +143,7 @@ export default async function MyLearningPlanPage() {
           />
 
           {/* Summary stats */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
               { label: "Total lessons", value: totalLessons },
               { label: "Completed", value: doneLessons, color: "text-green-700" },

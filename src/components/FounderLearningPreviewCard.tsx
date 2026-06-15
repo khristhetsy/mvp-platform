@@ -58,11 +58,11 @@ export function FounderLearningPreviewCard({
               <div key={mod.slug} className="flex items-center gap-3">
                 <Link
                   href={`/founder/learning/${mod.slug}`}
-                  className="min-w-[140px] flex-shrink-0 text-xs font-medium text-slate-800 hover:text-[#534AB7] truncate"
+                  className="flex-1 min-w-0 text-xs font-medium text-slate-800 hover:text-[#534AB7] truncate"
                 >
                   {mod.title}
                 </Link>
-                <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                <div className="w-16 sm:flex-1 shrink-0 h-1.5 rounded-full bg-slate-100 overflow-hidden">
                   <div
                     className="h-full rounded-full"
                     style={{ width: `${pct}%`, background: pct === 100 ? "#3B6D11" : "#534AB7" }}

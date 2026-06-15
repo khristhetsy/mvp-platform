@@ -252,7 +252,7 @@ export default async function FounderDashboardPage() {
           <WorkspacePanel title="Investor pipeline" subtitle="Read-only activity on your listing">
             {investorActivity ? (
               <>
-                <div className="mb-4 grid grid-cols-3 gap-3">
+                <div className="mb-4 grid grid-cols-1 min-[360px]:grid-cols-3 gap-3">
                   {[
                     ["Expressed interest", investorActivity.interests.length],
                     ["Intro requests", investorActivity.introRequests.length],
@@ -268,7 +268,7 @@ export default async function FounderDashboardPage() {
                   <div className="divide-y divide-slate-100">
                     {pipelineItems.map((item, i) => (
                       <div key={i} className="flex items-center justify-between py-2 text-xs">
-                        <span className="font-medium text-slate-800">{item.name}</span>
+                        <span className="min-w-0 flex-1 truncate font-medium text-slate-800">{item.name}</span>
                         <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${badgeCls[item.variant]}`}>
                           {item.type}
                         </span>

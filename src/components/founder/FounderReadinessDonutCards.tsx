@@ -461,7 +461,7 @@ export function FounderReadinessDonutCards({
               </div>
 
               {/* Stats row */}
-              <div className="mb-5 grid grid-cols-3 gap-3">
+              <div className="mb-5 grid grid-cols-1 min-[360px]:grid-cols-3 gap-3">
                 {config.stats.map((s) => (
                   <div
                     key={s.l}

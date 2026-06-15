@@ -237,7 +237,7 @@ export default async function MyProgressPage() {
                         <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-2xl">
                           {badge.icon}
                         </div>
-                        <p className="text-[10px] leading-tight text-slate-500">{badge.label}</p>
+                        <p className="line-clamp-2 text-[10px] leading-tight text-slate-500">{badge.label}</p>
                         {earned && (
                           <p className="mt-0.5 text-[9px] font-semibold text-green-700">Earned</p>
                         )}
