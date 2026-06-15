@@ -15,36 +15,42 @@ interface Props {
   aiEnabled: boolean;
 }
 
+type ViewMode = "card" | "list" | "tree";
+
 const ACCENT = "#534AB7";
 
 const STATUS_MAP: Record<string, { bg: string; color: string; label: string }> = {
-  draft: { bg: "#F1EFE8", color: "#5F5E5A", label: "Draft" },
-  active: { bg: "#E1F5EE", color: "#0F6E56", label: "Active" },
+  draft:    { bg: "#F1EFE8", color: "#5F5E5A", label: "Draft" },
+  active:   { bg: "#E1F5EE", color: "#0F6E56", label: "Active" },
   archived: { bg: "#FCEBEB", color: "#A32D2D", label: "Archived" },
 };
 
 const ITEM_STATUS_MAP: Record<string, { bg: string; color: string; label: string }> = {
-  planned: { bg: "#F1EFE8", color: "#5F5E5A", label: "Planned" },
-  in_progress: { bg: "#E6F1FB", color: "#185FA5", label: "In progress" },
-  done: { bg: "#E1F5EE", color: "#0F6E56", label: "Done" },
+  planned:     { bg: "#F1EFE8", color: "#5F5E5A",  label: "Planned" },
+  in_progress: { bg: "#E6F1FB", color: "#185FA5",  label: "In progress" },
+  done:        { bg: "#E1F5EE", color: "#0F6E56",  label: "Done" },
 };
 
 const PRIORITY_MAP: Record<string, { bg: string; color: string }> = {
-  high: { bg: "#FCEBEB", color: "#A32D2D" },
+  high:   { bg: "#FCEBEB", color: "#A32D2D" },
   medium: { bg: "#FAEEDA", color: "#854F0B" },
-  low: { bg: "#F1EFE8", color: "#5F5E5A" },
+  low:    { bg: "#F1EFE8", color: "#5F5E5A" },
+};
+
+const CHANNEL_COLOR_MAP: Record<string, { bg: string; color: string }> = {
+  email:        { bg: "#E6F1FB", color: "#185FA5" },
+  content:      { bg: "#EEEDFE", color: "#3C3489" },
+  social:       { bg: "#FBEAF0", color: "#993556" },
+  paid:         { bg: "#FAECE7", color: "#993C1D" },
+  events:       { bg: "#E1F5EE", color: "#0F6E56" },
+  pr:           { bg: "#EAF3DE", color: "#3B6D11" },
+  seo:          { bg: "#FAEEDA", color: "#854F0B" },
+  partnerships: { bg: "#EEEDFE", color: "#3C3489" },
+  other:        { bg: "#F1EFE8", color: "#5F5E5A" },
 };
 
 const CHANNELS: MarketingPlanItemChannel[] = [
-  "email",
-  "content",
-  "social",
-  "paid",
-  "events",
-  "pr",
-  "seo",
-  "partnerships",
-  "other",
+  "email", "content", "social", "paid", "events", "pr", "seo", "partnerships", "other",
 ];
 
 const card: React.CSSProperties = {
@@ -89,18 +95,17 @@ const inputStyle: React.CSSProperties = {
 function Badge({ map, value }: { map: Record<string, { bg: string; color: string; label?: string }>; value: string }) {
   const s = map[value] ?? { bg: "#F1EFE8", color: "#5F5E5A" };
   return (
-    <span
-      style={{
-        background: s.bg,
-        color: s.color,
-        fontSize: 11,
-        fontWeight: 500,
-        padding: "2px 8px",
-        borderRadius: 6,
-        textTransform: "capitalize",
-      }}
-    >
+    <span style={{ background: s.bg, color: s.color, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 6, textTransform: "capitalize" }}>
       {s.label ?? value.replace(/_/g, " ")}
+    </span>
+  );
+}
+
+function ChannelBadge({ channel }: { channel: string }) {
+  const s = CHANNEL_COLOR_MAP[channel] ?? CHANNEL_COLOR_MAP.other;
+  return (
+    <span style={{ background: s.bg, color: s.color, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 6, textTransform: "capitalize" }}>
+      {channel}
     </span>
   );
 }
@@ -108,31 +113,28 @@ function Badge({ map, value }: { map: Record<string, { bg: string; color: string
 export function PlanClient({ plans, aiEnabled }: Props) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<MarketingPlan | null>(null);
+  const [detail, setDetail]         = useState<MarketingPlan | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [busy, setBusy]             = useState<string | null>(null);
+  const [viewMode, setViewMode]     = useState<ViewMode>("card");
 
   // create-plan form
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    objective: "",
-    target_audience: "",
-    budget: "",
-    start_date: "",
-    end_date: "",
-  });
+  const [form, setForm] = useState({ name: "", objective: "", target_audience: "", budget: "", start_date: "", end_date: "" });
 
   // AI CMO modal
-  const [showCmo, setShowCmo] = useState(false);
-  const [cmoBrief, setCmoBrief] = useState({ goal: "", timeframe: "", budget: "" });
+  const [showCmo, setShowCmo]       = useState(false);
+  const [cmoBrief, setCmoBrief]     = useState({ goal: "", timeframe: "", budget: "" });
   const [cmoLoading, setCmoLoading] = useState(false);
-  const [draft, setDraft] = useState<CmoPlanDraft | null>(null);
+  const [draft, setDraft]           = useState<CmoPlanDraft | null>(null);
+
+  // edit initiative modal
+  const [editingItem, setEditingItem] = useState<MarketingPlanItem | null>(null);
+  const [editForm, setEditForm]       = useState({ title: "", description: "" });
 
   // add-initiative form
   const [newItem, setNewItem] = useState({
-    title: "",
-    description: "",
+    title: "", description: "",
     channel: "other" as MarketingPlanItemChannel,
     priority: "medium" as MarketingPlanItemPriority,
   });
@@ -161,11 +163,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
       const res = await fetch("/api/marketing/plans", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          start_date: form.start_date || null,
-          end_date: form.end_date || null,
-        }),
+        body: JSON.stringify({ ...form, start_date: form.start_date || null, end_date: form.end_date || null }),
       });
       if (res.ok) {
         const plan = await res.json();
@@ -203,13 +201,9 @@ export function PlanClient({ plans, aiEnabled }: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: draft.name,
-          objective: draft.objective,
-          summary: draft.summary,
-          target_audience: draft.target_audience,
-          budget: draft.budget,
-          generated_by: "claude",
-          items: draft.items,
+          name: draft.name, objective: draft.objective, summary: draft.summary,
+          target_audience: draft.target_audience, budget: draft.budget,
+          generated_by: "claude", items: draft.items,
         }),
       });
       if (res.ok) {
@@ -272,6 +266,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
   }
 
   async function deleteItem(item: MarketingPlanItem) {
+    if (!confirm(`Delete "${item.title}"?`)) return;
     setBusy("del-" + item.id);
     try {
       await fetch(`/api/marketing/plans/items/${item.id}`, { method: "DELETE" });
@@ -281,9 +276,178 @@ export function PlanClient({ plans, aiEnabled }: Props) {
     }
   }
 
+  function openEdit(item: MarketingPlanItem) {
+    setEditingItem(item);
+    setEditForm({ title: item.title, description: item.description ?? "" });
+  }
+
+  async function saveEdit() {
+    if (!editingItem) return;
+    setBusy("edit-" + editingItem.id);
+    try {
+      const res = await fetch(`/api/marketing/plans/items/${editingItem.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: editForm.title, description: editForm.description }),
+      });
+      if (res.ok) {
+        setEditingItem(null);
+        refreshDetail();
+      }
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // ── Card view ──────────────────────────────────────────────────────────────
+  function renderCardView(items: MarketingPlanItem[]) {
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 12 }}>
+        {items.map((item) => {
+          const ch = CHANNEL_COLOR_MAP[item.channel] ?? CHANNEL_COLOR_MAP.other;
+          const pr = PRIORITY_MAP[item.priority];
+          return (
+            <div key={item.id} style={{ border: "0.5px solid #e2e6ed", borderRadius: 10, padding: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <span style={{ background: ch.bg, color: ch.color, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 6, textTransform: "capitalize" }}>{item.channel}</span>
+                <div style={{ display: "flex", gap: 2 }}>
+                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: "2px 5px", fontSize: 15, lineHeight: 1 }} onClick={() => openEdit(item)} title="Edit">✎</button>
+                  <button style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 5px", fontSize: 15, lineHeight: 1 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete">✕</button>
+                </div>
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)" }}>{item.title}</div>
+              {item.description && <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.5, flex: 1 }}>{item.description}</div>}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                {item.due_date ? <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Due {item.due_date}</span> : <span />}
+                <span style={{ background: pr.bg, color: pr.color, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 6, textTransform: "capitalize" }}>{item.priority}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "0.5px solid #e2e6ed", paddingTop: 8, marginTop: 2 }}>
+                {item.task_id ? (
+                  <span style={{ fontSize: 11, color: "#0F6E56", fontWeight: 500 }}>✓ Synced to Tasks</span>
+                ) : (
+                  <button style={{ ...btnGhost, padding: "4px 9px", fontSize: 11 }} disabled={busy === "sync-" + item.id} onClick={() => syncTask(item)}>
+                    {busy === "sync-" + item.id ? "…" : "→ Add to Tasks"}
+                  </button>
+                )}
+                <select style={{ ...inputStyle, padding: "3px 6px", width: "auto", fontSize: 11 }} value={item.status} onChange={(e) => setItemStatus(item, e.target.value as MarketingPlanItem["status"])}>
+                  <option value="planned">Planned</option>
+                  <option value="in_progress">In progress</option>
+                  <option value="done">Done</option>
+                </select>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // ── List view ──────────────────────────────────────────────────────────────
+  function renderListView(items: MarketingPlanItem[]) {
+    return (
+      <div style={{ border: "0.5px solid #e2e6ed", borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 72px 110px 56px", padding: "7px 14px", background: "#f8f9fb", borderBottom: "0.5px solid #e2e6ed" }}>
+          {["Initiative", "Channel", "Priority", "Status", ""].map((h) => (
+            <span key={h} style={{ fontSize: 11, color: "var(--muted-foreground)", fontWeight: 500 }}>{h}</span>
+          ))}
+        </div>
+        {items.map((item, i) => (
+          <div key={item.id} style={{ display: "grid", gridTemplateColumns: "1fr 90px 72px 110px 56px", padding: "10px 14px", borderBottom: i < items.length - 1 ? "0.5px solid #e2e6ed" : "none", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>{item.title}</div>
+              {item.description && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{item.description}</div>}
+            </div>
+            <ChannelBadge channel={item.channel} />
+            <span style={{ background: PRIORITY_MAP[item.priority]?.bg, color: PRIORITY_MAP[item.priority]?.color, fontSize: 11, fontWeight: 500, padding: "2px 7px", borderRadius: 6, textTransform: "capitalize", width: "fit-content" }}>{item.priority}</span>
+            <select style={{ ...inputStyle, padding: "3px 6px", width: "auto", fontSize: 11 }} value={item.status} onChange={(e) => setItemStatus(item, e.target.value as MarketingPlanItem["status"])}>
+              <option value="planned">Planned</option>
+              <option value="in_progress">In progress</option>
+              <option value="done">Done</option>
+            </select>
+            <div style={{ display: "flex", gap: 2 }}>
+              <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: "2px 5px", fontSize: 15, lineHeight: 1 }} onClick={() => openEdit(item)} title="Edit">✎</button>
+              <button style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 5px", fontSize: 15, lineHeight: 1 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete">✕</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // ── Tree view (grouped by channel) ─────────────────────────────────────────
+  function renderTreeView(items: MarketingPlanItem[], plan: MarketingPlan) {
+    const grouped = CHANNELS.reduce<Record<string, MarketingPlanItem[]>>((acc, ch) => {
+      const filtered = items.filter((i) => i.channel === ch);
+      if (filtered.length > 0) acc[ch] = filtered;
+      return acc;
+    }, {});
+
+    const channelKeys = Object.keys(grouped);
+
+    return (
+      <div style={{ border: "0.5px solid #e2e6ed", borderRadius: 10, padding: "16px 16px 12px" }}>
+        {/* Root node */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 8, background: ACCENT, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 15, flexShrink: 0 }}>✦</div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 500 }}>{plan.name}</div>
+            {plan.objective && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{plan.objective}</div>}
+          </div>
+        </div>
+
+        {/* Channel branches */}
+        <div style={{ marginLeft: 17, borderLeft: "1.5px solid #e2e6ed" }}>
+          {channelKeys.length === 0 && (
+            <div style={{ marginLeft: 20, fontSize: 12, color: "var(--muted-foreground)", padding: "6px 0" }}>No initiatives yet.</div>
+          )}
+          {channelKeys.map((channel, gi) => {
+            const ch = CHANNEL_COLOR_MAP[channel] ?? CHANNEL_COLOR_MAP.other;
+            const channelItems = grouped[channel];
+            return (
+              <div key={channel} style={{ position: "relative", marginBottom: gi < channelKeys.length - 1 ? 10 : 0 }}>
+                {/* Horizontal branch to channel */}
+                <div style={{ position: "absolute", left: -1, top: 17, width: 20, height: 1.5, background: "#e2e6ed" }} />
+                {/* Channel header */}
+                <div style={{ marginLeft: 20, display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", borderRadius: 7, background: ch.bg, marginBottom: 8 }}>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: ch.color, textTransform: "capitalize" }}>{channel}</span>
+                  <span style={{ fontSize: 11, color: ch.color, marginLeft: "auto", opacity: 0.8 }}>
+                    {channelItems.length} {channelItems.length === 1 ? "initiative" : "initiatives"}
+                  </span>
+                </div>
+                {/* Items under this channel */}
+                <div style={{ marginLeft: 36, borderLeft: "1.5px solid #e2e6ed" }}>
+                  {channelItems.map((item, ii) => {
+                    const pr = PRIORITY_MAP[item.priority];
+                    return (
+                      <div key={item.id} style={{ position: "relative", marginBottom: ii < channelItems.length - 1 ? 6 : 8 }}>
+                        {/* Horizontal branch to item */}
+                        <div style={{ position: "absolute", left: -1, top: "50%", width: 18, height: 1.5, background: "#e2e6ed" }} />
+                        <div style={{ marginLeft: 18, border: "0.5px solid #e2e6ed", borderRadius: 8, padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 13, fontWeight: 500, flex: 1, minWidth: 120 }}>{item.title}</span>
+                          {item.due_date && <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Due {item.due_date}</span>}
+                          <span style={{ background: pr.bg, color: pr.color, fontSize: 11, fontWeight: 500, padding: "1px 7px", borderRadius: 6, textTransform: "capitalize" }}>{item.priority}</span>
+                          <Badge map={ITEM_STATUS_MAP} value={item.status} />
+                          <button style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: "2px 4px", fontSize: 14, lineHeight: 1 }} onClick={() => openEdit(item)} title="Edit">✎</button>
+                          <button style={{ background: "none", border: "none", cursor: "pointer", color: "#A32D2D", padding: "2px 4px", fontSize: 14, lineHeight: 1 }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)} title="Delete">✕</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  const items = detail?.items ?? [];
+
   return (
     <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 20, alignItems: "start" }}>
-      {/* LEFT: plan list */}
+
+      {/* ── LEFT: plan list ──────────────────────────────────────────────── */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "flex", gap: 8 }}>
           <button style={{ ...btnPrimary, flex: 1 }} onClick={() => setShowCreate((v) => !v)}>
@@ -345,7 +509,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
         ))}
       </div>
 
-      {/* RIGHT: detail */}
+      {/* ── RIGHT: detail ────────────────────────────────────────────────── */}
       <div>
         {!selectedId && (
           <div style={{ ...card, padding: 40, textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
@@ -355,6 +519,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
         {loadingDetail && <div style={{ ...card, padding: 24, fontSize: 13 }}>Loading…</div>}
         {detail && !loadingDetail && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Plan header */}
             <div style={{ ...card, padding: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h2 style={{ fontSize: 16, fontWeight: 600 }}>{detail.name}</h2>
@@ -365,7 +530,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
               <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: 12, color: "var(--muted-foreground)", flexWrap: "wrap" }}>
                 {detail.target_audience && <span><strong>Audience:</strong> {detail.target_audience}</span>}
                 {detail.budget && <span><strong>Budget:</strong> {detail.budget}</span>}
-                {(detail.start_date || detail.end_date) && (
+                {(detail.start_date ?? detail.end_date) && (
                   <span><strong>Window:</strong> {detail.start_date ?? "—"} → {detail.end_date ?? "—"}</span>
                 )}
               </div>
@@ -373,50 +538,34 @@ export function PlanClient({ plans, aiEnabled }: Props) {
 
             {/* Initiatives */}
             <div style={{ ...card, padding: 20 }}>
-              <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Initiatives</h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {(detail.items ?? []).length === 0 && (
-                  <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>No initiatives yet.</div>
-                )}
-                {(detail.items ?? []).map((item) => (
-                  <div key={item.id} style={{ border: "0.5px solid #e2e6ed", borderRadius: 10, padding: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 500 }}>{item.title}</div>
-                        {item.description && <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 4 }}>{item.description}</div>}
-                        <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                          <Badge map={{}} value={item.channel} />
-                          <Badge map={PRIORITY_MAP} value={item.priority} />
-                          <Badge map={ITEM_STATUS_MAP} value={item.status} />
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
-                        {item.task_id ? (
-                          <span style={{ fontSize: 11, color: "#0F6E56", fontWeight: 500 }}>✓ Synced to Tasks</span>
-                        ) : (
-                          <button style={{ ...btnGhost, padding: "5px 10px" }} disabled={busy === "sync-" + item.id} onClick={() => syncTask(item)}>
-                            {busy === "sync-" + item.id ? "Syncing…" : "→ Add to Tasks"}
-                          </button>
-                        )}
-                        <select
-                          style={{ ...inputStyle, padding: "4px 8px", width: "auto", fontSize: 11 }}
-                          value={item.status}
-                          onChange={(e) => setItemStatus(item, e.target.value as MarketingPlanItem["status"])}
-                        >
-                          <option value="planned">Planned</option>
-                          <option value="in_progress">In progress</option>
-                          <option value="done">Done</option>
-                        </select>
-                        <button style={{ ...btnGhost, padding: "4px 8px", color: "#A32D2D" }} disabled={busy === "del-" + item.id} onClick={() => deleteItem(item)}>
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              {/* Header + view toggle */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>Initiatives</h3>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {(["card", "list", "tree"] as ViewMode[]).map((mode) => {
+                    const labels: Record<ViewMode, string> = { card: "⊞ Cards", list: "≡ List", tree: "⌥ Tree" };
+                    const active = viewMode === mode;
+                    return (
+                      <button
+                        key={mode}
+                        onClick={() => setViewMode(mode)}
+                        style={{ ...btnGhost, padding: "5px 10px", fontSize: 11, background: active ? ACCENT : "#fff", color: active ? "#fff" : "var(--foreground)", borderColor: active ? ACCENT : "#e2e6ed" }}
+                      >
+                        {labels[mode]}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* add initiative */}
+              {/* Render view */}
+              {items.length === 0 ? (
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 12 }}>No initiatives yet — add one below.</div>
+              ) : viewMode === "card" ? renderCardView(items)
+                : viewMode === "list" ? renderListView(items)
+                : renderTreeView(items, detail)}
+
+              {/* Add initiative */}
               <div style={{ marginTop: 16, borderTop: "0.5px solid #e2e6ed", paddingTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
                 <input style={inputStyle} placeholder="New initiative title" value={newItem.title} onChange={(e) => setNewItem({ ...newItem, title: e.target.value })} />
                 <textarea style={{ ...inputStyle, minHeight: 44, resize: "vertical" }} placeholder="Description (optional)" value={newItem.description} onChange={(e) => setNewItem({ ...newItem, description: e.target.value })} />
@@ -439,7 +588,36 @@ export function PlanClient({ plans, aiEnabled }: Props) {
         )}
       </div>
 
-      {/* AI CMO modal */}
+      {/* ── Edit initiative modal ─────────────────────────────────────────── */}
+      {editingItem && (
+        <div
+          onClick={() => setEditingItem(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(12,35,64,0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 20 }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ ...card, padding: 24, width: 520 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Edit initiative</h2>
+            <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 14 }}>Changes are saved immediately to the plan.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div>
+                <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Title</label>
+                <input style={inputStyle} value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} autoFocus />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Description</label>
+                <textarea style={{ ...inputStyle, minHeight: 80, resize: "vertical" }} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
+              </div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
+                <button style={btnGhost} onClick={() => setEditingItem(null)}>Cancel</button>
+                <button style={btnPrimary} disabled={busy === "edit-" + editingItem.id || !editForm.title.trim()} onClick={saveEdit}>
+                  {busy === "edit-" + editingItem.id ? "Saving…" : "Save changes"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── AI CMO modal ──────────────────────────────────────────────────── */}
       {showCmo && (
         <div
           onClick={() => !cmoLoading && setShowCmo(false)}
@@ -452,7 +630,6 @@ export function PlanClient({ plans, aiEnabled }: Props) {
                 ? "Describe the goal — the CMO drafts a plan grounded in your contact & campaign data. Review, then save."
                 : "AI is not configured (ANTHROPIC_API_KEY missing). You'll get an editable starter outline."}
             </p>
-
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
               <textarea style={{ ...inputStyle, minHeight: 64, resize: "vertical" }} placeholder="Goal — e.g. 'Grow founder signups 30% in Q3 via content + email'" value={cmoBrief.goal} onChange={(e) => setCmoBrief({ ...cmoBrief, goal: e.target.value })} />
               <div style={{ display: "flex", gap: 8 }}>
