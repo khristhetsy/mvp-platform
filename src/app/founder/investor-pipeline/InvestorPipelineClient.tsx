@@ -20,8 +20,6 @@ interface PipelineInvestor {
   outreach_status: OutreachStatus;
   source: InvestorSource;
   platform_investor_id: string | null;
-  last_contact_date: string | null;
-  next_follow_up_date: string | null;
   preferred_stages: string[] | null;
   focus_sectors: string[] | null;
   notes: string | null;
@@ -66,19 +64,6 @@ const SECTOR_OPTIONS = [
   "Fintech", "SaaS", "HealthTech", "EdTech", "CleanTech",
   "AI / ML", "PropTech", "Consumer", "B2B", "Other",
 ];
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function fmtDate(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso + "T00:00:00");
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
-
-function isOverdue(iso: string | null): boolean {
-  if (!iso) return false;
-  return new Date(iso + "T00:00:00") < new Date(new Date().toDateString());
-}
 
 // ─── Badge sub-components ────────────────────────────────────────────────────
 
@@ -159,8 +144,6 @@ const EMPTY_FORM = {
   meeting_requested: "none" as MeetingStatus,
   match_score: "",
   outreach_status: "not_started" as OutreachStatus,
-  last_contact_date: "",
-  next_follow_up_date: "",
   preferred_stages: [] as string[],
   focus_sectors: [] as string[],
   notes: "",
@@ -203,7 +186,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
     total: investors.length,
     interested: investors.filter((i) => i.interested).length,
     meetings: investors.filter((i) => i.meeting_requested !== "none").length,
-    followUps: investors.filter((i) => i.next_follow_up_date && isOverdue(i.next_follow_up_date)).length,
+    closed: investors.filter((i) => i.outreach_status === "closed").length,
   };
 
   // ── Data actions ──────────────────────────────────────────────────────────────
@@ -228,8 +211,6 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
       meeting_requested: inv.meeting_requested,
       match_score: inv.match_score != null ? String(inv.match_score) : "",
       outreach_status: inv.outreach_status,
-      last_contact_date: inv.last_contact_date ?? "",
-      next_follow_up_date: inv.next_follow_up_date ?? "",
       preferred_stages: inv.preferred_stages ?? [],
       focus_sectors: inv.focus_sectors ?? [],
       notes: inv.notes ?? "",
@@ -254,8 +235,6 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
       meeting_requested: form.meeting_requested,
       match_score: form.match_score ? parseInt(form.match_score) : null,
       outreach_status: form.outreach_status,
-      last_contact_date: form.last_contact_date || null,
-      next_follow_up_date: form.next_follow_up_date || null,
       preferred_stages: form.preferred_stages,
       focus_sectors: form.focus_sectors,
       notes: form.notes || null,
@@ -345,7 +324,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
 
   // ── CSV export ────────────────────────────────────────────────────────────────
   function exportCSV() {
-    const cols: (keyof PipelineInvestor)[] = ["name", "location", "investor_type", "investment_size", "pledge_amount", "interested", "meeting_requested", "match_score", "outreach_status", "last_contact_date", "next_follow_up_date", "source", "preferred_stages", "focus_sectors", "notes"];
+    const cols: (keyof PipelineInvestor)[] = ["name", "location", "investor_type", "investment_size", "pledge_amount", "interested", "meeting_requested", "match_score", "outreach_status", "source", "preferred_stages", "focus_sectors", "notes"];
     const header = cols.join(",");
     const rows = investors.map((inv) =>
       cols.map((c) => {
@@ -377,7 +356,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
             { label: "Total Investors", value: stats.total, warn: false },
             { label: "Interested", value: stats.interested, warn: false },
             { label: "Meetings", value: stats.meetings, warn: false },
-            { label: "Overdue Follow-ups", value: stats.followUps, warn: stats.followUps > 0 },
+            { label: "Closed", value: stats.closed, warn: false },
           ] as { label: string; value: number; warn: boolean }[]
         ).map(({ label, value, warn }) => (
           <div key={label} className="rounded-xl border bg-white p-4" style={{ borderColor: warn ? "#fca5a5" : "var(--border-subtle)", boxShadow: "var(--shadow-panel)" }}>
@@ -417,7 +396,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
           <table className="enterprise-table enterprise-table--comfortable w-full border-collapse bg-white">
             <thead>
               <tr>
-                {["Investor", "Type", "Investment Size", "Pledged", "Interested", "Meeting", "Last Contact", "Next Follow-up", "Match", "Outreach", ""].map((h) => (
+                {["Investor", "Type", "Investment Size", "Pledged", "Interested", "Meeting", "Match", "Outreach", ""].map((h) => (
                   <th key={h} className="text-left px-4 py-3">{h}</th>
                 ))}
               </tr>
@@ -425,7 +404,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>
+                  <td colSpan={9} className="text-center py-12 text-sm" style={{ color: "var(--text-muted)" }}>
                     {investors.length === 0 ? "Add your first investor or import from platform matches." : "No investors match your search."}
                   </td>
                 </tr>
@@ -453,12 +432,6 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                     </span>
                   </td>
                   <td className="px-4 py-3"><MeetingBadge status={inv.meeting_requested} /></td>
-                  <td className="px-4 py-3 text-sm whitespace-nowrap" style={{ color: "var(--text-secondary)" }}>
-                    {fmtDate(inv.last_contact_date)}
-                  </td>
-                  <td className="px-4 py-3 text-sm whitespace-nowrap font-medium" style={{ color: isOverdue(inv.next_follow_up_date) ? "#dc2626" : "var(--text-secondary)" }}>
-                    {fmtDate(inv.next_follow_up_date)}
-                  </td>
                   <td className="px-4 py-3"><MatchBar score={inv.match_score} /></td>
                   <td className="px-4 py-3">
                     <OutreachBadge status={inv.outreach_status} editable onChange={(s) => handleOutreachChange(inv.id, s)} />
@@ -504,8 +477,6 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                   { label: "Match Score", node: <MatchBar score={profileOf.match_score} /> },
                   { label: "Outreach Status", node: <OutreachBadge status={profileOf.outreach_status} /> },
                   { label: "Meeting Status", node: <MeetingBadge status={profileOf.meeting_requested} /> },
-                  { label: "Last Contact", node: <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>{fmtDate(profileOf.last_contact_date)}</span> },
-                  { label: "Next Follow-up", node: <span className="text-sm font-medium" style={{ color: isOverdue(profileOf.next_follow_up_date) ? "#dc2626" : "var(--text-primary)" }}>{fmtDate(profileOf.next_follow_up_date)}</span> },
                 ].map(({ label, node }) => (
                   <div key={label}>
                     <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>{label}</p>
@@ -660,14 +631,6 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Match Score (0–100)</label>
                   <input type="number" min={0} max={100} className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.match_score} onChange={(e) => setForm((f) => ({ ...f, match_score: e.target.value }))} placeholder="75" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Last Contact Date</label>
-                  <input type="date" className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.last_contact_date} onChange={(e) => setForm((f) => ({ ...f, last_contact_date: e.target.value }))} />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Next Follow-up Date</label>
-                  <input type="date" className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-200" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }} value={form.next_follow_up_date} onChange={(e) => setForm((f) => ({ ...f, next_follow_up_date: e.target.value }))} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--text-muted)" }}>Outreach Status</label>

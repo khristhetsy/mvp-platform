@@ -9,7 +9,7 @@ function untyped(client: unknown): SupabaseClient {
 }
 
 const SAFE_COLUMNS =
-  "id,founder_id,name,location,investor_type,investment_size,pledge_amount,interested,meeting_requested,match_score,outreach_status,source,platform_investor_id,last_contact_date,next_follow_up_date,preferred_stages,focus_sectors,notes,created_at,updated_at";
+  "id,founder_id,name,location,investor_type,investment_size,pledge_amount,interested,meeting_requested,match_score,outreach_status,source,platform_investor_id,preferred_stages,focus_sectors,notes,created_at,updated_at";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -41,8 +41,6 @@ export async function PATCH(request: Request, { params }: Params) {
     "preferred_stages",
     "focus_sectors",
     "notes",
-    "last_contact_date",
-    "next_follow_up_date",
   ];
 
   const patch: Record<string, unknown> = {};

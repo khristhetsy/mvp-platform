@@ -22,6 +22,200 @@ import type { ActionCenterAnalytics, BulkActionType } from "@/lib/actions/types"
 import type { NextBestAction, NextBestActionRole } from "@/lib/next-best-actions/types";
 import { NBA_DISCLAIMER } from "@/lib/next-best-actions/types";
 
+// ─── Priority-grouped list view ──────────────────────────────────────────────
+
+const PRIORITY_CONF = {
+  critical: { label: "Critical", dot: "#A32D2D", headerBg: "#FEF2F2", border: "#FCA5A5", ctaBg: "#FCEBEB", ctaColor: "#A32D2D", cta: "Resolve" },
+  high:     { label: "High",     dot: "#854F0B", headerBg: "#FFFBEB", border: "#FCD34D", ctaBg: "#FEF3CD", ctaColor: "#854F0B", cta: "Review"  },
+  medium:   { label: "Medium",   dot: "#534AB7", headerBg: "#EEF2FF", border: "#A5B4FC", ctaBg: "#EEEDFB", ctaColor: "#534AB7", cta: "Open"    },
+  normal:   { label: "Normal",   dot: "#475569", headerBg: "#F8FAFC", border: "#CBD5E1", ctaBg: "#F1F5F9", ctaColor: "#475569", cta: "Open"    },
+  low:      { label: "Low",      dot: "#94a3b8", headerBg: "#F8FAFC", border: "#E2E8F0", ctaBg: "#F1F5F9", ctaColor: "#94a3b8", cta: "Open"    },
+} as const;
+
+function PriorityGroupedList({
+  actions,
+  onOpen,
+}: Readonly<{
+  actions: NextBestAction[];
+  onOpen: (id: string | null) => void;
+}>) {
+  type PKey = keyof typeof PRIORITY_CONF;
+  const ORDER: PKey[] = ["critical", "high", "medium", "normal", "low"];
+
+  const groups = ORDER.map((p) => ({
+    ...PRIORITY_CONF[p],
+    key: p,
+    items: actions.filter((a) => (a.priority ?? "normal") === p),
+  })).filter((g) => g.items.length > 0);
+
+  if (groups.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      {groups.map((group) => (
+        <div
+          key={group.key}
+          style={{
+            overflow: "hidden",
+            borderRadius: 12,
+            border: `0.5px solid ${group.border}`,
+            boxShadow: "0 1px 3px rgb(12 35 64 / 0.05)",
+          }}
+        >
+          {/* Group header */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 16px",
+              background: group.headerBg,
+              borderBottom: `0.5px solid ${group.border}`,
+            }}
+          >
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: group.dot,
+                flexShrink: 0,
+              }}
+            />
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                color: group.dot,
+              }}
+            >
+              {group.label}
+            </span>
+            <span
+              style={{
+                marginLeft: "auto",
+                fontSize: 11,
+                color: "#94a3b8",
+                fontWeight: 500,
+              }}
+            >
+              {group.items.length} {group.items.length === 1 ? "action" : "actions"}
+            </span>
+          </div>
+
+          {/* Action rows */}
+          <div style={{ background: "#ffffff" }}>
+            {group.items.map((action, idx) => {
+              const isOverdue =
+                action.status === "overdue" ||
+                (action.dueAt && new Date(action.dueAt).getTime() < Date.now());
+              return (
+                <div
+                  key={action.persistedId ?? action.id}
+                  onClick={() => onOpen(action.persistedId ?? null)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "11px 16px",
+                    borderTop: idx === 0 ? "none" : "0.5px solid #f1f5f9",
+                    borderLeft: `3px solid ${group.dot}`,
+                    cursor: "pointer",
+                    transition: "background 0.12s",
+                    background: isOverdue ? (group.key === "critical" ? "#FEF2F2" : "#FFFBEB") : "#ffffff",
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = group.headerBg; }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLDivElement).style.background = isOverdue
+                      ? group.key === "critical" ? "#FEF2F2" : "#FFFBEB"
+                      : "#ffffff";
+                  }}
+                >
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    {/* Category chip + status */}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 3, alignItems: "center" }}>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.04em",
+                          padding: "1px 6px",
+                          borderRadius: 5,
+                          background: group.headerBg,
+                          color: group.dot,
+                        }}
+                      >
+                        {action.category.replace(/_/g, " ")}
+                      </span>
+                      {action.status === "escalated" && (
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 5, background: "#FEF3CD", color: "#854F0B" }}>
+                          Escalated
+                        </span>
+                      )}
+                      {isOverdue && action.status !== "overdue" && (
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 5, background: "#FCEBEB", color: "#A32D2D" }}>
+                          Overdue
+                        </span>
+                      )}
+                    </div>
+                    {/* Title */}
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#0c2340", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {action.title}
+                    </p>
+                    {/* Reason / entity */}
+                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {action.reason ?? (action.entityType ? action.entityType.replace(/_/g, " ") : null) ?? action.category.replace(/_/g, " ")}
+                    </p>
+                  </div>
+
+                  {/* Right side: due date + CTA */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                    {action.dueAt && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: isOverdue ? 600 : 400,
+                          color: isOverdue ? "#A32D2D" : "#94a3b8",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {isOverdue ? "⚠ " : ""}
+                        {new Date(action.dueAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onOpen(action.persistedId ?? null); }}
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        padding: "5px 12px",
+                        borderRadius: 8,
+                        border: "none",
+                        cursor: "pointer",
+                        background: group.ctaBg,
+                        color: group.ctaColor,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {group.cta} →
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Page types ───────────────────────────────────────────────────────────────
+
 type ActionCenterPageProps = {
   role: NextBestActionRole;
   title?: string;
@@ -245,48 +439,7 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
           onOpen={(action) => setDetailId(action.persistedId ?? null)}
         />
       ) : (
-        <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
-          {actions.map((action) => {
-            const dotColor =
-              action.priority === "critical" ? "#A32D2D" :
-              action.priority === "high"     ? "#854F0B" :
-              action.priority === "medium"   ? "#534AB7" : "#888780";
-            const ctaLabel =
-              action.priority === "critical" ? "Resolve →" :
-              action.priority === "high"     ? "Review →"  : "Open →";
-            return (
-              <div
-                key={action.persistedId ?? action.id}
-                className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 cursor-pointer"
-                onClick={() => setDetailId(action.persistedId ?? null)}
-              >
-                <span
-                  className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full"
-                  style={{ background: dotColor }}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-slate-900">{action.title}</p>
-                  <p className="text-xs text-slate-500">
-                    {action.category.replace(/_/g, " ")}
-                    {action.entityType ? ` · ${action.entityType.replace(/_/g, " ")}` : ""}
-                    {action.status === "overdue" ? " · overdue" : ""}
-                    {action.status === "escalated" ? " · escalated" : ""}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="flex-shrink-0 text-xs font-semibold text-indigo-700 hover:text-indigo-900"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDetailId(action.persistedId ?? null);
-                  }}
-                >
-                  {ctaLabel}
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        <PriorityGroupedList actions={actions} onOpen={(id) => setDetailId(id)} />
       )}
 
       <p className="text-[10px] text-slate-500">{NBA_DISCLAIMER}</p>
