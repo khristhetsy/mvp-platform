@@ -73,36 +73,44 @@ alter table admin_lesson_assignments enable row level security;
 alter table learning_deliverable_submissions enable row level security;
 
 -- learning_course_schedules: founder reads/writes own rows; admin reads all
+drop policy if exists "founders_own_schedule" on learning_course_schedules;
 create policy "founders_own_schedule" on learning_course_schedules
   for all using (founder_id = auth.uid());
 
+drop policy if exists "admin_all_schedules" on learning_course_schedules;
 create policy "admin_all_schedules" on learning_course_schedules
   for select using (
     exists (select 1 from profiles where id = auth.uid() and role in ('ADMIN', 'ANALYST'))
   );
 
 -- admin_learning_stage_overrides: admin manages; founders read own
+drop policy if exists "admin_manage_overrides" on admin_learning_stage_overrides;
 create policy "admin_manage_overrides" on admin_learning_stage_overrides
   for all using (
     exists (select 1 from profiles where id = auth.uid() and role in ('ADMIN', 'ANALYST'))
   );
 
+drop policy if exists "founders_read_own_overrides" on admin_learning_stage_overrides;
 create policy "founders_read_own_overrides" on admin_learning_stage_overrides
   for select using (founder_id = auth.uid());
 
 -- admin_lesson_assignments: admin manages; founders read own
+drop policy if exists "admin_manage_assignments" on admin_lesson_assignments;
 create policy "admin_manage_assignments" on admin_lesson_assignments
   for all using (
     exists (select 1 from profiles where id = auth.uid() and role in ('ADMIN', 'ANALYST'))
   );
 
+drop policy if exists "founders_read_own_assignments" on admin_lesson_assignments;
 create policy "founders_read_own_assignments" on admin_lesson_assignments
   for select using (founder_id = auth.uid());
 
 -- learning_deliverable_submissions: founder owns; admin reads all
+drop policy if exists "founders_own_deliverables" on learning_deliverable_submissions;
 create policy "founders_own_deliverables" on learning_deliverable_submissions
   for all using (founder_id = auth.uid());
 
+drop policy if exists "admin_read_deliverables" on learning_deliverable_submissions;
 create policy "admin_read_deliverables" on learning_deliverable_submissions
   for select using (
     exists (select 1 from profiles where id = auth.uid() and role in ('ADMIN', 'ANALYST'))
