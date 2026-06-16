@@ -94,13 +94,27 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Invalid onboarding payload.", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { data: company, error: companyError } = await auth.supabase
+  let { data: company, error: companyError } = await auth.supabase
     .from("companies")
     .select("*")
     .eq("founder_id", auth.profile.id)
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
+
+  // First-time founder: create a stub company so onboarding can proceed
+  if (!company && !companyError) {
+    const name = parsed.data.company_name?.trim() || auth.profile.email?.split("@")[0] || "My Company";
+    const { data: created, error: createError } = await auth.supabase
+      .from("companies")
+      .insert({ founder_id: auth.profile.id, company_name: name, status: "draft" })
+      .select("*")
+      .single();
+    if (createError || !created) {
+      return NextResponse.json({ error: createError?.message ?? "Could not create company." }, { status: 500 });
+    }
+    company = created;
+  }
 
   if (companyError || !company) {
     return NextResponse.json({ error: "Company not found." }, { status: 404 });
