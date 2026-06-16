@@ -199,6 +199,10 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
       { href: "/founder/pitch-practice", label: "Pitch practice" },
       { href: "/founder/email-sequence", label: "Email sequences" },
       { href: "/founder/due-diligence", label: "Due diligence checklist" },
+      { href: "/founder/investor-update", label: "Investor update builder" },
+      { href: "/founder/funding-timeline", label: "Funding timeline" },
+      { href: "/founder/board-prep", label: "Board meeting prep" },
+      { href: "/founder/kpi-glossary", label: "KPI glossary" },
     ],
   },
   {
