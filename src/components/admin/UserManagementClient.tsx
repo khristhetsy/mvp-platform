@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Users } from "lucide-react";
+import { Users, Trash2 } from "lucide-react";
 import type { UserRole } from "@/lib/supabase/types";
 
 type UserStatus = "active" | "invited" | "inactive";
@@ -111,6 +111,7 @@ export function UserManagementClient() {
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [pendingRoles, setPendingRoles] = useState<Record<string, UserRole>>({});
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -179,6 +180,27 @@ export function UserManagementClient() {
       setTimeout(() => setStatusMsg(null), 3000);
     } catch (err) {
       setStatusMsg(`Error: ${err instanceof Error ? err.message : "Update failed."}`);
+    } finally {
+      setSaving((prev) => { const next = new Set(prev); next.delete(userId); return next; });
+    }
+  }, [load]);
+
+  const deleteUser = useCallback(async (userId: string) => {
+    setSaving((prev) => new Set(prev).add(userId));
+    setConfirmDeleteId(null);
+    try {
+      const res = await fetch("/api/admin/users/manage", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Delete failed.");
+      setStatusMsg("User permanently deleted.");
+      await load();
+      setTimeout(() => setStatusMsg(null), 3000);
+    } catch (err) {
+      setStatusMsg(`Error: ${err instanceof Error ? err.message : "Delete failed."}`);
     } finally {
       setSaving((prev) => { const next = new Set(prev); next.delete(userId); return next; });
     }
@@ -269,10 +291,10 @@ export function UserManagementClient() {
         <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-2">
           <input type="checkbox" className="h-4 w-4 rounded" checked={selectedIds.size === filtered.length && filtered.length > 0} onChange={toggleAll} />
           <span className="flex-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">User</span>
-          <span className="w-24 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Role</span>
+          <span className="w-20 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Role</span>
           <span className="w-20 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Status</span>
           <span className="w-24 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Last seen</span>
-          <span className="w-40"></span>
+          <span className="w-52"></span>
         </div>
 
         {/* Rows */}
@@ -307,7 +329,7 @@ export function UserManagementClient() {
                 </div>
 
                 {/* Role badge */}
-                <div className="w-24">
+                <div className="w-20">
                   <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${ROLE_COLORS[user.role] ?? "bg-slate-100 text-slate-700"}`}>
                     {ROLE_LABELS[user.role] ?? user.role}
                   </span>
@@ -324,10 +346,10 @@ export function UserManagementClient() {
                 <div className="w-24 text-xs text-slate-500">{user.last_seen_label}</div>
 
                 {/* Actions */}
-                <div className="flex w-40 shrink-0 items-center gap-1.5">
+                <div className="flex w-52 shrink-0 items-center justify-end gap-1.5">
                   {isInactive ? (
                     <>
-                      <select disabled className="flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs opacity-40">
+                      <select disabled className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-xs opacity-40">
                         <option>{ROLE_LABELS[user.role]}</option>
                       </select>
                       <button
@@ -344,7 +366,7 @@ export function UserManagementClient() {
                       <select
                         value={pendingRole}
                         onChange={(e) => setPendingRoles((p) => ({ ...p, [user.id]: e.target.value as UserRole }))}
-                        className="flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs"
+                        className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-xs"
                       >
                         {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                       </select>
@@ -363,7 +385,7 @@ export function UserManagementClient() {
                         value={pendingRole}
                         disabled={user.is_super_admin}
                         onChange={(e) => setPendingRoles((p) => ({ ...p, [user.id]: e.target.value as UserRole }))}
-                        className="flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs disabled:opacity-40"
+                        className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-xs disabled:opacity-40"
                       >
                         {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                       </select>
@@ -375,15 +397,41 @@ export function UserManagementClient() {
                       >
                         {isSaving ? "…" : "Save"}
                       </button>
+                    </>
+                  )}
+
+                  {/* Hard-delete (all states except self/super-admin) */}
+                  {!user.is_super_admin && (
+                    confirmDeleteId === user.id ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-[11px] text-red-700 font-medium">Sure?</span>
+                        <button
+                          type="button"
+                          disabled={isSaving}
+                          onClick={() => void deleteUser(user.id)}
+                          className="rounded-lg border border-[#F7C1C1] bg-[#FCEBEB] px-2 py-1.5 text-[11px] font-semibold text-[#A32D2D] hover:bg-[#F9D5D5] disabled:opacity-50"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-medium text-slate-600 hover:bg-slate-50"
+                        >
+                          No
+                        </button>
+                      </div>
+                    ) : (
                       <button
                         type="button"
-                        disabled={isSaving || user.is_super_admin}
-                        onClick={() => void patchUser(user.id, { is_active: false })}
-                        className="rounded-lg border border-[#F7C1C1] bg-white px-2.5 py-1.5 text-xs font-medium text-[#A32D2D] hover:bg-[#FCEBEB] disabled:opacity-40"
+                        disabled={isSaving}
+                        onClick={() => setConfirmDeleteId(user.id)}
+                        title="Permanently delete user"
+                        className="rounded-lg border border-[#F7C1C1] bg-white p-1.5 text-[#A32D2D] hover:bg-[#FCEBEB] disabled:opacity-40"
                       >
-                        {isSaving ? "…" : "Deactivate"}
+                        <Trash2 className="h-3.5 w-3.5" />
                       </button>
-                    </>
+                    )
                   )}
                 </div>
               </div>

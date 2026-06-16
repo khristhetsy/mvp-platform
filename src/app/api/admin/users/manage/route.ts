@@ -75,6 +75,49 @@ export async function GET() {
   return NextResponse.json({ users, audit: auditEntries, roles: ROLES });
 }
 
+// DELETE — hard-delete user from Supabase Auth + profiles
+export async function DELETE(req: NextRequest): Promise<Response> {
+  const auth = await requireManageUsersApi();
+  if ("error" in auth) return auth.error as Response;
+
+  const body = await req.json().catch(() => ({}));
+  const userId = body.userId;
+  if (!userId || typeof userId !== "string") {
+    return NextResponse.json({ error: "userId required." }, { status: 400 });
+  }
+  if (userId === auth.userId) {
+    return NextResponse.json({ error: "Cannot delete your own account." }, { status: 400 });
+  }
+
+  const admin = createServiceRoleClient() as any;
+
+  const { data: target } = await admin
+    .from("profiles")
+    .select("role, is_super_admin, full_name, email")
+    .eq("id", userId)
+    .single();
+
+  if (target?.is_super_admin) {
+    return NextResponse.json({ error: "Cannot delete a super admin account." }, { status: 403 });
+  }
+
+  // Hard-delete from Supabase Auth (profiles row cascades via FK)
+  const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
+  if (deleteError) {
+    return NextResponse.json({ error: deleteError.message ?? "Delete failed." }, { status: 500 });
+  }
+
+  await writeAuditLog(auth.supabase, {
+    userId: auth.userId,
+    action: "admin.user_deleted",
+    entityType: "profile",
+    entityId: userId,
+    metadata: { targetEmail: target?.email, targetName: target?.full_name },
+  });
+
+  return NextResponse.json({ success: true });
+}
+
 // PATCH — update role or is_active
 const patchSchema = z.object({
   userId: z.string().uuid(),
