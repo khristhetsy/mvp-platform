@@ -1,20 +1,14 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FounderAppShell } from "@/components/FounderAppShell";
-import { FounderOnboardingWizard } from "@/components/FounderOnboardingWizard";
-import { FounderRemediationActionPlan } from "@/components/FounderRemediationActionPlan";
+import { FounderConversationalOnboarding } from "@/components/founder/FounderConversationalOnboarding";
 import { loadFounderOnboardingPageData } from "@/lib/onboarding/load-founder-onboarding";
-import { loadFounderRemediationPlan } from "@/lib/remediation/load-founder-remediation";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function FounderOnboardingPage() {
   const profile = await requireRole(["founder"]);
-  const [data, remediation] = await Promise.all([
-    loadFounderOnboardingPageData(profile),
-    loadFounderRemediationPlan(profile),
-  ]);
+  const data = await loadFounderOnboardingPageData(profile);
 
   if (!data) {
     redirect("/auth/sign-in");
@@ -25,47 +19,22 @@ export default async function FounderOnboardingPage() {
       profileName={profile.full_name ?? profile.email ?? "Founder"}
       profileSubtitle={data.company.company_name}
     >
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+      <div className="space-y-6">
         <div className="max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-600">Founder onboarding</p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
-            Build investor readiness during your trial
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Founder onboarding</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+            Let&apos;s get you set up
           </h1>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Complete each step to strengthen your company profile, diligence posture, and visibility to institutional
-            investors. Progress is saved automatically — resume anytime.
-          </p>
-          <p className="mt-3 text-sm text-slate-500">
-            <Link href="/founder/dashboard" className="font-semibold text-indigo-600 hover:text-indigo-500">
-              Skip to dashboard
-            </Link>
-            {" · "}
-            <Link href="/founder/readiness" className="font-semibold text-indigo-600 hover:text-indigo-500">
-              Improve readiness
-            </Link>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            Answer a few quick questions. We&apos;ll personalise your experience and give you a clear starting action plan.
           </p>
         </div>
 
-        <div className="mt-8">
-          <FounderOnboardingWizard
-            company={data.company}
-            documents={data.documents}
-            initialProgress={data.progress}
-          />
-        </div>
-
-        {remediation.summary.active > 0 ? (
-          <div className="mt-8">
-            <FounderRemediationActionPlan
-              tasks={remediation.tasks}
-              summary={remediation.summary}
-              learningLinks={remediation.learningLinks}
-              compact
-              title="Gaps to close while onboarding"
-            />
-          </div>
-        ) : null}
-      </section>
+        <FounderConversationalOnboarding
+          company={data.company}
+          founderName={profile.full_name ?? profile.email ?? "Founder"}
+        />
+      </div>
     </FounderAppShell>
   );
 }
