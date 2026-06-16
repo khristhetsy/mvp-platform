@@ -11,7 +11,7 @@ import { listFounderChecklistSummary } from "@/lib/spv/checklist";
 import { listFounderClosingSummaries } from "@/lib/spv/closing-reviews";
 import { listFounderPackageSummaries } from "@/lib/spv/document-packages";
 import { listFounderSpvSummary } from "@/lib/spv/spv-workflow";
-import { formatPledgeTotal, getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
+import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -19,6 +19,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import type { Company } from "@/lib/supabase/types";
 import { CapitalRaiseCardsClient } from "@/components/founder/CapitalRaiseCardsClient";
+import { CapitalRaiseOverviewClient } from "@/components/founder/CapitalRaiseOverviewClient";
 
 export const dynamic = "force-dynamic";
 
@@ -165,18 +166,11 @@ export default async function FounderCapitalRaisePage() {
 
           <section className="mt-8 grid gap-6 xl:grid-cols-2">
             <WorkspacePanel title="Capital Raise Overview" subtitle="Non-binding marketplace interest">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 p-4 ring-1 ring-indigo-100">
-                  <p className="text-sm font-medium text-indigo-700">Total pledged</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-950">
-                    {formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
-                  </p>
-                </div>
-                <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                  <p className="text-sm font-medium text-slate-600">Investor count</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-950">{pledgeSummary.investorCount}</p>
-                </div>
-              </div>
+              <CapitalRaiseOverviewClient
+                pledgeSummary={pledgeSummary}
+                investorActivity={investorActivity}
+                fundingAmount={company.funding_amount ? Number(company.funding_amount) : null}
+              />
               {pledgeError ? null : pledgeSummary.totalPledged === 0 ? (
                 <p className="mt-4 text-sm text-amber-900">
                   Pledge query succeeded but total is 0 for company_id={company.id}.
