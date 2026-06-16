@@ -27,6 +27,7 @@ import { listCompanyDocuments } from "@/lib/data/documents";
 import { CapitalReadinessSection } from "@/components/founder/CapitalReadinessSection";
 import { DashboardPipelinePanel } from "@/components/founder/DashboardPipelinePanel";
 import { FounderProactiveInsights } from "@/components/founder/FounderProactiveInsights";
+import { FounderWeeklyDigest } from "@/components/founder/FounderWeeklyDigest";
 
 export const dynamic = "force-dynamic";
 
@@ -143,7 +144,21 @@ export default async function FounderDashboardPage() {
           />
         </div>
 
-        {/* 2. Proactive AI insights */}
+        {/* 2. Weekly raise digest */}
+        <div className="mb-8">
+          <FounderWeeklyDigest
+            rooms={activeRooms ?? []}
+            documents={documents ?? []}
+            unresolvedQCount={unresolvedQCount ?? 0}
+            readinessScore={readinessScore}
+            strongMatchCount={investorFit?.strongMatchCount ?? 0}
+            investorActivityTotal={investorActivityTotal}
+            companyCreatedAt={company?.created_at ?? null}
+            founderName={profile.full_name ?? profile.email ?? "Founder"}
+          />
+        </div>
+
+        {/* 3. Proactive AI insights */}
         <div className="mb-8">
           <FounderProactiveInsights
             rooms={activeRooms ?? []}
