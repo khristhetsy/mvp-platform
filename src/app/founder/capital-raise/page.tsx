@@ -13,6 +13,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import type { Company } from "@/lib/supabase/types";
 import { CapitalRaiseCardsClient } from "@/components/founder/CapitalRaiseCardsClient";
 import { CapitalRaiseOverviewClient } from "@/components/founder/CapitalRaiseOverviewClient";
+import { RoundStructureCalculator } from "@/components/founder/RoundStructureCalculator";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +94,11 @@ export default async function FounderCapitalRaisePage() {
             investorActivity={investorActivity}
             raiseStatus={raiseStatus}
           />
+
+          {/* Round structure calculator */}
+          <section className="mt-8">
+            <RoundStructureCalculator />
+          </section>
 
           <section className="mt-8 grid gap-6 xl:grid-cols-2">
             <WorkspacePanel title="Capital Raise Overview" subtitle="Non-binding marketplace interest">
