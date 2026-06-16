@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { ActionAnalyticsStrip } from "@/components/actions/ActionAnalyticsStrip";
+import { FounderActionAnalyticsCards } from "@/components/actions/FounderActionAnalyticsCards";
 import { InvestorActionAnalyticsCards } from "@/components/actions/InvestorActionAnalyticsCards";
 import { ActionBulkToolbar } from "@/components/actions/ActionBulkToolbar";
 import { ActionCard } from "@/components/actions/ActionCard";
@@ -348,17 +349,18 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
         }
       />
 
-      {analytics ? (
-        role === "investor" ? (
-          <InvestorActionAnalyticsCards analytics={analytics} actions={actions} />
-        ) : (
-          <ActionAnalyticsStrip analytics={analytics} role={role} />
-        )
-      ) : null}
-
       {role === "founder" ? (
         <>
           {/* ── Founder clean layout ─────────────────────────────────────── */}
+
+          {/* Clickable analytics cards */}
+          {analytics ? (
+            <FounderActionAnalyticsCards
+              analytics={analytics}
+              actions={actions}
+              needsAttention={needsAttention}
+            />
+          ) : null}
 
           {/* Simple search */}
           <div className="flex items-center gap-3">
@@ -471,6 +473,14 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
       ) : (
         <>
           {/* ── Full layout for admin / analyst / investor ─────────────── */}
+
+          {analytics ? (
+            role === "investor" ? (
+              <InvestorActionAnalyticsCards analytics={analytics} actions={actions} />
+            ) : (
+              <ActionAnalyticsStrip analytics={analytics} role={role} />
+            )
+          ) : null}
 
           {scheduled ? <ActionCenterScheduledStrip scheduled={scheduled} /> : null}
 
