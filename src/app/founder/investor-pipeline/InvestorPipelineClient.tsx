@@ -294,26 +294,53 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
     if (selectedIds.size === 0) return;
     setImportBusy(true);
     const toImport = platformMatches.filter((m) => selectedIds.has(m.investorId));
-    await Promise.all(toImport.map((m) =>
-      fetch("/api/founder/investor-pipeline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: m.investorName,
-          investor_type: m.investorType ?? "Venture Capital",
-          investment_size: m.investmentSize !== "Not set" ? m.investmentSize : null,
-          focus_sectors: m.focusSectors,
-          location: m.geographies[0] ?? null,
-          match_score: m.matchScore,
-          source: "platform_match",
-          platform_investor_id: m.investorId,
-          outreach_status: "not_started",
-        }),
+
+    const results = await Promise.all(
+      toImport.map(async (m) => {
+        const r = await fetch("/api/founder/investor-pipeline", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: m.investorName,
+            investor_type: m.investorType ?? "Venture Capital",
+            investment_size: m.investmentSize !== "Not set" ? m.investmentSize : null,
+            focus_sectors: m.focusSectors,
+            location: m.geographies[0] ?? null,
+            match_score: Math.round(m.matchScore),
+            source: "platform_match",
+            platform_investor_id: m.investorId,
+            outreach_status: "not_started",
+          }),
+        });
+        const d = await r.json().catch(() => ({}));
+        return {
+          ok: r.ok,
+          investor: d.investor as PipelineInvestor | null,
+          error: d.error as string | null,
+        };
       })
-    ));
+    );
+
     setImportBusy(false);
+
+    const succeeded = results.filter((r) => r.ok && r.investor);
+    const failed = results.filter((r) => !r.ok);
+
+    if (succeeded.length > 0) {
+      setInvestors((prev) => [
+        ...(succeeded.map((r) => r.investor) as PipelineInvestor[]),
+        ...prev,
+      ]);
+    }
+
+    if (failed.length > 0) {
+      setMatchesError(
+        `${failed.length} investor(s) failed to import: ${failed[0]?.error ?? "Unknown error. Check Vercel logs."}`
+      );
+      return; // keep modal open so user sees the error
+    }
+
     setShowImport(false);
-    refresh();
   }
 
   // ── CSV export ────────────────────────────────────────────────────────────────
