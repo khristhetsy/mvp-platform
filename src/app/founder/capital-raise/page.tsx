@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -19,6 +18,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import type { Company } from "@/lib/supabase/types";
+import { CapitalRaiseCardsClient } from "@/components/founder/CapitalRaiseCardsClient";
 
 export const dynamic = "force-dynamic";
 
@@ -151,47 +151,17 @@ export default async function FounderCapitalRaisePage() {
         </WorkspacePanel>
       ) : (
         <>
-          <section className="grid gap-3 md:grid-cols-3">
-            <Link
-              href="/founder/investors"
-              className="group block rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-indigo-300 hover:shadow-sm"
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Indicative interest</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-950">
-                {formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
-              </p>
-              <p className="mt-1 text-xs text-slate-500">
-                From {pledgeSummary.investorCount} {pledgeSummary.investorCount === 1 ? "investor" : "investors"}
-              </p>
-              <p className="mt-3 text-xs font-semibold text-indigo-700">View investors →</p>
-            </Link>
-            <Link
-              href="/founder/capital-raise"
-              className="group block rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-indigo-300 hover:shadow-sm"
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Raise status</p>
-              <p className={`mt-2 text-2xl font-semibold ${company.is_published ? "text-emerald-700" : "text-slate-950"}`}>
-                {raiseStatus}
-              </p>
-              <p className="mt-1 text-xs text-slate-500">
-                {company.is_published ? "Live on marketplace" : "Not yet published"}
-              </p>
-              <p className={`mt-3 text-xs font-semibold ${company.is_published ? "text-emerald-700" : "text-indigo-700"}`}>
-                {company.is_published ? "Fully live" : "Publish listing →"}
-              </p>
-            </Link>
-            <Link
-              href="/founder/settings"
-              className="group block rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-indigo-300 hover:shadow-sm"
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Funding target</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-950">
-                {company.funding_amount ? formatPledgeTotal(Number(company.funding_amount)) : "TBD"}
-              </p>
-              <p className="mt-1 text-xs text-slate-500">Company funding goal</p>
-              <p className="mt-3 text-xs font-semibold text-indigo-700">Update in settings →</p>
-            </Link>
-          </section>
+          <CapitalRaiseCardsClient
+            pledgeSummary={pledgeSummary}
+            company={{
+              funding_amount: company.funding_amount ? Number(company.funding_amount) : null,
+              is_published: company.is_published ?? false,
+              review_status: company.review_status ?? null,
+              status: company.status ?? null,
+            }}
+            investorActivity={investorActivity}
+            raiseStatus={raiseStatus}
+          />
 
           <section className="mt-8 grid gap-6 xl:grid-cols-2">
             <WorkspacePanel title="Capital Raise Overview" subtitle="Non-binding marketplace interest">
