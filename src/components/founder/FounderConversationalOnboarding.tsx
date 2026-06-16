@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Company } from "@/lib/supabase/types";
+import { AIFieldHelper } from "@/components/ui/AIFieldHelper";
 
 /* ─────────────────────────── data ─────────────────────────── */
 
@@ -47,6 +48,37 @@ function formatAmount(n: number): string {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
   if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`;
   return `$${n}`;
+}
+
+function generateOnboardingDraft(opts: {
+  companyName: string;
+  industry: string | null;
+  stage: string | null;
+}): string {
+  const name = opts.companyName.trim() || "Your company";
+  const ind  = (opts.industry ?? "").toLowerCase();
+  const stageNote =
+    opts.stage && opts.stage !== "pre_revenue"
+      ? `\n\nCurrently at [${opts.stage.replaceAll("_", " ")} stage], we're focused on [next growth lever].`
+      : "";
+
+  if (ind.includes("fintech") || ind.includes("financial")) {
+    return `${name} is a fintech platform helping [target customers] [manage/process/automate] [payments/lending/financial operations] without [key pain point].\n\nWe [your core differentiator]. Unlike [legacy providers], ${name} [your key advantage].${stageNote}`;
+  }
+  if (ind.includes("health")) {
+    return `${name} is a healthtech company enabling [patients / providers] to [access / deliver] [care / diagnostics] more [affordably / effectively].\n\nWe [your mechanism]. Our platform helps [target] [outcome] while [secondary benefit].${stageNote}`;
+  }
+  if (ind.includes("saas") || ind.includes("software") || ind.includes("b2b")) {
+    return `${name} is a [B2B / SMB-focused] software platform that helps [target buyer] [achieve outcome] by [mechanism].\n\nUnlike [legacy approach / spreadsheets], we [your key advantage]. Customers typically see [X% improvement] within [timeframe].${stageNote}`;
+  }
+  if (ind.includes("ai") || ind.includes("ml")) {
+    return `${name} is an AI platform that helps [target users] [automate / predict / analyse] [workflow / data] [faster / more accurately].\n\nWe [your core technology]. Unlike [rule-based tools / manual processes], ${name} [your key advantage].${stageNote}`;
+  }
+  if (ind.includes("marketplace")) {
+    return `${name} is a marketplace connecting [buyers] with [sellers] in the [industry] space.\n\nWe [how you create value for both sides]. Unlike [existing alternatives], ${name} [your key advantage].${stageNote}`;
+  }
+
+  return `${name} is a [industry] company that helps [target customers] [achieve a specific outcome] by [your mechanism].\n\nUnlike [existing alternatives], we [your key differentiator]. [One sentence on traction or why now.]${stageNote}`;
 }
 
 function computeActionPlan(opts: {
@@ -479,9 +511,11 @@ export function FounderConversationalOnboarding({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
-              <ContextCard>
-                <strong>Pro tip:</strong> Investors spend ~8 seconds reading company descriptions. Try: &ldquo;We help [customer] [achieve outcome] by [mechanism].&rdquo; Avoid jargon — if your investor can&apos;t explain it to a colleague, they won&apos;t back it.
-              </ContextCard>
+              <AIFieldHelper
+                benchmark="Investors spend ~8 seconds reading company descriptions. Lead with the problem you solve — not how you solve it. Replace each [bracket] with your specifics, then trim to 3–4 tight sentences."
+                draft={generateOnboardingDraft({ companyName, industry, stage })}
+                onInsert={(text) => setDescription(text)}
+              />
             </>
           ) : step === 6 ? (
             <>

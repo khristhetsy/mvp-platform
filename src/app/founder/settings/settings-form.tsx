@@ -5,7 +5,59 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import type { Company } from "@/lib/supabase/types";
 import { FormField } from "@/components/ui/FormField";
+import { AIFieldHelper } from "@/components/ui/AIFieldHelper";
 import { useFormValidation, type ZodFlatErrors } from "@/hooks/useFormValidation";
+
+/* ── Draft generation ─────────────────────────────────────── */
+
+function generateDescriptionDraft(company: Company | null): string {
+  const name = company?.company_name ?? "Your company";
+  const ind   = (company?.industry ?? "").toLowerCase();
+  const stage = company?.revenue_stage ?? "pre_revenue";
+
+  const stageNote =
+    stage === "pre_revenue"
+      ? ""
+      : `\n\nCurrently at [${stage.replaceAll("_", " ")} stage], we're focused on [next growth lever, e.g. expanding to new markets / scaling the sales team].`;
+
+  if (ind.includes("fintech") || ind.includes("financial")) {
+    return `${name} is a fintech platform helping [target customers, e.g. SMBs / consumers / enterprises] [manage/process/automate] [payments/lending/financial operations] without [key pain point, e.g. high fees / slow processing / manual complexity].\n\nWe [your core differentiator]. Unlike [legacy banks / traditional providers], ${name} [your key advantage].${stageNote}`;
+  }
+  if (ind.includes("health")) {
+    return `${name} is a healthtech company enabling [patients / providers / health systems] to [access / deliver / streamline] [care / diagnostics / records] [better / faster / more affordably].\n\nWe [your mechanism]. Our [product / platform] helps [target] [outcome] while [secondary benefit, e.g. reducing admin burden / cutting costs].${stageNote}`;
+  }
+  if (ind.includes("saas") || ind.includes("software") || ind.includes("b2b")) {
+    return `${name} is a [B2B / enterprise / SMB-focused] software platform that helps [target buyer, e.g. ops teams / CFOs / HR leaders] [achieve outcome] by [mechanism].\n\nUnlike [legacy approach / spreadsheets / manual processes], we [your key advantage]. Customers typically see [X% improvement / time saved] within [timeframe].${stageNote}`;
+  }
+  if (ind.includes("edtech") || ind.includes("education")) {
+    return `${name} is an edtech platform helping [students / teachers / institutions] [learn / teach / manage] [subject / curriculum / outcomes] more effectively.\n\nWe [your mechanism]. Unlike [traditional approach], ${name} [your key differentiator, e.g. personalises learning / reduces teacher workload / improves completion rates].${stageNote}`;
+  }
+  if (ind.includes("cleantech") || ind.includes("climate") || ind.includes("energy")) {
+    return `${name} is a cleantech company helping [enterprises / utilities / consumers] [reduce / measure / offset] [carbon emissions / energy costs / waste] through [mechanism].\n\nWe [your solution]. Unlike [traditional approach], ${name} [your key advantage, e.g. requires no capital expenditure / integrates in weeks / delivers measurable ROI].${stageNote}`;
+  }
+  if (ind.includes("marketplace")) {
+    return `${name} is a marketplace connecting [buyers / demand side] with [sellers / supply side] in the [industry] space.\n\nWe [how you create value for both sides]. Unlike [existing alternatives], ${name} [your key advantage, e.g. reduces friction / improves trust / expands access].${stageNote}`;
+  }
+  if (ind.includes("e-commerce") || ind.includes("commerce") || ind.includes("retail")) {
+    return `${name} is an e-commerce company that helps [consumers / retailers / brands] [discover / buy / sell] [product category] [better / faster / more affordably].\n\nWe [your mechanism]. Unlike [Amazon / legacy retailers / traditional brands], ${name} [your key differentiator].${stageNote}`;
+  }
+  if (ind.includes("ai") || ind.includes("ml") || ind.includes("machine learning")) {
+    return `${name} is an AI platform that helps [target users, e.g. operations teams / analysts / developers] [automate / predict / analyse] [workflow / data / decisions] [faster / more accurately / at lower cost].\n\nWe [your core technology]. Unlike [rule-based tools / manual processes], ${name} [your key advantage].${stageNote}`;
+  }
+  if (ind.includes("real estate") || ind.includes("property")) {
+    return `${name} is a proptech platform that helps [buyers / sellers / landlords / brokers] [find / manage / transact] [property / leases / investments] [faster / more transparently / at lower cost].\n\nWe [your mechanism]. Unlike [traditional agents / legacy platforms], ${name} [your key advantage].${stageNote}`;
+  }
+  if (ind.includes("logistic") || ind.includes("supply chain") || ind.includes("delivery")) {
+    return `${name} is a logistics platform that helps [shippers / carriers / warehouses] [optimise / track / automate] [deliveries / routes / inventory] [faster / at lower cost / with greater visibility].\n\nWe [your mechanism]. Unlike [legacy TMS / manual coordination], ${name} [your key advantage].${stageNote}`;
+  }
+
+  // Generic fallback
+  return `${name} is a [industry] company that helps [target customers] [achieve a specific outcome] by [your mechanism or approach].\n\nUnlike [existing alternatives], we [your key differentiator]. [One sentence on traction or why now, e.g. "We've signed our first 3 enterprise customers" or "The regulatory environment is shifting — now is the right time."]${stageNote}`;
+}
+
+const DESCRIPTION_BENCHMARK =
+  "Investors spend ~8 seconds reading company descriptions. Lead with the problem you solve — not how you solve it. Replace each [bracket] with your specifics, then trim to 3–4 tight sentences.";
+
 
 const settingsSchema = z.object({
   company_name: z.string().min(2),
@@ -204,6 +256,11 @@ export function CompanySettingsForm({ company }: Props) {
           value={description}
           onChange={(e) => { setDescription(e.target.value); clearError("business_description"); }}
           disabled={isSaving}
+        />
+        <AIFieldHelper
+          benchmark={DESCRIPTION_BENCHMARK}
+          draft={generateDescriptionDraft(company)}
+          onInsert={(text) => { setDescription(text); clearError("business_description"); }}
         />
       </FormField>
 
