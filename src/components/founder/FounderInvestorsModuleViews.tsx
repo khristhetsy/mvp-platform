@@ -623,8 +623,8 @@ function FounderInvestorsModuleViewsInner({
 
       {/* ── Pipeline summary drawer overlay ── */}
       <div
-        className="pointer-events-none fixed inset-0 z-50 transition-opacity duration-200"
-        style={{ opacity: drawerGroup ? 1 : 0, pointerEvents: drawerGroup ? "auto" : "none" }}
+        className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
+        style={{ opacity: drawerGroup ? 1 : 0, pointerEvents: drawerGroup ? "auto" : "none", transition: "opacity 200ms" }}
         aria-hidden={!drawerGroup}
       >
         {/* Backdrop */}
@@ -635,13 +635,11 @@ function FounderInvestorsModuleViewsInner({
         />
         {/* Drawer panel */}
         <div
-          className="absolute bottom-0 left-0 right-0 overflow-y-auto"
+          className="relative w-full overflow-y-auto rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl"
           style={{
-            background: "white",
-            borderRadius: "16px 16px 0 0",
-            borderTop: "0.5px solid #e2e8f0",
-            maxHeight: "56vh",
-            transform: drawerGroup ? "translateY(0)" : "translateY(100%)",
+            maxWidth: 448,
+            maxHeight: 536,
+            transform: drawerGroup ? "translateY(0)" : "translateY(40px)",
             transition: "transform 280ms cubic-bezier(0.32, 0.72, 0, 1)",
           }}
           onClick={(e) => e.stopPropagation()}

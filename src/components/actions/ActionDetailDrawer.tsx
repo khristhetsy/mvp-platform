@@ -95,13 +95,14 @@ export function ActionDetailDrawer({
   const action = detail?.action;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
       <button type="button" className="absolute inset-0 bg-slate-900/30" onClick={onClose} aria-label="Close drawer" />
       <aside
         role="dialog"
         aria-modal="true"
         aria-labelledby="action-detail-title"
-        className="relative flex h-full w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-xl"
+        className="relative z-10 flex w-full flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-xl sm:rounded-2xl"
+        style={{ maxWidth: 448, maxHeight: 536 }}
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <h2 id="action-detail-title" className="text-sm font-semibold text-slate-950">Action detail</h2>

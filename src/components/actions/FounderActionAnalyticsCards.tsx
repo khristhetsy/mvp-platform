@@ -555,10 +555,11 @@ export function FounderActionAnalyticsCards({
 
       {/* Slide-up drawer */}
       <div
-        className="pointer-events-none fixed inset-0 z-50 transition-opacity duration-200"
+        className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
         style={{
           opacity: open ? 1 : 0,
           pointerEvents: open ? "auto" : "none",
+          transition: "opacity 200ms",
         }}
       >
         <div
@@ -567,13 +568,11 @@ export function FounderActionAnalyticsCards({
           onClick={() => setOpen(null)}
         />
         <div
-          className="absolute bottom-0 left-0 right-0 overflow-y-auto"
+          className="relative w-full overflow-y-auto rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl"
           style={{
-            background: "white",
-            borderRadius: "16px 16px 0 0",
-            borderTop: "0.5px solid #e2e8f0",
-            maxHeight: "56vh",
-            transform: open ? "translateY(0)" : "translateY(100%)",
+            maxWidth: 448,
+            maxHeight: 536,
+            transform: open ? "translateY(0)" : "translateY(40px)",
             transition: "transform 280ms cubic-bezier(0.32, 0.72, 0, 1)",
           }}
           onClick={(e) => e.stopPropagation()}
