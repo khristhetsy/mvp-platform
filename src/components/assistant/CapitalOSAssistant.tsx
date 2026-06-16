@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Send, Sparkles, X } from "lucide-react";
 import { suggestedPromptChips } from "@/lib/assistant/assistant-actions";
 import { modeIntroLabel } from "@/lib/assistant/assistant-prompts";
 import { ASSISTANT_DISCLAIMER } from "@/lib/assistant/assistant-policy";
@@ -209,7 +209,7 @@ export function CapitalOSAssistant() {
         <button
           type="button"
           aria-label="Close assistant backdrop"
-          className="fixed inset-0 z-[90] bg-slate-900/30 sm:bg-transparent"
+          className="fixed inset-0 z-[90] bg-slate-900/20 sm:bg-transparent"
           onClick={() => setOpen(false)}
         />
       ) : null}
@@ -220,21 +220,34 @@ export function CapitalOSAssistant() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="capitalos-assistant-title"
-          className="fixed inset-x-0 bottom-0 z-[100] flex max-h-[85vh] w-full flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-[var(--shadow-card)] sm:inset-x-auto sm:bottom-20 sm:right-4 sm:left-auto sm:w-[400px] sm:max-h-[min(560px,82vh)] sm:rounded-2xl"
+          className="fixed inset-x-0 bottom-0 z-[100] flex max-h-[85vh] w-full flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-2xl sm:inset-x-auto sm:bottom-[4.5rem] sm:right-4 sm:left-auto sm:w-[400px] sm:max-h-[min(560px,82vh)] sm:rounded-2xl"
         >
-          <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 bg-[var(--blue)] px-4 py-3 text-white sm:rounded-t-2xl">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-[var(--gold)]" strokeWidth={1.75} aria-hidden />
-                <p id="capitalos-assistant-title" className="text-sm font-semibold">
-                  {mode === "cmo_marketing" ? "CapitalOS CMO AI" : mode === "investor_pipeline" || mode === "investor_portfolio" || mode === "investor_matching" ? "CapitalOS Analysis AI" : "CapitalOS AI"}
+          {/* Gradient accent bar */}
+          <div
+            className="h-[3px] w-full shrink-0 rounded-t-2xl"
+            style={{ background: "linear-gradient(90deg, #6366f1, #8b5cf6, #a78bfa)" }}
+          />
+
+          <header className="flex shrink-0 items-center justify-between gap-3 bg-white px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+              >
+                AI
+              </div>
+              <div>
+                <p id="capitalos-assistant-title" className="text-sm font-semibold text-slate-900">
+                  {mode === "cmo_marketing" ? "CMO AI" : mode === "investor_pipeline" || mode === "investor_portfolio" || mode === "investor_matching" ? "Analysis AI" : "CapitalOS AI"}
+                </p>
+                <p className="truncate text-[10px] leading-none text-slate-500" style={{ maxWidth: 180 }}>
+                  {intro.length > 44 ? intro.slice(0, 44) + "…" : intro}
                 </p>
               </div>
-              <p className="mt-1 text-[11px] leading-4 text-slate-300">{intro}</p>
             </div>
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1.5">
               {openAiAvailable === false ? (
-                <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-medium text-amber-100">
+                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-semibold text-amber-700 ring-1 ring-amber-200">
                   Guided
                 </span>
               ) : null}
@@ -243,7 +256,7 @@ export function CapitalOSAssistant() {
                   type="button"
                   aria-label="Clear chat"
                   onClick={clearChat}
-                  className="rounded p-1.5 text-slate-300 hover:bg-white/10 hover:text-white text-[11px]"
+                  className="rounded-full px-2 py-0.5 text-[10px] font-medium text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
                 >
                   Clear
                 </button>
@@ -252,32 +265,51 @@ export function CapitalOSAssistant() {
                 type="button"
                 aria-label="Close assistant"
                 onClick={() => setOpen(false)}
-                className="rounded p-1.5 text-slate-300 hover:bg-white/10 hover:text-white"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
               >
-                ✕
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
           </header>
 
-          <div ref={scrollRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3 text-sm">
+          <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
             {messages.length === 0 ? (
-              <p className="leading-6 text-slate-600">{intro}</p>
+              <div className="rounded-xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+                <p className="text-xs leading-5 text-slate-600">{intro}</p>
+              </div>
             ) : (
-              messages.map((entry, index) => (
-                <p
-                  key={`${entry.role}-${index}`}
-                  className={`whitespace-pre-wrap rounded-lg px-3 py-2 leading-6 ${
-                    entry.role === "user" ? "ml-6 bg-slate-100 text-slate-800" : "mr-2 bg-[var(--blue-muted)] text-[var(--blue-hover)]"
-                  }`}
-                >
-                  {entry.text}
-                </p>
-              ))
+              messages.map((entry, index) =>
+                entry.role === "user" ? (
+                  <div key={`u-${index}`} className="flex justify-end">
+                    <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-tr-sm bg-indigo-600 px-3.5 py-2.5 text-sm leading-5 text-white">
+                      {entry.text}
+                    </p>
+                  </div>
+                ) : (
+                  <div key={`a-${index}`} className="flex items-start gap-2">
+                    <div
+                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
+                      style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+                    >
+                      AI
+                    </div>
+                    <p className="min-w-0 flex-1 whitespace-pre-wrap rounded-2xl rounded-tl-sm bg-slate-50 px-3.5 py-2.5 text-sm leading-5 text-slate-800 ring-1 ring-slate-200/60">
+                      {entry.text}
+                    </p>
+                  </div>
+                )
+              )
             )}
             {loading ? (
-              <p className="text-xs text-slate-400" role="status" aria-live="polite">
-                Preparing guidance…
-              </p>
+              <div className="flex items-center gap-2">
+                <div
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
+                  style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
+                >
+                  AI
+                </div>
+                <span className="text-xs text-slate-400" role="status" aria-live="polite">Preparing guidance…</span>
+              </div>
             ) : null}
             {error ? (
               <p className="text-xs text-red-600" role="alert">
@@ -288,13 +320,13 @@ export function CapitalOSAssistant() {
 
           {lastResponse?.suggestedActions?.length ? (
             <div className="shrink-0 border-t border-slate-100 px-3 py-2">
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Suggested actions</p>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Suggested actions</p>
               <div className="flex flex-wrap gap-1.5">
                 {lastResponse.suggestedActions.slice(0, 4).map((action) => (
                   <Link
                     key={action.href}
                     href={action.href}
-                    className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-medium text-slate-950 hover:border-slate-300"
+                    className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-medium text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700"
                     onClick={() => setOpen(false)}
                   >
                     {action.label}
@@ -312,7 +344,7 @@ export function CapitalOSAssistant() {
                   type="button"
                   disabled={loading}
                   onClick={() => void sendMessage(prompt)}
-                  className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-medium text-slate-700 hover:bg-white disabled:opacity-50"
+                  className="rounded-full border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[10px] font-medium text-indigo-700 transition hover:bg-indigo-100 disabled:opacity-50"
                 >
                   {prompt}
                 </button>
@@ -322,7 +354,7 @@ export function CapitalOSAssistant() {
                   type="button"
                   disabled={agentLoading || agentRequested}
                   onClick={() => void requestLiveAgent()}
-                  className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-medium text-slate-700 hover:bg-white disabled:opacity-50"
+                  className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-medium text-slate-600 transition hover:border-slate-300 disabled:opacity-50"
                 >
                   {agentRequested ? "✓ Agent requested" : agentLoading ? "Requesting…" : "Request a live agent"}
                 </button>
@@ -330,7 +362,7 @@ export function CapitalOSAssistant() {
             </div>
           </div>
 
-          <div className="flex shrink-0 gap-2 border-t border-slate-100 p-3">
+          <div className="flex shrink-0 items-center gap-2 border-t border-slate-100 p-3">
             <label htmlFor="capitalos-assistant-message" className="sr-only">
               Message CapitalOS Assistant
             </label>
@@ -343,34 +375,41 @@ export function CapitalOSAssistant() {
                 if (event.key === "Enter") void sendMessage(message);
               }}
               placeholder="Ask about this workspace…"
-              className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className="min-w-0 flex-1 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             />
             <button
               type="button"
               disabled={loading}
               onClick={() => void sendMessage(message)}
-              className="cap-btn-primary rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60"
+              aria-label="Send message"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition hover:opacity-90 disabled:opacity-50 active:scale-95"
+              style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
             >
-              Send
+              <Send className="h-4 w-4" />
             </button>
           </div>
 
-          <footer className="shrink-0 border-t border-slate-100 px-4 py-2 text-[10px] leading-4 text-slate-500">
+          <footer className="shrink-0 border-t border-slate-100 px-4 py-2 text-[10px] leading-4 text-slate-400">
             {ASSISTANT_DISCLAIMER}
           </footer>
         </div>
       ) : null}
 
+      {/* FAB toggle */}
       <button
         type="button"
         aria-label={open ? "Close CapitalOS Assistant" : "Open CapitalOS Assistant"}
         aria-expanded={open}
         aria-controls="capitalos-assistant-dialog"
         onClick={() => setOpen((value) => !value)}
-        className="fixed bottom-4 right-4 z-[100] flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-950 shadow-[var(--shadow-card)] hover:border-slate-300"
+        className="fixed bottom-4 right-4 z-[100] flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:ring-offset-2"
+        style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}
       >
-        <Sparkles className="h-4 w-4 text-[var(--gold)]" strokeWidth={1.75} aria-hidden />
-        <span className="hidden sm:inline">{open ? "Close" : "Assistant"}</span>
+        {open ? (
+          <X className="h-5 w-5 text-white" />
+        ) : (
+          <Sparkles className="h-5 w-5 text-white" strokeWidth={1.75} aria-hidden />
+        )}
       </button>
     </>
   );
