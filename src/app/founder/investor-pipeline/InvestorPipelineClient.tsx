@@ -277,7 +277,11 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
     setShowImport(true); setMatchesLoading(true); setMatchesError(null); setSelectedIds(new Set());
     const r = await fetch("/api/founder/investor-pipeline/matches");
     setMatchesLoading(false);
-    if (!r.ok) { setMatchesError("Could not load platform matches."); return; }
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      setMatchesError(d.error ?? "Could not load platform matches.");
+      return;
+    }
     const d = await r.json();
     setPlatformMatches(d.matches ?? []);
   }
