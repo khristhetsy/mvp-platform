@@ -115,28 +115,35 @@ export async function ensureSubscriptionForProfile(input: {
   const now = new Date().toISOString();
   const admin = createServiceRoleClient();
 
-  const { data, error } = await admin
+  const { error: upsertError } = await admin
     .from("subscriptions")
-    .insert({
-      profile_id: input.profileId,
-      role: input.role,
-      plan_type: defaults.plan_type,
-      subscription_status: defaults.subscription_status,
-      trial_started_at: defaults.trial_started_at,
-      trial_ends_at: defaults.trial_ends_at,
-      current_period_start: now,
-      current_period_end: defaults.trial_ends_at,
-      monthly_price_cents: defaults.monthly_price_cents,
-      currency: "USD",
-    })
-    .select("*")
-    .single();
+    .upsert(
+      {
+        profile_id: input.profileId,
+        role: input.role,
+        plan_type: defaults.plan_type,
+        subscription_status: defaults.subscription_status,
+        trial_started_at: defaults.trial_started_at,
+        trial_ends_at: defaults.trial_ends_at,
+        current_period_start: now,
+        current_period_end: defaults.trial_ends_at,
+        monthly_price_cents: defaults.monthly_price_cents,
+        currency: "USD",
+      },
+      { onConflict: "profile_id", ignoreDuplicates: true }
+    );
 
-  if (error || !data) {
-    throw new Error(`Failed to create subscription: ${error?.message ?? "unknown error"}`);
+  if (upsertError) {
+    throw new Error(`Failed to create subscription: ${upsertError.message}`);
   }
 
-  return data as SubscriptionRecord;
+  // Re-fetch after upsert (handles both insert and race-condition no-op cases)
+  const created = await getSubscription(input.profileId);
+  if (!created) {
+    throw new Error("Failed to create subscription: record not found after upsert.");
+  }
+
+  return refreshSubscriptionState(created);
 }
 
 export async function getSubscriptionForProfile(profileId: string) {
