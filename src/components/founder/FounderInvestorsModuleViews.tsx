@@ -8,6 +8,77 @@ import { MetricGrid, PageSection } from "@/components/ui/workspace-layout";
 import type { FounderInvestorCrmView, FounderInvestorRelationRow } from "@/lib/data/investor-crm";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
 
+// ─── Pipeline donut chart ─────────────────────────────────────────────────────
+
+function polarToCart(cx: number, cy: number, r: number, angleDeg: number) {
+  const rad = ((angleDeg - 90) * Math.PI) / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function donutSlicePath(cx: number, cy: number, rOuter: number, rInner: number, startAngle: number, endAngle: number) {
+  const o1 = polarToCart(cx, cy, rOuter, startAngle);
+  const o2 = polarToCart(cx, cy, rOuter, endAngle);
+  const i1 = polarToCart(cx, cy, rInner, endAngle);
+  const i2 = polarToCart(cx, cy, rInner, startAngle);
+  const large = endAngle - startAngle > 180 ? 1 : 0;
+  return [
+    `M ${o1.x.toFixed(2)} ${o1.y.toFixed(2)}`,
+    `A ${rOuter} ${rOuter} 0 ${large} 1 ${o2.x.toFixed(2)} ${o2.y.toFixed(2)}`,
+    `L ${i1.x.toFixed(2)} ${i1.y.toFixed(2)}`,
+    `A ${rInner} ${rInner} 0 ${large} 0 ${i2.x.toFixed(2)} ${i2.y.toFixed(2)}`,
+    "Z",
+  ].join(" ");
+}
+
+const DONUT_COLORS = ["#534AB7", "#3B6D11", "#0369a1", "#854F0B"] as const;
+const DONUT_LABELS = ["Interested", "Pledged", "Intro Req.", "Follow-up"] as const;
+
+function PipelineDonut({ counts }: Readonly<{ counts: [number, number, number, number] }>) {
+  const total = counts.reduce((s, v) => s + v, 0);
+  if (total === 0) return null;
+
+  const CX = 56, CY = 56, R_OUTER = 48, R_INNER = 32;
+  let angle = 0;
+
+  const slices = counts.map((count, i) => {
+    const sweep = (count / total) * 360;
+    const start = angle;
+    angle += sweep;
+    if (sweep < 1) return null;
+    return {
+      path: donutSlicePath(CX, CY, R_OUTER, R_INNER, start, angle - 0.3),
+      color: DONUT_COLORS[i],
+      label: DONUT_LABELS[i],
+      count,
+    };
+  }).filter(Boolean);
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+      <svg width="112" height="112" viewBox="0 0 112 112" style={{ flexShrink: 0 }}>
+        {slices.map((s, i) => (
+          <path key={i} d={s!.path} fill={s!.color} />
+        ))}
+        <text x={CX} y={CY + 5} textAnchor="middle" style={{ fontSize: 16, fontWeight: 700, fill: "#0c2340" }}>
+          {total}
+        </text>
+        <text x={CX} y={CY + 17} textAnchor="middle" style={{ fontSize: 9, fill: "#94a3b8" }}>
+          investors
+        </text>
+      </svg>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {slices.map((s, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            <span style={{ width: 9, height: 9, borderRadius: "50%", background: s!.color, flexShrink: 0, display: "inline-block" }} />
+            <span style={{ fontSize: 11, color: "#64748b" }}>{s!.label}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#0c2340", marginLeft: "auto", paddingLeft: 12 }}>{s!.count}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 type ViewMode = "kanban" | "grid" | "list";
 
 function formatActivityDate(value: string) {
@@ -104,6 +175,14 @@ function FounderInvestorsModuleViewsInner({
   const allRows = useMemo(() => collectAllRows(crmView), [crmView]);
   const filteredRows = useMemo(() => filterRows(allRows, query), [allRows, query]);
 
+  const donutCounts = useMemo<[number, number, number, number]>(() => {
+    const interested = allRows.filter((r) => r.actionType === "interested" || r.actionType === "saved_deal").length;
+    const pledged    = allRows.filter((r) => r.actionType === "pledged"    || r.actionType === "indicative_interest").length;
+    const intro      = allRows.filter((r) => r.actionType === "intro_requested").length;
+    const followup   = allRows.filter((r) => r.actionType === "follow_up").length;
+    return [interested, pledged, intro, followup];
+  }, [allRows]);
+
   const pipelineColumns = useMemo(() => {
     const groups: Record<string, FounderInvestorRelationRow[]> = {
       interested: [],
@@ -170,40 +249,53 @@ function FounderInvestorsModuleViewsInner({
       </div>
 
       <PageSection title="Pipeline summary" subtitle={companyName}>
-        <MetricGrid>
-          <MetricCard
-            label="Interested investors"
-            value={String(crmView.summary.totalInterestedInvestors)}
-            detail="Unique investors with interest, saves, or intro activity"
-            accent="indigo"
-            href="/founder/investors"
-          />
-          <MetricCard
-            label="Pledged / indicative"
-            value={crmView.summary.totalPledgedDisplay}
-            detail={
-              crmView.summary.totalIndicativeInterestDisplay
-                ? `${crmView.summary.totalIndicativeInterestDisplay} indicative interest declared`
-                : "Total pledged amount from investor interests"
-            }
-            accent="violet"
-            href="/founder/capital-raise"
-          />
-          <MetricCard
-            label="Intro requests"
-            value={String(crmView.summary.introRequests)}
-            detail="Investors who requested an introduction"
-            accent="blue"
-            href="/founder/messages"
-          />
-          <MetricCard
-            label="Follow-ups needed"
-            value={String(crmView.summary.followUpsNeeded)}
-            detail="Investors waiting on founder or platform follow-up"
-            accent="slate"
-            href="/founder/investors"
-          />
-        </MetricGrid>
+        <div className="flex flex-wrap items-start gap-5">
+          {donutCounts[0] + donutCounts[1] + donutCounts[2] + donutCounts[3] > 0 && (
+            <div
+              className="shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4"
+              style={{ boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)" }}
+            >
+              <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Pipeline at a glance</p>
+              <PipelineDonut counts={donutCounts} />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <MetricGrid>
+              <MetricCard
+                label="Interested investors"
+                value={String(crmView.summary.totalInterestedInvestors)}
+                detail="Unique investors with interest, saves, or intro activity"
+                accent="indigo"
+                href="/founder/investors"
+              />
+              <MetricCard
+                label="Pledged / indicative"
+                value={crmView.summary.totalPledgedDisplay}
+                detail={
+                  crmView.summary.totalIndicativeInterestDisplay
+                    ? `${crmView.summary.totalIndicativeInterestDisplay} indicative interest declared`
+                    : "Total pledged amount from investor interests"
+                }
+                accent="violet"
+                href="/founder/capital-raise"
+              />
+              <MetricCard
+                label="Intro requests"
+                value={String(crmView.summary.introRequests)}
+                detail="Investors who requested an introduction"
+                accent="blue"
+                href="/founder/messages"
+              />
+              <MetricCard
+                label="Follow-ups needed"
+                value={String(crmView.summary.followUpsNeeded)}
+                detail="Investors waiting on founder or platform follow-up"
+                accent="slate"
+                href="/founder/investors"
+              />
+            </MetricGrid>
+          </div>
+        </div>
       </PageSection>
 
       <PageSection>

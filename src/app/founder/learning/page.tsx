@@ -18,6 +18,79 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
+// ─── Professional SVG icons ────────────────────────────────────────────────────
+
+function IconLayers({ color }: { color: string }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>
+    </svg>
+  );
+}
+function IconTrendingUp({ color }: { color: string }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+    </svg>
+  );
+}
+function IconZapStage({ color }: { color: string }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+    </svg>
+  );
+}
+function IconTarget({ color }: { color: string }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+    </svg>
+  );
+}
+function IconLock() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+  );
+}
+function IconBrain({ color }: { color: string }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/>
+    </svg>
+  );
+}
+function IconCalendarDays({ color }: { color: string }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8.01" y2="14"/><line x1="12" y1="14" x2="12.01" y2="14"/><line x1="16" y1="14" x2="16.01" y2="14"/>
+    </svg>
+  );
+}
+function IconBarChart({ color }: { color: string }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+    </svg>
+  );
+}
+
+function stageIcon(stage: CapitalStage) {
+  const colors: Record<CapitalStage, string> = {
+    stage_0: "#1D4ED8",
+    stage_1: "#15803D",
+    stage_2: "#C2410C",
+    stage_3: "#7E22CE",
+  };
+  const color = colors[stage] ?? "#534AB7";
+  if (stage === "stage_0") return <IconLayers color={color} />;
+  if (stage === "stage_1") return <IconTrendingUp color={color} />;
+  if (stage === "stage_2") return <IconZapStage color={color} />;
+  return <IconTarget color={color} />;
+}
+
 const STAGES: CapitalStage[] = ["stage_0", "stage_1", "stage_2", "stage_3"];
 
 export default async function FounderLearningPage() {
@@ -124,10 +197,10 @@ export default async function FounderLearningPage() {
                         className="group flex items-center gap-4 px-6 py-4 transition hover:bg-slate-50"
                       >
                         <div
-                          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-base"
+                          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg"
                           style={{ background: unlocked ? meta.bgColor : "#F1F5F9" }}
                         >
-                          {unlocked ? meta.icon : "🔒"}
+                          {unlocked ? stageIcon(stage) : <IconLock />}
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-slate-900">{meta.label}</p>
@@ -256,17 +329,24 @@ export default async function FounderLearningPage() {
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Quick actions</p>
                 </div>
                 <div className="divide-y divide-slate-100">
-                  {[
-                    { href: "/founder/learning/plan", icon: "🤖", label: "My AI learning plan" },
-                    { href: "/founder/learning/schedule", icon: "📅", label: "View my schedule" },
-                    { href: "/founder/learning/progress", icon: "📈", label: "Progress & badges" },
-                  ].map((link) => (
+                  {(
+                    [
+                      { href: "/founder/learning/plan",     svgIcon: <IconBrain color="#534AB7" />,          label: "My AI learning plan", bg: "#EEEDFB" },
+                      { href: "/founder/learning/schedule", svgIcon: <IconCalendarDays color="#3B6D11" />,   label: "View my schedule",    bg: "#EAF3DE" },
+                      { href: "/founder/learning/progress", svgIcon: <IconBarChart color="#92400E" />,        label: "Progress & badges",   bg: "#FEF3C7" },
+                    ]
+                  ).map((link) => (
                     <Link
                       key={link.href}
                       href={link.href}
                       className="group flex items-center gap-3 px-5 py-3.5 transition hover:bg-slate-50"
                     >
-                      <span className="text-base">{link.icon}</span>
+                      <div
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                        style={{ background: link.bg }}
+                      >
+                        {link.svgIcon}
+                      </div>
                       <span className="text-sm font-medium text-slate-800">{link.label}</span>
                       <span className="ml-auto text-xs text-indigo-600 opacity-0 transition group-hover:opacity-100">
                         →
