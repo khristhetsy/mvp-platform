@@ -59,16 +59,17 @@ export const founderOnboardingStepSchema = z.object({
       "investor_readiness_review",
     ])
     .optional(),
-  company_name: z.string().min(2).optional(),
-  website: z.string().url().optional().or(z.literal("")),
-  industry: z.string().min(2).optional(),
-  country: z.string().min(2).optional(),
+  // All string fields accept empty strings — empty means "skip this field"
+  company_name: z.string().optional(),
+  website: z.string().optional(),
+  industry: z.string().optional(),
+  country: z.string().optional(),
   state: z.string().optional(),
-  business_description: z.string().min(20).optional(),
-  founder_goals: z.string().min(10).optional(),
+  business_description: z.string().optional(),
+  founder_goals: z.string().optional(),
   funding_amount: z.coerce.number().positive().optional(),
-  revenue_stage: z.string().min(2).optional(),
-  use_of_funds: z.string().min(10).optional(),
+  revenue_stage: z.string().optional(),
+  use_of_funds: z.string().optional(),
 });
 
 export const documentUploadSchema = z.object({

@@ -31,16 +31,17 @@ async function requireCompanyManager(supabase: Awaited<ReturnType<typeof import(
 function companyPatchFromStep(parsed: ReturnType<typeof founderOnboardingStepSchema.parse>): Partial<Company> {
   const patch: Partial<Company> = {};
 
-  if (parsed.company_name != null) patch.company_name = parsed.company_name;
-  if (parsed.website != null) patch.website = parsed.website || null;
-  if (parsed.industry != null) patch.industry = parsed.industry;
-  if (parsed.country != null) patch.country = parsed.country;
-  if (parsed.state != null) patch.state = parsed.state || null;
-  if (parsed.business_description != null) patch.business_description = parsed.business_description;
-  if (parsed.founder_goals != null) patch.founder_goals = parsed.founder_goals;
+  if (parsed.company_name?.trim()) patch.company_name = parsed.company_name.trim();
+  if (parsed.website?.trim()) patch.website = parsed.website.trim();
+  else if (parsed.website === "") patch.website = null;
+  if (parsed.industry?.trim()) patch.industry = parsed.industry.trim();
+  if (parsed.country?.trim()) patch.country = parsed.country.trim();
+  if (parsed.state !== undefined) patch.state = parsed.state || null;
+  if (parsed.business_description?.trim()) patch.business_description = parsed.business_description.trim();
+  if (parsed.founder_goals?.trim()) patch.founder_goals = parsed.founder_goals.trim();
   if (parsed.funding_amount != null) patch.funding_amount = parsed.funding_amount;
-  if (parsed.revenue_stage != null) patch.revenue_stage = parsed.revenue_stage;
-  if (parsed.use_of_funds != null) patch.use_of_funds = parsed.use_of_funds;
+  if (parsed.revenue_stage?.trim()) patch.revenue_stage = parsed.revenue_stage.trim();
+  if (parsed.use_of_funds?.trim()) patch.use_of_funds = parsed.use_of_funds.trim();
 
   if (parsed.step === "investor_readiness_review") {
     patch.review_status = "pending";
