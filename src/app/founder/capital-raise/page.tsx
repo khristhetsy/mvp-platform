@@ -6,11 +6,6 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listFounderCompanyUpdates } from "@/lib/company-updates/company-updates";
 import { FounderCompanyUpdatesPanel } from "@/components/FounderCompanyUpdatesPanel";
 import { FounderInvestorPipelineKanban } from "@/components/FounderInvestorPipelineKanban";
-import { FounderSpvStatusPanel } from "@/components/FounderSpvStatusPanel";
-import { listFounderChecklistSummary } from "@/lib/spv/checklist";
-import { listFounderClosingSummaries } from "@/lib/spv/closing-reviews";
-import { listFounderPackageSummaries } from "@/lib/spv/document-packages";
-import { listFounderSpvSummary } from "@/lib/spv/spv-workflow";
 import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
@@ -33,15 +28,6 @@ export default async function FounderCapitalRaisePage() {
   let pledgeSummary = { totalPledged: 0, investorCount: 0, currency: "USD" };
   let investorActivity: Awaited<ReturnType<typeof listFounderInvestorActivity>> | null = null;
   let companyUpdates: Awaited<ReturnType<typeof listFounderCompanyUpdates>>["data"] = [];
-  let spvOpportunities: Awaited<ReturnType<typeof listFounderSpvSummary>>["opportunities"] = [];
-  let spvParticipations: Awaited<ReturnType<typeof listFounderSpvSummary>>["participations"] = [];
-  let spvChecklistSummaryBySpv: Awaited<ReturnType<typeof listFounderChecklistSummary>>["data"] = {};
-  let spvPackageSummaryBySpv: Awaited<ReturnType<typeof listFounderPackageSummaries>>["data"] = {};
-  let spvClosingSummaryBySpv: Awaited<ReturnType<typeof listFounderClosingSummaries>>["data"] = {};
-  let spvExecutionSummaryBySpv: Record<
-    string,
-    { executionPct: number; signerPct: number; nextStep: string }
-  > = {};
 
   try {
     company = await ensureFounderCompanyForUser(profile);
@@ -73,51 +59,6 @@ export default async function FounderCapitalRaisePage() {
       companyUpdates = [];
     }
 
-    try {
-      const supabase = await createServerSupabaseClient();
-      const spvSummary = await listFounderSpvSummary(supabase, company.id);
-      spvOpportunities = spvSummary.opportunities;
-      spvParticipations = spvSummary.participations;
-
-      const checklistSummary = await listFounderChecklistSummary(
-        supabase,
-        spvOpportunities.map((spv) => spv.id),
-      );
-      spvChecklistSummaryBySpv = checklistSummary.data ?? {};
-
-      const packageSummary = await listFounderPackageSummaries(
-        supabase,
-        spvOpportunities.map((spv) => spv.id),
-      );
-      spvPackageSummaryBySpv = packageSummary.data ?? {};
-
-      const closingSummary = await listFounderClosingSummaries(
-        supabase,
-        spvOpportunities.map((spv) => spv.id),
-      );
-      spvClosingSummaryBySpv = closingSummary.data ?? {};
-
-      for (const spv of spvOpportunities) {
-        const pkg = spvPackageSummaryBySpv[spv.id];
-        const partsForSpv = spvParticipations.filter((p) => p.spv_opportunity_id === spv.id);
-        const activeCount = partsForSpv.filter((p) => !["declined", "canceled"].includes(p.status)).length;
-        const readyCount = spv.investors_document_ready_count ?? 0;
-        spvExecutionSummaryBySpv[spv.id] = {
-          executionPct: spv.package_readiness_pct ?? pkg?.readinessPct ?? 0,
-          signerPct:
-            activeCount > 0 ? Math.round((readyCount / activeCount) * 100) : 0,
-          nextStep:
-            "Complete operational packages and investor requirements — DocuSign not connected (readiness only)",
-        };
-      }
-    } catch {
-      spvOpportunities = [];
-      spvParticipations = [];
-      spvChecklistSummaryBySpv = {};
-      spvPackageSummaryBySpv = {};
-      spvClosingSummaryBySpv = {};
-      spvExecutionSummaryBySpv = {};
-    }
   }
 
   const raiseStatus = company?.is_published ? "Published" : (company?.review_status ?? company?.status ?? "Draft");
@@ -193,17 +134,6 @@ export default async function FounderCapitalRaisePage() {
                 <FounderInvestorPipelineKanban activity={investorActivity} />
               )}
             </WorkspacePanel>
-          </section>
-
-          <section className="mt-8">
-            <FounderSpvStatusPanel
-              opportunities={spvOpportunities}
-              participations={spvParticipations}
-              checklistSummaryBySpv={spvChecklistSummaryBySpv ?? {}}
-              packageSummaryBySpv={spvPackageSummaryBySpv ?? {}}
-              closingSummaryBySpv={spvClosingSummaryBySpv ?? {}}
-              executionSummaryBySpv={spvExecutionSummaryBySpv}
-            />
           </section>
 
           <section className="mt-8">

@@ -19,13 +19,57 @@ export const dynamic = "force-dynamic";
 
 const STAGES: CapitalStage[] = ["stage_0", "stage_1", "stage_2", "stage_3"];
 
+// SVG badge icons
+function BadgeMedal() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
+    </svg>
+  );
+}
+function BadgeSprout() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5.517.015.015M18.75 4.97l-.015.014M18.735 4.984A12.75 12.75 0 0 1 12 16.5a12.75 12.75 0 0 1-6.75-11.516" />
+    </svg>
+  );
+}
+function BadgeRocket() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+    </svg>
+  );
+}
+function BadgeBriefcase() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0M12 12.75h.008v.008H12v-.008Z" />
+    </svg>
+  );
+}
+function BadgeTrophy() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
+    </svg>
+  );
+}
+function BadgeLightning() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
+    </svg>
+  );
+}
+
 const BADGES = [
-  { id: "foundation-complete", icon: "🏅", label: "Foundation complete", requireStage: "stage_0" as CapitalStage, requirePct: 100 },
-  { id: "seed-started", icon: "🌱", label: "Seed journey started", requireStage: "stage_1" as CapitalStage, requirePct: 10 },
-  { id: "seed-complete", icon: "🚀", label: "Seed-ready", requireStage: "stage_1" as CapitalStage, requirePct: 80 },
-  { id: "series-a", icon: "💼", label: "Series A track", requireStage: "stage_2" as CapitalStage, requirePct: 50 },
-  { id: "exit-ready", icon: "🏆", label: "Exit ready", requireStage: "stage_3" as CapitalStage, requirePct: 80 },
-  { id: "first-lesson", icon: "⚡", label: "First lesson done", requireStage: "stage_0" as CapitalStage, requirePct: 1 },
+  { id: "foundation-complete", icon: <BadgeMedal />, iconColor: "text-indigo-600", iconBg: "bg-indigo-50", label: "Foundation complete", requireStage: "stage_0" as CapitalStage, requirePct: 100 },
+  { id: "seed-started", icon: <BadgeSprout />, iconColor: "text-emerald-600", iconBg: "bg-emerald-50", label: "Seed journey started", requireStage: "stage_1" as CapitalStage, requirePct: 10 },
+  { id: "seed-complete", icon: <BadgeRocket />, iconColor: "text-blue-600", iconBg: "bg-blue-50", label: "Seed-ready", requireStage: "stage_1" as CapitalStage, requirePct: 80 },
+  { id: "series-a", icon: <BadgeBriefcase />, iconColor: "text-violet-600", iconBg: "bg-violet-50", label: "Series A track", requireStage: "stage_2" as CapitalStage, requirePct: 50 },
+  { id: "exit-ready", icon: <BadgeTrophy />, iconColor: "text-amber-600", iconBg: "bg-amber-50", label: "Exit ready", requireStage: "stage_3" as CapitalStage, requirePct: 80 },
+  { id: "first-lesson", icon: <BadgeLightning />, iconColor: "text-orange-600", iconBg: "bg-orange-50", label: "First lesson done", requireStage: "stage_0" as CapitalStage, requirePct: 1 },
 ];
 
 export default async function MyProgressPage() {
@@ -234,7 +278,7 @@ export default async function MyProgressPage() {
                     const earned = earnedBadges.some((b) => b.id === badge.id);
                     return (
                       <div key={badge.id} className={`text-center ${!earned ? "opacity-30" : ""}`}>
-                        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-2xl">
+                        <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl ${badge.iconBg} ${badge.iconColor}`}>
                           {badge.icon}
                         </div>
                         <p className="line-clamp-2 text-[10px] leading-tight text-slate-500">{badge.label}</p>
