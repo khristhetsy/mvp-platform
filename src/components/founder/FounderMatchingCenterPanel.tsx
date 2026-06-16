@@ -373,6 +373,181 @@ function MetricDrawerContent({
 }
 
 // ---------------------------------------------------------------------------
+// Outreach draft generation
+// ---------------------------------------------------------------------------
+
+function generateOutreachDraft(
+  investor: FounderMatchingCenterRow,
+  snapshot: FounderMatchingCenterSnapshot,
+): { subject: string; body: string } {
+  const name       = investor.investorName;
+  const company    = snapshot.companyName;
+  const industry   = snapshot.industry ?? "[your industry]";
+  const topReason  = investor.matchReasons[0] ?? null;
+  const topGap     = investor.missingFitReasons[0] ?? null;
+  const iType      = (investor.investorType ?? "").toLowerCase();
+  const isVC       = iType.includes("vc") || iType.includes("venture");
+  const isAngel    = iType.includes("angel");
+
+  // Subject line
+  const subject = topReason
+    ? `${company} — ${industry} · re: your focus on ${topReason.toLowerCase()}`
+    : `${company} — ${industry} founder intro`;
+
+  // Opening paragraph varies by investor type
+  const opening = isVC
+    ? `I came across your fund's focus on ${topReason ?? industry} and wanted to introduce ${company}.`
+    : isAngel
+    ? `I'm reaching out because ${topReason ? `your interest in ${topReason.toLowerCase()}` : "your investment background"} caught my attention.`
+    : `I wanted to reach out based on ${topReason ? `your focus on ${topReason.toLowerCase()}` : "your investment thesis"}.`;
+
+  // Fit signal paragraph
+  const fitParagraph = topReason
+    ? `Why I'm reaching out to you specifically: ${topReason}. ${
+        topGap
+          ? `I recognise there may be a question around ${topGap.toLowerCase()} — happy to address that directly.`
+          : "I believe there's strong alignment between what you look for and what we're building."
+      }`
+    : `Based on our matching score, I believe there could be meaningful alignment between your investment focus and what we're building at ${company}.`;
+
+  const geoNote =
+    investor.geographies.length > 0
+      ? `\n\nNote: we're based in ${snapshot.companyGeography ?? "[your location]"}, which I understand is within your investment geography (${investor.geographies.slice(0, 2).join(", ")}).`
+      : "";
+
+  const body = `Hi ${name},
+
+${opening}
+
+I'm the founder of ${company}, a ${industry} company helping [describe your target customer] [achieve a specific outcome]. We're currently raising [your round size] and speaking with a select group of investors.
+
+${fitParagraph}${geoNote}
+
+[One-line traction statement: e.g. "We've signed [X] customers / reached $[X]K ARR / completed [X] pilots."]
+
+Would you be open to a 20-minute intro call? Happy to share our deck in advance.
+
+Best,
+[Your name]`;
+
+  return { subject, body };
+}
+
+// ---------------------------------------------------------------------------
+// Outreach kit component
+// ---------------------------------------------------------------------------
+
+function OutreachKit({
+  investor,
+  snapshot,
+}: {
+  investor: FounderMatchingCenterRow;
+  snapshot: FounderMatchingCenterSnapshot;
+}) {
+  const [open, setOpen]           = useState(false);
+  const [copiedSubject, setCopiedSubject] = useState(false);
+  const [copiedBody, setCopiedBody]     = useState(false);
+
+  const { subject, body } = useMemo(
+    () => generateOutreachDraft(investor, snapshot),
+    [investor, snapshot],
+  );
+
+  const [editedBody, setEditedBody] = useState(body);
+
+  function copy(text: string, type: "subject" | "body") {
+    void navigator.clipboard.writeText(text).then(() => {
+      if (type === "subject") {
+        setCopiedSubject(true);
+        setTimeout(() => setCopiedSubject(false), 2000);
+      } else {
+        setCopiedBody(true);
+        setTimeout(() => setCopiedBody(false), 2000);
+      }
+    });
+  }
+
+  return (
+    <div className="mt-4">
+      {/* Toggle header */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition"
+        style={{ background: open ? "#EEEDFE" : "#f8f7fd", border: "1px solid #e0e7ff" }}
+      >
+        <div className="flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="#534AB7" strokeWidth="2" />
+            <polyline points="22,6 12,13 2,6" stroke="#534AB7" strokeWidth="2" />
+          </svg>
+          <span className="text-xs font-semibold" style={{ color: "#534AB7" }}>Outreach Kit</span>
+          <span className="rounded-full px-2 py-0.5 text-[9px] font-bold" style={{ background: "#534AB7", color: "white" }}>NEW</span>
+        </div>
+        <svg
+          width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+          style={{ transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "rotate(0)" }}
+        >
+          <path d="M6 9l6 6 6-6" stroke="#534AB7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {/* Body */}
+      {open ? (
+        <div
+          className="mt-2 rounded-xl border p-4"
+          style={{ borderColor: "#e0e7ff", background: "#fafaff", animation: "fadeUp .2s ease both" }}
+        >
+          <p className="mb-3 text-[10px] text-slate-400">
+            Personalised draft based on this investor&apos;s profile. Edit the{" "}
+            <span className="font-semibold text-slate-600">[brackets]</span> before sending.
+          </p>
+
+          {/* Subject line */}
+          <div className="mb-3">
+            <div className="mb-1 flex items-center justify-between">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Subject line</p>
+              <button
+                type="button"
+                onClick={() => copy(subject, "subject")}
+                className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition"
+                style={{ background: copiedSubject ? "#EAF3DE" : "#EEEDFE", color: copiedSubject ? "#1E6D3C" : "#534AB7" }}
+              >
+                {copiedSubject ? "Copied ✓" : "Copy"}
+              </button>
+            </div>
+            <p className="rounded-lg bg-white px-3 py-2 text-xs text-slate-700 ring-1 ring-slate-200">
+              {subject}
+            </p>
+          </div>
+
+          {/* Draft body */}
+          <div>
+            <div className="mb-1 flex items-center justify-between">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Draft message</p>
+              <button
+                type="button"
+                onClick={() => copy(editedBody, "body")}
+                className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition"
+                style={{ background: copiedBody ? "#EAF3DE" : "#EEEDFE", color: copiedBody ? "#1E6D3C" : "#534AB7" }}
+              >
+                {copiedBody ? "Copied ✓" : "Copy"}
+              </button>
+            </div>
+            <textarea
+              rows={10}
+              value={editedBody}
+              onChange={(e) => setEditedBody(e.target.value)}
+              className="w-full resize-none rounded-lg bg-white px-3 py-2.5 font-mono text-[11px] leading-relaxed text-slate-700 outline-none focus:ring-2 focus:ring-indigo-100 ring-1 ring-slate-200"
+            />
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Investor detail drawer
 // ---------------------------------------------------------------------------
 function InvestorDrawerContent({
@@ -493,6 +668,8 @@ function InvestorDrawerContent({
             : "This investor's check size and geography aren't fully specified — request their investment criteria before scheduling a call so you can confirm fit and tailor your pitch appropriately.",
         ]}
       />
+
+      <OutreachKit investor={investor} snapshot={snapshot} />
     </div>
   );
 }
