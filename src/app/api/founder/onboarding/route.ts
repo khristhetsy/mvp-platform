@@ -102,10 +102,11 @@ export async function PATCH(request: Request) {
     .limit(1)
     .maybeSingle();
 
-  // First-time founder: create a stub company so onboarding can proceed
+  // First-time founder: create a stub company via service role (bypasses RLS INSERT restriction)
   if (!company && !companyError) {
     const name = parsed.data.company_name?.trim() || auth.profile.email?.split("@")[0] || "My Company";
-    const { data: created, error: createError } = await auth.supabase
+    const adminClient = createServiceRoleClient();
+    const { data: created, error: createError } = await adminClient
       .from("companies")
       .insert({ founder_id: auth.profile.id, company_name: name, status: "draft" })
       .select("*")
