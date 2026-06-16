@@ -115,32 +115,33 @@ export async function ensureSubscriptionForProfile(input: {
   const now = new Date().toISOString();
   const admin = createServiceRoleClient();
 
-  const { error: upsertError } = await admin
+  const { error: insertError } = await admin
     .from("subscriptions")
-    .upsert(
-      {
-        profile_id: input.profileId,
-        role: input.role,
-        plan_type: defaults.plan_type,
-        subscription_status: defaults.subscription_status,
-        trial_started_at: defaults.trial_started_at,
-        trial_ends_at: defaults.trial_ends_at,
-        current_period_start: now,
-        current_period_end: defaults.trial_ends_at,
-        monthly_price_cents: defaults.monthly_price_cents,
-        currency: "USD",
-      },
-      { onConflict: "profile_id", ignoreDuplicates: true }
-    );
+    .insert({
+      profile_id: input.profileId,
+      role: input.role,
+      plan_type: defaults.plan_type,
+      subscription_status: defaults.subscription_status,
+      trial_started_at: defaults.trial_started_at,
+      trial_ends_at: defaults.trial_ends_at,
+      current_period_start: now,
+      current_period_end: defaults.trial_ends_at,
+      monthly_price_cents: defaults.monthly_price_cents,
+      currency: "USD",
+    });
 
-  if (upsertError) {
-    throw new Error(`Failed to create subscription: ${upsertError.message}`);
+  // Duplicate key = race condition: another request already created it — just fetch it
+  if (insertError) {
+    if (insertError.code === "23505") {
+      const fallback = await getSubscription(input.profileId);
+      if (fallback) return refreshSubscriptionState(fallback);
+    }
+    throw new Error(`Failed to create subscription: ${insertError.message}`);
   }
 
-  // Re-fetch after upsert (handles both insert and race-condition no-op cases)
   const created = await getSubscription(input.profileId);
   if (!created) {
-    throw new Error("Failed to create subscription: record not found after upsert.");
+    throw new Error("Failed to create subscription: record not found after insert.");
   }
 
   return refreshSubscriptionState(created);
