@@ -25,6 +25,7 @@ import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { CapitalReadinessSection } from "@/components/founder/CapitalReadinessSection";
+import { DashboardPipelinePanel } from "@/components/founder/DashboardPipelinePanel";
 
 export const dynamic = "force-dynamic";
 
@@ -75,27 +76,6 @@ export default async function FounderDashboardPage() {
     (investorActivity?.savedDeals.length ?? 0);
   const raiseProgress = company?.is_published ? "Published" : "Not published";
 
-  // Investor pipeline list (up to 5 most recent interactions)
-  const pipelineItems: { name: string; type: string; variant: "medium" | "high" | "neutral" }[] = [
-    ...(investorActivity?.interests.slice(0, 3).map((i) => {
-      const p = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles;
-      return { name: p?.full_name ?? p?.email ?? "Investor", type: "Expressed interest", variant: "medium" as const };
-    }) ?? []),
-    ...(investorActivity?.introRequests.slice(0, 2).map((i) => {
-      const p = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles;
-      return { name: p?.full_name ?? p?.email ?? "Investor", type: `Intro · ${i.status ?? "requested"}`, variant: "high" as const };
-    }) ?? []),
-    ...(investorActivity?.savedDeals.slice(0, 2).map((i) => {
-      const p = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles;
-      return { name: p?.full_name ?? p?.email ?? "Investor", type: "Saved deal", variant: "neutral" as const };
-    }) ?? []),
-  ].slice(0, 5);
-
-  const badgeCls = {
-    medium: "bg-[#EEEDFE] text-[#3C3489]",
-    high: "bg-[#FAEEDA] text-[#854F0B]",
-    neutral: "bg-slate-100 text-slate-600",
-  };
 
   return (
     <FounderAppShell
@@ -249,40 +229,13 @@ export default async function FounderDashboardPage() {
             </p>
           </WorkspacePanel>
 
-          <WorkspacePanel title="Investor pipeline" subtitle="Read-only activity on your listing">
-            {investorActivity ? (
-              <>
-                <div className="mb-4 grid grid-cols-1 min-[360px]:grid-cols-3 gap-3">
-                  {[
-                    ["Expressed interest", investorActivity.interests.length],
-                    ["Intro requests", investorActivity.introRequests.length],
-                    ["Saved deals", investorActivity.savedDeals.length],
-                  ].map(([title, count]) => (
-                    <div key={title as string} className="rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-slate-100 text-center">
-                      <p className="font-mono text-xl font-semibold text-slate-950">{count as number}</p>
-                      <p className="mt-0.5 text-[11px] text-slate-500">{title as string}</p>
-                    </div>
-                  ))}
-                </div>
-                {pipelineItems.length > 0 ? (
-                  <div className="divide-y divide-slate-100">
-                    {pipelineItems.map((item, i) => (
-                      <div key={i} className="flex items-center justify-between py-2 text-xs">
-                        <span className="min-w-0 flex-1 truncate font-medium text-slate-800">{item.name}</span>
-                        <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${badgeCls[item.variant]}`}>
-                          {item.type}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-500">No investor interactions yet. Publish your listing to receive activity.</p>
-                )}
-              </>
-            ) : (
+          {investorActivity ? (
+            <DashboardPipelinePanel activity={investorActivity} />
+          ) : (
+            <WorkspacePanel title="Investor pipeline" subtitle="Read-only activity on your listing">
               <p className="text-sm text-slate-600">Investor activity will appear once your company is linked.</p>
-            )}
-          </WorkspacePanel>
+            </WorkspacePanel>
+          )}
         </section>
 
         {/* 8. Recent Activity */}
