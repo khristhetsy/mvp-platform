@@ -465,7 +465,7 @@ export function CapitalReadinessSection({
             if (e.target === e.currentTarget) close();
           }}
         >
-          <div className="relative w-full max-w-md overflow-y-auto rounded-2xl bg-white px-5 pb-6 pt-5 shadow-2xl" style={{ maxHeight: "65vh" }}>
+          <div className="relative w-full max-w-md overflow-y-auto rounded-2xl bg-white px-5 pb-6 pt-5 shadow-2xl" style={{ maxHeight: "536px" }}>
             <div className="relative">
               <button
                 type="button"
