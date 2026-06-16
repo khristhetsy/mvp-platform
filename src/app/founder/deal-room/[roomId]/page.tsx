@@ -5,7 +5,7 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { DealRoomQuestionsPanel } from "@/components/deal-room/DealRoomQuestionsPanel";
+import { DealRoomQuestionsPanel, type DealRoomCompanySnapshot } from "@/components/deal-room/DealRoomQuestionsPanel";
 import { DealRoomDocRequestsPanel } from "@/components/deal-room/DealRoomDocRequestsPanel";
 import { DealRoomMilestonePanel } from "@/components/deal-room/DealRoomMilestonePanel";
 import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
@@ -19,12 +19,24 @@ export default async function FounderDealRoomPage({ params }: PageProps) {
   const { roomId } = await params;
   const supabase = await createServerSupabaseClient();
 
-  const [{ data: room }, { data: questions }, { data: docRequests }, { data: activity }] = await Promise.all([
+  const [{ data: room }, { data: questions }, { data: docRequests }, { data: activity }, { data: company }] = await Promise.all([
     supabase.from("deal_rooms").select("id, title, status, created_at").eq("id", roomId).maybeSingle(),
     supabase.from("deal_room_questions").select("*").eq("room_id", roomId).order("created_at", { ascending: false }).limit(200),
     supabase.from("deal_room_document_requests").select("*").eq("room_id", roomId).order("created_at", { ascending: false }).limit(200),
     supabase.from("deal_room_activity_events").select("*").eq("room_id", roomId).order("created_at", { ascending: false }).limit(200),
+    supabase.from("companies").select("company_name, industry, business_description, revenue_stage, funding_amount, country, state").eq("founder_id", profile.id).maybeSingle(),
   ]);
+
+  const companySnapshot: DealRoomCompanySnapshot | undefined = company
+    ? {
+        companyName: company.company_name ?? "Your company",
+        industry: company.industry ?? null,
+        businessDescription: company.business_description ?? null,
+        revenueStage: company.revenue_stage ?? null,
+        fundingAmount: company.funding_amount ? Number(company.funding_amount) : null,
+        geography: [company.state, company.country].filter(Boolean).join(", ") || null,
+      }
+    : undefined;
 
   if (!room) notFound();
 
@@ -70,7 +82,12 @@ export default async function FounderDealRoomPage({ params }: PageProps) {
 
           <section className="grid gap-6 xl:grid-cols-2">
             <WorkspacePanel title="Investor questions" subtitle={`${(questions ?? []).length} recent`}>
-              <DealRoomQuestionsPanel roomId={roomId} viewerRole="founder" initialQuestions={questions ?? []} />
+              <DealRoomQuestionsPanel
+                roomId={roomId}
+                viewerRole="founder"
+                initialQuestions={questions ?? []}
+                companySnapshot={companySnapshot}
+              />
             </WorkspacePanel>
             <WorkspacePanel title="Document requests" subtitle={`${(docRequests ?? []).length} recent`}>
               <DealRoomDocRequestsPanel roomId={roomId} viewerRole="founder" initialRequests={docRequests ?? []} />

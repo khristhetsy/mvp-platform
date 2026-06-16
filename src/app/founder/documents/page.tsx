@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DocumentQualityPanel } from "@/components/founder/DocumentQualityPanel";
 
 export const dynamic = "force-dynamic";
 import { FounderAppShell } from "@/components/FounderAppShell";
@@ -116,23 +117,29 @@ export default async function DocumentUploadPage() {
           ) : null}
         </div>
 
-        <div className="cap-surface-card p-4 sm:p-6">
-          <h2 className="text-lg font-semibold text-slate-950">Uploaded files</h2>
-          <div className="mt-5 divide-y divide-slate-100">
-            {(documents ?? []).length > 0 ? (
-              documents?.map((document) => (
-                <div key={document.id} className="flex items-center justify-between gap-3 py-4 text-sm">
-                  <span className="min-w-0 flex-1 truncate font-medium text-slate-800">{document.file_name ?? document.document_type}</span>
-                  <span className="shrink-0 rounded-full bg-[var(--blue-muted)] px-3 py-1 text-xs font-medium text-[var(--blue-hover)]">{document.status ?? "uploaded"}</span>
-                </div>
-              ))
-            ) : (
-              <p className="py-4 text-sm text-slate-600">No documents uploaded yet.</p>
-            )}
+        <div className="space-y-5">
+          {/* Document quality analyzer */}
+          <DocumentQualityPanel documents={documents ?? []} />
+
+          {/* Uploaded files list */}
+          <div className="cap-surface-card p-4 sm:p-6">
+            <h2 className="text-base font-semibold text-slate-950">Uploaded files</h2>
+            <div className="mt-4 divide-y divide-slate-100">
+              {(documents ?? []).length > 0 ? (
+                documents?.map((document) => (
+                  <div key={document.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                    <span className="min-w-0 flex-1 truncate font-medium text-slate-800">{document.file_name ?? document.document_type}</span>
+                    <span className="shrink-0 rounded-full bg-[var(--blue-muted)] px-3 py-1 text-xs font-medium text-[var(--blue-hover)]">{document.status ?? "uploaded"}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="py-3 text-sm text-slate-600">No documents uploaded yet.</p>
+              )}
+            </div>
+            <Link href="/founder/report" className="cap-btn-secondary mt-5 inline-flex rounded-lg px-5 py-2.5 text-sm font-semibold">
+              Generate diligence report
+            </Link>
           </div>
-          <Link href="/founder/report" className="cap-btn-secondary mt-6 inline-flex rounded-lg px-5 py-2.5 text-sm font-semibold">
-            Generate diligence report
-          </Link>
         </div>
       </section>
         </WorkspacePageContainer>

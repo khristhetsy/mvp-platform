@@ -548,6 +548,179 @@ function OutreachKit({
 }
 
 // ---------------------------------------------------------------------------
+// Meeting prep kit
+// ---------------------------------------------------------------------------
+
+function generateMeetingPrep(
+  investor: FounderMatchingCenterRow,
+  snapshot: FounderMatchingCenterSnapshot,
+): { likelyQuestions: string[]; talkingPoints: string[]; watchOuts: string[] } {
+  const iType  = (investor.investorType ?? "").toLowerCase();
+  const isVC   = iType.includes("vc") || iType.includes("venture");
+  const isAngel = iType.includes("angel");
+
+  // Likely questions — gap-driven first, then standard by type
+  const likelyQuestions: string[] = [];
+
+  for (const gap of investor.missingFitReasons.slice(0, 3)) {
+    likelyQuestions.push(`How do you address the question around ${gap.toLowerCase()}?`);
+  }
+
+  if (isVC) {
+    likelyQuestions.push(
+      "What does your path to $100M ARR look like?",
+      "How defensible is your competitive moat?",
+      "What are your unit economics and CAC:LTV ratio?",
+    );
+  } else if (isAngel) {
+    likelyQuestions.push(
+      "Why are you the right team to solve this problem?",
+      "What traction have you seen so far?",
+      "How much runway does this raise give you?",
+    );
+  } else {
+    likelyQuestions.push(
+      "How does your business fit into our existing portfolio?",
+      "What does co-investment look like — do you take board seats?",
+      "What does your governance structure look like?",
+    );
+  }
+
+  // Talking points — match-reason driven
+  const talkingPoints: string[] = [];
+
+  for (const reason of investor.matchReasons.slice(0, 3)) {
+    talkingPoints.push(`Lead with: "${reason}" — this is a direct fit signal for this investor.`);
+  }
+
+  if (investor.checkSizeMin !== null || investor.checkSizeMax !== null) {
+    const range = formatMatchingCheckSize(investor.checkSizeMin, investor.checkSizeMax);
+    talkingPoints.push(`Confirm your ask aligns with their check range (${range}) — do this early to avoid wasted time.`);
+  }
+
+  if (snapshot.companyGeography) {
+    talkingPoints.push(`Mention your geography (${snapshot.companyGeography}) early — they invest in ${investor.geographies.slice(0, 2).join(", ") || "your region"}.`);
+  }
+
+  talkingPoints.push(
+    "Close with a specific next step: share your data room, send deck, or schedule a follow-up — ambiguous endings lose deals.",
+  );
+
+  // Watch-outs
+  const watchOuts: string[] = [];
+
+  for (const gap of investor.missingFitReasons.slice(0, 2)) {
+    watchOuts.push(`Be ready to address "${gap}" proactively — don't wait for them to raise it.`);
+  }
+
+  if (investor.matchScore < 60) {
+    watchOuts.push("Low match score — tailor your pitch heavily to their stated focus, or reconsider whether this meeting is the best use of your time.");
+  }
+
+  watchOuts.push("Avoid generic intros — reference a specific portfolio company or thesis point to show you've done your homework.");
+
+  return {
+    likelyQuestions: likelyQuestions.slice(0, 5),
+    talkingPoints: talkingPoints.slice(0, 4),
+    watchOuts: watchOuts.slice(0, 3),
+  };
+}
+
+function MeetingPrepKit({
+  investor,
+  snapshot,
+}: {
+  investor: FounderMatchingCenterRow;
+  snapshot: FounderMatchingCenterSnapshot;
+}) {
+  const [open, setOpen] = useState(false);
+  const prep = useMemo(() => generateMeetingPrep(investor, snapshot), [investor, snapshot]);
+
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition"
+        style={{ background: open ? "#F0FDF4" : "#f8fdf9", border: "1px solid #bbf7d0" }}
+      >
+        <div className="flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              stroke="#16a34a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="text-xs font-semibold" style={{ color: "#16a34a" }}>Meeting Prep</span>
+        </div>
+        <svg
+          width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"
+          style={{ transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "rotate(0)" }}
+        >
+          <path d="M6 9l6 6 6-6" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {open ? (
+        <div
+          className="mt-2 space-y-4 rounded-xl border p-4"
+          style={{ borderColor: "#bbf7d0", background: "#f0fdf4", animation: "fadeUp .2s ease both" }}
+        >
+          <p className="text-[10px] text-slate-400">
+            Personalised briefing for your meeting with {investor.investorName}.
+          </p>
+
+          {/* Likely questions */}
+          <div>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Likely questions</p>
+            <div className="space-y-1.5">
+              {prep.likelyQuestions.map((q, i) => (
+                <div key={i} className="flex items-start gap-2 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100">
+                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[8px] font-bold text-slate-500">?</span>
+                  <p className="text-xs leading-relaxed text-slate-700">{q}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Talking points */}
+          <div>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Talking points</p>
+            <div className="space-y-1.5">
+              {prep.talkingPoints.map((p, i) => (
+                <div key={i} className="flex items-start gap-2 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100">
+                  <span
+                    className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
+                    style={{ background: "#16a34a" }}
+                  >
+                    {i + 1}
+                  </span>
+                  <p className="text-xs leading-relaxed text-slate-700">{p}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Watch-outs */}
+          <div>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Watch-outs</p>
+            <div className="space-y-1.5">
+              {prep.watchOuts.map((w, i) => (
+                <div key={i} className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 ring-1 ring-amber-100">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0" aria-hidden="true">
+                    <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                      stroke="#d97706" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <p className="text-xs leading-relaxed text-amber-800">{w}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Investor detail drawer
 // ---------------------------------------------------------------------------
 function InvestorDrawerContent({
@@ -670,6 +843,7 @@ function InvestorDrawerContent({
       />
 
       <OutreachKit investor={investor} snapshot={snapshot} />
+      <MeetingPrepKit investor={investor} snapshot={snapshot} />
     </div>
   );
 }

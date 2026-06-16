@@ -28,6 +28,7 @@ import { CapitalReadinessSection } from "@/components/founder/CapitalReadinessSe
 import { DashboardPipelinePanel } from "@/components/founder/DashboardPipelinePanel";
 import { FounderProactiveInsights } from "@/components/founder/FounderProactiveInsights";
 import { FounderWeeklyDigest } from "@/components/founder/FounderWeeklyDigest";
+import { FounderFundraisingMilestoneTracker } from "@/components/founder/FounderFundraisingMilestoneTracker";
 
 export const dynamic = "force-dynamic";
 
@@ -144,7 +145,19 @@ export default async function FounderDashboardPage() {
           />
         </div>
 
-        {/* 2. Weekly raise digest */}
+        {/* 2. Fundraising milestone tracker */}
+        <div className="mb-8">
+          <FounderFundraisingMilestoneTracker
+            readinessScore={readinessScore}
+            activeRoomCount={(activeRooms ?? []).length}
+            pledgedAmount={pledgeSummary.totalPledged}
+            fundingTarget={company?.funding_amount ? Number(company.funding_amount) : null}
+            isPublished={company?.is_published ?? false}
+            strongMatchCount={investorFit?.strongMatchCount ?? 0}
+          />
+        </div>
+
+        {/* 3. Weekly raise digest */}
         <div className="mb-8">
           <FounderWeeklyDigest
             rooms={activeRooms ?? []}
