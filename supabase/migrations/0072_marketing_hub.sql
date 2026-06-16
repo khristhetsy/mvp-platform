@@ -191,6 +191,7 @@ begin
     'marketing_events'
   ]
   loop
+    execute format('drop policy if exists "admin_all_%s" on %I', t, t);
     execute format(
       'create policy "admin_all_%s" on %I for all using (is_admin()) with check (is_admin())',
       t, t
