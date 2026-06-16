@@ -104,7 +104,13 @@ export async function DELETE(req: NextRequest): Promise<Response> {
   // Hard-delete from Supabase Auth (profiles row cascades via FK)
   const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
   if (deleteError) {
-    return NextResponse.json({ error: deleteError.message ?? "Delete failed." }, { status: 500 });
+    const msg = deleteError.message?.toLowerCase() ?? "";
+    // If auth user already gone, still clean up the profile row
+    if (!msg.includes("not found") && !msg.includes("user not found")) {
+      return NextResponse.json({ error: deleteError.message ?? "Delete failed." }, { status: 500 });
+    }
+    // Auth user missing — delete profile manually
+    await admin.from("profiles").delete().eq("id", userId);
   }
 
   await writeAuditLog(auth.supabase, {
