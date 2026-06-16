@@ -172,7 +172,6 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
       { href: "/founder/readiness", label: "Checklist" },
       { href: "/founder/readiness/diligence", label: "Diligence & review" },
       { href: "/founder/readiness/documents", label: "Document checklist" },
-      { href: "/founder/readiness/missing", label: "Missing documents" },
     ],
   },
   { href: "/founder/documents", label: "Documents" },
@@ -182,11 +181,10 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
     children: [
       { href: "/founder/investors", label: "Overview" },
       { href: "/founder/investors/outreach", label: "Outreach & CRM" },
-      { href: "/founder/investors/matches", label: "Platform matches" },
+      { href: "/founder/matching", label: "Matching" },
+      { href: "/founder/investor-pipeline", label: "Investor Pipeline" },
     ],
   },
-  { href: "/founder/investor-pipeline", label: "Investor Pipeline" },
-  { href: "/founder/matching", label: "Matching" },
   { href: "/founder/deal-room", label: "Deal Room" },
   { href: "/founder/messages", label: "Messages" },
   { href: "/founder/capital-raise", label: "Capital Raise" },
@@ -198,7 +196,7 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
       { href: "/founder/learning", label: "Overview" },
       { href: "/founder/learning/courses", label: "Browse courses" },
       { href: "/founder/learning/plan", label: "My learning plan" },
-      { href: "/founder/learning/schedule", label: "Schedule" },
+      { href: "/founder/learning/schedule", label: "My Schedule" },
       { href: "/founder/learning/progress", label: "My progress" },
       { href: "/founder/learning/stages/stage_0", label: "Stage 0 — Foundation" },
       { href: "/founder/learning/stages/stage_1", label: "Stage 1 — Seed Round" },
@@ -208,7 +206,16 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
   },
   { href: "/founder/analytics", label: "Analytics" },
   { href: "/founder/tasks", label: "Tasks" },
-  { href: "/founder/settings", label: "Settings" },
+  {
+    href: "/founder/settings",
+    label: "Settings",
+    children: [
+      { href: "/founder/settings", label: "Company profile" },
+      { href: "/founder/settings/billing", label: "Billing & subscription" },
+      { href: "/founder/settings/integrations", label: "Integrations" },
+      { href: "/founder/settings/feedback", label: "Feedback" },
+    ],
+  },
 ];
 
 export const investorWorkspaceNav: WorkspaceNavItem[] = [

@@ -411,10 +411,10 @@ export function FounderReadinessDonutCards({
         ))}
       </div>
 
-      {/* Drawer overlay */}
+      {/* Modal overlay */}
       {open && config ? (
         <div
-          className="fixed inset-0 z-50 flex items-end"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.45)" }}
           onClick={(e) => {
             if (e.target === e.currentTarget) setOpen(null);
@@ -424,15 +424,10 @@ export function FounderReadinessDonutCards({
           aria-label={config.title}
         >
           <div
-            className="w-full overflow-y-auto rounded-t-2xl bg-white"
-            style={{ maxHeight: "80vh" }}
+            className="relative w-full max-w-md overflow-y-auto rounded-2xl bg-white"
+            style={{ maxHeight: "65vh" }}
           >
-            {/* Handle */}
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="h-1 w-8 rounded-full bg-slate-200" />
-            </div>
-
-            <div className="px-5 pb-8 pt-2">
+            <div className="px-5 pb-6 pt-5">
               {/* Header */}
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import type { Company } from "@/lib/supabase/types";
@@ -31,6 +31,37 @@ export function CompanySettingsForm({ company }: Props) {
   const [website, setWebsite] = useState(company?.website ?? "");
   const [industry, setIndustry] = useState(company?.industry ?? "");
   const [logoUrl, setLogoUrl] = useState(company?.logo_url ?? "");
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoDragging, setLogoDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadLogo = useCallback(async (file: File) => {
+    if (!company) return;
+    setLogoUploading(true);
+    const form = new FormData();
+    form.append("file", file);
+    const r = await fetch(`/api/companies/${company.id}/logo`, { method: "POST", body: form });
+    const d = await r.json().catch(() => ({}));
+    setLogoUploading(false);
+    if (r.ok && d.logo_url) {
+      setLogoUrl(d.logo_url);
+      setMessage({ type: "success", text: "Logo uploaded." });
+    } else {
+      setMessage({ type: "error", text: d.error ?? "Logo upload failed." });
+    }
+  }, [company]);
+
+  const handleFileDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setLogoDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) void uploadLogo(file);
+  }, [uploadLogo]);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) void uploadLogo(file);
+  }, [uploadLogo]);
 
   const BASE_INPUT = "rounded-xl border px-4 py-3 font-normal w-full";
 
@@ -118,13 +149,51 @@ export function CompanySettingsForm({ company }: Props) {
         />
       </FormField>
 
-      <FormField label="Logo URL" error={getError("logo_url")} hint="Must start with https://">
+      <FormField label="Company logo" error={getError("logo_url")} hint="PNG, JPG, WebP or SVG · max 2 MB">
+        {/* Drag-and-drop zone */}
+        <div
+          onDragOver={(e) => { e.preventDefault(); setLogoDragging(true); }}
+          onDragLeave={() => setLogoDragging(false)}
+          onDrop={handleFileDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed px-6 py-5 transition-colors ${
+            logoDragging ? "border-indigo-400 bg-indigo-50" : "border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/50"
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          {logoUrl ? (
+            <img src={logoUrl} alt="Company logo" className="h-14 w-14 rounded-lg object-contain ring-1 ring-slate-200" />
+          ) : (
+            <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-white ring-1 ring-slate-200">
+              <span className="text-2xl">🏢</span>
+            </div>
+          )}
+          <div className="text-center">
+            {logoUploading ? (
+              <p className="text-sm font-medium text-indigo-600">Uploading…</p>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-slate-700">
+                  {logoUrl ? "Replace logo" : "Drop logo here or click to upload"}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-400">PNG, JPG, WebP, SVG · max 2 MB</p>
+              </>
+            )}
+          </div>
+        </div>
+        {/* Fallback URL input */}
         <input
-          className={`${BASE_INPUT} ${inputCls("logo_url")}`}
+          className={`${BASE_INPUT} ${inputCls("logo_url")} mt-2 text-xs`}
           value={logoUrl ?? ""}
           onChange={(e) => { setLogoUrl(e.target.value); clearError("logo_url"); }}
           disabled={isSaving}
-          placeholder="https://.../logo.png"
+          placeholder="Or paste a logo URL: https://…"
         />
       </FormField>
 

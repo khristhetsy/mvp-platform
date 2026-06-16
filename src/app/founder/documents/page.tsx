@@ -3,6 +3,8 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { DocumentUploadForm } from "@/components/DocumentUploadForm";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
@@ -61,13 +63,14 @@ export default async function DocumentUploadPage() {
       profileSubtitle={company?.company_name ?? "Your company"}
     >
       <FounderFeatureGate featureKey="documents">
-        <section className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="cap-surface-card p-4 sm:p-6 lg:p-7">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Secure upload</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Upload diligence documents</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Files are stored in a private Supabase bucket and served through signed, role-checked URLs only.
-          </p>
+        <WorkspacePageContainer>
+          <PageHeader
+            eyebrow="Documents"
+            title="Upload diligence documents"
+            description="Files are stored in a private bucket and served through signed, role-checked URLs only."
+          />
+        <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
+        <div className="cap-surface-card p-4 sm:p-6">
 
           {!company ? (
             <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950">
@@ -113,7 +116,7 @@ export default async function DocumentUploadPage() {
           ) : null}
         </div>
 
-        <div className="cap-surface-card p-4 sm:p-6 lg:p-7">
+        <div className="cap-surface-card p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-slate-950">Uploaded files</h2>
           <div className="mt-5 divide-y divide-slate-100">
             {(documents ?? []).length > 0 ? (
@@ -132,6 +135,7 @@ export default async function DocumentUploadPage() {
           </Link>
         </div>
       </section>
+        </WorkspacePageContainer>
       </FounderFeatureGate>
     </FounderAppShell>
   );

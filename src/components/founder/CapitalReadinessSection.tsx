@@ -456,25 +456,22 @@ export function CapitalReadinessSection({
         </div>
       </section>
 
-      {/* Drawer overlay */}
+      {/* Modal overlay */}
       {open && cfg ? (
         <div
-          className="fixed inset-0 z-50 flex items-end"
-          style={{ background: "rgba(0,0,0,0.35)" }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.40)" }}
           onClick={(e) => {
             if (e.target === e.currentTarget) close();
           }}
         >
-          <div className="max-h-[80vh] w-full overflow-y-auto rounded-t-2xl bg-white px-5 pb-8 pt-4 shadow-2xl">
-            {/* Handle */}
-            <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-slate-200" />
-
+          <div className="relative w-full max-w-md overflow-y-auto rounded-2xl bg-white px-5 pb-6 pt-5 shadow-2xl" style={{ maxHeight: "65vh" }}>
             <div className="relative">
               <button
                 type="button"
                 onClick={close}
                 className="absolute right-0 top-0 flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
-                aria-label="Close drawer"
+                aria-label="Close"
               >
                 ✕
               </button>
