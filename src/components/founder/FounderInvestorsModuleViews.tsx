@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
-import { MetricCard } from "@/components/MetricCard";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { ModuleEmptyState, PipelineBoard } from "@/components/ui/ViewToolbar";
 import { MetricGrid, PageSection } from "@/components/ui/workspace-layout";
@@ -78,6 +77,8 @@ function PipelineDonut({ counts }: Readonly<{ counts: [number, number, number, n
     </div>
   );
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 type ViewMode = "kanban" | "grid" | "list";
 
@@ -165,12 +166,265 @@ const PIPELINE_GROUPS = [
   { id: "follow_up", title: "Follow-up", actionTypes: ["follow_up"] },
 ] as const;
 
+// ─── Pipeline click card ──────────────────────────────────────────────────────
+
+function PipelineClickCard({
+  label, value, sub, accentColor, accentBg, onClick,
+}: {
+  label: string; value: string; sub: string;
+  accentColor: string; accentBg: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group w-full text-left overflow-hidden rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500/20 active:scale-[0.99]"
+    >
+      <span
+        className="mb-2.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest"
+        style={{ background: accentBg, color: accentColor }}
+      >
+        {label}
+      </span>
+      <p className="text-[2rem] font-medium leading-none text-slate-900">{value}</p>
+      <p className="mt-1 text-[11px] text-slate-400">{sub}</p>
+      <div className="mt-3 border-t border-slate-100 pt-2">
+        <span className="text-[11px] font-medium" style={{ color: accentColor }}>
+          View details →
+        </span>
+      </div>
+    </button>
+  );
+}
+
+// ─── Pipeline summary drawer ──────────────────────────────────────────────────
+
+type DrawerGroup = "interested" | "pledged" | "intro" | "followup";
+
+const DRAWER_CFG = {
+  interested: { label: "Interested",      ac: "#534AB7", ab: "#EEEDFE" },
+  pledged:    { label: "Pledged",          ac: "#0F6E56", ab: "#E1F5EE" },
+  intro:      { label: "Intro requested", ac: "#185FA5", ab: "#E6F1FB" },
+  followup:   { label: "Follow-up",       ac: "#854F0B", ab: "#FAEEDA" },
+} as const;
+
+function DrawerStatBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex-1 min-w-0 rounded-lg border border-slate-100 bg-slate-50 p-2.5">
+      <p className="mb-1 text-[11px] text-slate-400">{label}</p>
+      <p className="text-lg font-medium text-slate-900">{value}</p>
+    </div>
+  );
+}
+
+function DrawerRowItem({
+  row, ac, ab,
+}: {
+  row: FounderInvestorRelationRow;
+  ac: string;
+  ab: string;
+}) {
+  const amount = formatAmountRow(row);
+  return (
+    <div className="flex items-center gap-2.5 border-b border-slate-100 py-2 last:border-0">
+      <span className="inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ background: ac }} />
+      <span className="flex-1 truncate text-[13px] text-slate-900">{row.investorName}</span>
+      {amount !== "—" && (
+        <span className="flex-shrink-0 text-[11px] text-slate-500">{amount}</span>
+      )}
+      <span
+        className="flex-shrink-0 rounded-md px-2 py-0.5 text-[11px] font-medium"
+        style={{ background: ab, color: ac }}
+      >
+        {row.actionLabel}
+      </span>
+    </div>
+  );
+}
+
+function PipelineDrawerContent({
+  group, allRows, crmView, onClose,
+}: {
+  group: DrawerGroup;
+  allRows: FounderInvestorRelationRow[];
+  crmView: FounderInvestorCrmView;
+  onClose: () => void;
+}) {
+  const cfg = DRAWER_CFG[group];
+
+  const interestedRows  = allRows.filter((r) => r.actionType === "interested" || r.actionType === "saved_deal");
+  const savedDealCount  = allRows.filter((r) => r.actionType === "saved_deal").length;
+  const pledgedRows     = allRows.filter((r) => r.actionType === "pledged" || r.actionType === "indicative_interest");
+  const firmCount       = allRows.filter((r) => r.actionType === "pledged").length;
+  const indicativeCount = allRows.filter((r) => r.actionType === "indicative_interest").length;
+  const introRows       = allRows.filter((r) => r.actionType === "intro_requested");
+  const followupRows    = allRows.filter((r) => r.actionType === "follow_up");
+
+  const ic = interestedRows.length;
+  const pc = pledgedRows.length;
+  const convRate = ic > 0 ? Math.round((pc / ic) * 100) : 0;
+
+  type Entry = {
+    count: number;
+    stats: { l: string; v: string }[];
+    rows: FounderInvestorRelationRow[];
+    meaning: string;
+    ai: string;
+  };
+
+  const DATA: Record<DrawerGroup, Entry> = {
+    interested: {
+      count: ic,
+      stats: [
+        { l: "Interested",  v: String(ic - savedDealCount) },
+        { l: "Saved deals", v: String(savedDealCount) },
+        { l: "Total",       v: String(ic) },
+      ],
+      rows: interestedRows,
+      meaning: `${ic} investor${ic !== 1 ? "s have" : " has"} flagged your deal as interesting. At a typical 25–35% seed-stage conversion rate, this group could yield ${Math.ceil(ic * 0.25)}–${Math.ceil(ic * 0.35)} additional commitments.`,
+      ai: `Your interested-to-pledged conversion rate is ${convRate}%${convRate > 22 ? " — above the 22% seed-stage median" : ""}. The ${savedDealCount} investor${savedDealCount !== 1 ? "s" : ""} who saved your deal ${savedDealCount !== 1 ? "are" : "is"} your warmest prospect${savedDealCount !== 1 ? "s" : ""}. Prioritize scheduling calls with them this week before their attention shifts to other deals.`,
+    },
+    pledged: {
+      count: pc,
+      stats: [
+        { l: "Firm pledges", v: String(firmCount) },
+        { l: "Indicative",   v: String(indicativeCount) },
+        { l: "Committed",    v: crmView.summary.totalPledgedDisplay },
+      ],
+      rows: pledgedRows,
+      meaning: `You have ${pc} investor${pc !== 1 ? "s" : ""} at commitment stage — ${firmCount} firm pledge${firmCount !== 1 ? "s" : ""} and ${indicativeCount} indicative interest${indicativeCount !== 1 ? "s" : ""}. Investors who commit typically finalize within 6–8 weeks when kept warm with regular updates.`,
+      ai: `${crmView.summary.totalPledgedDisplay} in committed capital is strong traction. To protect ${pc === 1 ? "this pledge" : "these pledges"}, send each investor a brief milestone update this week — investors who receive consistent progress notes are 2× more likely to finalize and less likely to reduce their check size.`,
+    },
+    intro: {
+      count: introRows.length,
+      stats: [
+        { l: "Intro requests",  v: String(introRows.length) },
+        { l: "Response window", v: "14 days" },
+        { l: "Urgency",         v: "High" },
+      ],
+      rows: introRows,
+      meaning: `${introRows.length} investor${introRows.length !== 1 ? "s have" : " has"} actively requested an introduction. These are warm leads in active evaluation — your highest-urgency pipeline. Response rates drop ~60% after 14 days of silence.`,
+      ai: `${introRows.length} intro request${introRows.length !== 1 ? "s" : ""} ${introRows.length !== 1 ? "represent" : "represents"} your highest-conversion pipeline segment. Letting ${introRows.length !== 1 ? "them" : "it"} sit past 14 days drops response rate by ~60%. Reach out to each with a personal note and a proposed call slot before end of this week.`,
+    },
+    followup: {
+      count: followupRows.length,
+      stats: [
+        { l: "Follow-ups needed",  v: String(followupRows.length) },
+        { l: "Re-activation rate", v: "30–40%" },
+        { l: "Ideal window",       v: "≤30 days" },
+      ],
+      rows: followupRows,
+      meaning: `${followupRows.length} investor${followupRows.length !== 1 ? "s are" : " is"} waiting for follow-up. These contacts previously engaged with your deal — they are not cold. A personalized update referencing a specific recent milestone re-activates 30–40% of stalled conversations.`,
+      ai: `${followupRows.length} investor${followupRows.length !== 1 ? "s" : ""} in your follow-up queue. A one-paragraph update referencing your most recent traction milestone — revenue, users, or a key partnership — re-activates 30–40% of stalled conversations. Investors re-engaged within 30 days close at 3× the rate of those reached after 60 days.`,
+    },
+  };
+
+  const d = DATA[group];
+
+  return (
+    <div className="px-5 pb-6">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-slate-100 py-4">
+        <div className="flex items-center gap-2">
+          <span
+            className="inline-block h-2 w-2 flex-shrink-0 rounded-full"
+            style={{ background: cfg.ac }}
+          />
+          <span className="text-[13px] font-medium text-slate-900">{cfg.label}</span>
+          <span
+            className="rounded-md px-2 py-0.5 text-[11px] font-medium"
+            style={{ background: cfg.ab, color: cfg.ac }}
+          >
+            {d.count} investor{d.count !== 1 ? "s" : ""}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition-colors hover:bg-slate-50 focus:outline-none"
+          aria-label="Close drawer"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Stats row */}
+      <div className="mt-3.5 flex gap-2">
+        {d.stats.map((s) => (
+          <DrawerStatBox key={s.l} label={s.l} value={s.v} />
+        ))}
+      </div>
+
+      {/* Investor breakdown */}
+      {d.rows.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+            Investor breakdown
+          </p>
+          <div className="rounded-xl border border-slate-200 bg-white px-3 py-1">
+            {d.rows.slice(0, 6).map((row) => (
+              <DrawerRowItem key={row.id} row={row} ac={cfg.ac} ab={cfg.ab} />
+            ))}
+            {d.rows.length > 6 && (
+              <p className="py-2 text-center text-[11px] text-slate-400">
+                +{d.rows.length - 6} more investor{d.rows.length - 6 !== 1 ? "s" : ""}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* What this means */}
+      <div className="mt-3.5 rounded-xl border border-slate-100 bg-slate-50 p-3.5">
+        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+          What this means
+        </p>
+        <p className="text-[13px] leading-relaxed text-slate-700">{d.meaning}</p>
+      </div>
+
+      {/* Founder Intelligence */}
+      <div className="mt-2.5 rounded-xl p-3.5" style={{ background: "#1e1b4b" }}>
+        <div className="mb-2.5 flex items-center gap-2.5">
+          <div
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full"
+            style={{ background: "rgba(255,255,255,0.12)" }}
+          >
+            <svg
+              width="14" height="14" viewBox="0 0 24 24"
+              fill="none" stroke="#a5b4fc" strokeWidth={1.75}
+              strokeLinecap="round" strokeLinejoin="round"
+            >
+              <path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26A7 7 0 0 1 12 2z" />
+              <path d="M9 21h6M10 17v-1h4v1" />
+            </svg>
+          </div>
+          <p
+            className="text-[11px] font-semibold uppercase tracking-widest"
+            style={{ color: "#a5b4fc" }}
+          >
+            Founder intelligence
+          </p>
+        </div>
+        <p className="text-[12px] leading-relaxed" style={{ color: "#e0e7ff" }}>
+          {d.ai}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main view component ──────────────────────────────────────────────────────
+
 function FounderInvestorsModuleViewsInner({
   crmView,
   companyName,
 }: Readonly<{ crmView: FounderInvestorCrmView; companyName: string }>) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewMode>("kanban");
+  const [drawerGroup, setDrawerGroup] = useState<DrawerGroup | null>(null);
 
   const allRows = useMemo(() => collectAllRows(crmView), [crmView]);
   const filteredRows = useMemo(() => filterRows(allRows, query), [allRows, query]);
@@ -182,6 +436,25 @@ function FounderInvestorsModuleViewsInner({
     const followup   = allRows.filter((r) => r.actionType === "follow_up").length;
     return [interested, pledged, intro, followup];
   }, [allRows]);
+
+  // Sub-labels for the clickable cards
+  const cardSubs = useMemo(() => {
+    const savedCount      = allRows.filter((r) => r.actionType === "saved_deal").length;
+    const firmCount       = allRows.filter((r) => r.actionType === "pledged").length;
+    const indicativeCount = allRows.filter((r) => r.actionType === "indicative_interest").length;
+    return {
+      interested: `${donutCounts[0] - savedCount} interested · ${savedCount} saved`,
+      pledged:    `${firmCount} firm · ${indicativeCount} indicative`,
+      intro:      `${donutCounts[2]} awaiting introductions`,
+      followup:   `${donutCounts[3]} pending follow-ups`,
+    };
+  }, [allRows, donutCounts]);
+
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    document.body.style.overflow = drawerGroup ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [drawerGroup]);
 
   const pipelineColumns = useMemo(() => {
     const groups: Record<string, FounderInvestorRelationRow[]> = {
@@ -222,13 +495,13 @@ function FounderInvestorsModuleViewsInner({
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center gap-3 justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search investors, status, or activity…"
-          className="flex-1 min-w-[200px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          className="min-w-[200px] flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
         <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
           {(["kanban", "grid", "list"] as const).map((v) => (
@@ -238,7 +511,7 @@ function FounderInvestorsModuleViewsInner({
               onClick={() => setView(v)}
               className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
                 view === v
-                  ? "bg-white text-slate-950 shadow-sm border border-slate-200"
+                  ? "border border-slate-200 bg-white text-slate-950 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"
               }`}
             >
@@ -259,39 +532,39 @@ function FounderInvestorsModuleViewsInner({
               <PipelineDonut counts={donutCounts} />
             </div>
           )}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <MetricGrid>
-              <MetricCard
-                label="Interested investors"
-                value={String(crmView.summary.totalInterestedInvestors)}
-                detail="Unique investors with interest, saves, or intro activity"
-                accent="indigo"
-                href="/founder/investors"
+              <PipelineClickCard
+                label="Interested"
+                value={String(donutCounts[0])}
+                sub={cardSubs.interested}
+                accentColor="#534AB7"
+                accentBg="#EEEDFE"
+                onClick={() => setDrawerGroup("interested")}
               />
-              <MetricCard
-                label="Pledged / indicative"
+              <PipelineClickCard
+                label="Pledged"
                 value={crmView.summary.totalPledgedDisplay}
-                detail={
-                  crmView.summary.totalIndicativeInterestDisplay
-                    ? `${crmView.summary.totalIndicativeInterestDisplay} indicative interest declared`
-                    : "Total pledged amount from investor interests"
-                }
-                accent="violet"
-                href="/founder/capital-raise"
+                sub={cardSubs.pledged}
+                accentColor="#0F6E56"
+                accentBg="#E1F5EE"
+                onClick={() => setDrawerGroup("pledged")}
               />
-              <MetricCard
-                label="Intro requests"
-                value={String(crmView.summary.introRequests)}
-                detail="Investors who requested an introduction"
-                accent="blue"
-                href="/founder/messages"
+              <PipelineClickCard
+                label="Intro requested"
+                value={String(donutCounts[2])}
+                sub={cardSubs.intro}
+                accentColor="#185FA5"
+                accentBg="#E6F1FB"
+                onClick={() => setDrawerGroup("intro")}
               />
-              <MetricCard
-                label="Follow-ups needed"
-                value={String(crmView.summary.followUpsNeeded)}
-                detail="Investors waiting on founder or platform follow-up"
-                accent="slate"
-                href="/founder/investors"
+              <PipelineClickCard
+                label="Follow-up"
+                value={String(donutCounts[3])}
+                sub={cardSubs.followup}
+                accentColor="#854F0B"
+                accentBg="#FAEEDA"
+                onClick={() => setDrawerGroup("followup")}
               />
             </MetricGrid>
           </div>
@@ -339,7 +612,7 @@ function FounderInvestorsModuleViewsInner({
                     <td className="px-4 py-3 text-slate-500">{row.status ?? "—"}</td>
                     <td className="px-4 py-3 text-slate-500">{row.pipelineStage ? formatPipelineStage(row.pipelineStage) : "—"}</td>
                     <td className="px-4 py-3 text-slate-700">{formatAmountRow(row)}</td>
-                    <td className="px-4 py-3 text-slate-400 text-xs">{formatActivityDate(row.lastActivityAt)}</td>
+                    <td className="px-4 py-3 text-xs text-slate-400">{formatActivityDate(row.lastActivityAt)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -347,6 +620,42 @@ function FounderInvestorsModuleViewsInner({
           </div>
         )}
       </PageSection>
+
+      {/* ── Pipeline summary drawer overlay ── */}
+      <div
+        className="pointer-events-none fixed inset-0 z-50 transition-opacity duration-200"
+        style={{ opacity: drawerGroup ? 1 : 0, pointerEvents: drawerGroup ? "auto" : "none" }}
+        aria-hidden={!drawerGroup}
+      >
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0"
+          style={{ background: "rgba(12, 35, 64, 0.28)" }}
+          onClick={() => setDrawerGroup(null)}
+        />
+        {/* Drawer panel */}
+        <div
+          className="absolute bottom-0 left-0 right-0 overflow-y-auto"
+          style={{
+            background: "white",
+            borderRadius: "16px 16px 0 0",
+            borderTop: "0.5px solid #e2e8f0",
+            maxHeight: "56vh",
+            transform: drawerGroup ? "translateY(0)" : "translateY(100%)",
+            transition: "transform 280ms cubic-bezier(0.32, 0.72, 0, 1)",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {drawerGroup && (
+            <PipelineDrawerContent
+              group={drawerGroup}
+              allRows={allRows}
+              crmView={crmView}
+              onClose={() => setDrawerGroup(null)}
+            />
+          )}
+        </div>
+      </div>
     </>
   );
 }
