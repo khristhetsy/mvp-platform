@@ -28,30 +28,26 @@ export default async function FounderSettingsIntegrationsPage() {
         description="Connect external accounts and tools to your workspace."
       />
 
-      <div className="flex gap-6">
-        <SettingsSidebarNav active="integrations" />
+      <SettingsSidebarNav active="integrations" />
 
-        <div className="min-w-0 flex-1">
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
-              <h2 className="text-sm font-semibold text-slate-900">🔗 Integrations</h2>
-              <p className="mt-0.5 text-xs text-slate-500">Connected accounts and tools</p>
-            </div>
-            <div className="p-6 space-y-6">
-              <DraftEmailPanel
-                role="founder"
-                entityType={company ? "company" : undefined}
-                entityId={company?.id}
-                defaultTemplate="founder_investor_intro_followup"
-                googleConnected={googleStatus.connected}
-              />
-              <Suspense fallback={<p className="text-sm text-slate-500">Loading Google connection…</p>}>
-                <GoogleCalendarConnectionCard status={googleStatus} returnPath="/founder/settings/integrations" />
-              </Suspense>
-            </div>
-          </section>
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
+          <h2 className="text-sm font-semibold text-slate-900">Integrations</h2>
+          <p className="mt-0.5 text-xs text-slate-500">Connected accounts and tools</p>
         </div>
-      </div>
+        <div className="space-y-6 p-6">
+          <DraftEmailPanel
+            role="founder"
+            entityType={company ? "company" : undefined}
+            entityId={company?.id}
+            defaultTemplate="founder_investor_intro_followup"
+            googleConnected={googleStatus.connected}
+          />
+          <Suspense fallback={<p className="text-sm text-slate-500">Loading Google connection…</p>}>
+            <GoogleCalendarConnectionCard status={googleStatus} returnPath="/founder/settings/integrations" />
+          </Suspense>
+        </div>
+      </section>
     </FounderAppShell>
   );
 }

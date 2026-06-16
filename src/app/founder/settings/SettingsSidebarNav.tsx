@@ -4,46 +4,69 @@ import Link from "next/link";
 
 type SettingsTab = "company" | "billing" | "integrations" | "feedback";
 
-const SETTINGS_NAV: { key: SettingsTab; label: string; icon: string; href: string; sub: string }[] = [
-  { key: "company",      label: "Company profile",      icon: "🏢", href: "/founder/settings",              sub: "Listing, branding & details" },
-  { key: "billing",      label: "Billing & subscription", icon: "💳", href: "/founder/settings/billing",    sub: "Plan, payment & usage" },
-  { key: "integrations", label: "Integrations",          icon: "🔗", href: "/founder/settings/integrations", sub: "Connected accounts & tools" },
-  { key: "feedback",     label: "Feedback",              icon: "💬", href: "/founder/settings/feedback",     sub: "Help us improve CapitalOS" },
+function IcoBuildingOffice() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="7" width="20" height="14" rx="1" />
+      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+    </svg>
+  );
+}
+
+function IcoCreditCard() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+      <line x1="1" y1="10" x2="23" y2="10" />
+    </svg>
+  );
+}
+
+function IcoLink() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </svg>
+  );
+}
+
+function IcoMessageSquare() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+const SETTINGS_NAV = [
+  { key: "company" as SettingsTab,      label: "Company profile",       icon: IcoBuildingOffice, href: "/founder/settings"               },
+  { key: "billing" as SettingsTab,      label: "Billing & subscription", icon: IcoCreditCard,    href: "/founder/settings/billing"       },
+  { key: "integrations" as SettingsTab, label: "Integrations",           icon: IcoLink,          href: "/founder/settings/integrations"  },
+  { key: "feedback" as SettingsTab,     label: "Feedback",               icon: IcoMessageSquare, href: "/founder/settings/feedback"      },
 ];
 
 export function SettingsSidebarNav({ active }: { active: SettingsTab }) {
   return (
-    <nav className="hidden w-52 shrink-0 lg:block">
-      <div className="sticky top-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Settings</p>
-        </div>
-        <ul className="py-1">
-          {SETTINGS_NAV.map((item) => {
-            const isActive = item.key === active;
-            return (
-              <li key={item.key}>
-                <Link
-                  href={item.href}
-                  className={`flex items-start gap-3 px-4 py-3 transition-colors ${
-                    isActive
-                      ? "bg-indigo-50 text-indigo-700"
-                      : "text-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  <span className="mt-0.5 text-base leading-none">{item.icon}</span>
-                  <div className="min-w-0">
-                    <p className={`text-sm font-medium leading-tight ${isActive ? "text-indigo-700" : "text-slate-800"}`}>
-                      {item.label}
-                    </p>
-                    <p className="mt-0.5 text-[11px] leading-tight text-slate-400">{item.sub}</p>
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+    <nav className="mb-6 flex gap-0 border-b border-slate-200">
+      {SETTINGS_NAV.map((item) => {
+        const isActive = item.key === active;
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.key}
+            href={item.href}
+            className={`-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+              isActive
+                ? "border-indigo-600 text-indigo-700"
+                : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
+            }`}
+          >
+            <Icon />
+            {item.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }

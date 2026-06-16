@@ -29,23 +29,19 @@ export default async function FounderSettingsBillingPage() {
         description="Manage your plan, payment method, and usage."
       />
 
-      <div className="flex gap-6">
-        <SettingsSidebarNav active="billing" />
+      <SettingsSidebarNav active="billing" />
 
-        <div className="min-w-0 flex-1">
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
-              <h2 className="text-sm font-semibold text-slate-900">💳 Billing &amp; subscription</h2>
-              <p className="mt-0.5 text-xs text-slate-500">Plan, payment method, and usage</p>
-            </div>
-            <div className="p-6">
-              <Suspense fallback={<p className="text-sm text-slate-500">Loading subscription…</p>}>
-                <FounderSubscriptionSettingsCard subscription={subscription} requestedPlan={requestedPlan} />
-              </Suspense>
-            </div>
-          </section>
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
+          <h2 className="text-sm font-semibold text-slate-900">Billing &amp; subscription</h2>
+          <p className="mt-0.5 text-xs text-slate-500">Plan, payment method, and usage</p>
         </div>
-      </div>
+        <div className="p-6">
+          <Suspense fallback={<p className="text-sm text-slate-500">Loading subscription…</p>}>
+            <FounderSubscriptionSettingsCard subscription={subscription} requestedPlan={requestedPlan} />
+          </Suspense>
+        </div>
+      </section>
     </FounderAppShell>
   );
 }

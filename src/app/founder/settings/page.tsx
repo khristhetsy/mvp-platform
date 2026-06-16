@@ -23,30 +23,26 @@ export default async function FounderSettingsPage() {
         description="Edit your public listing, company details, and branding."
       />
 
-      <div className="flex gap-6">
-        <SettingsSidebarNav active="company" />
+      <SettingsSidebarNav active="company" />
 
-        <div className="min-w-0 flex-1">
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
-              <h2 className="text-sm font-semibold text-slate-900">🏢 Company profile</h2>
-              <p className="mt-0.5 text-xs text-slate-500">Edit your public listing and company details</p>
-            </div>
-            <div className="p-6">
-              <CompanySettingsForm company={company} />
-              {company ? (
-                <div className="mt-8">
-                  <CollaborationDiscussionPanel
-                    entityType="company"
-                    entityId={company.id}
-                    title="Company discussion"
-                  />
-                </div>
-              ) : null}
-            </div>
-          </section>
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
+          <h2 className="text-sm font-semibold text-slate-900">Company profile</h2>
+          <p className="mt-0.5 text-xs text-slate-500">Edit your public listing and company details</p>
         </div>
-      </div>
+        <div className="p-6">
+          <CompanySettingsForm company={company} />
+          {company ? (
+            <div className="mt-8">
+              <CollaborationDiscussionPanel
+                entityType="company"
+                entityId={company.id}
+                title="Company discussion"
+              />
+            </div>
+          ) : null}
+        </div>
+      </section>
     </FounderAppShell>
   );
 }

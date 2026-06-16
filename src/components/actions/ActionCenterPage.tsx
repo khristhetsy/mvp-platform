@@ -338,9 +338,14 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Action Intelligence"
+        eyebrow={role === "founder" ? "Action Center" : "Action Intelligence"}
         title={title ?? "Action Center"}
-        description={description ?? "Cross-workflow operational actions with lifecycle tracking."}
+        description={
+          description ??
+          (role === "founder"
+            ? "Your priority actions and recommended next steps."
+            : "Cross-workflow operational actions with lifecycle tracking.")
+        }
       />
 
       {analytics ? (
@@ -351,106 +356,224 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
         )
       ) : null}
 
-      {scheduled ? <ActionCenterScheduledStrip scheduled={scheduled} /> : null}
+      {role === "founder" ? (
+        <>
+          {/* ── Founder clean layout ─────────────────────────────────────── */}
 
-      {workflowDependencies.length > 0 ? (
-        <WorkflowDependencyPanel dependencies={workflowDependencies} title="Workflow blockers" />
-      ) : null}
+          {/* Simple search */}
+          <div className="flex items-center gap-3">
+            <div className="relative max-w-md flex-1">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search actions…"
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-800 placeholder-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              />
+            </div>
+          </div>
 
-      <ActionTabs
-        active={filters.tab}
-        onChange={setTab}
-        counts={
-          analytics
-            ? {
-                active: analytics.open,
-                overdue: analytics.overdue,
-                escalated: analytics.escalated,
-                completed: analytics.completedThisWeek,
-                snoozed: analytics.snoozed,
-              }
-            : undefined
-        }
-      />
-
-      {needsAttention.length > 0 && filters.tab === "active" ? (
-        <section className="rounded-xl border border-rose-200/80 bg-rose-50/30 p-4">
-          <h3 className="text-sm font-semibold text-rose-950">Needs attention</h3>
-          <p className="mt-1 text-xs text-rose-800/90">Overdue, escalated, blocked, or critical workflow items.</p>
-          <ul className="mt-3 space-y-2">
-            {needsAttention.map((action) => (
-              <li key={action.persistedId ?? action.id}>
-                <ActionCard
-                  action={action}
-                  selected={action.persistedId ? selectedIds.has(action.persistedId) : false}
-                  onSelect={(checked) => action.persistedId && toggleSelect(action.persistedId, checked)}
-                  onOpen={() => setDetailId(action.persistedId ?? null)}
+          {/* Needs attention banner */}
+          {needsAttention.length > 0 ? (
+            <div
+              style={{
+                overflow: "hidden",
+                borderRadius: 12,
+                border: "0.5px solid #FCA5A5",
+                boxShadow: "0 1px 3px rgb(12 35 64 / 0.05)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "10px 16px",
+                  background: "#FEF2F2",
+                  borderBottom: "0.5px solid #FCA5A5",
+                }}
+              >
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: "#A32D2D",
+                    flexShrink: 0,
+                  }}
                 />
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    color: "#A32D2D",
+                  }}
+                >
+                  Needs attention
+                </span>
+                <span style={{ marginLeft: "auto", fontSize: 11, color: "#94a3b8", fontWeight: 500 }}>
+                  {needsAttention.length} {needsAttention.length === 1 ? "item" : "items"}
+                </span>
+              </div>
+              <ul style={{ background: "#ffffff", padding: 0, margin: 0, listStyle: "none" }}>
+                {needsAttention.map((action) => (
+                  <li key={action.persistedId ?? action.id}>
+                    <ActionCard
+                      action={action}
+                      selected={false}
+                      onSelect={() => {}}
+                      onOpen={() => setDetailId(action.persistedId ?? null)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
-      <ActionFilters filters={filters} onChange={setFilters} onClear={clearFilters} />
+          {/* Priority list */}
+          {loading ? (
+            <p className="text-sm text-slate-500">Loading actions…</p>
+          ) : error ? (
+            <p className="text-sm text-red-700">{error}</p>
+          ) : actions.length === 0 ? (
+            <ActionEmptyState />
+          ) : (
+            <PriorityGroupedList actions={actions} onOpen={(id) => setDetailId(id)} />
+          )}
 
-      {role !== "investor" ? (
-        <ViewToolbar
-          viewMode={viewMode}
-          allowedModes={allowedModes}
-          onViewModeChange={setViewMode}
-          density={density}
-          onDensityChange={setDensity}
-          query={query}
-          onQueryChange={setQuery}
-          searchPlaceholder="Search actions, entities, or categories…"
-          showViewMode={false}
-          showDensity={false}
-          showSavedViews={false}
-          sticky
-        />
-      ) : null}
+          <p className="text-[10px] text-slate-500">{NBA_DISCLAIMER}</p>
 
-      <ActionBulkToolbar
-        selectedCount={selectedIds.size}
-        canEscalate={canEscalate}
-        disabled={bulkPending}
-        onBulk={handleBulk}
-      />
-
-      <div className="flex items-center justify-between text-xs text-slate-500">
-        <span>
-          Showing {actions.length} of {total} actions
-        </span>
-      </div>
-
-      {loading ? (
-        <p className="text-sm text-slate-500">Loading actions…</p>
-      ) : error ? (
-        <p className="text-sm text-red-700">{error}</p>
-      ) : actions.length === 0 ? (
-        <ActionEmptyState />
-      ) : viewMode === "table" ? (
-        <ActionTable
-          actions={actions}
-          selectedIds={selectedIds}
-          onToggle={toggleSelect}
-          onToggleAll={toggleAll}
-          onOpen={(action) => setDetailId(action.persistedId ?? null)}
-        />
+          <ActionDetailDrawer
+            actionId={detailId}
+            canEscalate={false}
+            viewerRole={role}
+            onClose={() => setDetailId(null)}
+            onUpdated={() => void refresh()}
+          />
+        </>
       ) : (
-        <PriorityGroupedList actions={actions} onOpen={(id) => setDetailId(id)} />
+        <>
+          {/* ── Full layout for admin / analyst / investor ─────────────── */}
+
+          {scheduled ? <ActionCenterScheduledStrip scheduled={scheduled} /> : null}
+
+          {workflowDependencies.length > 0 ? (
+            <WorkflowDependencyPanel dependencies={workflowDependencies} title="Workflow blockers" />
+          ) : null}
+
+          <ActionTabs
+            active={filters.tab}
+            onChange={setTab}
+            counts={
+              analytics
+                ? {
+                    active: analytics.open,
+                    overdue: analytics.overdue,
+                    escalated: analytics.escalated,
+                    completed: analytics.completedThisWeek,
+                    snoozed: analytics.snoozed,
+                  }
+                : undefined
+            }
+          />
+
+          {needsAttention.length > 0 && filters.tab === "active" ? (
+            <section className="rounded-xl border border-rose-200/80 bg-rose-50/30 p-4">
+              <h3 className="text-sm font-semibold text-rose-950">Needs attention</h3>
+              <p className="mt-1 text-xs text-rose-800/90">Overdue, escalated, blocked, or critical workflow items.</p>
+              <ul className="mt-3 space-y-2">
+                {needsAttention.map((action) => (
+                  <li key={action.persistedId ?? action.id}>
+                    <ActionCard
+                      action={action}
+                      selected={action.persistedId ? selectedIds.has(action.persistedId) : false}
+                      onSelect={(checked) => action.persistedId && toggleSelect(action.persistedId, checked)}
+                      onOpen={() => setDetailId(action.persistedId ?? null)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          <ActionFilters filters={filters} onChange={setFilters} onClear={clearFilters} />
+
+          {role !== "investor" ? (
+            <ViewToolbar
+              viewMode={viewMode}
+              allowedModes={allowedModes}
+              onViewModeChange={setViewMode}
+              density={density}
+              onDensityChange={setDensity}
+              query={query}
+              onQueryChange={setQuery}
+              searchPlaceholder="Search actions, entities, or categories…"
+              showViewMode={false}
+              showDensity={false}
+              showSavedViews={false}
+              sticky
+            />
+          ) : null}
+
+          <ActionBulkToolbar
+            selectedCount={selectedIds.size}
+            canEscalate={canEscalate}
+            disabled={bulkPending}
+            onBulk={handleBulk}
+          />
+
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span>
+              Showing {actions.length} of {total} actions
+            </span>
+          </div>
+
+          {loading ? (
+            <p className="text-sm text-slate-500">Loading actions…</p>
+          ) : error ? (
+            <p className="text-sm text-red-700">{error}</p>
+          ) : actions.length === 0 ? (
+            <ActionEmptyState />
+          ) : viewMode === "table" ? (
+            <ActionTable
+              actions={actions}
+              selectedIds={selectedIds}
+              onToggle={toggleSelect}
+              onToggleAll={toggleAll}
+              onOpen={(action) => setDetailId(action.persistedId ?? null)}
+            />
+          ) : (
+            <PriorityGroupedList actions={actions} onOpen={(id) => setDetailId(id)} />
+          )}
+
+          <p className="text-[10px] text-slate-500">{NBA_DISCLAIMER}</p>
+
+          <ActionDetailDrawer
+            actionId={detailId}
+            canEscalate={canEscalate}
+            viewerRole={role}
+            onClose={() => setDetailId(null)}
+            onUpdated={() => void refresh()}
+          />
+        </>
       )}
-
-      <p className="text-[10px] text-slate-500">{NBA_DISCLAIMER}</p>
-
-      <ActionDetailDrawer
-        actionId={detailId}
-        canEscalate={canEscalate}
-        viewerRole={role}
-        onClose={() => setDetailId(null)}
-        onUpdated={() => void refresh()}
-      />
     </div>
   );
 }
