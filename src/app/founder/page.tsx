@@ -26,6 +26,7 @@ import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestAct
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { CapitalReadinessSection } from "@/components/founder/CapitalReadinessSection";
 import { DashboardPipelinePanel } from "@/components/founder/DashboardPipelinePanel";
+import { FounderProactiveInsights } from "@/components/founder/FounderProactiveInsights";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,26 @@ export default async function FounderDashboardPage() {
     const pledgeCompanyId = await getFounderPledgeCompanyId(serviceSupabase, profile.id, company.id);
     pledgeSummary = await getCompanyPledgeSummary(serviceSupabase, pledgeCompanyId);
   }
+
+  // Proactive insights data
+  const { data: activeRooms } = company
+    ? await supabase
+        .from("deal_rooms")
+        .select("id, title, status, updated_at")
+        .eq("company_id", company.id)
+        .in("status", ["active", "pending"])
+        .order("updated_at", { ascending: true })
+        .limit(10)
+    : { data: [] as Array<{ id: string; title: string; status: string; updated_at: string }> };
+
+  const roomIds = (activeRooms ?? []).map((r) => r.id);
+  const { count: unresolvedQCount } = roomIds.length > 0
+    ? await supabase
+        .from("deal_room_questions")
+        .select("id", { count: "exact", head: true })
+        .in("room_id", roomIds)
+        .neq("status", "resolved")
+    : { count: 0 };
 
   const companyName = company?.company_name ?? "Your company";
   const pitchDeck = documents?.find((d) => d.document_type === "PITCH_DECK");
@@ -122,7 +143,17 @@ export default async function FounderDashboardPage() {
           />
         </div>
 
-        {/* 2. What to do next */}
+        {/* 2. Proactive AI insights */}
+        <div className="mb-8">
+          <FounderProactiveInsights
+            rooms={activeRooms ?? []}
+            unresolvedQCount={unresolvedQCount ?? 0}
+            readinessScore={readinessScore}
+            strongMatchCount={investorFit?.strongMatchCount ?? 0}
+          />
+        </div>
+
+        {/* 3. What to do next */}
         <div className="mb-8">
           <NextBestActionsPanel
             role="founder"
@@ -132,7 +163,7 @@ export default async function FounderDashboardPage() {
           />
         </div>
 
-        {/* 3. Priority remediation tasks */}
+        {/* 4. Priority remediation tasks */}
         {remediation.tasks.length > 0 ? (
           <div className="mb-8">
             <FounderRemediationActionPlan
@@ -145,7 +176,7 @@ export default async function FounderDashboardPage() {
           </div>
         ) : null}
 
-        {/* 4. Investor fit signals */}
+        {/* 5. Investor fit signals */}
         {investorFit ? (
           <div className="mb-8">
             <FounderInvestorFitSignals
