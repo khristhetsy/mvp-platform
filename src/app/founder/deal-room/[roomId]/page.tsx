@@ -8,6 +8,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { DealRoomQuestionsPanel, type DealRoomCompanySnapshot } from "@/components/deal-room/DealRoomQuestionsPanel";
 import { DealRoomDocRequestsPanel } from "@/components/deal-room/DealRoomDocRequestsPanel";
 import { DealRoomMilestonePanel } from "@/components/deal-room/DealRoomMilestonePanel";
+import { DealRoomActivityPanel } from "@/components/deal-room/DealRoomActivityPanel";
 import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
 
 export const dynamic = "force-dynamic";
@@ -97,6 +98,8 @@ export default async function FounderDealRoomPage({ params }: PageProps) {
           <WorkspacePanel title="Collaboration" subtitle="Discussion thread">
             <CollaborationDiscussionPanel entityType="deal_room" entityId={roomId} />
           </WorkspacePanel>
+
+          <DealRoomActivityPanel roomId={roomId} />
         </div>
       </FounderFeatureGate>
     </FounderAppShell>

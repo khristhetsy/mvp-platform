@@ -9,21 +9,69 @@ export type ActivityEvent = {
   metadata: Record<string, unknown> | null;
 };
 
-const EVENT_LABELS: Record<DealRoomActivityType, { label: string; icon: string; color: string }> = {
-  room_created:       { label: "Room created",         icon: "🏗️",  color: "#EEEDFE" },
-  room_viewed:        { label: "Room viewed",           icon: "👁️",  color: "#f0fdf4" },
-  room_status_changed:{ label: "Status changed",        icon: "🔄",  color: "#fef9c3" },
-  question_created:   { label: "Question submitted",    icon: "💬",  color: "#fef3c7" },
-  founder_responded:  { label: "You responded",         icon: "✅",  color: "#dcfce7" },
-  question_resolved:  { label: "Question resolved",     icon: "🎯",  color: "#dcfce7" },
-  doc_requested:      { label: "Document requested",    icon: "📋",  color: "#fef3c7" },
-  doc_fulfilled:      { label: "Document fulfilled",    icon: "📄",  color: "#dcfce7" },
-  follow_up_requested:{ label: "Follow-up requested",   icon: "📩",  color: "#ede9fe" },
+// SVG icons — no emojis
+type EventMeta = { label: string; icon: React.ReactElement; color: string };
+
+function mkIcon(path: React.ReactElement, color: string) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {path}
+    </svg>
+  );
+}
+
+const EVENT_CONFIGS: Record<DealRoomActivityType, EventMeta> = {
+  room_created: {
+    label: "Room created",
+    color: "#EEEDFE",
+    icon: mkIcon(<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></>, "#534AB7"),
+  },
+  room_viewed: {
+    label: "Room viewed",
+    color: "#eff6ff",
+    icon: mkIcon(<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>, "#1d4ed8"),
+  },
+  room_status_changed: {
+    label: "Status changed",
+    color: "#fef9c3",
+    icon: mkIcon(<><polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" /><polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" /></>, "#854d0e"),
+  },
+  question_created: {
+    label: "Question submitted",
+    color: "#fef3c7",
+    icon: mkIcon(<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />, "#92400e"),
+  },
+  founder_responded: {
+    label: "You responded",
+    color: "#f0fdf4",
+    icon: mkIcon(<polyline points="20 6 9 17 4 12" />, "#15803d"),
+  },
+  question_resolved: {
+    label: "Question resolved",
+    color: "#f0fdf4",
+    icon: mkIcon(<><circle cx="12" cy="12" r="10" /><polyline points="9 12 11 14 15 10" /></>, "#15803d"),
+  },
+  doc_requested: {
+    label: "Document requested",
+    color: "#fef3c7",
+    icon: mkIcon(<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" /></>, "#92400e"),
+  },
+  doc_fulfilled: {
+    label: "Document provided",
+    color: "#f0fdf4",
+    icon: mkIcon(<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><polyline points="9 14 11 16 15 12" /></>, "#15803d"),
+  },
+  follow_up_requested: {
+    label: "Follow-up requested",
+    color: "#fef2f2",
+    icon: mkIcon(<><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></>, "#b91c1c"),
+  },
 };
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "Just now";
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
@@ -35,56 +83,42 @@ function timeAgo(iso: string): string {
 export function DealRoomActivityFeed({ events }: { events: ActivityEvent[] }) {
   if (events.length === 0) {
     return (
-      <div style={{ padding: "24px 0", textAlign: "center" }}>
-        <p style={{ fontSize: 13, color: "#9ca3af" }}>No deal room activity yet.</p>
+      <div className="py-6 text-center">
+        <p className="text-sm text-slate-400">No activity yet across your deal rooms.</p>
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+    <div className="flex flex-col">
       {events.map((ev, i) => {
-        const meta = EVENT_LABELS[ev.event_type] ?? {
+        const config = EVENT_CONFIGS[ev.event_type] ?? {
           label: ev.event_type.replace(/_/g, " "),
-          icon: "•",
           color: "#f3f4f6",
+          icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth={2} aria-hidden><circle cx="12" cy="12" r="4" /></svg>,
         };
         const isLast = i === events.length - 1;
+
         return (
-          <div key={ev.id} style={{ display: "flex", gap: 12, position: "relative" }}>
-            {/* Vertical line */}
+          <div key={ev.id} className="relative flex gap-3">
             {!isLast && (
-              <div style={{
-                position: "absolute", left: 16, top: 36, bottom: 0,
-                width: 1, background: "#f3f4f6",
-              }} />
+              <div className="absolute left-4 top-9 bottom-0 w-px bg-slate-100" />
             )}
 
-            {/* Icon bubble */}
-            <div style={{
-              width: 32, height: 32, borderRadius: "50%",
-              background: meta.color, flexShrink: 0, zIndex: 1,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 14,
-            }}>
-              {meta.icon}
+            <div
+              className="relative z-10 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+              style={{ background: config.color }}
+            >
+              {config.icon}
             </div>
 
-            {/* Content */}
-            <div style={{ flex: 1, paddingBottom: isLast ? 0 : 20 }}>
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: "#111827", margin: 0 }}>
-                  {meta.label}
-                </p>
-                <span style={{ fontSize: 11, color: "#9ca3af", flexShrink: 0 }}>
-                  {timeAgo(ev.created_at)}
-                </span>
+            <div className={`min-w-0 flex-1 ${isLast ? "pb-0" : "pb-4"}`}>
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-900">{config.label}</p>
+                <span className="shrink-0 text-[11px] text-slate-400">{timeAgo(ev.created_at)}</span>
               </div>
-              <p style={{ fontSize: 11, color: "#6b7280", margin: "2px 0 0" }}>
+              <p className="mt-0.5 text-xs text-slate-500">
                 {ev.room_title}
-                {ev.metadata?.question_text
-                  ? ` — "${String(ev.metadata.question_text).slice(0, 60)}…"`
-                  : ""}
               </p>
             </div>
           </div>
