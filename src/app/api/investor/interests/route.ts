@@ -5,6 +5,8 @@ import { recordInvestorCrmActivity } from "@/lib/data/investor-crm";
 import { emitOperationalEvent } from "@/lib/operational-activity/create-event";
 import { upsertInvestorInterest } from "@/lib/data/investor-interests";
 import { notifyFounderInvestorInterest } from "@/lib/notifications/investor-events";
+import { emailFounderInvestorInterest } from "@/lib/email/deal-room-emails";
+import { getCompanyFounderId } from "@/lib/notifications/notifications";
 import { investorInterestSchema } from "@/lib/validation";
 
 async function parseBody(request: Request) {
@@ -100,6 +102,18 @@ export async function POST(request: Request) {
       investorId: auth.profile.id,
       entityId: data.id,
     });
+
+    // Fire-and-forget email alert to the founder
+    void (async () => {
+      const company = await getCompanyFounderId(data.company_id!);
+      if (company?.founder_id) {
+        await emailFounderInvestorInterest({
+          founderId: company.founder_id,
+          investorId: auth.profile.id,
+          companyName: company.company_name ?? "your company",
+        });
+      }
+    })();
   }
 
   return NextResponse.json({ interest: data });

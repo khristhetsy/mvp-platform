@@ -44,9 +44,14 @@ const FOUNDER_ALLOWED_DOCUMENT_TYPES = new Set([
   "PITCH_DECK",
   "BUSINESS_PLAN",
   "FINANCIAL_STATEMENTS",
+  "FINANCIALS",           // alias — normalised to FINANCIAL_STATEMENTS on checklist
   "CAP_TABLE",
   "TEAM_BIOS",
   "LEGAL_DOCUMENTS",
+  "LEGAL_DOCUMENT",       // alias — normalised to LEGAL_DOCUMENTS on checklist
+  "CORPORATE_DOCUMENTS",
+  "CUSTOMER_CONTRACTS",
+  "MARKET_RESEARCH",
   "OTHER",
 ]);
 

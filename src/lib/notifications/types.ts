@@ -62,7 +62,12 @@ export type NotificationType =
   | "spv_approved_for_closing"
   | "spv_operationally_closed"
   | "next_best_action_escalated"
-  | "next_best_action_critical_escalated";
+  | "next_best_action_critical_escalated"
+  | "deal_room_question_created"
+  | "deal_room_document_requested"
+  | "deal_room_viewed"
+  | "digest_ready"
+  | "reminder_generated";
 
 export type NotificationRecord = {
   id: string;
