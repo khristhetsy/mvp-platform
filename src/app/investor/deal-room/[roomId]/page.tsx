@@ -4,9 +4,13 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { DealRoomQuestionsPanel } from "@/components/deal-room/DealRoomQuestionsPanel";
 import { DealRoomDocRequestsPanel } from "@/components/deal-room/DealRoomDocRequestsPanel";
 import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
+import { writeDealRoomActivity } from "@/lib/deal-rooms/activity";
+import { createNotification } from "@/lib/notifications/notifications";
+import { emailFounderRoomViewed } from "@/lib/email/deal-room-emails";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +29,48 @@ export default async function InvestorDealRoomPage({ params }: PageProps) {
   ]);
 
   if (!room) notFound();
+
+  // Write room_viewed activity the first time this investor opens the room
+  const hasViewed = (activity ?? []).some(
+    (e) => e.event_type === "room_viewed" && e.actor_user_id === profile.id,
+  );
+  if (!hasViewed) {
+    const admin = createServiceRoleClient();
+    // Write activity + notify founder (fire-and-forget — page still renders on error)
+    void (async () => {
+      await writeDealRoomActivity(admin, {
+        roomId,
+        eventType: "room_viewed",
+        actorUserId: profile.id,
+        metadata: {},
+      });
+      // Get founder_id for notification + email
+      const { data: fullRoom } = await admin
+        .from("deal_rooms")
+        .select("founder_id, title")
+        .eq("id", roomId)
+        .maybeSingle();
+      if (fullRoom?.founder_id) {
+        await createNotification({
+          recipientUserId: fullRoom.founder_id,
+          actorUserId: profile.id,
+          type: "deal_room_question_created", // reuses the deal_room type
+          title: "Investor viewed your deal room",
+          message: `An investor opened your deal room "${fullRoom.title}"`,
+          entityType: "deal_room",
+          entityId: roomId,
+          deepLink: `/founder/deal-room/${roomId}`,
+          dedupeKey: `room_viewed:${roomId}:${profile.id}`,
+        });
+        void emailFounderRoomViewed({
+          founderId: fullRoom.founder_id,
+          investorId: profile.id,
+          roomId,
+          roomTitle: fullRoom.title ?? "Deal Room",
+        });
+      }
+    })();
+  }
 
   return (
     <AppShell

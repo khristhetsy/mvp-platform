@@ -70,6 +70,20 @@ export type CompanyMember = {
   created_at: string;
 };
 
+export type CompanyInvite = {
+  id: string;
+  company_id: string;
+  inviter_id: string;
+  invitee_email: string;
+  token: string;
+  role: "admin" | "member";
+  status: "pending" | "accepted" | "revoked";
+  created_at: string;
+  expires_at: string;
+  accepted_at: string | null;
+  accepted_by_user_id: string | null;
+};
+
 export type Subscription = {
   id: string;
   profile_id: string;
@@ -123,6 +137,12 @@ export type Database = {
         Row: CompanyMember;
         Insert: Pick<CompanyMember, "company_id" | "user_id"> & Partial<Pick<CompanyMember, "role">>;
         Update: Partial<Pick<CompanyMember, "role">>;
+        Relationships: [];
+      };
+      company_invites: {
+        Row: CompanyInvite;
+        Insert: Pick<CompanyInvite, "company_id" | "inviter_id" | "invitee_email"> & Partial<Pick<CompanyInvite, "role">>;
+        Update: Partial<Pick<CompanyInvite, "status" | "accepted_at" | "accepted_by_user_id">>;
         Relationships: [];
       };
       subscriptions: {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-type SettingsTab = "company" | "billing" | "integrations" | "feedback";
+type SettingsTab = "company" | "billing" | "integrations" | "feedback" | "team";
 
 function IcoBuildingOffice() {
   return (
@@ -39,8 +39,20 @@ function IcoMessageSquare() {
   );
 }
 
+function IcoUsers() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
 const SETTINGS_NAV = [
   { key: "company" as SettingsTab,      label: "Company profile",       icon: IcoBuildingOffice, href: "/founder/settings"               },
+  { key: "team" as SettingsTab,         label: "Team",                   icon: IcoUsers,          href: "/founder/settings/team"          },
   { key: "billing" as SettingsTab,      label: "Billing & subscription", icon: IcoCreditCard,    href: "/founder/settings/billing"       },
   { key: "integrations" as SettingsTab, label: "Integrations",           icon: IcoLink,          href: "/founder/settings/integrations"  },
   { key: "feedback" as SettingsTab,     label: "Feedback",               icon: IcoMessageSquare, href: "/founder/settings/feedback"      },

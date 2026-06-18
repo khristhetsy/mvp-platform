@@ -4,6 +4,7 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { writeDealRoomActivity } from "@/lib/deal-rooms/activity";
 import { createNotification } from "@/lib/notifications/notifications";
+import { emailFounderDocumentRequested } from "@/lib/email/deal-room-emails";
 
 const createSchema = z.object({
   request_type: z.enum(["financials", "cap_table", "legal_docs", "customer_metrics", "custom"]),
@@ -64,6 +65,21 @@ export async function POST(
       entityId: roomId,
       deepLink: `/founder/deal-room/${roomId}`,
       dedupeKey: `deal_room_doc_request:${roomId}:${row.id}`,
+    });
+    // Fire-and-forget email — does not block response
+    const DOC_LABELS: Record<string, string> = {
+      financials: "Financial Statements",
+      cap_table: "Cap Table",
+      legal_docs: "Legal Documents",
+      customer_metrics: "Customer Metrics",
+      custom: parsed.data.custom_request || "Custom Document",
+    };
+    void emailFounderDocumentRequested({
+      founderId: room.founder_id,
+      investorId: auth.profile.id,
+      roomId,
+      roomTitle: room.title ?? "Deal Room",
+      documentLabel: DOC_LABELS[parsed.data.request_type] ?? parsed.data.request_type,
     });
   }
 
