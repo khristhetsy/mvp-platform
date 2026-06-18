@@ -12,7 +12,9 @@ import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-set
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 
-const FOUNDER_DOCUMENT_TYPES: { label: string; value: string; aliases?: string[] }[] = [
+// Human-readable label lookup — covers canonical codes + upload-API aliases
+const DOC_TYPE_LABEL_MAP: Record<string, string> = {};
+const _FOUNDER_DOCUMENT_TYPES_RAW: { label: string; value: string; aliases?: string[] }[] = [
   { label: "Pitch Deck", value: "PITCH_DECK" },
   { label: "Business Plan", value: "BUSINESS_PLAN" },
   { label: "Financials", value: "FINANCIALS", aliases: ["FINANCIAL_STATEMENTS"] },
@@ -24,6 +26,16 @@ const FOUNDER_DOCUMENT_TYPES: { label: string; value: string; aliases?: string[]
   { label: "Market Research", value: "MARKET_RESEARCH" },
   { label: "Other", value: "OTHER" },
 ];
+
+// Build the lookup map now that the array is fully defined
+for (const t of _FOUNDER_DOCUMENT_TYPES_RAW) {
+  DOC_TYPE_LABEL_MAP[t.value.toUpperCase()] = t.label;
+  for (const alias of t.aliases ?? []) {
+    DOC_TYPE_LABEL_MAP[alias.toUpperCase()] = t.label;
+  }
+}
+
+const FOUNDER_DOCUMENT_TYPES: { label: string; value: string; aliases?: string[] }[] = _FOUNDER_DOCUMENT_TYPES_RAW;
 
 export default async function DocumentUploadPage() {
   const profile = await requireRole(["founder"]);
@@ -129,12 +141,22 @@ export default async function DocumentUploadPage() {
             <h2 className="text-base font-semibold text-slate-950">Uploaded files</h2>
             <div className="mt-4 divide-y divide-slate-100">
               {(documents ?? []).length > 0 ? (
-                documents?.map((document) => (
-                  <div key={document.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-                    <span className="min-w-0 flex-1 truncate font-medium text-slate-800">{document.file_name ?? document.document_type}</span>
-                    <span className="shrink-0 rounded-full bg-[var(--blue-muted)] px-3 py-1 text-xs font-medium text-[var(--blue-hover)]">{document.status ?? "uploaded"}</span>
-                  </div>
-                ))
+                documents?.map((document) => {
+                  const typeLabel = document.document_type
+                    ? (DOC_TYPE_LABEL_MAP[document.document_type.toUpperCase()] ?? document.document_type)
+                    : null;
+                  return (
+                    <div key={document.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-slate-800">{document.file_name ?? document.document_type}</p>
+                        {typeLabel && (
+                          <p className="text-xs text-slate-400">{typeLabel}</p>
+                        )}
+                      </div>
+                      <span className="shrink-0 rounded-full bg-[var(--blue-muted)] px-3 py-1 text-xs font-medium text-[var(--blue-hover)]">{document.status ?? "uploaded"}</span>
+                    </div>
+                  );
+                })
               ) : (
                 <p className="py-3 text-sm text-slate-600">No documents uploaded yet.</p>
               )}

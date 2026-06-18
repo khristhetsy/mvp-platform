@@ -120,19 +120,10 @@ type UploadedDoc = {
 };
 
 function computeOverallScore(docs: UploadedDoc[]): number {
-  const uploadedCodes = new Set(
-    docs
-      .filter((d) => (d.status ?? "").toLowerCase() !== "archived")
-      .map((d) => (d.document_type ?? "").toUpperCase()),
-  );
-
-  let score = 0;
-  for (const spec of DOC_SPECS) {
-    if (uploadedCodes.has(spec.typeCode)) {
-      score += spec.weight;
-    }
-  }
-  return score;
+  // Delegate to isUploaded() so alias resolution is consistent with the checklist display.
+  // (The upload API normalises FINANCIALS→FINANCIAL_STATEMENTS and LEGAL_DOCUMENT→LEGAL_DOCUMENTS
+  //  before writing to the DB, so a direct typeCode lookup misses those two specs.)
+  return DOC_SPECS.reduce((sum, spec) => sum + (isUploaded(spec, docs) ? spec.weight : 0), 0);
 }
 
 function isUploaded(spec: DocSpec, docs: UploadedDoc[]): boolean {
