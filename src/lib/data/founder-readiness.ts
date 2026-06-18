@@ -19,9 +19,12 @@ export function documentTypeCode(label: string) {
   return label.toUpperCase().replaceAll(" ", "_");
 }
 
-// Canonical aliases: checklist code → legacy upload codes that mean the same thing
+// Canonical aliases: checklist code → all DB codes that mean the same thing.
+// "Financial model" label → FINANCIAL_MODEL code → covers FINANCIAL_STATEMENTS (upload-API
+// canonical) and FINANCIALS (legacy upload form value).
+// "Legal documents" label → LEGAL_DOCUMENTS code → covers LEGAL_DOCUMENT (upload form value).
 const DOC_TYPE_ALIASES: Record<string, string[]> = {
-  FINANCIAL_STATEMENTS: ["FINANCIALS"],
+  FINANCIAL_MODEL: ["FINANCIAL_STATEMENTS", "FINANCIALS"],
   LEGAL_DOCUMENTS: ["LEGAL_DOCUMENT"],
 };
 

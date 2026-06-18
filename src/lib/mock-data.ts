@@ -1,8 +1,9 @@
 export const requiredDocumentTypes = [
   "Pitch deck",
-  "Financial statements",
+  "Financial model",
   "Cap table",
   "Business plan",
+  "Team bios",
   "Legal documents",
   "Corporate documents",
   "Customer contracts",
