@@ -346,12 +346,6 @@ export function PlanClient({ plans, aiEnabled }: Props) {
     return { title: name.slice(0, idx).trim(), subtitle: name.slice(idx + 1).trim() };
   }
 
-  function getQuarterTag(startDate: string | null | undefined): string | null {
-    if (!startDate) return null;
-    const d = new Date(startDate);
-    const q = Math.ceil((d.getMonth() + 1) / 3);
-    return `Q${q} ${d.getFullYear()}`;
-  }
 
   async function openShare() {
     setShareOpen(true);
@@ -806,45 +800,18 @@ export function PlanClient({ plans, aiEnabled }: Props) {
             <div style={{ borderTop: "0.5px solid var(--border-subtle)", marginBottom: 14 }} />
 
             {/* Fields */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: 0, alignItems: "start" }}>
-              {detail.objective && (
-                <div style={{ paddingRight: 24 }}>
-                  <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Objective</p>
-                  <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>{detail.objective}</p>
-                </div>
-              )}
-              {detail.target_audience && (
-                <div style={{ minWidth: 140, borderLeft: "0.5px solid var(--border-subtle)", paddingLeft: 20, paddingRight: 20 }}>
-                  <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Audience</p>
-                  <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>{detail.target_audience}</p>
-                </div>
-              )}
-              {detail.budget && (
-                <div style={{ minWidth: 90, borderLeft: "0.5px solid var(--border-subtle)", paddingLeft: 20, paddingRight: 20 }}>
-                  <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Budget</p>
-                  <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: ACCENT }}>
-                    {detail.budget.includes("/") ? (
-                      <>
-                        {detail.budget.split("/")[0]}
-                        <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text-muted)" }}>/{detail.budget.split("/")[1]}</span>
-                      </>
-                    ) : detail.budget}
-                  </p>
-                </div>
-              )}
-              {(detail.start_date ?? detail.end_date) && (
-                <div style={{ minWidth: 130, borderLeft: "0.5px solid var(--border-subtle)", paddingLeft: 20 }}>
-                  <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Window</p>
-                  <p style={{ fontSize: 13, margin: 0 }}>{detail.start_date ?? "—"}</p>
-                  <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "2px 0 0" }}>→ {detail.end_date ?? "—"}</p>
-                  {getQuarterTag(detail.start_date) && (
-                    <span style={{ fontSize: 10, fontWeight: 500, background: "#E6F1FB", color: "#185FA5", padding: "2px 6px", borderRadius: 5, display: "inline-block", marginTop: 6 }}>
-                      {getQuarterTag(detail.start_date)}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
+            {detail.objective && (
+              <div style={{ marginBottom: 14 }}>
+                <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Objective</p>
+                <p style={{ fontSize: 15, margin: 0, lineHeight: 1.6 }}>{detail.objective}</p>
+              </div>
+            )}
+            {detail.target_audience && (
+              <div style={{ borderTop: "0.5px solid var(--border-subtle)", paddingTop: 14 }}>
+                <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 4px", textTransform: "uppercase", letterSpacing: ".06em" }}>Audience</p>
+                <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>{detail.target_audience}</p>
+              </div>
+            )}
             {detail.summary && <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "14px 0 0", lineHeight: 1.6, borderTop: "0.5px solid var(--border-subtle)", paddingTop: 12 }}>{detail.summary}</p>}
           </div>
 
