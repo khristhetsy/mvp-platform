@@ -64,6 +64,13 @@ const TOOLS = [
     icon: "📚",
     tag: "Reference",
   },
+  {
+    href: "/founder/pitch-deck-analyzer",
+    label: "Pitch deck AI analyzer",
+    description: "Get scored, slide-by-slide AI feedback on your pitch deck from the perspective of a top VC.",
+    icon: "🔬",
+    tag: "AI",
+  },
 ] as const;
 
 const TAG_COLORS: Record<string, { bg: string; text: string }> = {
@@ -75,6 +82,7 @@ const TAG_COLORS: Record<string, { bg: string; text: string }> = {
   Planning:      { bg: "#FFF7ED", text: "#9A3412" },
   Governance:    { bg: "#F0FDF4", text: "#14532D" },
   Reference:     { bg: "#F8FAFC", text: "#475569" },
+  AI:            { bg: "#EEEDFE", text: "#3C3489" },
 };
 
 export default async function RaiseToolkitPage() {

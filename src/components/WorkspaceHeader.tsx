@@ -229,6 +229,20 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profi
           {workspaceLabel(workspace)}
         </span>
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          {/* Global search trigger */}
+          <button
+            type="button"
+            aria-label="Open global search (⌘K)"
+            onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true }))}
+            className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-500 hover:border-slate-300 hover:bg-slate-50 transition-colors md:flex"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+              <path d="M16.5 16.5L21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <span className="hidden lg:inline">Search</span>
+            <kbd className="hidden rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 lg:inline">⌘K</kbd>
+          </button>
           <button
             type="button"
             aria-label={`Current company: ${companyLabel}`}

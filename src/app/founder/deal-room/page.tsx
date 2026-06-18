@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { DealRoomActivityFeed, type ActivityEvent } from "@/components/founder/DealRoomActivityFeed";
 
 export const dynamic = "force-dynamic";
 
@@ -25,14 +26,33 @@ export default async function FounderDealRoomIndexPage() {
 
   // Fetch lightweight counts for milestone display
   const roomIds = (rooms ?? []).map((r) => r.id);
-  const [{ data: qCounts }, { data: dCounts }, { data: aCounts }] =
+  const [{ data: qCounts }, { data: dCounts }, { data: aCounts }, { data: recentActivity }] =
     roomIds.length > 0
       ? await Promise.all([
           supabase.from("deal_room_questions").select("room_id, status").in("room_id", roomIds),
           supabase.from("deal_room_document_requests").select("room_id, status").in("room_id", roomIds),
           supabase.from("deal_room_activity_events").select("room_id, event_type").in("room_id", roomIds),
+          supabase
+            .from("deal_room_activity_events")
+            .select("id, room_id, event_type, created_at, metadata")
+            .in("room_id", roomIds)
+            .order("created_at", { ascending: false })
+            .limit(20),
         ])
-      : [{ data: [] }, { data: [] }, { data: [] }];
+      : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }];
+
+  // Build room title lookup
+  const roomTitles: Record<string, string> = {};
+  for (const r of rooms ?? []) roomTitles[r.id] = r.title;
+
+  const activityEvents: ActivityEvent[] = (recentActivity ?? []).map((ev) => ({
+    id: String(ev.id),
+    room_id: String(ev.room_id),
+    room_title: roomTitles[String(ev.room_id)] ?? "Unknown room",
+    event_type: ev.event_type as ActivityEvent["event_type"],
+    created_at: String(ev.created_at),
+    metadata: (ev.metadata as Record<string, unknown> | null) ?? null,
+  }));
 
   function getRoomStep(roomId: string, roomStatus: string): 1 | 2 | 3 | 4 | 5 {
     if (roomStatus === "closed" || roomStatus === "archived") return 5;
@@ -138,6 +158,14 @@ export default async function FounderDealRoomIndexPage() {
                 })}
               </div>
             )}
+          </WorkspacePanel>
+
+          {/* Activity feed */}
+          <WorkspacePanel
+            title="Activity feed"
+            subtitle="Recent investor engagement across all rooms"
+          >
+            <DealRoomActivityFeed events={activityEvents} />
           </WorkspacePanel>
         </div>
       </FounderFeatureGate>

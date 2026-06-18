@@ -20,6 +20,8 @@ import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-set
 import { loadFounderRemediationPlan } from "@/lib/remediation/load-founder-remediation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
+import { computeReadinessBenchmark } from "@/lib/data/readiness-benchmark";
+import { ReadinessBenchmarkBanner } from "@/components/founder/ReadinessBenchmarkBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +61,7 @@ export default async function FounderReadinessPage() {
 
   const companyName = company?.company_name ?? "Your company";
   const remediation = await loadFounderRemediationPlan(profile);
+  const benchmark = company ? await computeReadinessBenchmark(company.id, company.revenue_stage ?? null) : null;
 
   return (
     <FounderAppShell
@@ -104,6 +107,12 @@ export default async function FounderReadinessPage() {
                   reviewFeedback={reviewNotes}
                 />
               </section>
+
+              {benchmark && (
+                <section className="mt-6">
+                  <ReadinessBenchmarkBanner benchmark={benchmark} />
+                </section>
+              )}
 
               <section className="mt-6">
                 <FounderRemediationActionPlan

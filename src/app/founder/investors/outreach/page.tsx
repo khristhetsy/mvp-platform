@@ -7,6 +7,7 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { loadFounderInvestorHub } from "@/lib/founder-crm/load-founder-investor-hub";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { requireRole } from "@/lib/supabase/auth";
+import { MilestoneCelebration, type MilestoneKey } from "@/components/founder/MilestoneCelebration";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,11 @@ export default async function FounderInvestorOutreachPage() {
     hub = await loadFounderInvestorHub(company, profile.id);
   }
 
+  const outreachMilestones: MilestoneKey[] = [];
+  if ((hub?.contacts ?? []).length > 0) outreachMilestones.push("first_contact_added");
+  const SENT_STATUSES = new Set(["contacted", "responded", "meeting_scheduled", "selected"]);
+  if ((hub?.targets ?? []).some((t) => SENT_STATUSES.has(t.status))) outreachMilestones.push("outreach_sent");
+
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
@@ -32,6 +38,8 @@ export default async function FounderInvestorOutreachPage() {
             title="Outreach & CRM"
             description="Private investor CRM, email outreach pipeline, and social drafts."
           />
+
+          <MilestoneCelebration achieved={outreachMilestones} />
 
           {!company ? (
             <WorkspacePanel title="Company profile required" subtitle="Link a company to manage outreach">

@@ -29,6 +29,7 @@ import { DashboardPipelinePanel } from "@/components/founder/DashboardPipelinePa
 import { FounderProactiveInsights } from "@/components/founder/FounderProactiveInsights";
 import { FounderWeeklyDigest } from "@/components/founder/FounderWeeklyDigest";
 import { FounderFundraisingMilestoneTracker } from "@/components/founder/FounderFundraisingMilestoneTracker";
+import { MilestoneCelebration, type MilestoneKey } from "@/components/founder/MilestoneCelebration";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +100,10 @@ export default async function FounderDashboardPage() {
     (investorActivity?.savedDeals.length ?? 0);
   const raiseProgress = company?.is_published ? "Published" : "Not published";
 
+  // Milestones achievable from dashboard data
+  const achievedMilestones: MilestoneKey[] = [];
+  if ((documents ?? []).length > 0) achievedMilestones.push("first_document_uploaded");
+  if (readinessScore >= 80) achievedMilestones.push("readiness_80");
 
   return (
     <FounderAppShell
@@ -296,6 +301,9 @@ export default async function FounderDashboardPage() {
             </WorkspacePanel>
           )}
         </section>
+
+        {/* Milestone celebrations — shown once per milestone, dismissible */}
+        <MilestoneCelebration achieved={achievedMilestones} />
 
         {/* 8. Recent Activity */}
         <section className="mb-8">

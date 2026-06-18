@@ -6,6 +6,7 @@ import { FounderOutreachPipelinePanel } from "@/components/FounderOutreachPipeli
 import { FounderSocialDraftsPanel } from "@/components/FounderSocialDraftsPanel";
 import { InvestorOutreachCoach } from "@/components/founder/InvestorOutreachCoach";
 import type { OutreachCoachSnapshot } from "@/components/founder/InvestorOutreachCoach";
+import { FollowUpNudgesPanel } from "@/components/founder/FollowUpNudgesPanel";
 import type { EnrichedOutreachTarget } from "@/lib/founder-crm/outreach";
 import type { OutreachReadinessResult } from "@/lib/founder-crm/outreach-readiness";
 import type { SocialOutreachReadinessResult } from "@/lib/founder-crm/social-outreach-readiness";
@@ -360,8 +361,10 @@ export function FounderInvestorHubPanels({
             ))}
           </ul>
         ) : null}
-        {followUpCount > 0 ? (
-          <p className="mt-3 text-sm text-amber-800">{followUpCount} follow-up reminders due.</p>
+        {targets.length > 0 ? (
+          <div className="mt-4">
+            <FollowUpNudgesPanel targets={targets} />
+          </div>
         ) : null}
       </section>
 

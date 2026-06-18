@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { WorkspaceSidebar } from "@/components/WorkspaceSidebar";
 import { CapitalOSAssistant } from "@/components/assistant/CapitalOSAssistant";
+import { GlobalSearchModal } from "@/components/GlobalSearchModal";
 import type { WorkspaceId } from "@/lib/workspace-nav";
 
 export function WorkspaceShell({
@@ -43,6 +44,7 @@ export function WorkspaceShell({
           {children}
         </main>
         <CapitalOSAssistant />
+        <GlobalSearchModal />
       </div>
     </div>
   );
