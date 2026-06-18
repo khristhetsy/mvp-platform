@@ -88,7 +88,12 @@ function SectionCard({ section }: { section: PitchDeckSection }) {
             marginTop: 12, background: "#fffbeb", border: "1px solid #fde68a",
             borderRadius: 8, padding: "10px 14px",
           }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: "#92400e", margin: "0 0 3px" }}>💡 Quick fix</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#92400e" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="13" /><path d="M12 17h.01" />
+              </svg>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#92400e", margin: 0 }}>Quick fix</p>
+            </div>
             <p style={{ fontSize: 12, color: "#78350f", margin: 0, lineHeight: 1.5 }}>{section.tip}</p>
           </div>
         </div>
@@ -248,9 +253,14 @@ export function PitchDeckAnalyzerClient({
             background: "#fffbeb", border: "1px solid #fde68a",
             borderRadius: 14, padding: "18px 22px",
           }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: "#92400e", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: ".07em" }}>
-              🎭 Simulated investor first impression
-            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#92400e" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#92400e", margin: 0, textTransform: "uppercase", letterSpacing: ".07em" }}>
+                Simulated investor first impression
+              </p>
+            </div>
             <p style={{ fontSize: 13, color: "#78350f", margin: 0, lineHeight: 1.6 }}>
               {analysis.investorReaction}
             </p>
@@ -259,9 +269,14 @@ export function PitchDeckAnalyzerClient({
           {/* Strengths & Gaps */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
             <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: "16px 20px" }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "#065f46", margin: "0 0 10px", textTransform: "uppercase", letterSpacing: ".07em" }}>
-                ✅ Top strengths
-              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#065f46" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "#065f46", margin: 0, textTransform: "uppercase", letterSpacing: ".07em" }}>
+                  Top strengths
+                </p>
+              </div>
               {analysis.topStrengths.map((s, i) => (
                 <p key={i} style={{ fontSize: 12, color: "#166534", margin: "0 0 6px", lineHeight: 1.5 }}>
                   • {s}
@@ -269,9 +284,14 @@ export function PitchDeckAnalyzerClient({
               ))}
             </div>
             <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: "16px 20px" }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "#991b1b", margin: "0 0 10px", textTransform: "uppercase", letterSpacing: ".07em" }}>
-                🚧 Top gaps
-              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#991b1b" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "#991b1b", margin: 0, textTransform: "uppercase", letterSpacing: ".07em" }}>
+                  Top gaps
+                </p>
+              </div>
               {analysis.topGaps.map((g, i) => (
                 <p key={i} style={{ fontSize: 12, color: "#7f1d1d", margin: "0 0 6px", lineHeight: 1.5 }}>
                   • {g}
