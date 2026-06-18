@@ -12,7 +12,23 @@ export const dynamic = "force-dynamic";
 export default async function InvestorOpportunitiesPage() {
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
   void trackInvestorOpportunityView(investorId);
-  const { matches } = await loadInvestorRecommendedMatches(supabase, investorId, 24);
+
+  const [{ matches }, pledgeRes] = await Promise.all([
+    loadInvestorRecommendedMatches(supabase, investorId, 24),
+    supabase
+      .from("investor_interests")
+      .select("company_id, pledge_amount")
+      .eq("investor_id", investorId)
+      .not("pledge_amount", "is", null),
+  ]);
+
+  // Build a map of company_id → pledge_amount for O(1) lookup
+  const pledgeByCompany = new Map<string, number>();
+  for (const row of pledgeRes.data ?? []) {
+    if (row.company_id && row.pledge_amount != null) {
+      pledgeByCompany.set(row.company_id, row.pledge_amount as number);
+    }
+  }
 
   const opportunityRows = (matches ?? []).map((row) => ({
     companyId: row.company.id,
@@ -34,6 +50,7 @@ export default async function InvestorOpportunitiesPage() {
     matchScore: row.matchScore,
     matchReasons: row.matchReasons,
     missingFitReasons: row.missingFitReasons,
+    myPledgeAmount: pledgeByCompany.get(row.company.id) ?? null,
   }));
 
   return (

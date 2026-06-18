@@ -21,6 +21,7 @@ export type InvestorOpportunityRow = {
   matchScore: number;
   matchReasons: string[];
   missingFitReasons: string[];
+  myPledgeAmount: number | null;
 };
 
 function scoreBucket(score: number): "high" | "medium" | "low" {
@@ -185,7 +186,17 @@ function OpportunitiesTable({ rows }: { rows: InvestorOpportunityRow[] }) {
               </td>
 
               {/* Pledge amount */}
-              <td className="px-4 py-3 text-xs text-slate-300">—</td>
+              <td className="px-4 py-3 text-xs text-slate-700">
+                {row.myPledgeAmount != null ? (
+                  new Intl.NumberFormat("en-US", {
+                    style: "currency",
+                    currency: "USD",
+                    maximumFractionDigits: 0,
+                  }).format(row.myPledgeAmount)
+                ) : (
+                  <span className="text-slate-300">—</span>
+                )}
+              </td>
 
               {/* Readiness score */}
               <td className="px-4 py-3">
@@ -295,7 +306,7 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {filtered.map((row) => (
+            {filtered.map(({ myPledgeAmount: _pledge, ...row }) => (
               <InvestorMatchOpportunityCard key={row.companyId} {...row} />
             ))}
           </div>
