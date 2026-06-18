@@ -106,6 +106,49 @@ const DOC_SPECS: DocSpec[] = [
     ],
     improvementTip: "IP assignment gaps are a top deal-killer at Series A diligence. Ensure all founders have signed before fundraising.",
   },
+  // --- Supplementary documents (non-critical, bonus score up to 100 cap) ---
+  {
+    typeCode: "CORPORATE_DOCUMENTS",
+    label: "Corporate Documents",
+    weight: 5,
+    critical: false,
+    investorExpectation: "Bylaws, board resolutions, and governance documents that show the company is properly structured.",
+    keyElements: [
+      "Bylaws or operating agreement",
+      "Board / member resolutions",
+      "Stock purchase agreements",
+      "83(b) elections (if applicable)",
+    ],
+    improvementTip: "Clean corporate records signal operational maturity and reduce legal costs during diligence.",
+  },
+  {
+    typeCode: "CUSTOMER_CONTRACTS",
+    label: "Customer Contracts",
+    weight: 5,
+    critical: false,
+    investorExpectation: "Signed agreements with paying customers that validate revenue claims and retention.",
+    keyElements: [
+      "Redacted enterprise contracts showing ARR/MRR",
+      "Standard customer agreement (MSA or SaaS agreement)",
+      "Key renewal and expansion terms",
+      "Any exclusivity or MFN clauses",
+    ],
+    improvementTip: "Even 1–2 redacted enterprise contracts dramatically strengthen revenue quality perception.",
+  },
+  {
+    typeCode: "MARKET_RESEARCH",
+    label: "Market Research",
+    weight: 5,
+    critical: false,
+    investorExpectation: "Third-party data or primary research backing your TAM/SAM/SOM claims.",
+    keyElements: [
+      "Market sizing methodology (top-down and bottom-up)",
+      "Competitor landscape matrix",
+      "Customer discovery interviews or survey data",
+      "Industry analyst reports (Gartner, Forrester, CB Insights, etc.)",
+    ],
+    improvementTip: "Cite specific sources for market size — unsourced TAM numbers are one of the fastest ways to lose credibility.",
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -121,15 +164,19 @@ type UploadedDoc = {
 
 function computeOverallScore(docs: UploadedDoc[]): number {
   // Delegate to isUploaded() so alias resolution is consistent with the checklist display.
-  // (The upload API normalises FINANCIALS→FINANCIAL_STATEMENTS and LEGAL_DOCUMENT→LEGAL_DOCUMENTS
-  //  before writing to the DB, so a direct typeCode lookup misses those two specs.)
-  return DOC_SPECS.reduce((sum, spec) => sum + (isUploaded(spec, docs) ? spec.weight : 0), 0);
+  // Capped at 100 — the 3 supplementary types (weight 5 each) act as bonus points.
+  const raw = DOC_SPECS.reduce((sum, spec) => sum + (isUploaded(spec, docs) ? spec.weight : 0), 0);
+  return Math.min(raw, 100);
 }
 
 function isUploaded(spec: DocSpec, docs: UploadedDoc[]): boolean {
   const aliases: Record<string, string[]> = {
     FINANCIALS: ["FINANCIAL_STATEMENTS"],
     LEGAL_DOCUMENT: ["LEGAL_DOCUMENTS"],
+    // Upload API writes the canonical codes below — these are direct matches; kept for symmetry.
+    CORPORATE_DOCUMENTS: [],
+    CUSTOMER_CONTRACTS: [],
+    MARKET_RESEARCH: [],
   };
   const matchCodes = new Set([spec.typeCode, ...(aliases[spec.typeCode] ?? [])]);
   return docs.some(
