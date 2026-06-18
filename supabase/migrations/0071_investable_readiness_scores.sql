@@ -37,6 +37,7 @@ create index if not exists company_readiness_scores_company_id_created_at_idx
 -- RLS: only admin/analyst/investor roles can read; founders cannot
 alter table company_readiness_scores enable row level security;
 
+drop policy if exists "admin_analyst_full_access" on company_readiness_scores;
 create policy "admin_analyst_full_access" on company_readiness_scores
   for all
   using (
@@ -47,6 +48,7 @@ create policy "admin_analyst_full_access" on company_readiness_scores
     )
   );
 
+drop policy if exists "investor_read" on company_readiness_scores;
 create policy "investor_read" on company_readiness_scores
   for select
   using (
