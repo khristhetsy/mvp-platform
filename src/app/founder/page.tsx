@@ -30,6 +30,8 @@ import { FounderProactiveInsights } from "@/components/founder/FounderProactiveI
 import { FounderWeeklyDigest } from "@/components/founder/FounderWeeklyDigest";
 import { FounderFundraisingMilestoneTracker } from "@/components/founder/FounderFundraisingMilestoneTracker";
 import { MilestoneCelebration, type MilestoneKey } from "@/components/founder/MilestoneCelebration";
+import { DashboardExpandableSection } from "@/components/founder/DashboardExpandableSection";
+import { FirstRunModal } from "@/components/founder/FirstRunModal";
 
 export const dynamic = "force-dynamic";
 
@@ -150,19 +152,7 @@ export default async function FounderDashboardPage() {
           />
         </div>
 
-        {/* 2. Fundraising milestone tracker */}
-        <div className="mb-8">
-          <FounderFundraisingMilestoneTracker
-            readinessScore={readinessScore}
-            activeRoomCount={(activeRooms ?? []).length}
-            pledgedAmount={pledgeSummary.totalPledged}
-            fundingTarget={company?.funding_amount ? Number(company.funding_amount) : null}
-            isPublished={company?.is_published ?? false}
-            strongMatchCount={investorFit?.strongMatchCount ?? 0}
-          />
-        </div>
-
-        {/* 3. Weekly raise digest */}
+        {/* 2. Weekly raise digest */}
         <div className="mb-8">
           <FounderWeeklyDigest
             rooms={activeRooms ?? []}
@@ -176,16 +166,6 @@ export default async function FounderDashboardPage() {
           />
         </div>
 
-        {/* 3. Proactive AI insights */}
-        <div className="mb-8">
-          <FounderProactiveInsights
-            rooms={activeRooms ?? []}
-            unresolvedQCount={unresolvedQCount ?? 0}
-            readinessScore={readinessScore}
-            strongMatchCount={investorFit?.strongMatchCount ?? 0}
-          />
-        </div>
-
         {/* 3. What to do next */}
         <div className="mb-8">
           <NextBestActionsPanel
@@ -196,152 +176,182 @@ export default async function FounderDashboardPage() {
           />
         </div>
 
-        {/* 4. Priority remediation tasks */}
-        {remediation.tasks.length > 0 ? (
+        {/* ── Secondary panels — hidden by default ── */}
+        <DashboardExpandableSection showLabel="Show more insights" hideLabel="Show less">
+
+          {/* Fundraising milestone tracker */}
           <div className="mb-8">
-            <FounderRemediationActionPlan
-              tasks={remediation.tasks}
-              summary={remediation.summary}
-              learningLinks={remediation.learningLinks}
-              compact
-              title="Priority remediation tasks"
+            <FounderFundraisingMilestoneTracker
+              readinessScore={readinessScore}
+              activeRoomCount={(activeRooms ?? []).length}
+              pledgedAmount={pledgeSummary.totalPledged}
+              fundingTarget={company?.funding_amount ? Number(company.funding_amount) : null}
+              isPublished={company?.is_published ?? false}
+              strongMatchCount={investorFit?.strongMatchCount ?? 0}
             />
           </div>
-        ) : null}
 
-        {/* 5. Investor fit signals */}
-        {investorFit ? (
+          {/* Proactive AI insights */}
           <div className="mb-8">
-            <FounderInvestorFitSignals
-              signals={buildFounderInvestorFitSignals({
-                company: investorFit.companyProfile,
-                approvedInvestorMatchCount: investorFit.approvedInvestorCount,
-                strongMatchCount: investorFit.strongMatchCount,
-              })}
-              approvedCount={investorFit.approvedInvestorCount}
-              strongCount={investorFit.strongMatchCount}
+            <FounderProactiveInsights
+              rooms={activeRooms ?? []}
+              unresolvedQCount={unresolvedQCount ?? 0}
+              readinessScore={readinessScore}
+              strongMatchCount={investorFit?.strongMatchCount ?? 0}
             />
           </div>
-        ) : null}
 
-        {/* 5. Institutional readiness learning */}
-        {learning ? (
-          <div className="mb-8">
-            <FounderLearningPreviewCard
-              overallPercent={learning.overallPercent}
-              currentMilestone={learning.currentMilestone}
-              nextMilestone={learning.nextMilestone}
-              continueModules={learning.continueModules}
-              recommendations={learning.recommendations}
-            />
-          </div>
-        ) : null}
-
-        {/* 6. Engagement trend */}
-        <section className="mb-8">
-          <DashboardInsightPanel
-            title="Engagement trend"
-            subtitle="Workspace activity snapshot — last 7 days"
-            introRequests={investorActivity?.introRequests.length ?? 0}
-          />
-        </section>
-
-        {/* 7. Capital Raise Overview + Investor Pipeline */}
-        <section className="mb-8 grid gap-5 xl:grid-cols-2">
-          <WorkspacePanel title="Capital raise overview" subtitle="Non-binding marketplace interest">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg px-4 py-3 ring-1 ring-[#EEEDFE]" style={{ background: "#EEEDFE" }}>
-                <p className="text-xs font-medium" style={{ color: "#534AB7" }}>Total pledged</p>
-                <p className="mt-1.5 font-mono text-2xl font-semibold" style={{ color: "#3C3489" }}>
-                  {formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
-                </p>
-                <p className="mt-1 text-[11px]" style={{ color: "#534AB7" }}>
-                  {pledgeSummary.investorCount} investor{pledgeSummary.investorCount === 1 ? "" : "s"}
-                </p>
-              </div>
-              <div className="rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-                <p className="text-xs font-medium text-slate-600">Funding target</p>
-                <p className="mt-1.5 font-mono text-2xl font-semibold text-slate-950">
-                  {company?.funding_amount ? formatPledgeTotal(Number(company.funding_amount)) : "TBD"}
-                </p>
-                <p className="mt-1 text-[11px] text-slate-500">
-                  {raiseProgress}
-                </p>
-              </div>
+          {/* Priority remediation tasks */}
+          {remediation.tasks.length > 0 ? (
+            <div className="mb-8">
+              <FounderRemediationActionPlan
+                tasks={remediation.tasks}
+                summary={remediation.summary}
+                learningLinks={remediation.learningLinks}
+                compact
+                title="Priority remediation tasks"
+              />
             </div>
-            {company?.funding_amount && Number(company.funding_amount) > 0 ? (
-              <div className="mt-4">
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-500">Raise progress</span>
-                  <span className="text-[11px] font-semibold" style={{ color: "#534AB7" }}>
-                    {Math.round(Math.min(100, (pledgeSummary.totalPledged / Number(company.funding_amount)) * 100))}%
-                  </span>
+          ) : null}
+
+          {/* Investor fit signals */}
+          {investorFit ? (
+            <div className="mb-8">
+              <FounderInvestorFitSignals
+                signals={buildFounderInvestorFitSignals({
+                  company: investorFit.companyProfile,
+                  approvedInvestorMatchCount: investorFit.approvedInvestorCount,
+                  strongMatchCount: investorFit.strongMatchCount,
+                })}
+                approvedCount={investorFit.approvedInvestorCount}
+                strongCount={investorFit.strongMatchCount}
+              />
+            </div>
+          ) : null}
+
+          {/* Institutional readiness learning */}
+          {learning ? (
+            <div className="mb-8">
+              <FounderLearningPreviewCard
+                overallPercent={learning.overallPercent}
+                currentMilestone={learning.currentMilestone}
+                nextMilestone={learning.nextMilestone}
+                continueModules={learning.continueModules}
+                recommendations={learning.recommendations}
+              />
+            </div>
+          ) : null}
+
+          {/* Engagement trend */}
+          <section className="mb-8">
+            <DashboardInsightPanel
+              title="Engagement trend"
+              subtitle="Workspace activity snapshot — last 7 days"
+              introRequests={investorActivity?.introRequests.length ?? 0}
+            />
+          </section>
+
+          {/* Capital Raise Overview + Investor Pipeline */}
+          <section className="mb-8 grid gap-5 xl:grid-cols-2">
+            <WorkspacePanel title="Capital raise overview" subtitle="Non-binding marketplace interest">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg px-4 py-3 ring-1 ring-[#EEEDFE]" style={{ background: "#EEEDFE" }}>
+                  <p className="text-xs font-medium" style={{ color: "#534AB7" }}>Total pledged</p>
+                  <p className="mt-1.5 font-mono text-2xl font-semibold" style={{ color: "#3C3489" }}>
+                    {formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
+                  </p>
+                  <p className="mt-1 text-[11px]" style={{ color: "#534AB7" }}>
+                    {pledgeSummary.investorCount} investor{pledgeSummary.investorCount === 1 ? "" : "s"}
+                  </p>
                 </div>
-                <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${Math.min(100, (pledgeSummary.totalPledged / Number(company.funding_amount)) * 100)}%`,
-                      background: "#534AB7",
-                    }}
-                  />
+                <div className="rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+                  <p className="text-xs font-medium text-slate-600">Funding target</p>
+                  <p className="mt-1.5 font-mono text-2xl font-semibold text-slate-950">
+                    {company?.funding_amount ? formatPledgeTotal(Number(company.funding_amount)) : "TBD"}
+                  </p>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    {raiseProgress}
+                  </p>
                 </div>
               </div>
-            ) : null}
-            <p className="mt-4 text-xs leading-5 text-slate-500">
-              Pledges are indicative and not legally committed investment.
-            </p>
-          </WorkspacePanel>
-
-          {investorActivity ? (
-            <DashboardPipelinePanel activity={investorActivity} />
-          ) : (
-            <WorkspacePanel title="Investor pipeline" subtitle="Read-only activity on your listing">
-              <p className="text-sm text-slate-600">Investor activity will appear once your company is linked.</p>
+              {company?.funding_amount && Number(company.funding_amount) > 0 ? (
+                <div className="mt-4">
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="text-[11px] text-slate-500">Raise progress</span>
+                    <span className="text-[11px] font-semibold" style={{ color: "#534AB7" }}>
+                      {Math.round(Math.min(100, (pledgeSummary.totalPledged / Number(company.funding_amount)) * 100))}%
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.min(100, (pledgeSummary.totalPledged / Number(company.funding_amount)) * 100)}%`,
+                        background: "#534AB7",
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : null}
+              <p className="mt-4 text-xs leading-5 text-slate-500">
+                Pledges are indicative and not legally committed investment.
+              </p>
             </WorkspacePanel>
-          )}
-        </section>
+
+            {investorActivity ? (
+              <DashboardPipelinePanel activity={investorActivity} />
+            ) : (
+              <WorkspacePanel title="Investor pipeline" subtitle="Read-only activity on your listing">
+                <p className="text-sm text-slate-600">Investor activity will appear once your company is linked.</p>
+              </WorkspacePanel>
+            )}
+          </section>
+
+          {/* Recent Activity */}
+          <section className="mb-8">
+            <WorkspacePanel
+              title="Recent activity"
+              subtitle="Documents and data room status"
+              action={
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                  {documentStatus}
+                </span>
+              }
+            >
+              <div className="divide-y divide-slate-100">
+                {(documents ?? []).length > 0 ? (
+                  documents?.slice(0, 5).map((doc) => (
+                    <div key={doc.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                      <span className="min-w-0 flex-1 truncate font-medium text-slate-800">
+                        {doc.file_name ?? doc.document_type}
+                      </span>
+                      <span
+                        className={`shrink-0 rounded px-2.5 py-1 text-[10px] font-semibold ${
+                          doc.status === "approved"
+                            ? "bg-[#EAF3DE] text-[#3B6D11]"
+                            : doc.status === "rejected"
+                            ? "bg-[#FCEBEB] text-[#A32D2D]"
+                            : "bg-[#EEEDFE] text-[#3C3489]"
+                        }`}
+                      >
+                        {doc.status ?? "uploaded"}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="py-3 text-sm text-slate-600">No documents uploaded yet.</p>
+                )}
+              </div>
+            </WorkspacePanel>
+          </section>
+
+        </DashboardExpandableSection>
 
         {/* Milestone celebrations — shown once per milestone, dismissible */}
         <MilestoneCelebration achieved={achievedMilestones} />
 
-        {/* 8. Recent Activity */}
-        <section className="mb-8">
-          <WorkspacePanel
-            title="Recent activity"
-            subtitle="Documents and data room status"
-            action={
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                {documentStatus}
-              </span>
-            }
-          >
-            <div className="divide-y divide-slate-100">
-              {(documents ?? []).length > 0 ? (
-                documents?.slice(0, 5).map((doc) => (
-                  <div key={doc.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-                    <span className="min-w-0 flex-1 truncate font-medium text-slate-800">
-                      {doc.file_name ?? doc.document_type}
-                    </span>
-                    <span
-                      className={`shrink-0 rounded px-2.5 py-1 text-[10px] font-semibold ${
-                        doc.status === "approved"
-                          ? "bg-[#EAF3DE] text-[#3B6D11]"
-                          : doc.status === "rejected"
-                          ? "bg-[#FCEBEB] text-[#A32D2D]"
-                          : "bg-[#EEEDFE] text-[#3C3489]"
-                      }`}
-                    >
-                      {doc.status ?? "uploaded"}
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="py-3 text-sm text-slate-600">No documents uploaded yet.</p>
-              )}
-            </div>
-          </WorkspacePanel>
-        </section>
+        {/* First-run onboarding — shown once to new founders with no documents */}
+        <FirstRunModal hasNoDocuments={(documents ?? []).length === 0} />
       </FounderFeatureGate>
     </FounderAppShell>
   );

@@ -175,9 +175,9 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
     label: "Investors",
     children: [
       { href: "/founder/investors", label: "Overview" },
-      { href: "/founder/investors/outreach", label: "Outreach & CRM" },
-      { href: "/founder/matching", label: "Matching" },
-      { href: "/founder/investor-pipeline", label: "Investor Pipeline" },
+      { href: "/founder/investors/outreach", label: "CRM" },
+      { href: "/founder/investor-pipeline", label: "Pipeline" },
+      { href: "/founder/investors/matches", label: "Matches" },
     ],
   },
   { href: "/founder/deal-room", label: "Deal Room" },
