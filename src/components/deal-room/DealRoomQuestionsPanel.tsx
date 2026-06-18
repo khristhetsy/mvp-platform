@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { formatApiError } from "@/lib/api/errors";
 import type { Database } from "@/lib/supabase/types";
 
@@ -16,73 +16,198 @@ export type DealRoomCompanySnapshot = {
 };
 
 // ---------------------------------------------------------------------------
-// AI draft generation — pure client-side, no API calls
+// Response time helpers
 // ---------------------------------------------------------------------------
 
-const CATEGORY_TEMPLATES: Record<
-  string,
-  (q: string, c: DealRoomCompanySnapshot) => string
-> = {
-  financial: (_q, c) => {
-    const stage = c.revenueStage ? ` We are currently at ${c.revenueStage} stage.` : "";
-    return `Thank you for this question.${stage} [Provide your current ARR/MRR, e.g. "$[X]K MRR growing at [X]% MoM."] Our unit economics show [gross margin %, CAC, LTV]. [Describe your current runway and burn rate, e.g. "We have [X] months of runway at current burn of $[X]K/month."] Happy to share our financial model under NDA if helpful.`;
-  },
-  legal: (_q, c) => {
-    return `${c.companyName} is incorporated as a [C-Corp / LLC] in [state/country]. We have [X] shareholders on the cap table, with founders holding [X]%. [Describe any IP assignments, NDAs, or material contracts relevant to this question.] There are no outstanding litigation matters or material legal encumbrances at this time. I can share our cap table summary or relevant agreements on request.`;
-  },
-  traction: (_q, c) => {
-    const geo = c.geography ? ` currently operating in ${c.geography}` : "";
-    return `${c.companyName}${geo} has achieved [key traction metric, e.g. "X paying customers / $XK ARR / X% month-over-month growth"]. [Add 1-2 additional proof points: retention rate, NPS, pilot results, etc.] Our strongest growth channel has been [channel], and we see [leading indicator] as the clearest signal of product-market fit.`;
-  },
-  market: (_q, _c) => {
-    return `The total addressable market (TAM) for [your market] is estimated at $[X]B globally, with our initial serviceable addressable market (SAM) at $[X]B. [Cite a credible source, e.g. "per [Gartner / internal analysis]."] We are targeting [ICP description] as our beachhead segment, with a land-and-expand motion into [adjacent segments]. [Add any competitive positioning or differentiation notes.]`;
-  },
-  product: (_q, c) => {
-    const stage = c.revenueStage ? ` at ${c.revenueStage} stage` : "";
-    return `${c.companyName}${stage} offers [one-line product description]. The core technology is built on [stack/approach], which enables [key differentiator]. [Describe current product maturity: "We shipped our GA release in [month/year] and have [X] active users / integrations."] Our roadmap for the next 6 months focuses on [top 1-2 priorities]. [Note any proprietary tech, patents, or moats.]`;
-  },
-  team: (_q, c) => {
-    return `${c.companyName} was founded by [Founder 1 background] and [Founder 2 background]. The team has deep expertise in [domain 1] and [domain 2], with prior experience at [notable companies / exits if applicable]. We currently have [X] full-time employees. [Name any key advisors or board members.] We are hiring for [open roles] to accelerate [function].`;
-  },
-  compliance: (_q, _c) => {
-    return `[Describe your regulatory status: e.g. "We operate under [specific regulation] and have [license/certification/exemption] in [jurisdictions]."] We conduct [compliance process] on a [frequency] basis. [Note any pending regulatory approvals or material compliance risks and how they are being addressed.] Happy to share documentation or connect you with our legal counsel for a deeper dive.`;
-  },
-  operations: (_q, c) => {
-    const geo = c.geography ? ` headquartered in ${c.geography}` : "";
-    return `${c.companyName}${geo} operates with a team of [X] full-time and [X] contractors. Our core operations include [key process 1] and [key process 2]. [Describe key vendor/supplier relationships, SLAs, or infrastructure dependencies.] We have [describe scalability approach: "built our infrastructure to scale to [X] without additional headcount / key hires"].`;
-  },
-  other: (_q, c) => {
-    return `Thank you for the question. [Start with a direct answer to what was asked.] At ${c.companyName}, [provide relevant context or supporting detail]. [If this requires a longer answer or supporting documents, note: "Happy to share [document / reference] or schedule a call to walk through this in more detail."]`;
-  },
-};
+function daysSince(iso: string | null | undefined): number | null {
+  if (!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  return Math.floor(ms / (1000 * 60 * 60 * 24));
+}
 
-function generateAnswerDraft(question: Question, company: DealRoomCompanySnapshot): string {
-  const category = question.category ?? "other";
-  const template = CATEGORY_TEMPLATES[category] ?? CATEGORY_TEMPLATES.other;
-  return template(question.question ?? "", company);
+function ResponseTimeBadge({ createdAt, respondedAt }: { createdAt: string | null; respondedAt: string | null }) {
+  if (respondedAt) {
+    const days = daysSince(createdAt);
+    const responded = daysSince(respondedAt);
+    const label = responded === 0 ? "responded today" : `responded in ${days ?? "?"}d`;
+    return (
+      <span style={{ fontSize: 9, fontWeight: 600, background: "#EAF3DE", color: "#1E6D3C", padding: "2px 7px", borderRadius: 20 }}>
+        ✓ {label}
+      </span>
+    );
+  }
+  const days = daysSince(createdAt);
+  if (days === null) return null;
+  if (days === 0) {
+    return (
+      <span style={{ fontSize: 9, fontWeight: 600, background: "#E6F1FB", color: "#185FA5", padding: "2px 7px", borderRadius: 20 }}>
+        asked today
+      </span>
+    );
+  }
+  const urgent = days >= 3;
+  return (
+    <span style={{
+      fontSize: 9, fontWeight: 600, padding: "2px 7px", borderRadius: 20,
+      background: urgent ? "#FCEBEB" : "#FAEEDA",
+      color: urgent ? "#A32D2D" : "#854F0B",
+    }}>
+      {urgent ? "⚠ " : ""}{days}d unanswered
+    </span>
+  );
 }
 
 // ---------------------------------------------------------------------------
-// Q&A coach button + panel
+// Pattern intelligence banner
+// ---------------------------------------------------------------------------
+
+const CATEGORY_LABELS: Record<string, string> = {
+  financial: "Financial",
+  legal: "Legal",
+  traction: "Traction",
+  market: "Market",
+  product: "Product",
+  team: "Team",
+  compliance: "Compliance",
+  operations: "Operations",
+  other: "Other",
+};
+
+const PATTERN_SIGNALS: Record<string, string> = {
+  financial: "Investor is closely scrutinising your financials — be thorough with unit economics and runway.",
+  legal: "Multiple legal questions indicate heightened due diligence — consider proactively sharing cap table and IP assignments.",
+  traction: "Investor focus on traction suggests they want more proof points — lead with your strongest retention or growth metrics.",
+  market: "Heavy market focus — strengthen your TAM/SAM narrative with a credible third-party source.",
+  team: "Team questions signal they are evaluating execution risk — highlight relevant domain expertise and key hires.",
+  product: "Multiple product questions — clarify your technical moat and roadmap clearly.",
+  compliance: "Compliance scrutiny — prepare to share any licenses, certifications, or regulatory status documents.",
+  operations: "Operational questions suggest they want to validate scalability — be specific about your infrastructure and key vendor dependencies.",
+};
+
+function IntelligenceBanner({ questions }: { questions: Question[] }) {
+  const unanswered = questions.filter((q) => !q.founder_response);
+  const oldestUnanswered = unanswered.reduce<number>((max, q) => {
+    const d = daysSince(q.created_at ? String(q.created_at) : null) ?? 0;
+    return d > max ? d : max;
+  }, 0);
+
+  // Category frequency map
+  const freq: Record<string, number> = {};
+  for (const q of questions) {
+    const cat = q.category ?? "other";
+    freq[cat] = (freq[cat] ?? 0) + 1;
+  }
+  const focusedCategories = Object.entries(freq)
+    .filter(([, count]) => count >= 2)
+    .sort(([, a], [, b]) => b - a);
+
+  if (questions.length === 0) return null;
+
+  return (
+    <div style={{ background: "#EEEDFE", borderRadius: 12, padding: "12px 14px", marginBottom: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"
+            stroke="#534AB7" strokeWidth="2" strokeLinejoin="round" fill="#534AB7" />
+        </svg>
+        <span style={{ fontSize: 10, fontWeight: 700, color: "#534AB7", textTransform: "uppercase", letterSpacing: ".07em" }}>
+          Deal room intelligence
+        </span>
+      </div>
+
+      {/* Stats row */}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <Chip label={`${questions.length} questions`} color="#534AB7" bg="#DDD9F9" />
+        <Chip label={`${unanswered.length} unanswered`} color={unanswered.length > 0 ? "#854F0B" : "#1E6D3C"} bg={unanswered.length > 0 ? "#FAEEDA" : "#EAF3DE"} />
+        {oldestUnanswered >= 1 && (
+          <Chip
+            label={`oldest unanswered: ${oldestUnanswered}d ${oldestUnanswered >= 3 ? "⚠" : ""}`}
+            color={oldestUnanswered >= 3 ? "#A32D2D" : "#854F0B"}
+            bg={oldestUnanswered >= 3 ? "#FCEBEB" : "#FAEEDA"}
+          />
+        )}
+        <Chip label="Benchmark: respond within 24h" color="#185FA5" bg="#E6F1FB" />
+      </div>
+
+      {/* Pattern signals */}
+      {focusedCategories.map(([cat, count]) => (
+        <div key={cat} style={{ background: "white", borderRadius: 8, padding: "8px 10px", display: "flex", gap: 8, alignItems: "flex-start" }}>
+          <span style={{ fontSize: 9, fontWeight: 700, background: "#EEEDFE", color: "#534AB7", padding: "2px 6px", borderRadius: 10, whiteSpace: "nowrap", marginTop: 1 }}>
+            {CATEGORY_LABELS[cat] ?? cat} ×{count}
+          </span>
+          <p style={{ fontSize: 11, color: "#3C3489", margin: 0, lineHeight: 1.5 }}>
+            {PATTERN_SIGNALS[cat] ?? `${count} questions in this category — address them comprehensively.`}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Chip({ label, color, bg }: { label: string; color: string; bg: string }) {
+  return (
+    <span style={{ fontSize: 10, fontWeight: 600, color, background: bg, padding: "3px 8px", borderRadius: 20 }}>
+      {label}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AI draft panel — calls real API
 // ---------------------------------------------------------------------------
 
 function QACoachPanel({
+  roomId,
   question,
   company,
   onInsert,
 }: {
+  roomId: string;
   question: Question;
   company: DealRoomCompanySnapshot;
   onInsert: (draft: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const draft = generateAnswerDraft(question, company);
+  const [draft, setDraft] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function fetchDraft() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/deal-room/${encodeURIComponent(roomId)}/ai-draft`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          questionId: question.id,
+          question: question.question ?? "",
+          category: question.category ?? "other",
+          companySnapshot: company,
+        }),
+      });
+      const json = await res.json() as { draft?: string; error?: string };
+      if (!res.ok) throw new Error(json.error ?? "AI draft failed.");
+      setDraft(json.draft ?? null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to generate draft.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleToggle() {
+    const next = !open;
+    setOpen(next);
+    if (next && !draft && !loading) void fetchDraft();
+  }
 
   return (
     <div className="mt-1">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={handleToggle}
         className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold transition"
         style={{
           background: open ? "#EEEDFE" : "white",
@@ -106,26 +231,52 @@ function QACoachPanel({
       {open ? (
         <div
           className="mt-2 rounded-xl border p-3"
-          style={{ borderColor: "#c7d2fe", background: "#fafaff", animation: "fadeUp .18s ease both" }}
+          style={{ borderColor: "#c7d2fe", background: "#fafaff" }}
         >
-          <p className="mb-2 text-[10px] leading-relaxed text-slate-400">
-            Category-matched draft. Edit the{" "}
-            <span className="font-semibold text-slate-600">[brackets]</span>{" "}
-            with your actual figures before inserting.
-          </p>
-          <p className="mb-2.5 whitespace-pre-wrap rounded-lg bg-white px-3 py-2.5 font-mono text-[10px] leading-relaxed text-slate-700 ring-1 ring-slate-200">
-            {draft}
-          </p>
-          <button
-            type="button"
-            onClick={() => { onInsert(draft); setOpen(false); }}
-            className="rounded-full px-3 py-1 text-[10px] font-semibold text-white transition hover:opacity-90"
-            style={{ background: "#534AB7" }}
-          >
-            Insert draft
-          </button>
+          {loading ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 0" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ animation: "spin 1s linear infinite" }}>
+                <circle cx="12" cy="12" r="10" stroke="#c7d2fe" strokeWidth="3" />
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="#534AB7" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              <span style={{ fontSize: 11, color: "#534AB7" }}>Generating AI draft…</span>
+            </div>
+          ) : error ? (
+            <p style={{ fontSize: 11, color: "#A32D2D", margin: 0 }}>{error}</p>
+          ) : draft ? (
+            <>
+              <p className="mb-2 text-[10px] leading-relaxed text-slate-400">
+                AI-generated draft. Edit the{" "}
+                <span className="font-semibold text-slate-600">[brackets]</span>{" "}
+                with your actual figures before inserting.
+              </p>
+              <p className="mb-2.5 whitespace-pre-wrap rounded-lg bg-white px-3 py-2.5 font-mono text-[10px] leading-relaxed text-slate-700 ring-1 ring-slate-200">
+                {draft}
+              </p>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => { onInsert(draft); setOpen(false); }}
+                  className="rounded-full px-3 py-1 text-[10px] font-semibold text-white transition hover:opacity-90"
+                  style={{ background: "#534AB7" }}
+                >
+                  Insert draft
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void fetchDraft()}
+                  className="rounded-full px-3 py-1 text-[10px] font-semibold transition hover:opacity-80"
+                  style={{ background: "white", color: "#534AB7", border: "1px solid #c7d2fe" }}
+                >
+                  Regenerate
+                </button>
+              </div>
+            </>
+          ) : null}
         </div>
       ) : null}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
@@ -151,6 +302,16 @@ export function DealRoomQuestionsPanel({
   const [responseById, setResponseById] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Sorted: unanswered first, then by age desc
+  const sortedQuestions = useMemo(() => {
+    return [...questions].sort((a, b) => {
+      const aUnanswered = !a.founder_response ? 1 : 0;
+      const bUnanswered = !b.founder_response ? 1 : 0;
+      if (aUnanswered !== bUnanswered) return bUnanswered - aUnanswered;
+      return new Date(String(b.created_at ?? 0)).getTime() - new Date(String(a.created_at ?? 0)).getTime();
+    });
+  }, [questions]);
 
   async function ask() {
     setLoading("ask");
@@ -200,6 +361,12 @@ export function DealRoomQuestionsPanel({
         </div>
       ) : null}
 
+      {/* Intelligence banner — founder only */}
+      {viewerRole === "founder" && questions.length > 0 && (
+        <IntelligenceBanner questions={questions} />
+      )}
+
+      {/* Investor: ask a question */}
       {viewerRole === "investor" ? (
         <div className="rounded-lg border border-slate-200 bg-white p-3">
           <p className="text-sm font-semibold text-slate-900">Ask a diligence question</p>
@@ -234,17 +401,17 @@ export function DealRoomQuestionsPanel({
         </div>
       ) : null}
 
-      {questions.length === 0 ? (
+      {sortedQuestions.length === 0 ? (
         <p className="text-sm text-slate-600">No questions yet.</p>
       ) : (
         <div className="space-y-3">
-          {questions.map((q) => (
+          {sortedQuestions.map((q) => (
             <div
               key={q.id}
               className="rounded-xl border border-slate-200 bg-white p-3.5 text-sm shadow-sm"
             >
-              {/* Category + status header */}
-              <div className="mb-2 flex items-center gap-2">
+              {/* Category + status + response time */}
+              <div className="mb-2 flex flex-wrap items-center gap-2">
                 <span
                   className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em]"
                   style={{ background: "#EEEDFE", color: "#534AB7" }}
@@ -262,6 +429,10 @@ export function DealRoomQuestionsPanel({
                 >
                   {q.status ?? "open"}
                 </span>
+                <ResponseTimeBadge
+                  createdAt={q.created_at ? String(q.created_at) : null}
+                  respondedAt={q.responded_at ? String(q.responded_at) : null}
+                />
               </div>
 
               {/* Question text */}
@@ -278,6 +449,7 @@ export function DealRoomQuestionsPanel({
                   {/* AI draft coach */}
                   {companySnapshot ? (
                     <QACoachPanel
+                      roomId={roomId}
                       question={q}
                       company={companySnapshot}
                       onInsert={(draft) =>
