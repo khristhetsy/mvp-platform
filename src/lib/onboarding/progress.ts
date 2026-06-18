@@ -157,9 +157,17 @@ export function computeFounderOnboardingProgress(input: {
     }
   }
 
-  const completedCount = ONBOARDING_STEP_IDS.filter((stepId) => detected[stepId].completed).length;
-  const percent = Math.round((completedCount / ONBOARDING_STEP_IDS.length) * 100);
-  const isComplete = completedCount === ONBOARDING_STEP_IDS.length;
+  // "investor_readiness_review" is admin-gated — the founder cannot trigger it
+  // through the conversational onboarding flow (FounderConversationalOnboarding).
+  // Exclude it from the progress meter so founders who complete the 4 actionable
+  // steps register as 100%. Admin review is tracked separately in the readiness pipeline.
+  const FOUNDER_ACTIONABLE_STEP_IDS = ONBOARDING_STEP_IDS.filter(
+    (id) => id !== "investor_readiness_review",
+  );
+
+  const completedCount = FOUNDER_ACTIONABLE_STEP_IDS.filter((stepId) => detected[stepId].completed).length;
+  const percent = Math.round((completedCount / FOUNDER_ACTIONABLE_STEP_IDS.length) * 100);
+  const isComplete = completedCount === FOUNDER_ACTIONABLE_STEP_IDS.length;
 
   let currentStep = parsed.currentStep;
   if (!detected[currentStep].completed) {
