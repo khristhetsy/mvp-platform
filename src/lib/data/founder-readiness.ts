@@ -19,6 +19,12 @@ export function documentTypeCode(label: string) {
   return label.toUpperCase().replaceAll(" ", "_");
 }
 
+// Canonical aliases: checklist code → legacy upload codes that mean the same thing
+const DOC_TYPE_ALIASES: Record<string, string[]> = {
+  FINANCIAL_STATEMENTS: ["FINANCIALS"],
+  LEGAL_DOCUMENTS: ["LEGAL_DOCUMENT"],
+};
+
 export function buildDocumentChecklist(
   documents: DocumentRecord[],
   requiredLabels: string[] = requiredDocumentTypes,
@@ -27,13 +33,19 @@ export function buildDocumentChecklist(
 
   for (const document of documents) {
     if (document.document_type) {
-      uploadedByType.set(document.document_type, document);
+      uploadedByType.set(document.document_type.toUpperCase(), document);
     }
   }
 
   return requiredLabels.map((label) => {
     const code = documentTypeCode(label);
-    const uploaded = uploadedByType.get(code);
+    const aliases = DOC_TYPE_ALIASES[code] ?? [];
+    const uploaded =
+      uploadedByType.get(code) ??
+      aliases.reduce<DocumentRecord | undefined>(
+        (found, alias) => found ?? uploadedByType.get(alias.toUpperCase()),
+        undefined,
+      );
 
     if (!uploaded) {
       return { label, code, status: "missing", fileName: null, uploadedAt: null };

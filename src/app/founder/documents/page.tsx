@@ -19,6 +19,9 @@ const FOUNDER_DOCUMENT_TYPES: { label: string; value: string; aliases?: string[]
   { label: "Cap Table", value: "CAP_TABLE" },
   { label: "Team Bios", value: "TEAM_BIOS" },
   { label: "Legal Document", value: "LEGAL_DOCUMENT", aliases: ["LEGAL_DOCUMENTS"] },
+  { label: "Corporate Documents", value: "CORPORATE_DOCUMENTS" },
+  { label: "Customer Contracts", value: "CUSTOMER_CONTRACTS" },
+  { label: "Market Research", value: "MARKET_RESEARCH" },
   { label: "Other", value: "OTHER" },
 ];
 
