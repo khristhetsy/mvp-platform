@@ -213,6 +213,7 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
       { href: "/founder/learning/stages/stage_3", label: "Stage 3 — Exit" },
     ],
   },
+  { href: "/founder/milestones", label: "Milestones" },
   { href: "/founder/analytics", label: "Analytics" },
   { href: "/founder/tasks", label: "Tasks" },
   { href: "/notifications", label: "Notifications" },
