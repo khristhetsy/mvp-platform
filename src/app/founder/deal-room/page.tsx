@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { DealRoomActivityFeed, type ActivityEvent } from "@/components/founder/DealRoomActivityFeed";
+import { FounderEmptyState } from "@/components/founder/FounderEmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +83,19 @@ export default async function FounderDealRoomIndexPage() {
 
           <WorkspacePanel title="Rooms" subtitle="Your company deal rooms">
             {(rooms ?? []).length === 0 ? (
-              <p className="text-sm text-slate-600">No deal rooms yet.</p>
+              <FounderEmptyState
+                icon="🔐"
+                title="No deal rooms yet"
+                description="Deal rooms open when an investor expresses interest in your company. They provide a private, structured space for diligence — Q&A, document requests, and status tracking."
+                steps={[
+                  { icon: "📋", label: "Publish your company profile to become visible to investors" },
+                  { icon: "👀", label: "An investor views your listing and requests access" },
+                  { icon: "🔐", label: "A deal room opens — you exchange documents and answer questions" },
+                  { icon: "🤝", label: "Diligence completes and you negotiate terms" },
+                ]}
+                action={{ label: "Publish your profile", href: "/founder/settings" }}
+                secondaryAction={{ label: "Upload documents", href: "/founder/documents" }}
+              />
             ) : (
               <div className="space-y-4">
                 {(rooms ?? []).map((r) => {

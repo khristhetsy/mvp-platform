@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
@@ -22,6 +23,23 @@ export default async function FounderSettingsPage() {
         eyebrow="Settings"
         title="Company profile"
         description="Edit your public listing, company details, and branding."
+        actions={
+          <Link
+            href="/founder/preview"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              fontSize: 13, fontWeight: 600, color: "#534AB7",
+              background: "#EEEDFE", borderRadius: 10,
+              padding: "8px 16px", textDecoration: "none",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" stroke="#534AB7" strokeWidth="2" />
+              <circle cx="12" cy="12" r="3" stroke="#534AB7" strokeWidth="2" />
+            </svg>
+            Preview as investor
+          </Link>
+        }
       />
 
       <SettingsSidebarNav active="company" />

@@ -14,6 +14,7 @@ import type { Company } from "@/lib/supabase/types";
 import { CapitalRaiseCardsClient } from "@/components/founder/CapitalRaiseCardsClient";
 import { CapitalRaiseOverviewClient } from "@/components/founder/CapitalRaiseOverviewClient";
 import { RoundStructureCalculator } from "@/components/founder/RoundStructureCalculator";
+import { FounderEmptyState } from "@/components/founder/FounderEmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -79,7 +80,13 @@ export default async function FounderCapitalRaisePage() {
 
       {!company ? (
         <WorkspacePanel title="Company profile required" subtitle="Link a company to track capital raise progress">
-          <p className="text-sm text-red-700">ensureFounderCompanyForUser() returned null.</p>
+          <FounderEmptyState
+            icon="💰"
+            title="Complete your profile to track your raise"
+            description="Set your funding target, publish your company profile, and start receiving indicative interest from investors on the platform."
+            action={{ label: "Complete onboarding", href: "/founder/onboarding" }}
+            secondaryAction={{ label: "Company settings", href: "/founder/settings" }}
+          />
         </WorkspacePanel>
       ) : (
         <>
@@ -107,24 +114,29 @@ export default async function FounderCapitalRaisePage() {
                 investorActivity={investorActivity}
                 fundingAmount={company.funding_amount ? Number(company.funding_amount) : null}
               />
-              {pledgeError ? null : pledgeSummary.totalPledged === 0 ? (
-                <p className="mt-4 text-sm text-amber-900">
-                  Pledge query succeeded but total is 0 for company_id={company.id}.
-                </p>
-              ) : (
-                <p className="mt-4 text-xs leading-5 text-slate-500">
-                  Pledges are indicative and not legally committed investment.
-                </p>
-              )}
+              <p className="mt-4 text-xs leading-5 text-slate-500">
+                Pledges are indicative and not legally committed investment.
+                {pledgeSummary.totalPledged === 0 && !pledgeError && (
+                  <>{" "}Publish your company profile to start receiving interest.</>
+                )}
+              </p>
             </WorkspacePanel>
 
             <WorkspacePanel title="Investor pipeline" subtitle="Interest tied to your listing">
               {activityError ? (
-                <p className="text-sm text-red-700">Activity query failed: {activityError}</p>
-              ) : !investorActivity ? (
-                <p className="text-sm text-amber-900">
-                  Activity query succeeded but returned no data for company_id={company.id}.
-                </p>
+                <div className="rounded-lg border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+                  Could not load investor activity. Please refresh or contact support.
+                </div>
+              ) : !investorActivity ||
+                (investorActivity.interests.length === 0 &&
+                  investorActivity.introRequests.length === 0 &&
+                  investorActivity.savedDeals.length === 0) ? (
+                <FounderEmptyState
+                  icon="🎯"
+                  title="No investor activity yet"
+                  description="Investor interests, intro requests, and saved deals appear here once your company is published and investors engage with your listing."
+                  action={{ label: "Publish your profile", href: "/founder/settings" }}
+                />
               ) : (
                 <FounderInvestorPipelineKanban activity={investorActivity} />
               )}
