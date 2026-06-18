@@ -3,6 +3,9 @@ import { loadActionCenter } from "@/lib/actions/action-center";
 import { parseActionCenterFilters } from "@/lib/actions/filters";
 import { requireApiProfile } from "@/lib/api/auth";
 
+// No role restriction — action center is intentionally multi-role (founder/investor/admin).
+// Data isolation is enforced by RLS on next_best_actions (scoped to user_id) and the
+// user-scoped Supabase client. loadActionCenter branches internally on profile.role.
 export async function GET(request: Request) {
   const auth = await requireApiProfile();
   if ("error" in auth) return auth.error;

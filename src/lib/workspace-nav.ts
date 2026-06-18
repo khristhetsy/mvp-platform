@@ -45,12 +45,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
     ],
   },
   {
-    title: "Sales",
-    items: [
-      { href: "/admin/sales/crm", label: "Sales CRM", requiredPermission: "view_admin_dashboard" },
-    ],
-  },
-  {
     title: "Investor Relations",
     items: [
       {
@@ -109,7 +103,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/learning/founders", label: "Founder roster" },
         ],
       },
-      { href: "/admin/conference",       label: "Conference",      requiredPermission: "view_admin_dashboard" },
       { href: "/admin/portfolio",        label: "Portfolio",       requiredPermission: "view_admin_dashboard" },
       { href: "/admin/readiness",        label: "Readiness Scores",requiredPermission: "manage_companies"    },
     ],
