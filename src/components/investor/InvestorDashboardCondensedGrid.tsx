@@ -160,10 +160,10 @@ export function InvestorDashboardCondensedGrid({
   const goalPct = Math.min(100, Math.round((weeklyTotal / 10) * 100));
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="flex flex-col gap-4">
 
-      {/* ── Row 1: 3 equal columns ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
+      {/* ── Row 1: 3 equal columns (stacks on mobile → 2-col on sm → 3-col on lg) ── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 
         {/* Engagement Pipeline */}
         <div style={card}>
@@ -267,7 +267,7 @@ export function InvestorDashboardCondensedGrid({
       </div>
 
       {/* ── Row 2: Portfolio (1) + Recommended (2) ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 16 }}>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_2fr]">
 
         {/* Portfolio */}
         <div style={card}>
