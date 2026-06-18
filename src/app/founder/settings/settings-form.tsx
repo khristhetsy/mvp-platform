@@ -8,7 +8,16 @@ import { FormField } from "@/components/ui/FormField";
 import { AIFieldHelper } from "@/components/ui/AIFieldHelper";
 import { useFormValidation, type ZodFlatErrors } from "@/hooks/useFormValidation";
 
-/* ── Draft generation ─────────────────────────────────────── */
+/* ── Revenue stage options ──────────────────────────────────── */
+
+const STAGES = [
+  { id: "pre_revenue",   label: "Pre-revenue",   sub: "Idea, prototype, or early development" },
+  { id: "early_revenue", label: "Early revenue", sub: "Up to $100K ARR" },
+  { id: "growing",       label: "Growing",       sub: "$100K – $1M ARR" },
+  { id: "scaling",       label: "Scaling",       sub: "$1M+ ARR" },
+];
+
+/* ── Draft generators ───────────────────────────────────────── */
 
 function generateDescriptionDraft(company: Company | null): string {
   const name = company?.company_name ?? "Your company";
@@ -51,13 +60,50 @@ function generateDescriptionDraft(company: Company | null): string {
     return `${name} is a logistics platform that helps [shippers / carriers / warehouses] [optimise / track / automate] [deliveries / routes / inventory] [faster / at lower cost / with greater visibility].\n\nWe [your mechanism]. Unlike [legacy TMS / manual coordination], ${name} [your key advantage].${stageNote}`;
   }
 
-  // Generic fallback
   return `${name} is a [industry] company that helps [target customers] [achieve a specific outcome] by [your mechanism or approach].\n\nUnlike [existing alternatives], we [your key differentiator]. [One sentence on traction or why now, e.g. "We've signed our first 3 enterprise customers" or "The regulatory environment is shifting — now is the right time."]${stageNote}`;
 }
+
+function generateUseOfFundsDraft(company: Company | null): string {
+  const name = company?.company_name ?? "Your company";
+  const stage = company?.revenue_stage ?? "pre_revenue";
+  const amount = company?.funding_amount ? `$${Number(company.funding_amount).toLocaleString()}` : "this round";
+
+  if (stage === "pre_revenue") {
+    return `${amount} will be deployed over [12–18 months] across three areas:\n\n1. **Product development** (~40%) — complete [specific milestone, e.g. MVP v1 / beta launch / core feature set]\n2. **Early customer acquisition** (~35%) — [first X paying customers / pilot programme / design partners]\n3. **Operations & infrastructure** (~25%) — cloud costs, legal/compliance setup, and founding team salaries\n\nPrimary milestone: [your key proof point, e.g. "achieving $10K MRR" / "closing first enterprise contract" / "reaching 1,000 active users"]`;
+  }
+  if (stage === "early_revenue") {
+    return `${amount} will be deployed over [12–18 months] to accelerate growth:\n\n1. **Sales & marketing** (~45%) — hire [first AE / growth lead], build demand generation, target [$X ARR / X new customers]\n2. **Product & engineering** (~35%) — [key feature, e.g. integrations / enterprise tier / self-serve onboarding]\n3. **Team & operations** (~20%) — [2–3 key hires in engineering/customer success]\n\nPrimary milestone: reaching [$100K ARR / $X MRR] and demonstrating repeatable sales motion.`;
+  }
+  if (stage === "growing") {
+    return `${amount} will accelerate ${name}'s path to scale over [18–24 months]:\n\n1. **Go-to-market** (~50%) — expand sales team, marketing, and [new channel / geography / vertical]\n2. **Product** (~30%) — [platform expansion, e.g. enterprise features / API / mobile]\n3. **Operations** (~20%) — hire [VP Sales / Head of Marketing / CTO] and build supporting infrastructure\n\nPrimary milestone: reaching [$1M ARR / Series A readiness] within [12 months of close].`;
+  }
+  // scaling
+  return `${amount} will fund ${name}'s next phase of growth:\n\n1. **Market expansion** (~40%) — enter [new geography / vertical / segment]\n2. **Team scaling** (~35%) — senior hires across [engineering / sales / operations]\n3. **Infrastructure & platform** (~25%) — [enterprise readiness / compliance / international infrastructure]\n\nPrimary milestone: [2–3× revenue growth / international launch / profitability path] within [18 months].`;
+}
+
+function generateFounderGoalsDraft(company: Company | null): string {
+  const name = company?.company_name ?? "Your company";
+  const stage = company?.revenue_stage ?? "pre_revenue";
+
+  const horizon = stage === "pre_revenue" || stage === "early_revenue"
+    ? "12–18 months"
+    : "18–24 months";
+
+  return `Over the next ${horizon}, ${name}'s primary goal is [your most important milestone, e.g. reaching $1M ARR / closing Series A / entering 3 new markets / achieving profitability].\n\nBeyond capital, we're looking for investors who can provide:\n• [Specific value-add #1, e.g. "enterprise sales network in the financial services space"]\n• [Specific value-add #2, e.g. "board-level experience scaling B2B SaaS to Series B"]\n• [Specific value-add #3, e.g. "portfolio synergies with other infrastructure / fintech companies"]\n\nLong-term, we're building ${name} to be [your vision: the category leader / a $X company / a default infrastructure layer for Y].`;
+}
+
+/* ── Benchmarks ─────────────────────────────────────────────── */
 
 const DESCRIPTION_BENCHMARK =
   "Investors spend ~8 seconds reading company descriptions. Lead with the problem you solve — not how you solve it. Replace each [bracket] with your specifics, then trim to 3–4 tight sentences.";
 
+const USE_OF_FUNDS_BENCHMARK =
+  "Investors want to see capital efficiency. Show the % breakdown, name the primary milestone it funds, and tie the milestone to your next raise. Vague answers like 'marketing and engineering' fail.";
+
+const GOALS_BENCHMARK =
+  "This is your chance to filter for the right investors. Be specific about the non-capital value you need — network, board experience, portfolio synergies. Generic answers ('grow the business') signal a first-time fundraiser.";
+
+/* ── Zod schema ─────────────────────────────────────────────── */
 
 const settingsSchema = z.object({
   company_name: z.string().min(2),
@@ -65,6 +111,12 @@ const settingsSchema = z.object({
   industry: z.string().min(2),
   website: z.string().url().optional().or(z.literal("")),
   logo_url: z.string().url().optional().or(z.literal("")),
+  revenue_stage: z.string().optional(),
+  funding_amount: z.coerce.number().positive().optional().or(z.literal("")),
+  use_of_funds: z.string().optional(),
+  founder_goals: z.string().optional(),
+  country: z.string().optional(),
+  state: z.string().optional(),
 });
 
 type Props = {
@@ -78,11 +130,24 @@ export function CompanySettingsForm({ company }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // Basic fields
   const [companyName, setCompanyName] = useState(company?.company_name ?? "");
   const [description, setDescription] = useState(company?.business_description ?? "");
   const [website, setWebsite] = useState(company?.website ?? "");
   const [industry, setIndustry] = useState(company?.industry ?? "");
   const [logoUrl, setLogoUrl] = useState(company?.logo_url ?? "");
+
+  // New fields
+  const [revenueStage, setRevenueStage] = useState(company?.revenue_stage ?? "");
+  const [fundingAmount, setFundingAmount] = useState(
+    company?.funding_amount ? String(Number(company.funding_amount)) : ""
+  );
+  const [useOfFunds, setUseOfFunds] = useState(company?.use_of_funds ?? "");
+  const [founderGoals, setFounderGoals] = useState(company?.founder_goals ?? "");
+  const [country, setCountry] = useState(company?.country ?? "");
+  const [state, setState] = useState(company?.state ?? "");
+
+  // Logo upload
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoDragging, setLogoDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -132,21 +197,35 @@ export function CompanySettingsForm({ company }: Props) {
       industry: industry.trim(),
       website: website.trim(),
       logo_url: logoUrl.trim(),
+      revenue_stage: revenueStage || undefined,
+      funding_amount: fundingAmount.trim() || undefined,
+      use_of_funds: useOfFunds.trim() || undefined,
+      founder_goals: founderGoals.trim() || undefined,
+      country: country.trim() || undefined,
+      state: state.trim() || undefined,
     });
     if (!ok) return;
 
     setIsSaving(true);
 
+    const payload: Record<string, unknown> = {
+      company_name: companyName.trim(),
+      business_description: description.trim(),
+      website: website.trim() || undefined,
+      industry: industry.trim(),
+      logo_url: logoUrl.trim() || undefined,
+    };
+    if (revenueStage) payload.revenue_stage = revenueStage;
+    if (fundingAmount.trim()) payload.funding_amount = Number(fundingAmount);
+    if (useOfFunds.trim()) payload.use_of_funds = useOfFunds.trim();
+    if (founderGoals.trim()) payload.founder_goals = founderGoals.trim();
+    if (country.trim()) payload.country = country.trim();
+    if (state.trim()) payload.state = state.trim();
+
     const response = await fetch(`/api/companies/${company.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        company_name: companyName.trim(),
-        business_description: description.trim(),
-        website: website.trim() || undefined,
-        industry: industry.trim(),
-        logo_url: logoUrl.trim() || undefined,
-      }),
+      body: JSON.stringify(payload),
     });
 
     const body = (await response.json().catch(() => null)) as {
@@ -169,8 +248,14 @@ export function CompanySettingsForm({ company }: Props) {
     router.refresh();
   }
 
+  // Snapshot for AI helpers that depend on current form state
+  const liveSnapshot: Company | null = company
+    ? { ...company, industry, revenue_stage: revenueStage || company.revenue_stage, funding_amount: fundingAmount ? Number(fundingAmount) : company.funding_amount }
+    : null;
+
   return (
     <form onSubmit={handleSubmit} className="mt-8 grid gap-5">
+      {/* Row 1: Company name + Industry */}
       <div className="grid gap-5 md:grid-cols-2">
         <FormField label="Company name" error={getError("company_name")} required>
           <input
@@ -191,6 +276,7 @@ export function CompanySettingsForm({ company }: Props) {
         </FormField>
       </div>
 
+      {/* Row 2: Website */}
       <FormField label="Website" error={getError("website")} hint="Include https:// — e.g. https://example.com">
         <input
           className={`${BASE_INPUT} ${inputCls("website")}`}
@@ -201,8 +287,8 @@ export function CompanySettingsForm({ company }: Props) {
         />
       </FormField>
 
+      {/* Row 3: Logo */}
       <FormField label="Company logo" error={getError("logo_url")} hint="PNG, JPG, WebP or SVG · max 2 MB">
-        {/* Drag-and-drop zone */}
         <div
           onDragOver={(e) => { e.preventDefault(); setLogoDragging(true); }}
           onDragLeave={() => setLogoDragging(false)}
@@ -239,7 +325,6 @@ export function CompanySettingsForm({ company }: Props) {
             )}
           </div>
         </div>
-        {/* Fallback URL input */}
         <input
           className={`${BASE_INPUT} ${inputCls("logo_url")} mt-2 text-xs`}
           value={logoUrl ?? ""}
@@ -249,6 +334,7 @@ export function CompanySettingsForm({ company }: Props) {
         />
       </FormField>
 
+      {/* Row 4: Business description */}
       <FormField label="Description" error={getError("business_description")} required hint="Min 20 characters">
         <textarea
           rows={6}
@@ -259,10 +345,119 @@ export function CompanySettingsForm({ company }: Props) {
         />
         <AIFieldHelper
           benchmark={DESCRIPTION_BENCHMARK}
-          draft={generateDescriptionDraft(company)}
+          draft={generateDescriptionDraft(liveSnapshot)}
           onInsert={(text) => { setDescription(text); clearError("business_description"); }}
         />
       </FormField>
+
+      {/* ── Fundraising section ───────────────────────────────── */}
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+        <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Fundraising details</p>
+
+        {/* Revenue stage */}
+        <div className="grid gap-5 md:grid-cols-2">
+          <FormField label="Revenue stage" error={getError("revenue_stage")}>
+            <select
+              className={`${BASE_INPUT} ${inputCls("revenue_stage")} bg-white`}
+              value={revenueStage}
+              onChange={(e) => { setRevenueStage(e.target.value); clearError("revenue_stage"); }}
+              disabled={isSaving}
+            >
+              <option value="">— Select stage —</option>
+              {STAGES.map((s) => (
+                <option key={s.id} value={s.id}>{s.label} · {s.sub}</option>
+              ))}
+            </select>
+          </FormField>
+
+          {/* Funding amount */}
+          <FormField
+            label="Funding target (USD)"
+            error={getError("funding_amount")}
+            hint={
+              revenueStage === "pre_revenue" ? "Pre-seed: $150K–$750K · Seed: $500K–$3M" :
+              revenueStage === "early_revenue" ? "Seed: $500K–$3M · Series A starts at $3M+" :
+              revenueStage === "growing" ? "Series A: $3M–$15M" :
+              revenueStage === "scaling" ? "Series B+: $15M+" :
+              "Enter the amount you're raising"
+            }
+          >
+            <input
+              type="number"
+              min={0}
+              step={50000}
+              className={`${BASE_INPUT} ${inputCls("funding_amount")}`}
+              value={fundingAmount}
+              onChange={(e) => { setFundingAmount(e.target.value); clearError("funding_amount"); }}
+              disabled={isSaving}
+              placeholder="e.g. 1500000"
+            />
+          </FormField>
+        </div>
+
+        {/* Use of funds */}
+        <div className="mt-5">
+          <FormField label="Use of funds" error={getError("use_of_funds")} hint="How will you deploy this round?">
+            <textarea
+              rows={5}
+              className={`${BASE_INPUT} ${inputCls("use_of_funds")}`}
+              value={useOfFunds}
+              onChange={(e) => { setUseOfFunds(e.target.value); clearError("use_of_funds"); }}
+              disabled={isSaving}
+              placeholder="Break down how you'll allocate the capital (product, hiring, go-to-market, etc.)…"
+            />
+            <AIFieldHelper
+              benchmark={USE_OF_FUNDS_BENCHMARK}
+              draft={generateUseOfFundsDraft(liveSnapshot)}
+              onInsert={(text) => { setUseOfFunds(text); clearError("use_of_funds"); }}
+            />
+          </FormField>
+        </div>
+      </div>
+
+      {/* ── Investor goals section ────────────────────────────── */}
+      <FormField
+        label="Founder goals & investor fit"
+        error={getError("founder_goals")}
+        hint="What milestones are you targeting? What do you need beyond capital?"
+      >
+        <textarea
+          rows={6}
+          className={`${BASE_INPUT} ${inputCls("founder_goals")}`}
+          value={founderGoals}
+          onChange={(e) => { setFounderGoals(e.target.value); clearError("founder_goals"); }}
+          disabled={isSaving}
+          placeholder="Describe your 12–24 month goals and the kind of investors you're looking for…"
+        />
+        <AIFieldHelper
+          benchmark={GOALS_BENCHMARK}
+          draft={generateFounderGoalsDraft(liveSnapshot)}
+          onInsert={(text) => { setFounderGoals(text); clearError("founder_goals"); }}
+        />
+      </FormField>
+
+      {/* ── Location section ─────────────────────────────────── */}
+      <div className="grid gap-5 md:grid-cols-2">
+        <FormField label="Country" error={getError("country")}>
+          <input
+            className={`${BASE_INPUT} ${inputCls("country")}`}
+            value={country}
+            onChange={(e) => { setCountry(e.target.value); clearError("country"); }}
+            disabled={isSaving}
+            placeholder="e.g. United States"
+          />
+        </FormField>
+
+        <FormField label="State / Province" error={getError("state")}>
+          <input
+            className={`${BASE_INPUT} ${inputCls("state")}`}
+            value={state}
+            onChange={(e) => { setState(e.target.value); clearError("state"); }}
+            disabled={isSaving}
+            placeholder="e.g. California"
+          />
+        </FormField>
+      </div>
 
       {message ? (
         <p
