@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { MessagingThreadWorkspace } from "@/components/MessagingThreadWorkspace";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import {
   getMessageThreadDetail,
@@ -36,10 +37,7 @@ export default async function InvestorMessageThreadPage({ params }: PageProps) {
       profileName={profile.full_name ?? profile.email ?? "Investor"}
       profileSubtitle="Investor account"
     >
-      <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Messages</h1>
-      </div>
+      <PageHeader eyebrow="Investor workspace" title="Messages" />
 
       <InvestorFeatureGate>
         <MessagingThreadWorkspace

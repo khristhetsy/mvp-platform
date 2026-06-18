@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { InvestorSpvWorkspace } from "@/components/InvestorSpvWorkspace";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { canInvestorPerformSensitiveActions } from "@/lib/investor/access";
 import { listInvestorParticipationRequirements } from "@/lib/spv/participation-requirements";
 import { loadInvestorSpvWorkspace } from "@/lib/spv/spv-workflow";
@@ -42,14 +43,11 @@ export default async function InvestorSpvsPage() {
       profileName={profile.full_name ?? profile.email ?? "Investor"}
       profileSubtitle="SPV participation"
     >
-      <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">SPVs</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Review admin-managed SPV opportunities and express non-binding indicative interest. Legal documents
-          and eligibility checks are required before any investment.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Portfolio & deals"
+        title="SPVs"
+        description="Review admin-managed SPV opportunities and express non-binding indicative interest. Legal documents and eligibility checks are required before any investment."
+      />
 
       {investorProfileId ? (
         <div className="mb-6 space-y-4">

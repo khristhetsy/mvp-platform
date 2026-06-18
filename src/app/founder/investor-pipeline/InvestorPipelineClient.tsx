@@ -393,7 +393,7 @@ export function InvestorPipelineClient({ initialData }: { initialData: PipelineI
       {/* Table */}
       <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--border-subtle)", boxShadow: "var(--shadow-panel)" }}>
         <div className="overflow-x-auto">
-          <table className="enterprise-table enterprise-table--comfortable w-full border-collapse bg-white">
+          <table className="enterprise-table enterprise-table--comfortable w-full min-w-[900px] border-collapse bg-white">
             <thead>
               <tr>
                 {["Investor", "Type", "Investment Size", "Pledged", "Interested", "Meeting", "Match", "Outreach", ""].map((h) => (

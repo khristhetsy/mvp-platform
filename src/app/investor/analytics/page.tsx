@@ -3,6 +3,7 @@ import { AnalyticsBreakdownPanel } from "@/components/AnalyticsBreakdownPanel";
 import { AppShell } from "@/components/AppShell";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { MetricCard } from "@/components/MetricCard";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { loadInvestorAnalytics } from "@/lib/analytics/investor-analytics";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
@@ -22,13 +23,11 @@ export default async function InvestorAnalyticsPage() {
       profileName={profile.full_name ?? profile.email ?? "Investor"}
       profileSubtitle="Investor account"
     >
-      <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Investor Workspace</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Analytics</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Your engagement command center — saved deals, interests, messaging, and match signals from CapitalOS data only.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Investor workspace"
+        title="Analytics"
+        description="Your engagement command center — saved deals, interests, messaging, and match signals from CapitalOS data only."
+      />
 
       <InvestorFeatureGate>
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
