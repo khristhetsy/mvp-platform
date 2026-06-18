@@ -5,7 +5,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type SearchResult = {
   id: string;
-  type: "contact" | "document" | "deal_room";
+  type: "contact" | "document" | "deal_room" | "investor";
   title: string;
   subtitle: string | null;
   href: string;
@@ -82,6 +82,25 @@ export async function GET(request: Request) {
       title: r.title,
       subtitle: r.status ?? null,
       href: `/founder/deal-room/${r.id}`,
+    });
+  }
+
+  // Pipeline investors (untyped — not in generated schema)
+  const untypedSupabase = supabase as unknown as import("@supabase/supabase-js").SupabaseClient;
+  const { data: pipelineInvestors } = await untypedSupabase
+    .from("pipeline_investors")
+    .select("id, name, investor_type, outreach_status")
+    .eq("founder_id", auth.profile.id)
+    .or(`name.ilike.${term},investor_type.ilike.${term}`)
+    .limit(5);
+
+  for (const p of (pipelineInvestors as Array<{ id: string; name: string; investor_type: string | null; outreach_status: string | null }>) ?? []) {
+    results.push({
+      id: p.id,
+      type: "investor",
+      title: p.name,
+      subtitle: p.investor_type ?? p.outreach_status ?? null,
+      href: "/founder/investor-pipeline",
     });
   }
 

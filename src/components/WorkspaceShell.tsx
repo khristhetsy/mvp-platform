@@ -44,7 +44,7 @@ export function WorkspaceShell({
           {children}
         </main>
         <CapitalOSAssistant />
-        <GlobalSearchModal />
+        <GlobalSearchModal workspace={workspace} />
       </div>
     </div>
   );
