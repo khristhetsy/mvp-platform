@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { NotificationsPanel } from "@/components/NotificationsPanel";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { dashboardForRole } from "@/lib/supabase/auth";
 import type { WorkspaceId } from "@/lib/workspace-nav";
@@ -32,13 +33,11 @@ export default async function NotificationsPage() {
       profileName={profile.full_name ?? profile.email ?? "User"}
       profileSubtitle="Notifications"
     >
-      <div className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Activity</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Notifications</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Unified alerts for investor activity, onboarding, remediation, learning, reviews, and billing events.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Activity"
+        title="Notifications"
+        description="Unified alerts for investor activity, onboarding, remediation, learning, reviews, and billing events."
+      />
 
       <NotificationsPanel />
     </AppShell>
