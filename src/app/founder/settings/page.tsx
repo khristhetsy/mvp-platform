@@ -6,7 +6,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
 import { CompanySettingsForm } from "./settings-form";
 import { SettingsSidebarNav } from "./SettingsSidebarNav";
-import { OnePagerShareCard } from "@/components/founder/OnePagerShareCard";
+import { OnePagerPublishCard } from "@/components/founder/OnePagerPublishCard";
 
 export const dynamic = "force-dynamic";
 
@@ -44,8 +44,12 @@ export default async function FounderSettingsPage() {
 
       <SettingsSidebarNav active="company" />
 
-      {company?.slug && company.is_published && (
-        <OnePagerShareCard slug={company.slug} companyName={company.company_name} />
+      {company && (
+        <OnePagerPublishCard
+          initialIsPublished={company.is_published ?? false}
+          initialSlug={company.slug ?? null}
+          companyName={company.company_name}
+        />
       )}
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">

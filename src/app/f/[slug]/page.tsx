@@ -233,14 +233,26 @@ export default async function InvestorOnePagerPage({
 
         {/* Use of funds */}
         {company.use_of_funds && (
-          <Section title="Use of funds" icon="💰">
+          <Section title="Use of funds" icon={
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          }>
             <FormattedText text={company.use_of_funds} />
           </Section>
         )}
 
         {/* Founder goals */}
         {company.founder_goals && (
-          <Section title="What we're looking for" icon="🎯">
+          <Section title="What we're looking for" icon={
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <circle cx="12" cy="12" r="3" />
+              <line x1="12" y1="2" x2="12" y2="5" />
+            </svg>
+          }>
             <FormattedText text={company.founder_goals} />
           </Section>
         )}
@@ -334,7 +346,7 @@ function MetricCard({
   );
 }
 
-function Section({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
+function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <div style={{
       background: "white",
@@ -344,7 +356,7 @@ function Section({ title, icon, children }: { title: string; icon: string; child
       marginBottom: 16,
     }}>
       <h2 style={{ fontSize: 13, fontWeight: 700, color: "#374151", margin: "0 0 14px", display: "flex", alignItems: "center", gap: 7 }}>
-        <span>{icon}</span> {title}
+        {icon} {title}
       </h2>
       {children}
     </div>
