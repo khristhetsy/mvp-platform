@@ -21,21 +21,22 @@ type ResendWebhookEvent = {
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
-  if (webhookSecret) {
-    const signature = req.headers.get("svix-signature") ?? "";
-    // Constant-time comparison to prevent timing attacks
-    try {
-      const sigBuf = Buffer.from(signature);
-      const secretBuf = Buffer.from(webhookSecret);
-      const valid =
-        sigBuf.length === secretBuf.length &&
-        timingSafeEqual(sigBuf, secretBuf);
-      if (!valid) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-    } catch {
+  if (!webhookSecret) {
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
+  }
+  const signature = req.headers.get("svix-signature") ?? "";
+  // Constant-time comparison to prevent timing attacks
+  try {
+    const sigBuf = Buffer.from(signature);
+    const secretBuf = Buffer.from(webhookSecret);
+    const valid =
+      sigBuf.length === secretBuf.length &&
+      timingSafeEqual(sigBuf, secretBuf);
+    if (!valid) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let event: ResendWebhookEvent;

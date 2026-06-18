@@ -115,6 +115,7 @@ const settingsSchema = z.object({
   funding_amount: z.coerce.number().positive().optional().or(z.literal("")),
   use_of_funds: z.string().optional(),
   founder_goals: z.string().optional(),
+  team_summary: z.string().max(1000).optional(),
   country: z.string().optional(),
   state: z.string().optional(),
 });
@@ -144,6 +145,7 @@ export function CompanySettingsForm({ company }: Props) {
   );
   const [useOfFunds, setUseOfFunds] = useState(company?.use_of_funds ?? "");
   const [founderGoals, setFounderGoals] = useState(company?.founder_goals ?? "");
+  const [teamSummary, setTeamSummary] = useState(company?.team_summary ?? "");
   const [country, setCountry] = useState(company?.country ?? "");
   const [state, setState] = useState(company?.state ?? "");
 
@@ -201,6 +203,7 @@ export function CompanySettingsForm({ company }: Props) {
       funding_amount: fundingAmount.trim() || undefined,
       use_of_funds: useOfFunds.trim() || undefined,
       founder_goals: founderGoals.trim() || undefined,
+      team_summary: teamSummary.trim() || undefined,
       country: country.trim() || undefined,
       state: state.trim() || undefined,
     });
@@ -219,6 +222,7 @@ export function CompanySettingsForm({ company }: Props) {
     if (fundingAmount.trim()) payload.funding_amount = Number(fundingAmount);
     if (useOfFunds.trim()) payload.use_of_funds = useOfFunds.trim();
     if (founderGoals.trim()) payload.founder_goals = founderGoals.trim();
+    if (teamSummary.trim()) payload.team_summary = teamSummary.trim();
     if (country.trim()) payload.country = country.trim();
     if (state.trim()) payload.state = state.trim();
 
@@ -433,6 +437,22 @@ export function CompanySettingsForm({ company }: Props) {
           benchmark={GOALS_BENCHMARK}
           draft={generateFounderGoalsDraft(liveSnapshot)}
           onInsert={(text) => { setFounderGoals(text); clearError("founder_goals"); }}
+        />
+      </FormField>
+
+      {/* ── Team summary ─────────────────────────────────────── */}
+      <FormField
+        label="Team summary"
+        error={getError("team_summary")}
+        hint="Brief description of your founding team, key hires, and domain expertise."
+      >
+        <textarea
+          rows={5}
+          className={`${BASE_INPUT} ${inputCls("team_summary")}`}
+          value={teamSummary}
+          onChange={(e) => { setTeamSummary(e.target.value); clearError("team_summary"); }}
+          disabled={isSaving}
+          placeholder="Describe your founding team's background, key hires, and relevant domain expertise…"
         />
       </FormField>
 

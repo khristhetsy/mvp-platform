@@ -26,19 +26,23 @@ export async function GET(request: Request) {
   const admin = createServiceRoleClient();
 
   // Members
-  const { data: members } = await admin
+  const { data: members, error: membersError } = await admin
     .from("company_members")
     .select("id, role, created_at, user_id, profiles:profiles!inner(full_name, email, avatar_url)")
     .eq("company_id", company.id)
     .order("created_at", { ascending: true });
 
+  if (membersError) return NextResponse.json({ error: "Query failed" }, { status: 500 });
+
   // Pending invites
-  const { data: invites } = await admin
+  const { data: invites, error: invitesError } = await admin
     .from("company_invites")
     .select("id, invitee_email, role, status, created_at, expires_at")
     .eq("company_id", company.id)
     .eq("status", "pending")
     .order("created_at", { ascending: false });
+
+  if (invitesError) return NextResponse.json({ error: "Query failed" }, { status: 500 });
 
   return NextResponse.json({ members: members ?? [], invites: invites ?? [] });
 }
@@ -57,12 +61,14 @@ export async function POST(request: Request) {
   const admin = createServiceRoleClient();
 
   // Check caller is owner or admin
-  const { data: myMember } = await admin
+  const { data: myMember, error: myMemberError } = await admin
     .from("company_members")
     .select("role")
     .eq("company_id", company.id)
     .eq("user_id", auth.profile.id)
     .maybeSingle();
+
+  if (myMemberError) return NextResponse.json({ error: "Query failed" }, { status: 500 });
 
   if (!myMember || !["owner", "admin"].includes(myMember.role)) {
     return NextResponse.json({ error: "Only owners and admins can invite members." }, { status: 403 });

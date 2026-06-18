@@ -32,7 +32,7 @@ export async function requireStaffApi(allowedRoles: UserRole[] = STAFF_ROLES) {
 
   const { data: profileRaw, error: profileError } = await userSupabase
     .from("profiles")
-    .select("*")
+    .select("id, full_name, email, role, is_active, is_super_admin")
     .eq("id", user.id)
     .single();
 

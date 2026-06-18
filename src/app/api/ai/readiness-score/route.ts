@@ -69,7 +69,6 @@ export async function POST(request: Request) {
   // Don't persist demo scores — require a real API key
   if (result.isDemo) {
     const hasKey = !!process.env.ANTHROPIC_API_KEY;
-    console.error("[readiness-score] isDemo=true, hasKey=", hasKey, "companyId=", companyId);
     return NextResponse.json(
       {
         error: hasKey

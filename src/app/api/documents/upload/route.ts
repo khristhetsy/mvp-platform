@@ -452,17 +452,21 @@ export async function POST(request: Request) {
     documentId = inserted.id;
   }
 
-  await writeAuditLog(admin, {
-    userId: auth.profile.id,
-    action: operation === "update" ? "document.replaced" : "document.uploaded",
-    entityType: "document",
-    entityId: documentId!,
-    metadata: {
-      companyId,
-      documentType: normalizedDocumentType,
-      bucket,
-    },
-  });
+  if (!documentId) {
+    console.error("[upload] documentId is null at audit log write — skipping");
+  } else {
+    await writeAuditLog(admin, {
+      userId: auth.profile.id,
+      action: operation === "update" ? "document.replaced" : "document.uploaded",
+      entityType: "document",
+      entityId: documentId,
+      metadata: {
+        companyId,
+        documentType: normalizedDocumentType,
+        bucket,
+      },
+    });
+  }
 
   return NextResponse.json({
     ok: true,

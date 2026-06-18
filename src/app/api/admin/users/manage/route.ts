@@ -145,7 +145,10 @@ export async function PATCH(req: NextRequest): Promise<Response> {
   const admin = createServiceRoleClient() as any;
 
   // Prevent editing super admins
-  const { data: target } = await admin.from("profiles").select("role, is_super_admin, full_name, email").eq("id", userId).single();
+  const { data: target, error: targetError } = await admin.from("profiles").select("role, is_super_admin, full_name, email").eq("id", userId).single();
+  if (targetError) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
   if (target?.is_super_admin && auth.userId !== userId) {
     return NextResponse.json({ error: "Cannot modify a super admin account." }, { status: 403 });
   }

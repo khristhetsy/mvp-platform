@@ -270,7 +270,7 @@ export function buildRemediationTaskDrafts(input: {
       description: "Your submission needs updates before it can progress in the review pipeline.",
       priority: "high",
       recommended_action: "Review admin feedback and update your profile and documents.",
-      related_feature: "/founder/readiness",
+      related_feature: "/founder/settings",
     });
   }
 

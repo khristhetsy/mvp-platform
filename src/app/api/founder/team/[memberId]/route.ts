@@ -22,12 +22,14 @@ export async function DELETE(
   const admin = createServiceRoleClient();
 
   // Check caller is owner or admin
-  const { data: myMember } = await admin
+  const { data: myMember, error: myMemberError } = await admin
     .from("company_members")
     .select("role")
     .eq("company_id", company.id)
     .eq("user_id", auth.profile.id)
     .maybeSingle();
+
+  if (myMemberError) return NextResponse.json({ error: "Query failed" }, { status: 500 });
 
   if (!myMember || !["owner", "admin"].includes(myMember.role)) {
     return NextResponse.json({ error: "Only owners and admins can remove members." }, { status: 403 });

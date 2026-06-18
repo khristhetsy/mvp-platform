@@ -14,7 +14,7 @@ export async function requireApiProfile(allowedRoles?: UserRole[]) {
     return { error: NextResponse.json({ error: "Authentication required." }, { status: 401 }) };
   }
 
-  const { data: profileRaw, error: profileError } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  const { data: profileRaw, error: profileError } = await supabase.from("profiles").select("id, full_name, email, role, is_active, is_super_admin").eq("id", user.id).single();
 
   if (profileError || !profileRaw) {
     return { error: NextResponse.json({ error: "Profile not found." }, { status: 403 }) };

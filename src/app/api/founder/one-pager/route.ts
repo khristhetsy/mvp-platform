@@ -23,11 +23,13 @@ export async function POST(request: Request) {
   const admin = createServiceRoleClient() as SupabaseClient<Database>;
 
   // Fetch company
-  const { data: company } = await admin
+  const { data: company, error: companyError } = await admin
     .from("companies")
     .select("id, company_name, slug, is_published, published_at")
     .eq("founder_id", auth.profile.id)
     .maybeSingle();
+
+  if (companyError) return NextResponse.json({ error: "Failed to load company" }, { status: 500 });
 
   if (!company) {
     return NextResponse.json({ error: "No company found." }, { status: 404 });

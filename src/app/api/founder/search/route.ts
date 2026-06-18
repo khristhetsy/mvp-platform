@@ -32,12 +32,14 @@ export async function GET(request: Request) {
   const results: SearchResult[] = [];
 
   // CRM contacts
-  const { data: contacts } = await supabase
+  const { data: contacts, error: contactsError } = await supabase
     .from("founder_investor_contacts")
     .select("id, investor_name, firm_name, status")
     .eq("company_id", company.id)
     .or(`investor_name.ilike.${term},firm_name.ilike.${term}`)
     .limit(5);
+
+  if (contactsError) return NextResponse.json({ error: "Query failed" }, { status: 500 });
 
   for (const c of contacts ?? []) {
     results.push({
@@ -50,12 +52,14 @@ export async function GET(request: Request) {
   }
 
   // Documents
-  const { data: docs } = await supabase
+  const { data: docs, error: docsError } = await supabase
     .from("documents")
     .select("id, file_name, document_type, status")
     .eq("company_id", company.id)
     .or(`file_name.ilike.${term},document_type.ilike.${term}`)
     .limit(5);
+
+  if (docsError) return NextResponse.json({ error: "Query failed" }, { status: 500 });
 
   for (const d of docs ?? []) {
     results.push({
@@ -68,12 +72,14 @@ export async function GET(request: Request) {
   }
 
   // Deal rooms
-  const { data: rooms } = await supabase
+  const { data: rooms, error: roomsError } = await supabase
     .from("deal_rooms")
     .select("id, title, status")
     .eq("company_id", company.id)
     .ilike("title", term)
     .limit(3);
+
+  if (roomsError) return NextResponse.json({ error: "Query failed" }, { status: 500 });
 
   for (const r of rooms ?? []) {
     results.push({
@@ -87,12 +93,14 @@ export async function GET(request: Request) {
 
   // Pipeline investors (untyped — not in generated schema)
   const untypedSupabase = supabase as unknown as import("@supabase/supabase-js").SupabaseClient;
-  const { data: pipelineInvestors } = await untypedSupabase
+  const { data: pipelineInvestors, error: pipelineError } = await untypedSupabase
     .from("pipeline_investors")
     .select("id, name, investor_type, outreach_status")
     .eq("founder_id", auth.profile.id)
     .or(`name.ilike.${term},investor_type.ilike.${term}`)
     .limit(5);
+
+  if (pipelineError) return NextResponse.json({ error: "Query failed" }, { status: 500 });
 
   for (const p of (pipelineInvestors as Array<{ id: string; name: string; investor_type: string | null; outreach_status: string | null }>) ?? []) {
     results.push({

@@ -19,7 +19,7 @@ export async function requireInvestorApi(options?: { requireApproved?: boolean }
 
   const { data: profileRaw, error: profileError } = await supabase
     .from("profiles")
-    .select("*")
+    .select("id, full_name, email, role, is_active, is_super_admin")
     .eq("id", user.id)
     .single();
 

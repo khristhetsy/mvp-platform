@@ -39,15 +39,15 @@ export async function requireSuperAdminApi() {
     return { error: NextResponse.json({ error: "Authentication required." }, { status: 401 }) };
   }
 
-  const { data: profileRaw, error: profileError } = await userSupabase
+  const { data: profileRaw, error: superAdminProfileError } = await userSupabase
     .from("profiles")
-    .select("*")
+    .select("id, full_name, email, role, is_active, is_super_admin")
     .eq("id", user.id)
     .single();
 
   const profile = profileRaw as (Profile & { is_super_admin?: boolean }) | null;
 
-  if (profileError || !profile) {
+  if (superAdminProfileError || !profile) {
     return { error: NextResponse.json({ error: "Profile not found." }, { status: 403 }) };
   }
 

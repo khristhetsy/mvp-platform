@@ -56,7 +56,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   } else if (profileId) {
     query = query.eq("profile_id", profileId);
   } else {
-    console.warn("[ls-webhook] No identifier in event", event_name);
     return NextResponse.json({ received: true });
   }
 

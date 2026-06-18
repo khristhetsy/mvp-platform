@@ -40,6 +40,7 @@ export const companyUpdateSchema = z.object({
   use_of_funds: z.string().min(10).optional(),
   revenue_stage: z.string().min(2).optional(),
   founder_goals: z.string().min(10).optional(),
+  team_summary: z.string().max(1000).optional(),
 });
 
 export const founderOnboardingStepSchema = z.object({

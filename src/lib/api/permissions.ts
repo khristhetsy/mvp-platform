@@ -21,7 +21,7 @@ export async function requirePermissionApi(permission: InternalPermission) {
 
   const { data: profileRaw, error: profileError } = await userSupabase
     .from("profiles")
-    .select("*")
+    .select("id, full_name, email, role, is_active, is_super_admin")
     .eq("id", user.id)
     .single();
 
