@@ -215,6 +215,7 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
   },
   { href: "/founder/analytics", label: "Analytics" },
   { href: "/founder/tasks", label: "Tasks" },
+  { href: "/notifications", label: "Notifications" },
   {
     href: "/founder/settings",
     label: "Settings",
@@ -253,6 +254,8 @@ export const investorWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/investor/messages", label: "Messages" },
   { href: "/investor/analytics", label: "Analytics" },
   { href: "/investor/tasks", label: "Tasks" },
+  { href: "/notifications", label: "Notifications" },
+  { href: "/investor/learning", label: "Learning" },
   { href: "/investor/settings", label: "Settings" },
 ];
 
