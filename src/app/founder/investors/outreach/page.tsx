@@ -50,6 +50,15 @@ export default async function FounderInvestorOutreachPage() {
               followUpCount={hub.followUpCount}
               socialDrafts={hub.socialDrafts}
               socialReadiness={hub.socialReadiness}
+              companySnapshot={{
+                companyName: company.company_name,
+                industry: company.industry ?? null,
+                businessDescription: company.business_description ?? null,
+                revenueStage: company.revenue_stage ?? null,
+                fundingAmount: company.funding_amount ? Number(company.funding_amount) : null,
+                geography: [company.state, company.country].filter(Boolean).join(", ") || null,
+                founderGoals: company.founder_goals ?? null,
+              }}
             />
           ) : (
             <WorkspacePanel title="Outreach hub" subtitle="Loading…">

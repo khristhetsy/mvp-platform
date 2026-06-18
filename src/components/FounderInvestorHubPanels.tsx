@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FounderOutreachPipelinePanel } from "@/components/FounderOutreachPipelinePanel";
 import { FounderSocialDraftsPanel } from "@/components/FounderSocialDraftsPanel";
+import { InvestorOutreachCoach } from "@/components/founder/InvestorOutreachCoach";
+import type { OutreachCoachSnapshot } from "@/components/founder/InvestorOutreachCoach";
 import type { EnrichedOutreachTarget } from "@/lib/founder-crm/outreach";
 import type { OutreachReadinessResult } from "@/lib/founder-crm/outreach-readiness";
 import type { SocialOutreachReadinessResult } from "@/lib/founder-crm/social-outreach-readiness";
@@ -30,6 +32,7 @@ type Props = {
   followUpCount: number;
   socialDrafts: SocialOutreachDraftRecord[];
   socialReadiness: SocialOutreachReadinessResult;
+  companySnapshot?: OutreachCoachSnapshot;
 };
 
 const CONTACT_STATUSES = [
@@ -52,9 +55,10 @@ export function FounderInvestorHubPanels({
   followUpCount,
   socialDrafts,
   socialReadiness,
+  companySnapshot,
 }: Readonly<Props>) {
   const router = useRouter();
-  const [hubTab, setHubTab] = useState<"crm" | "pipeline" | "social">("crm");
+  const [hubTab, setHubTab] = useState<"crm" | "pipeline" | "social" | "coach">("crm");
   const [contacts, setContacts] = useState(initialContacts);
   const [targets, setTargets] = useState(initialTargets);
   const [campaigns] = useState(initialCampaigns);
@@ -288,6 +292,14 @@ export function FounderInvestorHubPanels({
         >
           Social drafts
         </button>
+        <button
+          type="button"
+          onClick={() => setHubTab("coach")}
+          className={`rounded-lg px-4 py-2 text-sm font-medium ${hubTab === "coach" ? "text-white" : "text-slate-600"}`}
+          style={hubTab === "coach" ? { background: "#534AB7" } : {}}
+        >
+          ✦ Outreach coach
+        </button>
       </div>
 
       {hubTab === "pipeline" ? (
@@ -306,6 +318,21 @@ export function FounderInvestorHubPanels({
           initialDrafts={socialDrafts}
           socialReadiness={socialReadiness}
           campaigns={campaigns}
+        />
+      ) : null}
+
+      {hubTab === "coach" ? (
+        <InvestorOutreachCoach
+          contacts={contacts}
+          companySnapshot={companySnapshot ?? {
+            companyName,
+            industry: null,
+            businessDescription: null,
+            revenueStage: null,
+            fundingAmount: null,
+            geography: null,
+            founderGoals: null,
+          }}
         />
       ) : null}
 
