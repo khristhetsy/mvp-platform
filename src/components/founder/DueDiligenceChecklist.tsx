@@ -1,6 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useToolkitSave, ToolkitSaveStatus } from "@/hooks/useToolkitSave";
+
+function SaveChip({ status }: { status: ToolkitSaveStatus }) {
+  if (status === "idle") return null;
+  const styles: Record<string, { bg: string; text: string; label: string }> = {
+    saving: { bg: "#F1F5F9", text: "#64748b", label: "Saving…" },
+    saved:  { bg: "#F0FDF4", text: "#15803D", label: "Saved" },
+    error:  { bg: "#FEF2F2", text: "#DC2626", label: "Save failed" },
+  };
+  const s = styles[status];
+  if (!s) return null;
+  return (
+    <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: s.bg, color: s.text }}>
+      {s.label}
+    </span>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Types & data
@@ -253,6 +270,19 @@ export function DueDiligenceChecklist() {
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [filterUrgency, setFilterUrgency] = useState<"all" | "always" | "often">("always");
 
+  const { savedData, loaded, save, saveStatus } = useToolkitSave<{ checkedIds: string[] }>("due-diligence");
+
+  useEffect(() => {
+    if (loaded && savedData) {
+      setCheckedIds(new Set(savedData.checkedIds ?? []));
+    }
+  }, [loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    save({ checkedIds: [...checkedIds] });
+  }, [checkedIds, loaded, save]);
+
   function toggle(id: string) {
     setCheckedIds((prev) => {
       const next = new Set(prev);
@@ -278,6 +308,11 @@ export function DueDiligenceChecklist() {
 
   return (
     <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <SaveChip status={saveStatus} />
+      </div>
+
       {/* Stats strip */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">

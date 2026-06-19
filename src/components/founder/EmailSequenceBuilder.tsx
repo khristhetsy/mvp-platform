@@ -1,6 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useToolkitSave, ToolkitSaveStatus } from "@/hooks/useToolkitSave";
+
+function SaveChip({ status }: { status: ToolkitSaveStatus }) {
+  if (status === "idle") return null;
+  const styles: Record<string, { bg: string; text: string; label: string }> = {
+    saving: { bg: "#F1F5F9", text: "#64748b", label: "Saving…" },
+    saved:  { bg: "#F0FDF4", text: "#15803D", label: "Saved" },
+    error:  { bg: "#FEF2F2", text: "#DC2626", label: "Save failed" },
+  };
+  const s = styles[status];
+  if (!s) return null;
+  return (
+    <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: s.bg, color: s.text }}>
+      {s.label}
+    </span>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Types & data
@@ -444,6 +461,20 @@ export function EmailSequenceBuilder() {
   const [vars, setVars] = useState<TemplateVars>(DEFAULT_VARS);
   const [showCustomise, setShowCustomise] = useState(false);
 
+  const { savedData, loaded, save, saveStatus } = useToolkitSave<{ investorType: string; vars: Record<string, string> }>("email-sequence");
+
+  useEffect(() => {
+    if (loaded && savedData) {
+      setInvestorType((savedData.investorType as InvestorType) ?? "vc");
+      setVars({ ...DEFAULT_VARS, ...savedData.vars });
+    }
+  }, [loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    save({ investorType, vars });
+  }, [investorType, vars, loaded, save]);
+
   const sequence = SEQUENCES[investorType];
 
   function update(key: keyof TemplateVars, value: string) {
@@ -452,6 +483,11 @@ export function EmailSequenceBuilder() {
 
   return (
     <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <SaveChip status={saveStatus} />
+      </div>
+
       {/* Intro */}
       <div className="rounded-xl border border-indigo-100 bg-[#FAFAFF] px-4 py-3">
         <p className="text-xs font-semibold" style={{ color: "#534AB7" }}>How to use this</p>

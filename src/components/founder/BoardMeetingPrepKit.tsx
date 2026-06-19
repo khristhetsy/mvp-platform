@@ -1,6 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useToolkitSave, ToolkitSaveStatus } from "@/hooks/useToolkitSave";
+
+function SaveChip({ status }: { status: ToolkitSaveStatus }) {
+  if (status === "idle") return null;
+  const styles: Record<string, { bg: string; text: string; label: string }> = {
+    saving: { bg: "#F1F5F9", text: "#64748b", label: "Saving…" },
+    saved:  { bg: "#F0FDF4", text: "#15803D", label: "Saved" },
+    error:  { bg: "#FEF2F2", text: "#DC2626", label: "Save failed" },
+  };
+  const s = styles[status];
+  if (!s) return null;
+  return (
+    <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: s.bg, color: s.text }}>
+      {s.label}
+    </span>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Types & data
@@ -224,6 +241,22 @@ export function BoardMeetingPrepKit() {
   const [period, setPeriod] = useState("");
   const [copied, setCopied] = useState(false);
 
+  const { savedData, loaded, save, saveStatus } = useToolkitSave<{ stage: string; metrics: Record<string, string>; company: string; period: string }>("board-prep");
+
+  useEffect(() => {
+    if (loaded && savedData) {
+      setStage((savedData.stage as BoardStage) ?? "seed");
+      setMetrics(savedData.metrics ?? {});
+      setCompany(savedData.company ?? "");
+      setPeriod(savedData.period ?? "");
+    }
+  }, [loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    save({ stage, metrics, company, period });
+  }, [stage, metrics, company, period, loaded, save]);
+
   const agenda = AGENDA_ITEMS[stage];
   const totalDuration = agenda.reduce((sum, item) => {
     const match = item.duration.match(/(\d+)/);
@@ -241,6 +274,11 @@ export function BoardMeetingPrepKit() {
 
   return (
     <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <SaveChip status={saveStatus} />
+      </div>
+
       {/* Stage selector */}
       <div className="flex items-center gap-3">
         <p className="text-xs font-semibold text-slate-700">Board stage:</p>

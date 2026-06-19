@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import type { NotificationRecord } from "@/lib/notifications/types";
 
 function formatRelativeTime(value: string) {
@@ -142,13 +143,43 @@ export function NotificationBellDropdown() {
     }
   }, []);
 
-  // Initial load + 60s polling
+  // Initial load + Supabase Realtime (replaces 60s polling)
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect -- polling */
     void loadNotifications();
-    /* eslint-enable react-hooks/set-state-in-effect */
-    const interval = window.setInterval(() => void loadNotifications(), 60000);
-    return () => window.clearInterval(interval);
+
+    const supabase = createClient();
+    let mounted = true;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let channelToCleanup: any = null;
+
+    void supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!mounted || !user) return;
+
+      channelToCleanup = supabase
+        .channel(`notifications_bell_${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+            filter: `recipient_user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const incoming = payload.new as NotificationRecord;
+            setNotifications((prev) => [incoming, ...prev].slice(0, 12));
+            setUnreadCount((n) => n + 1);
+          },
+        )
+        .subscribe();
+    });
+
+    return () => {
+      mounted = false;
+      if (channelToCleanup) {
+        void supabase.removeChannel(channelToCleanup as Parameters<typeof supabase.removeChannel>[0]);
+      }
+    };
   }, [loadNotifications]);
 
   // Close on outside click / Escape

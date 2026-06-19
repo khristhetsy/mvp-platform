@@ -32,6 +32,7 @@ import { FounderFundraisingMilestoneTracker } from "@/components/founder/Founder
 import { MilestoneCelebration, type MilestoneKey } from "@/components/founder/MilestoneCelebration";
 import { DashboardExpandableSection } from "@/components/founder/DashboardExpandableSection";
 import { FirstRunModal } from "@/components/founder/FirstRunModal";
+import { RoundCloseTracker } from "@/components/founder/RoundCloseTracker";
 
 export const dynamic = "force-dynamic";
 
@@ -152,7 +153,12 @@ export default async function FounderDashboardPage() {
           />
         </div>
 
-        {/* 2. Weekly raise digest */}
+        {/* 2. Round close tracker — live thermometer + pipeline stage breakdown */}
+        <div className="mb-8">
+          <RoundCloseTracker />
+        </div>
+
+        {/* 3. Weekly raise digest */}
         <div className="mb-8">
           <FounderWeeklyDigest
             rooms={activeRooms ?? []}
@@ -166,7 +172,7 @@ export default async function FounderDashboardPage() {
           />
         </div>
 
-        {/* 3. What to do next */}
+        {/* 4. What to do next */}
         <div className="mb-8">
           <NextBestActionsPanel
             role="founder"

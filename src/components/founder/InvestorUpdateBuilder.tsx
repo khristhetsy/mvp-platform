@@ -1,6 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useToolkitSave, ToolkitSaveStatus } from "@/hooks/useToolkitSave";
+
+function SaveChip({ status }: { status: ToolkitSaveStatus }) {
+  if (status === "idle") return null;
+  const styles: Record<string, { bg: string; text: string; label: string }> = {
+    saving: { bg: "#F1F5F9", text: "#64748b", label: "Saving…" },
+    saved:  { bg: "#F0FDF4", text: "#15803D", label: "Saved" },
+    error:  { bg: "#FEF2F2", text: "#DC2626", label: "Save failed" },
+  };
+  const s = styles[status];
+  if (!s) return null;
+  return (
+    <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: s.bg, color: s.text }}>
+      {s.label}
+    </span>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Types & data
@@ -189,6 +206,23 @@ export function InvestorUpdateBuilder() {
   const [companyName, setCompanyName] = useState("");
   const [period, setPeriod] = useState("");
 
+  const { savedData, loaded, save, saveStatus } = useToolkitSave<{ stage: string; frequency: string; values: Record<string, string>; companyName: string; period: string }>("investor-update");
+
+  useEffect(() => {
+    if (loaded && savedData) {
+      setStage((savedData.stage as RaiseStage) ?? "seed");
+      setFrequency((savedData.frequency as UpdateFrequency) ?? "monthly");
+      setValues(savedData.values ?? Object.fromEntries(SECTIONS.map((s) => [s.id, ""])));
+      setCompanyName(savedData.companyName ?? "");
+      setPeriod(savedData.period ?? "");
+    }
+  }, [loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    save({ stage, frequency, values, companyName, period });
+  }, [stage, frequency, values, companyName, period, loaded, save]);
+
   const guidance = STAGE_GUIDANCE[stage];
 
   function update(id: string, value: string) {
@@ -234,6 +268,11 @@ export function InvestorUpdateBuilder() {
 
   return (
     <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <SaveChip status={saveStatus} />
+      </div>
+
       {/* Stage & frequency */}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>

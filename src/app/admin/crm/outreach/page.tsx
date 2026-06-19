@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { AdminFounderOutreachSummary } from "@/components/AdminFounderOutreachSummary";
 import { AdminInvestorActivity } from "@/components/AdminInvestorActivity";
+import { AdminIntroQueue } from "@/components/admin/AdminIntroQueue";
 import { formatError } from "@/lib/errors/format-error";
 import { getFounderOutreachAdminSummary } from "@/lib/founder-crm/admin-outreach-summary";
 import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
@@ -65,6 +66,12 @@ export default async function AdminCrmOutreachPage() {
 
       <div className="mb-8">
         <AdminFounderOutreachSummary summary={outreachSummary} />
+      </div>
+
+      {/* Intro request action queue — pending requests with Facilitate / Decline actions */}
+      <div className="mb-10">
+        <h2 className="mb-4 text-base font-semibold text-slate-900">Intro request queue</h2>
+        <AdminIntroQueue introRequests={investorActivity.introRequests} />
       </div>
 
       <AdminInvestorActivity

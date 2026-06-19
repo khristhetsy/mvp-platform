@@ -1,6 +1,23 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useToolkitSave, ToolkitSaveStatus } from "@/hooks/useToolkitSave";
+
+function SaveChip({ status }: { status: ToolkitSaveStatus }) {
+  if (status === "idle") return null;
+  const styles: Record<string, { bg: string; text: string; label: string }> = {
+    saving: { bg: "#F1F5F9", text: "#64748b", label: "Saving…" },
+    saved:  { bg: "#F0FDF4", text: "#15803D", label: "Saved" },
+    error:  { bg: "#FEF2F2", text: "#DC2626", label: "Save failed" },
+  };
+  const s = styles[status];
+  if (!s) return null;
+  return (
+    <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: s.bg, color: s.text }}>
+      {s.label}
+    </span>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Clause library
@@ -259,6 +276,21 @@ export function TermSheetExplainer() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeRisk, setActiveRisk] = useState<RiskLevel | null>(null);
 
+  const { savedData, loaded, save, saveStatus } = useToolkitSave<{ search: string; activeCategory: string | null; activeRisk: string | null }>("term-sheet");
+
+  useEffect(() => {
+    if (loaded && savedData) {
+      setSearch(savedData.search ?? "");
+      setActiveCategory(savedData.activeCategory ?? null);
+      setActiveRisk((savedData.activeRisk as RiskLevel | null) ?? null);
+    }
+  }, [loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    save({ search, activeCategory, activeRisk });
+  }, [search, activeCategory, activeRisk, loaded, save]);
+
   const filtered = useMemo(() => {
     return CLAUSES.filter((c) => {
       const matchSearch =
@@ -281,6 +313,11 @@ export function TermSheetExplainer() {
         <p className="mt-0.5 text-[11px] text-amber-700">
           This explainer covers common term sheet provisions. Always review your specific terms with a qualified startup attorney before signing.
         </p>
+      </div>
+
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <SaveChip status={saveStatus} />
       </div>
 
       {/* Stats strip */}
