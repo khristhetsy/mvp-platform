@@ -44,3 +44,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# repo hygiene — stray nested clone (accidental embedded git repo) and loose patches
+/mvp-platform/
+*.patch
