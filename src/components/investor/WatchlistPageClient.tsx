@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 export type WatchlistRow = {
   id: string;
@@ -13,7 +13,10 @@ export type WatchlistRow = {
   location: string | null;
   dateSaved: string | null;
   status: string | null;
+  notes: string | null;
 };
+
+type NoteStatus = "idle" | "saving" | "saved" | "error";
 
 function initials(name: string) {
   return name
@@ -48,6 +51,40 @@ function StatusPill({ status }: { status: string | null }) {
 
 export function WatchlistPageClient({ rows }: Readonly<{ rows: WatchlistRow[] }>) {
   const [query, setQuery] = useState("");
+
+  // Notes state: noteMap tracks live text, statusMap tracks save state per row
+  const [noteMap, setNoteMap] = useState<Record<string, string>>(() =>
+    Object.fromEntries(rows.map((r) => [r.id, r.notes ?? ""])),
+  );
+  const [statusMap, setStatusMap] = useState<Record<string, NoteStatus>>({});
+  const debounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  const saveNote = useCallback(async (id: string, value: string) => {
+    setStatusMap((prev) => ({ ...prev, [id]: "saving" }));
+    try {
+      const res = await fetch(`/api/investor/watchlist/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: value }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setStatusMap((prev) => ({ ...prev, [id]: "saved" }));
+      // Clear "saved" indicator after 2s
+      setTimeout(() => setStatusMap((prev) => ({ ...prev, [id]: "idle" })), 2000);
+    } catch {
+      setStatusMap((prev) => ({ ...prev, [id]: "error" }));
+    }
+  }, []);
+
+  const handleNoteChange = useCallback(
+    (id: string, value: string) => {
+      setNoteMap((prev) => ({ ...prev, [id]: value }));
+      // Debounce 700ms
+      clearTimeout(debounceRef.current[id]);
+      debounceRef.current[id] = setTimeout(() => void saveNote(id, value), 700);
+    },
+    [saveNote],
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -113,6 +150,9 @@ export function WatchlistPageClient({ rows }: Readonly<{ rows: WatchlistRow[] }>
                 <th className="px-4 py-2.5 text-left text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">
                   Status
                 </th>
+                <th className="px-4 py-2.5 text-left text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">
+                  Notes
+                </th>
                 <th className="px-4 py-2.5 text-right text-[9.5px] font-semibold uppercase tracking-wide text-slate-400" />
               </tr>
             </thead>
@@ -164,6 +204,34 @@ export function WatchlistPageClient({ rows }: Readonly<{ rows: WatchlistRow[] }>
                   {/* Status */}
                   <td className="px-4 py-3">
                     <StatusPill status={row.status} />
+                  </td>
+
+                  {/* Notes */}
+                  <td className="px-4 py-3">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={noteMap[row.id] ?? ""}
+                        onChange={(e) => handleNoteChange(row.id, e.target.value)}
+                        placeholder="Add a note…"
+                        className="w-full min-w-[160px] rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11.5px] text-slate-700 placeholder:text-slate-300 focus:border-indigo-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
+                      />
+                      {statusMap[row.id] === "saving" && (
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-slate-400">
+                          saving…
+                        </span>
+                      )}
+                      {statusMap[row.id] === "saved" && (
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-emerald-500">
+                          ✓
+                        </span>
+                      )}
+                      {statusMap[row.id] === "error" && (
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-red-500">
+                          !
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   {/* Actions */}

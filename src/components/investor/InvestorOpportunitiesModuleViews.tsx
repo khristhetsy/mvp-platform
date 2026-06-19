@@ -7,6 +7,9 @@ import { ModuleEmptyState } from "@/components/ui/ViewToolbar";
 import { PageSection } from "@/components/ui/workspace-layout";
 
 type ViewMode = "grid" | "list";
+type SortBy = "match" | "newest" | "readiness";
+
+const NEW_LISTING_DAYS = 14;
 
 export type InvestorOpportunityRow = {
   companyId: string;
@@ -48,15 +51,77 @@ function formatDate(value: string | null) {
   });
 }
 
-function filterMatches(rows: InvestorOpportunityRow[], query: string) {
+function isNewListing(publishedAt: string | null): boolean {
+  if (!publishedAt) return false;
+  const ageMs = Date.now() - new Date(publishedAt).getTime();
+  return ageMs < NEW_LISTING_DAYS * 24 * 60 * 60 * 1000;
+}
+
+function filterMatches(
+  rows: InvestorOpportunityRow[],
+  query: string,
+  industryFilter: string,
+  stageFilter: string,
+) {
+  let result = rows;
+  if (industryFilter) {
+    result = result.filter((r) => r.industry === industryFilter);
+  }
+  if (stageFilter) {
+    result = result.filter((r) => r.stage === stageFilter);
+  }
   const q = query.trim().toLowerCase();
-  if (!q) return rows;
-  return rows.filter(
-    (row) =>
-      row.companyName.toLowerCase().includes(q) ||
-      (row.industry?.toLowerCase().includes(q) ?? false) ||
-      (row.stage?.toLowerCase().includes(q) ?? false) ||
-      (row.location?.toLowerCase().includes(q) ?? false),
+  if (q) {
+    result = result.filter(
+      (row) =>
+        row.companyName.toLowerCase().includes(q) ||
+        (row.industry?.toLowerCase().includes(q) ?? false) ||
+        (row.stage?.toLowerCase().includes(q) ?? false) ||
+        (row.location?.toLowerCase().includes(q) ?? false),
+    );
+  }
+  return result;
+}
+
+function sortMatches(rows: InvestorOpportunityRow[], sortBy: SortBy) {
+  return [...rows].sort((a, b) => {
+    if (sortBy === "newest") {
+      const ta = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const tb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return tb - ta;
+    }
+    if (sortBy === "readiness") {
+      return (b.readinessScore ?? 0) - (a.readinessScore ?? 0);
+    }
+    // default: match score
+    return b.matchScore - a.matchScore;
+  });
+}
+
+function FilterSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+    >
+      <option value="">{label}</option>
+      {options.map((opt) => (
+        <option key={opt} value={opt}>
+          {opt}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -145,6 +210,11 @@ function OpportunitiesTable({ rows }: { rows: InvestorOpportunityRow[] }) {
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-slate-900">{row.companyName}</span>
                       <MatchPill score={row.matchScore} />
+                      {isNewListing(row.publishedAt) && (
+                        <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700">
+                          New
+                        </span>
+                      )}
                     </div>
                     {row.location ? (
                       <p className="mt-0.5 text-[11px] text-slate-400">{row.location}</p>
@@ -243,16 +313,37 @@ function OpportunitiesTable({ rows }: { rows: InvestorOpportunityRow[] }) {
   );
 }
 
+const SORT_LABELS: Record<SortBy, string> = {
+  match: "Match score",
+  newest: "Newest listed",
+  readiness: "Readiness score",
+};
+
 function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: InvestorOpportunityRow[] }>) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewMode>("list");
+  const [industryFilter, setIndustryFilter] = useState("");
+  const [stageFilter, setStageFilter] = useState("");
+  const [sortBy, setSortBy] = useState<SortBy>("match");
 
-  const filtered = useMemo(() => filterMatches(matches, query), [matches, query]);
-
-  const sortedByScore = useMemo(
-    () => [...filtered].sort((a, b) => b.matchScore - a.matchScore),
-    [filtered],
+  // Derive unique option lists from the full matches array
+  const industries = useMemo(
+    () => [...new Set(matches.map((r) => r.industry).filter((v): v is string => !!v))].sort(),
+    [matches],
   );
+  const stages = useMemo(
+    () => [...new Set(matches.map((r) => r.stage).filter((v): v is string => !!v))].sort(),
+    [matches],
+  );
+
+  const filtered = useMemo(
+    () => filterMatches(matches, query, industryFilter, stageFilter),
+    [matches, query, industryFilter, stageFilter],
+  );
+
+  const sorted = useMemo(() => sortMatches(filtered, sortBy), [filtered, sortBy]);
+
+  const hasFilters = !!query || !!industryFilter || !!stageFilter;
 
   if (matches.length === 0) {
     return (
@@ -275,6 +366,29 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
           placeholder="Search companies, sector, or stage…"
           className="min-w-[200px] flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
         />
+        <FilterSelect
+          label="All sectors"
+          value={industryFilter}
+          options={industries}
+          onChange={setIndustryFilter}
+        />
+        <FilterSelect
+          label="All stages"
+          value={stageFilter}
+          options={stages}
+          onChange={setStageFilter}
+        />
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortBy)}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+        >
+          {(Object.keys(SORT_LABELS) as SortBy[]).map((k) => (
+            <option key={k} value={k}>
+              Sort: {SORT_LABELS[k]}
+            </option>
+          ))}
+        </select>
         <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
           {(["list", "grid"] as const).map((v) => (
             <button
@@ -291,22 +405,31 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
             </button>
           ))}
         </div>
+        {hasFilters && (
+          <button
+            type="button"
+            onClick={() => { setQuery(""); setIndustryFilter(""); setStageFilter(""); }}
+            className="text-xs font-medium text-slate-400 hover:text-slate-700 transition-colors"
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       <PageSection
         title="Recommended for you"
-        subtitle={`${filtered.length} match${filtered.length !== 1 ? "es" : ""} sorted by CapitalOS match score`}
+        subtitle={`${sorted.length} match${sorted.length !== 1 ? "es" : ""} · sorted by ${SORT_LABELS[sortBy].toLowerCase()}`}
       >
         {view === "list" ? (
-          <OpportunitiesTable rows={sortedByScore} />
-        ) : filtered.length === 0 ? (
+          <OpportunitiesTable rows={sorted} />
+        ) : sorted.length === 0 ? (
           <ModuleEmptyState
             title="No matching opportunities"
-            description="Adjust your search or browse the full marketplace."
+            description="Adjust your filters or browse the full marketplace."
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {filtered.map(({ myPledgeAmount: _pledge, ...row }) => (
+            {sorted.map(({ myPledgeAmount: _pledge, ...row }) => (
               <InvestorMatchOpportunityCard key={row.companyId} {...row} />
             ))}
           </div>

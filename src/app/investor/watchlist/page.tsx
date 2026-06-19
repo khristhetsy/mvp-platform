@@ -13,13 +13,27 @@ export default async function InvestorWatchlistPage() {
   const { profile, investorId } = await requireInvestorWorkspaceSession();
 
   const admin = createServiceRoleClient();
-  const { data: savedDeals } = await admin
+  // Cast required: notes column added in migration 20260619004, types not yet regenerated
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: savedDeals } = await (admin as any)
     .from("saved_deals")
     .select(
-      "id, company_id, status, created_at, companies(company_name, slug, industry, revenue_stage, state, country)",
+      "id, company_id, status, notes, created_at, companies(company_name, slug, industry, revenue_stage, state, country)",
     )
     .eq("investor_id", investorId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false }) as {
+      data: Array<{
+        id: string;
+        company_id: string;
+        status: string | null;
+        notes: string | null;
+        created_at: string | null;
+        companies:
+          | { company_name?: string | null; slug?: string | null; industry?: string | null; revenue_stage?: string | null; state?: string | null; country?: string | null }
+          | Array<{ company_name?: string | null; slug?: string | null; industry?: string | null; revenue_stage?: string | null; state?: string | null; country?: string | null }>
+          | null;
+      }> | null;
+    };
 
   const rows: WatchlistRow[] = (savedDeals ?? []).map((row) => {
     const company = Array.isArray(row.companies) ? row.companies[0] : row.companies;
@@ -34,6 +48,7 @@ export default async function InvestorWatchlistPage() {
       location: location || null,
       dateSaved: row.created_at ?? null,
       status: row.status ?? "Saved",
+      notes: row.notes ?? null,
     };
   });
 

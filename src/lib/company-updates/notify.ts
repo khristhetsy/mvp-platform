@@ -11,11 +11,14 @@ export async function notifyInvestorsOfCompanyUpdate(input: {
   const admin = createServiceRoleClient();
   const { data: company } = await admin
     .from("companies")
-    .select("company_name")
+    .select("company_name, slug")
     .eq("id", input.companyId)
     .maybeSingle();
 
   const companyName = company?.company_name ?? "A company you follow";
+  const deepLink = company?.slug
+    ? `/deals/${company.slug}`
+    : "/investor/opportunities";
   const recipientIds = new Set<string>();
 
   const [interests, intros, saved, threads] = await Promise.all([
@@ -65,6 +68,8 @@ export async function notifyInvestorsOfCompanyUpdate(input: {
         message,
         entityType: "company_update",
         entityId: input.updateId,
+        deepLink,
+        dedupeKey: `company_update:${input.updateId}:${recipientUserId}`,
       }),
     ),
   );
