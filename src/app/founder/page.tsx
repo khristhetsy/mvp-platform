@@ -33,6 +33,7 @@ import { MilestoneCelebration, type MilestoneKey } from "@/components/founder/Mi
 import { DashboardExpandableSection } from "@/components/founder/DashboardExpandableSection";
 import { FirstRunModal } from "@/components/founder/FirstRunModal";
 import { RoundCloseTracker } from "@/components/founder/RoundCloseTracker";
+import { FounderInvestorEngagementTimeline } from "@/components/founder/FounderInvestorEngagementTimeline";
 
 export const dynamic = "force-dynamic";
 
@@ -245,6 +246,13 @@ export default async function FounderDashboardPage() {
                 continueModules={learning.continueModules}
                 recommendations={learning.recommendations}
               />
+            </div>
+          ) : null}
+
+          {/* Investor engagement timeline — chronological interactions */}
+          {company ? (
+            <div className="mb-8">
+              <FounderInvestorEngagementTimeline companyId={company.id} />
             </div>
           ) : null}
 

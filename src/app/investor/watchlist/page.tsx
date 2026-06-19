@@ -5,6 +5,7 @@ import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { WatchlistPageClient } from "@/components/investor/WatchlistPageClient";
 import type { WatchlistRow } from "@/components/investor/WatchlistPageClient";
 import { InvestorWatchlistAISummary } from "@/components/investor/InvestorWatchlistAISummary";
+import { InvestorDealComparisonPanel } from "@/components/investor/InvestorDealComparisonPanel";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 
@@ -69,6 +70,7 @@ export default async function InvestorWatchlistPage() {
         <InvestorFeatureGate>
           <InvestorWatchlistAISummary rows={rows} />
           <WatchlistPageClient rows={rows} />
+          <InvestorDealComparisonPanel rows={rows} />
         </InvestorFeatureGate>
       </WorkspacePageContainer>
     </AppShell>
