@@ -33,9 +33,30 @@ export function InvestorDealBrief({ companyId }: { companyId: string }) {
 
   if (state === "loading") {
     return (
-      <div className="flex items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs text-slate-500">
-        <span className="h-3 w-3 animate-spin rounded-full border-2 border-indigo-400 border-t-transparent" />
-        Preparing your personalized thesis brief…
+      <div
+        className="rounded-2xl border border-slate-200 bg-white shadow-sm"
+        role="status"
+        aria-label="Preparing your personalized thesis brief"
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <div className="enterprise-skeleton h-6 w-28 rounded-full" />
+          <div className="enterprise-skeleton h-3 w-3 rounded" />
+        </div>
+        <div className="space-y-4 px-5 py-4">
+          <div className="enterprise-skeleton h-4 w-3/4" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <div className="enterprise-skeleton h-3 w-24" />
+              <div className="enterprise-skeleton h-3 w-full" />
+              <div className="enterprise-skeleton h-3 w-5/6" />
+            </div>
+            <div className="space-y-2">
+              <div className="enterprise-skeleton h-3 w-24" />
+              <div className="enterprise-skeleton h-3 w-full" />
+              <div className="enterprise-skeleton h-3 w-4/6" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

@@ -337,6 +337,18 @@ export default async function FounderJourneyPage() {
                       </Link>
                     </div>
                   ) : null}
+
+                  {/* Optimize workspace entry */}
+                  {stage === "optimize" && isActive ? (
+                    <div className="mt-4">
+                      <Link
+                        href="/founder/optimize"
+                        className="inline-block rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500"
+                      >
+                        Open Optimize workspace →
+                      </Link>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>
