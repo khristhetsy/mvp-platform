@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { InvestorCompanyReportView } from "@/components/InvestorCompanyReportView";
+import { InvestorDealBrief } from "@/components/investor/InvestorDealBrief";
 import { canInvestorPerformSensitiveActions } from "@/lib/investor/access";
 import { loadInvestorCompanyReport } from "@/lib/investor/load-company-report";
 import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
@@ -43,6 +44,12 @@ export default async function InvestorCompanyReportPage({
           ← Opportunities
         </Link>
       </p>
+
+      {/* Personalized thesis brief — lazy-loaded client-side */}
+      <div className="mb-6">
+        <InvestorDealBrief companyId={companyId} />
+      </div>
+
       <InvestorCompanyReportView report={report} viewerRole="investor" isOwnCompany={false} />
     </AppShell>
   );
