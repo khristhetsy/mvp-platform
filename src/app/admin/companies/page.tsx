@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { AdminActionHealthProvider } from "@/components/AdminActionHealthProvider";
 import { AdminCompaniesModuleViews } from "@/components/admin/AdminCompaniesModuleViews";
+import { AdminPendingQuickReview } from "@/components/admin/AdminPendingQuickReview";
 import { formatError } from "@/lib/errors/format-error";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -78,6 +79,18 @@ export default async function AdminCompaniesPage() {
             description="Review submissions, manage publication, and control marketplace visibility."
           />
 
+          <AdminPendingQuickReview
+            companies={companyCards
+              .filter((c) => c.review_status === "pending")
+              .map((c) => ({
+                id: c.id,
+                company_name: c.company_name,
+                review_status: c.review_status,
+                created_at: c.created_at,
+                industry: c.industry,
+                readinessScore: c.founder_onboarding_percent ?? null,
+              }))}
+          />
           <AdminCompaniesModuleViews
             companies={companyCards}
             loadError={loadError}

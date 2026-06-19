@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { InvestorOpportunitiesModuleViews } from "@/components/investor/InvestorOpportunitiesModuleViews";
+import { InvestorForYouPanel } from "@/components/investor/InvestorForYouPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { trackInvestorOpportunityView } from "@/lib/beta/track-investor-activation";
@@ -78,6 +79,7 @@ export default async function InvestorOpportunitiesPage() {
           }
         />
 
+        <InvestorForYouPanel rows={opportunityRows} />
         <InvestorOpportunitiesModuleViews matches={opportunityRows} />
       </WorkspacePageContainer>
     </AppShell>

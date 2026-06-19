@@ -10,6 +10,7 @@ import { AnalyticsCardsClient } from "@/components/founder/AnalyticsCardsClient"
 import { AnalyticsChartPanelsClient } from "@/components/founder/AnalyticsChartPanelsClient";
 import { FounderEmptyState } from "@/components/founder/FounderEmptyState";
 import { FounderMarketplaceFunnelCard } from "@/components/founder/FounderMarketplaceFunnelCard";
+import { AnalyticsEngagementChart } from "@/components/founder/AnalyticsEngagementChart";
 
 function formatStatusCounts(counts: Record<string, number>) {
   const entries = Object.entries(counts);
@@ -119,6 +120,11 @@ export default async function FounderAnalyticsPage() {
               </div>
               <FounderMarketplaceFunnelCard analytics={analytics} />
             </div>
+            {company && (
+              <div className="mt-6">
+                <AnalyticsEngagementChart />
+              </div>
+            )}
           </>
         ) : (
           <>
@@ -129,6 +135,11 @@ export default async function FounderAnalyticsPage() {
               </div>
               <FounderMarketplaceFunnelCard analytics={analytics} />
             </div>
+            {company && (
+              <div className="mt-6">
+                <AnalyticsEngagementChart />
+              </div>
+            )}
             <p className="mt-6 text-xs text-slate-500">
               Outreach pipeline summary: {formatStatusCounts(analytics.outreachByStatus)}.{" "}
               <Link href="/founder/investors" className="font-semibold text-indigo-700">
