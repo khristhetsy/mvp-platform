@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
 import type { InvestorInterestRecord, InvestorIntroRecord, InvestorSavedDealRecord } from "@/lib/data/investor-interests";
@@ -9,12 +10,21 @@ type ViewMode = "kanban" | "grid" | "list";
 type PipelineCard = {
   id: string;
   company: string;
+  companyId: string | null;
   slug: string | null;
   column: "watching" | "interested" | "intro" | "pledged";
   status: string;
+  introStatus: "requested" | "reviewing" | "facilitated" | "declined" | null;
   date: string;
   amount: string | null;
   message: string | null;
+};
+
+const INTRO_STATUS_STYLES: Record<string, { badge: string; label: string }> = {
+  requested:   { badge: "bg-blue-50 text-blue-700",    label: "Pending review" },
+  reviewing:   { badge: "bg-indigo-50 text-indigo-700", label: "Under review" },
+  facilitated: { badge: "bg-emerald-50 text-emerald-800", label: "Facilitated ✓" },
+  declined:    { badge: "bg-red-50 text-red-700",       label: "Not matched" },
 };
 
 function formatDate(value: string) {
@@ -57,9 +67,11 @@ export function InterestPipelineKanban({
       result.push({
         id: `saved-${row.id}`,
         company: row.companies?.company_name ?? "Unknown company",
+        companyId: row.company_id ?? null,
         slug: row.companies?.slug ?? null,
         column: "watching",
         status: "saved",
+        introStatus: null,
         date: row.updated_at ?? row.created_at,
         amount: null,
         message: null,
@@ -71,9 +83,11 @@ export function InterestPipelineKanban({
       result.push({
         id: `interest-${row.id}`,
         company: row.companies?.company_name ?? "Unknown company",
+        companyId: row.company_id ?? null,
         slug: row.companies?.slug ?? null,
         column: amount ? "pledged" : "interested",
         status: row.status ?? "interested",
+        introStatus: null,
         date: row.updated_at ?? row.created_at,
         amount,
         message: row.message,
@@ -81,12 +95,15 @@ export function InterestPipelineKanban({
     }
 
     for (const row of introRequests) {
+      const s = row.status as "requested" | "reviewing" | "facilitated" | "declined" | null;
       result.push({
         id: `intro-${row.id}`,
         company: row.companies?.company_name ?? "Unknown company",
+        companyId: row.company_id ?? null,
         slug: row.companies?.slug ?? null,
         column: "intro",
         status: row.status ?? "requested",
+        introStatus: s,
         date: row.created_at,
         amount: null,
         message: row.message,
@@ -162,21 +179,54 @@ export function InterestPipelineKanban({
                       None
                     </div>
                   ) : (
-                    colCards.map((card) => (
-                      <div key={card.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-                        <p className="text-sm font-medium text-slate-900">{card.company}</p>
-                        <p className="mt-1 text-[11px] text-slate-500">{formatDate(card.date)}</p>
-                        {card.amount ? (
-                          <p className="mt-1.5 text-xs font-semibold text-indigo-700">{card.amount}</p>
-                        ) : null}
-                        {card.message ? (
-                          <p className="mt-1.5 line-clamp-2 text-[11px] text-slate-600">{card.message}</p>
-                        ) : null}
-                        <span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${col.color}`}>
-                          {card.status}
-                        </span>
-                      </div>
-                    ))
+                    colCards.map((card) => {
+                      const introStyle = card.introStatus
+                        ? (INTRO_STATUS_STYLES[card.introStatus] ?? INTRO_STATUS_STYLES.requested)
+                        : null;
+                      return (
+                        <div key={card.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                          <div className="flex items-start justify-between gap-1.5">
+                            {card.companyId ? (
+                              <Link
+                                href={`/investor/opportunities/${card.companyId}/report`}
+                                className="text-sm font-medium text-slate-900 hover:text-indigo-700 transition-colors leading-snug"
+                              >
+                                {card.company}
+                              </Link>
+                            ) : (
+                              <p className="text-sm font-medium text-slate-900 leading-snug">{card.company}</p>
+                            )}
+                            {card.companyId && (
+                              <Link
+                                href={`/investor/opportunities/${card.companyId}/report`}
+                                className="shrink-0 text-[10px] text-slate-400 hover:text-indigo-600 transition-colors"
+                                aria-label="View report"
+                              >
+                                →
+                              </Link>
+                            )}
+                          </div>
+                          <p className="mt-1 text-[11px] text-slate-500">{formatDate(card.date)}</p>
+                          {card.amount ? (
+                            <p className="mt-1.5 text-xs font-semibold text-indigo-700">{card.amount}</p>
+                          ) : null}
+                          {card.message ? (
+                            <p className="mt-1.5 line-clamp-2 text-[11px] text-slate-600">{card.message}</p>
+                          ) : null}
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {introStyle ? (
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${introStyle.badge}`}>
+                                {introStyle.label}
+                              </span>
+                            ) : (
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${col.color}`}>
+                                {card.status}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -192,15 +242,34 @@ export function InterestPipelineKanban({
           ) : (
             cards.map((card) => {
               const col = COLUMNS.find((c) => c.key === card.column)!;
+              const introStyle = card.introStatus
+                ? (INTRO_STATUS_STYLES[card.introStatus] ?? INTRO_STATUS_STYLES.requested)
+                : null;
               return (
                 <div key={card.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="font-medium text-slate-900">{card.company}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    {card.companyId ? (
+                      <Link
+                        href={`/investor/opportunities/${card.companyId}/report`}
+                        className="font-medium text-slate-900 hover:text-indigo-700 transition-colors"
+                      >
+                        {card.company}
+                      </Link>
+                    ) : (
+                      <p className="font-medium text-slate-900">{card.company}</p>
+                    )}
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${col.color}`}>
+                      {col.label}
+                    </span>
+                  </div>
                   <p className="mt-1 text-xs text-slate-500">{formatDate(card.date)}</p>
                   {card.amount ? <p className="mt-2 text-xs font-semibold text-indigo-700">{card.amount}</p> : null}
                   {card.message ? <p className="mt-2 text-xs text-slate-600 line-clamp-2">{card.message}</p> : null}
-                  <span className={`mt-3 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${col.color}`}>
-                    {col.label}
-                  </span>
+                  {introStyle && (
+                    <span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${introStyle.badge}`}>
+                      {introStyle.label}
+                    </span>
+                  )}
                 </div>
               );
             })
@@ -216,13 +285,31 @@ export function InterestPipelineKanban({
             <div className="divide-y divide-slate-100">
               {cards.map((card) => {
                 const col = COLUMNS.find((c) => c.key === card.column)!;
+                const introStyle = card.introStatus
+                  ? (INTRO_STATUS_STYLES[card.introStatus] ?? INTRO_STATUS_STYLES.requested)
+                  : null;
                 return (
                   <div key={card.id} className="flex items-center gap-3 px-4 py-3">
                     <span className={`h-2 w-2 shrink-0 rounded-full ${col.dot}`} />
-                    <p className="flex-1 text-sm font-medium text-slate-900">{card.company}</p>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${col.color}`}>
-                      {col.label}
-                    </span>
+                    {card.companyId ? (
+                      <Link
+                        href={`/investor/opportunities/${card.companyId}/report`}
+                        className="flex-1 text-sm font-medium text-slate-900 hover:text-indigo-700 transition-colors"
+                      >
+                        {card.company}
+                      </Link>
+                    ) : (
+                      <p className="flex-1 text-sm font-medium text-slate-900">{card.company}</p>
+                    )}
+                    {introStyle ? (
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${introStyle.badge}`}>
+                        {introStyle.label}
+                      </span>
+                    ) : (
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${col.color}`}>
+                        {col.label}
+                      </span>
+                    )}
                     {card.amount ? (
                       <span className="text-xs font-semibold text-indigo-700">{card.amount}</span>
                     ) : null}

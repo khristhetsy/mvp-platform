@@ -67,7 +67,10 @@ export type NotificationType =
   | "deal_room_document_requested"
   | "deal_room_viewed"
   | "digest_ready"
-  | "reminder_generated";
+  | "reminder_generated"
+  | "intro_facilitated"
+  | "intro_facilitated_founder"
+  | "intro_declined";
 
 export type NotificationRecord = {
   id: string;
