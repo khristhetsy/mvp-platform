@@ -20,12 +20,13 @@ export default async function FounderDealRoomPage({ params }: PageProps) {
   const { roomId } = await params;
   const supabase = await createServerSupabaseClient();
 
-  const [{ data: room }, { data: questions }, { data: docRequests }, { data: activity }, { data: company }] = await Promise.all([
+  const [{ data: room }, { data: questions }, { data: docRequests }, { data: activity }, { data: company }, { data: documents }] = await Promise.all([
     supabase.from("deal_rooms").select("id, title, status, created_at").eq("id", roomId).maybeSingle(),
     supabase.from("deal_room_questions").select("*").eq("room_id", roomId).order("created_at", { ascending: false }).limit(200),
     supabase.from("deal_room_document_requests").select("*").eq("room_id", roomId).order("created_at", { ascending: false }).limit(200),
     supabase.from("deal_room_activity_events").select("*").eq("room_id", roomId).order("created_at", { ascending: false }).limit(200),
     supabase.from("companies").select("company_name, industry, business_description, revenue_stage, funding_amount, country, state").eq("founder_id", profile.id).maybeSingle(),
+    supabase.from("documents").select("id, file_name, document_type").eq("uploaded_by", profile.id).order("created_at", { ascending: false }).limit(100),
   ]);
 
   const companySnapshot: DealRoomCompanySnapshot | undefined = company
@@ -91,7 +92,16 @@ export default async function FounderDealRoomPage({ params }: PageProps) {
               />
             </WorkspacePanel>
             <WorkspacePanel title="Document requests" subtitle={`${(docRequests ?? []).length} recent`}>
-              <DealRoomDocRequestsPanel roomId={roomId} viewerRole="founder" initialRequests={docRequests ?? []} />
+              <DealRoomDocRequestsPanel
+                roomId={roomId}
+                viewerRole="founder"
+                initialRequests={docRequests ?? []}
+                founderDocuments={(documents ?? []).map((d) => ({
+                  id: d.id,
+                  file_name: d.file_name ?? null,
+                  document_type: d.document_type ?? null,
+                }))}
+              />
             </WorkspacePanel>
           </section>
 
