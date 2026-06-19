@@ -16,6 +16,7 @@ function inputs(over: Partial<PartnerScoreInputs> = {}): PartnerScoreInputs {
     daysSinceLastActive: 5,
     accredited: true,
     profileCompleteness: 1,
+    amountPledgesMade: 4,
     pledgesWithinRange: 4,
     backedReadinessAvg: 75,
     closedDeals: 2,
@@ -52,7 +53,7 @@ describe("computePillars", () => {
 
   it("treats no-pledges as neutral consistency (not a penalty)", () => {
     const p = computePillars(
-      inputs({ accredited: true, profileCompleteness: 1, pledgesMade: 0, pledgesWithinRange: 0 }),
+      inputs({ accredited: true, profileCompleteness: 1, amountPledgesMade: 0, pledgesWithinRange: 0 }),
     );
     expect(p.credibility).toBe(100); // 40 + 30 + 30(neutral)
   });
@@ -100,6 +101,7 @@ describe("computePartnerScore", () => {
       daysSinceLastActive: null,
       accredited: false,
       profileCompleteness: 0,
+      amountPledgesMade: 0,
       pledgesWithinRange: 0,
       backedReadinessAvg: null,
       closedDeals: 0,

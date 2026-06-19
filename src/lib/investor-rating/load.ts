@@ -57,6 +57,17 @@ export async function loadPartnerScore(
     dealRooms.map((d) => d.company_id).filter((id): id is string => Boolean(id)),
   );
 
+  // 2b. SPV participations — pledge follow-through (commit -> complete) + closings.
+  type ParticipationRow = { status: string | null };
+  const participationsRes = await supabase
+    .from("spv_participations")
+    .select("status")
+    .eq("investor_id", investorId);
+  const participations = ((participationsRes as { data: ParticipationRow[] | null }).data ?? []);
+  const COMMITTED = new Set(["soft_committed", "documents_pending", "completed"]);
+  const committedParticipations = participations.filter((p) => COMMITTED.has(p.status ?? "")).length;
+  const completedParticipations = participations.filter((p) => p.status === "completed").length;
+
   // 3. Message threads + messages (responsiveness + recency).
   type ThreadRow = { id: string; founder_id: string; company_id: string | null };
   const threadsRes = await supabase
@@ -181,14 +192,13 @@ export async function loadPartnerScore(
     ...threads.map((t) => t.founder_id),
   ]).size;
 
-  // NOTE: pledgesHonored / closedDeals require a clean investor↔closing link in
-  // spv_closing_reviews; left at 0 in Phase 1 until that linkage is confirmed.
   const inputs: PartnerScoreInputs = {
     sampleSize,
     interestsExpressed: interests.length,
     dealRoomsOpened: dealRooms.length,
-    pledgesMade: pledges.length,
-    pledgesHonored: 0,
+    // Follow-through pledges come from SPV participations (commit -> complete).
+    pledgesMade: committedParticipations,
+    pledgesHonored: completedParticipations,
     ghostedCount,
     founderThreads,
     repliedThreads,
@@ -196,9 +206,11 @@ export async function loadPartnerScore(
     daysSinceLastActive,
     accredited: Boolean(profile?.accredited_status),
     profileCompleteness,
+    // Amount-pledges (for check-size consistency) come from marketplace interests.
+    amountPledgesMade: pledges.length,
     pledgesWithinRange,
     backedReadinessAvg,
-    closedDeals: 0,
+    closedDeals: completedParticipations,
     tenureMonths: monthsBetween(profile?.created_at ?? null, now),
   };
 

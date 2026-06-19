@@ -36,11 +36,11 @@ export type PartnerScoreInputs = {
   /** Distinct founders the investor has engaged — drives the cold-start gate. */
   sampleSize: number;
 
-  // Follow-through
+  // Follow-through — pledges here are SPV participations (commit -> complete).
   interestsExpressed: number;
   dealRoomsOpened: number;
-  pledgesMade: number;
-  pledgesHonored: number;
+  pledgesMade: number; // SPV participations the investor committed to
+  pledgesHonored: number; // SPV participations that reached 'completed'
   ghostedCount: number; // interests with no deal room and no message within window
 
   // Responsiveness
@@ -49,10 +49,12 @@ export type PartnerScoreInputs = {
   medianResponseHours: number | null;
   daysSinceLastActive: number | null;
 
-  // Credibility
+  // Credibility — amount pledges come from marketplace interests (which carry
+  // an amount); consistency = how many fell within the stated check-size range.
   accredited: boolean;
   profileCompleteness: number; // 0..1
-  pledgesWithinRange: number; // pledges that fell within the stated check-size range
+  amountPledgesMade: number; // interest pledges that carry an amount
+  pledgesWithinRange: number; // of those, how many fell within the check-size range
 
   // Portfolio readiness (descriptor, light weight)
   backedReadinessAvg: number | null; // avg readiness (0..100) of backed companies

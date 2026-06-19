@@ -51,9 +51,9 @@ export function computePillars(input: PartnerScoreInputs): PartnerPillars {
   );
 
   // Credibility (20%) — accreditation + profile completeness + pledge consistency.
-  // No pledges yet → consistency is neutral (1), not a penalty.
+  // No amount-pledges yet → consistency is neutral (1), not a penalty.
   const consistency =
-    input.pledgesMade > 0 ? rate(input.pledgesWithinRange, input.pledgesMade) : 1;
+    input.amountPledgesMade > 0 ? rate(input.pledgesWithinRange, input.amountPledgesMade) : 1;
   const credibility = clamp(
     40 * (input.accredited ? 1 : 0) +
       30 * clamp(input.profileCompleteness, 0, 1) +
