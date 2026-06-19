@@ -40,6 +40,7 @@ export type FounderAnalyticsSnapshot = {
   investorInterestCount: number;
   introRequestCount: number;
   savedByInvestorsCount: number;
+  reportViewCount: number;
   pledgeTotalDisplay: string;
   pledgeInvestorCount: number;
 };
@@ -75,6 +76,7 @@ export async function loadFounderAnalytics(profile: Profile): Promise<FounderAna
     threads,
     investorActivity,
     pledgeCompanyId,
+    reportViewsResult,
   ] = await Promise.all([
     listCompanyDocuments(supabase, company.id),
     getLatestDiligenceReport(supabase, company.id),
@@ -94,6 +96,11 @@ export async function loadFounderAnalytics(profile: Profile): Promise<FounderAna
     supabase.from("message_threads").select("id", { count: "exact", head: true }).eq("founder_id", profile.id).eq("company_id", company.id),
     listFounderInvestorActivity(supabase, company.id),
     getFounderPledgeCompanyId(admin, profile.id, company.id),
+    admin
+      .from("investor_activity")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", company.id)
+      .eq("activity_type", "report_viewed"),
   ]);
 
   const onboarding = computeFounderOnboardingProgress({
@@ -166,6 +173,7 @@ export async function loadFounderAnalytics(profile: Profile): Promise<FounderAna
     investorInterestCount: investorActivity?.interests.length ?? 0,
     introRequestCount: investorActivity?.introRequests.length ?? 0,
     savedByInvestorsCount: investorActivity?.savedDeals.length ?? 0,
+    reportViewCount: reportViewsResult.count ?? 0,
     pledgeTotalDisplay: formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency),
     pledgeInvestorCount: pledgeSummary.investorCount,
   };

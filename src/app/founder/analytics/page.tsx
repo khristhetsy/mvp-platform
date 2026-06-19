@@ -9,6 +9,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { AnalyticsCardsClient } from "@/components/founder/AnalyticsCardsClient";
 import { AnalyticsChartPanelsClient } from "@/components/founder/AnalyticsChartPanelsClient";
 import { FounderEmptyState } from "@/components/founder/FounderEmptyState";
+import { FounderMarketplaceFunnelCard } from "@/components/founder/FounderMarketplaceFunnelCard";
 
 function formatStatusCounts(counts: Record<string, number>) {
   const entries = Object.entries(counts);
@@ -112,12 +113,22 @@ export default async function FounderAnalyticsPage() {
 
             {/* Show the charts anyway — they'll show zeros but at least the UI is legible */}
             <AnalyticsCardsClient analytics={analytics} />
-            <AnalyticsChartPanelsClient analytics={analytics} />
+            <div className="mt-6 grid gap-6 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <AnalyticsChartPanelsClient analytics={analytics} />
+              </div>
+              <FounderMarketplaceFunnelCard analytics={analytics} />
+            </div>
           </>
         ) : (
           <>
             <AnalyticsCardsClient analytics={analytics} />
-            <AnalyticsChartPanelsClient analytics={analytics} />
+            <div className="mt-6 grid gap-6 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <AnalyticsChartPanelsClient analytics={analytics} />
+              </div>
+              <FounderMarketplaceFunnelCard analytics={analytics} />
+            </div>
             <p className="mt-6 text-xs text-slate-500">
               Outreach pipeline summary: {formatStatusCounts(analytics.outreachByStatus)}.{" "}
               <Link href="/founder/investors" className="font-semibold text-indigo-700">

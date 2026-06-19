@@ -7,6 +7,7 @@ import { InvestorOnboardingWizard } from "@/components/InvestorOnboardingWizard"
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { ensureInvestorProfileForUser } from "@/lib/investor/profile";
+import { InvestorProfileCompletenessCard } from "@/components/investor/InvestorProfileCompletenessCard";
 import { InvestorSettingsNav } from "./InvestorSettingsNav";
 
 export const dynamic = "force-dynamic";
@@ -52,6 +53,7 @@ export default async function InvestorSettingsPage({
             </p>
           </div>
           <div className="p-6">
+            <InvestorProfileCompletenessCard profile={investorProfile} />
             <InvestorOnboardingWizard
               investorProfile={investorProfile}
               profileName={profile.full_name ?? profile.email ?? "Investor"}
