@@ -15,6 +15,7 @@ import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -194,13 +195,12 @@ export default async function FounderDeployPage() {
           <section className="mt-6">
             <h2 className="mb-3 text-sm font-medium text-slate-900">Investor pipeline</h2>
             {pipelineList.length === 0 ? (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-8 text-center">
-                <p className="text-sm font-medium text-slate-900">No investor activity yet</p>
-                <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
-                  As investors express interest or request intros, they&apos;ll appear here. Start outreach to
-                  build your pipeline.
-                </p>
-              </div>
+              <EmptyState
+                title="No investor activity yet"
+                description="As investors express interest or request intros, they'll appear here. Start outreach to build your pipeline."
+                secondaryActionLabel="Open investor CRM"
+                secondaryActionHref="/founder/investors"
+              />
             ) : (
               <ul className="space-y-2">
                 {pipelineList.map((row) => {
