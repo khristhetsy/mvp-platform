@@ -16,6 +16,7 @@ import { getRequestedPlansByProfileIds } from "@/lib/billing/requested-plan";
 import { listSubscriptionsByProfileIds } from "@/lib/subscriptions/get-subscription";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
+import { computeReadinessScore } from "@/lib/data/founder-readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -24,12 +25,16 @@ type PendingProfileRow = {
   full_name: string | null;
   email: string | null;
   stage_approval_requested_at: string | null;
-  readiness_score: number | null;
 };
 
 type CompanyRow = {
   founder_id: string | null;
   company_name: string | null;
+};
+
+type FounderDocumentRow = {
+  uploaded_by: string | null;
+  document_type: string | null;
 };
 
 export default async function AdminCompaniesPage() {
@@ -47,7 +52,7 @@ export default async function AdminCompaniesPage() {
     const rawSupabase = supabase as unknown as ReturnType<typeof import("@supabase/supabase-js").createClient>;
     const { data: pendingProfilesRaw } = await rawSupabase
       .from("profiles")
-      .select("id, full_name, email, stage_approval_requested_at, readiness_score")
+      .select("id, full_name, email, stage_approval_requested_at")
       .eq("journey_stage", "qualify")
       .eq("stage_approval_status", "pending");
 
@@ -68,13 +73,30 @@ export default async function AdminCompaniesPage() {
         }
       }
 
+      // Compute each founder's readiness the same way the founder view does,
+      // so the queue shows the real number (readiness_score is not a profiles
+      // column — selecting it previously errored the whole query and left the
+      // queue permanently empty).
+      const { data: docsRaw } = await rawSupabase
+        .from("documents")
+        .select("uploaded_by, document_type")
+        .in("uploaded_by", founderProfileIds);
+      const docs = (docsRaw ?? []) as FounderDocumentRow[];
+      const docTypesByFounderId = new Map<string, string[]>();
+      for (const doc of docs) {
+        if (!doc.uploaded_by) continue;
+        const list = docTypesByFounderId.get(doc.uploaded_by) ?? [];
+        if (doc.document_type) list.push(doc.document_type);
+        docTypesByFounderId.set(doc.uploaded_by, list);
+      }
+
       pendingFounders = pendingProfiles.map((p) => ({
         profileId: p.id,
         fullName: p.full_name,
         email: p.email,
         companyName: companyNameByFounderId.get(p.id) ?? null,
         requestedAt: p.stage_approval_requested_at ?? "",
-        readinessScore: p.readiness_score,
+        readinessScore: computeReadinessScore(docTypesByFounderId.get(p.id) ?? []),
       }));
     }
 

@@ -3,6 +3,8 @@ import { z } from "zod";
 import { requireStaffApi } from "@/lib/api/admin";
 import { adminDebug } from "@/lib/debug/admin-debug";
 import { apiErrorMessage } from "@/lib/api/errors";
+import { writeAuditLog } from "@/lib/data/audit";
+import { createNotification } from "@/lib/notifications/notifications";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const stageReviewSchema = z.object({
@@ -116,6 +118,28 @@ export async function POST(
     });
     return NextResponse.json({ error: message }, { status: 400 });
   }
+
+  await writeAuditLog(auth.supabase, {
+    userId: auth.profile.id,
+    action: action === "approve" ? "founder_stage_approved" : "founder_stage_rejected",
+    entityType: "profile",
+    entityId: profileId,
+    metadata: { action, feedback: feedback?.trim() ?? null },
+  });
+
+  await createNotification({
+    recipientUserId: profileId,
+    actorUserId: auth.profile.id,
+    type: "founder_stage_review",
+    title: action === "approve" ? "You're approved to Deploy" : "Changes requested on your submission",
+    message:
+      action === "approve"
+        ? "Your Qualify submission was approved. Your raise workspace is now unlocked."
+        : `An admin requested changes: ${feedback?.trim() ?? ""}`.trim(),
+    entityType: "profile",
+    entityId: profileId,
+    deepLink: "/founder/journey",
+  });
 
   const { data: updatedRaw, error: fetchError } = await rc
     .from("profiles")
