@@ -108,7 +108,7 @@ export default async function FounderOptimizePage() {
     dealRoomCount = ((drResult as { data: CountRow[] | null }).data ?? []).length;
 
     const updatesResult = await listFounderCompanyUpdates(supabase, company.id);
-    const updates = "data" in updatesResult ? updatesResult.data : [];
+    const updates = ("data" in updatesResult ? updatesResult.data : []) ?? [];
     const lastUpdate = updates[0] as { created_at?: string | null } | undefined;
     if (lastUpdate?.created_at) {
       daysSinceUpdate = daysSince(lastUpdate.created_at);
