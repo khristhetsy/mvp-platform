@@ -2,8 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/supabase/types';
 import { JOURNEY_STAGES } from './types';
 import type { JourneyStage, StageApprovalStatus, StageConditions, FounderJourneyState } from './types';
-
-const REQUIRED_DOC_TYPES = ['financials', 'cap_table', 'pitch_deck'] as const;
+import { allQualifyDocsUploaded } from './documents';
 
 export async function evaluateFounderJourney(
   supabase: SupabaseClient<Database>,
@@ -87,8 +86,8 @@ export async function evaluateFounderJourney(
     documentRows = data ?? [];
   }
 
-  const uploadedTypes = new Set(documentRows.map((d) => d.document_type).filter(Boolean));
-  const requiredDocsUploaded = REQUIRED_DOC_TYPES.every((t) => uploadedTypes.has(t));
+  const uploadedTypes = documentRows.map((d) => d.document_type);
+  const requiredDocsUploaded = allQualifyDocsUploaded(uploadedTypes);
 
   // 5. Query deal_rooms — check if any exist for the company
   let hasDealRoom = false;

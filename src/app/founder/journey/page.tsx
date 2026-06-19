@@ -145,23 +145,6 @@ function RequirementRow({ label, met }: Requirement) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Request Approval button (client island inline)
-// ────────────────────────────────────────────────────────────────────────────
-
-function RequestApprovalButton() {
-  return (
-    <form action="/api/founder/stage-approval-request" method="POST">
-      <button
-        type="submit"
-        className="rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 transition-colors"
-      >
-        Request admin review
-      </button>
-    </form>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────────────
 // Additional counts fetched for stage 4
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -182,7 +165,7 @@ export default async function FounderJourneyPage() {
   const state = await evaluateFounderJourney(supabase, profile.id);
 
   // Fetch extra counts for the journey page display
-  let counts: StageCounts = {
+  const counts: StageCounts = {
     dealRoomCount: 0,
     investorInterestCount: 0,
     onboardingPercent: 0,
@@ -311,12 +294,19 @@ export default async function FounderJourneyPage() {
                         </p>
                       ) : null}
 
-                      {state.canRequestApproval ? (
+                      {isActive ? (
                         <div className="flex items-center gap-3">
-                          <RequestApprovalButton />
-                          <span className="text-xs text-slate-500">
-                            All requirements met — request admin review to advance to Deploy
-                          </span>
+                          <Link
+                            href="/founder/qualify"
+                            className="rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500"
+                          >
+                            Open Qualify workspace →
+                          </Link>
+                          {state.canRequestApproval ? (
+                            <span className="text-xs text-slate-500">
+                              All requirements met — submit for admin review
+                            </span>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
