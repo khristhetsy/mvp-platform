@@ -21,6 +21,7 @@ import type { WorkflowDependency } from "@/lib/automation/types";
 import type { NextBestAction, NextBestActionRole } from "@/lib/next-best-actions/types";
 import type { RiskSignal } from "@/lib/predictive-intelligence/types";
 import { RiskSignalsPanel } from "@/components/predictive-intelligence/RiskSignalsPanel";
+import { AdminCompanyAIAssessment } from "@/components/admin/AdminCompanyAIAssessment";
 
 export function AdminCompanyWorkspace({
   data,
@@ -71,6 +72,10 @@ export function AdminCompanyWorkspace({
           />
         </PageSection>
       ) : null}
+
+      <PageSection title="AI company assessment" subtitle="Structured review — recommendation, strengths, concerns, and data gaps">
+        <AdminCompanyAIAssessment companyId={data.company.id} />
+      </PageSection>
 
       <PageSection title="Operational timeline" subtitle="Company-scoped events from operational_activity_events">
         <CompanyTimelinePanel items={data.timeline} companyId={data.company.id} />

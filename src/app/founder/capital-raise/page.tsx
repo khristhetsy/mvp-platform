@@ -16,6 +16,7 @@ import { CapitalRaiseOverviewClient } from "@/components/founder/CapitalRaiseOve
 import { RoundStructureCalculator } from "@/components/founder/RoundStructureCalculator";
 import { RoundHealthAdvisor } from "@/components/founder/RoundHealthAdvisor";
 import { FounderEmptyState } from "@/components/founder/FounderEmptyState";
+import { FounderProfileViewsCard } from "@/components/founder/FounderProfileViewsCard";
 
 export const dynamic = "force-dynamic";
 
@@ -103,9 +104,12 @@ export default async function FounderCapitalRaisePage() {
             raiseStatus={raiseStatus}
           />
 
-          {/* AI Round Health Advisor */}
-          <section className="mt-8">
-            <RoundHealthAdvisor />
+          {/* Investor view signals + AI Round Health Advisor */}
+          <section className="mt-8 grid gap-6 xl:grid-cols-3">
+            <div className="xl:col-span-2">
+              <RoundHealthAdvisor />
+            </div>
+            <FounderProfileViewsCard companyId={company.id} />
           </section>
 
           {/* Round structure calculator */}
