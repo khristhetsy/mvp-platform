@@ -271,6 +271,7 @@ export const investorWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/investor/tasks", label: "Tasks" },
   { href: "/notifications", label: "Notifications" },
   { href: "/investor/learning", label: "Learning" },
+  { href: "/investor/partner-score", label: "Partner Score" },
   { href: "/investor/settings", label: "Settings" },
 ];
 
