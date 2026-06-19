@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AuthHandler } from "@/components/AuthHandler";
 import { PostHogProvider } from "@/components/PostHogProvider";
+import { ToastProvider } from "@/components/ui/ToastProvider";
 import { GoogleAnalyticsScript } from "@/components/GoogleAnalytics";
 import "./globals.css";
 
@@ -41,7 +42,7 @@ export default async function RootLayout({
         <NextIntlClientProvider messages={messages}>
           <PostHogProvider>
             <AuthHandler />
-            {children}
+            <ToastProvider>{children}</ToastProvider>
           </PostHogProvider>
         </NextIntlClientProvider>
         <Analytics />
