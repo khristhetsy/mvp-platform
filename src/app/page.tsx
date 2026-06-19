@@ -58,7 +58,7 @@ export default function Home() {
               platform.
             </p>
             <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
-              <Link href="/submit-company" className="cap-btn-primary rounded-lg px-5 py-2.5 text-center text-sm font-semibold">
+              <Link href="/auth/sign-up" className="cap-btn-primary rounded-lg px-5 py-2.5 text-center text-sm font-semibold">
                 Get Started as Founder
               </Link>
               <Link

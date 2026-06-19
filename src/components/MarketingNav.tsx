@@ -46,13 +46,13 @@ export function MarketingNav() {
 
         <div className="hidden items-center gap-2 sm:flex">
           <Link
-            href="https://icapos.com/login"
+            href="/auth/sign-in"
             className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:text-slate-950"
           >
             Login
           </Link>
-          <Link href="/submit-company" className="cap-btn-primary rounded-lg px-4 py-2 text-sm font-semibold">
-            Get Started
+          <Link href="/auth/sign-up" className="cap-btn-primary rounded-lg px-4 py-2 text-sm font-semibold">
+            Sign up
           </Link>
         </div>
 
@@ -91,18 +91,18 @@ export function MarketingNav() {
           </ul>
           <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3">
             <Link
-              href="https://icapos.com/login"
+              href="/auth/sign-in"
               onClick={() => setMobileOpen(false)}
               className="rounded-lg border border-slate-200 px-3 py-2.5 text-center text-sm font-medium text-slate-700"
             >
               Login
             </Link>
             <Link
-              href="/submit-company"
+              href="/auth/sign-up"
               onClick={() => setMobileOpen(false)}
               className="cap-btn-primary rounded-lg px-3 py-2.5 text-center text-sm font-semibold"
             >
-              Get Started
+              Sign up
             </Link>
           </div>
         </nav>
