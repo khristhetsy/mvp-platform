@@ -325,6 +325,18 @@ export default async function FounderJourneyPage() {
                       </div>
                     </div>
                   ) : null}
+
+                  {/* Deploy workspace entry */}
+                  {stage === "deploy" && isActive ? (
+                    <div className="mt-4">
+                      <Link
+                        href="/founder/deploy"
+                        className="inline-block rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500"
+                      >
+                        Open Deploy workspace →
+                      </Link>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>
