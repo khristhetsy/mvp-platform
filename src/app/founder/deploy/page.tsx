@@ -11,9 +11,12 @@ import {
   getCompanyPledgeSummary,
   getFounderPledgeCompanyId,
 } from "@/lib/data/investor-pledges";
+import { loadPartnerScore } from "@/lib/investor-rating/load";
+import { founderFacingPartnerView, type FounderFacingPartner } from "@/lib/investor-rating/founder-view";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
+import { FounderFacingInvestorTier } from "@/components/founder/FounderFacingInvestorTier";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -122,6 +125,10 @@ export default async function FounderDeployPage() {
   const company = await ensureFounderCompanyForUser(profile);
 
   let crmView: ReturnType<typeof buildFounderInvestorCrmView> | null = null;
+  let pipelineList: FounderInvestorRelationRow[] = [];
+  // Founder-facing investor standing (tier + facts only — never the score).
+  const partnerViews = new Map<string, FounderFacingPartner>();
+
   if (company) {
     const supabase = await createServerSupabaseClient();
     const serviceSupabase = createServiceRoleClient();
@@ -131,6 +138,17 @@ export default async function FounderDeployPage() {
       getCompanyPledgeSummary(serviceSupabase, pledgeCompanyId),
     ]);
     crmView = buildFounderInvestorCrmView(activity, pledgeSummary);
+    pipelineList = buildPipelineList(crmView);
+
+    // Compute the founder-safe Partner view for each shown investor (capped to
+    // the pipeline list). Service role: a founder can't read other investors'
+    // data directly. NOTE: if this list grows, move to a snapshot table.
+    await Promise.all(
+      pipelineList.map(async (row) => {
+        const score = await loadPartnerScore(serviceSupabase, row.investorId);
+        partnerViews.set(row.investorId, founderFacingPartnerView(score));
+      }),
+    );
   }
 
   const funnel: FunnelStage[] = [
@@ -139,7 +157,6 @@ export default async function FounderDeployPage() {
     { label: "Follow-up", value: crmView?.summary.followUpsNeeded ?? 0 },
     { label: "Pledged", value: crmView?.sections.pledged.length ?? 0 },
   ];
-  const pipelineList = crmView ? buildPipelineList(crmView) : [];
   const followUpsNeeded = crmView?.summary.followUpsNeeded ?? 0;
 
   return (
@@ -220,6 +237,14 @@ export default async function FounderDeployPage() {
                           {amount ? `${amount} · ` : ""}
                           {formatDate(row.lastActivityAt)}
                         </p>
+                        {partnerViews.has(row.investorId) ? (
+                          <div className="mt-1.5">
+                            <FounderFacingInvestorTier
+                              view={partnerViews.get(row.investorId)!}
+                              showFacts={false}
+                            />
+                          </div>
+                        ) : null}
                       </div>
                       <span
                         className={[
