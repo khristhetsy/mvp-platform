@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderConversationalOnboarding } from "@/components/founder/FounderConversationalOnboarding";
+import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingProgressCard";
 import { loadFounderOnboardingPageData } from "@/lib/onboarding/load-founder-onboarding";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -29,6 +30,8 @@ export default async function FounderOnboardingPage() {
             Answer a few quick questions. We&apos;ll personalise your experience and give you a clear starting action plan.
           </p>
         </div>
+
+        <FounderOnboardingProgressCard progress={data.progress} inPage />
 
         <FounderConversationalOnboarding
           company={data.company}

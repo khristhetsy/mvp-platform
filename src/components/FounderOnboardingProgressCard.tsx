@@ -6,11 +6,33 @@ import { WorkflowProgressRail } from "@/components/ui/WorkflowProgressRail";
 
 export function FounderOnboardingProgressCard({
   progress,
+  inPage = false,
 }: Readonly<{
   progress: FounderOnboardingProgress;
+  /** When true (onboarding page): hides the CTA and shows a completion
+   *  banner instead of returning null when isComplete. */
+  inPage?: boolean;
 }>) {
-  if (progress.isComplete) {
+  if (progress.isComplete && !inPage) {
     return null;
+  }
+
+  if (progress.isComplete && inPage) {
+    return (
+      <section className="mb-5 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M2 7l4 4 6-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-emerald-900">Onboarding complete</p>
+          <p className="text-xs leading-5 text-emerald-700">
+            Company profile, funding information, and pitch deck are all set. Your profile is ready for investors.
+          </p>
+        </div>
+      </section>
+    );
   }
 
   const incompleteSteps = ONBOARDING_STEPS.filter((step) => !progress.steps[step.id].completed);
@@ -55,12 +77,14 @@ export function FounderOnboardingProgressCard({
             <WorkflowProgressRail steps={railSteps} compact />
           </div>
         </div>
-        <Link
-          href="/founder/onboarding"
-          className="cap-btn-primary inline-flex w-full shrink-0 justify-center rounded-lg px-5 py-2.5 text-sm font-semibold sm:w-auto"
-        >
-          Continue onboarding
-        </Link>
+        {!inPage && (
+          <Link
+            href="/founder/onboarding"
+            className="cap-btn-primary inline-flex w-full shrink-0 justify-center rounded-lg px-5 py-2.5 text-sm font-semibold sm:w-auto"
+          >
+            Continue onboarding
+          </Link>
+        )}
       </div>
     </section>
   );
