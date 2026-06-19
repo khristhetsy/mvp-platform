@@ -14,6 +14,7 @@ import type { Company } from "@/lib/supabase/types";
 import { CapitalRaiseCardsClient } from "@/components/founder/CapitalRaiseCardsClient";
 import { CapitalRaiseOverviewClient } from "@/components/founder/CapitalRaiseOverviewClient";
 import { RoundStructureCalculator } from "@/components/founder/RoundStructureCalculator";
+import { RoundHealthAdvisor } from "@/components/founder/RoundHealthAdvisor";
 import { FounderEmptyState } from "@/components/founder/FounderEmptyState";
 
 export const dynamic = "force-dynamic";
@@ -101,6 +102,11 @@ export default async function FounderCapitalRaisePage() {
             investorActivity={investorActivity}
             raiseStatus={raiseStatus}
           />
+
+          {/* AI Round Health Advisor */}
+          <section className="mt-8">
+            <RoundHealthAdvisor />
+          </section>
 
           {/* Round structure calculator */}
           <section className="mt-8">
