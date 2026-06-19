@@ -2,6 +2,8 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { AdminConversionFunnel } from "@/components/admin/AdminConversionFunnel";
+import { AdminPlatformInsights } from "@/components/admin/AdminPlatformInsights";
 import { AdminOperationalViewToolbar } from "@/components/admin/AdminOperationalViewToolbar";
 import { clampTrendWindowDays, formatCurrencyAmount, formatPct } from "@/lib/analytics/display";
 import { loadPlatformAnalyticsSnapshot } from "@/lib/analytics/metrics";
@@ -44,7 +46,14 @@ export default async function AdminAnalyticsPage({
   );
   const view = typeof searchParams?.view === "string" ? searchParams.view : null;
   const supabase = createServiceRoleClient();
-  const analytics = await loadPlatformAnalyticsSnapshot(supabase, windowDays);
+  const [analytics, funnelRes] = await Promise.all([
+    loadPlatformAnalyticsSnapshot(supabase, windowDays),
+    supabase
+      .from("intro_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "facilitated"),
+  ]);
+  const facilitatedIntros = funnelRes.count ?? 0;
 
   return (
     <AppShell
@@ -187,6 +196,57 @@ export default async function AdminAnalyticsPage({
         />
       </section>
       )}
+
+      {/* Conversion funnel */}
+      <section className="mt-8">
+        <WorkspacePanel
+          title="Marketplace Conversion Funnel"
+          subtitle="Platform-wide deal flow from company registration to facilitated intro"
+        >
+          <AdminConversionFunnel
+            stages={[
+              {
+                label: "Total companies",
+                count: analytics.metrics.totalCompanies,
+                href: "/admin/companies",
+                description: "All registered",
+              },
+              {
+                label: "Published",
+                count: analytics.metrics.publishedCompanies,
+                href: "/admin/companies",
+                description: "Live on marketplace",
+              },
+              {
+                label: "Interests expressed",
+                count: analytics.metrics.expressedInterests,
+                href: "/admin/crm",
+                description: "At least 1 investor interest",
+              },
+              {
+                label: "Intro requests",
+                count: analytics.metrics.introRequests,
+                href: "/admin/crm/outreach",
+                description: "Investor-requested intros",
+              },
+              {
+                label: "Intros facilitated",
+                count: facilitatedIntros,
+                href: "/admin/crm/outreach",
+                description: "Completed by admin",
+              },
+            ]}
+          />
+          <p className="mt-4 text-xs text-slate-500">
+            Conv. column shows step-over-step conversion rate. Counts are cumulative totals, not windowed.
+          </p>
+        </WorkspacePanel>
+      </section>
+
+      {/* Admin platform insights */}
+      <section className="mt-6">
+        <AdminPlatformInsights />
+      </section>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-2">
         <WorkspacePanel title="Platform Overview" subtitle={`Aggregate metrics · last ${windowDays} days for windowed cards`}>

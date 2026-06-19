@@ -17,6 +17,69 @@ function formatStage(stage: string) {
     .join(" ");
 }
 
+function ageDays(isoDate: string | null): number | null {
+  if (!isoDate) return null;
+  const ms = Date.now() - new Date(isoDate).getTime();
+  return Math.floor(ms / (1000 * 60 * 60 * 24));
+}
+
+const STAGE_COLORS: Record<string, string> = {
+  interested:        "bg-indigo-500",
+  meeting_requested: "bg-violet-500",
+  follow_up:         "bg-sky-500",
+};
+
+function StageSummaryBar({ rows }: { rows: AdminInvestorPipelineRow[] }) {
+  const counts = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const row of rows) {
+      map[row.stage] = (map[row.stage] ?? 0) + 1;
+    }
+    return map;
+  }, [rows]);
+
+  const total = rows.length;
+  if (total === 0) return null;
+
+  return (
+    <div className="mb-5 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+      <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+        Stage distribution · {total} relationship{total !== 1 ? "s" : ""}
+      </p>
+      {/* Stacked bar */}
+      <div className="mb-3 flex h-3 w-full overflow-hidden rounded-full">
+        {INVESTOR_PIPELINE_STAGES.map((stage) => {
+          const count = counts[stage] ?? 0;
+          const pct = Math.round((count / total) * 100);
+          if (pct === 0) return null;
+          return (
+            <div
+              key={stage}
+              className={`h-full ${STAGE_COLORS[stage] ?? "bg-slate-300"}`}
+              style={{ width: `${pct}%` }}
+              title={`${formatStage(stage)}: ${count}`}
+            />
+          );
+        })}
+      </div>
+      {/* Legend */}
+      <div className="flex flex-wrap gap-3">
+        {INVESTOR_PIPELINE_STAGES.map((stage) => {
+          const count = counts[stage] ?? 0;
+          const dot = STAGE_COLORS[stage] ?? "bg-slate-300";
+          return (
+            <div key={stage} className="flex items-center gap-1.5 text-xs text-slate-600">
+              <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
+              <span>{formatStage(stage)}</span>
+              <span className="font-semibold text-slate-900">{count}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function formatDate(value: string | null) {
   if (!value) {
     return "—";
@@ -160,6 +223,8 @@ export function AdminInvestorPipelinePanel({ rows, initialCompanyId, initialInve
         </label>
       </div>
 
+      <StageSummaryBar rows={rows} />
+
       <div className="mb-4 flex flex-wrap gap-3">
         <input
           type="search"
@@ -211,7 +276,15 @@ export function AdminInvestorPipelinePanel({ rows, initialCompanyId, initialInve
                 </Link>
 
                 <dl className="mt-2 grid gap-1 text-xs text-slate-600 sm:grid-cols-2">
-                  <div>Last activity: {formatDate(row.last_activity_at)}</div>
+                  <div>
+                    Last activity: {formatDate(row.last_activity_at)}
+                    {(() => {
+                      const d = ageDays(row.last_activity_at);
+                      if (d == null) return null;
+                      const cls = d >= 14 ? "text-red-600 font-semibold" : d >= 7 ? "text-amber-600" : "text-slate-400";
+                      return <span className={`ml-1 ${cls}`}>({d}d ago)</span>;
+                    })()}
+                  </div>
                   <div>Last contacted: {formatDate(row.last_contacted_at)}</div>
                   <div>Next follow-up: {formatDate(row.next_follow_up_at)}</div>
                   <div>Owner: {row.owner_admin_name ?? "Unassigned"}</div>
