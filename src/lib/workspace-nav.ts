@@ -58,9 +58,10 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/crm/outreach",  label: "Outreach"  },
         ],
       },
-      { href: "/admin/deal-rooms", label: "Deal Rooms",       requiredPermission: "manage_deal_rooms" },
-      { href: "/admin/spvs",       label: "SPVs",             requiredPermission: "manage_spvs"       },
-      { href: "/admin/matching",   label: "Matching",         requiredPermission: "manage_matching"   },
+      { href: "/admin/intro-requests", label: "Intro Requests",  requiredPermission: "manage_matching"    },
+      { href: "/admin/deal-rooms",     label: "Deal Rooms",      requiredPermission: "manage_deal_rooms" },
+      { href: "/admin/spvs",           label: "SPVs",            requiredPermission: "manage_spvs"       },
+      { href: "/admin/matching",       label: "Matching",        requiredPermission: "manage_matching"   },
     ],
   },
   {

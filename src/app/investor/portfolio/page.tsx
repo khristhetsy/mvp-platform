@@ -4,6 +4,7 @@ import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { InvestorPortfolioPageClient } from "@/components/investor/InvestorPortfolioPageClient";
+import { InvestorFacilitatedIntrosPanel } from "@/components/investor/InvestorFacilitatedIntrosPanel";
 import { canInvestorPerformSensitiveActions } from "@/lib/investor/access";
 import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
@@ -19,8 +20,6 @@ export default async function InvestorPortfolioPage() {
     redirect("/investor/dashboard");
   }
 
-  void investorId; // used for session auth; portfolio loaded client-side via API
-
   return (
     <AppShell
       role="INVESTOR"
@@ -35,6 +34,11 @@ export default async function InvestorPortfolioPage() {
           description="Track your pledges, investments, and returns across all deals — linked and self-reported."
         />
         <InvestorFeatureGate>
+          {/* Facilitated intro connections — server-rendered */}
+          <Suspense fallback={null}>
+            <InvestorFacilitatedIntrosPanel investorId={investorId} />
+          </Suspense>
+          {/* Full investment tracker — client-rendered */}
           <Suspense fallback={null}>
             <InvestorPortfolioPageClient />
           </Suspense>

@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { WatchlistPageClient } from "@/components/investor/WatchlistPageClient";
 import type { WatchlistRow } from "@/components/investor/WatchlistPageClient";
+import { InvestorWatchlistAISummary } from "@/components/investor/InvestorWatchlistAISummary";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 
@@ -66,6 +67,7 @@ export default async function InvestorWatchlistPage() {
           description="Saved deals and companies you are tracking across the CapitalOS marketplace."
         />
         <InvestorFeatureGate>
+          <InvestorWatchlistAISummary rows={rows} />
           <WatchlistPageClient rows={rows} />
         </InvestorFeatureGate>
       </WorkspacePageContainer>
