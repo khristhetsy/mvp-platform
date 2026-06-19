@@ -3,6 +3,7 @@ import type { Database } from '@/lib/supabase/types';
 import { JOURNEY_STAGES } from './types';
 import type { JourneyStage, StageApprovalStatus, StageConditions, FounderJourneyState } from './types';
 import { allQualifyDocsUploaded } from './documents';
+import { computeReadinessScore } from '@/lib/data/founder-readiness';
 
 export async function evaluateFounderJourney(
   supabase: SupabaseClient<Database>,
@@ -71,9 +72,6 @@ export async function evaluateFounderJourney(
     diligenceData = data;
   }
 
-  const readinessScore = diligenceData?.readiness_score ?? null;
-  const readinessQualified = readinessScore !== null && readinessScore >= 75;
-
   // 4. Query documents for required doc types
   type DocumentRow = { document_type: string | null };
   let documentRows: DocumentRow[] = [];
@@ -88,6 +86,16 @@ export async function evaluateFounderJourney(
 
   const uploadedTypes = documentRows.map((d) => d.document_type);
   const requiredDocsUploaded = allQualifyDocsUploaded(uploadedTypes);
+
+  // Readiness score: prefer the admin-generated diligence score, but fall back
+  // to the same self-service computed score the readiness page shows. The AI
+  // report path currently always writes a null score, so without this fallback
+  // the Qualify gate can never open. Keeping both in sync avoids the founder
+  // seeing one number on /founder/readiness and a blocked gate here.
+  const uploadedTypeCodes = uploadedTypes.filter((t): t is string => Boolean(t));
+  const computedReadiness = computeReadinessScore(uploadedTypeCodes);
+  const readinessScore = diligenceData?.readiness_score ?? computedReadiness;
+  const readinessQualified = readinessScore >= 75;
 
   // 5. Query deal_rooms — check if any exist for the company
   let hasDealRoom = false;
