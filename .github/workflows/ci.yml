@@ -23,10 +23,13 @@ jobs:
         run: npm ci
 
       - name: Type check
-        run: npx tsc --noEmit --project tsconfig.build.json
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
 
       - name: Lint
-        run: npx next lint --max-warnings 0
+        run: npm run lint
         continue-on-error: true
 
       - name: Build

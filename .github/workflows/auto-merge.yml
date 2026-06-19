@@ -1,8 +1,12 @@
 name: Auto Merge PRs
 
+# Only runs after the CI workflow finishes, and only merges when CI succeeded.
+# This replaces the previous behaviour of merging immediately on PR open, which
+# let unverified code reach main.
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
 
 permissions:
   contents: write
@@ -11,19 +15,40 @@ permissions:
 jobs:
   auto-merge:
     runs-on: ubuntu-latest
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request'
     steps:
-      - name: Merge PR
+      - name: Merge PRs whose CI passed
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            await github.rest.pulls.merge({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
-              merge_method: 'squash',
-<<<<<<< HEAD
-            })
-=======
-            })
->>>>>>> b16db7fc6d8a8b61e0c873299c205e85636ec72c
+            const run = context.payload.workflow_run;
+            let prs = run.pull_requests ?? [];
+
+            // workflow_run.pull_requests is empty for some events — fall back to
+            // looking up open PRs by the CI run's head branch.
+            if (prs.length === 0) {
+              const { data } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                head: `${context.repo.owner}:${run.head_branch}`,
+              });
+              prs = data;
+            }
+
+            for (const pr of prs) {
+              try {
+                await github.rest.pulls.merge({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                  merge_method: 'squash',
+                });
+                core.info(`Merged PR #${pr.number}`);
+              } catch (error) {
+                core.warning(`Could not merge PR #${pr.number}: ${error.message}`);
+              }
+            }

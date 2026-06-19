@@ -10,6 +10,7 @@
     "check:env": "node scripts/check-env.mjs",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit --project tsconfig.build.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:investor-express-interest": "node scripts/test-investor-express-interest.mjs",
