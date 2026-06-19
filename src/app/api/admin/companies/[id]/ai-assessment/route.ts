@@ -92,7 +92,7 @@ function fallbackAssessment(
 
 export async function POST(
   _request: Request,
-  { params }: { params: Promise<{ companyId: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     await requireRole(["admin", "analyst"]);
@@ -100,11 +100,11 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { companyId } = await params;
+  const { id } = await params;
 
   let workspace;
   try {
-    workspace = await getAdminCompanyWorkspace(companyId);
+    workspace = await getAdminCompanyWorkspace(id);
   } catch {
     return NextResponse.json({ error: "Company not found" }, { status: 404 });
   }

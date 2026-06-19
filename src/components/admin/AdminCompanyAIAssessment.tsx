@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { AIAssessmentResult, AIAssessmentRecommendation } from "@/app/api/admin/companies/[companyId]/ai-assessment/route";
+import type { AIAssessmentResult, AIAssessmentRecommendation } from "@/app/api/admin/companies/[id]/ai-assessment/route";
 
 const RECOMMENDATION_STYLES: Record<AIAssessmentRecommendation, {
   badge: string;
