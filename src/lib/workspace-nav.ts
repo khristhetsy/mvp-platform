@@ -22,6 +22,7 @@ export const adminOperationsNav: WorkspaceNavItem[] = [
   { href: "/admin/companies", label: "Companies", requiredPermission: "manage_companies" },
   { href: "/admin/spvs", label: "SPVs", requiredPermission: "manage_spvs" },
   { href: "/admin/investors", label: "Investors", requiredPermission: "manage_investors" },
+  { href: "/admin/partner-scores", label: "Partner Scores", requiredPermission: "manage_investors" },
   { href: "/admin/deal-rooms", label: "Deal Rooms", requiredPermission: "manage_deal_rooms" },
   {
     href: "/admin/crm",
