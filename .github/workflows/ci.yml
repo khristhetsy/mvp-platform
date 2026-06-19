@@ -12,6 +12,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -28,9 +30,31 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: Lint
+      # Whole-repo lint is informational only — there's an existing backlog we
+      # don't want blocking every build.
+      - name: Lint (full, informational)
         run: npm run lint
         continue-on-error: true
+
+      # Blocking gate: only the files changed in this PR must be lint-clean
+      # (errors). This stops new lint errors entering the codebase without
+      # forcing a mass cleanup of the existing backlog. Pre-existing warnings
+      # are allowed; new errors fail the build.
+      - name: Lint changed files (blocking on PRs)
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin "${{ github.base_ref }}"
+          BASE="origin/${{ github.base_ref }}"
+          CHANGED=$(git diff --name-only --diff-filter=ACMR "$BASE"...HEAD \
+            | grep -E '\.(ts|tsx|js|jsx|mjs)$' \
+            | grep -vE '^mvp-platform/' || true)
+          if [ -z "$CHANGED" ]; then
+            echo "No lintable files changed."
+            exit 0
+          fi
+          echo "Linting changed files:"
+          echo "$CHANGED"
+          npx eslint $CHANGED
 
       - name: Build
         run: npm run build
