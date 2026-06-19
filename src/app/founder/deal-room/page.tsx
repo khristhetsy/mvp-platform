@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
@@ -72,6 +73,7 @@ export default async function FounderDealRoomIndexPage() {
 
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle={company?.company_name ?? "Your company"}>
+      <FounderJourneyGate minStage="deploy">
       <FounderFeatureGate featureKey="investor_access">
         <div className="space-y-6">
           <PageHeader
@@ -182,6 +184,7 @@ export default async function FounderDealRoomIndexPage() {
           </WorkspacePanel>
         </div>
       </FounderFeatureGate>
+      </FounderJourneyGate>
     </FounderAppShell>
   );
 }

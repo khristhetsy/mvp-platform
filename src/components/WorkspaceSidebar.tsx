@@ -64,6 +64,32 @@ const NAV_LABEL_KEYS: Record<string, string> = {
   "Onboarding": "onboarding",
 };
 
+const STAGE_LABELS: Record<string, string> = {
+  initialize: "Stage 1 — Initialize",
+  qualify: "Stage 2 — Qualify",
+  deploy: "Stage 3 — Deploy",
+  optimize: "Stage 4 — Optimize",
+};
+
+function useFounderStage(workspace: WorkspaceId) {
+  const [stage, setStage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (workspace !== "founder") return;
+    let cancelled = false;
+    void fetch("/api/founder/journey/stage")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { stage?: string } | null) => {
+        if (cancelled) return;
+        if (data?.stage) setStage(data.stage);
+      })
+      .catch(() => { /* silent — indicator is non-critical */ });
+    return () => { cancelled = true; };
+  }, [workspace]);
+
+  return stage;
+}
+
 function useAdminNavPermissions(workspace: WorkspaceId) {
   const [state, setState] = useState<{ permissions: InternalPermission[]; isSuperAdmin: boolean } | null>(null);
 
@@ -108,6 +134,7 @@ export function WorkspaceSidebar({
   const pathname = usePathname();
   const t = useTranslations("nav");
   const adminNav = useAdminNavPermissions(workspace);
+  const founderStage = useFounderStage(workspace);
 
   function tLabel(label: string): string {
     const key = NAV_LABEL_KEYS[label];
@@ -243,6 +270,11 @@ export function WorkspaceSidebar({
           <CapitalOSLogo height={32} />
         </Link>
         <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+        {founderStage ? (
+          <span className="mt-2 inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-[10px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-200">
+            {STAGE_LABELS[founderStage] ?? founderStage}
+          </span>
+        ) : null}
       </div>
       <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 py-2.5" aria-label={`${label} navigation`}>
         {adminSections

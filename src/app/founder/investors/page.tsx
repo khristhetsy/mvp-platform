@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
 import { FounderInvestorsModuleViews } from "@/components/founder/FounderInvestorsModuleViews";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -36,6 +37,7 @@ export default async function FounderInvestorsPage() {
       profileName={profile.full_name ?? profile.email ?? "Founder"}
       profileSubtitle={company?.company_name ?? "Your company"}
     >
+      <FounderJourneyGate minStage="deploy">
       <FounderFeatureGate featureKey="investor_access">
         <WorkspacePageContainer>
           <PageHeader
@@ -62,6 +64,7 @@ export default async function FounderInvestorsPage() {
           )}
         </WorkspacePageContainer>
       </FounderFeatureGate>
+      </FounderJourneyGate>
     </FounderAppShell>
   );
 }

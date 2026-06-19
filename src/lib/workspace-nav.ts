@@ -1,5 +1,6 @@
 import type { InternalPermission } from "@/lib/rbac/constants";
 import type { Role } from "@/lib/auth";
+import type { JourneyStage } from "@/lib/founder-journey/types";
 
 export type WorkspaceId = "founder" | "investor" | "admin";
 
@@ -7,6 +8,7 @@ export type WorkspaceNavItem = {
   href: string;
   label: string;
   requiredPermission?: InternalPermission;
+  minStage?: JourneyStage;
   children?: WorkspaceNavItem[];
 };
 
@@ -160,35 +162,38 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
 
 export const founderWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/founder", label: "Dashboard" },
+  { href: "/founder/journey", label: "My Journey" },
   { href: "/founder/command-center", label: "Command Center" },
   { href: "/founder/actions", label: "Actions" },
   {
     href: "/founder/readiness",
     label: "Readiness",
+    minStage: "qualify",
     children: [
-      { href: "/founder/readiness", label: "Checklist" },
-      { href: "/founder/readiness/wizard", label: "Score wizard" },
-      { href: "/founder/readiness/diligence", label: "Diligence & review" },
-      { href: "/founder/readiness/documents", label: "Document checklist" },
-      { href: "/founder/report", label: "AI diligence report" },
+      { href: "/founder/readiness", label: "Checklist", minStage: "qualify" },
+      { href: "/founder/readiness/wizard", label: "Score wizard", minStage: "qualify" },
+      { href: "/founder/readiness/diligence", label: "Diligence & review", minStage: "qualify" },
+      { href: "/founder/readiness/documents", label: "Document checklist", minStage: "qualify" },
+      { href: "/founder/report", label: "AI diligence report", minStage: "qualify" },
     ],
   },
-  { href: "/founder/documents", label: "Documents" },
+  { href: "/founder/documents", label: "Documents", minStage: "qualify" },
   {
     href: "/founder/investors",
     label: "Investors",
+    minStage: "deploy",
     children: [
-      { href: "/founder/investors", label: "Overview" },
-      { href: "/founder/investors/outreach", label: "CRM" },
-      { href: "/founder/investor-pipeline", label: "Pipeline" },
-      { href: "/founder/investors/matches", label: "Matches" },
-      { href: "/founder/matching", label: "AI match center" },
+      { href: "/founder/investors", label: "Overview", minStage: "deploy" },
+      { href: "/founder/investors/outreach", label: "CRM", minStage: "deploy" },
+      { href: "/founder/investor-pipeline", label: "Pipeline", minStage: "deploy" },
+      { href: "/founder/investors/matches", label: "Matches", minStage: "deploy" },
+      { href: "/founder/matching", label: "AI match center", minStage: "deploy" },
     ],
   },
-  { href: "/founder/deal-room", label: "Deal Room" },
-  { href: "/founder/updates", label: "Investor Updates" },
-  { href: "/founder/messages", label: "Messages" },
-  { href: "/founder/capital-raise", label: "Capital Raise" },
+  { href: "/founder/deal-room", label: "Deal Room", minStage: "deploy" },
+  { href: "/founder/updates", label: "Investor Updates", minStage: "deploy" },
+  { href: "/founder/messages", label: "Messages", minStage: "deploy" },
+  { href: "/founder/capital-raise", label: "Capital Raise", minStage: "deploy" },
   { href: "/founder/spvs", label: "SPVs" },
   {
     href: "/founder/raise-toolkit",
@@ -220,8 +225,8 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
       { href: "/founder/learning/stages/stage_3", label: "Stage 3 — Exit" },
     ],
   },
-  { href: "/founder/milestones", label: "Milestones" },
-  { href: "/founder/analytics", label: "Analytics" },
+  { href: "/founder/milestones", label: "Milestones", minStage: "optimize" },
+  { href: "/founder/analytics", label: "Analytics", minStage: "optimize" },
   { href: "/founder/tasks", label: "Tasks" },
   { href: "/notifications", label: "Notifications" },
   {

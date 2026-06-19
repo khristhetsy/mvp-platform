@@ -2,6 +2,8 @@ import { AppShell } from "@/components/AppShell";
 import { AdminActionHealthProvider } from "@/components/AdminActionHealthProvider";
 import { AdminCompaniesModuleViews } from "@/components/admin/AdminCompaniesModuleViews";
 import { AdminPendingQuickReview } from "@/components/admin/AdminPendingQuickReview";
+import { AdminStageApprovalQueue } from "@/components/admin/AdminStageApprovalQueue";
+import type { PendingFounder } from "@/components/admin/AdminStageApprovalQueue";
 import { formatError } from "@/lib/errors/format-error";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -17,15 +19,65 @@ import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
+type PendingProfileRow = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  stage_approval_requested_at: string | null;
+  readiness_score: number | null;
+};
+
+type CompanyRow = {
+  founder_id: string | null;
+  company_name: string | null;
+};
+
 export default async function AdminCompaniesPage() {
   const profile = await requireRole(["admin", "analyst"]);
 
   const serviceRoleConfigured = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
   let loadError: string | null = null;
   let companyCards = mapAdminCompaniesToCardData([]);
+  let pendingFounders: PendingFounder[] = [];
 
   try {
     const supabase = createServiceRoleClient();
+
+    // Query pending stage approvals (qualify → deploy)
+    const rawSupabase = supabase as unknown as ReturnType<typeof import("@supabase/supabase-js").createClient>;
+    const { data: pendingProfilesRaw } = await rawSupabase
+      .from("profiles")
+      .select("id, full_name, email, stage_approval_requested_at, readiness_score")
+      .eq("journey_stage", "qualify")
+      .eq("stage_approval_status", "pending");
+
+    const pendingProfiles = (pendingProfilesRaw ?? []) as PendingProfileRow[];
+
+    if (pendingProfiles.length > 0) {
+      const founderProfileIds = pendingProfiles.map((p) => p.id);
+      const { data: companiesForFoundersRaw } = await rawSupabase
+        .from("companies")
+        .select("founder_id, company_name")
+        .in("founder_id", founderProfileIds);
+
+      const companiesForFounders = (companiesForFoundersRaw ?? []) as CompanyRow[];
+      const companyNameByFounderId = new Map<string, string>();
+      for (const c of companiesForFounders) {
+        if (c.founder_id) {
+          companyNameByFounderId.set(c.founder_id, c.company_name ?? "");
+        }
+      }
+
+      pendingFounders = pendingProfiles.map((p) => ({
+        profileId: p.id,
+        fullName: p.full_name,
+        email: p.email,
+        companyName: companyNameByFounderId.get(p.id) ?? null,
+        requestedAt: p.stage_approval_requested_at ?? "",
+        readinessScore: p.readiness_score,
+      }));
+    }
+
     const companies = await listAdminCompanies(supabase);
     const founderIds = companies.map((company) => company.founder_id).filter(Boolean);
     const companyIds = companies.map((company) => company.id);
@@ -78,6 +130,8 @@ export default async function AdminCompaniesPage() {
             title="Companies"
             description="Review submissions, manage publication, and control marketplace visibility."
           />
+
+          <AdminStageApprovalQueue founders={pendingFounders} />
 
           <AdminPendingQuickReview
             companies={companyCards

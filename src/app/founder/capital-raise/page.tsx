@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { formatError } from "@/lib/errors/format-error";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
@@ -61,6 +62,7 @@ export default async function FounderCapitalRaisePage() {
       profileName={profile.full_name ?? profile.email ?? "Founder"}
       profileSubtitle={company?.company_name ?? "Your company"}
     >
+      <FounderJourneyGate minStage="deploy">
       <FounderFeatureGate featureKey="capital_raise">
         <PageHeader
           eyebrow="Founder workspace"
@@ -157,6 +159,7 @@ export default async function FounderCapitalRaisePage() {
         </>
       )}
       </FounderFeatureGate>
+      </FounderJourneyGate>
     </FounderAppShell>
   );
 }
