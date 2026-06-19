@@ -79,8 +79,9 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
 
   const { totalContacts, newContacts7d, sent, opened, clicked, openRate, clickRate, activeCampaigns, campaigns } = data;
 
-  const unsubRate = 0.48; // placeholder — extend data prop when webhook tracking is live
-  const deliverability = 97.2;
+  // TODO: replace with real webhook-tracked values once email tracking is wired
+  const unsubRate = 0.48; // estimated — not yet live-tracked
+  const deliverability = 97.2; // estimated — not yet live-tracked
 
   const cards = [
     {
@@ -186,7 +187,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
                   <StatBox val={totalContacts.toLocaleString()} label="Total contacts" />
                   <StatBox val={`+${newContacts7d}`} label="Added this week" />
-                  <StatBox val={`${deliverability}%`} label="Deliverability" />
+                  <StatBox val={`${deliverability}% (est.)`} label="Deliverability" />
                 </div>
 
                 {campaignRows.length > 0 && (
@@ -228,7 +229,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
                   <StatBox val={sent.toLocaleString()} label="Sent this month" />
-                  <StatBox val={`${deliverability}%`} label="Delivery rate" />
+                  <StatBox val={`${deliverability}% (est.)`} label="Delivery rate" />
                   <StatBox val={activeCampaigns.toString()} label="Active campaigns" />
                 </div>
 
@@ -243,7 +244,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
 
                 <div style={{ background: "#f5f6f8", borderRadius: 10, padding: "12px 14px", marginBottom: 14 }}>
                   <p style={{ fontSize: 12.5, color: "#374151", lineHeight: 1.6 }}>
-                    <strong>What this means:</strong> You sent <strong>{sent.toLocaleString()} emails</strong> in the last 30 days. A delivery rate of <strong>{deliverability}%</strong> is healthy — anything above 95% is considered good for transactional and marketing mail. Volume growth is positive as long as your open rate stays stable.
+                    <strong>What this means:</strong> You sent <strong>{sent.toLocaleString()} emails</strong> in the last 30 days. An estimated delivery rate of <strong>{deliverability}%</strong> is healthy — anything above 95% is considered good for transactional and marketing mail. Volume growth is positive as long as your open rate stays stable.
                   </p>
                 </div>
 

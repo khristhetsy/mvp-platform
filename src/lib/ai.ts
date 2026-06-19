@@ -1,5 +1,5 @@
 import { claudeComplete, isClaudeConfigured, CLAUDE_SONNET } from "./claude";
-import { requiredDocumentTypes } from "./mock-data";
+import { requiredDocumentTypes } from "./documents/required-types";
 
 type AnalysisInput = {
   companyName: string;

@@ -103,8 +103,11 @@ export default async function FounderPreviewPage() {
           <p style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", margin: 0 }}>
             This is exactly what investors see on your one-pager.
             {!isPublished && (
-              <span style={{ color: "#fbbf24", marginLeft: 6 }}>
-                ⚠ Not published — investors cannot see this yet.
+              <span style={{ color: "#fbbf24", marginLeft: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+                  <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Not published — investors cannot see this yet.
               </span>
             )}
           </p>
@@ -183,7 +186,9 @@ export default async function FounderPreviewPage() {
             alignItems: "flex-start",
             gap: 10,
           }}>
-            <span style={{ fontSize: 16 }}>⚠️</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }}>
+              <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="#92400e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
             <div>
               <p style={{ fontSize: 13, fontWeight: 700, color: "#92400e", margin: "0 0 2px" }}>
                 Your profile is not published
@@ -269,13 +274,13 @@ export default async function FounderPreviewPage() {
         </div>
 
         {pub.use_of_funds && (
-          <Section title="Use of funds" icon="💰">
+          <Section title="Use of funds" icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="#374151" strokeWidth="2"/><path d="M12 6v2m0 8v2M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke="#374151" strokeWidth="2" strokeLinecap="round"/></svg>}>
             <FormattedText text={pub.use_of_funds} />
           </Section>
         )}
 
         {pub.founder_goals && (
-          <Section title="What we&apos;re looking for" icon="🎯">
+          <Section title="What we&apos;re looking for" icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="#374151" strokeWidth="2"/><circle cx="12" cy="12" r="6" stroke="#374151" strokeWidth="2"/><circle cx="12" cy="12" r="2" stroke="#374151" strokeWidth="2"/></svg>}>
             <FormattedText text={pub.founder_goals} />
           </Section>
         )}
@@ -335,11 +340,11 @@ function MetricCard({ label, value, accent, href }: { label: string; value: stri
   );
 }
 
-function Section({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
+function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 14, padding: "22px 28px", marginBottom: 16 }}>
       <h2 style={{ fontSize: 13, fontWeight: 700, color: "#374151", margin: "0 0 14px", display: "flex", alignItems: "center", gap: 7 }}>
-        <span>{icon}</span> {title}
+        {icon} {title}
       </h2>
       {children}
     </div>

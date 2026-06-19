@@ -197,6 +197,7 @@ function DayDrawerContent({
 // Main component
 // ---------------------------------------------------------------------------
 export function LearningScheduleClient() {
+  const [loading, setLoading] = useState(true);
   const [studyDays, setStudyDays] = useState<DayOfWeek[]>(["monday", "wednesday", "thursday"]);
   const [preferredTime, setPreferredTime] = useState("08:00");
   const [sessionMinutes, setSessionMinutes] = useState(25);
@@ -208,6 +209,26 @@ export function LearningScheduleClient() {
   const [openDay, setOpenDay] = useState<DayOfWeek | null>(null);
 
   const streakDays = 7;
+
+  // Load saved schedule on mount
+  useEffect(() => {
+    fetch("/api/learning/schedule")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        const d = json?.data;
+        if (d) {
+          if (Array.isArray(d.study_days) && d.study_days.length > 0)
+            setStudyDays(d.study_days as DayOfWeek[]);
+          if (d.preferred_time) setPreferredTime(d.preferred_time);
+          if (d.session_minutes) setSessionMinutes(d.session_minutes);
+          if (typeof d.reminders_on === "boolean") setRemindersOn(d.reminders_on);
+          if (typeof d.weekly_digest === "boolean") setWeeklyDigest(d.weekly_digest);
+          if (typeof d.inactivity_nudge === "boolean") setInactivityNudge(d.inactivity_nudge);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   // Lock body scroll when drawer open
   useEffect(() => {
@@ -269,6 +290,16 @@ export function LearningScheduleClient() {
       onChange: setInactivityNudge,
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-8 w-48 rounded-lg bg-slate-100 animate-pulse" />
+        <div className="h-48 rounded-2xl bg-slate-100 animate-pulse" />
+        <div className="h-32 rounded-2xl bg-slate-100 animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 enterprise-animate-in">

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { generateDiligenceReport } from "@/lib/ai";
-import { requiredDocumentTypes } from "@/lib/mock-data";
+import { requiredDocumentTypes } from "@/lib/documents/required-types";
 
 // Mock the claude helper so tests don't make real API calls
 vi.mock("@/lib/claude", () => ({

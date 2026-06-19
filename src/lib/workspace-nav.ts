@@ -71,13 +71,15 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         label: "Marketing Hub",
         requiredPermission: "view_admin_dashboard",
         children: [
-          { href: "/admin/marketing",           label: "Dashboard"  },
-          { href: "/admin/marketing/contacts",  label: "Contacts"   },
-          { href: "/admin/marketing/campaigns", label: "Campaigns"  },
-          { href: "/admin/marketing/sequences", label: "Sequences"  },
-          { href: "/admin/marketing/templates", label: "Templates"  },
-          { href: "/admin/marketing/analytics", label: "Analytics"  },
-          { href: "/admin/marketing/plan",      label: "Plans"      },
+          { href: "/admin/marketing",                 label: "Dashboard"    },
+          { href: "/admin/marketing/contacts",        label: "Contacts"     },
+          { href: "/admin/marketing/campaigns",       label: "Campaigns"    },
+          { href: "/admin/marketing/sequences",       label: "Sequences"    },
+          { href: "/admin/marketing/templates",       label: "Templates"    },
+          { href: "/admin/marketing/lists",           label: "Lists"        },
+          { href: "/admin/marketing/suppressions",    label: "Suppressions" },
+          { href: "/admin/marketing/analytics",       label: "Analytics"    },
+          { href: "/admin/marketing/plan",            label: "Plans"        },
         ],
       },
     ],
@@ -91,7 +93,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     title: "Operation",
     items: [
-      { href: "/admin/dashboard",        label: "Dashboard",       requiredPermission: "view_admin_dashboard" },
+      { href: "/admin",                   label: "Dashboard",       requiredPermission: "view_admin_dashboard" },
       { href: "/admin/actions",          label: "Actions",         requiredPermission: "view_actions"         },
       {
         href: "/admin/learning",
@@ -125,7 +127,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         label: "Compliance",
         requiredPermission: "manage_compliance",
         children: [
-          { href: "/admin/diligence",  label: "Diligence"  },
           { href: "/admin/compliance", label: "Compliance" },
           { href: "/admin/audit",      label: "Audit"      },
         ],
@@ -135,6 +136,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     title: "Admin",
     items: [
+      { href: "/admin/profile",            label: "My Profile",       requiredPermission: "view_admin_dashboard" },
       { href: "/admin/billing",           label: "Billing",          requiredPermission: "manage_billing"      },
       { href: "/admin/users/manage",      label: "User Management",  requiredPermission: "manage_users"        },
       { href: "/admin/users/permissions", label: "User Permissions", requiredPermission: "manage_users"        },
@@ -156,7 +158,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
 ];
 
 export const founderWorkspaceNav: WorkspaceNavItem[] = [
-  { href: "/founder/dashboard", label: "Dashboard" },
+  { href: "/founder", label: "Dashboard" },
   { href: "/founder/command-center", label: "Command Center" },
   { href: "/founder/actions", label: "Actions" },
   {
@@ -167,6 +169,7 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
       { href: "/founder/readiness/wizard", label: "Score wizard" },
       { href: "/founder/readiness/diligence", label: "Diligence & review" },
       { href: "/founder/readiness/documents", label: "Document checklist" },
+      { href: "/founder/report", label: "AI diligence report" },
     ],
   },
   { href: "/founder/documents", label: "Documents" },
@@ -178,6 +181,7 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
       { href: "/founder/investors/outreach", label: "CRM" },
       { href: "/founder/investor-pipeline", label: "Pipeline" },
       { href: "/founder/investors/matches", label: "Matches" },
+      { href: "/founder/matching", label: "AI match center" },
     ],
   },
   { href: "/founder/deal-room", label: "Deal Room" },
@@ -223,6 +227,7 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
     label: "Settings",
     children: [
       { href: "/founder/settings", label: "Company profile" },
+      { href: "/founder/settings/team", label: "Team" },
       { href: "/founder/settings/billing", label: "Billing & subscription" },
       { href: "/founder/settings/integrations", label: "Integrations" },
       { href: "/founder/settings/feedback", label: "Feedback" },

@@ -1,5 +1,5 @@
 import { documentTypeCode, buildDocumentChecklist } from "@/lib/data/founder-readiness";
-import { requiredDocumentTypes } from "@/lib/mock-data";
+import { requiredDocumentTypes } from "@/lib/documents/required-types";
 import { computeFounderOnboardingProgress } from "@/lib/onboarding/progress";
 import type { Company, DocumentRecord } from "@/lib/supabase/types";
 import type { RemediationTaskDraft } from "@/lib/remediation/types";

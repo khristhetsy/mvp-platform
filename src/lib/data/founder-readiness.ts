@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { requiredDocumentTypes } from "@/lib/mock-data";
+import { requiredDocumentTypes } from "@/lib/documents/required-types";
 import type { Company, Database, DocumentRecord } from "@/lib/supabase/types";
 
 export type DocumentChecklistItem = {
@@ -30,7 +30,7 @@ const DOC_TYPE_ALIASES: Record<string, string[]> = {
 
 export function buildDocumentChecklist(
   documents: DocumentRecord[],
-  requiredLabels: string[] = requiredDocumentTypes,
+  requiredLabels: readonly string[] = requiredDocumentTypes,
 ): DocumentChecklistItem[] {
   const uploadedByType = new Map<string, DocumentRecord>();
 
@@ -72,7 +72,7 @@ export function buildDocumentChecklist(
 
 export function computeReadinessScore(
   uploadedTypeCodes: string[],
-  requiredLabels: string[] = requiredDocumentTypes,
+  requiredLabels: readonly string[] = requiredDocumentTypes,
 ) {
   const missingCount = requiredLabels.filter(
     (label) => !uploadedTypeCodes.includes(documentTypeCode(label)),

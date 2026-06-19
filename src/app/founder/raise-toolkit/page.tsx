@@ -7,68 +7,131 @@ import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-set
 
 export const dynamic = "force-dynamic";
 
+// SVG path data for each tool icon (24×24 viewBox, stroke-based)
+const TOOL_ICONS: Record<string, { path: string; color: string }> = {
+  document: {
+    path: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z",
+    color: "#4338CA",
+  },
+  microphone: {
+    path: "M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1 17.93V22h2v-3.07A8 8 0 0 0 20 11h-2a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.93z",
+    color: "#7E22CE",
+  },
+  envelope: {
+    path: "M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4.7-8 5-8-5V6l8 5 8-5v2.7z",
+    color: "#065F46",
+  },
+  checklist: {
+    path: "M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
+    color: "#92400E",
+  },
+  barchart: {
+    path: "M18 20V10M12 20V4M6 20v-6",
+    color: "#1D4ED8",
+  },
+  calendar: {
+    path: "M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 2v4M8 2v4M3 10h18",
+    color: "#9A3412",
+  },
+  columns: {
+    path: "M2 20h20M4 20V9M8 20V5M12 20V9M16 20V5M20 20V9",
+    color: "#14532D",
+  },
+  book: {
+    path: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5V4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z",
+    color: "#475569",
+  },
+  sparkles: {
+    path: "M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z",
+    color: "#3C3489",
+  },
+};
+
+function ToolIcon({ name }: Readonly<{ name: string }>) {
+  const icon = TOOL_ICONS[name];
+  if (!icon) return null;
+  return (
+    <div
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 10,
+        background: `${icon.color}14`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d={icon.path} stroke={icon.color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </div>
+  );
+}
+
 const TOOLS = [
   {
     href: "/founder/term-sheet",
     label: "Term sheet explainer",
     description: "Decode every clause in a term sheet — valuation, pro-rata rights, liquidation preferences, anti-dilution, and more.",
-    icon: "📄",
+    icon: "document",
     tag: "Education",
   },
   {
     href: "/founder/pitch-practice",
     label: "Pitch practice simulator",
     description: "Simulate tough investor Q&A. Get coached on your answers before you're in the room.",
-    icon: "🎤",
+    icon: "microphone",
     tag: "Practice",
   },
   {
     href: "/founder/email-sequence",
     label: "Email sequence builder",
     description: "Build a structured investor outreach sequence — cold intro, follow-up, and closing emails.",
-    icon: "✉️",
+    icon: "envelope",
     tag: "Outreach",
   },
   {
     href: "/founder/due-diligence",
     label: "Due diligence checklist",
     description: "Know exactly what investors will ask for and get your data room ready before they do.",
-    icon: "✅",
+    icon: "checklist",
     tag: "Preparation",
   },
   {
     href: "/founder/investor-update",
     label: "Investor update builder",
     description: "Write clear, consistent monthly or quarterly updates that keep your investors engaged.",
-    icon: "📊",
+    icon: "barchart",
     tag: "Communication",
   },
   {
     href: "/founder/funding-timeline",
     label: "Funding timeline planner",
     description: "Map out your raise from first outreach to close — milestones, lead time, and runway math.",
-    icon: "📅",
+    icon: "calendar",
     tag: "Planning",
   },
   {
     href: "/founder/board-prep",
     label: "Board meeting prep kit",
     description: "Structure your board deck, anticipate tough questions, and run a meeting investors respect.",
-    icon: "🏛️",
+    icon: "columns",
     tag: "Governance",
   },
   {
     href: "/founder/kpi-glossary",
     label: "KPI glossary",
     description: "Every metric investors care about — ARR, burn multiple, CAC payback, NRR — explained clearly.",
-    icon: "📚",
+    icon: "book",
     tag: "Reference",
   },
   {
     href: "/founder/pitch-deck-analyzer",
     label: "Pitch deck AI analyzer",
     description: "Get scored, slide-by-slide AI feedback on your pitch deck from the perspective of a top VC.",
-    icon: "🔬",
+    icon: "sparkles",
     tag: "AI",
   },
 ] as const;
@@ -141,7 +204,7 @@ export default async function RaiseToolkitPage() {
                 >
                   {/* Icon + tag row */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 28, lineHeight: 1 }}>{tool.icon}</span>
+                    <ToolIcon name={tool.icon} />
                     <span
                       style={{
                         fontSize: 10,

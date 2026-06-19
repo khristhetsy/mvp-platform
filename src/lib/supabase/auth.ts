@@ -4,10 +4,10 @@ import { createServerSupabaseClient } from "./server";
 import type { Profile, UserRole } from "./types";
 
 const dashboardByRole: Record<UserRole, string> = {
-  founder: "/founder/dashboard",
+  founder: "/founder",
   investor: "/investor/dashboard",
-  admin: "/admin/dashboard",
-  analyst: "/admin/dashboard",
+  admin: "/admin",
+  analyst: "/admin",
 };
 
 export function dashboardForRole(role: UserRole) {

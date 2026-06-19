@@ -20,8 +20,15 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ roomId: string }> },
 ) {
-  const profile = await requireRole(["investor"]).catch(() => null);
-  if (!profile) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let profile;
+  try {
+    profile = await requireRole(["investor"]);
+  } catch (err) {
+    const isAuthError =
+      err instanceof Error && (err.message.includes("Unauthorized") || err.message.includes("Forbidden"));
+    if (isAuthError) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    throw err; // re-throw non-auth errors (DB timeouts, etc.) so they surface as 500
+  }
 
   const { roomId } = await params;
   const admin = createServiceRoleClient();
