@@ -1,9 +1,10 @@
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { InvestorApprovalBanner } from "@/components/InvestorApprovalBanner";
+import { InvestorOnboardingProgressCard } from "@/components/InvestorOnboardingProgressCard";
 import { investorCompanyLabel, loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
 import { loadInvestorRecommendedMatches } from "@/lib/matching/load-investor-recommendations";
 import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
+import { computeInvestorOnboardingProgress } from "@/lib/investor/profile";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
@@ -16,6 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function InvestorDashboardPage() {
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
   const { investorProfile } = await loadInvestorWorkspaceContext(profile);
+  const investorProgress = investorProfile ? computeInvestorOnboardingProgress(investorProfile) : null;
 
   const [{ workspace, crmActivity }, { matches }, nextBestActions] = await Promise.all([
     loadInvestorWorkspacePageData(investorId),
@@ -40,7 +42,7 @@ export default async function InvestorDashboardPage() {
         description="Opportunity pipeline, watchlist, expressed interest, and relationship activity."
       />
 
-      <InvestorApprovalBanner investorProfile={investorProfile} />
+      {investorProgress ? <InvestorOnboardingProgressCard progress={investorProgress} /> : null}
 
       <InvestorMetricCards
         data={{

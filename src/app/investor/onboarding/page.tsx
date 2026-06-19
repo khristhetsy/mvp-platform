@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
-import { InvestorApprovalBanner } from "@/components/InvestorApprovalBanner";
+import { InvestorOnboardingProgressCard } from "@/components/InvestorOnboardingProgressCard";
 import { InvestorOnboardingWizard } from "@/components/InvestorOnboardingWizard";
-import { ensureInvestorProfileForUser } from "@/lib/investor/profile";
+import { computeInvestorOnboardingProgress, ensureInvestorProfileForUser } from "@/lib/investor/profile";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function InvestorOnboardingPage() {
   const profile = await requireRole(["investor"]);
   const investorProfile = await ensureInvestorProfileForUser(profile.id);
+  const progress = computeInvestorOnboardingProgress(investorProfile);
 
   return (
     <AppShell
@@ -31,7 +32,7 @@ export default async function InvestorOnboardingPage() {
         </p>
       </div>
 
-      <InvestorApprovalBanner investorProfile={investorProfile} />
+      <InvestorOnboardingProgressCard progress={progress} inPage />
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         <InvestorOnboardingWizard

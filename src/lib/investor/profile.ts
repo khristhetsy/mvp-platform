@@ -48,6 +48,44 @@ export function parseCommaList(value: string) {
     .filter(Boolean);
 }
 
+export type InvestorOnboardingProgress = {
+  percent: number;
+  isComplete: boolean;
+  profileComplete: boolean;
+  submitted: boolean;
+  approved: boolean;
+  needsResubmit: boolean;
+  approvalStatus: InvestorApprovalStatus;
+  adminFeedback: string | null;
+};
+
+export function computeInvestorOnboardingProgress(
+  record: InvestorProfileRecord,
+): InvestorOnboardingProgress {
+  const profileComplete =
+    isInvestorProfileComplete(record) ||
+    record.approval_status !== "draft";
+
+  const submitted = ["submitted", "approved"].includes(record.approval_status);
+  const needsResubmit = ["changes_requested", "rejected"].includes(record.approval_status);
+  const approved = record.approval_status === "approved";
+
+  const completedCount = [profileComplete, submitted || needsResubmit, approved].filter(Boolean).length;
+  // submitted OR needsResubmit both count as "step 2 touched" for progress display
+  const percent = Math.round((completedCount / 3) * 100);
+
+  return {
+    percent,
+    isComplete: approved,
+    profileComplete,
+    submitted,
+    approved,
+    needsResubmit,
+    approvalStatus: record.approval_status,
+    adminFeedback: record.admin_feedback,
+  };
+}
+
 export function isInvestorProfileComplete(record: InvestorProfileRecord) {
   return Boolean(
     record.investor_type?.trim() &&
