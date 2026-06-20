@@ -41,6 +41,11 @@ export const adminOperationsNav: WorkspaceNavItem[] = [
 
 export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
   {
+    items: [
+      { href: "/admin", label: "Dashboard", requiredPermission: "view_admin_dashboard" },
+    ],
+  },
+  {
     title: "Contacts",
     items: [
       { href: "/admin/companies",  label: "Companies",  requiredPermission: "manage_companies" },
@@ -97,7 +102,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     title: "Operation",
     items: [
-      { href: "/admin",                   label: "Dashboard",       requiredPermission: "view_admin_dashboard" },
       { href: "/admin/actions",          label: "Actions",         requiredPermission: "view_actions"         },
       {
         href: "/admin/learning",
