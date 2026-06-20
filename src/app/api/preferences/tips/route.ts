@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
-import { dismissTipForToday, setTipsEnabled } from "@/lib/tips/preferences";
+import { dismissTipForToday, setTipsEnabled, loadTipPreference } from "@/lib/tips/preferences";
 
 export const dynamic = "force-dynamic";
+
+export async function GET() {
+  const auth = await requireApiProfile();
+  if ("error" in auth) return auth.error;
+  const pref = await loadTipPreference(auth.supabase, auth.profile.id);
+  return NextResponse.json({ showTips: pref.showTips });
+}
 
 const schema = z.object({
   action: z.enum(["dismiss", "disable", "enable"]),

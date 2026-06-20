@@ -7,6 +7,7 @@ import { CollaborationDiscussionPanel } from "@/components/collaboration/Collabo
 import { CompanySettingsForm } from "./settings-form";
 import { SettingsSidebarNav } from "./SettingsSidebarNav";
 import { OnePagerPublishCard } from "@/components/founder/OnePagerPublishCard";
+import { TipsPreferenceToggle } from "@/components/tips/TipsPreferenceToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,11 @@ export default async function FounderSettingsPage() {
             </div>
           ) : null}
         </div>
+      </section>
+
+      <section className="mt-6">
+        <h2 className="mb-3 text-sm font-semibold text-slate-900">Preferences</h2>
+        <TipsPreferenceToggle />
       </section>
     </FounderAppShell>
   );
