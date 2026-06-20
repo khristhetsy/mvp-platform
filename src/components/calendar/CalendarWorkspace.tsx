@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Video, X, Trash2, MapPin } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Video, X, Trash2, MapPin, ExternalLink } from "lucide-react";
 import type { CalendarEventRecord } from "@/lib/scheduling/types";
 import type { GoogleEventLite } from "@/lib/integrations/google-calendar";
 
@@ -93,6 +93,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"month" | "agenda">("month");
+  const [selected, setSelected] = useState<DisplayEvent | null>(null);
 
   const grid = useMemo(() => monthGrid(anchor), [anchor]);
 
@@ -219,6 +220,25 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
     }
   }, [form, load]);
 
+  const deleteEvent = useCallback(async (id: string) => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/calendar/events/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed.");
+      setSelected(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed.");
+    } finally {
+      setSaving(false);
+    }
+  }, [load]);
+
+  function googleDayUrl(iso: string): string {
+    const d = new Date(iso);
+    return `https://calendar.google.com/calendar/u/0/r/day/${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+  }
+
   const monthLabel = anchor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   const todayKey = ymd(new Date());
   const currentMonth = anchor.getMonth();
@@ -227,6 +247,43 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
   const upcoming = display
     .filter((e) => new Date(e.end_time).getTime() >= nowMs)
     .sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+  function renderPopover(sel: DisplayEvent) {
+    const start = new Date(sel.start_time);
+    const end = new Date(sel.end_time);
+    const when = `${start.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · ${start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} – ${end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4" onClick={() => setSelected(null)}>
+        <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-start justify-between gap-3 px-5 py-4">
+            <div className="flex gap-2.5">
+              <span className={`mt-1 h-3 w-3 shrink-0 rounded ${sel.editable ? "bg-[#7F77DD]" : "bg-[#378ADD]"}`} />
+              <div>
+                <p className="text-sm font-semibold text-slate-950">{sel.title}</p>
+                <p className="mt-0.5 text-xs text-slate-500">{when}</p>
+              </div>
+            </div>
+            <button type="button" onClick={() => setSelected(null)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
+          </div>
+          <div className="flex flex-wrap gap-2 border-t border-slate-100 bg-slate-50/50 px-5 py-3">
+            {sel.editable && sel.record ? (
+              <>
+                <button type="button" onClick={() => { if (sel.record) { setSelected(null); setForm(formFromEvent(sel.record)); } }} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">Edit</button>
+                {sel.meet_url ? <a href={sel.meet_url} className="inline-flex items-center gap-1 rounded-lg border border-[#CECBF6] bg-[#EEEDFE] px-3 py-1.5 text-xs font-medium text-[#3C3489] hover:bg-[#CECBF6]"><Video className="h-3.5 w-3.5" /> Join Meet</a> : null}
+                <button type="button" disabled={saving} onClick={() => { if (sel.record) void deleteEvent(sel.record.id); }} className="inline-flex items-center gap-1 rounded-lg border border-[#F7C1C1] bg-white px-3 py-1.5 text-xs font-medium text-[#A32D2D] hover:bg-[#FCEBEB] disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
+              </>
+            ) : (
+              <>
+                {sel.meet_url ? <a href={sel.meet_url} className="inline-flex items-center gap-1 rounded-lg border border-[#CECBF6] bg-[#EEEDFE] px-3 py-1.5 text-xs font-medium text-[#3C3489] hover:bg-[#CECBF6]"><Video className="h-3.5 w-3.5" /> Join Meet</a> : null}
+                <a href={googleDayUrl(sel.start_time)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-[#B5D4F4] bg-[#E6F1FB] px-3 py-1.5 text-xs font-medium text-[#0C447C] hover:bg-[#B5D4F4]"><ExternalLink className="h-3.5 w-3.5" /> Open in Google Calendar</a>
+              </>
+            )}
+          </div>
+          <p className="px-5 pb-3 text-[11px] text-slate-400">{sel.editable ? "CapitalOS event · synced to Google" : "From your Google Calendar (read-only)"}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -249,9 +306,15 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
             <button type="button" onClick={() => setView("agenda")} className={`rounded-md px-2.5 py-1 text-xs font-medium ${view === "agenda" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-700"}`}>Agenda</button>
           </div>
         </div>
-        <button type="button" onClick={() => setForm(emptyForm(new Date()))} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800">
-          <Plus className="h-4 w-4" /> New event
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="hidden items-center gap-3 sm:flex">
+            <span className="flex items-center gap-1.5 text-[11px] text-slate-500"><span className="h-2 w-2 rounded-full bg-[#7F77DD]" /> CapitalOS</span>
+            <span className="flex items-center gap-1.5 text-[11px] text-slate-500"><span className="h-2 w-2 rounded-full bg-[#378ADD]" /> Google</span>
+          </div>
+          <button type="button" onClick={() => setForm(emptyForm(new Date()))} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800">
+            <Plus className="h-4 w-4" /> New event
+          </button>
+        </div>
       </div>
 
       {error && !form ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
@@ -290,11 +353,11 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
                       key={e.id}
                       role="button"
                       tabIndex={0}
-                      title={e.editable ? undefined : "From Google Calendar (read-only)"}
-                      onClick={(ev) => { ev.stopPropagation(); if (e.editable && e.record) setForm(formFromEvent(e.record)); }}
-                      onKeyDown={(ev) => { if (ev.key === "Enter" && e.editable && e.record) { ev.stopPropagation(); setForm(formFromEvent(e.record)); } }}
-                      className={`flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px] font-medium ${e.editable ? "bg-[#EEEDFE] text-[#3C3489] hover:bg-[#CECBF6]" : "bg-[#E6F1FB] text-[#0C447C] hover:bg-[#B5D4F4]"}`}
+                      onClick={(ev) => { ev.stopPropagation(); setSelected(e); }}
+                      onKeyDown={(ev) => { if (ev.key === "Enter") { ev.stopPropagation(); setSelected(e); } }}
+                      className={`flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px] ${e.editable ? "bg-[#7F77DD] font-medium text-white hover:bg-[#534AB7]" : "font-normal text-slate-700 hover:bg-slate-100"}`}
                     >
+                      {e.editable ? null : <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#378ADD]" />}
                       {e.meet_url ? <Video className="h-2.5 w-2.5 shrink-0" /> : null}
                       <span className="truncate">{new Date(e.start_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} {e.title}</span>
                     </span>
@@ -316,7 +379,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
               <li key={e.id}>
                 <button
                   type="button"
-                  onClick={() => { if (e.editable && e.record) setForm(formFromEvent(e.record)); }}
+                  onClick={() => setSelected(e)}
                   className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50"
                 >
                   <span className="w-28 shrink-0 text-xs text-slate-500">{new Date(e.start_time).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
@@ -377,6 +440,9 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
           </div>
         </div>
       ) : null}
+
+      {/* Event detail popover */}
+      {selected && !form ? renderPopover(selected) : null}
     </div>
   );
 }
