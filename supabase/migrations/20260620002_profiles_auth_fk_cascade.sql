@@ -1,80 +1,93 @@
--- PERMANENT FIX: user-deletion referential integrity (core graph).
+-- PERMANENT FIX: user-deletion referential integrity.
 --
--- Two recurring symptoms had one root cause — no consistent on-delete policy
--- between auth.users, profiles, and the data that references a user:
---   1. Deleting an auth user orphaned its profile (admin list drifts vs Auth),
---      because profiles.id had no FK to auth.users at all.
---   2. Deleting a profile failed, because companies.founder_id (and a few
---      company-child FKs) had no cascade.
+-- Root cause of the recurring admin-list ↔ Supabase Auth drift (and blocked user
+-- deletes): no consistent on-delete policy between auth.users, profiles, and the
+-- data that references a user; plus dangling rows left by past deletes.
 --
--- Policy (chosen): OWNED data cascades with the user; ACTOR/audit references are
--- set null so history is preserved. This migration applies that policy across
--- the core (0001) graph, removes existing orphan profiles, and finally adds the
--- profiles -> auth.users cascade so drift is structurally impossible.
+-- Policy: OWNED data cascades with the user; ACTOR/audit references set null.
+-- This migration is generic and name-agnostic:
+--   A. Company/campaign owned-data subtree -> cascade.
+--   B. EVERY blocking (no-action / restrict) FK to profiles -> cascade if the
+--      column is NOT NULL or an ownership column, else set null.
+--   C. Remove orphan profiles (now cascade cleanly).
+--   D. profiles.id -> auth.users(id) cascade.
+-- Each step pre-cleans rows that already violate the target policy. Re-runnable.
 --
--- Constraint names follow Postgres' inline convention (<table>_<column>_fkey).
--- All steps are idempotent (drop-if-exists before re-add).
+-- ⚠️ DESTRUCTIVE on already-orphaned data. Back up the database first
+-- (npm run ops:backup-db) and run on staging before production.
 
--- ── 1. Company-owned data cascades when the company is deleted ────────────────
-alter table public.documents
-  drop constraint if exists documents_company_id_fkey,
-  add constraint documents_company_id_fkey
-    foreign key (company_id) references public.companies(id) on delete cascade;
+-- ── A. Company / campaign owned-data subtree -> cascade ───────────────────────
+do $$
+declare spec record; cname text;
+begin
+  for spec in select * from (values
+    ('investor_interests', 'campaign_id', 'campaigns'),
+    ('documents',          'company_id',  'companies'),
+    ('diligence_reports',  'company_id',  'companies'),
+    ('campaigns',          'company_id',  'companies'),
+    ('admin_reviews',      'company_id',  'companies'),
+    ('investor_interests', 'company_id',  'companies')
+  ) as t(child, col, parent)
+  loop
+    for cname in
+      select con.conname from pg_constraint con
+      join pg_attribute att on att.attrelid = con.conrelid and att.attnum = any (con.conkey)
+      where con.conrelid = ('public.'||spec.child)::regclass and con.contype = 'f'
+        and con.confrelid = ('public.'||spec.parent)::regclass and att.attname = spec.col
+    loop execute format('alter table public.%I drop constraint %I', spec.child, cname); end loop;
 
-alter table public.diligence_reports
-  drop constraint if exists diligence_reports_company_id_fkey,
-  add constraint diligence_reports_company_id_fkey
-    foreign key (company_id) references public.companies(id) on delete cascade;
+    execute format('delete from public.%I where %I is not null and %I not in (select id from public.%I)',
+      spec.child, spec.col, spec.col, spec.parent);
+    execute format('alter table public.%I add constraint %I foreign key (%I) references public.%I(id) on delete cascade',
+      spec.child, spec.child||'_'||spec.col||'_fkey', spec.col, spec.parent);
+  end loop;
+end $$;
 
-alter table public.campaigns
-  drop constraint if exists campaigns_company_id_fkey,
-  add constraint campaigns_company_id_fkey
-    foreign key (company_id) references public.companies(id) on delete cascade;
+-- ── B. Every blocking FK to profiles -> cascade (owned) or set null (actor) ────
+do $$
+declare r record; do_cascade boolean;
+begin
+  for r in
+    select con.conname,
+           con.conrelid::regclass::text as tbl,
+           att.attname as col,
+           att.attnotnull as notnull
+    from pg_constraint con
+    join pg_attribute att on att.attrelid = con.conrelid and att.attnum = any (con.conkey)
+    where con.contype = 'f'
+      and con.confrelid = 'public.profiles'::regclass
+      and con.confdeltype in ('a', 'r')   -- no action / restrict = the blockers
+  loop
+    -- Ownership columns (or NOT NULL columns that can't be nulled) cascade.
+    do_cascade := r.notnull or r.col in ('founder_id', 'investor_id');
+    execute format('alter table %s drop constraint %I', r.tbl, r.conname);
+    if do_cascade then
+      execute format('delete from %s where %I is not null and %I not in (select id from public.profiles)',
+        r.tbl, r.col, r.col);
+      execute format('alter table %s add constraint %I foreign key (%I) references public.profiles(id) on delete cascade',
+        r.tbl, r.conname, r.col);
+    else
+      execute format('update %s set %I = null where %I is not null and %I not in (select id from public.profiles)',
+        r.tbl, r.col, r.col, r.col);
+      execute format('alter table %s add constraint %I foreign key (%I) references public.profiles(id) on delete set null',
+        r.tbl, r.conname, r.col);
+    end if;
+  end loop;
+end $$;
 
-alter table public.admin_reviews
-  drop constraint if exists admin_reviews_company_id_fkey,
-  add constraint admin_reviews_company_id_fkey
-    foreign key (company_id) references public.companies(id) on delete cascade;
-
-alter table public.investor_interests
-  drop constraint if exists investor_interests_company_id_fkey,
-  add constraint investor_interests_company_id_fkey
-    foreign key (company_id) references public.companies(id) on delete cascade;
-
--- ── 2. User-owned data cascades; actor/audit references set null ──────────────
--- Owned: a founder owns their company; an investor owns their expressed interest.
-alter table public.companies
-  drop constraint if exists companies_founder_id_fkey,
-  add constraint companies_founder_id_fkey
-    foreign key (founder_id) references public.profiles(id) on delete cascade;
-
-alter table public.investor_interests
-  drop constraint if exists investor_interests_investor_id_fkey,
-  add constraint investor_interests_investor_id_fkey
-    foreign key (investor_id) references public.profiles(id) on delete cascade;
-
--- Actor/audit: preserve the record, null out the deleted person.
-alter table public.documents
-  drop constraint if exists documents_uploaded_by_fkey,
-  add constraint documents_uploaded_by_fkey
-    foreign key (uploaded_by) references public.profiles(id) on delete set null;
-
-alter table public.admin_reviews
-  drop constraint if exists admin_reviews_reviewed_by_fkey,
-  add constraint admin_reviews_reviewed_by_fkey
-    foreign key (reviewed_by) references public.profiles(id) on delete set null;
-
-alter table public.audit_logs
-  drop constraint if exists audit_logs_user_id_fkey,
-  add constraint audit_logs_user_id_fkey
-    foreign key (user_id) references public.profiles(id) on delete set null;
-
--- ── 3. Remove existing orphan profiles (now cascades cleanly via step 1+2) ─────
+-- ── C. Remove orphan profiles (now cascade cleanly) ───────────────────────────
 delete from public.profiles p
 where not exists (select 1 from auth.users u where u.id = p.id);
 
--- ── 4. Tie profiles to auth.users — deleting an auth user removes its profile ──
-alter table public.profiles
-  drop constraint if exists profiles_id_fkey,
-  add constraint profiles_id_fkey
-    foreign key (id) references auth.users(id) on delete cascade;
+-- ── D. Tie profiles to auth.users ─────────────────────────────────────────────
+do $$
+declare cname text;
+begin
+  for cname in
+    select conname from pg_constraint
+    where conrelid = 'public.profiles'::regclass and contype = 'f'
+      and confrelid = 'auth.users'::regclass
+  loop execute format('alter table public.profiles drop constraint %I', cname); end loop;
+  alter table public.profiles
+    add constraint profiles_id_fkey foreign key (id) references auth.users(id) on delete cascade;
+end $$;
