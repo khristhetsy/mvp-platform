@@ -8,6 +8,7 @@ import { CompanySettingsForm } from "./settings-form";
 import { SettingsSidebarNav } from "./SettingsSidebarNav";
 import { OnePagerPublishCard } from "@/components/founder/OnePagerPublishCard";
 import { TipsPreferenceToggle } from "@/components/tips/TipsPreferenceToggle";
+import { SignatureSettings } from "@/components/email/SignatureSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -72,9 +73,10 @@ export default async function FounderSettingsPage() {
         </div>
       </section>
 
-      <section className="mt-6">
-        <h2 className="mb-3 text-sm font-semibold text-slate-900">Preferences</h2>
+      <section className="mt-6 space-y-3">
+        <h2 className="text-sm font-semibold text-slate-900">Preferences</h2>
         <TipsPreferenceToggle />
+        <SignatureSettings />
       </section>
     </FounderAppShell>
   );

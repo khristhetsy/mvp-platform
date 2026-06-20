@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { sendEmail } from "@/lib/email/send-email";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { loadSignature } from "@/lib/email/signature";
 
 // email_threads / email_messages aren't in the generated types yet — raw client.
 function raw(supabase: SupabaseClient<Database>): SupabaseClient {
@@ -148,12 +149,15 @@ async function sendOnThread(
   subject: string | null,
   body: string,
 ): Promise<void> {
-  const html = htmlFromText(body);
+  // Append the sender's saved signature (if any) to outgoing mail.
+  const signature = await loadSignature(supabase, owner.id);
+  const fullBody = signature ? `${body}\n\n${signature}` : body;
+  const html = htmlFromText(fullBody);
   const sent = await sendEmail({
     to: thread.contact_email,
     subject: subject ?? "(no subject)",
     html,
-    text: body,
+    text: fullBody,
     replyTo: replyAddress(thread.reply_token),
     fromName: owner.name ?? owner.email ?? undefined,
   });
@@ -167,7 +171,7 @@ async function sendOnThread(
     from_name: owner.name,
     to_email: thread.contact_email,
     subject,
-    body_text: body,
+    body_text: fullBody,
     body_html: html,
     provider_id: sent ? "resend" : null,
   });

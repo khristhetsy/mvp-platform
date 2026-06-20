@@ -21,6 +21,10 @@ function when(ts: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" });
 }
 
+function initials(name: string): string {
+  return name.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase() ?? "").join("") || "?";
+}
+
 type ActiveThread = { id: string; subject: string | null; contact_email: string; contact_name: string | null };
 
 export function EmailInbox() {
@@ -137,6 +141,17 @@ export function EmailInbox() {
     }
   }, [active, loadThreads]);
 
+  const forward = useCallback(() => {
+    if (!active) return;
+    const last = messages[messages.length - 1];
+    const quoted = last
+      ? `\n\n---------- Forwarded message ----------\nFrom: ${last.from_email}\nSubject: ${active.subject ?? ""}\n\n${last.body_text ?? ""}`
+      : "";
+    setError(null);
+    setCompose({ to: "", subject: `Fwd: ${active.subject ?? ""}`.trim(), body: quoted });
+    setComposeOpen(true);
+  }, [active, messages]);
+
   const selectFolder = useCallback((f: MailFolder) => {
     setFolder(f);
     setActive(null);
@@ -243,18 +258,29 @@ export function EmailInbox() {
             </div>
             <button type="button" onClick={() => void deleteThread(active.id)} className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-400 hover:border-[#F7C1C1] hover:bg-[#FCEBEB] hover:text-[#A32D2D]" aria-label="Delete conversation"><Trash2 className="h-4 w-4" /></button>
           </div>
-          <div className="max-h-[440px] space-y-3 overflow-y-auto px-4 py-3">
-            {messages.map((m) => (
-              <div key={m.id} className={`rounded-lg border p-3 text-sm ${m.direction === "outbound" ? "border-[#CECBF6] bg-[#EEEDFE]/40" : "border-slate-200 bg-white"}`}>
-                <div className="mb-1 flex items-center justify-between text-[11px] text-slate-500">
-                  <span className="font-medium text-slate-700">{m.direction === "outbound" ? "You" : (m.from_name ?? m.from_email)}</span>
-                  <span>{new Date(m.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+          <div className="max-h-[460px] space-y-5 overflow-y-auto px-5 py-4">
+            {messages.map((m) => {
+              const senderName = m.direction === "outbound" ? "You" : (m.from_name ?? m.from_email);
+              return (
+                <div key={m.id} className="flex gap-3 border-b border-slate-100 pb-5 last:border-0 last:pb-0">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E6F1FB] text-xs font-semibold text-[#0C447C]">{initials(senderName)}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="truncate text-sm"><span className="font-semibold text-slate-900">{senderName}</span> <span className="text-xs text-slate-400">&lt;{m.from_email}&gt;</span></p>
+                      <span className="shrink-0 text-xs text-slate-400">{new Date(m.created_at).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">to {m.to_email}</p>
+                    <p className="mt-2.5 whitespace-pre-wrap text-sm leading-relaxed text-slate-800">{m.body_text ?? ""}</p>
+                  </div>
                 </div>
-                <p className="whitespace-pre-wrap text-slate-800">{m.body_text ?? ""}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div className="border-t border-slate-100 p-3">
+            <div className="mb-2 flex gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600"><Send className="h-3.5 w-3.5" /> Reply below</span>
+              <button type="button" onClick={() => forward()} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"><ArrowLeft className="h-3.5 w-3.5 rotate-180" /> Forward</button>
+            </div>
             <textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={3} placeholder="Reply…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
             <div className="mt-2 flex justify-end">
               <button type="button" onClick={() => void sendReply()} disabled={sending || !reply.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"><Send className="h-4 w-4" /> {sending ? "Sending…" : "Send"}</button>
