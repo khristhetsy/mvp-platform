@@ -27,6 +27,7 @@ import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestAct
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { CapitalReadinessSection } from "@/components/founder/CapitalReadinessSection";
 import { DashboardPipelinePanel } from "@/components/founder/DashboardPipelinePanel";
+import { UpcomingMeetingsCard } from "@/components/calendar/UpcomingMeetingsCard";
 import { FounderProactiveInsights } from "@/components/founder/FounderProactiveInsights";
 import { FounderWeeklyDigest } from "@/components/founder/FounderWeeklyDigest";
 import { FounderFundraisingMilestoneTracker } from "@/components/founder/FounderFundraisingMilestoneTracker";
@@ -184,6 +185,11 @@ export default async function FounderDashboardPage() {
             limit={5}
             viewAllHref="/founder/actions?tab=overdue&overdue=true"
           />
+        </div>
+
+        {/* 5. Upcoming meetings */}
+        <div className="mb-8">
+          <UpcomingMeetingsCard calendarHref="/founder/calendar" scheduleHref="/founder/schedule" />
         </div>
 
         {/* ── Secondary panels — hidden by default ── */}
