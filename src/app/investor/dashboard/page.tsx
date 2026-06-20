@@ -9,6 +9,7 @@ import { computeInvestorOnboardingProgress } from "@/lib/investor/profile";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
+import { UpcomingMeetingsCard } from "@/components/calendar/UpcomingMeetingsCard";
 import { InvestorMetricCards } from "@/components/investor/InvestorMetricCards";
 import { InvestorDashboardCondensedGrid } from "@/components/investor/InvestorDashboardCondensedGrid";
 import { TaskReminderToast } from "@/components/investor/TaskReminderToast";
@@ -65,6 +66,10 @@ export default async function InvestorDashboardPage() {
           limit={5}
           viewAllHref="/investor/actions"
         />
+      </div>
+
+      <div className="mb-6">
+        <UpcomingMeetingsCard calendarHref="/investor/calendar" scheduleHref="/investor/schedule" />
       </div>
 
       <TaskReminderToast />

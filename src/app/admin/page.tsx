@@ -19,6 +19,7 @@ import { getScheduledOperationalCounts } from "@/lib/notifications/scheduled/sum
 import { getAutomationDailySummary } from "@/lib/automation/automation-log";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
+import { UpcomingMeetingsCard } from "@/components/calendar/UpcomingMeetingsCard";
 import { AdminPlatformHealthWidget } from "@/components/admin/AdminPlatformHealthWidget";
 
 export const dynamic = "force-dynamic";
@@ -135,6 +136,9 @@ export default async function AdminDashboardPage() {
           showEscalate
           viewAllHref="/admin/actions?priority=critical"
         />
+      </div>
+      <div className="mb-6 px-1">
+        <UpcomingMeetingsCard calendarHref="/admin/calendar" scheduleHref="/admin/schedule" />
       </div>
       <AdminDashboardShell
         userId={profile.id}
