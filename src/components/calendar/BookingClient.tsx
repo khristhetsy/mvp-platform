@@ -13,6 +13,8 @@ export function BookingClient({ hostId, hostName }: { hostId: string; hostName: 
   const [error, setError] = useState<string | null>(null);
   const [booking, setBooking] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState<{ when: string; meetUrl: string | null } | null>(null);
+  const [pending, setPending] = useState<TimeInterval | null>(null);
+  const [note, setNote] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -45,28 +47,37 @@ export function BookingClient({ hostId, hostName }: { hostId: string; hostName: 
     return Array.from(map.entries());
   }, [slots]);
 
-  const book = useCallback(async (slot: TimeInterval) => {
-    setBooking(slot.start);
+  const book = useCallback(async () => {
+    if (!pending) return;
+    setBooking(pending.start);
     setError(null);
     try {
       const res = await fetch("/api/scheduling/book", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hostId, startTime: slot.start, endTime: slot.end, timezone: LOCAL_TZ }),
+        body: JSON.stringify({
+          hostId,
+          startTime: pending.start,
+          endTime: pending.end,
+          timezone: LOCAL_TZ,
+          note: note.trim() || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Booking failed.");
       setConfirmed({
-        when: new Date(slot.start).toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" }),
+        when: new Date(pending.start).toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" }),
         meetUrl: data.meetUrl ?? null,
       });
+      setPending(null);
+      setNote("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Booking failed.");
       await load();
     } finally {
       setBooking(null);
     }
-  }, [hostId, load]);
+  }, [hostId, note, pending, load]);
 
   if (confirmed) {
     return (
@@ -96,6 +107,42 @@ export function BookingClient({ hostId, hostName }: { hostId: string; hostName: 
       </div>
 
       {error ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
+
+      {pending ? (
+        <div className="rounded-xl border border-[#B5D4F4] bg-[#E6F1FB] p-4">
+          <p className="text-sm font-semibold text-[#0C447C]">
+            {new Date(pending.start).toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" })}
+          </p>
+          <p className="text-xs text-[#185FA5]">
+            {Math.round((Date.parse(pending.end) - Date.parse(pending.start)) / 60000)} min · with {hostName}
+          </p>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={2}
+            placeholder="What's this about? (optional)"
+            className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none"
+          />
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={() => void book()}
+              disabled={booking !== null}
+              className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+            >
+              {booking !== null ? "Booking…" : "Confirm booking"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setPending(null); setNote(""); }}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {loading ? (
         <p className="text-sm text-slate-500">Finding open times…</p>
       ) : byDay.length === 0 ? (
@@ -106,17 +153,24 @@ export function BookingClient({ hostId, hostName }: { hostId: string; hostName: 
             <div key={day} className="rounded-xl border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
               <p className="mb-2 text-sm font-semibold text-slate-800">{day}</p>
               <div className="flex flex-wrap gap-2">
-                {daySlots.map((s) => (
-                  <button
-                    key={s.start}
-                    type="button"
-                    disabled={booking !== null}
-                    onClick={() => void book(s)}
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-[var(--blue)] hover:bg-[#E6F1FB] disabled:opacity-50"
-                  >
-                    {booking === s.start ? "Booking…" : new Date(s.start).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
-                  </button>
-                ))}
+                {daySlots.map((s) => {
+                  const selected = pending?.start === s.start;
+                  return (
+                    <button
+                      key={s.start}
+                      type="button"
+                      disabled={booking !== null}
+                      onClick={() => { setPending(s); setError(null); }}
+                      className={`rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50 ${
+                        selected
+                          ? "border-[var(--blue)] bg-[#E6F1FB] text-[#0C447C]"
+                          : "border-slate-200 text-slate-700 hover:border-[var(--blue)] hover:bg-[#E6F1FB]"
+                      }`}
+                    >
+                      {new Date(s.start).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))}
