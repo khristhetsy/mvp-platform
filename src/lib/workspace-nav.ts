@@ -144,6 +144,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       { href: "/admin/billing",           label: "Billing",          requiredPermission: "manage_billing"      },
       { href: "/admin/users/manage",      label: "User Management",  requiredPermission: "manage_users"        },
       { href: "/admin/users/permissions", label: "User Permissions", requiredPermission: "manage_users"        },
+      { href: "/admin/manual",            label: "Operations Manual",requiredPermission: "view_admin_dashboard" },
       {
         href: "/admin/integrations",
         label: "System",
