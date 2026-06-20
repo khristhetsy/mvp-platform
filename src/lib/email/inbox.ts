@@ -175,6 +175,18 @@ export async function replyToThread(
   return refreshed?.messages ?? [];
 }
 
+export async function countUnreadThreads(
+  supabase: SupabaseClient<Database>,
+  ownerId: string,
+): Promise<number> {
+  const { count } = await raw(supabase)
+    .from("email_threads")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", ownerId)
+    .eq("unread", true);
+  return count ?? 0;
+}
+
 export async function markThreadRead(
   supabase: SupabaseClient<Database>,
   ownerId: string,

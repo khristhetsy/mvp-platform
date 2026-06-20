@@ -136,6 +136,28 @@ export function WorkspaceSidebar({
   const adminNav = useAdminNavPermissions(workspace);
   const founderStage = useFounderStage(workspace);
 
+  // Live unread-email count for the Inbox nav badge (polled).
+  const [unreadEmail, setUnreadEmail] = useState(0);
+  useEffect(() => {
+    let active = true;
+    const fetchCount = async () => {
+      try {
+        const res = await fetch("/api/email/unread-count");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (active) setUnreadEmail(data.count ?? 0);
+      } catch {
+        // ignore — badge just won't show
+      }
+    };
+    void fetchCount();
+    const id = setInterval(() => void fetchCount(), 60_000);
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
+  }, []);
+
   function tLabel(label: string): string {
     const key = NAV_LABEL_KEYS[label];
     if (!key) return label;
@@ -259,6 +281,11 @@ export function WorkspaceSidebar({
           aria-hidden
         />
         <span className="truncate">{tLabel(item.label)}</span>
+        {item.href.endsWith("/inbox") && unreadEmail > 0 ? (
+          <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#534AB7] px-1.5 text-[11px] font-semibold text-white">
+            {unreadEmail > 99 ? "99+" : unreadEmail}
+          </span>
+        ) : null}
       </Link>
     );
   }
