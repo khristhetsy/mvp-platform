@@ -77,6 +77,44 @@ export async function enrollContact(
     );
 }
 
+/** Bulk-enroll every contact in a list into a sequence (idempotent upsert). */
+export async function enrollList(
+  sequenceId: string,
+  listId: string
+): Promise<{ enrolled: number }> {
+  const db = await marketingDb();
+
+  const { data: firstStep } = await db
+    .from("marketing_sequence_steps")
+    .select("delay_days")
+    .eq("sequence_id", sequenceId)
+    .order("step_order", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const delayMs = (firstStep?.delay_days ?? 0) * 24 * 60 * 60 * 1000;
+  const nextSendAt = new Date(Date.now() + delayMs).toISOString();
+
+  const { data: members } = await db
+    .from("marketing_list_contacts")
+    .select("contact_id")
+    .eq("list_id", listId);
+
+  const rows = (members ?? []).map((m: { contact_id: string }) => ({
+    sequence_id: sequenceId,
+    contact_id: m.contact_id,
+    next_send_at: nextSendAt,
+  }));
+
+  if (rows.length === 0) return { enrolled: 0 };
+
+  await db
+    .from("marketing_sequence_enrollments")
+    .upsert(rows, { onConflict: "sequence_id,contact_id" });
+
+  return { enrolled: rows.length };
+}
+
 export async function processDueSequenceSteps(): Promise<{ processed: number }> {
   const db = await marketingDb();
 

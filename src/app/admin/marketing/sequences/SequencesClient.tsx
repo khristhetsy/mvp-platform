@@ -2,16 +2,26 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { MarketingSequence, MarketingTemplate } from "@/lib/marketing/types";
+import type { MarketingSequence, MarketingTemplate, MarketingList } from "@/lib/marketing/types";
 
-interface Props { sequences: MarketingSequence[]; templates: MarketingTemplate[]; }
+interface Props { sequences: MarketingSequence[]; templates: MarketingTemplate[]; lists: MarketingList[]; }
 
+// Display labels for all stored conditions (existing steps may use any).
 const conditionLabels: Record<string, string> = {
   always:   "Always send",
   no_open:  "If not opened",
   no_click: "If not clicked",
   no_reply: "If no reply",
 };
+
+// Conditions offered when creating a step. "no_reply" is excluded: Resend
+// webhooks don't report inbound replies, so it can't be detected and would
+// silently behave like "always send".
+const selectableConditions: Array<[string, string]> = [
+  ["always", conditionLabels.always],
+  ["no_open", conditionLabels.no_open],
+  ["no_click", conditionLabels.no_click],
+];
 
 const statusColors: Record<string, { bg: string; color: string }> = {
   draft:    { bg: "#F1EFE8", color: "#5F5E5A" },
@@ -27,12 +37,31 @@ const card: React.CSSProperties = {
   boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)",
 };
 
-export function SequencesClient({ sequences, templates }: Props) {
+export function SequencesClient({ sequences, templates, lists }: Props) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
   const [addingStep, setAddingStep] = useState<string | null>(null);
+  const [enrollListId, setEnrollListId] = useState(lists[0]?.id ?? "");
+  const [enrollMsg, setEnrollMsg] = useState<string | null>(null);
+
+  async function handleEnrollList(sequenceId: string) {
+    if (!enrollListId) return;
+    setEnrollMsg(null);
+    try {
+      const res = await fetch("/api/marketing/sequences/enroll-list", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sequence_id: sequenceId, list_id: enrollListId }),
+      });
+      const data = await res.json();
+      setEnrollMsg(res.ok ? `Enrolled ${data.enrolled ?? 0} contacts` : data.error ?? "Failed to enroll");
+      router.refresh();
+    } catch {
+      setEnrollMsg("Failed to enroll list");
+    }
+  }
   const [stepForm, setStepForm] = useState({
     template_id: templates[0]?.id ?? "",
     delay_days: "0",
@@ -178,7 +207,7 @@ export function SequencesClient({ sequences, templates }: Props) {
                         <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 3 }}>Condition</label>
                         <select value={stepForm.condition} onChange={(e) => setStepForm({ ...stepForm, condition: e.target.value })}
                           style={{ width: "100%", fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }}>
-                          {Object.entries(conditionLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                          {selectableConditions.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                         </select>
                       </div>
                       <div>
@@ -229,6 +258,31 @@ export function SequencesClient({ sequences, templates }: Props) {
                     {steps.length} step{steps.length !== 1 ? "s" : ""}
                   </div>
                 </div>
+
+                {/* Enroll a list */}
+                {steps.length > 0 ? (
+                  <div style={{ display: "flex", gap: 6, marginTop: 10, alignItems: "center" }}>
+                    <select
+                      value={enrollListId}
+                      onChange={(e) => setEnrollListId(e.target.value)}
+                      style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", color: "var(--foreground)" }}
+                    >
+                      {lists.length === 0 ? (
+                        <option value="">No lists yet</option>
+                      ) : (
+                        lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)
+                      )}
+                    </select>
+                    <button
+                      onClick={() => handleEnrollList(seq.id)}
+                      disabled={!enrollListId}
+                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)", opacity: enrollListId ? 1 : 0.5 }}
+                    >
+                      Enroll list
+                    </button>
+                    {enrollMsg ? <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{enrollMsg}</span> : null}
+                  </div>
+                ) : null}
               </div>
             );
           })}
