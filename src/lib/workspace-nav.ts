@@ -154,6 +154,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/schedule", label: "Scheduling" },
         ],
       },
+      { href: "/admin/inbox",     label: "Inbox",            requiredPermission: "view_admin_dashboard" },
       {
         href: "/admin/integrations",
         label: "System",
@@ -184,6 +185,7 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
       { href: "/founder/schedule", label: "Scheduling" },
     ],
   },
+  { href: "/founder/inbox", label: "Inbox" },
   {
     href: "/founder/readiness",
     label: "Readiness",
@@ -285,6 +287,7 @@ export const investorWorkspaceNav: WorkspaceNavItem[] = [
     ],
   },
   { href: "/investor/messages", label: "Messages" },
+  { href: "/investor/inbox", label: "Inbox" },
   {
     href: "/investor/calendar",
     label: "Calendar",
