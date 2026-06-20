@@ -20,6 +20,8 @@ export type EmailPayload = {
   /** Personalize the From display name (e.g. the sender's name) while keeping
    *  the verified platform sending address. */
   fromName?: string;
+  /** File attachments — base64 content (Resend format). */
+  attachments?: Array<{ filename: string; content: string }>;
 };
 
 const DEFAULT_FROM = "CapitalOS <no-reply@mail.capitalos.io>";
@@ -59,6 +61,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
         html: payload.html,
         text: payload.text,
         reply_to: payload.replyTo,
+        attachments: payload.attachments && payload.attachments.length > 0 ? payload.attachments : undefined,
       }),
     });
 

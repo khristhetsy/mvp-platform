@@ -12,11 +12,19 @@ export async function GET(req: NextRequest): Promise<Response> {
   return NextResponse.json({ threads });
 }
 
+const attachmentSchema = z.object({
+  name: z.string().max(200),
+  path: z.string().max(400),
+  size: z.number().int().nonnegative(),
+  content_type: z.string().nullish(),
+});
+
 const composeSchema = z.object({
   to: z.string().email(),
   toName: z.string().max(200).optional(),
   subject: z.string().min(1).max(300),
   body: z.string().min(1).max(50000),
+  attachments: z.array(attachmentSchema).max(10).optional(),
 });
 
 export async function POST(req: NextRequest): Promise<Response> {
@@ -32,7 +40,13 @@ export async function POST(req: NextRequest): Promise<Response> {
     const thread = await composeThread(
       auth.supabase,
       { id: auth.profile.id, email: auth.profile.email, name: auth.profile.full_name },
-      parsed.data,
+      {
+        to: parsed.data.to,
+        toName: parsed.data.toName,
+        subject: parsed.data.subject,
+        body: parsed.data.body,
+        attachments: parsed.data.attachments?.map((a) => ({ ...a, content_type: a.content_type ?? null })),
+      },
     );
     return NextResponse.json({ thread });
   } catch (err) {

@@ -1,8 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Mail, Send, Plus, X, RefreshCw, Trash2, MailOpen, ArrowLeft, Search, Inbox as InboxIcon, FileText, Layers, AlertTriangle, RotateCcw } from "lucide-react";
-import type { ThreadListItem, EmailMessage, MailFolder } from "@/lib/email/inbox";
+import { Mail, Send, Plus, X, RefreshCw, Trash2, MailOpen, ArrowLeft, Search, Inbox as InboxIcon, FileText, Layers, AlertTriangle, RotateCcw, Paperclip } from "lucide-react";
+import type { ThreadListItem, EmailMessage, MailFolder, EmailAttachment } from "@/lib/email/inbox";
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 const FOLDERS: Array<{ id: MailFolder | "drafts" | "spam"; label: string; icon: typeof Mail; soon?: boolean }> = [
   { id: "inbox", label: "Inbox", icon: InboxIcon },
@@ -41,6 +47,30 @@ export function EmailInbox() {
 
   const [composeOpen, setComposeOpen] = useState(false);
   const [compose, setCompose] = useState({ to: "", subject: "", body: "" });
+  const [composeFiles, setComposeFiles] = useState<EmailAttachment[]>([]);
+  const [replyFiles, setReplyFiles] = useState<EmailAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+
+  const uploadFiles = useCallback(async (files: FileList | null, target: "compose" | "reply") => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await fetch("/api/email/attachments", { method: "POST", body: fd });
+        const data = await res.json();
+        if (res.ok && data.attachment) {
+          if (target === "compose") setComposeFiles((p) => [...p, data.attachment]);
+          else setReplyFiles((p) => [...p, data.attachment]);
+        } else {
+          setError(typeof data.error === "string" ? data.error : "Upload failed.");
+        }
+      }
+    } finally {
+      setUploading(false);
+    }
+  }, []);
 
   const loadThreads = useCallback(async () => {
     setLoading(true);
@@ -166,19 +196,20 @@ export function EmailInbox() {
       const res = await fetch(`/api/email/threads/${active.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: reply }),
+        body: JSON.stringify({ body: reply, attachments: replyFiles }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Reply failed.");
       setMessages(data.messages ?? []);
       setReply("");
+      setReplyFiles([]);
       await loadThreads();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reply failed.");
     } finally {
       setSending(false);
     }
-  }, [active, reply, loadThreads]);
+  }, [active, reply, replyFiles, loadThreads]);
 
   const sendCompose = useCallback(async () => {
     if (!compose.to.trim() || !compose.subject.trim() || !compose.body.trim()) {
@@ -190,12 +221,13 @@ export function EmailInbox() {
       const res = await fetch("/api/email/threads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(compose),
+        body: JSON.stringify({ ...compose, attachments: composeFiles }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Send failed.");
       setComposeOpen(false);
       setCompose({ to: "", subject: "", body: "" });
+      setComposeFiles([]);
       await loadThreads();
       if (data.thread?.id) await openThread(data.thread.id);
     } catch (err) {
@@ -203,7 +235,7 @@ export function EmailInbox() {
     } finally {
       setSending(false);
     }
-  }, [compose, loadThreads, openThread]);
+  }, [compose, composeFiles, loadThreads, openThread]);
 
   return (
     <div className="space-y-3">
@@ -271,6 +303,15 @@ export function EmailInbox() {
                     </div>
                     <p className="text-[11px] text-slate-400">to {m.to_email}</p>
                     <p className="mt-2.5 whitespace-pre-wrap text-sm leading-relaxed text-slate-800">{m.body_text ?? ""}</p>
+                    {m.attachments && m.attachments.length > 0 ? (
+                      <div className="mt-2.5 flex flex-wrap gap-2">
+                        {m.attachments.map((a) => (
+                          <a key={a.path} href={`/api/email/attachments/download?path=${encodeURIComponent(a.path)}`} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-50">
+                            <Paperclip className="h-3.5 w-3.5 text-slate-400" /> {a.name} <span className="text-slate-400">{formatSize(a.size)}</span>
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               );
@@ -282,7 +323,21 @@ export function EmailInbox() {
               <button type="button" onClick={() => forward()} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"><ArrowLeft className="h-3.5 w-3.5 rotate-180" /> Forward</button>
             </div>
             <textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={3} placeholder="Reply…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
-            <div className="mt-2 flex justify-end">
+            {replyFiles.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {replyFiles.map((a) => (
+                  <span key={a.path} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700">
+                    <Paperclip className="h-3.5 w-3.5 text-slate-400" /> {a.name}
+                    <button type="button" onClick={() => setReplyFiles((p) => p.filter((x) => x.path !== a.path))} className="text-slate-400 hover:text-slate-700"><X className="h-3 w-3" /></button>
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            <div className="mt-2 flex items-center justify-between">
+              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                <Paperclip className="h-3.5 w-3.5" /> {uploading ? "Uploading…" : "Attach"}
+                <input type="file" multiple className="hidden" onChange={(e) => { void uploadFiles(e.target.files, "reply"); e.target.value = ""; }} />
+              </label>
               <button type="button" onClick={() => void sendReply()} disabled={sending || !reply.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"><Send className="h-4 w-4" /> {sending ? "Sending…" : "Send"}</button>
             </div>
           </div>
@@ -357,6 +412,18 @@ export function EmailInbox() {
               <input value={compose.to} onChange={(e) => setCompose({ ...compose, to: e.target.value })} placeholder="To (email)" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
               <input value={compose.subject} onChange={(e) => setCompose({ ...compose, subject: e.target.value })} placeholder="Subject" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
               <textarea value={compose.body} onChange={(e) => setCompose({ ...compose, body: e.target.value })} rows={6} placeholder="Write your message…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                  <Paperclip className="h-3.5 w-3.5" /> {uploading ? "Uploading…" : "Attach files"}
+                  <input type="file" multiple className="hidden" onChange={(e) => { void uploadFiles(e.target.files, "compose"); e.target.value = ""; }} />
+                </label>
+                {composeFiles.map((a) => (
+                  <span key={a.path} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700">
+                    <Paperclip className="h-3.5 w-3.5 text-slate-400" /> {a.name} <span className="text-slate-400">{formatSize(a.size)}</span>
+                    <button type="button" onClick={() => setComposeFiles((p) => p.filter((x) => x.path !== a.path))} className="text-slate-400 hover:text-slate-700"><X className="h-3 w-3" /></button>
+                  </span>
+                ))}
+              </div>
             </div>
             <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50/50 px-5 py-3">
               <button type="button" onClick={() => setComposeOpen(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>

@@ -24,6 +24,13 @@ export interface EmailThread {
   updated_at: string;
 }
 
+export interface EmailAttachment {
+  name: string;
+  path: string;
+  size: number;
+  content_type: string | null;
+}
+
 export interface EmailMessage {
   id: string;
   thread_id: string;
@@ -36,13 +43,14 @@ export interface EmailMessage {
   body_text: string | null;
   body_html: string | null;
   provider_id: string | null;
+  attachments: EmailAttachment[];
   created_at: string;
 }
 
 const THREAD_COLS =
   "id, owner_id, subject, contact_email, contact_name, reply_token, last_message_at, last_direction, unread, created_at, updated_at";
 const MSG_COLS =
-  "id, thread_id, owner_id, direction, from_email, from_name, to_email, subject, body_text, body_html, provider_id, created_at";
+  "id, thread_id, owner_id, direction, from_email, from_name, to_email, subject, body_text, body_html, provider_id, attachments, created_at";
 
 export function inboundDomain(): string {
   return process.env.INBOUND_EMAIL_DOMAIN ?? "mail.capitalos.io";
@@ -148,11 +156,30 @@ async function sendOnThread(
   thread: EmailThread,
   subject: string | null,
   body: string,
+  attachments: EmailAttachment[] = [],
 ): Promise<void> {
   // Append the sender's saved signature (if any) to outgoing mail.
   const signature = await loadSignature(supabase, owner.id);
   const fullBody = signature ? `${body}\n\n${signature}` : body;
   const html = htmlFromText(fullBody);
+
+  // Pull attachment bytes from storage → base64 for Resend.
+  const resendAttachments: Array<{ filename: string; content: string }> = [];
+  if (attachments.length > 0) {
+    const admin = createServiceRoleClient();
+    for (const a of attachments) {
+      try {
+        const { data } = await admin.storage.from("email-attachments").download(a.path);
+        if (data) {
+          const buf = Buffer.from(await data.arrayBuffer());
+          resendAttachments.push({ filename: a.name, content: buf.toString("base64") });
+        }
+      } catch {
+        // skip an attachment that fails to download
+      }
+    }
+  }
+
   const sent = await sendEmail({
     to: thread.contact_email,
     subject: subject ?? "(no subject)",
@@ -160,6 +187,7 @@ async function sendOnThread(
     text: fullBody,
     replyTo: replyAddress(thread.reply_token),
     fromName: owner.name ?? owner.email ?? undefined,
+    attachments: resendAttachments,
   });
 
   const now = new Date().toISOString();
@@ -174,6 +202,7 @@ async function sendOnThread(
     body_text: fullBody,
     body_html: html,
     provider_id: sent ? "resend" : null,
+    attachments,
   });
   await raw(supabase)
     .from("email_threads")
@@ -184,7 +213,7 @@ async function sendOnThread(
 export async function composeThread(
   supabase: SupabaseClient<Database>,
   owner: Owner,
-  input: { to: string; toName?: string | null; subject: string; body: string },
+  input: { to: string; toName?: string | null; subject: string; body: string; attachments?: EmailAttachment[] },
 ): Promise<EmailThread> {
   const token = randomBytes(12).toString("hex");
   const now = new Date().toISOString();
@@ -205,7 +234,7 @@ export async function composeThread(
   if (error) throw new Error(error.message ?? "Unable to start thread.");
 
   const thread = data as EmailThread;
-  await sendOnThread(supabase, owner, thread, input.subject, input.body);
+  await sendOnThread(supabase, owner, thread, input.subject, input.body, input.attachments ?? []);
   return thread;
 }
 
@@ -214,11 +243,12 @@ export async function replyToThread(
   owner: Owner,
   threadId: string,
   body: string,
+  attachments: EmailAttachment[] = [],
 ): Promise<EmailMessage[]> {
   const existing = await getThread(supabase, owner.id, threadId);
   if (!existing) throw new Error("Thread not found.");
   const subject = existing.thread.subject ? `Re: ${existing.thread.subject.replace(/^Re:\s*/i, "")}` : null;
-  await sendOnThread(supabase, owner, existing.thread, subject, body);
+  await sendOnThread(supabase, owner, existing.thread, subject, body, attachments);
   const refreshed = await getThread(supabase, owner.id, threadId);
   return refreshed?.messages ?? [];
 }

@@ -17,7 +17,13 @@ export async function GET(_req: NextRequest, ctx: RouteContext): Promise<Respons
   return NextResponse.json(result);
 }
 
-const replySchema = z.object({ body: z.string().min(1).max(50000) });
+const replySchema = z.object({
+  body: z.string().min(1).max(50000),
+  attachments: z
+    .array(z.object({ name: z.string().max(200), path: z.string().max(400), size: z.number().int().nonnegative(), content_type: z.string().nullish() }))
+    .max(10)
+    .optional(),
+});
 
 export async function POST(req: NextRequest, ctx: RouteContext): Promise<Response> {
   const auth = await requireApiProfile();
@@ -35,6 +41,7 @@ export async function POST(req: NextRequest, ctx: RouteContext): Promise<Respons
       { id: auth.profile.id, email: auth.profile.email, name: auth.profile.full_name },
       id,
       parsed.data.body,
+      parsed.data.attachments?.map((a) => ({ ...a, content_type: a.content_type ?? null })),
     );
     return NextResponse.json({ messages });
   } catch (err) {
