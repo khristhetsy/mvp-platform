@@ -34,6 +34,23 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [origin, setOrigin] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  // Resolve the app origin client-side so the booking link is a full shareable URL.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setOrigin(window.location.origin); }, []);
+  const bookingUrl = bookingPath ? `${origin}${bookingPath}` : "";
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(bookingUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard blocked — user can still select the text
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -100,7 +117,17 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
       {bookingPath ? (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#B5D4F4] bg-[#E6F1FB] px-3 py-2 text-sm text-[#0C447C]">
           <span className="font-medium">Your booking link:</span>
-          <code className="rounded bg-white/70 px-2 py-0.5 text-xs">{bookingPath}</code>
+          <a href={bookingPath} className="truncate rounded bg-white/70 px-2 py-0.5 text-xs underline-offset-2 hover:underline">
+            {bookingUrl || bookingPath}
+          </a>
+          <button
+            type="button"
+            onClick={() => void copyLink()}
+            disabled={!bookingUrl}
+            className="rounded-md border border-[#85B7EB] bg-white px-2 py-0.5 text-xs font-medium text-[#0C447C] hover:bg-[#E6F1FB] disabled:opacity-50"
+          >
+            {copied ? "Copied!" : "Copy"}
+          </button>
         </div>
       ) : null}
 
