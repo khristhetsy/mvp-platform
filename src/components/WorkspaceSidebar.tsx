@@ -3,13 +3,14 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { InternalPermission } from "@/lib/rbac/constants";
 import type { WorkspaceId, WorkspaceNavItem } from "@/lib/workspace-nav";
 import { getAdminWorkspaceNavSections, getWorkspaceNav, workspaceLabel } from "@/lib/workspace-nav";
 import { getWorkspaceNavIcon } from "@/lib/ui/nav-icons";
+import { useToast } from "@/components/ui/ToastProvider";
 import { CapitalOSLogo } from "@/components/CapitalOSLogo";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
@@ -136,8 +137,13 @@ export function WorkspaceSidebar({
   const adminNav = useAdminNavPermissions(workspace);
   const founderStage = useFounderStage(workspace);
 
-  // Live unread-email count for the Inbox nav badge (polled).
+  // Live unread-email count for the Inbox nav badge (polled), plus a toast when
+  // new mail arrives.
   const [unreadEmail, setUnreadEmail] = useState(0);
+  const { toast } = useToast();
+  const toastRef = useRef(toast);
+  useEffect(() => { toastRef.current = toast; }, [toast]);
+  const prevUnreadRef = useRef<number | null>(null);
   useEffect(() => {
     let active = true;
     const fetchCount = async () => {
@@ -145,7 +151,19 @@ export function WorkspaceSidebar({
         const res = await fetch("/api/email/unread-count");
         if (!res.ok) return;
         const data = await res.json();
-        if (active) setUnreadEmail(data.count ?? 0);
+        if (!active) return;
+        const next: number = data.count ?? 0;
+        const prev = prevUnreadRef.current;
+        if (prev !== null && next > prev) {
+          const delta = next - prev;
+          toastRef.current({
+            title: "New mail",
+            description: `${delta} new message${delta === 1 ? "" : "s"} in your inbox.`,
+            variant: "info",
+          });
+        }
+        prevUnreadRef.current = next;
+        setUnreadEmail(next);
       } catch {
         // ignore — badge just won't show
       }
