@@ -19,7 +19,7 @@ const patchSchema = z.object({
 
 export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<Response> {
   const auth = await requireApiProfile();
-  if ("error" in auth) return auth.error;
+  if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await ctx.params;
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
@@ -40,7 +40,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<Respon
 
 export async function DELETE(_req: NextRequest, ctx: RouteContext): Promise<Response> {
   const auth = await requireApiProfile();
-  if ("error" in auth) return auth.error;
+  if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await ctx.params;
   try {

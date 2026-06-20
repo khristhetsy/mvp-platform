@@ -10,7 +10,7 @@ const MAX_RANGE_MS = 60 * 24 * 60 * 60 * 1000; // 60 days
  */
 export async function GET(req: NextRequest): Promise<Response> {
   const auth = await requireApiProfile();
-  if ("error" in auth) return auth.error;
+  if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const host = req.nextUrl.searchParams.get("host");
   const from = req.nextUrl.searchParams.get("from");

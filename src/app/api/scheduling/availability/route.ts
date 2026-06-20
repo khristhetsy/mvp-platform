@@ -5,7 +5,7 @@ import { loadAvailability, saveAvailability } from "@/lib/scheduling/store";
 
 export async function GET(): Promise<Response> {
   const auth = await requireApiProfile();
-  if ("error" in auth) return auth.error;
+  if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const settings = await loadAvailability(auth.supabase, auth.profile.id);
   return NextResponse.json({ settings });
 }
@@ -25,7 +25,7 @@ const putSchema = z.object({
 
 export async function PUT(req: NextRequest): Promise<Response> {
   const auth = await requireApiProfile();
-  if ("error" in auth) return auth.error;
+  if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const parsed = putSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {

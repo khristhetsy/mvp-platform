@@ -15,7 +15,7 @@ const schema = z.object({
 
 export async function POST(req: NextRequest): Promise<Response> {
   const auth = await requireApiProfile();
-  if ("error" in auth) return auth.error;
+  if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
