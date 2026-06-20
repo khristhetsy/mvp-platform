@@ -16,12 +16,21 @@ const ruleSchema = z.object({
   endMinute: z.number().int().min(1).max(1440),
 });
 
+const questionSchema = z.object({
+  id: z.string().max(60),
+  label: z.string().min(1).max(300),
+  type: z.enum(["short_text", "single", "multi"]),
+  options: z.array(z.string().max(200)).max(20).default([]),
+  required: z.boolean().default(false),
+});
+
 const putSchema = z.object({
   timezone: z.string().min(1).max(64),
   slotMinutes: z.number().int().min(5).max(480),
   bufferMinutes: z.number().int().min(0).max(240),
   weeklyRules: z.array(ruleSchema).max(50),
   meetingTitle: z.string().max(120).default(""),
+  questions: z.array(questionSchema).max(20).default([]),
 });
 
 export async function PUT(req: NextRequest): Promise<Response> {

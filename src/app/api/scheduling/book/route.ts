@@ -15,6 +15,7 @@ const schema = z.object({
   email: z.string().email(),
   phone: z.string().max(40).optional(),
   note: z.string().max(2000).nullish(),
+  answers: z.array(z.object({ label: z.string().max(300), value: z.string().max(1000) })).max(20).optional(),
 });
 
 export async function POST(req: NextRequest): Promise<Response> {
@@ -43,6 +44,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       endTime: parsed.data.endTime,
       timezone: parsed.data.timezone,
       note: parsed.data.note ?? null,
+      answers: parsed.data.answers,
     });
 
     await sendBookingEmails({

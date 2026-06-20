@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Clock, Check } from "lucide-react";
-import type { AvailabilitySettings, WeeklyRule } from "@/lib/scheduling/types";
+import { Clock, Check, Plus, Trash2 } from "lucide-react";
+import type { AvailabilitySettings, WeeklyRule, ScheduleQuestion } from "@/lib/scheduling/types";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const LOCAL_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -32,6 +32,13 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
   const [slotMinutes, setSlotMinutes] = useState(30);
   const [bufferMinutes, setBufferMinutes] = useState(0);
   const [meetingTitle, setMeetingTitle] = useState("");
+  const [questions, setQuestions] = useState<ScheduleQuestion[]>([]);
+
+  const addQuestion = () =>
+    setQuestions((p) => [...p, { id: (crypto.randomUUID?.() ?? String(Date.now())), label: "", type: "multi", options: ["Option 1"], required: false }]);
+  const updateQuestion = (id: string, patch: Partial<ScheduleQuestion>) =>
+    setQuestions((p) => p.map((q) => (q.id === id ? { ...q, ...patch } : q)));
+  const removeQuestion = (id: string) => setQuestions((p) => p.filter((q) => q.id !== id));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -65,6 +72,7 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
         setSlotMinutes(s.slotMinutes ?? 30);
         setBufferMinutes(s.bufferMinutes ?? 0);
         setMeetingTitle(s.meetingTitle ?? "");
+        setQuestions(Array.isArray(s.questions) ? s.questions : []);
       }
     } finally {
       setLoading(false);
@@ -85,7 +93,10 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
       const res = await fetch("/api/scheduling/availability", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ timezone, slotMinutes, bufferMinutes, weeklyRules, meetingTitle }),
+        body: JSON.stringify({
+          timezone, slotMinutes, bufferMinutes, weeklyRules, meetingTitle,
+          questions: questions.filter((q) => q.label.trim()).map((q) => ({ ...q, options: q.type === "short_text" ? [] : q.options.filter((o) => o.trim()) })),
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -98,7 +109,7 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
     } finally {
       setSaving(false);
     }
-  }, [days, timezone, slotMinutes, bufferMinutes, meetingTitle]);
+  }, [days, timezone, slotMinutes, bufferMinutes, meetingTitle, questions]);
 
   const setDay = (i: number, patch: Partial<DayState>) =>
     setDays((prev) => prev.map((d, idx) => (idx === i ? { ...d, ...patch } : d)));
@@ -185,6 +196,45 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
               )}
             </div>
           ))}
+        </div>
+
+        {/* Booking questions */}
+        <div className="mt-5 border-t border-slate-100 pt-4">
+          <div className="mb-2 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Booking questions</p>
+              <p className="text-xs text-slate-500">Asked on your booking page. Answers arrive with each booking.</p>
+            </div>
+            <button type="button" onClick={addQuestion} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"><Plus className="h-3.5 w-3.5" /> Add question</button>
+          </div>
+          <div className="space-y-3">
+            {questions.map((q) => (
+              <div key={q.id} className="rounded-lg border border-slate-200 p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <input value={q.label} onChange={(e) => updateQuestion(q.id, { label: e.target.value })} placeholder="Question label" className="min-w-[180px] flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
+                  <select value={q.type} onChange={(e) => updateQuestion(q.id, { type: e.target.value as ScheduleQuestion["type"] })} className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm">
+                    <option value="short_text">Short text</option>
+                    <option value="single">Single choice</option>
+                    <option value="multi">Checkboxes</option>
+                  </select>
+                  <label className="flex items-center gap-1 text-xs text-slate-600"><input type="checkbox" checked={q.required} onChange={(e) => updateQuestion(q.id, { required: e.target.checked })} className="h-3.5 w-3.5" /> Required</label>
+                  <button type="button" onClick={() => removeQuestion(q.id)} className="rounded p-1 text-slate-400 hover:text-[#A32D2D]" aria-label="Remove question"><Trash2 className="h-4 w-4" /></button>
+                </div>
+                {q.type !== "short_text" ? (
+                  <div className="mt-2 space-y-1.5 pl-1">
+                    {q.options.map((opt, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <input value={opt} onChange={(e) => updateQuestion(q.id, { options: q.options.map((o, j) => (j === i ? e.target.value : o)) })} placeholder={`Option ${i + 1}`} className="w-full max-w-xs rounded-lg border border-slate-200 px-3 py-1 text-sm" />
+                        <button type="button" onClick={() => updateQuestion(q.id, { options: q.options.filter((_, j) => j !== i) })} className="text-slate-400 hover:text-[#A32D2D]"><Trash2 className="h-3.5 w-3.5" /></button>
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => updateQuestion(q.id, { options: [...q.options, `Option ${q.options.length + 1}`] })} className="text-xs font-medium text-[#185FA5] hover:underline">+ Add option</button>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+            {questions.length === 0 ? <p className="text-xs text-slate-400">No questions yet. Add one to collect info from bookers.</p> : null}
+          </div>
         </div>
 
         <div className="mt-4">

@@ -15,6 +15,7 @@ export interface BookSlotInput {
   timezone: string;
   title?: string;
   note?: string | null;
+  answers?: Array<{ label: string; value: string }>;
 }
 
 export interface BookSlotResult {
@@ -82,6 +83,7 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
     input.booker.name ? `Booked by: ${input.booker.name}` : null,
     input.booker.email ? `Email: ${input.booker.email}` : null,
     input.booker.phone ? `Phone: ${input.booker.phone}` : null,
+    ...(input.answers ?? []).filter((a) => a.value).map((a) => `${a.label}: ${a.value}`),
   ].filter(Boolean).join("\n") || null;
 
   // Host event (authoritative) — creates the Google event + Meet, invites booker.

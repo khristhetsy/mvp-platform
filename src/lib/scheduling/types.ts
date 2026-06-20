@@ -14,6 +14,15 @@ export interface WeeklyRule {
   endMinute: number;
 }
 
+/** A host-configured intake question shown on the booking form. */
+export interface ScheduleQuestion {
+  id: string;
+  label: string;
+  type: "short_text" | "single" | "multi";
+  options: string[];
+  required: boolean;
+}
+
 /** A user's saved scheduling preferences. */
 export interface AvailabilitySettings {
   timezone: string;
@@ -22,6 +31,8 @@ export interface AvailabilitySettings {
   weeklyRules: WeeklyRule[];
   /** Custom meeting name shown on the booking page. */
   meetingTitle: string;
+  /** Custom intake questions shown on the booking form. */
+  questions: ScheduleQuestion[];
 }
 
 /** Engine config: settings resolved to a concrete UTC offset for the range. */
