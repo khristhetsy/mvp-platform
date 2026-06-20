@@ -67,6 +67,9 @@ import {
 } from "@/lib/next-best-actions/display";
 import { contextUsedKeys } from "@/lib/assistant/assistant-context";
 import { buildAssistantSystemPrompt } from "@/lib/assistant/assistant-prompts";
+import { isAdminSopIntent, retrieveSops } from "@/lib/admin-sop/retrieve";
+import { formatSopForAssistant, formatNoSopMatch, sopHref } from "@/lib/admin-sop/format";
+import { getEffectivePermissions } from "@/lib/rbac/effective-permissions";
 import { loadAdminAssistantContext } from "@/lib/assistant/load-admin-assistant-context";
 import { loadFounderAssistantContext } from "@/lib/assistant/load-founder-assistant-context";
 import { loadInvestorAssistantContext } from "@/lib/assistant/load-investor-assistant-context";
@@ -214,6 +217,48 @@ async function runLearningMode(
   };
 }
 
+/**
+ * Admin/analyst "how do I…" questions are answered from the operations manual.
+ * The reply is grounded in the matched SOP's own steps (no free generation), and
+ * gated to what the viewer's RBAC permissions let them see.
+ */
+async function runAdminSopMode(
+  profile: Profile,
+  message: string,
+  resolvedMode: AssistantChatResponse["mode"],
+): Promise<AssistantChatResponse> {
+  const effective = await getEffectivePermissions(createServiceRoleClient(), profile.id, profile);
+  const viewer = { permissions: effective.permissions, isSuperAdmin: effective.isSuperAdmin };
+  const results = retrieveSops(message, viewer, { limit: 3 });
+
+  const suggestedActions: AssistantChatResponse["suggestedActions"] = [
+    { label: "Open operations manual", href: "/admin/manual", type: "navigation", priority: "medium" },
+  ];
+
+  if (results.length === 0) {
+    return {
+      answer: formatNoSopMatch(),
+      suggestedActions,
+      relatedLinks: [{ label: "Operations manual", href: "/admin/manual" }],
+      safetyNotes: [ASSISTANT_DISCLAIMER, ...ASSISTANT_SAFETY_NOTES],
+      contextUsed: ["adminSop"],
+      mode: resolvedMode,
+      provider: "fallback",
+    };
+  }
+
+  const top = results[0];
+  return {
+    answer: formatSopForAssistant(top.sop, top.locked),
+    suggestedActions,
+    relatedLinks: results.map((r) => ({ label: `SOP ${r.sop.id} — ${r.sop.title}`, href: sopHref(r.sop) })),
+    safetyNotes: [ASSISTANT_DISCLAIMER, ...ASSISTANT_SAFETY_NOTES],
+    contextUsed: ["adminSop"],
+    mode: resolvedMode,
+    provider: "fallback",
+  };
+}
+
 export async function loadAssistantContextForProfile(
   profile: Profile,
   supabase: SupabaseClient<Database>,
@@ -276,6 +321,13 @@ export async function runAssistantChat(input: {
 
   if (input.profile.role === "founder" && resolvedMode === "learning") {
     return runLearningMode(input.profile, input.supabase, input.request);
+  }
+
+  if (
+    (input.profile.role === "admin" || input.profile.role === "analyst") &&
+    isAdminSopIntent(message)
+  ) {
+    return runAdminSopMode(input.profile, message, resolvedMode);
   }
 
   const nbaRole = nbaRoleForProfile(input.profile.role);
