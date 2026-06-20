@@ -3,11 +3,13 @@ import { CalendarWorkspace } from "@/components/calendar/CalendarWorkspace";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
+import { assertFeatureEnabled } from "@/lib/feature-controls/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function FounderCalendarPage() {
   const profile = await requireRole(["founder"]);
+  await assertFeatureEnabled("founder", "calendar", "/founder/dashboard");
   const supabase = await createServerSupabaseClient();
   const status = await getGoogleConnectionStatus(supabase, profile.id);
 

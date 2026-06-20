@@ -181,6 +181,23 @@ export function WorkspaceSidebar({
     if (!key) return label;
     try { return t(key as Parameters<typeof t>[0]); } catch { return label; }
   }
+  // Admin-controlled feature visibility — hrefs to hide for this user's role.
+  const [disabledHrefs, setDisabledHrefs] = useState<string[]>([]);
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const res = await fetch("/api/feature-controls");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (active) setDisabledHrefs(data.disabledHrefs ?? []);
+      } catch {
+        // ignore — show everything
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
   const canShowNavItem = useMemo(() => {
     return (item: WorkspaceNavItem) => {
       if (workspace !== "admin") return true;
@@ -192,8 +209,22 @@ export function WorkspaceSidebar({
   }, [adminNav, workspace]);
 
   const items = useMemo(() => {
-    return getWorkspaceNav(workspace).filter(canShowNavItem);
-  }, [canShowNavItem, workspace]);
+    const hidden = new Set(disabledHrefs);
+    return getWorkspaceNav(workspace)
+      .filter(canShowNavItem)
+      .map((item) => {
+        if (item.children?.length) {
+          return { ...item, children: item.children.filter((c) => !hidden.has(c.href)) };
+        }
+        return item;
+      })
+      .filter((item) => {
+        // Drop leaf items whose href is hidden, and groups whose children are all hidden.
+        if (item.children?.length === 0) return false;
+        if (!item.children?.length && hidden.has(item.href)) return false;
+        return true;
+      });
+  }, [canShowNavItem, workspace, disabledHrefs]);
 
   const adminSections = useMemo(() => {
     if (workspace !== "admin") return null;
