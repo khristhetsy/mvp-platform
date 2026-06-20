@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 /** GET — full matrix (every audience×feature) with defaults filled in. */
 export async function GET() {
   const auth = await requirePermissionApi("manage_settings");
-  if ("error" in auth) return auth.error;
+  if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const flags = await loadFeatureFlags(auth.supabase);
   const matrix: Record<string, boolean> = {};
@@ -40,7 +40,7 @@ const putSchema = z.object({
 
 export async function PUT(req: NextRequest): Promise<Response> {
   const auth = await requirePermissionApi("manage_settings");
-  if ("error" in auth) return auth.error;
+  if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const parsed = putSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
