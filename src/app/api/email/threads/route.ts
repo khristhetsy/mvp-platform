@@ -26,10 +26,17 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
   }
 
-  const thread = await composeThread(
-    auth.supabase,
-    { id: auth.profile.id, email: auth.profile.email, name: auth.profile.full_name },
-    parsed.data,
-  );
-  return NextResponse.json({ thread });
+  try {
+    const thread = await composeThread(
+      auth.supabase,
+      { id: auth.profile.id, email: auth.profile.email, name: auth.profile.full_name },
+      parsed.data,
+    );
+    return NextResponse.json({ thread });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Unable to send message." },
+      { status: 500 },
+    );
+  }
 }

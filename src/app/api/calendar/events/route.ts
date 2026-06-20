@@ -45,10 +45,17 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
   }
 
-  const event = await createEvent(auth.supabase, auth.profile.id, {
-    ...parsed.data,
-    description: parsed.data.description ?? null,
-    location: parsed.data.location ?? null,
-  });
-  return NextResponse.json({ event });
+  try {
+    const event = await createEvent(auth.supabase, auth.profile.id, {
+      ...parsed.data,
+      description: parsed.data.description ?? null,
+      location: parsed.data.location ?? null,
+    });
+    return NextResponse.json({ event });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Unable to create event." },
+      { status: 500 },
+    );
+  }
 }

@@ -35,6 +35,13 @@ export async function PUT(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: "Each rule's endMinute must be after startMinute." }, { status: 400 });
   }
 
-  const settings = await saveAvailability(auth.supabase, auth.profile.id, parsed.data);
-  return NextResponse.json({ settings });
+  try {
+    const settings = await saveAvailability(auth.supabase, auth.profile.id, parsed.data);
+    return NextResponse.json({ settings });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Unable to save availability." },
+      { status: 500 },
+    );
+  }
 }

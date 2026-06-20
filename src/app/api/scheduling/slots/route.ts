@@ -28,6 +28,13 @@ export async function GET(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: "Range too large (max 60 days)." }, { status: 400 });
   }
 
-  const slots = await computeHostSlots(host, from, to);
-  return NextResponse.json({ slots });
+  try {
+    const slots = await computeHostSlots(host, from, to);
+    return NextResponse.json({ slots });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Unable to load availability." },
+      { status: 500 },
+    );
+  }
 }
