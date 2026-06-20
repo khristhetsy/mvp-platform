@@ -31,6 +31,7 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
   const [timezone, setTimezone] = useState(LOCAL_TZ);
   const [slotMinutes, setSlotMinutes] = useState(30);
   const [bufferMinutes, setBufferMinutes] = useState(0);
+  const [meetingTitle, setMeetingTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -63,6 +64,7 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
         setTimezone(s.timezone || LOCAL_TZ);
         setSlotMinutes(s.slotMinutes ?? 30);
         setBufferMinutes(s.bufferMinutes ?? 0);
+        setMeetingTitle(s.meetingTitle ?? "");
       }
     } finally {
       setLoading(false);
@@ -83,7 +85,7 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
       const res = await fetch("/api/scheduling/availability", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ timezone, slotMinutes, bufferMinutes, weeklyRules }),
+        body: JSON.stringify({ timezone, slotMinutes, bufferMinutes, weeklyRules, meetingTitle }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -96,7 +98,7 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
     } finally {
       setSaving(false);
     }
-  }, [days, timezone, slotMinutes, bufferMinutes]);
+  }, [days, timezone, slotMinutes, bufferMinutes, meetingTitle]);
 
   const setDay = (i: number, patch: Partial<DayState>) =>
     setDays((prev) => prev.map((d, idx) => (idx === i ? { ...d, ...patch } : d)));
@@ -136,6 +138,16 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
       ) : null}
 
       <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
+        <label className="mb-4 block text-sm">
+          <span className="mb-1 block text-xs font-medium text-slate-500">Meeting name</span>
+          <input
+            value={meetingTitle}
+            onChange={(e) => setMeetingTitle(e.target.value)}
+            placeholder={`Meeting with you (e.g. "ICFO intro call")`}
+            className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-1.5 text-sm"
+          />
+          <span className="mt-1 block text-[11px] text-slate-400">Shown on your booking page. Leave blank to use a default.</span>
+        </label>
         <div className="mb-4 flex flex-wrap gap-4">
           <label className="text-sm">
             <span className="mb-1 block text-xs font-medium text-slate-500">Timezone</span>

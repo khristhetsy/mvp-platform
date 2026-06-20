@@ -25,7 +25,8 @@ function initials(name: string): string {
   return name.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase() ?? "").join("") || "?";
 }
 
-export function BookingClient({ hostId, hostName }: { hostId: string; hostName: string }) {
+export function BookingClient({ hostId, hostName, meetingTitle }: { hostId: string; hostName: string; meetingTitle?: string }) {
+  const title = meetingTitle?.trim() || `Meeting with ${hostName}`;
   const [anchor, setAnchor] = useState(() => new Date());
   const [slots, setSlots] = useState<TimeInterval[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,7 +135,7 @@ export function BookingClient({ hostId, hostName }: { hostId: string; hostName: 
           <CapitalOSLogo height={24} />
           <div className="mt-5 mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#E6F1FB] text-sm font-semibold text-[#0C447C]">{initials(hostName)}</div>
           <p className="text-xs text-slate-500">{hostName}</p>
-          <p className="mb-3 text-lg font-semibold text-slate-950">Meeting with {hostName}</p>
+          <p className="mb-3 text-lg font-semibold text-slate-950">{title}</p>
           <p className="mb-1.5 flex items-center gap-1.5 text-xs text-slate-600"><Clock className="h-4 w-4 text-slate-400" /> {durationMin} min</p>
           <p className="flex items-start gap-1.5 text-xs text-slate-600"><Video className="mt-0.5 h-4 w-4 text-slate-400" /> Google Meet link added on confirmation</p>
         </div>

@@ -21,6 +21,7 @@ const putSchema = z.object({
   slotMinutes: z.number().int().min(5).max(480),
   bufferMinutes: z.number().int().min(0).max(240),
   weeklyRules: z.array(ruleSchema).max(50),
+  meetingTitle: z.string().max(120).default(""),
 });
 
 export async function PUT(req: NextRequest): Promise<Response> {

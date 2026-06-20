@@ -20,6 +20,8 @@ export interface AvailabilitySettings {
   slotMinutes: number;
   bufferMinutes: number;
   weeklyRules: WeeklyRule[];
+  /** Custom meeting name shown on the booking page. */
+  meetingTitle: string;
 }
 
 /** Engine config: settings resolved to a concrete UTC offset for the range. */
@@ -56,6 +58,7 @@ export const DEFAULT_AVAILABILITY: AvailabilitySettings = {
   timezone: "UTC",
   slotMinutes: 30,
   bufferMinutes: 0,
+  meetingTitle: "",
   // Mon–Fri, 9:00–17:00 local.
   weeklyRules: [1, 2, 3, 4, 5].map((weekday) => ({
     weekday,

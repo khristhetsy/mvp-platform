@@ -17,6 +17,7 @@ type AvailabilityRow = {
   slot_minutes: number | null;
   buffer_minutes: number | null;
   weekly_rules: WeeklyRule[] | null;
+  meeting_title: string | null;
 };
 
 function rowToSettings(row: AvailabilityRow | null): AvailabilitySettings {
@@ -26,6 +27,7 @@ function rowToSettings(row: AvailabilityRow | null): AvailabilitySettings {
     slotMinutes: row.slot_minutes ?? DEFAULT_AVAILABILITY.slotMinutes,
     bufferMinutes: row.buffer_minutes ?? DEFAULT_AVAILABILITY.bufferMinutes,
     weeklyRules: Array.isArray(row.weekly_rules) ? row.weekly_rules : DEFAULT_AVAILABILITY.weeklyRules,
+    meetingTitle: row.meeting_title ?? "",
   };
 }
 
@@ -35,7 +37,7 @@ export async function loadAvailability(
 ): Promise<AvailabilitySettings> {
   const { data } = await raw(supabase)
     .from("scheduling_availability")
-    .select("timezone, slot_minutes, buffer_minutes, weekly_rules")
+    .select("timezone, slot_minutes, buffer_minutes, weekly_rules, meeting_title")
     .eq("profile_id", profileId)
     .maybeSingle();
   return rowToSettings(data as AvailabilityRow | null);
@@ -56,6 +58,7 @@ export async function saveAvailability(
         slot_minutes: settings.slotMinutes,
         buffer_minutes: settings.bufferMinutes,
         weekly_rules: settings.weeklyRules,
+        meeting_title: settings.meetingTitle,
         updated_at: now,
       },
       { onConflict: "profile_id" },

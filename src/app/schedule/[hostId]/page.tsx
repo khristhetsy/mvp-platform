@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { loadAvailability } from "@/lib/scheduling/store";
 import { BookingClient } from "@/components/calendar/BookingClient";
 
 export const dynamic = "force-dynamic";
@@ -22,10 +23,11 @@ export default async function BookingPage({ params }: Props) {
     redirect("/");
   }
   const hostName = host.full_name ?? host.email ?? "this member";
+  const availability = await loadAvailability(admin, hostId);
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
-      <BookingClient hostId={hostId} hostName={hostName} />
+    <div className="mx-auto max-w-3xl px-4 py-10">
+      <BookingClient hostId={hostId} hostName={hostName} meetingTitle={availability.meetingTitle} />
     </div>
   );
 }
