@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
-import { getThread, replyToThread, markThreadRead, deleteThread } from "@/lib/email/inbox";
+import { getThread, replyToThread, markThreadRead, deleteThread, setThreadUnread } from "@/lib/email/inbox";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -40,6 +40,21 @@ export async function POST(req: NextRequest, ctx: RouteContext): Promise<Respons
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Reply failed." }, { status: 500 });
   }
+}
+
+const patchSchema = z.object({ unread: z.boolean() });
+
+export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<Response> {
+  const auth = await requireApiProfile();
+  if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await ctx.params;
+  const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
+  await setThreadUnread(auth.supabase, auth.profile.id, id, parsed.data.unread);
+  return NextResponse.json({ success: true });
 }
 
 export async function DELETE(_req: NextRequest, ctx: RouteContext): Promise<Response> {

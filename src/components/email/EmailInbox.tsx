@@ -1,42 +1,32 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Mail, Send, Plus, X, RefreshCw, Trash2 } from "lucide-react";
-import type { EmailThread, EmailMessage } from "@/lib/email/inbox";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Mail, Send, Plus, X, RefreshCw, Trash2, MailOpen, ArrowLeft, Search } from "lucide-react";
+import type { ThreadListItem, EmailMessage } from "@/lib/email/inbox";
 
-function initials(name: string | null, email: string): string {
-  const base = name ?? email;
-  return base.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("");
-}
 function when(ts: string): string {
   const d = new Date(ts);
   const today = new Date();
   if (d.toDateString() === today.toDateString()) return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  if (d.getFullYear() === today.getFullYear()) return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" });
 }
 
+type ActiveThread = { id: string; subject: string | null; contact_email: string; contact_name: string | null };
+
 export function EmailInbox() {
-  const [threads, setThreads] = useState<EmailThread[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [messages, setMessages] = useState<EmailMessage[]>([]);
-  const [activeThread, setActiveThread] = useState<EmailThread | null>(null);
+  const [threads, setThreads] = useState<ThreadListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [reply, setReply] = useState("");
-  const [sending, setSending] = useState(false);
-  const [composeOpen, setComposeOpen] = useState(false);
-  const [compose, setCompose] = useState({ to: "", subject: "", body: "" });
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  const filteredThreads = threads.filter((t) => {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      (t.contact_name ?? "").toLowerCase().includes(q) ||
-      t.contact_email.toLowerCase().includes(q) ||
-      (t.subject ?? "").toLowerCase().includes(q)
-    );
-  });
+  const [active, setActive] = useState<ActiveThread | null>(null);
+  const [messages, setMessages] = useState<EmailMessage[]>([]);
+  const [reply, setReply] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [compose, setCompose] = useState({ to: "", subject: "", body: "" });
 
   const loadThreads = useCallback(async () => {
     setLoading(true);
@@ -55,8 +45,7 @@ export function EmailInbox() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void loadThreads(); }, [loadThreads]);
 
-  // Deep link: /inbox?to=email&subject=... opens compose prefilled (used by CRM
-  // "Email" buttons). Read once on mount from the URL.
+  // Deep link: /inbox?to=email&subject=... opens compose prefilled.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -68,14 +57,26 @@ export function EmailInbox() {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  const unreadCount = threads.filter((t) => t.unread).length;
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return threads;
+    return threads.filter(
+      (t) =>
+        (t.contact_name ?? "").toLowerCase().includes(q) ||
+        t.contact_email.toLowerCase().includes(q) ||
+        (t.subject ?? "").toLowerCase().includes(q) ||
+        (t.snippet ?? "").toLowerCase().includes(q),
+    );
+  }, [threads, search]);
+
   const openThread = useCallback(async (id: string) => {
-    setSelected(id);
-    setMessages([]);
     try {
       const res = await fetch(`/api/email/threads/${id}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to open.");
-      setActiveThread(data.thread);
+      setActive(data.thread);
       setMessages(data.messages ?? []);
       setThreads((prev) => prev.map((t) => (t.id === id ? { ...t, unread: false } : t)));
     } catch (err) {
@@ -83,11 +84,34 @@ export function EmailInbox() {
     }
   }, []);
 
+  const markUnread = useCallback(async (id: string) => {
+    setThreads((prev) => prev.map((t) => (t.id === id ? { ...t, unread: true } : t)));
+    try {
+      await fetch(`/api/email/threads/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ unread: true }),
+      });
+    } catch {
+      // best-effort
+    }
+  }, []);
+
+  const deleteThread = useCallback(async (id: string) => {
+    setThreads((prev) => prev.filter((t) => t.id !== id));
+    if (active?.id === id) { setActive(null); setMessages([]); }
+    try {
+      await fetch(`/api/email/threads/${id}`, { method: "DELETE" });
+    } catch {
+      void loadThreads();
+    }
+  }, [active, loadThreads]);
+
   const sendReply = useCallback(async () => {
-    if (!selected || !reply.trim()) return;
+    if (!active || !reply.trim()) return;
     setSending(true);
     try {
-      const res = await fetch(`/api/email/threads/${selected}`, {
+      const res = await fetch(`/api/email/threads/${active.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ body: reply }),
@@ -102,21 +126,7 @@ export function EmailInbox() {
     } finally {
       setSending(false);
     }
-  }, [selected, reply, loadThreads]);
-
-  const deleteCurrentThread = useCallback(async () => {
-    if (!selected) return;
-    try {
-      const res = await fetch(`/api/email/threads/${selected}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Delete failed.");
-      setActiveThread(null);
-      setSelected(null);
-      setMessages([]);
-      await loadThreads();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed.");
-    }
-  }, [selected, loadThreads]);
+  }, [active, reply, loadThreads]);
 
   const sendCompose = useCallback(async () => {
     if (!compose.to.trim() || !compose.subject.trim() || !compose.body.trim()) {
@@ -148,97 +158,92 @@ export function EmailInbox() {
       <div className="flex items-center justify-between">
         <h1 className="flex items-center gap-2 text-2xl font-semibold text-slate-950">
           <Mail className="h-6 w-6 text-[var(--gold)]" strokeWidth={1.75} aria-hidden /> Inbox
+          {unreadCount > 0 ? <span className="text-sm font-normal text-slate-400">{unreadCount} unread</span> : null}
         </h1>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => void loadThreads()} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50" aria-label="Refresh"><RefreshCw className="h-4 w-4" /></button>
-          <button type="button" onClick={() => { setError(null); setComposeOpen(true); }} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"><Plus className="h-4 w-4" /> Compose</button>
+          <button type="button" onClick={() => { setError(null); setComposeOpen(true); }} className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"><Plus className="h-4 w-4" /> Compose</button>
         </div>
       </div>
 
       {error && !composeOpen ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-[300px_minmax(0,1fr)]">
-        {/* Thread list */}
+      {active ? (
+        /* ── Conversation view ── */
         <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
-          <div className="border-b border-slate-100 p-2">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search mail…"
-              className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:border-[var(--blue)] focus:outline-none"
-            />
-          </div>
-          {loading ? (
-            <p className="px-4 py-6 text-sm text-slate-400">Loading…</p>
-          ) : threads.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-slate-400">No conversations yet. Compose to start one.</p>
-          ) : filteredThreads.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-slate-400">No conversations match &ldquo;{search}&rdquo;.</p>
-          ) : (
-            <ul className="divide-y divide-slate-100">
-              {filteredThreads.map((t) => (
-                <li key={t.id}>
-                  <button type="button" onClick={() => void openThread(t.id)} className={`flex w-full items-start gap-2.5 px-3 py-2.5 text-left hover:bg-slate-50 ${selected === t.id ? "bg-slate-50" : ""}`}>
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EEEDFE] text-[11px] font-semibold text-[#3C3489]">{initials(t.contact_name, t.contact_email)}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center justify-between gap-2">
-                        <span className={`truncate text-sm ${t.unread ? "font-semibold text-slate-950" : "text-slate-700"}`}>{t.contact_name ?? t.contact_email}</span>
-                        <span className="shrink-0 text-[11px] text-slate-400">{when(t.last_message_at)}</span>
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="truncate text-xs text-slate-500">{t.subject ?? "(no subject)"}</span>
-                        {t.unread ? <span className="h-2 w-2 shrink-0 rounded-full bg-[#534AB7]" /> : null}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Reading pane */}
-        <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
-          {!activeThread ? (
-            <div className="flex h-full min-h-[200px] items-center justify-center px-4 py-10 text-sm text-slate-400">Select a conversation</div>
-          ) : (
-            <div className="flex flex-col">
-              <div className="flex items-start justify-between gap-2 border-b border-slate-100 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-950">{activeThread.subject ?? "(no subject)"}</p>
-                  <p className="truncate text-xs text-slate-500">{activeThread.contact_name ? `${activeThread.contact_name} · ` : ""}{activeThread.contact_email}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void deleteCurrentThread()}
-                  title="Delete conversation"
-                  className="shrink-0 rounded-lg border border-slate-200 bg-white p-1.5 text-slate-400 hover:border-[#F7C1C1] hover:bg-[#FCEBEB] hover:text-[#A32D2D]"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="max-h-[420px] space-y-3 overflow-y-auto px-4 py-3">
-                {messages.map((m) => (
-                  <div key={m.id} className={`rounded-lg border p-3 text-sm ${m.direction === "outbound" ? "border-[#CECBF6] bg-[#EEEDFE]/40" : "border-slate-200 bg-white"}`}>
-                    <div className="mb-1 flex items-center justify-between text-[11px] text-slate-500">
-                      <span className="font-medium text-slate-700">{m.direction === "outbound" ? "You" : (m.from_name ?? m.from_email)}</span>
-                      <span>{new Date(m.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
-                    </div>
-                    <p className="whitespace-pre-wrap text-slate-800">{m.body_text ?? ""}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="border-t border-slate-100 p-3">
-                <textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={3} placeholder="Write a reply…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
-                <div className="mt-2 flex justify-end">
-                  <button type="button" onClick={() => void sendReply()} disabled={sending || !reply.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"><Send className="h-4 w-4" /> {sending ? "Sending…" : "Send"}</button>
-                </div>
+          <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <button type="button" onClick={() => { setActive(null); setMessages([]); }} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Back to inbox"><ArrowLeft className="h-4 w-4" /></button>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-950">{active.subject ?? "(no subject)"}</p>
+                <p className="truncate text-xs text-slate-500">{active.contact_name ? `${active.contact_name} · ` : ""}{active.contact_email}</p>
               </div>
             </div>
-          )}
+            <button type="button" onClick={() => void deleteThread(active.id)} className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-400 hover:border-[#F7C1C1] hover:bg-[#FCEBEB] hover:text-[#A32D2D]" aria-label="Delete conversation"><Trash2 className="h-4 w-4" /></button>
+          </div>
+          <div className="max-h-[440px] space-y-3 overflow-y-auto px-4 py-3">
+            {messages.map((m) => (
+              <div key={m.id} className={`rounded-lg border p-3 text-sm ${m.direction === "outbound" ? "border-[#CECBF6] bg-[#EEEDFE]/40" : "border-slate-200 bg-white"}`}>
+                <div className="mb-1 flex items-center justify-between text-[11px] text-slate-500">
+                  <span className="font-medium text-slate-700">{m.direction === "outbound" ? "You" : (m.from_name ?? m.from_email)}</span>
+                  <span>{new Date(m.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                </div>
+                <p className="whitespace-pre-wrap text-slate-800">{m.body_text ?? ""}</p>
+              </div>
+            ))}
+          </div>
+          <div className="border-t border-slate-100 p-3">
+            <textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={3} placeholder="Reply…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
+            <div className="mt-2 flex justify-end">
+              <button type="button" onClick={() => void sendReply()} disabled={sending || !reply.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"><Send className="h-4 w-4" /> {sending ? "Sending…" : "Send"}</button>
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        /* ── List view ── */
+        <>
+          <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2">
+            <Search className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search mail" className="w-full bg-transparent text-sm focus:outline-none" />
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
+            {loading ? (
+              <p className="px-4 py-8 text-sm text-slate-400">Loading…</p>
+            ) : threads.length === 0 ? (
+              <p className="px-4 py-10 text-center text-sm text-slate-400">No conversations yet. Compose to start one.</p>
+            ) : filtered.length === 0 ? (
+              <p className="px-4 py-10 text-center text-sm text-slate-400">No conversations match &ldquo;{search}&rdquo;.</p>
+            ) : (
+              <ul>
+                {filtered.map((t) => (
+                  <li
+                    key={t.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => void openThread(t.id)}
+                    onKeyDown={(e) => { if (e.key === "Enter") void openThread(t.id); }}
+                    className={`group flex cursor-pointer items-center gap-3 border-b border-slate-100 px-4 py-2.5 last:border-0 ${t.unread ? "bg-white hover:bg-slate-50" : "bg-slate-50/40 hover:bg-slate-50"}`}
+                  >
+                    <span className={`w-44 shrink-0 truncate text-sm ${t.unread ? "font-semibold text-slate-950" : "text-slate-600"}`}>
+                      {t.contact_name ?? t.contact_email}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm">
+                      <span className={t.unread ? "font-semibold text-slate-950" : "text-slate-700"}>{t.subject ?? "(no subject)"}</span>
+                      {t.snippet ? <span className="text-slate-400"> — {t.snippet}</span> : null}
+                    </span>
+                    <span className="hidden shrink-0 items-center gap-2 group-hover:flex">
+                      <button type="button" title="Mark unread" onClick={(e) => { e.stopPropagation(); void markUnread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700"><MailOpen className="h-4 w-4" /></button>
+                      <button type="button" title="Delete" onClick={(e) => { e.stopPropagation(); void deleteThread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#A32D2D]"><Trash2 className="h-4 w-4" /></button>
+                    </span>
+                    <span className={`w-16 shrink-0 text-right text-xs group-hover:hidden ${t.unread ? "font-semibold text-slate-900" : "text-slate-400"}`}>{when(t.last_message_at)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Compose modal */}
       {composeOpen ? (

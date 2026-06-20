@@ -57,17 +57,49 @@ function htmlFromText(text: string): string {
   return escaped.split(/\n{2,}/).map((p) => `<p>${p.replace(/\n/g, "<br/>")}</p>`).join("");
 }
 
+export type ThreadListItem = EmailThread & { snippet: string | null };
+
 export async function listThreads(
   supabase: SupabaseClient<Database>,
   ownerId: string,
-): Promise<EmailThread[]> {
+): Promise<ThreadListItem[]> {
   const { data } = await raw(supabase)
     .from("email_threads")
     .select(THREAD_COLS)
     .eq("owner_id", ownerId)
     .order("last_message_at", { ascending: false })
     .limit(200);
-  return (data ?? []) as EmailThread[];
+  const threads = (data ?? []) as EmailThread[];
+  if (threads.length === 0) return [];
+
+  // Latest message body per thread → preview snippet (single query).
+  const ids = threads.map((t) => t.id);
+  const { data: msgs } = await raw(supabase)
+    .from("email_messages")
+    .select("thread_id, body_text, created_at")
+    .in("thread_id", ids)
+    .order("created_at", { ascending: false });
+
+  const snippetByThread = new Map<string, string>();
+  for (const m of (msgs ?? []) as Array<{ thread_id: string; body_text: string | null }>) {
+    if (!snippetByThread.has(m.thread_id) && m.body_text) {
+      snippetByThread.set(m.thread_id, m.body_text.replace(/\s+/g, " ").trim().slice(0, 140));
+    }
+  }
+  return threads.map((t) => ({ ...t, snippet: snippetByThread.get(t.id) ?? null }));
+}
+
+export async function setThreadUnread(
+  supabase: SupabaseClient<Database>,
+  ownerId: string,
+  threadId: string,
+  unread: boolean,
+): Promise<void> {
+  await raw(supabase)
+    .from("email_threads")
+    .update({ unread, updated_at: new Date().toISOString() })
+    .eq("id", threadId)
+    .eq("owner_id", ownerId);
 }
 
 export async function getThread(
