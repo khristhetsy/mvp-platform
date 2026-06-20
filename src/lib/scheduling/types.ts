@@ -70,6 +70,7 @@ export const DEFAULT_AVAILABILITY: AvailabilitySettings = {
   slotMinutes: 30,
   bufferMinutes: 0,
   meetingTitle: "",
+  questions: [],
   // Mon–Fri, 9:00–17:00 local.
   weeklyRules: [1, 2, 3, 4, 5].map((weekday) => ({
     weekday,
