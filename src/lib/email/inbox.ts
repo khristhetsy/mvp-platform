@@ -58,17 +58,27 @@ function htmlFromText(text: string): string {
 }
 
 export type ThreadListItem = EmailThread & { snippet: string | null };
+export type MailFolder = "inbox" | "sent" | "all" | "trash";
+
+export function isMailFolder(v: string): v is MailFolder {
+  return v === "inbox" || v === "sent" || v === "all" || v === "trash";
+}
 
 export async function listThreads(
   supabase: SupabaseClient<Database>,
   ownerId: string,
+  folder: MailFolder = "inbox",
 ): Promise<ThreadListItem[]> {
-  const { data } = await raw(supabase)
-    .from("email_threads")
-    .select(THREAD_COLS)
-    .eq("owner_id", ownerId)
-    .order("last_message_at", { ascending: false })
-    .limit(200);
+  let query = raw(supabase).from("email_threads").select(THREAD_COLS).eq("owner_id", ownerId);
+  if (folder === "trash") {
+    query = query.not("trashed_at", "is", null);
+  } else {
+    query = query.is("trashed_at", null);
+    // Inbox = received or brand-new; Sent = you sent last. All = both.
+    if (folder === "inbox") query = query.or("last_direction.is.null,last_direction.eq.inbound");
+    else if (folder === "sent") query = query.eq("last_direction", "outbound");
+  }
+  const { data } = await query.order("last_message_at", { ascending: false }).limit(200);
   const threads = (data ?? []) as EmailThread[];
   if (threads.length === 0) return [];
 
@@ -217,8 +227,35 @@ export async function countUnreadThreads(
     .from("email_threads")
     .select("id", { count: "exact", head: true })
     .eq("owner_id", ownerId)
-    .eq("unread", true);
+    .eq("unread", true)
+    .is("trashed_at", null);
   return count ?? 0;
+}
+
+/** Move a thread to Trash (soft delete). Reversible via restoreThread. */
+export async function trashThread(
+  supabase: SupabaseClient<Database>,
+  ownerId: string,
+  threadId: string,
+): Promise<void> {
+  await raw(supabase)
+    .from("email_threads")
+    .update({ trashed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("id", threadId)
+    .eq("owner_id", ownerId);
+}
+
+/** Restore a thread out of Trash. */
+export async function restoreThread(
+  supabase: SupabaseClient<Database>,
+  ownerId: string,
+  threadId: string,
+): Promise<void> {
+  await raw(supabase)
+    .from("email_threads")
+    .update({ trashed_at: null, updated_at: new Date().toISOString() })
+    .eq("id", threadId)
+    .eq("owner_id", ownerId);
 }
 
 /**

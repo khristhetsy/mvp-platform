@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
-import { getThread, replyToThread, markThreadRead, deleteThread, setThreadUnread } from "@/lib/email/inbox";
+import { getThread, replyToThread, markThreadRead, deleteThread, setThreadUnread, trashThread, restoreThread } from "@/lib/email/inbox";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest, ctx: RouteContext): Promise<Respons
   }
 }
 
-const patchSchema = z.object({ unread: z.boolean() });
+const patchSchema = z.object({ unread: z.boolean().optional(), trashed: z.boolean().optional() });
 
 export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<Response> {
   const auth = await requireApiProfile();
@@ -53,17 +53,24 @@ export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<Respon
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
-  await setThreadUnread(auth.supabase, auth.profile.id, id, parsed.data.unread);
+  if (parsed.data.unread !== undefined) {
+    await setThreadUnread(auth.supabase, auth.profile.id, id, parsed.data.unread);
+  }
+  if (parsed.data.trashed === true) await trashThread(auth.supabase, auth.profile.id, id);
+  if (parsed.data.trashed === false) await restoreThread(auth.supabase, auth.profile.id, id);
   return NextResponse.json({ success: true });
 }
 
-export async function DELETE(_req: NextRequest, ctx: RouteContext): Promise<Response> {
+// DELETE moves to Trash (soft) by default; ?purge=true permanently deletes.
+export async function DELETE(req: NextRequest, ctx: RouteContext): Promise<Response> {
   const auth = await requireApiProfile();
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await ctx.params;
+  const purge = req.nextUrl.searchParams.get("purge") === "true";
   try {
-    await deleteThread(auth.profile.id, id);
+    if (purge) await deleteThread(auth.profile.id, id);
+    else await trashThread(auth.supabase, auth.profile.id, id);
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Delete failed." }, { status: 500 });

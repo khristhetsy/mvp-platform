@@ -1,8 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Mail, Send, Plus, X, RefreshCw, Trash2, MailOpen, ArrowLeft, Search } from "lucide-react";
-import type { ThreadListItem, EmailMessage } from "@/lib/email/inbox";
+import { Mail, Send, Plus, X, RefreshCw, Trash2, MailOpen, ArrowLeft, Search, Inbox as InboxIcon, FileText, Layers, AlertTriangle, RotateCcw } from "lucide-react";
+import type { ThreadListItem, EmailMessage, MailFolder } from "@/lib/email/inbox";
+
+const FOLDERS: Array<{ id: MailFolder | "drafts" | "spam"; label: string; icon: typeof Mail; soon?: boolean }> = [
+  { id: "inbox", label: "Inbox", icon: InboxIcon },
+  { id: "sent", label: "Sent", icon: Send },
+  { id: "drafts", label: "Drafts", icon: FileText, soon: true },
+  { id: "all", label: "All Mail", icon: Layers },
+  { id: "spam", label: "Spam", icon: AlertTriangle, soon: true },
+  { id: "trash", label: "Trash", icon: Trash2 },
+];
 
 function when(ts: string): string {
   const d = new Date(ts);
@@ -19,6 +28,7 @@ export function EmailInbox() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [folder, setFolder] = useState<MailFolder>("inbox");
 
   const [active, setActive] = useState<ActiveThread | null>(null);
   const [messages, setMessages] = useState<EmailMessage[]>([]);
@@ -31,7 +41,7 @@ export function EmailInbox() {
   const loadThreads = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/email/threads");
+      const res = await fetch(`/api/email/threads?folder=${folder}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to load.");
       setThreads(data.threads ?? []);
@@ -40,7 +50,7 @@ export function EmailInbox() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [folder]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void loadThreads(); }, [loadThreads]);
@@ -107,6 +117,33 @@ export function EmailInbox() {
     }
   }, [active, loadThreads]);
 
+  const purgeThread = useCallback(async (id: string) => {
+    setThreads((prev) => prev.filter((t) => t.id !== id));
+    if (active?.id === id) { setActive(null); setMessages([]); }
+    try {
+      await fetch(`/api/email/threads/${id}?purge=true`, { method: "DELETE" });
+    } catch {
+      void loadThreads();
+    }
+  }, [active, loadThreads]);
+
+  const restoreThread = useCallback(async (id: string) => {
+    setThreads((prev) => prev.filter((t) => t.id !== id));
+    if (active?.id === id) { setActive(null); setMessages([]); }
+    try {
+      await fetch(`/api/email/threads/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trashed: false }) });
+    } catch {
+      void loadThreads();
+    }
+  }, [active, loadThreads]);
+
+  const selectFolder = useCallback((f: MailFolder) => {
+    setFolder(f);
+    setActive(null);
+    setMessages([]);
+    setSearch("");
+  }, []);
+
   const sendReply = useCallback(async () => {
     if (!active || !reply.trim()) return;
     setSending(true);
@@ -168,6 +205,31 @@ export function EmailInbox() {
 
       {error && !composeOpen ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
 
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[156px_minmax(0,1fr)]">
+        <aside>
+          <nav className="space-y-0.5">
+            {FOLDERS.map((f) => {
+              const Icon = f.icon;
+              const isActive = !f.soon && folder === f.id;
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  disabled={f.soon}
+                  onClick={() => { if (!f.soon) selectFolder(f.id as MailFolder); }}
+                  className={`flex w-full items-center gap-2.5 rounded-full px-3 py-2 text-sm ${isActive ? "bg-[#E6F1FB] font-medium text-[#0C447C]" : f.soon ? "cursor-not-allowed text-slate-300" : "text-slate-600 hover:bg-slate-100"}`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                  <span className="flex-1 text-left">{f.label}</span>
+                  {f.id === "inbox" && unreadCount > 0 ? <span className="text-[11px]">{unreadCount}</span> : null}
+                  {f.soon ? <span className="rounded border border-slate-200 px-1 text-[9px]">soon</span> : null}
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
+
+        <div className="min-w-0 space-y-3">
       {active ? (
         /* ── Conversation view ── */
         <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
@@ -211,7 +273,7 @@ export function EmailInbox() {
             {loading ? (
               <p className="px-4 py-8 text-sm text-slate-400">Loading…</p>
             ) : threads.length === 0 ? (
-              <p className="px-4 py-10 text-center text-sm text-slate-400">No conversations yet. Compose to start one.</p>
+              <p className="px-4 py-10 text-center text-sm text-slate-400">{folder === "trash" ? "Trash is empty." : folder === "sent" ? "No sent mail yet." : "No conversations yet. Compose to start one."}</p>
             ) : filtered.length === 0 ? (
               <p className="px-4 py-10 text-center text-sm text-slate-400">No conversations match &ldquo;{search}&rdquo;.</p>
             ) : (
@@ -233,8 +295,17 @@ export function EmailInbox() {
                       {t.snippet ? <span className="text-slate-400"> — {t.snippet}</span> : null}
                     </span>
                     <span className="hidden shrink-0 items-center gap-2 group-hover:flex">
-                      <button type="button" title="Mark unread" onClick={(e) => { e.stopPropagation(); void markUnread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700"><MailOpen className="h-4 w-4" /></button>
-                      <button type="button" title="Delete" onClick={(e) => { e.stopPropagation(); void deleteThread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#A32D2D]"><Trash2 className="h-4 w-4" /></button>
+                      {folder === "trash" ? (
+                        <>
+                          <button type="button" title="Restore" onClick={(e) => { e.stopPropagation(); void restoreThread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#185FA5]"><RotateCcw className="h-4 w-4" /></button>
+                          <button type="button" title="Delete forever" onClick={(e) => { e.stopPropagation(); void purgeThread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#A32D2D]"><Trash2 className="h-4 w-4" /></button>
+                        </>
+                      ) : (
+                        <>
+                          <button type="button" title="Mark unread" onClick={(e) => { e.stopPropagation(); void markUnread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700"><MailOpen className="h-4 w-4" /></button>
+                          <button type="button" title="Move to Trash" onClick={(e) => { e.stopPropagation(); void deleteThread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#A32D2D]"><Trash2 className="h-4 w-4" /></button>
+                        </>
+                      )}
                     </span>
                     <span className={`w-16 shrink-0 text-right text-xs group-hover:hidden ${t.unread ? "font-semibold text-slate-900" : "text-slate-400"}`}>{when(t.last_message_at)}</span>
                   </li>
@@ -244,6 +315,8 @@ export function EmailInbox() {
           </div>
         </>
       )}
+        </div>
+      </div>
 
       {/* Compose modal */}
       {composeOpen ? (

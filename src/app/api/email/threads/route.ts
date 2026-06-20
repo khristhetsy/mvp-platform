@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
-import { listThreads, composeThread } from "@/lib/email/inbox";
+import { listThreads, composeThread, isMailFolder } from "@/lib/email/inbox";
 
-export async function GET(): Promise<Response> {
+export async function GET(req: NextRequest): Promise<Response> {
   const auth = await requireApiProfile();
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const threads = await listThreads(auth.supabase, auth.profile.id);
+  const folderParam = req.nextUrl.searchParams.get("folder") ?? "inbox";
+  const folder = isMailFolder(folderParam) ? folderParam : "inbox";
+  const threads = await listThreads(auth.supabase, auth.profile.id, folder);
   return NextResponse.json({ threads });
 }
 
