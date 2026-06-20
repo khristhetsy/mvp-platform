@@ -193,6 +193,63 @@ export async function createAllDayCalendarEvent(
   return { eventId: payload.id };
 }
 
+export type GoogleEventLite = {
+  id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+  all_day: boolean;
+  meet_url: string | null;
+};
+
+type GoogleApiEvent = {
+  id?: string;
+  summary?: string;
+  hangoutLink?: string;
+  start?: { dateTime?: string; date?: string };
+  end?: { dateTime?: string; date?: string };
+};
+
+/** Read the user's primary-calendar events between timeMin/timeMax (read-only). */
+export async function listGoogleEvents(
+  accessToken: string,
+  timeMin: string,
+  timeMax: string,
+): Promise<GoogleEventLite[]> {
+  const url = new URL(CALENDAR_EVENTS_URL);
+  url.searchParams.set("timeMin", timeMin);
+  url.searchParams.set("timeMax", timeMax);
+  url.searchParams.set("singleEvents", "true");
+  url.searchParams.set("orderBy", "startTime");
+  url.searchParams.set("maxResults", "250");
+
+  const response = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  const payload = (await response.json().catch(() => null)) as
+    | { items?: GoogleApiEvent[]; error?: { message?: string } }
+    | null;
+  if (!response.ok) {
+    throw new Error(payload?.error?.message ?? "Unable to list Google events.");
+  }
+
+  const out: GoogleEventLite[] = [];
+  for (const it of payload?.items ?? []) {
+    const start = it.start?.dateTime ?? (it.start?.date ? `${it.start.date}T00:00:00.000Z` : null);
+    const end = it.end?.dateTime ?? (it.end?.date ? `${it.end.date}T00:00:00.000Z` : null);
+    if (!it.id || !start || !end) continue;
+    out.push({
+      id: it.id,
+      title: it.summary ?? "(no title)",
+      start_time: start,
+      end_time: end,
+      all_day: Boolean(it.start?.date && !it.start?.dateTime),
+      meet_url: it.hangoutLink ?? null,
+    });
+  }
+  return out;
+}
+
 export async function cancelCalendarEvent(eventId: string, accessToken: string): Promise<void> {
   const url = `${CALENDAR_EVENTS_URL}/${encodeURIComponent(eventId)}?sendUpdates=all`;
 

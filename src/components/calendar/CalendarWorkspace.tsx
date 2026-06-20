@@ -3,6 +3,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Video, X, Trash2, MapPin } from "lucide-react";
 import type { CalendarEventRecord } from "@/lib/scheduling/types";
+import type { GoogleEventLite } from "@/lib/integrations/google-calendar";
+
+/** Unified item for rendering: local events are editable, Google overlay is read-only. */
+type DisplayEvent = {
+  id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+  meet_url: string | null;
+  editable: boolean;
+  record: CalendarEventRecord | null;
+};
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const LOCAL_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -75,6 +87,7 @@ function formFromEvent(e: CalendarEventRecord): FormState {
 export function CalendarWorkspace({ googleConnected = false }: { googleConnected?: boolean }) {
   const [anchor, setAnchor] = useState(() => new Date());
   const [events, setEvents] = useState<CalendarEventRecord[]>([]);
+  const [googleEvents, setGoogleEvents] = useState<GoogleEventLite[]>([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -89,10 +102,21 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
     try {
       const from = grid[0].toISOString();
       const to = new Date(grid[41].getTime() + 86400000).toISOString();
-      const res = await fetch(`/api/calendar/events?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+      const range = `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+      const [res, gRes] = await Promise.all([
+        fetch(`/api/calendar/events?${range}`),
+        fetch(`/api/calendar/google-events?${range}`),
+      ]);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to load events.");
       setEvents(data.events ?? []);
+      // Google overlay is best-effort — never block the local calendar on it.
+      try {
+        const gData = await gRes.json();
+        setGoogleEvents(gRes.ok ? (gData.events ?? []) : []);
+      } catch {
+        setGoogleEvents([]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load.");
     } finally {
@@ -104,9 +128,24 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
 
+  // Merge local (editable) events with the Google overlay (read-only), dropping
+  // Google copies of events we already synced from CapitalOS.
+  const display = useMemo<DisplayEvent[]>(() => {
+    const syncedIds = new Set(events.map((e) => e.external_event_id).filter((id): id is string => Boolean(id)));
+    const local: DisplayEvent[] = events.map((e) => ({
+      id: e.id, title: e.title, start_time: e.start_time, end_time: e.end_time, meet_url: e.meet_url, editable: true, record: e,
+    }));
+    const google: DisplayEvent[] = googleEvents
+      .filter((g) => !syncedIds.has(g.id))
+      .map((g) => ({
+        id: `g:${g.id}`, title: g.title, start_time: g.start_time, end_time: g.end_time, meet_url: g.meet_url, editable: false, record: null,
+      }));
+    return [...local, ...google];
+  }, [events, googleEvents]);
+
   const eventsByDay = useMemo(() => {
-    const map = new Map<string, CalendarEventRecord[]>();
-    for (const e of events) {
+    const map = new Map<string, DisplayEvent[]>();
+    for (const e of display) {
       const key = ymd(new Date(e.start_time));
       const list = map.get(key) ?? [];
       list.push(e);
@@ -114,7 +153,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
     }
     for (const list of map.values()) list.sort((a, b) => a.start_time.localeCompare(b.start_time));
     return map;
-  }, [events]);
+  }, [display]);
 
   const save = useCallback(async () => {
     if (!form) return;
@@ -185,7 +224,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
   const currentMonth = anchor.getMonth();
 
   const nowMs = new Date().getTime();
-  const upcoming = events
+  const upcoming = display
     .filter((e) => new Date(e.end_time).getTime() >= nowMs)
     .sort((a, b) => a.start_time.localeCompare(b.start_time));
 
@@ -251,9 +290,10 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
                       key={e.id}
                       role="button"
                       tabIndex={0}
-                      onClick={(ev) => { ev.stopPropagation(); setForm(formFromEvent(e)); }}
-                      onKeyDown={(ev) => { if (ev.key === "Enter") { ev.stopPropagation(); setForm(formFromEvent(e)); } }}
-                      className="flex items-center gap-1 truncate rounded bg-[#EEEDFE] px-1.5 py-0.5 text-[11px] font-medium text-[#3C3489] hover:bg-[#CECBF6]"
+                      title={e.editable ? undefined : "From Google Calendar (read-only)"}
+                      onClick={(ev) => { ev.stopPropagation(); if (e.editable && e.record) setForm(formFromEvent(e.record)); }}
+                      onKeyDown={(ev) => { if (ev.key === "Enter" && e.editable && e.record) { ev.stopPropagation(); setForm(formFromEvent(e.record)); } }}
+                      className={`flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px] font-medium ${e.editable ? "bg-[#EEEDFE] text-[#3C3489] hover:bg-[#CECBF6]" : "bg-[#E6F1FB] text-[#0C447C] hover:bg-[#B5D4F4]"}`}
                     >
                       {e.meet_url ? <Video className="h-2.5 w-2.5 shrink-0" /> : null}
                       <span className="truncate">{new Date(e.start_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} {e.title}</span>
@@ -274,10 +314,15 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
           <ul className="divide-y divide-slate-100">
             {upcoming.map((e) => (
               <li key={e.id}>
-                <button type="button" onClick={() => setForm(formFromEvent(e))} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50">
+                <button
+                  type="button"
+                  onClick={() => { if (e.editable && e.record) setForm(formFromEvent(e.record)); }}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50"
+                >
                   <span className="w-28 shrink-0 text-xs text-slate-500">{new Date(e.start_time).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
                   <span className="w-20 shrink-0 text-xs font-medium text-slate-700">{new Date(e.start_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
                   <span className="flex-1 truncate text-sm text-slate-900">{e.title}</span>
+                  {!e.editable ? <span className="shrink-0 rounded bg-[#E6F1FB] px-1.5 py-0.5 text-[10px] font-medium text-[#0C447C]">Google</span> : null}
                   {e.meet_url ? <Video className="h-3.5 w-3.5 shrink-0 text-[#534AB7]" aria-label="Has Google Meet" /> : null}
                 </button>
               </li>
