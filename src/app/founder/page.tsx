@@ -2,6 +2,7 @@ import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { TipOfTheDay } from "@/components/tips/TipOfTheDay";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingProgressCard";
 import { FounderRemediationActionPlan } from "@/components/FounderRemediationActionPlan";
@@ -136,6 +137,8 @@ export default async function FounderDashboardPage() {
             </div>
           }
         />
+
+        <TipOfTheDay profileId={profile.id} audience="founder" />
 
         {onboardingProgress ? <FounderOnboardingProgressCard progress={onboardingProgress} /> : null}
 

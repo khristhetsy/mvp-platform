@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { TipOfTheDay } from "@/components/tips/TipOfTheDay";
 import { InvestorOnboardingProgressCard } from "@/components/InvestorOnboardingProgressCard";
 import { investorCompanyLabel, loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
 import { loadInvestorRecommendedMatches } from "@/lib/matching/load-investor-recommendations";
@@ -41,6 +42,8 @@ export default async function InvestorDashboardPage() {
         title="Dashboard"
         description="Opportunity pipeline, watchlist, expressed interest, and relationship activity."
       />
+
+      <TipOfTheDay profileId={profile.id} audience="investor" />
 
       {investorProgress ? <InvestorOnboardingProgressCard progress={investorProgress} /> : null}
 
