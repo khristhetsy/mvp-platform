@@ -168,6 +168,14 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/founder/command-center", label: "Command Center" },
   { href: "/founder/actions", label: "Actions" },
   {
+    href: "/founder/calendar",
+    label: "Calendar",
+    children: [
+      { href: "/founder/calendar", label: "Calendar" },
+      { href: "/founder/schedule", label: "Scheduling" },
+    ],
+  },
+  {
     href: "/founder/readiness",
     label: "Readiness",
     minStage: "qualify",
@@ -268,6 +276,14 @@ export const investorWorkspaceNav: WorkspaceNavItem[] = [
     ],
   },
   { href: "/investor/messages", label: "Messages" },
+  {
+    href: "/investor/calendar",
+    label: "Calendar",
+    children: [
+      { href: "/investor/calendar", label: "Calendar" },
+      { href: "/investor/schedule", label: "Scheduling" },
+    ],
+  },
   { href: "/investor/analytics", label: "Analytics" },
   { href: "/investor/tasks", label: "Tasks" },
   { href: "/notifications", label: "Notifications" },
