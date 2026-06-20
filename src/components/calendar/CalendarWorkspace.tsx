@@ -79,6 +79,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<"month" | "agenda">("month");
 
   const grid = useMemo(() => monthGrid(anchor), [anchor]);
 
@@ -183,6 +184,11 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
   const todayKey = ymd(new Date());
   const currentMonth = anchor.getMonth();
 
+  const nowMs = new Date().getTime();
+  const upcoming = events
+    .filter((e) => new Date(e.end_time).getTime() >= nowMs)
+    .sort((a, b) => a.start_time.localeCompare(b.start_time));
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -199,6 +205,10 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
+          <div className="ml-1 flex items-center gap-0.5 rounded-lg border border-slate-200 p-0.5">
+            <button type="button" onClick={() => setView("month")} className={`rounded-md px-2.5 py-1 text-xs font-medium ${view === "month" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-700"}`}>Month</button>
+            <button type="button" onClick={() => setView("agenda")} className={`rounded-md px-2.5 py-1 text-xs font-medium ${view === "agenda" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-700"}`}>Agenda</button>
+          </div>
         </div>
         <button type="button" onClick={() => setForm(emptyForm(new Date()))} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800">
           <Plus className="h-4 w-4" /> New event
@@ -212,6 +222,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
         </p>
       ) : null}
 
+      {view === "month" ? (
       <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
         <div className="grid grid-cols-7 border-b border-slate-100">
           {WEEKDAYS.map((d) => (
@@ -255,6 +266,26 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
           })}
         </div>
       </div>
+      ) : (
+      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
+        {upcoming.length === 0 ? (
+          <p className="px-4 py-8 text-center text-sm text-slate-500">No upcoming events in this range. Use the month arrows to look further out.</p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {upcoming.map((e) => (
+              <li key={e.id}>
+                <button type="button" onClick={() => setForm(formFromEvent(e))} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50">
+                  <span className="w-28 shrink-0 text-xs text-slate-500">{new Date(e.start_time).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
+                  <span className="w-20 shrink-0 text-xs font-medium text-slate-700">{new Date(e.start_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
+                  <span className="flex-1 truncate text-sm text-slate-900">{e.title}</span>
+                  {e.meet_url ? <Video className="h-3.5 w-3.5 shrink-0 text-[#534AB7]" aria-label="Has Google Meet" /> : null}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      )}
       {loading ? <p className="text-xs text-slate-400">Loading…</p> : null}
 
       {/* Event modal */}
