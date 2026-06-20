@@ -26,6 +26,17 @@ export function EmailInbox() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [compose, setCompose] = useState({ to: "", subject: "", body: "" });
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  const filteredThreads = threads.filter((t) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (t.contact_name ?? "").toLowerCase().includes(q) ||
+      t.contact_email.toLowerCase().includes(q) ||
+      (t.subject ?? "").toLowerCase().includes(q)
+    );
+  });
 
   const loadThreads = useCallback(async () => {
     setLoading(true);
@@ -135,13 +146,24 @@ export function EmailInbox() {
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[300px_minmax(0,1fr)]">
         {/* Thread list */}
         <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
+          <div className="border-b border-slate-100 p-2">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search mail…"
+              className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:border-[var(--blue)] focus:outline-none"
+            />
+          </div>
           {loading ? (
             <p className="px-4 py-6 text-sm text-slate-400">Loading…</p>
           ) : threads.length === 0 ? (
             <p className="px-4 py-6 text-sm text-slate-400">No conversations yet. Compose to start one.</p>
+          ) : filteredThreads.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-slate-400">No conversations match &ldquo;{search}&rdquo;.</p>
           ) : (
             <ul className="divide-y divide-slate-100">
-              {threads.map((t) => (
+              {filteredThreads.map((t) => (
                 <li key={t.id}>
                   <button type="button" onClick={() => void openThread(t.id)} className={`flex w-full items-start gap-2.5 px-3 py-2.5 text-left hover:bg-slate-50 ${selected === t.id ? "bg-slate-50" : ""}`}>
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EEEDFE] text-[11px] font-semibold text-[#3C3489]">{initials(t.contact_name, t.contact_email)}</span>
