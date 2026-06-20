@@ -44,6 +44,19 @@ export function EmailInbox() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void loadThreads(); }, [loadThreads]);
 
+  // Deep link: /inbox?to=email&subject=... opens compose prefilled (used by CRM
+  // "Email" buttons). Read once on mount from the URL.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const to = params.get("to");
+    if (to) {
+      setCompose({ to, subject: params.get("subject") ?? "", body: "" });
+      setComposeOpen(true);
+    }
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   const openThread = useCallback(async (id: string) => {
     setSelected(id);
     setMessages([]);

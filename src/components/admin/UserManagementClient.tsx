@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Users, Trash2, UserMinus, AlertTriangle, X } from "lucide-react";
+import { EmailContactButton } from "@/components/email/EmailContactButton";
 import type { UserRole } from "@/lib/supabase/types";
 
 type DependentItem = { key: string; label: string; count: number };
@@ -378,7 +379,7 @@ export function UserManagementClient() {
                 <div className="w-24 text-xs text-slate-500">{user.last_seen_label}</div>
 
                 {/* Actions */}
-                <div className="flex w-52 shrink-0 items-center justify-end gap-1.5">
+                <div className="flex w-64 shrink-0 items-center justify-end gap-1.5">
                   {isInactive ? (
                     <>
                       <select disabled className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-xs opacity-40">
@@ -444,6 +445,16 @@ export function UserManagementClient() {
                       )}
                     </>
                   )}
+
+                  {/* Email this user — admins legitimately hold every user's email */}
+                  {user.email ? (
+                    <EmailContactButton
+                      email={user.email}
+                      inboxBasePath="/admin/inbox"
+                      label=""
+                      className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-500 hover:bg-slate-50 hover:text-[#185FA5]"
+                    />
+                  ) : null}
 
                   {/* Permanent delete — secondary, behind a guarded modal */}
                   {!user.is_super_admin && (
