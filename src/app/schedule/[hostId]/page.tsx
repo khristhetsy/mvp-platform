@@ -11,10 +11,9 @@ type Props = { params: Promise<{ hostId: string }> };
 export default async function BookingPage({ params }: Props) {
   const { hostId } = await params;
 
+  // Public page — anyone with the link can book (guest booking). If the visitor
+  // happens to be signed in, we prefill their name/email.
   const viewer = await getCurrentUserProfile();
-  if (!viewer) {
-    redirect(`/auth/sign-in?next=/schedule/${hostId}`);
-  }
 
   const admin = createServiceRoleClient();
   const { data } = await admin.from("profiles").select("full_name, email").eq("id", hostId).single();
@@ -27,7 +26,13 @@ export default async function BookingPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
-      <BookingClient hostId={hostId} hostName={hostName} meetingTitle={availability.meetingTitle} />
+      <BookingClient
+        hostId={hostId}
+        hostName={hostName}
+        meetingTitle={availability.meetingTitle}
+        viewerName={viewer?.full_name ?? null}
+        viewerEmail={viewer?.email ?? null}
+      />
     </div>
   );
 }

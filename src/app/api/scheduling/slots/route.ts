@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireApiProfile } from "@/lib/api/auth";
 import { computeHostSlots } from "@/lib/scheduling/store";
 
 const MAX_RANGE_MS = 60 * 24 * 60 * 60 * 1000; // 60 days
 
 /**
  * GET /api/scheduling/slots?host=<profileId>&from=<iso>&to=<iso>
- * Open booking slots for a host. Auth required (any signed-in user may book).
+ * Open booking slots for a host. Public — powers the guest booking page (only
+ * exposes open time slots, not event details).
  */
 export async function GET(req: NextRequest): Promise<Response> {
-  const auth = await requireApiProfile();
-  if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const host = req.nextUrl.searchParams.get("host");
   const from = req.nextUrl.searchParams.get("from");
   const to = req.nextUrl.searchParams.get("to");

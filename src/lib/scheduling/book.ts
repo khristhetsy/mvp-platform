@@ -8,7 +8,8 @@ import type { CalendarEventRecord, TimeInterval } from "./types";
 
 export interface BookSlotInput {
   hostId: string;
-  booker: { id: string; email: string | null; name: string | null };
+  /** id is null for guest bookers (no CapitalOS account). */
+  booker: { id: string | null; email: string | null; name: string | null; phone?: string | null };
   startTime: string;
   endTime: string;
   timezone: string;
@@ -76,11 +77,17 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
 
   const bookerLabel = input.booker.name ?? input.booker.email ?? "a member";
   const title = input.title?.trim() || `Meeting with ${bookerLabel}`;
+  const description = [
+    input.note ?? null,
+    input.booker.name ? `Booked by: ${input.booker.name}` : null,
+    input.booker.email ? `Email: ${input.booker.email}` : null,
+    input.booker.phone ? `Phone: ${input.booker.phone}` : null,
+  ].filter(Boolean).join("\n") || null;
 
   // Host event (authoritative) — creates the Google event + Meet, invites booker.
   const hostEvent = await createEvent(admin, input.hostId, {
     title,
-    description: input.note ?? null,
+    description,
     startTime: input.startTime,
     endTime: input.endTime,
     timezone: input.timezone,
@@ -88,17 +95,19 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
     addMeet: true,
   });
 
-  // Mirror onto the booker's own calendar — local only (the host's Google event
-  // already invites the booker; a second Google event would duplicate the Meet).
-  await insertLocalEvent(admin, input.booker.id, {
-    title: hostName ? `${title} (${hostName})` : title,
-    description: input.note ?? null,
-    startTime: input.startTime,
-    endTime: input.endTime,
-    timezone: input.timezone,
-    attendees: hostEmail ? [{ email: hostEmail, name: hostName ?? undefined }] : [],
-    meetUrl: hostEvent.meet_url,
-  });
+  // Mirror onto the booker's own calendar (only if they have a CapitalOS account) —
+  // local only, since the host's Google event already invites them.
+  if (input.booker.id) {
+    await insertLocalEvent(admin, input.booker.id, {
+      title: hostName ? `${title} (${hostName})` : title,
+      description: input.note ?? null,
+      startTime: input.startTime,
+      endTime: input.endTime,
+      timezone: input.timezone,
+      attendees: hostEmail ? [{ email: hostEmail, name: hostName ?? undefined }] : [],
+      meetUrl: hostEvent.meet_url,
+    });
+  }
 
   return { event: hostEvent, meetUrl: hostEvent.meet_url, hostEmail, hostName };
 }
