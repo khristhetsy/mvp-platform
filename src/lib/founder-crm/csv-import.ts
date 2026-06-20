@@ -48,8 +48,17 @@ function parseCheckSize(value: string | undefined) {
   }
 
   const cleaned = value.replace(/[$,\s]/g, "").toLowerCase();
-  const multiplier = cleaned.includes("m") ? 1_000_000 : cleaned.includes("k") ? 1_000 : 1;
-  const numbers = cleaned.match(/[\d.]+/g)?.map((n) => Number(n) * multiplier) ?? [];
+
+  // Parse each number with its OWN unit suffix (k/m) so mixed-unit ranges like
+  // "500k-2m" are handled correctly. A single global multiplier (the previous
+  // approach) turned "$500K-$2M" into $500M-$2M.
+  const numbers: number[] = [];
+  for (const match of cleaned.matchAll(/(\d+(?:\.\d+)?)([km]?)/g)) {
+    const base = Number(match[1]);
+    if (Number.isNaN(base)) continue;
+    const multiplier = match[2] === "m" ? 1_000_000 : match[2] === "k" ? 1_000 : 1;
+    numbers.push(base * multiplier);
+  }
 
   if (numbers.length === 0) {
     return { min: null, max: null };
