@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Users, Trash2 } from "lucide-react";
+import { Users, Trash2, UserMinus, AlertTriangle, X } from "lucide-react";
 import type { UserRole } from "@/lib/supabase/types";
+
+type DependentItem = { key: string; label: string; count: number };
+type Dependents = { items: DependentItem[]; total: number };
 
 type UserStatus = "active" | "invited" | "inactive";
 
@@ -111,7 +114,10 @@ export function UserManagementClient() {
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [pendingRoles, setPendingRoles] = useState<Record<string, UserRole>>({});
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ManagedUser | null>(null);
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const [deps, setDeps] = useState<Dependents | null>(null);
+  const [depsLoading, setDepsLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -129,6 +135,9 @@ export function UserManagementClient() {
     }
   }, []);
 
+  // Mount + manual reloads: load() owns its own loading/error state. The
+  // setState calls happen inside an async callback, not synchronously here.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
 
   const filtered = useMemo(() => {
@@ -152,7 +161,8 @@ export function UserManagementClient() {
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -185,9 +195,31 @@ export function UserManagementClient() {
     }
   }, [load]);
 
+  const openDeleteModal = useCallback(async (user: ManagedUser) => {
+    setDeleteTarget(user);
+    setConfirmEmail("");
+    setDeps(null);
+    setDepsLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/dependents?userId=${encodeURIComponent(user.id)}`);
+      const data = await res.json();
+      if (res.ok) setDeps({ items: data.items ?? [], total: data.total ?? 0 });
+    } catch {
+      // Non-fatal: modal still works, just without the count breakdown.
+    } finally {
+      setDepsLoading(false);
+    }
+  }, []);
+
+  const closeDeleteModal = useCallback(() => {
+    setDeleteTarget(null);
+    setConfirmEmail("");
+    setDeps(null);
+  }, []);
+
   const deleteUser = useCallback(async (userId: string) => {
     setSaving((prev) => new Set(prev).add(userId));
-    setConfirmDeleteId(null);
+    closeDeleteModal();
     try {
       const res = await fetch("/api/admin/users/manage", {
         method: "DELETE",
@@ -204,7 +236,7 @@ export function UserManagementClient() {
     } finally {
       setSaving((prev) => { const next = new Set(prev); next.delete(userId); return next; });
     }
-  }, [load]);
+  }, [load, closeDeleteModal]);
 
   if (loading) return <p className="text-sm text-slate-600">Loading users…</p>;
   if (error) return <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>;
@@ -397,41 +429,33 @@ export function UserManagementClient() {
                       >
                         {isSaving ? "…" : "Save"}
                       </button>
-                    </>
-                  )}
-
-                  {/* Hard-delete (all states except self/super-admin) */}
-                  {!user.is_super_admin && (
-                    confirmDeleteId === user.id ? (
-                      <div className="flex items-center gap-1">
-                        <span className="text-[11px] text-red-700 font-medium">Sure?</span>
+                      {/* Primary safe action: reversible deactivation */}
+                      {!user.is_super_admin && (
                         <button
                           type="button"
                           disabled={isSaving}
-                          onClick={() => void deleteUser(user.id)}
-                          className="rounded-lg border border-[#F7C1C1] bg-[#FCEBEB] px-2 py-1.5 text-[11px] font-semibold text-[#A32D2D] hover:bg-[#F9D5D5] disabled:opacity-50"
+                          onClick={() => void patchUser(user.id, { is_active: false })}
+                          title="Deactivate (reversible)"
+                          className="inline-flex items-center gap-1 rounded-lg border border-[#E4C77A] bg-[#FBF4E2] px-2.5 py-1.5 text-xs font-semibold text-[#7A5409] hover:bg-[#F6E9C7] disabled:opacity-50"
                         >
-                          Yes
+                          <UserMinus className="h-3.5 w-3.5" />
+                          {isSaving ? "…" : "Deactivate"}
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-medium text-slate-600 hover:bg-slate-50"
-                        >
-                          No
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={isSaving}
-                        onClick={() => setConfirmDeleteId(user.id)}
-                        title="Permanently delete user"
-                        className="rounded-lg border border-[#F7C1C1] bg-white p-1.5 text-[#A32D2D] hover:bg-[#FCEBEB] disabled:opacity-40"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )
+                      )}
+                    </>
+                  )}
+
+                  {/* Permanent delete — secondary, behind a guarded modal */}
+                  {!user.is_super_admin && (
+                    <button
+                      type="button"
+                      disabled={isSaving}
+                      onClick={() => void openDeleteModal(user)}
+                      title="Delete permanently"
+                      className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-400 hover:border-[#F7C1C1] hover:bg-[#FCEBEB] hover:text-[#A32D2D] disabled:opacity-40"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   )}
                 </div>
               </div>
@@ -460,8 +484,93 @@ export function UserManagementClient() {
       ) : null}
 
       <p className="text-xs text-slate-500">
-        Role changes take effect immediately on the user's next page load. Deactivating an admin revokes their access instantly.
+        Role changes take effect immediately on the user&apos;s next page load. Deactivating an admin revokes their access instantly.
       </p>
+
+      {/* Guarded permanent-delete modal */}
+      {deleteTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={closeDeleteModal}>
+          <div
+            className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#FCEBEB] text-[#A32D2D]">
+                  <AlertTriangle className="h-5 w-5" strokeWidth={1.75} />
+                </span>
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-950">Delete permanently</h2>
+                  <p className="text-xs text-slate-500">This cannot be undone.</p>
+                </div>
+              </div>
+              <button type="button" onClick={closeDeleteModal} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-5 py-4">
+              <p className="text-sm text-slate-700">
+                Deleting <span className="font-semibold text-slate-950">{deleteTarget.full_name ?? deleteTarget.email}</span> removes
+                their account and everything they own. Consider <span className="font-semibold">Deactivate</span> instead — it revokes
+                access immediately and is fully reversible.
+              </p>
+
+              {/* Blast radius */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">What will be deleted</p>
+                {depsLoading ? (
+                  <p className="text-sm text-slate-500">Counting dependent records…</p>
+                ) : deps && deps.total > 0 ? (
+                  <ul className="space-y-1">
+                    {deps.items.filter((i) => i.count > 0).map((i) => (
+                      <li key={i.key} className="flex items-center justify-between text-sm">
+                        <span className="text-slate-600">{i.label}</span>
+                        <span className="font-semibold text-slate-950">{i.count}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-slate-500">No owned records — only the account itself will be removed.</p>
+                )}
+              </div>
+
+              {/* Type-to-confirm */}
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Type <span className="font-mono font-semibold text-slate-900">{deleteTarget.email}</span> to confirm
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={confirmEmail}
+                  onChange={(e) => setConfirmEmail(e.target.value)}
+                  placeholder={deleteTarget.email ?? ""}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#A32D2D] focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/50 px-5 py-3">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={confirmEmail.trim().toLowerCase() !== (deleteTarget.email ?? "").toLowerCase()}
+                onClick={() => void deleteUser(deleteTarget.id)}
+                className="rounded-lg bg-[#A32D2D] px-3 py-2 text-sm font-semibold text-white hover:bg-[#8A2525] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Delete permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

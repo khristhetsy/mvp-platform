@@ -3,9 +3,27 @@ import { z } from "zod";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireManageUsersApi } from "@/lib/api/permissions";
 import { writeAuditLog } from "@/lib/data/audit";
-import type { UserRole } from "@/lib/supabase/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database, UserRole } from "@/lib/supabase/types";
+
+type ServiceClient = SupabaseClient<Database>;
 
 const ROLES: UserRole[] = ["founder", "investor", "admin", "analyst"];
+
+/**
+ * Returns true if `userId` is the last active admin — i.e. removing their admin
+ * access (deactivate, delete, or demote) would leave nobody able to manage the
+ * platform. Guards against an accidental full lockout.
+ */
+async function isLastActiveAdmin(admin: ServiceClient, userId: string): Promise<boolean> {
+  const { count } = await admin
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("role", "admin")
+    .eq("is_active", true)
+    .neq("id", userId);
+  return (count ?? 0) === 0;
+}
 
 function formatLastSeen(ts: string | null | undefined): string {
   if (!ts) return "Never";
@@ -25,13 +43,13 @@ export async function GET() {
   const auth = await requireManageUsersApi();
   if ("error" in auth) return auth.error as Response;
 
-  const admin = createServiceRoleClient() as any;
+  const admin = createServiceRoleClient();
 
   const [profilesRes, authUsersRes, auditRes] = await Promise.all([
     admin.from("profiles").select("id, full_name, email, role, is_active, last_seen_at, created_at, is_super_admin").order("created_at", { ascending: false }),
     admin.auth.admin.listUsers({ perPage: 1000 }),
     admin.from("audit_logs")
-      .select("id, user_id, action, metadata, created_at, profiles:user_id(full_name, email)")
+      .select("id, user_id, action, metadata, created_at")
       .in("action", ["admin.user_role_changed", "admin.user_deactivated", "admin.user_reactivated", "admin.staff_invited"])
       .order("created_at", { ascending: false })
       .limit(20),
@@ -46,7 +64,14 @@ export async function GET() {
     authMap.set(u.id, { last_sign_in_at: u.last_sign_in_at ?? null, invited_at: u.invited_at ?? null });
   }
 
-  const users = (profilesRes.data ?? []).map((p: any) => {
+  // Actor display names, resolved from the profiles we just fetched (avoids a
+  // fragile embedded join on audit_logs.user_id → profiles).
+  const nameById = new Map<string, string>();
+  for (const p of profilesRes.data ?? []) {
+    nameById.set(p.id, p.full_name ?? p.email ?? "Unknown");
+  }
+
+  const users = (profilesRes.data ?? []).map((p) => {
     const auth = authMap.get(p.id);
     const lastSeen = p.last_seen_at ?? auth?.last_sign_in_at ?? null;
     const isPending = !auth?.last_sign_in_at && !!auth?.invited_at;
@@ -64,12 +89,12 @@ export async function GET() {
     };
   });
 
-  const auditEntries = (auditRes.data ?? []).map((entry: any) => ({
+  const auditEntries = (auditRes.data ?? []).map((entry) => ({
     id: entry.id,
     action: entry.action,
     metadata: entry.metadata,
     created_at: entry.created_at,
-    actor_name: (entry.profiles as any)?.full_name ?? (entry.profiles as any)?.email ?? "Unknown",
+    actor_name: (entry.user_id && nameById.get(entry.user_id)) || "Unknown",
   }));
 
   return NextResponse.json({ users, audit: auditEntries, roles: ROLES });
@@ -89,7 +114,7 @@ export async function DELETE(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: "Cannot delete your own account." }, { status: 400 });
   }
 
-  const admin = createServiceRoleClient() as any;
+  const admin = createServiceRoleClient();
 
   const { data: target } = await admin
     .from("profiles")
@@ -99,6 +124,13 @@ export async function DELETE(req: NextRequest): Promise<Response> {
 
   if (target?.is_super_admin) {
     return NextResponse.json({ error: "Cannot delete a super admin account." }, { status: 403 });
+  }
+
+  if (target?.role === "admin" && (await isLastActiveAdmin(admin, userId))) {
+    return NextResponse.json(
+      { error: "Cannot delete the last active admin — promote another admin first." },
+      { status: 409 }
+    );
   }
 
   // Hard-delete from Supabase Auth (profiles row cascades via FK)
@@ -142,7 +174,7 @@ export async function PATCH(req: NextRequest): Promise<Response> {
   }
 
   const { userId, role, is_active } = parsed.data;
-  const admin = createServiceRoleClient() as any;
+  const admin = createServiceRoleClient();
 
   // Prevent editing super admins
   const { data: target, error: targetError } = await admin.from("profiles").select("role, is_super_admin, full_name, email").eq("id", userId).single();
@@ -153,7 +185,21 @@ export async function PATCH(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: "Cannot modify a super admin account." }, { status: 403 });
   }
 
-  const update: Record<string, unknown> = {};
+  // Lockout guard: don't let the last active admin lose admin access.
+  const deactivatingAdmin = is_active === false && target?.role === "admin";
+  const demotingAdmin = role !== undefined && role !== "admin" && target?.role === "admin";
+  if ((deactivatingAdmin || demotingAdmin) && (await isLastActiveAdmin(admin, userId))) {
+    return NextResponse.json(
+      {
+        error: deactivatingAdmin
+          ? "Cannot deactivate the last active admin — promote another admin first."
+          : "Cannot remove admin from the last active admin — promote another admin first.",
+      },
+      { status: 409 }
+    );
+  }
+
+  const update: Database["public"]["Tables"]["profiles"]["Update"] = {};
   if (role !== undefined) update.role = role;
   if (is_active !== undefined) update.is_active = is_active;
 
