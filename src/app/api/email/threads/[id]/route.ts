@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
-import { getThread, replyToThread, markThreadRead } from "@/lib/email/inbox";
+import { getThread, replyToThread, markThreadRead, deleteThread } from "@/lib/email/inbox";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -39,5 +39,18 @@ export async function POST(req: NextRequest, ctx: RouteContext): Promise<Respons
     return NextResponse.json({ messages });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Reply failed." }, { status: 500 });
+  }
+}
+
+export async function DELETE(_req: NextRequest, ctx: RouteContext): Promise<Response> {
+  const auth = await requireApiProfile();
+  if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await ctx.params;
+  try {
+    await deleteThread(auth.profile.id, id);
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Delete failed." }, { status: 500 });
   }
 }

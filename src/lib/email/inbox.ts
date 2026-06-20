@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { sendEmail } from "@/lib/email/send-email";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 // email_threads / email_messages aren't in the generated types yet — raw client.
 function raw(supabase: SupabaseClient<Database>): SupabaseClient {
@@ -186,6 +187,21 @@ export async function countUnreadThreads(
     .eq("owner_id", ownerId)
     .eq("unread", true);
   return count ?? 0;
+}
+
+/**
+ * Permanently delete a conversation and its messages (cascade). Ownership is
+ * enforced by the owner_id filter; uses the service-role client since the table
+ * has no delete RLS policy.
+ */
+export async function deleteThread(ownerId: string, threadId: string): Promise<void> {
+  const admin = createServiceRoleClient();
+  const { error } = await raw(admin)
+    .from("email_threads")
+    .delete()
+    .eq("id", threadId)
+    .eq("owner_id", ownerId);
+  if (error) throw new Error(error.message ?? "Unable to delete conversation.");
 }
 
 export async function markThreadRead(

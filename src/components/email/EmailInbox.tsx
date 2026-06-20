@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Mail, Send, Plus, X, RefreshCw } from "lucide-react";
+import { Mail, Send, Plus, X, RefreshCw, Trash2 } from "lucide-react";
 import type { EmailThread, EmailMessage } from "@/lib/email/inbox";
 
 function initials(name: string | null, email: string): string {
@@ -104,6 +104,20 @@ export function EmailInbox() {
     }
   }, [selected, reply, loadThreads]);
 
+  const deleteCurrentThread = useCallback(async () => {
+    if (!selected) return;
+    try {
+      const res = await fetch(`/api/email/threads/${selected}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed.");
+      setActiveThread(null);
+      setSelected(null);
+      setMessages([]);
+      await loadThreads();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed.");
+    }
+  }, [selected, loadThreads]);
+
   const sendCompose = useCallback(async () => {
     if (!compose.to.trim() || !compose.subject.trim() || !compose.body.trim()) {
       setError("To, subject and message are required.");
@@ -190,9 +204,19 @@ export function EmailInbox() {
             <div className="flex h-full min-h-[200px] items-center justify-center px-4 py-10 text-sm text-slate-400">Select a conversation</div>
           ) : (
             <div className="flex flex-col">
-              <div className="border-b border-slate-100 px-4 py-3">
-                <p className="text-sm font-semibold text-slate-950">{activeThread.subject ?? "(no subject)"}</p>
-                <p className="text-xs text-slate-500">{activeThread.contact_name ? `${activeThread.contact_name} · ` : ""}{activeThread.contact_email}</p>
+              <div className="flex items-start justify-between gap-2 border-b border-slate-100 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-950">{activeThread.subject ?? "(no subject)"}</p>
+                  <p className="truncate text-xs text-slate-500">{activeThread.contact_name ? `${activeThread.contact_name} · ` : ""}{activeThread.contact_email}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void deleteCurrentThread()}
+                  title="Delete conversation"
+                  className="shrink-0 rounded-lg border border-slate-200 bg-white p-1.5 text-slate-400 hover:border-[#F7C1C1] hover:bg-[#FCEBEB] hover:text-[#A32D2D]"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
               <div className="max-h-[420px] space-y-3 overflow-y-auto px-4 py-3">
                 {messages.map((m) => (
