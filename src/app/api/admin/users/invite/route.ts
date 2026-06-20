@@ -22,7 +22,7 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const { email, role, fullName } = parsed.data;
-  const admin = createServiceRoleClient() as any;
+  const admin = createServiceRoleClient();
 
   // Check if user already exists
   const { data: existing } = await admin
@@ -38,7 +38,7 @@ export async function POST(req: Request): Promise<Response> {
     );
   }
 
-  const redirectTo = `${getAppUrl() ?? "http://localhost:3000"}/admin/dashboard`;
+  const redirectTo = `${getAppUrl() ?? "http://localhost:3000"}/auth/accept-invite`;
 
   const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
     data: {
