@@ -3,7 +3,7 @@ import type { InternalPermission } from "@/lib/rbac/constants";
 /** The 14 parts of the Admin Operations Manual. */
 export type SopPartId =
   | "A" | "B" | "C" | "D" | "E" | "F" | "G"
-  | "H" | "I" | "J" | "K" | "L" | "M" | "N";
+  | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O";
 
 export interface SopPart {
   id: SopPartId;
@@ -69,6 +69,7 @@ export const SOP_PARTS: SopPart[] = [
   { id: "L", title: "Staff governance" },
   { id: "M", title: "Release & deployment" },
   { id: "N", title: "Trust, safety & support" },
+  { id: "O", title: "Calendar, scheduling & email" },
 ];
 
 /** Canonical anchor for an SOP, e.g. 7 → "sop-07". */

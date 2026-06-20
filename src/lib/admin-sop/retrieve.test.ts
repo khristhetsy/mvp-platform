@@ -95,12 +95,12 @@ describe("resolveVisibility / visibleSops", () => {
 });
 
 describe("library integrity", () => {
-  it("has 57 SOPs with unique sequential ids", () => {
-    expect(ADMIN_SOPS).toHaveLength(57);
+  it("has 63 SOPs with unique sequential ids", () => {
+    expect(ADMIN_SOPS).toHaveLength(63);
     const ids = ADMIN_SOPS.map((s) => s.id);
-    expect(new Set(ids).size).toBe(57);
+    expect(new Set(ids).size).toBe(63);
     expect(Math.min(...ids)).toBe(1);
-    expect(Math.max(...ids)).toBe(57);
+    expect(Math.max(...ids)).toBe(63);
   });
 
   it("every SOP has at least one step and keyword", () => {
