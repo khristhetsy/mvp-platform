@@ -17,11 +17,25 @@ export type EmailPayload = {
   /** Optional plain-text fallback */
   text?: string;
   replyTo?: string;
+  /** Personalize the From display name (e.g. the sender's name) while keeping
+   *  the verified platform sending address. */
+  fromName?: string;
 };
+
+const DEFAULT_FROM = "CapitalOS <no-reply@mail.capitalos.io>";
+
+/** Bare address from EMAIL_FROM, whether it's "Name <addr>" or just "addr". */
+function baseFromAddress(): string {
+  const raw = process.env.EMAIL_FROM ?? DEFAULT_FROM;
+  const m = raw.match(/<([^>]+)>/);
+  return (m ? m[1] : raw).trim();
+}
 
 export async function sendEmail(payload: EmailPayload): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM ?? "CapitalOS <no-reply@mail.capitalos.io>";
+  const from = payload.fromName
+    ? `${payload.fromName.replace(/[<>"]/g, "").trim()} <${baseFromAddress()}>`
+    : process.env.EMAIL_FROM ?? DEFAULT_FROM;
 
   if (!apiKey) {
     // Not configured — log in dev, skip silently in prod

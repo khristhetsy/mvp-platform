@@ -112,6 +112,7 @@ async function sendOnThread(
     html,
     text: body,
     replyTo: replyAddress(thread.reply_token),
+    fromName: owner.name ?? owner.email ?? undefined,
   });
 
   const now = new Date().toISOString();
