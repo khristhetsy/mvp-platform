@@ -14,6 +14,8 @@ const OPTIONAL_INTEGRATIONS = [
   "GOOGLE_CLIENT_SECRET",
   "GOOGLE_REDIRECT_URI",
   "TOKEN_ENCRYPTION_SECRET",
+  "RESEND_API_KEY",
+  "CLOUDCONVERT_API_KEY",
 ] as const;
 
 function trimEnv(name: string): string | undefined {
@@ -81,6 +83,16 @@ export function getAppUrl(): string | null {
 
 export function isServiceRoleConfigured(): boolean {
   return Boolean(trimEnv("SUPABASE_SERVICE_ROLE_KEY"));
+}
+
+/** Resend transactional email key (optional — features degrade without it). */
+export function getResendApiKey(): string | null {
+  return trimEnv("RESEND_API_KEY") ?? null;
+}
+
+/** CloudConvert key for DOCX→PDF conversion (optional — .docx upload degrades without it). */
+export function getCloudConvertApiKey(): string | null {
+  return trimEnv("CLOUDCONVERT_API_KEY") ?? null;
 }
 
 export type EnvValidationResult = {
@@ -183,6 +195,8 @@ export function getEnvironmentStatusSummary() {
     ),
     cronConfigured: Boolean(trimEnv("CRON_SECRET")),
     claudeConfigured: Boolean(trimEnv("ANTHROPIC_API_KEY")),
+    resendConfigured: Boolean(trimEnv("RESEND_API_KEY")),
+    cloudconvertConfigured: Boolean(trimEnv("CLOUDCONVERT_API_KEY")),
     envValidationOk: validation.ok,
     missingEnvKeys: validation.missing,
     warnings: validation.warnings,
