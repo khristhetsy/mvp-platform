@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Mail, Send, Plus, X, RefreshCw, Trash2, MailOpen, ArrowLeft, Search, Inbox as InboxIcon, FileText, Layers, AlertTriangle, RotateCcw, Paperclip } from "lucide-react";
 import type { ThreadListItem, EmailMessage, MailFolder, EmailAttachment } from "@/lib/email/inbox";
+import type { EmailDraft } from "@/lib/email/drafts";
+
+type FolderId = MailFolder | "drafts";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -13,7 +16,7 @@ function formatSize(bytes: number): string {
 const FOLDERS: Array<{ id: MailFolder | "drafts" | "spam"; label: string; icon: typeof Mail; soon?: boolean }> = [
   { id: "inbox", label: "Inbox", icon: InboxIcon },
   { id: "sent", label: "Sent", icon: Send },
-  { id: "drafts", label: "Drafts", icon: FileText, soon: true },
+  { id: "drafts", label: "Drafts", icon: FileText },
   { id: "all", label: "All Mail", icon: Layers },
   { id: "spam", label: "Spam", icon: AlertTriangle, soon: true },
   { id: "trash", label: "Trash", icon: Trash2 },
@@ -38,7 +41,9 @@ export function EmailInbox() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [folder, setFolder] = useState<MailFolder>("inbox");
+  const [folder, setFolder] = useState<FolderId>("inbox");
+  const [drafts, setDrafts] = useState<EmailDraft[]>([]);
+  const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
 
   const [active, setActive] = useState<ActiveThread | null>(null);
   const [messages, setMessages] = useState<EmailMessage[]>([]);
@@ -72,7 +77,16 @@ export function EmailInbox() {
     }
   }, []);
 
+  const loadDrafts = useCallback(async () => {
+    try {
+      const res = await fetch("/api/email/drafts");
+      const data = await res.json();
+      if (res.ok) setDrafts(data.drafts ?? []);
+    } catch { /* best-effort */ }
+  }, []);
+
   const loadThreads = useCallback(async () => {
+    if (folder === "drafts") { setLoading(true); await loadDrafts(); setLoading(false); return; }
     setLoading(true);
     try {
       const res = await fetch(`/api/email/threads?folder=${folder}`);
@@ -84,7 +98,7 @@ export function EmailInbox() {
     } finally {
       setLoading(false);
     }
-  }, [folder]);
+  }, [folder, loadDrafts]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void loadThreads(); }, [loadThreads]);
@@ -182,12 +196,39 @@ export function EmailInbox() {
     setComposeOpen(true);
   }, [active, messages]);
 
-  const selectFolder = useCallback((f: MailFolder) => {
+  const selectFolder = useCallback((f: FolderId) => {
     setFolder(f);
     setActive(null);
     setMessages([]);
     setSearch("");
   }, []);
+
+  const saveDraft = useCallback(async (close: boolean) => {
+    try {
+      const res = await fetch("/api/email/drafts", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editingDraftId, to: compose.to, subject: compose.subject, body: compose.body, attachments: composeFiles }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not save draft.");
+      setEditingDraftId(data.draft.id);
+      if (close) { setComposeOpen(false); setCompose({ to: "", subject: "", body: "" }); setComposeFiles([]); setEditingDraftId(null); void loadDrafts(); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save draft.");
+    }
+  }, [editingDraftId, compose, composeFiles, loadDrafts]);
+
+  const openDraft = useCallback((d: EmailDraft) => {
+    setEditingDraftId(d.id);
+    setCompose({ to: d.to_email ?? "", subject: d.subject ?? "", body: d.body ?? "" });
+    setComposeFiles(d.attachments ?? []);
+    setComposeOpen(true);
+  }, []);
+
+  const discardDraft = useCallback(async (id: string) => {
+    setDrafts((prev) => prev.filter((d) => d.id !== id));
+    try { await fetch("/api/email/drafts", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); } catch { void loadDrafts(); }
+  }, [loadDrafts]);
 
   const sendReply = useCallback(async () => {
     if (!active || !reply.trim()) return;
@@ -228,6 +269,12 @@ export function EmailInbox() {
       setComposeOpen(false);
       setCompose({ to: "", subject: "", body: "" });
       setComposeFiles([]);
+      // Sending a draft removes it.
+      if (editingDraftId) {
+        try { await fetch("/api/email/drafts", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingDraftId }) }); } catch { /* best-effort */ }
+        setEditingDraftId(null);
+        void loadDrafts();
+      }
       await loadThreads();
       if (data.thread?.id) await openThread(data.thread.id);
     } catch (err) {
@@ -235,7 +282,7 @@ export function EmailInbox() {
     } finally {
       setSending(false);
     }
-  }, [compose, composeFiles, loadThreads, openThread]);
+  }, [compose, composeFiles, editingDraftId, loadThreads, loadDrafts, openThread]);
 
   return (
     <div className="space-y-3">
@@ -246,7 +293,7 @@ export function EmailInbox() {
         </h1>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => void loadThreads()} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50" aria-label="Refresh"><RefreshCw className="h-4 w-4" /></button>
-          <button type="button" onClick={() => { setError(null); setComposeOpen(true); }} className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"><Plus className="h-4 w-4" /> Compose</button>
+          <button type="button" onClick={() => { setError(null); setEditingDraftId(null); setCompose({ to: "", subject: "", body: "" }); setComposeFiles([]); setComposeOpen(true); }} className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"><Plus className="h-4 w-4" /> Compose</button>
         </div>
       </div>
 
@@ -263,7 +310,7 @@ export function EmailInbox() {
                   key={f.id}
                   type="button"
                   disabled={f.soon}
-                  onClick={() => { if (!f.soon) selectFolder(f.id as MailFolder); }}
+                  onClick={() => { if (!f.soon) selectFolder(f.id as FolderId); }}
                   className={`flex w-full items-center gap-2.5 rounded-full px-3 py-2 text-sm ${isActive ? "bg-[#E6F1FB] font-medium text-[#0C447C]" : f.soon ? "cursor-not-allowed text-slate-300" : "text-slate-600 hover:bg-slate-100"}`}
                 >
                   <Icon className="h-4 w-4 shrink-0" aria-hidden />
@@ -351,7 +398,26 @@ export function EmailInbox() {
           </div>
 
           <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
-            {loading ? (
+            {folder === "drafts" ? (
+              loading ? (
+                <p className="px-4 py-8 text-sm text-slate-400">Loading…</p>
+              ) : drafts.length === 0 ? (
+                <p className="px-4 py-10 text-center text-sm text-slate-400">No drafts. Start one from Compose, then Save draft.</p>
+              ) : (
+                <ul>
+                  {drafts.map((d) => (
+                    <li key={d.id} className="group flex items-start gap-3 border-b border-slate-50 px-4 py-3 last:border-0 hover:bg-slate-50">
+                      <button type="button" onClick={() => openDraft(d)} className="min-w-0 flex-1 text-left">
+                        <p className="truncate text-sm font-medium text-slate-900">{d.subject?.trim() || "(no subject)"}</p>
+                        <p className="truncate text-xs text-slate-500">{d.to_email ? `To: ${d.to_email}` : "No recipient"} · {(d.body ?? "").trim().slice(0, 80) || "Empty"}</p>
+                      </button>
+                      <span className="text-xs text-slate-400">{when(d.updated_at)}</span>
+                      <button type="button" aria-label="Discard draft" onClick={() => void discardDraft(d.id)} className="rounded p-1 text-slate-300 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+                    </li>
+                  ))}
+                </ul>
+              )
+            ) : loading ? (
               <p className="px-4 py-8 text-sm text-slate-400">Loading…</p>
             ) : threads.length === 0 ? (
               <p className="px-4 py-10 text-center text-sm text-slate-400">{folder === "trash" ? "Trash is empty." : folder === "sent" ? "No sent mail yet." : "No conversations yet. Compose to start one."}</p>
@@ -425,8 +491,9 @@ export function EmailInbox() {
                 ))}
               </div>
             </div>
-            <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50/50 px-5 py-3">
-              <button type="button" onClick={() => setComposeOpen(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
+            <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/50 px-5 py-3">
+              <button type="button" onClick={() => setComposeOpen(false)} className="mr-auto rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
+              <button type="button" onClick={() => void saveDraft(true)} disabled={sending} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"><FileText className="h-4 w-4" /> Save draft</button>
               <button type="button" onClick={() => void sendCompose()} disabled={sending} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"><Send className="h-4 w-4" /> {sending ? "Sending…" : "Send"}</button>
             </div>
           </div>
