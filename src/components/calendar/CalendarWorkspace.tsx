@@ -92,6 +92,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
   const [googleEvents, setGoogleEvents] = useState<GoogleEventLite[]>([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState<FormState | null>(null);
+  const [dayView, setDayView] = useState<{ date: Date; events: DisplayEvent[] } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"month" | "agenda">("month");
@@ -370,7 +371,17 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
                       <span className="truncate">{new Date(e.start_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} {e.title}</span>
                     </span>
                   ))}
-                  {dayEvents.length > 3 ? <span className="px-1 text-[10px] text-slate-400">+{dayEvents.length - 3} more</span> : null}
+                  {dayEvents.length > 3 ? (
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(ev) => { ev.stopPropagation(); setDayView({ date: day, events: dayEvents }); }}
+                      onKeyDown={(ev) => { if (ev.key === "Enter") { ev.stopPropagation(); setDayView({ date: day, events: dayEvents }); } }}
+                      className="block rounded px-1 text-[10px] font-medium text-[#534AB7] hover:bg-slate-100"
+                    >
+                      +{dayEvents.length - 3} more
+                    </span>
+                  ) : null}
                 </div>
               </button>
             );
@@ -405,6 +416,31 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
       {loading ? <p className="text-xs text-slate-400">Loading…</p> : null}
 
       {/* Event modal */}
+      {dayView ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={() => setDayView(null)}>
+          <div onClick={(e) => e.stopPropagation()} className="max-h-[80vh] w-full max-w-md overflow-auto rounded-2xl bg-white p-4 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-slate-900">{dayView.date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</h2>
+              <button type="button" onClick={() => setDayView(null)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
+            </div>
+            <ul className="mt-3 space-y-1">
+              {dayView.events.map((e) => (
+                <li key={e.id}>
+                  <button type="button" onClick={() => { setDayView(null); setSelected(e); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-slate-50">
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${e.editable ? "bg-[#534AB7]" : "bg-[#378ADD]"}`} />
+                    {e.meet_url ? <Video className="h-3.5 w-3.5 shrink-0 text-slate-400" /> : null}
+                    <span className="w-16 shrink-0 text-xs text-slate-500">{new Date(e.start_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
+                    <span className="truncate text-slate-800">{e.title}</span>
+                    {e.editable ? null : <span className="ml-auto shrink-0 text-[10px] text-slate-400">Google</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button type="button" onClick={() => { const d = dayView.date; setDayView(null); setForm(emptyForm(d)); }} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">+ New event this day</button>
+          </div>
+        </div>
+      ) : null}
+
       {form ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={() => setForm(null)}>
           <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
