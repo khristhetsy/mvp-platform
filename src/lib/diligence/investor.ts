@@ -9,6 +9,22 @@ function raw(supabase: SupabaseClient<Database>): SupabaseClient {
   return supabase as unknown as SupabaseClient;
 }
 
+export type InvestorDeal = { id: string; company_name: string; report_code: string; sector: string | null; round_label: string | null; updated_at: string };
+
+/** Released engagements this investor is a member of, newest first. */
+export async function listInvestorDeals(service: SupabaseClient<Database>, userId: string): Promise<InvestorDeal[]> {
+  const { data: members } = await raw(service).from("dd_engagement_members").select("engagement_id").eq("user_id", userId).eq("role", "investor");
+  const ids = ((members ?? []) as Array<{ engagement_id: string }>).map((m) => m.engagement_id);
+  if (ids.length === 0) return [];
+  const { data } = await raw(service)
+    .from("dd_engagements")
+    .select("id, company_name, report_code, sector, round_label, updated_at")
+    .in("id", ids)
+    .eq("lifecycle_stage", "released")
+    .order("updated_at", { ascending: false });
+  return (data as unknown as InvestorDeal[]) ?? [];
+}
+
 export async function isInvestorMember(service: SupabaseClient<Database>, eid: string, userId: string): Promise<boolean> {
   const { data } = await raw(service).from("dd_engagement_members").select("role").eq("engagement_id", eid).eq("user_id", userId).eq("role", "investor").maybeSingle();
   return Boolean(data);

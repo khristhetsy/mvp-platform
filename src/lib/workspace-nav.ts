@@ -289,6 +289,7 @@ export const investorWorkspaceNav: WorkspaceNavItem[] = [
     label: "Portfolio & Deals",
     children: [
       { href: "/investor/portfolio", label: "Portfolio" },
+      { href: "/investor/deals", label: "Diligence" },
       { href: "/investor/deal-room", label: "Deal Room" },
       { href: "/investor/spvs", label: "SPVs" },
     ],
