@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Trash2, Sparkles, Loader2, Send, Undo2, FileDown } from "lucide-react";
+import { Plus, Trash2, Sparkles, Loader2, Send, Undo2, FileDown, FilePen } from "lucide-react";
 import { useToast } from "@/components/ui/ToastProvider";
 import { StateChip } from "./StateChip";
 import { ConfidenceMeter } from "./ConfidenceMeter";
@@ -10,7 +10,8 @@ import type { Claim, Domain, Engagement, Finding, Severity, Verification } from 
 
 type DocRequestRow = { id: string; category: string; label: string; closes_findings: string[]; due_date: string | null; status: string };
 type ConditionRow = { id: string; label: string; detail: string | null; status: string };
-type Detail = { engagement: Engagement; domains: Domain[]; findings: Finding[]; claims: Claim[]; gate: GateMap; docRequests: DocRequestRow[]; conditions: ConditionRow[] };
+type ConsentInfo = { envelope: { status: string; signature_request_id: string | null } | null; sealedHash: string | null };
+type Detail = { engagement: Engagement; domains: Domain[]; findings: Finding[]; claims: Claim[]; gate: GateMap; docRequests: DocRequestRow[]; conditions: ConditionRow[]; consent?: ConsentInfo };
 
 const DEFAULT_GATE: GateMap = {
   findings: { founder_visible: true, investor_visible: true },
@@ -33,6 +34,9 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
   const [founderEmail, setFounderEmail] = useState("");
   const [sendGate, setSendGate] = useState<GateMap>(DEFAULT_GATE);
   const [acting, setActing] = useState(false);
+  const [consentOpen, setConsentOpen] = useState(false);
+  const [ceoName, setCeoName] = useState("");
+  const [ceoEmail, setCeoEmail] = useState("");
 
   const reload = useCallback(async () => {
     const res = await fetch(`/api/admin/diligence/${engagementId}`);
@@ -179,8 +183,32 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
     try { await postJson("/conditions", "DELETE", { conditionId }); await reload(); } catch { /* ignore */ }
   }, [postJson, reload]);
 
+  const doRequestConsent = useCallback(async () => {
+    setActing(true);
+    try {
+      const data = await postJson("/consent", "POST", { signer_name: ceoName.trim(), signer_email: ceoEmail.trim() });
+      toast({ title: data.delivered ? "Consent sent for signature" : "Consent created (email not configured)", description: data.delivered ? "" : "Share the signing link manually.", variant: "success" });
+      setConsentOpen(false); setCeoName(""); setCeoEmail("");
+      await reload();
+    } catch (err) {
+      toast({ title: "Could not request consent", description: err instanceof Error ? err.message : "", variant: "error" });
+    } finally { setActing(false); }
+  }, [postJson, ceoName, ceoEmail, reload, toast]);
+
+  const doRelease = useCallback(async () => {
+    if (!window.confirm("Release this engagement to investors? This is final.")) return;
+    setActing(true);
+    try {
+      const data = await postJson("/release", "POST", {});
+      toast({ title: "Released to investors", description: `${data.notified} investor${data.notified === 1 ? "" : "s"} notified.`, variant: "success" });
+      await reload();
+    } catch (err) {
+      toast({ title: "Could not release", description: err instanceof Error ? err.message : "", variant: "error" });
+    } finally { setActing(false); }
+  }, [postJson, reload, toast]);
+
   if (loading || !detail) return <p className="text-sm text-slate-500">Loading…</p>;
-  const { engagement, domains, findings, claims, gate, docRequests, conditions } = detail;
+  const { engagement, domains, findings, claims, gate, docRequests, conditions, consent } = detail;
   const stage = engagement.lifecycle_stage;
 
   return (
@@ -248,6 +276,25 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
         </div>
       ) : null}
 
+      {consentOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900"><FilePen className="h-5 w-5 text-[#2f6cb0]" /> Request consent</h2>
+            <p className="mt-1 text-sm text-slate-600">Freezes the current report as a version and sends it to the founder to sign via the in-platform e-signature. On signing, the version seals and the engagement locks.</p>
+            <label className="mt-3 block"><span className="mb-1 block text-sm font-medium text-slate-700">Signer name</span>
+              <input value={ceoName} onChange={(e) => setCeoName(e.target.value)} placeholder="Founder / CEO name" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></label>
+            <label className="mt-3 block"><span className="mb-1 block text-sm font-medium text-slate-700">Signer email</span>
+              <input type="email" value={ceoEmail} onChange={(e) => setCeoEmail(e.target.value)} placeholder="founder@company.com" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" /></label>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => setConsentOpen(false)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">Cancel</button>
+              <button type="button" onClick={() => void doRequestConsent()} disabled={acting || !ceoName.trim() || !ceoEmail.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-[#2f6cb0] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                {acting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FilePen className="h-4 w-4" />} Send for signature
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
         <span className="text-xs font-medium text-slate-500">Lifecycle:</span>
         {stage === "draft" ? (
@@ -260,12 +307,25 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
             Mark ready for review
           </button>
         ) : null}
-        {stage !== "draft" && stage !== "consented_locked" && stage !== "released" ? (
+        {stage === "admin_review" ? (
+          <button type="button" onClick={() => setConsentOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg bg-[#2f6cb0] px-3 py-1.5 text-sm font-semibold text-white">
+            <FilePen className="h-4 w-4" /> Request consent
+          </button>
+        ) : null}
+        {stage === "consent_requested" ? (
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800"><Loader2 className="h-4 w-4 animate-spin" /> Awaiting founder signature</span>
+        ) : null}
+        {stage === "consented_locked" ? (
+          <button type="button" disabled={acting} onClick={() => void doRelease()} className="inline-flex items-center gap-1.5 rounded-lg bg-[#1d7a4d] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50">
+            <Send className="h-4 w-4" /> Lock &amp; release to investors
+          </button>
+        ) : null}
+        {stage !== "draft" && stage !== "consented_locked" && stage !== "released" && stage !== "consent_requested" ? (
           <button type="button" disabled={acting} onClick={() => void doTransition("recall")} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
             <Undo2 className="h-4 w-4" /> Recall
           </button>
         ) : null}
-        <span className="ml-auto text-xs text-slate-400">Next: {stage === "draft" ? "send to founder" : stage === "responding" ? "mark review" : stage === "admin_review" ? "request consent (Phase 8)" : "—"}</span>
+        {consent?.sealedHash ? <span className="ml-auto font-mono text-[11px] text-slate-400" title="Sealed document SHA-256">sealed · {consent.sealedHash.slice(0, 12)}…</span> : null}
       </div>
 
       {stage !== "draft" ? (

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requirePermissionApi } from "@/lib/api/permissions";
 import { loadEngagementDetail } from "@/lib/diligence/data";
 import { loadGate } from "@/lib/diligence/gate";
+import { loadConsentSummary } from "@/lib/diligence/consent";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,6 @@ export async function GET(
   const detail = await loadEngagementDetail(auth.supabase, id);
   if (!detail) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
-  const gate = await loadGate(auth.supabase, id);
-  return NextResponse.json({ ...detail, gate });
+  const [gate, consent] = await Promise.all([loadGate(auth.supabase, id), loadConsentSummary(auth.supabase, id)]);
+  return NextResponse.json({ ...detail, gate, consent });
 }

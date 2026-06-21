@@ -10,6 +10,7 @@ import {
 import { writeSignatureAudit, requestClientMeta } from "@/lib/esignature/storage";
 import { sealEnvelope } from "@/lib/esignature/seal";
 import { sendCompletionNotice } from "@/lib/esignature/email";
+import { onSignatureCompleted } from "@/lib/diligence/consent";
 import { resolveAutoValue } from "@/lib/esignature/compute";
 
 export const dynamic = "force-dynamic";
@@ -83,6 +84,9 @@ export async function POST(
       actor: "system",
       metadata: { document_hash: result.hash },
     });
+
+    // If this envelope is a Diligence consent, seal the DD version + advance.
+    try { await onSignatureCompleted(supabase, request.id); } catch { /* best-effort; not a DD consent */ }
 
     const adminEmail = await getCreatorEmail(supabase, request.created_by);
     await Promise.allSettled([

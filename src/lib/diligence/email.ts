@@ -41,6 +41,12 @@ export function sendDocumentsRequested(to: string, companyName: string, eid: str
     [`Hello,`, ``, `New documents have been requested for the ${companyName} diligence.`, ``, url, ``, SENDER].join("\n"));
 }
 
+export function sendFounderSigned(to: string, companyName: string, eid: string) {
+  const url = diligenceLink("founder", eid).replace("/founder/", "/admin/"); // admin link
+  return send(to, `Founder signed — ${companyName}`,
+    [`Hello,`, ``, `The founder has signed the consent for ${companyName}. The version is sealed and the engagement is locked.`, ``, url, ``, SENDER].join("\n"));
+}
+
 export function sendReleasedToInvestor(to: string, companyName: string, eid: string) {
   const url = diligenceLink("investor", eid);
   return send(to, `Deal available — ${companyName}`,
