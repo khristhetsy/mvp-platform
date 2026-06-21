@@ -67,10 +67,10 @@ function htmlFromText(text: string): string {
 }
 
 export type ThreadListItem = EmailThread & { snippet: string | null };
-export type MailFolder = "inbox" | "sent" | "all" | "trash";
+export type MailFolder = "inbox" | "sent" | "all" | "trash" | "spam";
 
 export function isMailFolder(v: string): v is MailFolder {
-  return v === "inbox" || v === "sent" || v === "all" || v === "trash";
+  return v === "inbox" || v === "sent" || v === "all" || v === "trash" || v === "spam";
 }
 
 export async function listThreads(
@@ -81,8 +81,11 @@ export async function listThreads(
   let query = raw(supabase).from("email_threads").select(THREAD_COLS).eq("owner_id", ownerId);
   if (folder === "trash") {
     query = query.not("trashed_at", "is", null);
+  } else if (folder === "spam") {
+    query = query.is("trashed_at", null).not("spam_at", "is", null);
   } else {
-    query = query.is("trashed_at", null);
+    // Active folders exclude trashed AND spam threads.
+    query = query.is("trashed_at", null).is("spam_at", null);
     // Inbox = received or brand-new; Sent = you sent last. All = both.
     if (folder === "inbox") query = query.or("last_direction.is.null,last_direction.eq.inbound");
     else if (folder === "sent") query = query.eq("last_direction", "outbound");
@@ -288,6 +291,20 @@ export async function restoreThread(
   await raw(supabase)
     .from("email_threads")
     .update({ trashed_at: null, updated_at: new Date().toISOString() })
+    .eq("id", threadId)
+    .eq("owner_id", ownerId);
+}
+
+/** Mark / unmark a thread as spam (reversible). */
+export async function setThreadSpam(
+  supabase: SupabaseClient<Database>,
+  ownerId: string,
+  threadId: string,
+  spam: boolean,
+): Promise<void> {
+  await raw(supabase)
+    .from("email_threads")
+    .update({ spam_at: spam ? new Date().toISOString() : null, updated_at: new Date().toISOString() })
     .eq("id", threadId)
     .eq("owner_id", ownerId);
 }

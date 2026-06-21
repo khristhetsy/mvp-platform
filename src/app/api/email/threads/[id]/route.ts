@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
-import { getThread, replyToThread, markThreadRead, deleteThread, setThreadUnread, trashThread, restoreThread } from "@/lib/email/inbox";
+import { getThread, replyToThread, markThreadRead, deleteThread, setThreadUnread, trashThread, restoreThread, setThreadSpam } from "@/lib/email/inbox";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest, ctx: RouteContext): Promise<Respons
   }
 }
 
-const patchSchema = z.object({ unread: z.boolean().optional(), trashed: z.boolean().optional() });
+const patchSchema = z.object({ unread: z.boolean().optional(), trashed: z.boolean().optional(), spam: z.boolean().optional() });
 
 export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<Response> {
   const auth = await requireApiProfile();
@@ -65,6 +65,8 @@ export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<Respon
   }
   if (parsed.data.trashed === true) await trashThread(auth.supabase, auth.profile.id, id);
   if (parsed.data.trashed === false) await restoreThread(auth.supabase, auth.profile.id, id);
+  if (parsed.data.spam === true) await setThreadSpam(auth.supabase, auth.profile.id, id, true);
+  if (parsed.data.spam === false) await setThreadSpam(auth.supabase, auth.profile.id, id, false);
   return NextResponse.json({ success: true });
 }
 

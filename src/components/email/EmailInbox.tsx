@@ -18,7 +18,7 @@ const FOLDERS: Array<{ id: MailFolder | "drafts" | "spam"; label: string; icon: 
   { id: "sent", label: "Sent", icon: Send },
   { id: "drafts", label: "Drafts", icon: FileText },
   { id: "all", label: "All Mail", icon: Layers },
-  { id: "spam", label: "Spam", icon: AlertTriangle, soon: true },
+  { id: "spam", label: "Spam", icon: AlertTriangle },
   { id: "trash", label: "Trash", icon: Trash2 },
 ];
 
@@ -180,6 +180,16 @@ export function EmailInbox() {
     if (active?.id === id) { setActive(null); setMessages([]); }
     try {
       await fetch(`/api/email/threads/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trashed: false }) });
+    } catch {
+      void loadThreads();
+    }
+  }, [active, loadThreads]);
+
+  const setSpam = useCallback(async (id: string, spam: boolean) => {
+    setThreads((prev) => prev.filter((t) => t.id !== id));
+    if (active?.id === id) { setActive(null); setMessages([]); }
+    try {
+      await fetch(`/api/email/threads/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ spam }) });
     } catch {
       void loadThreads();
     }
@@ -447,9 +457,15 @@ export function EmailInbox() {
                           <button type="button" title="Restore" onClick={(e) => { e.stopPropagation(); void restoreThread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#185FA5]"><RotateCcw className="h-4 w-4" /></button>
                           <button type="button" title="Delete forever" onClick={(e) => { e.stopPropagation(); void purgeThread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#A32D2D]"><Trash2 className="h-4 w-4" /></button>
                         </>
+                      ) : folder === "spam" ? (
+                        <>
+                          <button type="button" title="Not spam" onClick={(e) => { e.stopPropagation(); void setSpam(t.id, false); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#185FA5]"><RotateCcw className="h-4 w-4" /></button>
+                          <button type="button" title="Move to Trash" onClick={(e) => { e.stopPropagation(); void deleteThread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#A32D2D]"><Trash2 className="h-4 w-4" /></button>
+                        </>
                       ) : (
                         <>
                           <button type="button" title="Mark unread" onClick={(e) => { e.stopPropagation(); void markUnread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700"><MailOpen className="h-4 w-4" /></button>
+                          <button type="button" title="Report spam" onClick={(e) => { e.stopPropagation(); void setSpam(t.id, true); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#B06A00]"><AlertTriangle className="h-4 w-4" /></button>
                           <button type="button" title="Move to Trash" onClick={(e) => { e.stopPropagation(); void deleteThread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#A32D2D]"><Trash2 className="h-4 w-4" /></button>
                         </>
                       )}
