@@ -8,6 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { STORAGE_BUCKET, STORAGE_FOLDER_SIGNED, MIME_PDF, BRAND } from "./types";
 import type { SignatureField, SignatureRequest } from "./types";
+import { fieldToPdfRect } from "./compute";
 
 function raw(supabase: SupabaseClient<Database>): SupabaseClient {
   return supabase as unknown as SupabaseClient;
@@ -33,13 +34,7 @@ export async function sealEnvelope(
   for (const f of fields) {
     const page = pages[f.page - 1];
     if (!page) continue;
-    const pw = page.getWidth();
-    const ph = page.getHeight();
-    const boxW = f.width * pw;
-    const boxH = f.height * ph;
-    const left = f.x * pw;
-    const topFromTop = f.y * ph;
-    const bottom = ph - topFromTop - boxH; // pdf-lib origin is bottom-left
+    const { left, bottom, width: boxW, height: boxH } = fieldToPdfRect(f, page.getWidth(), page.getHeight());
 
     if ((f.field_type === "signature" || f.field_type === "initial") && f.value?.startsWith("data:image")) {
       try {

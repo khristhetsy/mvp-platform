@@ -10,6 +10,7 @@ import {
 import { writeSignatureAudit, requestClientMeta } from "@/lib/esignature/storage";
 import { sealEnvelope } from "@/lib/esignature/seal";
 import { sendCompletionNotice } from "@/lib/esignature/email";
+import { resolveAutoValue } from "@/lib/esignature/compute";
 
 export const dynamic = "force-dynamic";
 
@@ -48,14 +49,8 @@ export async function POST(
   // Server computes auto values (never trust the client for those).
   const resolved: { fieldId: string; value: string }[] = [];
   for (const f of fields) {
-    let value: string;
-    if (f.auto_source === "signing_date" || f.field_type === "date") {
-      value = today;
-    } else if (f.auto_source === "signer_company" || f.field_type === "company") {
-      value = request.signer_company ?? "";
-    } else {
-      value = (provided[f.id] ?? "").trim();
-    }
+    const auto = resolveAutoValue(f, today, request.signer_company);
+    const value = auto !== null ? auto : (provided[f.id] ?? "").trim();
 
     if (f.required && !value) {
       return NextResponse.json({ error: "Please complete all required fields." }, { status: 400 });
