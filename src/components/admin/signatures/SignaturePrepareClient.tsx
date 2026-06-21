@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pen, Calendar, Building2, Type, Trash2, Save, Loader2 } from "lucide-react";
+import { Pen, Calendar, Building2, Type, Trash2, Save, Loader2, Download, Ban } from "lucide-react";
 import { useToast } from "@/components/ui/ToastProvider";
 import type { FieldType } from "@/lib/esignature/types";
 
@@ -44,6 +44,12 @@ const FIELD_COLORS: Record<FieldType, string> = {
   initial: "#993556",
 };
 
+type AuditEvent = { id: string; event_type: string; actor: string | null; ip_address: string | null; created_at: string };
+
+const STATUS_LABELS: Record<string, string> = {
+  draft: "Draft", sent: "Sent", viewed: "Viewed", signed: "Signed", completed: "Completed", voided: "Voided",
+};
+
 export function SignaturePrepareClient({ requestId, documentName, status, pageCount }: Props) {
   const router = useRouter();
   const { toast } = useToast();
@@ -52,9 +58,13 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const editable = status === "draft";
+  const [liveStatus, setLiveStatus] = useState(status);
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [audit, setAudit] = useState<AuditEvent[]>([]);
+  const [voiding, setVoiding] = useState(false);
+  const editable = liveStatus === "draft";
 
-  // ── Load existing fields ──────────────────────────────────────────────────
+  // ── Load existing fields + status + audit ─────────────────────────────────
   useEffect(() => {
     let active = true;
     void (async () => {
@@ -76,6 +86,9 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
             placeholder: f.placeholder,
           })),
         );
+        setSignedUrl(data.signedUrl ?? null);
+        setAudit(data.audit ?? []);
+        if (data.request?.status) setLiveStatus(data.request.status);
       } catch (err) {
         if (active) toast({ title: "Could not load document", description: err instanceof Error ? err.message : "", variant: "error" });
       } finally {
@@ -146,6 +159,24 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
     }
   }, [fields, requestId, toast]);
 
+  const voidEnvelope = useCallback(async () => {
+    if (!window.confirm("Void this envelope? The signer will no longer be able to sign it.")) return;
+    setVoiding(true);
+    try {
+      const res = await fetch(`/api/admin/signatures/${requestId}/void`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Void failed.");
+      setLiveStatus("voided");
+      toast({ title: "Envelope voided", variant: "success" });
+    } catch (err) {
+      toast({ title: "Could not void", description: err instanceof Error ? err.message : "", variant: "error" });
+    } finally {
+      setVoiding(false);
+    }
+  }, [requestId, toast]);
+
+  const canVoid = ["draft", "sent", "viewed"].includes(liveStatus);
+
   const selectedField = fields.find((f) => f.uid === selected) ?? null;
 
   return (
@@ -153,31 +184,53 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Prepare document</p>
-          <h1 className="mt-1 text-2xl font-semibold text-slate-950">{documentName}</h1>
+          <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold text-slate-950">
+            {documentName}
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{STATUS_LABELS[liveStatus] ?? liveStatus}</span>
+          </h1>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => router.push(`/admin/signatures/${requestId}/send`)}
-            disabled={fields.length === 0 || !editable}
-            className="cap-btn-secondary rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
-          >
-            Continue to send →
-          </button>
-          <button
-            type="button"
-            onClick={() => void save()}
-            disabled={saving || !editable}
-            className="cap-btn-primary inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save fields
-          </button>
+          {signedUrl ? (
+            <a href={signedUrl} target="_blank" rel="noreferrer" className="cap-btn-secondary inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold">
+              <Download className="h-4 w-4" /> Signed PDF
+            </a>
+          ) : null}
+          {canVoid ? (
+            <button
+              type="button"
+              onClick={() => void voidEnvelope()}
+              disabled={voiding}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+            >
+              <Ban className="h-4 w-4" /> Void
+            </button>
+          ) : null}
+          {editable ? (
+            <>
+              <button
+                type="button"
+                onClick={() => router.push(`/admin/signatures/${requestId}/send`)}
+                disabled={fields.length === 0}
+                className="cap-btn-secondary rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              >
+                Continue to send →
+              </button>
+              <button
+                type="button"
+                onClick={() => void save()}
+                disabled={saving}
+                className="cap-btn-primary inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save fields
+              </button>
+            </>
+          ) : null}
         </div>
       </div>
 
       {!editable ? (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          This envelope is {status}. Fields are read-only.
+          This envelope is {STATUS_LABELS[liveStatus]?.toLowerCase() ?? liveStatus}. Fields are read-only.
         </p>
       ) : (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/80 bg-white p-2 shadow-[var(--shadow-panel)]">
@@ -252,6 +305,22 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
           onUpdate={updateField}
         />
       )}
+
+      {audit.length > 0 ? (
+        <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
+          <h2 className="mb-2 text-sm font-semibold text-slate-800">Audit trail</h2>
+          <ol className="space-y-1.5">
+            {audit.map((e) => (
+              <li key={e.id} className="flex flex-wrap items-center gap-x-2 text-xs text-slate-600">
+                <span className="inline-block w-20 font-medium capitalize text-slate-900">{e.event_type}</span>
+                <span>{new Date(e.created_at).toLocaleString()}</span>
+                {e.actor ? <span className="text-slate-400">· {e.actor}</span> : null}
+                {e.ip_address ? <span className="text-slate-400">· {e.ip_address}</span> : null}
+              </li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
     </div>
   );
 }

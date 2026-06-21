@@ -85,6 +85,15 @@ export async function markRequestSent(
   if (error) throw new Error(`Could not send envelope: ${error.message}`);
 }
 
+/** Void an unsigned envelope. */
+export async function markRequestVoided(supabase: SupabaseClient<Database>, id: string): Promise<void> {
+  const { error } = await raw(supabase)
+    .from("signature_requests")
+    .update({ status: "voided", voided_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw new Error(`Could not void envelope: ${error.message}`);
+}
+
 export async function getRequestById(
   supabase: SupabaseClient<Database>,
   id: string,

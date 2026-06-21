@@ -61,6 +61,19 @@ export async function writeSignatureAudit(
     });
 }
 
+/** Read the audit chain for an envelope (oldest first). */
+export async function listAuditEvents(
+  supabase: SupabaseClient<Database>,
+  requestId: string,
+): Promise<Array<{ id: string; event_type: string; actor: string | null; ip_address: string | null; created_at: string }>> {
+  const { data } = await raw(supabase)
+    .from("signature_audit_events")
+    .select("id, event_type, actor, ip_address, created_at")
+    .eq("request_id", requestId)
+    .order("created_at", { ascending: true });
+  return (data as Array<{ id: string; event_type: string; actor: string | null; ip_address: string | null; created_at: string }>) ?? [];
+}
+
 /** Best-effort client IP + user agent from a request, for the audit trail. */
 export function requestClientMeta(req: Request): { ip: string | null; userAgent: string | null } {
   const fwd = req.headers.get("x-forwarded-for");

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requirePermissionApi } from "@/lib/api/permissions";
 import { getRequestById, updateRequestDetails } from "@/lib/esignature/requests";
 import { listFields } from "@/lib/esignature/fields";
-import { signatureSignedUrl } from "@/lib/esignature/storage";
+import { signatureSignedUrl, listAuditEvents } from "@/lib/esignature/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -21,13 +21,14 @@ export async function GET(
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
 
-  const [fields, previewUrl, signedUrl] = await Promise.all([
+  const [fields, previewUrl, signedUrl, audit] = await Promise.all([
     listFields(auth.supabase, id),
     signatureSignedUrl(auth.supabase, request.working_file_path, 600),
     request.signed_file_path ? signatureSignedUrl(auth.supabase, request.signed_file_path, 600) : Promise.resolve(null),
+    listAuditEvents(auth.supabase, id),
   ]);
 
-  return NextResponse.json({ request, fields, previewUrl, signedUrl });
+  return NextResponse.json({ request, fields, previewUrl, signedUrl, audit });
 }
 
 const patchSchema = z.object({
