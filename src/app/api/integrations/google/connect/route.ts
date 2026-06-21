@@ -19,6 +19,9 @@ const ALLOWED_RETURN_PATHS = new Set([
   "/investor/calendar",
   "/admin/calendar",
   "/admin/integrations",
+  "/founder/inbox",
+  "/investor/inbox",
+  "/admin/inbox",
 ]);
 
 export async function GET(request: Request) {

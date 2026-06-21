@@ -1,5 +1,5 @@
 import { AppShell } from "@/components/AppShell";
-import { EmailInbox } from "@/components/email/EmailInbox";
+import { InboxTabs } from "@/components/email/InboxTabs";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,7 @@ export default async function AdminInboxPage() {
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle="Inbox"
     >
-      <EmailInbox />
+      <InboxTabs />
     </AppShell>
   );
 }

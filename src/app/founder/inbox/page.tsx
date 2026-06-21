@@ -1,5 +1,5 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
-import { EmailInbox } from "@/components/email/EmailInbox";
+import { InboxTabs } from "@/components/email/InboxTabs";
 import { requireRole } from "@/lib/supabase/auth";
 import { assertFeatureEnabled } from "@/lib/feature-controls/server";
 
@@ -10,7 +10,7 @@ export default async function FounderInboxPage() {
   await assertFeatureEnabled("founder", "inbox", "/founder/dashboard");
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle="Inbox">
-      <EmailInbox />
+      <InboxTabs />
     </FounderAppShell>
   );
 }

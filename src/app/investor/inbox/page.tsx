@@ -1,5 +1,5 @@
 import { AppShell } from "@/components/AppShell";
-import { EmailInbox } from "@/components/email/EmailInbox";
+import { InboxTabs } from "@/components/email/InboxTabs";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { assertFeatureEnabled } from "@/lib/feature-controls/server";
 
@@ -15,7 +15,7 @@ export default async function InvestorInboxPage() {
       profileName={profile.full_name ?? profile.email ?? "Investor"}
       profileSubtitle="Inbox"
     >
-      <EmailInbox />
+      <InboxTabs />
     </AppShell>
   );
 }
