@@ -16,6 +16,14 @@ export function EmailFoundationSection({ status }: Readonly<{ status: GmailFound
         ) : (
           <StatusBadge label="Google not connected" status="neutral" />
         )}
+        {!status.googleConnected ? (
+          <a
+            href="/api/integrations/google/connect?returnTo=/admin/integrations"
+            className="ml-auto inline-flex items-center rounded-md bg-[#534AB7] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#3C3489]"
+          >
+            Connect Google
+          </a>
+        ) : null}
       </div>
       <p className="mt-3 text-xs text-slate-600">{status.message}</p>
       {status.googleEmailHint ? (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { ChevronLeft, ChevronRight, Plus, Video, X, Trash2, MapPin, ExternalLink } from "lucide-react";
 import type { CalendarEventRecord } from "@/lib/scheduling/types";
 import type { GoogleEventLite } from "@/lib/integrations/google-calendar";
@@ -85,6 +86,7 @@ function formFromEvent(e: CalendarEventRecord): FormState {
 }
 
 export function CalendarWorkspace({ googleConnected = false }: { googleConnected?: boolean }) {
+  const pathname = usePathname();
   const [anchor, setAnchor] = useState(() => new Date());
   const [events, setEvents] = useState<CalendarEventRecord[]>([]);
   const [googleEvents, setGoogleEvents] = useState<GoogleEventLite[]>([]);
@@ -319,9 +321,15 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
 
       {error && !form ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
       {!googleConnected ? (
-        <p className="rounded-lg border border-[#B5D4F4] bg-[#E6F1FB] px-3 py-2 text-xs text-[#0C447C]">
-          Connect your Google account in Integrations to sync events and auto-create Google Meet links.
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#B5D4F4] bg-[#E6F1FB] px-3 py-2 text-xs text-[#0C447C]">
+          <span>Connect your Google account to sync events and auto-create Google Meet links.</span>
+          <a
+            href={`/api/integrations/google/connect?returnTo=${encodeURIComponent(pathname ?? "/admin/calendar")}`}
+            className="inline-flex items-center gap-1.5 rounded-md bg-[#2f6cb0] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#234f86]"
+          >
+            <ExternalLink className="h-3.5 w-3.5" /> Connect Google
+          </a>
+        </div>
       ) : null}
 
       {view === "month" ? (
