@@ -203,7 +203,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
         ? await fetch(`/api/calendar/google-events/${form.googleId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: form.title.trim(), startTime, endTime, timezone: LOCAL_TZ, location: form.location || null }),
+            body: JSON.stringify({ title: form.title.trim(), startTime, endTime, timezone: LOCAL_TZ, location: form.location || null, description: form.description || null, attendees: attendees.map((a) => a.email) }),
           })
         : form.id
         ? await fetch(`/api/calendar/events/${form.id}`, {
@@ -259,6 +259,26 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
     }
   }, [load]);
 
+  /** Open a Google event in the editor, enriching with full detail (location/description/attendees). */
+  const openGoogleForEdit = useCallback(async (e: DisplayEvent) => {
+    const gid = e.id.startsWith("g:") ? e.id.slice(2) : e.id;
+    setSelected(null);
+    setForm(formFromDisplay(e));
+    try {
+      const res = await fetch(`/api/calendar/google-events/${gid}`);
+      const data = await res.json();
+      if (res.ok && data.event) {
+        setForm((prev) =>
+          prev && prev.googleId === gid
+            ? { ...prev, location: data.event.location || "", description: data.event.description || "", attendees: (data.event.attendees || []).join(", ") }
+            : prev,
+        );
+      }
+    } catch {
+      // keep the basic title/time form
+    }
+  }, []);
+
   function googleDayUrl(iso: string): string {
     const d = new Date(iso);
     return `https://calendar.google.com/calendar/u/0/r/day/${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
@@ -291,7 +311,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
             <button type="button" onClick={() => setSelected(null)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
           </div>
           <div className="flex flex-wrap gap-2 border-t border-slate-100 bg-slate-50/50 px-5 py-3">
-            <button type="button" onClick={() => { setSelected(null); setForm(sel.editable && sel.record ? formFromEvent(sel.record) : formFromDisplay(sel)); }} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">Edit</button>
+            <button type="button" onClick={() => { if (sel.editable && sel.record) { setSelected(null); setForm(formFromEvent(sel.record)); } else { void openGoogleForEdit(sel); } }} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">Edit</button>
             {sel.meet_url ? <a href={sel.meet_url} className="inline-flex items-center gap-1 rounded-lg border border-[#CECBF6] bg-[#EEEDFE] px-3 py-1.5 text-xs font-medium text-[#3C3489] hover:bg-[#CECBF6]"><Video className="h-3.5 w-3.5" /> Join Meet</a> : null}
             {!sel.editable ? <a href={googleDayUrl(sel.start_time)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-[#B5D4F4] bg-[#E6F1FB] px-3 py-1.5 text-xs font-medium text-[#0C447C] hover:bg-[#B5D4F4]"><ExternalLink className="h-3.5 w-3.5" /> Open in Google</a> : null}
             <button type="button" disabled={saving} onClick={() => void deleteEvent(sel)} className="inline-flex items-center gap-1 rounded-lg border border-[#F7C1C1] bg-white px-3 py-1.5 text-xs font-medium text-[#A32D2D] hover:bg-[#FCEBEB] disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /> Delete</button>

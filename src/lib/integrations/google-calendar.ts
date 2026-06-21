@@ -10,7 +10,19 @@ export type CalendarEventInput = {
   timezone: string;
   attendees?: string[];
   notes?: string | null;
+  location?: string | null;
   requestId?: string;
+};
+
+export type GoogleEventFull = {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  start_time: string;
+  end_time: string;
+  attendees: string[];
+  meet_url: string | null;
 };
 
 export type CalendarEventResult = {
@@ -21,6 +33,12 @@ export type CalendarEventResult = {
 
 type GoogleCalendarEventResponse = {
   id?: string;
+  summary?: string;
+  description?: string;
+  location?: string;
+  start?: { dateTime?: string; date?: string };
+  end?: { dateTime?: string; date?: string };
+  attendees?: Array<{ email?: string }>;
   hangoutLink?: string;
   conferenceData?: {
     entryPoints?: Array<{ entryPointType?: string; uri?: string }>;
@@ -119,6 +137,9 @@ export async function updateCalendarEvent(
   if (input.notes !== undefined) {
     patch.description = input.notes;
   }
+  if (input.location !== undefined) {
+    patch.location = input.location;
+  }
   if (input.startTime && input.timezone) {
     patch.start = { dateTime: input.startTime, timeZone: input.timezone };
   }
@@ -148,6 +169,24 @@ export async function updateCalendarEvent(
     provider: "google",
     eventId: payload.id,
     meetUrl: extractMeetUrl(payload),
+  };
+}
+
+/** Fetch a single Google event with full detail (description, location, attendees). */
+export async function getGoogleEvent(eventId: string, accessToken: string): Promise<GoogleEventFull> {
+  const url = `${CALENDAR_EVENTS_URL}/${encodeURIComponent(eventId)}`;
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+  const e = (await response.json().catch(() => null)) as GoogleCalendarEventResponse | null;
+  if (!response.ok || !e?.id) throw new Error(e?.error?.message ?? "Unable to load Google Calendar event.");
+  return {
+    id: e.id,
+    title: e.summary ?? "",
+    description: e.description ?? "",
+    location: e.location ?? "",
+    start_time: e.start?.dateTime ?? e.start?.date ?? "",
+    end_time: e.end?.dateTime ?? e.end?.date ?? "",
+    attendees: (e.attendees ?? []).map((a) => a.email ?? "").filter(Boolean),
+    meet_url: extractMeetUrl(e),
   };
 }
 

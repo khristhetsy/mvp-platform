@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
 import { getValidGoogleAccessToken } from "@/lib/integrations/google-access-token";
-import { updateCalendarEvent, cancelCalendarEvent } from "@/lib/integrations/google-calendar";
+import { updateCalendarEvent, cancelCalendarEvent, getGoogleEvent } from "@/lib/integrations/google-calendar";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -13,6 +13,8 @@ const patchSchema = z.object({
   endTime: z.string().datetime({ offset: true }).optional(),
   timezone: z.string().optional(),
   location: z.string().max(500).nullish(),
+  description: z.string().max(8000).nullish(),
+  attendees: z.array(z.string().email()).max(100).optional(),
 });
 
 async function token(userId: string): Promise<string | { error: Response }> {
@@ -21,6 +23,23 @@ async function token(userId: string): Promise<string | { error: Response }> {
     return { error: NextResponse.json({ error: "Google is not connected." }, { status: 400 }) };
   }
   return t.accessToken;
+}
+
+/** GET — full Google event detail (for the editor: description, location, attendees). */
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+  const auth = await requireApiProfile();
+  if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+  const tk = await token(auth.profile.id);
+  if (typeof tk !== "string") return tk.error;
+
+  try {
+    const event = await getGoogleEvent(id, tk);
+    return NextResponse.json({ event });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Load failed." }, { status: 500 });
+  }
 }
 
 /** PATCH — edit a Google Calendar event directly (partial update; unspecified fields preserved). */
@@ -36,12 +55,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (typeof tk !== "string") return tk.error;
 
   try {
-    // The Google helper supports title/time/timezone (not location); send those.
     await updateCalendarEvent(id, {
       title: parsed.data.title,
       startTime: parsed.data.startTime,
       endTime: parsed.data.endTime,
       timezone: parsed.data.timezone,
+      location: parsed.data.location ?? undefined,
+      notes: parsed.data.description ?? undefined,
+      attendees: parsed.data.attendees,
     }, tk);
     return NextResponse.json({ ok: true });
   } catch (err) {
