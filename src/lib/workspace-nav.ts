@@ -150,6 +150,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       { href: "/admin/users/permissions", label: "User Permissions", requiredPermission: "manage_users"        },
       { href: "/admin/manual",            label: "Operations Manual",requiredPermission: "view_admin_dashboard" },
       { href: "/admin/feature-controls",  label: "Feature Controls", requiredPermission: "manage_settings"      },
+      { href: "/admin/signatures",        label: "E-Signatures",     requiredPermission: "review_documents"     },
       {
         href: "/admin/calendar",
         label: "Calendar",
