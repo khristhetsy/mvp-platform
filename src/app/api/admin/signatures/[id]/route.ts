@@ -21,12 +21,13 @@ export async function GET(
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
 
-  const [fields, previewUrl] = await Promise.all([
+  const [fields, previewUrl, signedUrl] = await Promise.all([
     listFields(auth.supabase, id),
     signatureSignedUrl(auth.supabase, request.working_file_path, 600),
+    request.signed_file_path ? signatureSignedUrl(auth.supabase, request.signed_file_path, 600) : Promise.resolve(null),
   ]);
 
-  return NextResponse.json({ request, fields, previewUrl });
+  return NextResponse.json({ request, fields, previewUrl, signedUrl });
 }
 
 const patchSchema = z.object({

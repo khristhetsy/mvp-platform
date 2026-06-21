@@ -13,6 +13,12 @@ export function buildSignUrl(token: string): string {
   return `${base.replace(/\/$/, "")}/sign/${token}`;
 }
 
+/** Public sealed-document download URL for a token. */
+export function buildSealedDocUrl(token: string): string {
+  const base = getAppUrl() ?? "http://localhost:3000";
+  return `${base.replace(/\/$/, "")}/api/sign/${token}/document`;
+}
+
 /** From header — branded sender name "iCFO Venture Group" over the configured address. */
 function brandedFrom(): string {
   const configured =
@@ -61,4 +67,28 @@ export async function sendSigningInvite(input: {
   ].join("\n");
 
   return send({ to: input.to, subject: `Review and sign: ${input.documentName}`, text });
+}
+
+/** Notify a party that the document is complete, with the sealed-copy link. */
+export async function sendCompletionNotice(input: {
+  to: string;
+  documentName: string;
+  token: string;
+  forSigner: boolean;
+}): Promise<{ delivered: boolean }> {
+  const url = buildSealedDocUrl(input.token);
+  const text = [
+    input.forSigner ? "Hello," : "Hi,",
+    "",
+    input.forSigner
+      ? `Your signed copy of "${input.documentName}" is ready.`
+      : `"${input.documentName}" has been signed and completed.`,
+    "",
+    "View the signed document:",
+    url,
+    "",
+    BRAND.emailSender,
+  ].join("\n");
+
+  return send({ to: input.to, subject: `Completed: ${input.documentName}`, text });
 }

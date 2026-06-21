@@ -3,10 +3,13 @@ import { z } from "zod";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import {
   getRequestByToken,
+  getCreatorEmail,
   listFieldsForToken,
   saveSignerValuesAndSign,
 } from "@/lib/esignature/public";
 import { writeSignatureAudit, requestClientMeta } from "@/lib/esignature/storage";
+import { sealEnvelope } from "@/lib/esignature/seal";
+import { sendCompletionNotice } from "@/lib/esignature/email";
 
 export const dynamic = "force-dynamic";
 
@@ -72,5 +75,32 @@ export async function POST(
     metadata: { field_count: resolved.length },
   });
 
-  return NextResponse.json({ ok: true });
+  // Seal: burn values + signature into the PDF, hash, store, complete, notify.
+  let sealed = false;
+  try {
+    const updatedFields = await listFieldsForToken(supabase, request.id);
+    const result = await sealEnvelope(supabase, request, updatedFields);
+    sealed = true;
+
+    await writeSignatureAudit(supabase, {
+      requestId: request.id,
+      eventType: "sealed",
+      actor: "system",
+      metadata: { document_hash: result.hash },
+    });
+
+    const adminEmail = await getCreatorEmail(supabase, request.created_by);
+    await Promise.allSettled([
+      request.signer_email
+        ? sendCompletionNotice({ to: request.signer_email, documentName: request.document_name, token, forSigner: true })
+        : Promise.resolve(),
+      adminEmail
+        ? sendCompletionNotice({ to: adminEmail, documentName: request.document_name, token, forSigner: false })
+        : Promise.resolve(),
+    ]);
+  } catch {
+    // Signature is recorded; sealing can be retried. Don't fail the signer.
+  }
+
+  return NextResponse.json({ ok: true, sealed });
 }

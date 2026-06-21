@@ -53,6 +53,15 @@ export async function saveSignerValuesAndSign(
     .eq("id", id);
 }
 
+/** Creator (admin) email for completion notices. */
+export async function getCreatorEmail(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<string | null> {
+  const { data } = await raw(supabase).from("profiles").select("email").eq("id", userId).maybeSingle();
+  return (data as { email?: string } | null)?.email ?? null;
+}
+
 export async function listFieldsForToken(
   supabase: SupabaseClient<Database>,
   requestId: string,
