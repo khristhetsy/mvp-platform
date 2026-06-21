@@ -41,6 +41,21 @@ export function sendDocumentsRequested(to: string, companyName: string, eid: str
     [`Hello,`, ``, `New documents have been requested for the ${companyName} diligence.`, ``, url, ``, SENDER].join("\n"));
 }
 
+function adminLink(eid: string): string {
+  const base = (getAppUrl() ?? "http://localhost:3000").replace(/\/$/, "");
+  return `${base}/admin/diligence/${eid}`;
+}
+
+export function sendNewResponseToAdmin(to: string, companyName: string, eid: string) {
+  return send(to, `New founder response — ${companyName}`,
+    [`A founder has responded on the ${companyName} diligence.`, ``, adminLink(eid), ``, SENDER].join("\n"));
+}
+
+export function sendDocumentSubmittedToAdmin(to: string, companyName: string, eid: string) {
+  return send(to, `Document submitted — verify — ${companyName}`,
+    [`A document was submitted on the ${companyName} diligence and is ready to verify.`, ``, adminLink(eid), ``, SENDER].join("\n"));
+}
+
 export function sendFounderSigned(to: string, companyName: string, eid: string) {
   const url = diligenceLink("founder", eid).replace("/founder/", "/admin/"); // admin link
   return send(to, `Founder signed — ${companyName}`,

@@ -4,9 +4,23 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { computeConfidence } from "./confidence";
 import { ddAudit } from "./audit";
+import { sendDocumentsRequested } from "./email";
 
 function raw(supabase: SupabaseClient<Database>): SupabaseClient {
   return supabase as unknown as SupabaseClient;
+}
+
+/** Notify the engagement's founder member that documents were requested. */
+async function notifyFounderDocsRequested(service: SupabaseClient<Database>, eid: string): Promise<void> {
+  const { data: m } = await raw(service).from("dd_engagement_members").select("user_id").eq("engagement_id", eid).eq("role", "founder").maybeSingle();
+  const userId = (m as { user_id?: string } | null)?.user_id;
+  if (!userId) return;
+  const [{ data: prof }, { data: eng }] = await Promise.all([
+    raw(service).from("profiles").select("email").eq("id", userId).maybeSingle(),
+    raw(service).from("dd_engagements").select("company_name").eq("id", eid).maybeSingle(),
+  ]);
+  const email = (prof as { email?: string } | null)?.email;
+  if (email) { try { await sendDocumentsRequested(email, (eng as { company_name?: string } | null)?.company_name ?? "your company", eid); } catch { /* best-effort */ } }
 }
 
 export type DocRequest = {
@@ -42,6 +56,7 @@ export async function createDocRequest(
     .single();
   if (error || !data) throw new Error(`Could not create request: ${error?.message ?? "unknown"}`);
   await ddAudit(supabase, { engagementId: eid, actorId, action: "doc_request.create", target: (data as { id: string }).id, after: { label: input.label } });
+  await notifyFounderDocsRequested(supabase, eid);
   return data as unknown as DocRequest;
 }
 
@@ -75,6 +90,7 @@ export async function generateDocRequests(supabase: SupabaseClient<Database>, ei
   await db.from("dd_findings").update({ verification: "requested" }).eq("engagement_id", eid).in("finding_code", targets.map((t) => t.finding_code)).eq("verification", "unverified");
 
   await ddAudit(supabase, { engagementId: eid, actorId, action: "doc_request.generate", target: eid, after: { count: targets.length } });
+  await notifyFounderDocsRequested(supabase, eid);
   return { count: targets.length };
 }
 

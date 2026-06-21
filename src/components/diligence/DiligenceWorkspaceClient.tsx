@@ -27,7 +27,8 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
   const { toast } = useToast();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"findings" | "ledger" | "dataroom" | "conditions">("findings");
+  const [tab, setTab] = useState<"findings" | "ledger" | "dataroom" | "conditions" | "activity">("findings");
+  const [audit, setAudit] = useState<{ id: number; action: string; actor: string | null; target: string | null; at: string }[]>([]);
   const [aiOpen, setAiOpen] = useState(false);
   const [aiText, setAiText] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -208,6 +209,15 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
     } finally { setActing(false); }
   }, [postJson, reload, toast]);
 
+  useEffect(() => {
+    if (tab !== "activity") return;
+    let active = true;
+    void (async () => {
+      try { const res = await fetch(`/api/admin/diligence/${engagementId}/audit`); const d = await res.json(); if (active && res.ok) setAudit(d.audit ?? []); } catch { /* ignore */ }
+    })();
+    return () => { active = false; };
+  }, [tab, engagementId]);
+
   const addInvestor = useCallback(async (email: string) => {
     try { await postJson("/members", "POST", { email, role: "investor" }); toast({ title: "Investor added", variant: "success" }); await reload(); }
     catch (err) { toast({ title: "Could not add", description: err instanceof Error ? err.message : "", variant: "error" }); }
@@ -347,7 +357,7 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
       </details>
 
       <div className="flex gap-1 border-b border-slate-200">
-        {([["findings", "Findings register"], ["ledger", "Verification ledger"], ["dataroom", "Data room"], ["conditions", "Conditions"]] as const).map(([t, label]) => (
+        {([["findings", "Findings register"], ["ledger", "Verification ledger"], ["dataroom", "Data room"], ["conditions", "Conditions"], ["activity", "Activity"]] as const).map(([t, label]) => (
           <button key={t} type="button" onClick={() => setTab(t)}
             className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium ${tab === t ? "border-[#2f6cb0] text-[#2f6cb0]" : "border-transparent text-slate-500 hover:text-slate-800"}`}>
             {label}
@@ -361,8 +371,23 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
         <VerificationLedger claims={claims} findings={findings} onSave={saveClaim} onVerify={verifyClaimState} />
       ) : tab === "dataroom" ? (
         <DataRoom rows={docRequests} onGenerate={generateDocs} onAdd={addDocRequest} onVerify={verifyDoc} />
-      ) : (
+      ) : tab === "conditions" ? (
         <Conditions rows={conditions} onSave={saveCondition} onDelete={removeCondition} />
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
+          {audit.length === 0 ? <p className="p-4 text-sm text-slate-500">No activity yet.</p> : (
+            <ol className="divide-y divide-slate-50">
+              {audit.map((e) => (
+                <li key={e.id} className="flex flex-wrap items-center gap-x-2 px-4 py-2 text-xs">
+                  <span className="w-44 font-mono text-slate-700">{e.action}</span>
+                  <span className="text-slate-500">{new Date(e.at).toLocaleString()}</span>
+                  <span className="text-slate-400">· {e.actor ?? "system"}</span>
+                  {e.target ? <span className="truncate text-slate-400">· {e.target}</span> : null}
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
       )}
     </div>
   );

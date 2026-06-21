@@ -6,9 +6,20 @@ import type { Database } from "@/lib/supabase/types";
 import type { Disposition } from "./types";
 import { ddAudit } from "./audit";
 import { computeConfidence } from "./confidence";
+import { sendNewResponseToAdmin, sendDocumentSubmittedToAdmin } from "./email";
 
 function raw(supabase: SupabaseClient<Database>): SupabaseClient {
   return supabase as unknown as SupabaseClient;
+}
+
+/** Engagement owner's email + company name, for admin notifications. */
+async function ownerContact(service: SupabaseClient<Database>, eid: string): Promise<{ email: string; company: string } | null> {
+  const { data: eng } = await raw(service).from("dd_engagements").select("owner_id, company_name").eq("id", eid).maybeSingle();
+  const e = eng as { owner_id?: string; company_name?: string } | null;
+  if (!e?.owner_id) return null;
+  const { data: o } = await raw(service).from("profiles").select("email").eq("id", e.owner_id).maybeSingle();
+  const email = (o as { email?: string } | null)?.email;
+  return email ? { email, company: e.company_name ?? "the engagement" } : null;
 }
 
 export class NotAMemberError extends Error {
@@ -69,6 +80,10 @@ export async function submitFounderResponse(
   }
 
   await ddAudit(service, { engagementId: eid, actorId: userId, action: "response.submit", target: (data as { id: string }).id, after: { finding_codes: input.finding_codes, disposition: input.disposition } });
+
+  const owner = await ownerContact(service, eid);
+  if (owner) { try { await sendNewResponseToAdmin(owner.email, owner.company, eid); } catch { /* best-effort */ } }
+
   return data as { id: string };
 }
 
@@ -117,5 +132,9 @@ export async function uploadFounderDocument(
   await raw(service).from("dd_engagements").update({ confidence_pct: confidence }).eq("id", eid);
 
   await ddAudit(service, { engagementId: eid, actorId: userId, action: "document.upload", target: documentId, after: { filename: file.filename, doc_request: opts.docRequestId ?? null } });
+
+  const owner = await ownerContact(service, eid);
+  if (owner) { try { await sendDocumentSubmittedToAdmin(owner.email, owner.company, eid); } catch { /* best-effort */ } }
+
   return { documentId };
 }
