@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Mail, RefreshCw, ArrowLeft, ExternalLink, Inbox as InboxIcon, Send, FileText, Layers, AlertTriangle, Trash2, Plus, X, Loader2 } from "lucide-react";
+import { Mail, RefreshCw, ArrowLeft, ExternalLink, Inbox as InboxIcon, Send, FileText, Layers, AlertTriangle, Trash2, Plus, X, Loader2, Archive, RotateCcw, CornerUpLeft } from "lucide-react";
+
+type GmailActionId = "archive" | "spam" | "notspam" | "trash" | "untrash";
 
 type GmailFolder = "inbox" | "sent" | "all" | "spam" | "trash" | "drafts";
 type GmailItem = { id: string; threadId: string; from: string; subject: string; date: string; snippet: string; unread: boolean };
@@ -48,6 +50,8 @@ export function GmailInbox() {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [replying, setReplying] = useState(false);
 
   const connectUrl = `/api/integrations/google/connect?returnTo=${encodeURIComponent(pathname ?? "/admin/inbox")}`;
 
@@ -82,6 +86,38 @@ export function GmailInbox() {
       setError(err instanceof Error ? err.message : "Failed to open.");
     }
   }, []);
+
+  const act = useCallback(async (threadId: string, action: GmailActionId) => {
+    setItems((prev) => prev.filter((t) => t.threadId !== threadId));
+    try {
+      const res = await fetch(`/api/integrations/google/gmail/threads/${threadId}/actions`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error ?? "Action failed."); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Action failed.");
+      void load();
+    }
+  }, [load]);
+
+  const sendReply = useCallback(async () => {
+    if (!thread || !replyText.trim()) return;
+    setReplying(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/integrations/google/gmail/threads/${thread.id}/reply`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: replyText }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Reply failed.");
+      setReplyText("");
+      await openThread(thread.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Reply failed.");
+    } finally {
+      setReplying(false);
+    }
+  }, [thread, replyText, openThread]);
 
   const send = useCallback(async () => {
     if (!to.trim() || !subject.trim() || !body.trim()) { setError("To, subject and message are required."); return; }
@@ -134,6 +170,15 @@ export function GmailInbox() {
             ))}
           </ul>
         </div>
+        {error ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
+        <div className="rounded-xl border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
+          <textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} rows={3} placeholder="Reply…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+          <div className="mt-2 flex justify-end">
+            <button type="button" onClick={() => void sendReply()} disabled={replying || !replyText.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50">
+              {replying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CornerUpLeft className="h-4 w-4" />} {replying ? "Sending…" : "Reply"}
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -165,13 +210,26 @@ export function GmailInbox() {
           <ul>
             {items.map((t) => (
               <li key={t.threadId} role="button" tabIndex={0} onClick={() => void openThread(t.threadId)} onKeyDown={(e) => { if (e.key === "Enter") void openThread(t.threadId); }}
-                className={`flex cursor-pointer items-center gap-3 border-b border-slate-100 px-4 py-2.5 last:border-0 ${t.unread ? "bg-white hover:bg-slate-50" : "bg-slate-50/40 hover:bg-slate-50"}`}>
+                className={`group flex cursor-pointer items-center gap-3 border-b border-slate-100 px-4 py-2.5 last:border-0 ${t.unread ? "bg-white hover:bg-slate-50" : "bg-slate-50/40 hover:bg-slate-50"}`}>
                 <span className={`w-44 shrink-0 truncate text-sm ${t.unread ? "font-semibold text-slate-950" : "text-slate-600"}`}>{fromName(t.from)}</span>
                 <span className="min-w-0 flex-1 truncate text-sm">
                   <span className={t.unread ? "font-semibold text-slate-950" : "text-slate-700"}>{t.subject}</span>
                   {t.snippet ? <span className="text-slate-400"> — {t.snippet}</span> : null}
                 </span>
-                <span className={`w-16 shrink-0 text-right text-xs ${t.unread ? "font-semibold text-slate-900" : "text-slate-400"}`}>{when(t.date)}</span>
+                <span className="hidden shrink-0 items-center gap-1 group-hover:flex">
+                  {folder === "trash" ? (
+                    <button type="button" title="Restore to inbox" onClick={(e) => { e.stopPropagation(); void act(t.threadId, "untrash"); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#185FA5]"><RotateCcw className="h-4 w-4" /></button>
+                  ) : folder === "spam" ? (
+                    <button type="button" title="Not spam" onClick={(e) => { e.stopPropagation(); void act(t.threadId, "notspam"); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#185FA5]"><RotateCcw className="h-4 w-4" /></button>
+                  ) : (
+                    <>
+                      <button type="button" title="Archive" onClick={(e) => { e.stopPropagation(); void act(t.threadId, "archive"); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700"><Archive className="h-4 w-4" /></button>
+                      <button type="button" title="Report spam" onClick={(e) => { e.stopPropagation(); void act(t.threadId, "spam"); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#B06A00]"><AlertTriangle className="h-4 w-4" /></button>
+                      <button type="button" title="Move to Trash" onClick={(e) => { e.stopPropagation(); void act(t.threadId, "trash"); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#A32D2D]"><Trash2 className="h-4 w-4" /></button>
+                    </>
+                  )}
+                </span>
+                <span className={`w-16 shrink-0 text-right text-xs group-hover:hidden ${t.unread ? "font-semibold text-slate-900" : "text-slate-400"}`}>{when(t.date)}</span>
               </li>
             ))}
           </ul>
