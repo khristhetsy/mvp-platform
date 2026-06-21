@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePermissionApi } from "@/lib/api/permissions";
 import { writeAuditLog } from "@/lib/data/audit";
-import { convertDocxToPdf, DocxConversionError } from "@/lib/esignature/convert";
 import { countPdfPages, PdfValidationError } from "@/lib/esignature/pdf";
 import {
   uploadToSignatureBucket,
@@ -12,10 +11,8 @@ import {
 import { createDraftRequest } from "@/lib/esignature/requests";
 import {
   MAX_UPLOAD_BYTES,
-  MIME_DOCX,
   MIME_PDF,
   STORAGE_FOLDER_ORIGINALS,
-  STORAGE_FOLDER_SOURCE,
   type SourceFormat,
 } from "@/lib/esignature/types";
 
@@ -69,19 +66,12 @@ export async function POST(req: Request): Promise<Response> {
   const requestId = crypto.randomUUID();
   const meta = requestClientMeta(req);
 
-  let workingPdf: Buffer;
-  let sourceFilePath: string | null = null;
+  // PDF-only: the uploaded bytes are the canonical working PDF. (DOCX conversion
+  // stays available behind convertDocxToPdf() for when a converter is enabled.)
+  const workingPdf: Buffer = uploadBytes;
+  const sourceFilePath: string | null = null;
 
   try {
-    if (sourceFormat === "docx") {
-      // Keep the original .docx, then convert to the canonical PDF.
-      sourceFilePath = `${STORAGE_FOLDER_SOURCE}/${requestId}.docx`;
-      await uploadToSignatureBucket(supabase, sourceFilePath, uploadBytes, MIME_DOCX);
-      workingPdf = await convertDocxToPdf(uploadBytes, name);
-    } else {
-      workingPdf = uploadBytes;
-    }
-
     const pageCount = await countPdfPages(workingPdf);
 
     const workingFilePath = `${STORAGE_FOLDER_ORIGINALS}/${requestId}.pdf`;
@@ -128,7 +118,7 @@ export async function POST(req: Request): Promise<Response> {
       previewUrl,
     });
   } catch (err) {
-    if (err instanceof PdfValidationError || err instanceof DocxConversionError) {
+    if (err instanceof PdfValidationError) {
       return NextResponse.json({ error: err.message }, { status: 422 });
     }
     const message = err instanceof Error ? err.message : "Upload failed.";
