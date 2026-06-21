@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { GMAIL_READ_SCOPE } from "@/lib/integrations/google-oauth";
-import { listGmailThreads, GmailScopeError } from "@/lib/integrations/gmail-read";
+import { listGmailThreads, isGmailFolder, GmailScopeError } from "@/lib/integrations/gmail-read";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -18,11 +18,11 @@ export async function GET(req: NextRequest): Promise<Response> {
     return NextResponse.json({ connected: true, needsReadScope: true, email: status.email, threads: [] });
   }
 
-  const labelParam = req.nextUrl.searchParams.get("label");
-  const label = labelParam === "SENT" ? "SENT" : "INBOX";
+  const folderParam = req.nextUrl.searchParams.get("folder") ?? "inbox";
+  const folder = isGmailFolder(folderParam) ? folderParam : "inbox";
 
   try {
-    const threads = await listGmailThreads(auth.profile.id, { label });
+    const threads = await listGmailThreads(auth.profile.id, { folder });
     return NextResponse.json({ connected: true, needsReadScope: false, email: status.email, threads });
   } catch (err) {
     if (err instanceof GmailScopeError) return NextResponse.json({ connected: true, needsReadScope: true, threads: [] });

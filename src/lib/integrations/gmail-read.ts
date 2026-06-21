@@ -76,28 +76,34 @@ function extractBodies(payload: GmailPayload | undefined): { text: string | null
   return { text, html };
 }
 
-/** Inbox/Sent list, deduped to one row per thread (most recent message). */
-export async function listGmailThreads(
-  userId: string,
-  opts: { label?: "INBOX" | "SENT"; max?: number } = {},
-): Promise<GmailListItem[]> {
-  const accessToken = await token(userId);
-  const label = opts.label ?? "INBOX";
-  const max = opts.max ?? 25;
+export type GmailFolder = "inbox" | "sent" | "all" | "spam" | "trash" | "drafts";
 
-  const list = await gmailGet<{ messages?: Array<{ id: string }> }>(accessToken, `/messages?labelIds=${label}&maxResults=${max}`);
-  const ids = (list.messages ?? []).map((m) => m.id);
-  if (ids.length === 0) return [];
+const GMAIL_FOLDERS: GmailFolder[] = ["inbox", "sent", "all", "spam", "trash", "drafts"];
+export function isGmailFolder(v: string): v is GmailFolder {
+  return (GMAIL_FOLDERS as string[]).includes(v);
+}
 
+/** messages.list query suffix for a folder (drafts handled separately). */
+function folderQuery(folder: GmailFolder): string {
+  switch (folder) {
+    case "inbox": return "labelIds=INBOX";
+    case "sent": return "labelIds=SENT";
+    case "spam": return "labelIds=SPAM&includeSpamTrash=true";
+    case "trash": return "labelIds=TRASH&includeSpamTrash=true";
+    case "all": return ""; // all mail (excludes spam/trash by default)
+    default: return "labelIds=INBOX";
+  }
+}
+
+async function metaToItem(accessToken: string, ids: string[]): Promise<GmailListItem[]> {
   const metas = await Promise.all(
     ids.map((id) =>
       gmailGet<{ id: string; threadId: string; snippet: string; labelIds?: string[]; payload?: GmailPayload }>(
         accessToken,
-        `/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`,
+        `/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Subject&metadataHeaders=Date`,
       ).catch(() => null),
     ),
   );
-
   const seen = new Set<string>();
   const items: GmailListItem[] = [];
   for (const m of metas) {
@@ -106,7 +112,7 @@ export async function listGmailThreads(
     items.push({
       id: m.id,
       threadId: m.threadId,
-      from: header(m.payload?.headers, "From"),
+      from: header(m.payload?.headers, "From") || header(m.payload?.headers, "To"),
       subject: header(m.payload?.headers, "Subject") || "(no subject)",
       date: header(m.payload?.headers, "Date"),
       snippet: m.snippet ?? "",
@@ -114,6 +120,29 @@ export async function listGmailThreads(
     });
   }
   return items;
+}
+
+/** List a folder, deduped to one row per thread (most recent message). */
+export async function listGmailThreads(
+  userId: string,
+  opts: { folder?: GmailFolder; max?: number } = {},
+): Promise<GmailListItem[]> {
+  const accessToken = await token(userId);
+  const folder = opts.folder ?? "inbox";
+  const max = opts.max ?? 25;
+
+  if (folder === "drafts") {
+    const list = await gmailGet<{ drafts?: Array<{ id: string; message?: { id: string } }> }>(accessToken, `/drafts?maxResults=${max}`);
+    const ids = (list.drafts ?? []).map((d) => d.message?.id).filter((x): x is string => Boolean(x));
+    if (ids.length === 0) return [];
+    return metaToItem(accessToken, ids);
+  }
+
+  const q = folderQuery(folder);
+  const list = await gmailGet<{ messages?: Array<{ id: string }> }>(accessToken, `/messages?maxResults=${max}${q ? `&${q}` : ""}`);
+  const ids = (list.messages ?? []).map((m) => m.id);
+  if (ids.length === 0) return [];
+  return metaToItem(accessToken, ids);
 }
 
 export async function getGmailThread(userId: string, threadId: string): Promise<GmailThread> {
