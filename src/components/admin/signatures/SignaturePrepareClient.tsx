@@ -432,7 +432,8 @@ function PdfPage({
 
   const handlePageClick = (e: React.MouseEvent) => {
     if (!editable) return;
-    if (e.target !== e.currentTarget) return; // ignore clicks that bubble from a field
+    // Clicks land on the canvas (which fills the wrapper) — place relative to the
+    // wrapper rect. Clicks on placed fields stopPropagation, so they won't reach here.
     const rect = wrapRef.current?.getBoundingClientRect();
     if (!rect) return;
     onAdd(pageNum, (e.clientX - rect.left) / rect.width, (e.clientY - rect.top) / rect.height);
@@ -484,6 +485,7 @@ function PdfPage({
           <div
             key={f.uid}
             onPointerDown={(e) => startDrag(e, f, "move")}
+            onClick={(e) => { e.stopPropagation(); onSelect(f.uid); }}
             className="absolute flex items-center justify-center rounded text-[11px] font-medium"
             style={{
               left: `${f.x * 100}%`,
