@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Trash2, Sparkles, Loader2, Send, Undo2 } from "lucide-react";
+import { Plus, Trash2, Sparkles, Loader2, Send, Undo2, FileDown } from "lucide-react";
 import { useToast } from "@/components/ui/ToastProvider";
 import { StateChip } from "./StateChip";
 import { ConfidenceMeter } from "./ConfidenceMeter";
@@ -194,6 +194,9 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
           <p className="mt-1 text-sm text-slate-500">{[engagement.round_label, engagement.sector].filter(Boolean).join(" · ") || "—"}</p>
         </div>
         <div className="flex items-center gap-4">
+          <a href={`/api/admin/diligence/${engagementId}/export`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            <FileDown className="h-4 w-4" /> PDF
+          </a>
           {engagement.lifecycle_stage === "draft" ? (
             <button type="button" onClick={() => setAiOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-[#2f6cb0]/30 bg-[#eaf1f9] px-3 py-2 text-sm font-semibold text-[#234f86] hover:bg-[#dceaf7]">
               <Sparkles className="h-4 w-4" /> AI draft

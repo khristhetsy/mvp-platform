@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
-import { Upload, Send, Loader2, FileCheck2 } from "lucide-react";
+import { Upload, Send, Loader2, FileCheck2, FileDown } from "lucide-react";
 import { useToast } from "@/components/ui/ToastProvider";
 import { StateChip } from "./StateChip";
 import type { FounderView } from "@/lib/diligence/founder";
@@ -69,6 +69,9 @@ export function FounderSurface({ engagementId, view }: { engagementId: string; v
           Diligence — {engagement.company_name} <StateChip variant={engagement.lifecycle_stage as "responding"} />
         </h1>
         <p className="mt-1 text-sm text-slate-600">Review each finding, respond, and upload supporting documents.</p>
+        <a href={`/api/founder/diligence/${engagementId}/export`} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+          <FileDown className="h-4 w-4" /> Download PDF
+        </a>
       </div>
 
       {/* Findings */}
