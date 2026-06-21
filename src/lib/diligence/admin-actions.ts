@@ -23,24 +23,38 @@ async function stageOf(supabase: SupabaseClient<Database>, eid: string): Promise
   return s;
 }
 
-/** Add the founder as a member, apply the default gate, transition, notify. */
+/** Add the founder as a member, apply the default gate, transition, notify.
+ *  If no email is given, resolves the founder from the engagement's linked company. */
 export async function sendToFounder(
   supabase: SupabaseClient<Database>,
   eid: string,
   actorId: string,
-  founderEmail: string,
+  founderEmail?: string | null,
 ): Promise<{ delivered: boolean }> {
   const current = await stageOf(supabase, eid);
   const t = evaluateTransition(current, "send_to_founder", "admin");
   if (!t.ok) throw new ActionError(t.error);
 
-  // Resolve an existing founder account.
-  const { data: prof } = await raw(supabase)
-    .from("profiles")
-    .select("id, email, role")
-    .ilike("email", founderEmail.trim())
-    .maybeSingle();
-  const founder = prof as { id: string; email: string; role: string } | null;
+  let founder: { id: string; email: string; role: string } | null = null;
+
+  if (founderEmail && founderEmail.trim()) {
+    const { data: prof } = await raw(supabase).from("profiles").select("id, email, role").ilike("email", founderEmail.trim()).maybeSingle();
+    founder = prof as { id: string; email: string; role: string } | null;
+  } else {
+    // Resolve from the linked company's founder.
+    const { data: eng } = await raw(supabase).from("dd_engagements").select("company_id").eq("id", eid).maybeSingle();
+    const companyId = (eng as { company_id?: string } | null)?.company_id;
+    if (companyId) {
+      const { data: comp } = await raw(supabase).from("companies").select("founder_id").eq("id", companyId).maybeSingle();
+      const founderId = (comp as { founder_id?: string } | null)?.founder_id;
+      if (founderId) {
+        const { data: prof } = await raw(supabase).from("profiles").select("id, email, role").eq("id", founderId).maybeSingle();
+        founder = prof as { id: string; email: string; role: string } | null;
+      }
+    }
+    if (!founder) throw new ActionError("No founder is linked to this engagement. Enter the founder's email to send.");
+  }
+
   if (!founder) throw new ActionError("No account found for that email. The founder must have a CapitalOS account first.");
   if (String(founder.role).toLowerCase() !== "founder") throw new ActionError("That account is not a founder.");
 

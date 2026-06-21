@@ -59,7 +59,7 @@ export async function loadEngagementDetail(
 
 export async function createEngagement(
   supabase: SupabaseClient<Database>,
-  input: { companyName: string; roundLabel?: string | null; sector?: string | null; ownerId: string },
+  input: { companyName: string; roundLabel?: string | null; sector?: string | null; ownerId: string; companyId?: string | null },
 ): Promise<Engagement> {
   const { data, error } = await raw(supabase)
     .from("dd_engagements")
@@ -70,6 +70,7 @@ export async function createEngagement(
       sector: input.sector ?? null,
       report_code: generateReportCode(input.companyName),
       owner_id: input.ownerId,
+      company_id: input.companyId ?? null,
     })
     .select("*")
     .single();

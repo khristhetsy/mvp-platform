@@ -18,6 +18,8 @@ export function DiligencePipelineClient() {
   const [name, setName] = useState("");
   const [round, setRound] = useState("");
   const [sector, setSector] = useState("");
+  const [companyId, setCompanyId] = useState("");
+  const [companies, setCompanies] = useState<{ id: string; company_name: string; industry: string | null; has_founder: boolean }[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -36,13 +38,31 @@ export function DiligencePipelineClient() {
     return () => { active = false; };
   }, [toast]);
 
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const res = await fetch("/api/admin/diligence/companies");
+        const data = await res.json();
+        if (active && res.ok) setCompanies(data.companies ?? []);
+      } catch { /* picker just won't populate */ }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  const pickCompany = useCallback((id: string) => {
+    setCompanyId(id);
+    const c = companies.find((x) => x.id === id);
+    if (c) { setName(c.company_name); setSector(c.industry ?? ""); }
+  }, [companies]);
+
   const create = useCallback(async () => {
     setCreating(true);
     try {
       const res = await fetch("/api/admin/diligence", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ company_name: name.trim(), round_label: round.trim() || null, sector: sector.trim() || null }),
+        body: JSON.stringify({ company_name: name.trim(), round_label: round.trim() || null, sector: sector.trim() || null, company_id: companyId || null }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Create failed.");
@@ -52,7 +72,7 @@ export function DiligencePipelineClient() {
     } finally {
       setCreating(false);
     }
-  }, [name, round, sector, router, toast]);
+  }, [name, round, sector, companyId, router, toast]);
 
   return (
     <div className="space-y-5">
@@ -71,8 +91,17 @@ export function DiligencePipelineClient() {
 
       {showForm ? (
         <div className="space-y-3 rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
+          {companies.length ? (
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-slate-500">Select a company (or enter manually below)</span>
+              <select value={companyId} onChange={(e) => pickCompany(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                <option value="">— Enter manually —</option>
+                {companies.map((c) => <option key={c.id} value={c.id}>{c.company_name}{c.has_founder ? "" : " (no founder linked)"}</option>)}
+              </select>
+            </label>
+          ) : null}
           <div className="grid gap-3 sm:grid-cols-3">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Company name *" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            <input value={name} onChange={(e) => { setName(e.target.value); setCompanyId(""); }} placeholder="Company name *" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
             <input value={round} onChange={(e) => setRound(e.target.value)} placeholder="Round (e.g. Series A)" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
             <input value={sector} onChange={(e) => setSector(e.target.value)} placeholder="Sector" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
           </div>

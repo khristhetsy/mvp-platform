@@ -23,6 +23,7 @@ export interface Engagement {
   id: string;
   company_name: string;
   company_slug: string;
+  company_id?: string | null;
   round_label: string | null;
   sector: string | null;
   report_code: string;

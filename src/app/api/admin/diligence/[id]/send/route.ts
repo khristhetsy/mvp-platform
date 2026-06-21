@@ -8,7 +8,7 @@ import { ddAudit } from "@/lib/diligence/audit";
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
-  founder_email: z.string().email(),
+  founder_email: z.string().email().nullish(),
   gate: z.array(z.object({
     section: z.enum(["findings", "responses", "data_room", "candor", "icfo_review", "verdict"]),
     who: z.enum(["founder", "investor"]),
@@ -23,10 +23,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const { id } = await params;
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
-  if (!parsed.success) return NextResponse.json({ error: "A valid founder email is required." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
 
   try {
-    const result = await sendToFounder(auth.supabase, id, auth.userId, parsed.data.founder_email);
+    const result = await sendToFounder(auth.supabase, id, auth.userId, parsed.data.founder_email ?? null);
     // Apply any deliberate gate overrides from the send step.
     for (const g of parsed.data.gate ?? []) {
       await setGate(auth.supabase, id, g.section, g.who, g.visible);

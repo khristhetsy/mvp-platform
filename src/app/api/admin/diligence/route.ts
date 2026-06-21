@@ -18,6 +18,7 @@ const createSchema = z.object({
   company_name: z.string().min(1).max(160),
   round_label: z.string().max(80).nullish(),
   sector: z.string().max(80).nullish(),
+  company_id: z.string().uuid().nullish(),
 });
 
 /** POST — create an engagement (seeds 5 domains + default gate). */
@@ -34,6 +35,7 @@ export async function POST(req: Request): Promise<Response> {
       roundLabel: parsed.data.round_label ?? null,
       sector: parsed.data.sector ?? null,
       ownerId: auth.userId,
+      companyId: parsed.data.company_id ?? null,
     });
     return NextResponse.json({ engagement });
   } catch (err) {

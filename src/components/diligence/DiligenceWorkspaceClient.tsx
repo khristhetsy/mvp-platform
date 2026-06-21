@@ -12,7 +12,8 @@ type DocRequestRow = { id: string; category: string; label: string; closes_findi
 type ConditionRow = { id: string; label: string; detail: string | null; status: string };
 type ConsentInfo = { envelope: { status: string; signature_request_id: string | null } | null; sealedHash: string | null };
 type MemberRow = { email: string; role: string };
-type Detail = { engagement: Engagement; domains: Domain[]; findings: Finding[]; claims: Claim[]; gate: GateMap; docRequests: DocRequestRow[]; conditions: ConditionRow[]; consent?: ConsentInfo; members?: MemberRow[] };
+type CompanyCtx = { founderEmail: string | null; businessDescription: string | null };
+type Detail = { engagement: Engagement; domains: Domain[]; findings: Finding[]; claims: Claim[]; gate: GateMap; docRequests: DocRequestRow[]; conditions: ConditionRow[]; consent?: ConsentInfo; members?: MemberRow[]; company?: CompanyCtx | null };
 
 const DEFAULT_GATE: GateMap = {
   findings: { founder_visible: true, investor_visible: true },
@@ -224,7 +225,7 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
   }, [postJson, reload, toast]);
 
   if (loading || !detail) return <p className="text-sm text-slate-500">Loading…</p>;
-  const { engagement, domains, findings, claims, gate, docRequests, conditions, consent, members } = detail;
+  const { engagement, domains, findings, claims, gate, docRequests, conditions, consent, members, company } = detail;
   const stage = engagement.lifecycle_stage;
 
   return (
@@ -242,7 +243,7 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
             <FileDown className="h-4 w-4" /> PDF
           </a>
           {engagement.lifecycle_stage === "draft" ? (
-            <button type="button" onClick={() => setAiOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-[#2f6cb0]/30 bg-[#eaf1f9] px-3 py-2 text-sm font-semibold text-[#234f86] hover:bg-[#dceaf7]">
+            <button type="button" onClick={() => { if (!aiText && company?.businessDescription) setAiText(company.businessDescription); setAiOpen(true); }} className="inline-flex items-center gap-1.5 rounded-lg border border-[#2f6cb0]/30 bg-[#eaf1f9] px-3 py-2 text-sm font-semibold text-[#234f86] hover:bg-[#dceaf7]">
               <Sparkles className="h-4 w-4" /> AI draft
             </button>
           ) : null}
@@ -277,6 +278,7 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
             <label className="mt-3 block">
               <span className="mb-1 block text-sm font-medium text-slate-700">Founder email</span>
               <input type="email" value={founderEmail} onChange={(e) => setFounderEmail(e.target.value)} placeholder="founder@company.com" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+              {company?.founderEmail ? <span className="mt-1 block text-xs text-[#1d7a4d]">Linked founder from the company record — leave as-is to send.</span> : null}
             </label>
             <div className="mt-3">
               <p className="mb-1.5 text-sm font-medium text-slate-700">Visibility</p>
@@ -314,7 +316,7 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
         <span className="text-xs font-medium text-slate-500">Lifecycle:</span>
         {stage === "draft" ? (
-          <button type="button" onClick={() => { setSendGate(DEFAULT_GATE); setSendOpen(true); }} className="inline-flex items-center gap-1.5 rounded-lg bg-[#2f6cb0] px-3 py-1.5 text-sm font-semibold text-white">
+          <button type="button" onClick={() => { setSendGate(DEFAULT_GATE); setFounderEmail(company?.founderEmail ?? ""); setSendOpen(true); }} className="inline-flex items-center gap-1.5 rounded-lg bg-[#2f6cb0] px-3 py-1.5 text-sm font-semibold text-white">
             <Send className="h-4 w-4" /> Send to founder
           </button>
         ) : null}

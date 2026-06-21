@@ -4,6 +4,7 @@ import { loadEngagementDetail } from "@/lib/diligence/data";
 import { loadGate } from "@/lib/diligence/gate";
 import { loadConsentSummary } from "@/lib/diligence/consent";
 import { listMembers } from "@/lib/diligence/investor";
+import { getCompanyContext } from "@/lib/diligence/companies";
 
 export const dynamic = "force-dynamic";
 
@@ -20,5 +21,6 @@ export async function GET(
   if (!detail) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
   const [gate, consent, members] = await Promise.all([loadGate(auth.supabase, id), loadConsentSummary(auth.supabase, id), listMembers(auth.supabase, id)]);
-  return NextResponse.json({ ...detail, gate, consent, members });
+  const company = detail.engagement.company_id ? await getCompanyContext(auth.supabase, detail.engagement.company_id) : null;
+  return NextResponse.json({ ...detail, gate, consent, members, company });
 }
