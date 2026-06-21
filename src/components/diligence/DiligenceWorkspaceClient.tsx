@@ -11,7 +11,8 @@ import type { Claim, Domain, Engagement, Finding, Severity, Verification } from 
 type DocRequestRow = { id: string; category: string; label: string; closes_findings: string[]; due_date: string | null; status: string };
 type ConditionRow = { id: string; label: string; detail: string | null; status: string };
 type ConsentInfo = { envelope: { status: string; signature_request_id: string | null } | null; sealedHash: string | null };
-type Detail = { engagement: Engagement; domains: Domain[]; findings: Finding[]; claims: Claim[]; gate: GateMap; docRequests: DocRequestRow[]; conditions: ConditionRow[]; consent?: ConsentInfo };
+type MemberRow = { email: string; role: string };
+type Detail = { engagement: Engagement; domains: Domain[]; findings: Finding[]; claims: Claim[]; gate: GateMap; docRequests: DocRequestRow[]; conditions: ConditionRow[]; consent?: ConsentInfo; members?: MemberRow[] };
 
 const DEFAULT_GATE: GateMap = {
   findings: { founder_visible: true, investor_visible: true },
@@ -207,8 +208,13 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
     } finally { setActing(false); }
   }, [postJson, reload, toast]);
 
+  const addInvestor = useCallback(async (email: string) => {
+    try { await postJson("/members", "POST", { email, role: "investor" }); toast({ title: "Investor added", variant: "success" }); await reload(); }
+    catch (err) { toast({ title: "Could not add", description: err instanceof Error ? err.message : "", variant: "error" }); }
+  }, [postJson, reload, toast]);
+
   if (loading || !detail) return <p className="text-sm text-slate-500">Loading…</p>;
-  const { engagement, domains, findings, claims, gate, docRequests, conditions, consent } = detail;
+  const { engagement, domains, findings, claims, gate, docRequests, conditions, consent, members } = detail;
   const stage = engagement.lifecycle_stage;
 
   return (
@@ -334,6 +340,11 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
           <div className="mt-3"><VisibilityGate gate={gate} onToggle={(s, w, v) => void toggleLiveGate(s, w, v)} /></div>
         </details>
       ) : null}
+
+      <details className="rounded-xl border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-800">People {members?.length ? `(${members.length})` : ""}</summary>
+        <InvestorAdder members={members ?? []} onAdd={addInvestor} />
+      </details>
 
       <div className="flex gap-1 border-b border-slate-200">
         {([["findings", "Findings register"], ["ledger", "Verification ledger"], ["dataroom", "Data room"], ["conditions", "Conditions"]] as const).map(([t, label]) => (
@@ -537,6 +548,30 @@ function DataRoom({
           </table>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── People ────────────────────────────────────────────────────────────────────
+function InvestorAdder({ members, onAdd }: { members: MemberRow[]; onAdd: (email: string) => void }) {
+  const [email, setEmail] = useState("");
+  return (
+    <div className="mt-3 space-y-2">
+      {members.length ? (
+        <ul className="space-y-1">
+          {members.map((m) => (
+            <li key={m.email} className="flex items-center justify-between text-sm">
+              <span className="text-slate-700">{m.email}</span>
+              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs capitalize text-slate-600">{m.role}</span>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="text-sm text-slate-500">No founder or investor members yet.</p>}
+      <div className="flex items-center gap-2 pt-1">
+        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="investor@fund.com" className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm" />
+        <button type="button" disabled={!email.trim()} onClick={() => { onAdd(email.trim()); setEmail(""); }} className="inline-flex items-center gap-1 rounded-lg bg-[#2f6cb0] px-2.5 py-1.5 text-sm font-semibold text-white disabled:opacity-50"><Plus className="h-4 w-4" /> Add investor</button>
+      </div>
+      <p className="text-xs text-slate-400">Investors must have an investor account; they see the released cut only.</p>
     </div>
   );
 }
