@@ -1,13 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Trash2, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Trash2, Sparkles, Loader2, Send, Undo2 } from "lucide-react";
 import { useToast } from "@/components/ui/ToastProvider";
 import { StateChip } from "./StateChip";
 import { ConfidenceMeter } from "./ConfidenceMeter";
+import { VisibilityGate, type GateMap } from "./VisibilityGate";
 import type { Claim, Domain, Engagement, Finding, Severity, Verification } from "@/lib/diligence/types";
 
-type Detail = { engagement: Engagement; domains: Domain[]; findings: Finding[]; claims: Claim[] };
+type Detail = { engagement: Engagement; domains: Domain[]; findings: Finding[]; claims: Claim[]; gate: GateMap };
+
+const DEFAULT_GATE: GateMap = {
+  findings: { founder_visible: true, investor_visible: true },
+  responses: { founder_visible: true, investor_visible: true },
+  data_room: { founder_visible: true, investor_visible: false },
+  candor: { founder_visible: false, investor_visible: false },
+  icfo_review: { founder_visible: false, investor_visible: false },
+  verdict: { founder_visible: false, investor_visible: true },
+};
 
 export function DiligenceWorkspaceClient({ engagementId }: { engagementId: string }) {
   const { toast } = useToast();
@@ -17,6 +27,10 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
   const [aiOpen, setAiOpen] = useState(false);
   const [aiText, setAiText] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [founderEmail, setFounderEmail] = useState("");
+  const [sendGate, setSendGate] = useState<GateMap>(DEFAULT_GATE);
+  const [acting, setActing] = useState(false);
 
   const reload = useCallback(async () => {
     const res = await fetch(`/api/admin/diligence/${engagementId}`);
@@ -91,8 +105,51 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
     }
   }, [engagementId, aiText, reload, toast]);
 
+  const doSend = useCallback(async () => {
+    setActing(true);
+    try {
+      const gateOverrides = Object.entries(sendGate).flatMap(([section, row]) => [
+        { section, who: "founder" as const, visible: row.founder_visible },
+        { section, who: "investor" as const, visible: row.investor_visible },
+      ]);
+      const res = await fetch(`/api/admin/diligence/${engagementId}/send`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ founder_email: founderEmail.trim(), gate: gateOverrides }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Send failed.");
+      toast({ title: data.delivered ? "Sent to founder" : "Sent (email not configured)", variant: "success" });
+      setSendOpen(false); setFounderEmail("");
+      await reload();
+    } catch (err) {
+      toast({ title: "Could not send", description: err instanceof Error ? err.message : "", variant: "error" });
+    } finally { setActing(false); }
+  }, [engagementId, founderEmail, sendGate, reload, toast]);
+
+  const doTransition = useCallback(async (action: "mark_review" | "recall") => {
+    setActing(true);
+    try {
+      const res = await fetch(`/api/admin/diligence/${engagementId}/transition`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Action failed.");
+      await reload();
+    } catch (err) {
+      toast({ title: "Could not update", description: err instanceof Error ? err.message : "", variant: "error" });
+    } finally { setActing(false); }
+  }, [engagementId, reload, toast]);
+
+  const toggleLiveGate = useCallback(async (section: string, who: "founder" | "investor", visible: boolean) => {
+    setDetail((d) => d ? { ...d, gate: { ...d.gate, [section]: { ...(d.gate[section] ?? { founder_visible: false, investor_visible: false }), [who === "founder" ? "founder_visible" : "investor_visible"]: visible } } } : d);
+    await fetch(`/api/admin/diligence/${engagementId}/gate`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section, who, visible }),
+    });
+  }, [engagementId]);
+
   if (loading || !detail) return <p className="text-sm text-slate-500">Loading…</p>;
-  const { engagement, domains, findings, claims } = detail;
+  const { engagement, domains, findings, claims, gate } = detail;
+  const stage = engagement.lifecycle_stage;
 
   return (
     <div className="space-y-5">
@@ -131,6 +188,56 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
             </div>
           </div>
         </div>
+      ) : null}
+
+      {sendOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900"><Send className="h-5 w-5 text-[#2f6cb0]" /> Send to founder</h2>
+            <p className="mt-1 text-sm text-slate-600">The founder must already have a CapitalOS account. Set what they (and investors, on release) can see — this is deliberate, never silent.</p>
+            <label className="mt-3 block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Founder email</span>
+              <input type="email" value={founderEmail} onChange={(e) => setFounderEmail(e.target.value)} placeholder="founder@company.com" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </label>
+            <div className="mt-3">
+              <p className="mb-1.5 text-sm font-medium text-slate-700">Visibility</p>
+              <VisibilityGate gate={sendGate} onToggle={(s, w, v) => setSendGate((g) => ({ ...g, [s]: { ...g[s], [w === "founder" ? "founder_visible" : "investor_visible"]: v } }))} />
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => setSendOpen(false)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">Cancel</button>
+              <button type="button" onClick={() => void doSend()} disabled={acting || !founderEmail.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-[#2f6cb0] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                {acting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Send
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
+        <span className="text-xs font-medium text-slate-500">Lifecycle:</span>
+        {stage === "draft" ? (
+          <button type="button" onClick={() => { setSendGate(DEFAULT_GATE); setSendOpen(true); }} className="inline-flex items-center gap-1.5 rounded-lg bg-[#2f6cb0] px-3 py-1.5 text-sm font-semibold text-white">
+            <Send className="h-4 w-4" /> Send to founder
+          </button>
+        ) : null}
+        {stage === "responding" ? (
+          <button type="button" disabled={acting} onClick={() => void doTransition("mark_review")} className="inline-flex items-center gap-1.5 rounded-lg bg-[#2f6cb0] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50">
+            Mark ready for review
+          </button>
+        ) : null}
+        {stage !== "draft" && stage !== "consented_locked" && stage !== "released" ? (
+          <button type="button" disabled={acting} onClick={() => void doTransition("recall")} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+            <Undo2 className="h-4 w-4" /> Recall
+          </button>
+        ) : null}
+        <span className="ml-auto text-xs text-slate-400">Next: {stage === "draft" ? "send to founder" : stage === "responding" ? "mark review" : stage === "admin_review" ? "request consent (Phase 8)" : "—"}</span>
+      </div>
+
+      {stage !== "draft" ? (
+        <details className="rounded-xl border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
+          <summary className="cursor-pointer text-sm font-semibold text-slate-800">Visibility gate</summary>
+          <div className="mt-3"><VisibilityGate gate={gate} onToggle={(s, w, v) => void toggleLiveGate(s, w, v)} /></div>
+        </details>
       ) : null}
 
       <div className="flex gap-1 border-b border-slate-200">

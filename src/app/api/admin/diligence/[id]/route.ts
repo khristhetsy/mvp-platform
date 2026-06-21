@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { requirePermissionApi } from "@/lib/api/permissions";
 import { loadEngagementDetail } from "@/lib/diligence/data";
+import { loadGate } from "@/lib/diligence/gate";
 
 export const dynamic = "force-dynamic";
 
-/** GET — full admin detail: engagement + domains + findings + claims. */
+/** GET — full admin detail: engagement + domains + findings + claims + gate. */
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -16,5 +17,6 @@ export async function GET(
   const detail = await loadEngagementDetail(auth.supabase, id);
   if (!detail) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
-  return NextResponse.json(detail);
+  const gate = await loadGate(auth.supabase, id);
+  return NextResponse.json({ ...detail, gate });
 }
