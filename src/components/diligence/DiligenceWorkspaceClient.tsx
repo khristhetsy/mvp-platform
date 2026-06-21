@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Sparkles, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/ToastProvider";
 import { StateChip } from "./StateChip";
 import { ConfidenceMeter } from "./ConfidenceMeter";
@@ -14,6 +14,9 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
   const [detail, setDetail] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"findings" | "ledger">("findings");
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiText, setAiText] = useState("");
+  const [generating, setGenerating] = useState(false);
 
   const reload = useCallback(async () => {
     const res = await fetch(`/api/admin/diligence/${engagementId}`);
@@ -69,6 +72,25 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
     if (res.ok) await reload();
   }, [engagementId, reload]);
 
+  const generate = useCallback(async () => {
+    setGenerating(true);
+    try {
+      const res = await fetch(`/api/admin/diligence/${engagementId}/generate`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source_text: aiText.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Generation failed.");
+      toast({ title: `Drafted ${data.count} finding${data.count === 1 ? "" : "s"}`, description: "Review and edit before sending.", variant: "success" });
+      setAiOpen(false);
+      setAiText("");
+      await reload();
+    } catch (err) {
+      toast({ title: "Could not generate", description: err instanceof Error ? err.message : "", variant: "error" });
+    } finally {
+      setGenerating(false);
+    }
+  }, [engagementId, aiText, reload, toast]);
+
   if (loading || !detail) return <p className="text-sm text-slate-500">Loading…</p>;
   const { engagement, domains, findings, claims } = detail;
 
@@ -82,11 +104,34 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
           </h1>
           <p className="mt-1 text-sm text-slate-500">{[engagement.round_label, engagement.sector].filter(Boolean).join(" · ") || "—"}</p>
         </div>
-        <div className="text-right">
-          <p className="text-xs font-medium text-slate-500">Confidence</p>
-          <ConfidenceMeter pct={engagement.confidence_pct} />
+        <div className="flex items-center gap-4">
+          {engagement.lifecycle_stage === "draft" ? (
+            <button type="button" onClick={() => setAiOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-[#2f6cb0]/30 bg-[#eaf1f9] px-3 py-2 text-sm font-semibold text-[#234f86] hover:bg-[#dceaf7]">
+              <Sparkles className="h-4 w-4" /> AI draft
+            </button>
+          ) : null}
+          <div className="text-right">
+            <p className="text-xs font-medium text-slate-500">Confidence</p>
+            <ConfidenceMeter pct={engagement.confidence_pct} />
+          </div>
         </div>
       </div>
+
+      {aiOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="w-full max-w-xl rounded-2xl bg-white p-5 shadow-xl">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900"><Sparkles className="h-5 w-5 text-[#2f6cb0]" /> AI draft from summary</h2>
+            <p className="mt-1 text-sm text-slate-600">Paste the company business summary. Claude drafts domains, findings, and claims for you to edit — nothing is published automatically.</p>
+            <textarea value={aiText} onChange={(e) => setAiText(e.target.value)} rows={10} placeholder="Paste the business summary, deck notes, or memo text…" className="mt-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            <div className="mt-3 flex justify-end gap-2">
+              <button type="button" onClick={() => setAiOpen(false)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">Cancel</button>
+              <button type="button" onClick={() => void generate()} disabled={generating || aiText.trim().length < 40} className="inline-flex items-center gap-1.5 rounded-lg bg-[#2f6cb0] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} {generating ? "Drafting…" : "Generate draft"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="flex gap-1 border-b border-slate-200">
         {(["findings", "ledger"] as const).map((t) => (
