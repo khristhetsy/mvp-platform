@@ -78,7 +78,7 @@ export function SignaturesIndexClient() {
           <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold text-slate-950">
             <FileSignature className="h-6 w-6 text-[var(--gold)]" strokeWidth={1.75} aria-hidden /> E-signatures
           </h1>
-          <p className="mt-1 text-sm text-slate-600">Upload a deal document, place fields, and send it for signature.</p>
+          <p className="mt-1 text-sm text-slate-600">Upload a PDF, place fields, and send it for signature. (Word? Save it as PDF first.)</p>
         </div>
         <button
           type="button"
@@ -92,7 +92,7 @@ export function SignaturesIndexClient() {
         <input
           ref={fileRef}
           type="file"
-          accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          accept=".pdf,application/pdf"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];

@@ -11,7 +11,6 @@ import {
 } from "@/lib/esignature/storage";
 import { createDraftRequest } from "@/lib/esignature/requests";
 import {
-  ACCEPTED_MIME_TYPES,
   MAX_UPLOAD_BYTES,
   MIME_DOCX,
   MIME_PDF,
@@ -49,18 +48,17 @@ export async function POST(req: Request): Promise<Response> {
 
   const mime = file.type || "";
   const name = file.name || "document";
-  const isDocxByName = name.toLowerCase().endsWith(".docx");
   const isPdfByName = name.toLowerCase().endsWith(".pdf");
 
-  // Trust the extension when the browser sends a blank/odd MIME type.
-  const sourceFormat: SourceFormat | null =
-    mime === MIME_PDF || (isPdfByName && !mime) ? "pdf"
-    : mime === MIME_DOCX || (isDocxByName && !mime) ? "docx"
-    : ACCEPTED_MIME_TYPES.has(mime) ? (mime === MIME_PDF ? "pdf" : "docx")
-    : null;
+  // PDF-only for now. DOCX conversion stays wired behind convertDocxToPdf() but
+  // is disabled here until a converter (CloudConvert) is configured.
+  const sourceFormat: SourceFormat | null = mime === MIME_PDF || (isPdfByName && !mime) ? "pdf" : null;
 
   if (!sourceFormat) {
-    return NextResponse.json({ error: "Only PDF and Word (.docx) files are accepted." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Only PDF files are accepted. If you have a Word document, save it as PDF first." },
+      { status: 400 },
+    );
   }
 
   const documentName = name.replace(/\.(pdf|docx)$/i, "");
