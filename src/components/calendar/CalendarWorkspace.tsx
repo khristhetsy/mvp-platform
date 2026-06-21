@@ -22,6 +22,7 @@ const LOCAL_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
 type FormState = {
   id: string | null;
+  googleId: string | null; // set when editing a Google-Calendar event directly
   title: string;
   date: string;
   startTime: string;
@@ -59,6 +60,7 @@ function emptyForm(date: Date): FormState {
   end.setHours(9, 30, 0, 0);
   return {
     id: null,
+    googleId: null,
     title: "",
     date: ymd(date),
     startTime: hm(start),
@@ -74,6 +76,7 @@ function formFromEvent(e: CalendarEventRecord): FormState {
   const en = new Date(e.end_time);
   return {
     id: e.id,
+    googleId: null,
     title: e.title,
     date: ymd(s),
     startTime: hm(s),
@@ -81,6 +84,24 @@ function formFromEvent(e: CalendarEventRecord): FormState {
     location: e.location ?? "",
     description: e.description ?? "",
     attendees: (e.attendees ?? []).map((a) => a.email).join(", "),
+    addMeet: Boolean(e.meet_url),
+  };
+}
+/** Editable form for a Google-Calendar event (id prefixed "g:"). Google overlay
+ *  carries only title/time/meet — other fields stay blank and are preserved on save. */
+function formFromDisplay(e: DisplayEvent): FormState {
+  const s = new Date(e.start_time);
+  const en = new Date(e.end_time);
+  return {
+    id: null,
+    googleId: e.id.startsWith("g:") ? e.id.slice(2) : e.id,
+    title: e.title,
+    date: ymd(s),
+    startTime: hm(s),
+    endTime: hm(en),
+    location: "",
+    description: "",
+    attendees: "",
     addMeet: Boolean(e.meet_url),
   };
 }
@@ -176,26 +197,24 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
         .map((s) => s.trim())
         .filter(Boolean)
         .map((email) => ({ email }));
-      const body = {
-        title: form.title.trim(),
-        description: form.description || null,
-        startTime,
-        endTime,
-        timezone: LOCAL_TZ,
-        location: form.location || null,
-        attendees,
-        addMeet: form.addMeet,
-      };
-      const res = form.id
+      // Editing a Google event → write straight back to Google Calendar.
+      // Send only the fields we have so Google preserves description/attendees.
+      const res = form.googleId
+        ? await fetch(`/api/calendar/google-events/${form.googleId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: form.title.trim(), startTime, endTime, timezone: LOCAL_TZ, location: form.location || null }),
+          })
+        : form.id
         ? await fetch(`/api/calendar/events/${form.id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
+            body: JSON.stringify({ title: form.title.trim(), description: form.description || null, startTime, endTime, timezone: LOCAL_TZ, location: form.location || null, attendees, addMeet: form.addMeet }),
           })
         : await fetch("/api/calendar/events", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
+            body: JSON.stringify({ title: form.title.trim(), description: form.description || null, startTime, endTime, timezone: LOCAL_TZ, location: form.location || null, attendees, addMeet: form.addMeet }),
           });
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Save failed.");
@@ -209,10 +228,12 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
   }, [form, load]);
 
   const remove = useCallback(async () => {
-    if (!form?.id) return;
+    if (!form) return;
+    const url = form.googleId ? `/api/calendar/google-events/${form.googleId}` : form.id ? `/api/calendar/events/${form.id}` : null;
+    if (!url) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/calendar/events/${form.id}`, { method: "DELETE" });
+      const res = await fetch(url, { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed.");
       setForm(null);
       await load();
@@ -223,10 +244,11 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
     }
   }, [form, load]);
 
-  const deleteEvent = useCallback(async (id: string) => {
+  const deleteEvent = useCallback(async (e: DisplayEvent) => {
+    const url = e.editable ? `/api/calendar/events/${e.record?.id}` : `/api/calendar/google-events/${e.id.startsWith("g:") ? e.id.slice(2) : e.id}`;
     setSaving(true);
     try {
-      const res = await fetch(`/api/calendar/events/${id}`, { method: "DELETE" });
+      const res = await fetch(url, { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed.");
       setSelected(null);
       await load();
@@ -269,20 +291,12 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
             <button type="button" onClick={() => setSelected(null)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
           </div>
           <div className="flex flex-wrap gap-2 border-t border-slate-100 bg-slate-50/50 px-5 py-3">
-            {sel.editable && sel.record ? (
-              <>
-                <button type="button" onClick={() => { if (sel.record) { setSelected(null); setForm(formFromEvent(sel.record)); } }} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">Edit</button>
-                {sel.meet_url ? <a href={sel.meet_url} className="inline-flex items-center gap-1 rounded-lg border border-[#CECBF6] bg-[#EEEDFE] px-3 py-1.5 text-xs font-medium text-[#3C3489] hover:bg-[#CECBF6]"><Video className="h-3.5 w-3.5" /> Join Meet</a> : null}
-                <button type="button" disabled={saving} onClick={() => { if (sel.record) void deleteEvent(sel.record.id); }} className="inline-flex items-center gap-1 rounded-lg border border-[#F7C1C1] bg-white px-3 py-1.5 text-xs font-medium text-[#A32D2D] hover:bg-[#FCEBEB] disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
-              </>
-            ) : (
-              <>
-                {sel.meet_url ? <a href={sel.meet_url} className="inline-flex items-center gap-1 rounded-lg border border-[#CECBF6] bg-[#EEEDFE] px-3 py-1.5 text-xs font-medium text-[#3C3489] hover:bg-[#CECBF6]"><Video className="h-3.5 w-3.5" /> Join Meet</a> : null}
-                <a href={googleDayUrl(sel.start_time)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-[#B5D4F4] bg-[#E6F1FB] px-3 py-1.5 text-xs font-medium text-[#0C447C] hover:bg-[#B5D4F4]"><ExternalLink className="h-3.5 w-3.5" /> Open in Google Calendar</a>
-              </>
-            )}
+            <button type="button" onClick={() => { setSelected(null); setForm(sel.editable && sel.record ? formFromEvent(sel.record) : formFromDisplay(sel)); }} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">Edit</button>
+            {sel.meet_url ? <a href={sel.meet_url} className="inline-flex items-center gap-1 rounded-lg border border-[#CECBF6] bg-[#EEEDFE] px-3 py-1.5 text-xs font-medium text-[#3C3489] hover:bg-[#CECBF6]"><Video className="h-3.5 w-3.5" /> Join Meet</a> : null}
+            {!sel.editable ? <a href={googleDayUrl(sel.start_time)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-[#B5D4F4] bg-[#E6F1FB] px-3 py-1.5 text-xs font-medium text-[#0C447C] hover:bg-[#B5D4F4]"><ExternalLink className="h-3.5 w-3.5" /> Open in Google</a> : null}
+            <button type="button" disabled={saving} onClick={() => void deleteEvent(sel)} className="inline-flex items-center gap-1 rounded-lg border border-[#F7C1C1] bg-white px-3 py-1.5 text-xs font-medium text-[#A32D2D] hover:bg-[#FCEBEB] disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
           </div>
-          <p className="px-5 pb-3 text-[11px] text-slate-400">{sel.editable ? "CapitalOS event · synced to Google" : "From your Google Calendar (read-only)"}</p>
+          <p className="px-5 pb-3 text-[11px] text-slate-400">{sel.editable ? "CapitalOS event · synced to Google" : "Google Calendar event · edits sync to Google"}</p>
         </div>
       </div>
     );
@@ -445,7 +459,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={() => setForm(null)}>
           <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-              <h2 className="text-sm font-semibold text-slate-950">{form.id ? "Edit event" : "New event"}</h2>
+              <h2 className="text-sm font-semibold text-slate-950">{form.id || form.googleId ? "Edit event" : "New event"}</h2>
               <button type="button" onClick={() => setForm(null)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-3 px-5 py-4">
@@ -470,7 +484,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
             </div>
             <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-5 py-3">
               <div>
-                {form.id ? (
+                {form.id || form.googleId ? (
                   <button type="button" onClick={() => void remove()} disabled={saving} className="inline-flex items-center gap-1 rounded-lg border border-[#F7C1C1] bg-white px-2.5 py-2 text-xs font-medium text-[#A32D2D] hover:bg-[#FCEBEB] disabled:opacity-50">
                     <Trash2 className="h-3.5 w-3.5" /> Delete
                   </button>
