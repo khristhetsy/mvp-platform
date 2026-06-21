@@ -42,6 +42,19 @@ export async function createDraftRequest(
   return data as unknown as SignatureRequest;
 }
 
+/** List envelopes created by an admin, newest first. */
+export async function listRequests(
+  supabase: SupabaseClient<Database>,
+  createdBy: string,
+): Promise<SignatureRequest[]> {
+  const { data } = await raw(supabase)
+    .from("signature_requests")
+    .select("*")
+    .eq("created_by", createdBy)
+    .order("created_at", { ascending: false });
+  return (data as unknown as SignatureRequest[]) ?? [];
+}
+
 export async function getRequestById(
   supabase: SupabaseClient<Database>,
   id: string,
