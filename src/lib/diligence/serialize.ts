@@ -5,7 +5,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import type { DiligenceRole, GateSection } from "./types";
-import { loadGate } from "./gate";
+import { loadGate, type GateMap } from "./gate";
 
 function raw(supabase: SupabaseClient<Database>): SupabaseClient {
   return supabase as unknown as SupabaseClient;
@@ -49,6 +49,32 @@ async function loadFullReport(supabase: SupabaseClient<Database>, eid: string): 
 const stripCandor = (f: Record<string, unknown>) => { const { internal_note: _drop, ...rest } = f; void _drop; return rest; };
 const stripReview = (r: Record<string, unknown>) => { const { icfo_review: _drop, ...rest } = r; void _drop; return rest; };
 
+/**
+ * Pure role/gate filter. Admin passes through; founder/investor get a gated,
+ * candor-stripped cut (claims dropped, internal_note/icfo_review removed,
+ * verdict shown only when gated). Unit-tested in serialize.test.ts.
+ */
+export function applyRoleFilter(raw: ReportPayload, role: DiligenceRole, gate: GateMap): ReportPayload {
+  if (role === "admin") return raw;
+  const show = (s: GateSection) => (role === "founder" ? gate[s]?.founder_visible : gate[s]?.investor_visible) ?? false;
+  const eng = raw.engagement as Record<string, unknown>;
+
+  return {
+    ...raw,
+    claims: undefined, // never to non-admin
+    findings: show("findings") ? raw.findings.map(stripCandor) : [],
+    responses: show("responses") ? raw.responses.map(stripReview) : [],
+    docRequests: show("data_room") ? raw.docRequests : [],
+    conditions: show("findings") ? raw.conditions : [],
+    engagement: {
+      ...eng,
+      posture: show("verdict") ? eng.posture : null,
+      recommendation: show("verdict") ? eng.recommendation : null,
+      owner_id: undefined,
+    },
+  };
+}
+
 /** Role-aware serialized report. Returns null if the engagement doesn't exist. */
 export async function serializeReport(
   supabase: SupabaseClient<Database>,
@@ -58,24 +84,6 @@ export async function serializeReport(
   const raw_ = await loadFullReport(supabase, eid);
   if (!raw_) return null;
   if (role === "admin") return raw_;
-
   const gate = await loadGate(supabase, eid);
-  const show = (s: GateSection) => (role === "founder" ? gate[s]?.founder_visible : gate[s]?.investor_visible) ?? false;
-  const eng = raw_.engagement as Record<string, unknown>;
-
-  return {
-    ...raw_,
-    claims: undefined, // never to non-admin
-    findings: show("findings") ? raw_.findings.map(stripCandor) : [],
-    responses: show("responses") ? raw_.responses.map(stripReview) : [],
-    docRequests: show("data_room") ? raw_.docRequests : [],
-    conditions: show("findings") ? raw_.conditions : [],
-    engagement: {
-      ...eng,
-      posture: show("verdict") ? eng.posture : null,
-      recommendation: show("verdict") ? eng.recommendation : null,
-      // never leak the candor-adjacent internal fields
-      owner_id: undefined,
-    },
-  };
+  return applyRoleFilter(raw_, role, gate);
 }
