@@ -55,6 +55,36 @@ export async function listRequests(
   return (data as unknown as SignatureRequest[]) ?? [];
 }
 
+/** Update editable envelope details on a draft (signer info + deal label). */
+export async function updateRequestDetails(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  patch: { signerName?: string | null; signerEmail?: string | null; signerCompany?: string | null; dealLabel?: string | null },
+): Promise<void> {
+  const update: Record<string, unknown> = {};
+  if (patch.signerName !== undefined) update.signer_name = patch.signerName;
+  if (patch.signerEmail !== undefined) update.signer_email = patch.signerEmail;
+  if (patch.signerCompany !== undefined) update.signer_company = patch.signerCompany;
+  if (patch.dealLabel !== undefined) update.deal_label = patch.dealLabel;
+  if (Object.keys(update).length === 0) return;
+
+  const { error } = await raw(supabase).from("signature_requests").update(update).eq("id", id);
+  if (error) throw new Error(`Could not update envelope: ${error.message}`);
+}
+
+/** Mark a draft as sent: store the access token, flip status, stamp sent_at. */
+export async function markRequestSent(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  accessToken: string,
+): Promise<void> {
+  const { error } = await raw(supabase)
+    .from("signature_requests")
+    .update({ status: "sent", access_token: accessToken, sent_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw new Error(`Could not send envelope: ${error.message}`);
+}
+
 export async function getRequestById(
   supabase: SupabaseClient<Database>,
   id: string,
