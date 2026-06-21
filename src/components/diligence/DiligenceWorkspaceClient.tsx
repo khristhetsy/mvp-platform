@@ -8,7 +8,9 @@ import { ConfidenceMeter } from "./ConfidenceMeter";
 import { VisibilityGate, type GateMap } from "./VisibilityGate";
 import type { Claim, Domain, Engagement, Finding, Severity, Verification } from "@/lib/diligence/types";
 
-type Detail = { engagement: Engagement; domains: Domain[]; findings: Finding[]; claims: Claim[]; gate: GateMap };
+type DocRequestRow = { id: string; category: string; label: string; closes_findings: string[]; due_date: string | null; status: string };
+type ConditionRow = { id: string; label: string; detail: string | null; status: string };
+type Detail = { engagement: Engagement; domains: Domain[]; findings: Finding[]; claims: Claim[]; gate: GateMap; docRequests: DocRequestRow[]; conditions: ConditionRow[] };
 
 const DEFAULT_GATE: GateMap = {
   findings: { founder_visible: true, investor_visible: true },
@@ -23,7 +25,7 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
   const { toast } = useToast();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"findings" | "ledger">("findings");
+  const [tab, setTab] = useState<"findings" | "ledger" | "dataroom" | "conditions">("findings");
   const [aiOpen, setAiOpen] = useState(false);
   const [aiText, setAiText] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -147,8 +149,38 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
     });
   }, [engagementId]);
 
+  const postJson = useCallback(async (path: string, method: string, body: unknown) => {
+    const res = await fetch(`/api/admin/diligence/${engagementId}${path}`, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error ?? "Request failed."); }
+    return res.json();
+  }, [engagementId]);
+
+  const generateDocs = useCallback(async () => {
+    try { const d = await postJson("/doc-requests", "POST", { generate: true }); toast({ title: `Generated ${d.count} request${d.count === 1 ? "" : "s"}`, variant: "success" }); await reload(); }
+    catch (err) { toast({ title: "Could not generate", description: err instanceof Error ? err.message : "", variant: "error" }); }
+  }, [postJson, reload, toast]);
+
+  const addDocRequest = useCallback(async (label: string) => {
+    try { await postJson("/doc-requests", "POST", { label, category: "Evidence" }); await reload(); }
+    catch (err) { toast({ title: "Could not add", description: err instanceof Error ? err.message : "", variant: "error" }); }
+  }, [postJson, reload, toast]);
+
+  const verifyDoc = useCallback(async (requestId: string) => {
+    try { await postJson("/doc-requests", "PATCH", { requestId }); await reload(); }
+    catch (err) { toast({ title: "Could not verify", description: err instanceof Error ? err.message : "", variant: "error" }); }
+  }, [postJson, reload, toast]);
+
+  const saveCondition = useCallback(async (c: Partial<ConditionRow>) => {
+    try { await postJson("/conditions", "POST", c); await reload(); }
+    catch (err) { toast({ title: "Could not save", description: err instanceof Error ? err.message : "", variant: "error" }); }
+  }, [postJson, reload, toast]);
+
+  const removeCondition = useCallback(async (conditionId: string) => {
+    try { await postJson("/conditions", "DELETE", { conditionId }); await reload(); } catch { /* ignore */ }
+  }, [postJson, reload]);
+
   if (loading || !detail) return <p className="text-sm text-slate-500">Loading…</p>;
-  const { engagement, domains, findings, claims, gate } = detail;
+  const { engagement, domains, findings, claims, gate, docRequests, conditions } = detail;
   const stage = engagement.lifecycle_stage;
 
   return (
@@ -241,18 +273,22 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
       ) : null}
 
       <div className="flex gap-1 border-b border-slate-200">
-        {(["findings", "ledger"] as const).map((t) => (
+        {([["findings", "Findings register"], ["ledger", "Verification ledger"], ["dataroom", "Data room"], ["conditions", "Conditions"]] as const).map(([t, label]) => (
           <button key={t} type="button" onClick={() => setTab(t)}
             className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium ${tab === t ? "border-[#2f6cb0] text-[#2f6cb0]" : "border-transparent text-slate-500 hover:text-slate-800"}`}>
-            {t === "findings" ? "Findings register" : "Verification ledger"}
+            {label}
           </button>
         ))}
       </div>
 
       {tab === "findings" ? (
         <FindingsRegister findings={findings} domains={domains} onSave={saveFinding} onDelete={removeFinding} />
-      ) : (
+      ) : tab === "ledger" ? (
         <VerificationLedger claims={claims} findings={findings} onSave={saveClaim} onVerify={verifyClaimState} />
+      ) : tab === "dataroom" ? (
+        <DataRoom rows={docRequests} onGenerate={generateDocs} onAdd={addDocRequest} onVerify={verifyDoc} />
+      ) : (
+        <Conditions rows={conditions} onSave={saveCondition} onDelete={removeCondition} />
       )}
     </div>
   );
@@ -389,6 +425,90 @@ function VerificationLedger({
               <button type="button" disabled={!text.trim()} onClick={() => { onSave({ claim: text.trim() }); setText(""); }}
                 className="inline-flex items-center gap-1 rounded-lg bg-[#2f6cb0] px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50"><Plus className="h-3.5 w-3.5" /> Add</button>
             </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Data room ─────────────────────────────────────────────────────────────────
+function DataRoom({
+  rows, onGenerate, onAdd, onVerify,
+}: {
+  rows: DocRequestRow[];
+  onGenerate: () => void;
+  onAdd: (label: string) => void;
+  onVerify: (id: string) => void;
+}) {
+  const [label, setLabel] = useState("");
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={onGenerate} className="inline-flex items-center gap-1.5 rounded-lg border border-[#2f6cb0]/30 bg-[#eaf1f9] px-3 py-1.5 text-sm font-semibold text-[#234f86] hover:bg-[#dceaf7]">
+          <Sparkles className="h-4 w-4" /> Generate from open findings
+        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="New request label…" className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm" />
+          <button type="button" disabled={!label.trim()} onClick={() => { onAdd(label.trim()); setLabel(""); }} className="inline-flex items-center gap-1 rounded-lg bg-[#2f6cb0] px-2.5 py-1.5 text-sm font-semibold text-white disabled:opacity-50"><Plus className="h-4 w-4" /> Add</button>
+        </div>
+      </div>
+      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
+        {rows.length === 0 ? <p className="p-4 text-sm text-slate-500">No document requests yet. Generate them from open findings, or add one.</p> : (
+          <table className="w-full text-sm">
+            <thead><tr className="border-b border-slate-100 text-left text-[11px] uppercase tracking-wide text-slate-400">
+              <th className="px-3 py-2.5 font-semibold">Request</th><th className="px-3 py-2.5 font-semibold">Closes</th><th className="px-3 py-2.5 font-semibold">Status</th><th className="px-3 py-2.5" />
+            </tr></thead>
+            <tbody>
+              {rows.map((d) => (
+                <tr key={d.id} className="border-b border-slate-50 last:border-0">
+                  <td className="px-3 py-2"><p className="font-medium text-slate-900">{d.label}</p><p className="text-xs text-slate-500">{d.category}{d.due_date ? ` · due ${d.due_date}` : ""}</p></td>
+                  <td className="px-3 py-2 font-mono text-xs text-slate-500">{d.closes_findings.join(", ") || "—"}</td>
+                  <td className="px-3 py-2"><StateChip variant={d.status === "verified" ? "verified" : d.status === "submitted" ? "submitted" : "requested"} /></td>
+                  <td className="px-3 py-2 text-right">
+                    {d.status !== "verified" ? <button type="button" onClick={() => onVerify(d.id)} className="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-[#1d7a4d] hover:bg-emerald-50">Verify</button> : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Conditions ────────────────────────────────────────────────────────────────
+function Conditions({
+  rows, onSave, onDelete,
+}: {
+  rows: ConditionRow[];
+  onSave: (c: Partial<ConditionRow>) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [label, setLabel] = useState("");
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
+      <table className="w-full text-sm">
+        <thead><tr className="border-b border-slate-100 text-left text-[11px] uppercase tracking-wide text-slate-400">
+          <th className="px-3 py-2.5 font-semibold">Condition</th><th className="px-3 py-2.5 font-semibold">Status</th><th className="px-3 py-2.5" />
+        </tr></thead>
+        <tbody>
+          {rows.map((c) => (
+            <tr key={c.id} className="border-b border-slate-50 last:border-0">
+              <td className="px-3 py-2"><input defaultValue={c.label} onBlur={(e) => { if (e.target.value !== c.label) onSave({ id: c.id, label: e.target.value }); }} className="w-full rounded border border-transparent px-1 py-0.5 hover:border-slate-200 focus:border-slate-300" /></td>
+              <td className="px-3 py-2">
+                <select value={c.status} onChange={(e) => onSave({ id: c.id, status: e.target.value })} className="rounded border border-slate-200 px-1.5 py-1 text-xs">
+                  <option value="not_started">Not started</option><option value="in_progress">In progress</option><option value="done">Done</option>
+                </select>
+              </td>
+              <td className="px-3 py-2 text-right"><button type="button" onClick={() => onDelete(c.id)} aria-label="Delete condition" className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-4 w-4" /></button></td>
+            </tr>
+          ))}
+          <tr>
+            <td className="px-3 py-2"><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="New condition…" className="w-full rounded border border-slate-200 px-2 py-1" /></td>
+            <td />
+            <td className="px-3 py-2 text-right"><button type="button" disabled={!label.trim()} onClick={() => { onSave({ label: label.trim() }); setLabel(""); }} className="inline-flex items-center gap-1 rounded-lg bg-[#2f6cb0] px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50"><Plus className="h-3.5 w-3.5" /> Add</button></td>
           </tr>
         </tbody>
       </table>

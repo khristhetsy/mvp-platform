@@ -27,6 +27,9 @@ export type EngagementDetail = {
   domains: Domain[];
   findings: Finding[];
   claims: Claim[];
+  docRequests: unknown[];
+  conditions: unknown[];
+  documents: unknown[];
 };
 
 export async function loadEngagementDetail(
@@ -35,16 +38,22 @@ export async function loadEngagementDetail(
 ): Promise<EngagementDetail | null> {
   const engagement = await getEngagement(supabase, id);
   if (!engagement) return null;
-  const [{ data: domains }, { data: findings }, { data: claims }] = await Promise.all([
+  const [{ data: domains }, { data: findings }, { data: claims }, { data: docRequests }, { data: conditions }, { data: documents }] = await Promise.all([
     raw(supabase).from("dd_domains").select("*").eq("engagement_id", id).order("sort_order", { ascending: true }),
     raw(supabase).from("dd_findings").select("*").eq("engagement_id", id).order("finding_code", { ascending: true }),
     raw(supabase).from("dd_claims").select("*").eq("engagement_id", id).order("id", { ascending: true }),
+    raw(supabase).from("dd_doc_requests").select("*").eq("engagement_id", id).order("category", { ascending: true }),
+    raw(supabase).from("dd_conditions").select("*").eq("engagement_id", id).order("sort_order", { ascending: true }),
+    raw(supabase).from("dd_documents").select("id, filename, uploaded_at").eq("engagement_id", id).order("uploaded_at", { ascending: false }),
   ]);
   return {
     engagement,
     domains: (domains as unknown as Domain[]) ?? [],
     findings: (findings as unknown as Finding[]) ?? [],
     claims: (claims as unknown as Claim[]) ?? [],
+    docRequests: (docRequests as unknown[]) ?? [],
+    conditions: (conditions as unknown[]) ?? [],
+    documents: (documents as unknown[]) ?? [],
   };
 }
 
