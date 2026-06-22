@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { AdminProfileClient } from "@/components/admin/AdminProfileClient";
+import { SignatureSettings } from "@/components/email/SignatureSettings";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,10 @@ export default async function AdminProfilePage() {
         isSuperAdmin={profile.is_super_admin ?? false}
         createdAt={profile.created_at}
       />
+
+      <div className="mt-6">
+        <SignatureSettings />
+      </div>
     </AppShell>
   );
 }
