@@ -1,20 +1,27 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
-export type FeatureKey = "inbox" | "calendar" | "scheduling";
-export type FeatureAudience = "founder" | "investor";
+export type FeatureKey = "inbox" | "calendar" | "scheduling" | "tasks" | "signatures" | "diligence";
+export type FeatureAudience = "founder" | "investor" | "admin";
 
-export const FEATURE_KEYS: FeatureKey[] = ["inbox", "calendar", "scheduling"];
-export const FEATURE_AUDIENCES: FeatureAudience[] = ["founder", "investor"];
+export const FEATURE_KEYS: FeatureKey[] = ["inbox", "calendar", "scheduling", "tasks", "signatures", "diligence"];
+export const FEATURE_AUDIENCES: FeatureAudience[] = ["founder", "investor", "admin"];
 
 export const FEATURE_LABELS: Record<FeatureKey, string> = {
   inbox: "Inbox",
   calendar: "Calendar",
   scheduling: "Scheduling",
+  tasks: "Tasks",
+  signatures: "E-Signatures",
+  diligence: "Diligence",
 };
 
-/** Nav hrefs each feature governs, by audience. Used to hide menu items. */
-export const FEATURE_HREFS: Record<FeatureAudience, Record<FeatureKey, string[]>> = {
+/**
+ * Nav hrefs each feature governs, per audience. Only features that actually
+ * exist for an audience are listed (so the matrix shows them as N/A elsewhere).
+ * For a parent menu group, list all child hrefs so hiding empties + drops it.
+ */
+export const FEATURE_HREFS: Record<FeatureAudience, Partial<Record<FeatureKey, string[]>>> = {
   founder: {
     inbox: ["/founder/inbox"],
     calendar: ["/founder/calendar"],
@@ -25,7 +32,24 @@ export const FEATURE_HREFS: Record<FeatureAudience, Record<FeatureKey, string[]>
     calendar: ["/investor/calendar"],
     scheduling: ["/investor/schedule"],
   },
+  admin: {
+    inbox: ["/admin/inbox"],
+    calendar: ["/admin/calendar", "/admin/schedule"],
+    tasks: ["/admin/tasks"],
+    signatures: ["/admin/signatures"],
+    diligence: ["/admin/diligence"],
+  },
 };
+
+/** Features that exist for an audience (have at least one governed href). */
+export function featuresForAudience(audience: FeatureAudience): FeatureKey[] {
+  return FEATURE_KEYS.filter((f) => (FEATURE_HREFS[audience][f]?.length ?? 0) > 0);
+}
+
+/** Whether a feature applies to an audience (drives the matrix UI). */
+export function appliesTo(audience: FeatureAudience, feature: FeatureKey): boolean {
+  return (FEATURE_HREFS[audience][feature]?.length ?? 0) > 0;
+}
 
 /** Flat map keyed `${audience}:${feature}` → enabled. Missing key = enabled. */
 export type FeatureFlagMap = Record<string, boolean>;
@@ -60,8 +84,8 @@ export function isFeatureEnabled(map: FeatureFlagMap, audience: FeatureAudience,
 /** The nav hrefs that should be hidden for this audience given the flag map. */
 export function disabledHrefsFor(map: FeatureFlagMap, audience: FeatureAudience): string[] {
   const hidden: string[] = [];
-  for (const feature of FEATURE_KEYS) {
-    if (!isFeatureEnabled(map, audience, feature)) hidden.push(...FEATURE_HREFS[audience][feature]);
+  for (const feature of featuresForAudience(audience)) {
+    if (!isFeatureEnabled(map, audience, feature)) hidden.push(...(FEATURE_HREFS[audience][feature] ?? []));
   }
   return hidden;
 }

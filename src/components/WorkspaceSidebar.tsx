@@ -228,13 +228,22 @@ export function WorkspaceSidebar({
 
   const adminSections = useMemo(() => {
     if (workspace !== "admin") return null;
+    const hidden = new Set(disabledHrefs);
     return getAdminWorkspaceNavSections()
       .map((section) => ({
         ...section,
-        items: section.items.filter(canShowNavItem),
+        items: section.items
+          .filter(canShowNavItem)
+          .map((item) => (item.children?.length ? { ...item, children: item.children.filter((c) => !hidden.has(c.href)) } : item))
+          .filter((item) => {
+            // Drop groups whose children are all hidden, and hidden leaf items.
+            if (item.children?.length === 0) return false;
+            if (!item.children?.length && hidden.has(item.href)) return false;
+            return true;
+          }),
       }))
       .filter((section) => section.items.length > 0);
-  }, [canShowNavItem, workspace]);
+  }, [canShowNavItem, workspace, disabledHrefs]);
 
   const label = workspaceLabel(workspace);
 

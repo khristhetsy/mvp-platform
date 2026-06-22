@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { loadFeatureFlags, disabledHrefsFor } from "@/lib/feature-controls";
+import { loadFeatureFlags, disabledHrefsFor, type FeatureAudience } from "@/lib/feature-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -11,9 +11,11 @@ export async function GET(): Promise<Response> {
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const role = auth.profile.role;
-  if (role !== "founder" && role !== "investor") {
-    return NextResponse.json({ disabledHrefs: [] });
-  }
+  // Staff (admin/analyst) share the admin workspace audience.
+  const audience: FeatureAudience | null =
+    role === "founder" ? "founder" : role === "investor" ? "investor" : role === "admin" || role === "analyst" ? "admin" : null;
+  if (!audience) return NextResponse.json({ disabledHrefs: [] });
+
   const flags = await loadFeatureFlags(createServiceRoleClient());
-  return NextResponse.json({ disabledHrefs: disabledHrefsFor(flags, role) });
+  return NextResponse.json({ disabledHrefs: disabledHrefsFor(flags, audience) });
 }

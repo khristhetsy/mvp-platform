@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { SlidersHorizontal, Check } from "lucide-react";
-import { FEATURE_KEYS, FEATURE_AUDIENCES, FEATURE_LABELS } from "@/lib/feature-controls";
+import { FEATURE_KEYS, FEATURE_AUDIENCES, FEATURE_LABELS, featuresForAudience, appliesTo } from "@/lib/feature-controls";
 
-const AUDIENCE_LABELS: Record<string, string> = { founder: "Founders", investor: "Investors" };
+const AUDIENCE_LABELS: Record<string, string> = { founder: "Founders", investor: "Investors", admin: "Admin" };
 
 export function FeatureControlsClient() {
   const [matrix, setMatrix] = useState<Record<string, boolean>>({});
@@ -35,7 +35,7 @@ export function FeatureControlsClient() {
     setMsg(null);
     try {
       const updates = FEATURE_AUDIENCES.flatMap((audience) =>
-        FEATURE_KEYS.map((feature) => ({ audience, feature, enabled: matrix[`${audience}:${feature}`] !== false })),
+        featuresForAudience(audience).map((feature) => ({ audience, feature, enabled: matrix[`${audience}:${feature}`] !== false })),
       );
       const res = await fetch("/api/admin/feature-controls", {
         method: "PUT",
@@ -80,6 +80,9 @@ export function FeatureControlsClient() {
             <div key={feature} className="flex items-center border-b border-slate-100 px-4 py-3 last:border-0">
               <span className="flex-1 text-sm font-medium text-slate-900">{FEATURE_LABELS[feature]}</span>
               {FEATURE_AUDIENCES.map((audience) => {
+                if (!appliesTo(audience, feature)) {
+                  return <div key={audience} className="flex w-24 justify-center text-sm text-slate-300">—</div>;
+                }
                 const on = matrix[`${audience}:${feature}`] !== false;
                 return (
                   <div key={audience} className="flex w-24 justify-center">

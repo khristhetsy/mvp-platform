@@ -5,13 +5,13 @@ import { writeAuditLog } from "@/lib/data/audit";
 import {
   loadFeatureFlags,
   isFeatureEnabled,
-  FEATURE_KEYS,
+  featuresForAudience,
   FEATURE_AUDIENCES,
 } from "@/lib/feature-controls";
 
 export const dynamic = "force-dynamic";
 
-/** GET — full matrix (every audience×feature) with defaults filled in. */
+/** GET — matrix of every valid audience×feature pair with defaults filled in. */
 export async function GET() {
   const auth = await requirePermissionApi("manage_settings");
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -19,7 +19,7 @@ export async function GET() {
   const flags = await loadFeatureFlags(auth.supabase);
   const matrix: Record<string, boolean> = {};
   for (const audience of FEATURE_AUDIENCES) {
-    for (const feature of FEATURE_KEYS) {
+    for (const feature of featuresForAudience(audience)) {
       matrix[`${audience}:${feature}`] = isFeatureEnabled(flags, audience, feature);
     }
   }
@@ -30,12 +30,12 @@ const putSchema = z.object({
   updates: z
     .array(
       z.object({
-        audience: z.enum(["founder", "investor"]),
-        feature: z.enum(["inbox", "calendar", "scheduling"]),
+        audience: z.enum(["founder", "investor", "admin"]),
+        feature: z.enum(["inbox", "calendar", "scheduling", "tasks", "signatures", "diligence"]),
         enabled: z.boolean(),
       }),
     )
-    .max(20),
+    .max(40),
 });
 
 export async function PUT(req: NextRequest): Promise<Response> {
