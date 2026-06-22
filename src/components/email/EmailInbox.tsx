@@ -1,11 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Mail, Send, Plus, X, RefreshCw, Trash2, MailOpen, ArrowLeft, Search, Inbox as InboxIcon, FileText, Layers, AlertTriangle, RotateCcw, Paperclip } from "lucide-react";
+import { Mail, Send, Plus, X, RefreshCw, Trash2, MailOpen, ArrowLeft, Search, Inbox as InboxIcon, FileText, Layers, AlertTriangle, RotateCcw, Paperclip, Reply, ReplyAll, Forward } from "lucide-react";
 import type { ThreadListItem, EmailMessage, MailFolder, EmailAttachment } from "@/lib/email/inbox";
 import type { EmailDraft } from "@/lib/email/drafts";
+import { buildPrefill, type ComposeMode, type ComposePrefill } from "@/lib/email/compose-prefill";
+import type { ComposeDraft, Sender } from "./types";
+import { ComposeModal } from "./ComposeModal";
+import { SenderHeader } from "./SenderHeader";
 
 type FolderId = MailFolder | "drafts";
+
+/** All platform mail is sent over TLS (Resend) — shown in the contact card. */
+const TLS_SECURITY = "Standard encryption (TLS)";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -35,11 +42,14 @@ function initials(name: string): string {
 }
 
 type ActiveThread = { id: string; subject: string | null; contact_email: string; contact_name: string | null };
+/** Where a modal send should route: an in-thread reply (preserves threading) or a new thread. */
+type ComposeContext = { mode: ComposeMode; threadId: string | null };
 
 export function EmailInbox() {
   const [threads, setThreads] = useState<ThreadListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [folder, setFolder] = useState<FolderId>("inbox");
   const [drafts, setDrafts] = useState<EmailDraft[]>([]);
@@ -49,14 +59,18 @@ export function EmailInbox() {
   const [messages, setMessages] = useState<EmailMessage[]>([]);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [openCardId, setOpenCardId] = useState<string | null>(null); // F2: single open card
 
+  // F3 compose modal state
   const [composeOpen, setComposeOpen] = useState(false);
-  const [compose, setCompose] = useState({ to: "", subject: "", body: "" });
-  const [composeFiles, setComposeFiles] = useState<EmailAttachment[]>([]);
+  const [composePrefill, setComposePrefill] = useState<ComposePrefill | undefined>(undefined);
+  const [composeInitAttachments, setComposeInitAttachments] = useState<EmailAttachment[]>([]);
+  const [composeContext, setComposeContext] = useState<ComposeContext>({ mode: "new", threadId: null });
   const [replyFiles, setReplyFiles] = useState<EmailAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
 
-  const uploadFiles = useCallback(async (files: FileList | null, target: "compose" | "reply") => {
+  /** Upload for the inline quick-reply box. */
+  const uploadReplyFiles = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setUploading(true);
     try {
@@ -65,16 +79,31 @@ export function EmailInbox() {
         fd.append("file", file);
         const res = await fetch("/api/email/attachments", { method: "POST", body: fd });
         const data = await res.json();
-        if (res.ok && data.attachment) {
-          if (target === "compose") setComposeFiles((p) => [...p, data.attachment]);
-          else setReplyFiles((p) => [...p, data.attachment]);
-        } else {
-          setError(typeof data.error === "string" ? data.error : "Upload failed.");
-        }
+        if (res.ok && data.attachment) setReplyFiles((p) => [...p, data.attachment]);
+        else setError(typeof data.error === "string" ? data.error : "Upload failed.");
       }
     } finally {
       setUploading(false);
     }
+  }, []);
+
+  /** Upload for the compose modal — returns the stored attachments to the modal. */
+  const uploadComposeFiles = useCallback(async (files: FileList): Promise<EmailAttachment[]> => {
+    setUploading(true);
+    const out: EmailAttachment[] = [];
+    try {
+      for (const file of Array.from(files)) {
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await fetch("/api/email/attachments", { method: "POST", body: fd });
+        const data = await res.json();
+        if (res.ok && data.attachment) out.push(data.attachment);
+        else setError(typeof data.error === "string" ? data.error : "Upload failed.");
+      }
+    } finally {
+      setUploading(false);
+    }
+    return out;
   }, []);
 
   const loadDrafts = useCallback(async () => {
@@ -103,16 +132,34 @@ export function EmailInbox() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void loadThreads(); }, [loadThreads]);
 
+  // ── F3 single compose entry point ─────────────────────────────────────────
+  const openCompose = useCallback(
+    (prefill?: ComposePrefill, opts?: { context?: ComposeContext; draftId?: string | null; attachments?: EmailAttachment[] }) => {
+      setError(null);
+      setNotice(null);
+      setEditingDraftId(opts?.draftId ?? null);
+      setComposeInitAttachments(opts?.attachments ?? []);
+      setComposeContext(opts?.context ?? { mode: prefill?.mode ?? "new", threadId: null });
+      setComposePrefill(prefill ?? buildPrefill({ mode: "new" }));
+      setComposeOpen(true);
+    },
+    [],
+  );
+
+  const closeCompose = useCallback(() => {
+    setComposeOpen(false);
+    setComposePrefill(undefined);
+    setComposeInitAttachments([]);
+    setEditingDraftId(null);
+  }, []);
+
   // Deep link: /inbox?to=email&subject=... opens compose prefilled.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const to = params.get("to");
-    if (to) {
-      setCompose({ to, subject: params.get("subject") ?? "", body: "" });
-      setComposeOpen(true);
-    }
-  }, []);
+    if (to) openCompose(buildPrefill({ mode: "new", sender: to, subject: params.get("subject") ?? "" }));
+  }, [openCompose]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const unreadCount = threads.filter((t) => t.unread).length;
@@ -136,6 +183,7 @@ export function EmailInbox() {
       if (!res.ok) throw new Error(data.error ?? "Failed to open.");
       setActive(data.thread);
       setMessages(data.messages ?? []);
+      setOpenCardId(null);
       setThreads((prev) => prev.map((t) => (t.id === id ? { ...t, unread: false } : t)));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to open.");
@@ -145,14 +193,8 @@ export function EmailInbox() {
   const markUnread = useCallback(async (id: string) => {
     setThreads((prev) => prev.map((t) => (t.id === id ? { ...t, unread: true } : t)));
     try {
-      await fetch(`/api/email/threads/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ unread: true }),
-      });
-    } catch {
-      // best-effort
-    }
+      await fetch(`/api/email/threads/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ unread: true }) });
+    } catch { /* best-effort */ }
   }, []);
 
   const deleteThread = useCallback(async (id: string) => {
@@ -160,9 +202,7 @@ export function EmailInbox() {
     if (active?.id === id) { setActive(null); setMessages([]); }
     try {
       await fetch(`/api/email/threads/${id}`, { method: "DELETE" });
-    } catch {
-      void loadThreads();
-    }
+    } catch { void loadThreads(); }
   }, [active, loadThreads]);
 
   const purgeThread = useCallback(async (id: string) => {
@@ -170,9 +210,7 @@ export function EmailInbox() {
     if (active?.id === id) { setActive(null); setMessages([]); }
     try {
       await fetch(`/api/email/threads/${id}?purge=true`, { method: "DELETE" });
-    } catch {
-      void loadThreads();
-    }
+    } catch { void loadThreads(); }
   }, [active, loadThreads]);
 
   const restoreThread = useCallback(async (id: string) => {
@@ -180,9 +218,7 @@ export function EmailInbox() {
     if (active?.id === id) { setActive(null); setMessages([]); }
     try {
       await fetch(`/api/email/threads/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trashed: false }) });
-    } catch {
-      void loadThreads();
-    }
+    } catch { void loadThreads(); }
   }, [active, loadThreads]);
 
   const setSpam = useCallback(async (id: string, spam: boolean) => {
@@ -190,50 +226,120 @@ export function EmailInbox() {
     if (active?.id === id) { setActive(null); setMessages([]); }
     try {
       await fetch(`/api/email/threads/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ spam }) });
-    } catch {
-      void loadThreads();
-    }
+    } catch { void loadThreads(); }
   }, [active, loadThreads]);
 
-  const forward = useCallback(() => {
+  // ── Reply / Reply all / Forward → open the wide compose modal (F3) ─────────
+  const recipientsOf = useCallback((): string[] => {
+    const last = messages[messages.length - 1];
+    return last ? [last.from_email, last.to_email].filter(Boolean) : [];
+  }, [messages]);
+
+  const startReply = useCallback(() => {
+    if (!active) return;
+    openCompose(buildPrefill({ mode: "reply", sender: active.contact_email, subject: active.subject }), {
+      context: { mode: "reply", threadId: active.id },
+    });
+  }, [active, openCompose]);
+
+  const startReplyAll = useCallback(() => {
+    if (!active) return;
+    openCompose(buildPrefill({ mode: "replyAll", sender: active.contact_email, recipients: recipientsOf(), subject: active.subject }), {
+      context: { mode: "replyAll", threadId: active.id },
+    });
+  }, [active, recipientsOf, openCompose]);
+
+  const startForward = useCallback(() => {
     if (!active) return;
     const last = messages[messages.length - 1];
-    const quoted = last
-      ? `\n\n---------- Forwarded message ----------\nFrom: ${last.from_email}\nSubject: ${active.subject ?? ""}\n\n${last.body_text ?? ""}`
-      : "";
-    setError(null);
-    setCompose({ to: "", subject: `Fwd: ${active.subject ?? ""}`.trim(), body: quoted });
-    setComposeOpen(true);
-  }, [active, messages]);
+    openCompose(
+      buildPrefill({ mode: "forward", sender: last?.from_email ?? active.contact_email, subject: active.subject, body: last?.body_text, date: last ? new Date(last.created_at).toLocaleString() : undefined }),
+      { context: { mode: "forward", threadId: null } },
+    );
+  }, [active, messages, openCompose]);
 
   const selectFolder = useCallback((f: FolderId) => {
     setFolder(f);
     setActive(null);
     setMessages([]);
     setSearch("");
+    setOpenCardId(null);
   }, []);
 
-  const saveDraft = useCallback(async (close: boolean) => {
+  // ── Compose modal send / save-draft ───────────────────────────────────────
+  const onSaveDraft = useCallback(async (draft: ComposeDraft) => {
     try {
       const res = await fetch("/api/email/drafts", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: editingDraftId, to: compose.to, subject: compose.subject, body: compose.body, attachments: composeFiles }),
+        body: JSON.stringify({ id: editingDraftId, to: draft.to, subject: draft.subject, body: draft.body, attachments: draft.attachments }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not save draft.");
-      setEditingDraftId(data.draft.id);
-      if (close) { setComposeOpen(false); setCompose({ to: "", subject: "", body: "" }); setComposeFiles([]); setEditingDraftId(null); void loadDrafts(); }
+      closeCompose();
+      void loadDrafts();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save draft.");
     }
-  }, [editingDraftId, compose, composeFiles, loadDrafts]);
+  }, [editingDraftId, loadDrafts, closeCompose]);
+
+  const onSendCompose = useCallback(async (draft: ComposeDraft) => {
+    const inThread = (composeContext.mode === "reply" || composeContext.mode === "replyAll") && composeContext.threadId;
+    if (inThread) {
+      // Preserve threading: reply within the existing thread.
+      if (!draft.body.trim()) { setError("Message is required."); return; }
+      setSending(true);
+      try {
+        const res = await fetch(`/api/email/threads/${composeContext.threadId}`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ body: draft.body, attachments: draft.attachments }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Reply failed.");
+        setMessages(data.messages ?? []);
+        closeCompose();
+        await loadThreads();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Reply failed.");
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
+    // New thread (Compose / Forward / Email-from-card).
+    if (!draft.to.trim() || !draft.subject.trim() || !draft.body.trim()) {
+      setError("To, subject and message are required.");
+      return;
+    }
+    setSending(true);
+    try {
+      const res = await fetch("/api/email/threads", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: draft.to, cc: draft.cc, bcc: draft.bcc, subject: draft.subject, body: draft.body, attachments: draft.attachments }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Send failed.");
+      const wasDraft = editingDraftId;
+      closeCompose();
+      if (wasDraft) {
+        try { await fetch("/api/email/drafts", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: wasDraft }) }); } catch { /* best-effort */ }
+        void loadDrafts();
+      }
+      await loadThreads();
+      if (data.thread?.id) await openThread(data.thread.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Send failed.");
+    } finally {
+      setSending(false);
+    }
+  }, [composeContext, editingDraftId, loadThreads, loadDrafts, openThread, closeCompose]);
 
   const openDraft = useCallback((d: EmailDraft) => {
-    setEditingDraftId(d.id);
-    setCompose({ to: d.to_email ?? "", subject: d.subject ?? "", body: d.body ?? "" });
-    setComposeFiles(d.attachments ?? []);
-    setComposeOpen(true);
-  }, []);
+    openCompose(buildPrefill({ mode: "new", sender: d.to_email ?? "", subject: d.subject ?? "", body: d.body ?? "" }), {
+      draftId: d.id,
+      attachments: d.attachments ?? [],
+    });
+  }, [openCompose]);
 
   const discardDraft = useCallback(async (id: string) => {
     setDrafts((prev) => prev.filter((d) => d.id !== id));
@@ -245,8 +351,7 @@ export function EmailInbox() {
     setSending(true);
     try {
       const res = await fetch(`/api/email/threads/${active.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ body: reply, attachments: replyFiles }),
       });
       const data = await res.json();
@@ -262,37 +367,19 @@ export function EmailInbox() {
     }
   }, [active, reply, replyFiles, loadThreads]);
 
-  const sendCompose = useCallback(async () => {
-    if (!compose.to.trim() || !compose.subject.trim() || !compose.body.trim()) {
-      setError("To, subject and message are required.");
-      return;
-    }
-    setSending(true);
-    try {
-      const res = await fetch("/api/email/threads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...compose, attachments: composeFiles }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Send failed.");
-      setComposeOpen(false);
-      setCompose({ to: "", subject: "", body: "" });
-      setComposeFiles([]);
-      // Sending a draft removes it.
-      if (editingDraftId) {
-        try { await fetch("/api/email/drafts", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingDraftId }) }); } catch { /* best-effort */ }
-        setEditingDraftId(null);
-        void loadDrafts();
-      }
-      await loadThreads();
-      if (data.thread?.id) await openThread(data.thread.id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Send failed.");
-    } finally {
-      setSending(false);
-    }
-  }, [compose, composeFiles, editingDraftId, loadThreads, loadDrafts, openThread]);
+  // ── F2 contact-card actions ───────────────────────────────────────────────
+  const onCardEmail = useCallback((s: Sender) => {
+    setOpenCardId(null);
+    openCompose(buildPrefill({ mode: "new", sender: s.email }));
+  }, [openCompose]);
+
+  const onCardAddContact = useCallback((s: Sender) => {
+    setOpenCardId(null);
+    // No admin contacts store exists yet (out of scope: storage). Copy the address
+    // so the user can add it in their CRM, and confirm inline.
+    try { void navigator.clipboard?.writeText(s.email); } catch { /* ignore */ }
+    setNotice(`Copied ${s.email} — add it in your CRM.`);
+  }, []);
 
   return (
     <div className="space-y-3">
@@ -303,11 +390,12 @@ export function EmailInbox() {
         </h1>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => void loadThreads()} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50" aria-label="Refresh"><RefreshCw className="h-4 w-4" /></button>
-          <button type="button" onClick={() => { setError(null); setEditingDraftId(null); setCompose({ to: "", subject: "", body: "" }); setComposeFiles([]); setComposeOpen(true); }} className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"><Plus className="h-4 w-4" /> Compose</button>
+          <button type="button" onClick={() => openCompose()} className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"><Plus className="h-4 w-4" /> Compose</button>
         </div>
       </div>
 
       {error && !composeOpen ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
+      {notice ? <p className="rounded-lg border border-[#B5D4F4] bg-[#E6F1FB] px-3 py-2 text-sm text-[#0C447C]">{notice}</p> : null}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[156px_minmax(0,1fr)]">
         <aside>
@@ -339,7 +427,7 @@ export function EmailInbox() {
         <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
           <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
             <div className="flex min-w-0 items-center gap-2">
-              <button type="button" onClick={() => { setActive(null); setMessages([]); }} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Back to inbox"><ArrowLeft className="h-4 w-4" /></button>
+              <button type="button" onClick={() => { setActive(null); setMessages([]); setOpenCardId(null); }} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Back to inbox"><ArrowLeft className="h-4 w-4" /></button>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-slate-950">{active.subject ?? "(no subject)"}</p>
                 <p className="truncate text-xs text-slate-500">{active.contact_name ? `${active.contact_name} · ` : ""}{active.contact_email}</p>
@@ -349,13 +437,28 @@ export function EmailInbox() {
           </div>
           <div className="max-h-[460px] space-y-5 overflow-y-auto px-5 py-4">
             {messages.map((m) => {
-              const senderName = m.direction === "outbound" ? "You" : (m.from_name ?? m.from_email);
+              const outbound = m.direction === "outbound";
+              const senderName = outbound ? "You" : (m.from_name ?? m.from_email);
+              const sender: Sender = { name: m.from_name ?? m.from_email, email: m.from_email };
               return (
                 <div key={m.id} className="flex gap-3 border-b border-slate-100 pb-5 last:border-0 last:pb-0">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E6F1FB] text-xs font-semibold text-[#0C447C]">{initials(senderName)}</span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
-                      <p className="truncate text-sm"><span className="font-semibold text-slate-900">{senderName}</span> <span className="text-xs text-slate-400">&lt;{m.from_email}&gt;</span></p>
+                      {outbound ? (
+                        <p className="truncate text-sm"><span className="font-semibold text-slate-900">You</span> <span className="text-xs text-slate-400">&lt;{m.from_email}&gt;</span></p>
+                      ) : (
+                        <SenderHeader
+                          sender={sender}
+                          date={m.created_at}
+                          security={TLS_SECURITY}
+                          open={openCardId === m.id}
+                          onToggle={() => setOpenCardId((cur) => (cur === m.id ? null : m.id))}
+                          onClose={() => setOpenCardId(null)}
+                          onEmail={onCardEmail}
+                          onAddContact={onCardAddContact}
+                        />
+                      )}
                       <span className="shrink-0 text-xs text-slate-400">{new Date(m.created_at).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
                     </div>
                     <p className="text-[11px] text-slate-400">to {m.to_email}</p>
@@ -375,11 +478,12 @@ export function EmailInbox() {
             })}
           </div>
           <div className="border-t border-slate-100 p-3">
-            <div className="mb-2 flex gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600"><Send className="h-3.5 w-3.5" /> Reply below</span>
-              <button type="button" onClick={() => forward()} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"><ArrowLeft className="h-3.5 w-3.5 rotate-180" /> Forward</button>
+            <div className="mb-2 flex flex-wrap gap-2">
+              <button type="button" onClick={startReply} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"><Reply className="h-3.5 w-3.5" /> Reply</button>
+              <button type="button" onClick={startReplyAll} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"><ReplyAll className="h-3.5 w-3.5" /> Reply all</button>
+              <button type="button" onClick={startForward} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"><Forward className="h-3.5 w-3.5" /> Forward</button>
             </div>
-            <textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={3} placeholder="Reply…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
+            <textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={3} placeholder="Quick reply…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
             {replyFiles.length > 0 ? (
               <div className="mt-2 flex flex-wrap gap-2">
                 {replyFiles.map((a) => (
@@ -393,7 +497,7 @@ export function EmailInbox() {
             <div className="mt-2 flex items-center justify-between">
               <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50">
                 <Paperclip className="h-3.5 w-3.5" /> {uploading ? "Uploading…" : "Attach"}
-                <input type="file" multiple className="hidden" onChange={(e) => { void uploadFiles(e.target.files, "reply"); e.target.value = ""; }} />
+                <input type="file" multiple className="hidden" onChange={(e) => { void uploadReplyFiles(e.target.files); e.target.value = ""; }} />
               </label>
               <button type="button" onClick={() => void sendReply()} disabled={sending || !reply.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"><Send className="h-4 w-4" /> {sending ? "Sending…" : "Send"}</button>
             </div>
@@ -481,40 +585,20 @@ export function EmailInbox() {
         </div>
       </div>
 
-      {/* Compose modal */}
-      {composeOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={() => setComposeOpen(false)}>
-          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-              <h2 className="text-sm font-semibold text-slate-950">New message</h2>
-              <button type="button" onClick={() => setComposeOpen(false)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
-            </div>
-            <div className="space-y-3 px-5 py-4">
-              {error ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{error}</p> : null}
-              <input value={compose.to} onChange={(e) => setCompose({ ...compose, to: e.target.value })} placeholder="To (email)" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-              <input value={compose.subject} onChange={(e) => setCompose({ ...compose, subject: e.target.value })} placeholder="Subject" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-              <textarea value={compose.body} onChange={(e) => setCompose({ ...compose, body: e.target.value })} rows={6} placeholder="Write your message…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
-                  <Paperclip className="h-3.5 w-3.5" /> {uploading ? "Uploading…" : "Attach files"}
-                  <input type="file" multiple className="hidden" onChange={(e) => { void uploadFiles(e.target.files, "compose"); e.target.value = ""; }} />
-                </label>
-                {composeFiles.map((a) => (
-                  <span key={a.path} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700">
-                    <Paperclip className="h-3.5 w-3.5 text-slate-400" /> {a.name} <span className="text-slate-400">{formatSize(a.size)}</span>
-                    <button type="button" onClick={() => setComposeFiles((p) => p.filter((x) => x.path !== a.path))} className="text-slate-400 hover:text-slate-700"><X className="h-3 w-3" /></button>
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/50 px-5 py-3">
-              <button type="button" onClick={() => setComposeOpen(false)} className="mr-auto rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
-              <button type="button" onClick={() => void saveDraft(true)} disabled={sending} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"><FileText className="h-4 w-4" /> Save draft</button>
-              <button type="button" onClick={() => void sendCompose()} disabled={sending} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"><Send className="h-4 w-4" /> {sending ? "Sending…" : "Send"}</button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {/* F3 wide compose modal */}
+      <ComposeModal
+        open={composeOpen}
+        prefill={composePrefill}
+        title={composeContext.mode === "forward" ? "Forward" : composeContext.mode === "reply" || composeContext.mode === "replyAll" ? "Reply" : "New message"}
+        sending={sending}
+        error={composeOpen ? error : null}
+        onSaveDraft={composeContext.threadId ? undefined : onSaveDraft}
+        onSend={(d) => void onSendCompose(d)}
+        onClose={closeCompose}
+        uploadFiles={uploadComposeFiles}
+        uploading={uploading}
+        initialAttachments={composeInitAttachments}
+      />
     </div>
   );
 }
