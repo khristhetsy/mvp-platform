@@ -2,14 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Mail, RefreshCw, ArrowLeft, ExternalLink, Inbox as InboxIcon, Send, FileText, Layers, AlertTriangle, Trash2, Plus, X, Loader2, Archive, RotateCcw, CornerUpLeft, Search } from "lucide-react";
+import { Mail, RefreshCw, ArrowLeft, ExternalLink, Inbox as InboxIcon, Send, FileText, Layers, AlertTriangle, Trash2, Plus, Loader2, Archive, RotateCcw, CornerUpLeft, Search, Reply, ReplyAll, Forward } from "lucide-react";
 import { EmailBody } from "./EmailBody";
+import { ComposeModal } from "./ComposeModal";
+import { SenderHeader } from "./SenderHeader";
+import { buildPrefill, type ComposeMode, type ComposePrefill } from "@/lib/email/compose-prefill";
+import type { ComposeDraft, Sender } from "./types";
 
 type GmailFolder = "inbox" | "sent" | "all" | "spam" | "trash" | "drafts";
 type GmailActionId = "archive" | "spam" | "notspam" | "trash" | "untrash";
 type GmailItem = { id: string; threadId: string; from: string; subject: string; date: string; snippet: string; unread: boolean };
 type GmailMessage = { id: string; from: string; to: string; date: string; subject: string; text: string | null; html: string | null; snippet: string };
 type GmailThread = { id: string; subject: string; messages: GmailMessage[] };
+type ComposeContext = { mode: ComposeMode; threadId: string | null };
+
+const TLS_SECURITY = "Standard encryption (TLS)";
 
 const FOLDERS: { id: GmailFolder; label: string; icon: typeof Mail }[] = [
   { id: "inbox", label: "Inbox", icon: InboxIcon },
@@ -22,6 +29,10 @@ const FOLDERS: { id: GmailFolder; label: string; icon: typeof Mail }[] = [
 
 function fromName(from: string): string {
   const m = from.match(/^\s*"?([^"<]+?)"?\s*</);
+  return (m ? m[1] : from).trim();
+}
+function fromEmail(from: string): string {
+  const m = from.match(/<([^>]+)>/);
   return (m ? m[1] : from).trim();
 }
 function when(ts: string): string {
@@ -41,12 +52,13 @@ export function GmailInbox() {
   const [needsReadScope, setNeedsReadScope] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [thread, setThread] = useState<GmailThread | null>(null);
+  const [openCardId, setOpenCardId] = useState<string | null>(null);
 
   const [composeOpen, setComposeOpen] = useState(false);
-  const [to, setTo] = useState("");
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
+  const [composePrefill, setComposePrefill] = useState<ComposePrefill | undefined>(undefined);
+  const [composeContext, setComposeContext] = useState<ComposeContext>({ mode: "new", threadId: null });
   const [sending, setSending] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [replying, setReplying] = useState(false);
@@ -73,7 +85,7 @@ export function GmailInbox() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
 
-  const selectFolder = useCallback((f: GmailFolder) => { setFolder(f); setThread(null); setSearch(""); }, []);
+  const selectFolder = useCallback((f: GmailFolder) => { setFolder(f); setThread(null); setSearch(""); setOpenCardId(null); }, []);
 
   const openThread = useCallback(async (threadId: string) => {
     setError(null);
@@ -82,6 +94,7 @@ export function GmailInbox() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to open.");
       setThread(data.thread);
+      setOpenCardId(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to open.");
     }
@@ -120,24 +133,93 @@ export function GmailInbox() {
     }
   }, [thread, replyText, openThread]);
 
-  const send = useCallback(async () => {
-    if (!to.trim() || !subject.trim() || !body.trim()) { setError("To, subject and message are required."); return; }
+  // ── Compose seam (F3) ──────────────────────────────────────────────────────
+  const openCompose = useCallback((prefill?: ComposePrefill, ctx?: ComposeContext) => {
+    setError(null);
+    setNotice(null);
+    setComposeContext(ctx ?? { mode: prefill?.mode ?? "new", threadId: null });
+    setComposePrefill(prefill ?? buildPrefill({ mode: "new" }));
+    setComposeOpen(true);
+  }, []);
+  const closeCompose = useCallback(() => { setComposeOpen(false); setComposePrefill(undefined); }, []);
+
+  const onSend = useCallback(async (draft: ComposeDraft) => {
+    const inThread = (composeContext.mode === "reply" || composeContext.mode === "replyAll") && composeContext.threadId;
+    if (inThread) {
+      if (!draft.body.trim()) { setError("Message is required."); return; }
+      setSending(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/integrations/google/gmail/threads/${composeContext.threadId}/reply`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: draft.body }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Reply failed.");
+        closeCompose();
+        if (composeContext.threadId) await openThread(composeContext.threadId);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Reply failed.");
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+    if (!draft.to.trim() || !draft.subject.trim() || !draft.body.trim()) { setError("To, subject and message are required."); return; }
     setSending(true);
     setError(null);
     try {
       const res = await fetch("/api/integrations/google/gmail/send", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: to.trim(), subject: subject.trim(), body }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: draft.to.trim(), subject: draft.subject.trim(), body: draft.body }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Send failed.");
-      setComposeOpen(false); setTo(""); setSubject(""); setBody("");
+      closeCompose();
       if (folder === "sent") void load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Send failed.");
     } finally {
       setSending(false);
     }
-  }, [to, subject, body, folder, load]);
+  }, [composeContext, folder, load, openThread, closeCompose]);
+
+  // Reply / Reply all / Forward → wide modal (replies route in-thread).
+  const recipientsOf = useCallback((): string[] => {
+    if (!thread) return [];
+    return thread.messages.flatMap((m) => [fromEmail(m.from), ...m.to.split(",").map((s) => fromEmail(s))]).filter(Boolean);
+  }, [thread]);
+
+  const lastMsg = thread?.messages[thread.messages.length - 1];
+
+  const startReply = useCallback(() => {
+    if (!thread || !lastMsg) return;
+    openCompose(buildPrefill({ mode: "reply", sender: fromEmail(lastMsg.from), subject: thread.subject }), { mode: "reply", threadId: thread.id });
+  }, [thread, lastMsg, openCompose]);
+
+  const startReplyAll = useCallback(() => {
+    if (!thread || !lastMsg) return;
+    openCompose(buildPrefill({ mode: "replyAll", sender: fromEmail(lastMsg.from), recipients: recipientsOf(), subject: thread.subject }), { mode: "replyAll", threadId: thread.id });
+  }, [thread, lastMsg, recipientsOf, openCompose]);
+
+  const startForward = useCallback(() => {
+    if (!thread || !lastMsg) return;
+    openCompose(
+      buildPrefill({ mode: "forward", sender: fromEmail(lastMsg.from), subject: thread.subject, body: lastMsg.text || lastMsg.snippet, date: lastMsg.date }),
+      { mode: "forward", threadId: null },
+    );
+  }, [thread, lastMsg, openCompose]);
+
+  const onCardEmail = useCallback((s: Sender) => {
+    setOpenCardId(null);
+    openCompose(buildPrefill({ mode: "new", sender: s.email }));
+  }, [openCompose]);
+
+  const onCardAddContact = useCallback((s: Sender) => {
+    setOpenCardId(null);
+    try { void navigator.clipboard?.writeText(s.email); } catch { /* ignore */ }
+    setNotice(`Copied ${s.email} — add it in your CRM.`);
+  }, []);
+
+  const send = useCallback(() => openCompose(), [openCompose]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -166,11 +248,12 @@ export function GmailInbox() {
         </h1>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => void load()} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50" aria-label="Refresh"><RefreshCw className="h-4 w-4" /></button>
-          <button type="button" onClick={() => { setError(null); setComposeOpen(true); }} className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"><Plus className="h-4 w-4" /> Compose</button>
+          <button type="button" onClick={send} className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"><Plus className="h-4 w-4" /> Compose</button>
         </div>
       </div>
 
       {error && !composeOpen ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
+      {notice ? <p className="rounded-lg border border-[#B5D4F4] bg-[#E6F1FB] px-3 py-2 text-sm text-[#0C447C]">{notice}</p> : null}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[156px_minmax(0,1fr)]">
         <aside>
@@ -193,7 +276,7 @@ export function GmailInbox() {
             <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
               <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
                 <div className="flex min-w-0 items-center gap-2">
-                  <button type="button" onClick={() => setThread(null)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Back"><ArrowLeft className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => { setThread(null); setOpenCardId(null); }} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Back"><ArrowLeft className="h-4 w-4" /></button>
                   <p className="truncate text-sm font-semibold text-slate-950">{thread.subject}</p>
                 </div>
                 <button type="button" onClick={() => void act(thread.id, "trash")} className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-400 hover:border-[#F7C1C1] hover:bg-[#FCEBEB] hover:text-[#A32D2D]" aria-label="Trash"><Trash2 className="h-4 w-4" /></button>
@@ -202,7 +285,16 @@ export function GmailInbox() {
                 {thread.messages.map((m) => (
                   <div key={m.id} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0">
                     <div className="flex items-baseline justify-between gap-2">
-                      <p className="truncate text-sm font-medium text-slate-900">{fromName(m.from)}</p>
+                      <SenderHeader
+                        sender={{ name: fromName(m.from), email: fromEmail(m.from) }}
+                        date={m.date}
+                        security={TLS_SECURITY}
+                        open={openCardId === m.id}
+                        onToggle={() => setOpenCardId((cur) => (cur === m.id ? null : m.id))}
+                        onClose={() => setOpenCardId(null)}
+                        onEmail={onCardEmail}
+                        onAddContact={onCardAddContact}
+                      />
                       <span className="shrink-0 text-xs text-slate-400">{when(m.date)}</span>
                     </div>
                     <div className="mt-2"><EmailBody html={m.html} text={m.text || m.snippet} /></div>
@@ -210,7 +302,12 @@ export function GmailInbox() {
                 ))}
               </div>
               <div className="border-t border-slate-100 p-3">
-                <textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} rows={3} placeholder="Reply…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
+                <div className="mb-2 flex flex-wrap gap-2">
+                  <button type="button" onClick={startReply} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"><Reply className="h-3.5 w-3.5" /> Reply</button>
+                  <button type="button" onClick={startReplyAll} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"><ReplyAll className="h-3.5 w-3.5" /> Reply all</button>
+                  <button type="button" onClick={startForward} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"><Forward className="h-3.5 w-3.5" /> Forward</button>
+                </div>
+                <textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} rows={3} placeholder="Quick reply…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
                 <div className="mt-2 flex justify-end">
                   <button type="button" onClick={() => void sendReply()} disabled={replying || !replyText.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50">{replying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CornerUpLeft className="h-4 w-4" />} {replying ? "Sending…" : "Reply"}</button>
                 </div>
@@ -261,26 +358,16 @@ export function GmailInbox() {
         </div>
       </div>
 
-      {composeOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-              <h2 className="text-sm font-semibold text-slate-900">New message · Gmail</h2>
-              <button type="button" onClick={() => setComposeOpen(false)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
-            </div>
-            <div className="space-y-3 px-5 py-4">
-              {error ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{error}</p> : null}
-              <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="To" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-              <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-              <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={8} placeholder="Write your message…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
-            </div>
-            <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50/50 px-5 py-3">
-              <button type="button" onClick={() => setComposeOpen(false)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
-              <button type="button" onClick={() => void send()} disabled={sending} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50">{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} {sending ? "Sending…" : "Send"}</button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {/* F3 wide compose modal (Gmail) */}
+      <ComposeModal
+        open={composeOpen}
+        prefill={composePrefill}
+        title={composeContext.mode === "forward" ? "Forward · Gmail" : composeContext.mode === "reply" || composeContext.mode === "replyAll" ? "Reply · Gmail" : "New message · Gmail"}
+        sending={sending}
+        error={composeOpen ? error : null}
+        onSend={(d) => void onSend(d)}
+        onClose={closeCompose}
+      />
     </div>
   );
 }
