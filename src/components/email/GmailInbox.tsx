@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Mail, RefreshCw, ArrowLeft, ExternalLink, Inbox as InboxIcon, Send, FileText, Layers, AlertTriangle, Trash2, Plus, X, Loader2, Archive, RotateCcw, CornerUpLeft, Search } from "lucide-react";
+import { EmailBody } from "./EmailBody";
 
 type GmailFolder = "inbox" | "sent" | "all" | "spam" | "trash" | "drafts";
 type GmailActionId = "archive" | "spam" | "notspam" | "trash" | "untrash";
@@ -19,9 +20,6 @@ const FOLDERS: { id: GmailFolder; label: string; icon: typeof Mail }[] = [
   { id: "trash", label: "Trash", icon: Trash2 },
 ];
 
-function stripHtml(html: string): string {
-  return html.replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/[ \t]{2,}/g, " ").trim();
-}
 function fromName(from: string): string {
   const m = from.match(/^\s*"?([^"<]+?)"?\s*</);
   return (m ? m[1] : from).trim();
@@ -207,7 +205,7 @@ export function GmailInbox() {
                       <p className="truncate text-sm font-medium text-slate-900">{fromName(m.from)}</p>
                       <span className="shrink-0 text-xs text-slate-400">{when(m.date)}</span>
                     </div>
-                    <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-800">{m.text || (m.html ? stripHtml(m.html) : m.snippet)}</p>
+                    <div className="mt-2"><EmailBody html={m.html} text={m.text || m.snippet} /></div>
                   </div>
                 ))}
               </div>

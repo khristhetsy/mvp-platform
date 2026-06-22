@@ -8,6 +8,7 @@ import { buildPrefill, type ComposeMode, type ComposePrefill } from "@/lib/email
 import type { ComposeDraft, Sender } from "./types";
 import { ComposeModal } from "./ComposeModal";
 import { SenderHeader } from "./SenderHeader";
+import { EmailBody } from "./EmailBody";
 
 type FolderId = MailFolder | "drafts";
 
@@ -462,7 +463,7 @@ export function EmailInbox() {
                       <span className="shrink-0 text-xs text-slate-400">{new Date(m.created_at).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
                     </div>
                     <p className="text-[11px] text-slate-400">to {m.to_email}</p>
-                    <p className="mt-2.5 whitespace-pre-wrap text-sm leading-relaxed text-slate-800">{m.body_text ?? ""}</p>
+                    <div className="mt-2.5"><EmailBody html={m.body_html} text={m.body_text} /></div>
                     {m.attachments && m.attachments.length > 0 ? (
                       <div className="mt-2.5 flex flex-wrap gap-2">
                         {m.attachments.map((a) => (
