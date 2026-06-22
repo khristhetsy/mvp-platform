@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadSignature, saveSignature, sanitizeSignatureHtml } from "@/lib/email/signature";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +9,9 @@ export const dynamic = "force-dynamic";
 export async function GET(): Promise<Response> {
   const auth = await requireApiProfile();
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const signature = await loadSignature(auth.supabase, auth.profile.id);
+  // Service-role read keyed by the authenticated profile id (avoids RLS edge cases).
+  const db = createServiceRoleClient();
+  const signature = await loadSignature(db, auth.profile.id);
   return NextResponse.json({ signature });
 }
 
@@ -23,7 +26,9 @@ export async function PUT(req: NextRequest): Promise<Response> {
   }
   const clean = sanitizeSignatureHtml(parsed.data.signature);
   try {
-    await saveSignature(auth.supabase, auth.profile.id, clean);
+    // Service-role write, scoped to the authenticated user's own profile id only.
+    const db = createServiceRoleClient();
+    await saveSignature(db, auth.profile.id, clean);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not save signature.";
     return NextResponse.json({ error: message }, { status: 500 });
