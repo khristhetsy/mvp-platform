@@ -1,31 +1,25 @@
+import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/supabase/auth";
-import { listTasks, listInternalUsers } from "@/lib/tasks/db";
-import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
-import type { GoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { TasksClient } from "./TasksClient";
+import { listTasks } from "@/lib/admin-tasks/queries";
+import { TasksView } from "@/components/admin-tasks/TasksView";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Team Tasks" };
+export const metadata = { title: "Tasks" };
 
 export default async function AdminTasksPage() {
   const profile = await requireRole(["admin", "analyst"]);
-  const admin   = createServiceRoleClient();
-  const [tasks, users, googleStatus] = await Promise.all([
-    listTasks(),
-    listInternalUsers(),
-    getGoogleConnectionStatus(admin, profile.id),
-  ]);
+  const admin = createServiceRoleClient();
+  const tasks = await listTasks(admin).catch(() => []);
 
   return (
-    <TasksClient
-      initialTasks={tasks}
-      internalUsers={users}
-      currentUserId={profile.id}
-      googleConnected={googleStatus.connected}
-      googleStatus={googleStatus}
-    />
+    <AppShell
+      role="ADMIN"
+      workspace="admin"
+      profileName={profile.full_name ?? profile.email ?? "Admin"}
+      profileSubtitle="Tasks"
+    >
+      <TasksView initialTasks={tasks} />
+    </AppShell>
   );
 }
-
-export type { GoogleConnectionStatus };
