@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
-import { loadSignature, saveSignature } from "@/lib/email/signature";
+import { loadSignature, saveSignature, sanitizeSignatureHtml } from "@/lib/email/signature";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export async function GET(): Promise<Response> {
   return NextResponse.json({ signature });
 }
 
-const schema = z.object({ signature: z.string().max(2000) });
+const schema = z.object({ signature: z.string().max(20000) });
 
 export async function PUT(req: NextRequest): Promise<Response> {
   const auth = await requireApiProfile();
@@ -21,6 +21,7 @@ export async function PUT(req: NextRequest): Promise<Response> {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
-  await saveSignature(auth.supabase, auth.profile.id, parsed.data.signature);
-  return NextResponse.json({ signature: parsed.data.signature });
+  const clean = sanitizeSignatureHtml(parsed.data.signature);
+  await saveSignature(auth.supabase, auth.profile.id, clean);
+  return NextResponse.json({ signature: clean });
 }

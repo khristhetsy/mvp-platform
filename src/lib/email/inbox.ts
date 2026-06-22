@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { sendEmail } from "@/lib/email/send-email";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { loadSignature } from "@/lib/email/signature";
+import { loadSignature, sanitizeSignatureHtml, signatureToPlainText, isHtmlSignature } from "@/lib/email/signature";
 
 // email_threads / email_messages aren't in the generated types yet — raw client.
 function raw(supabase: SupabaseClient<Database>): SupabaseClient {
@@ -161,10 +161,22 @@ async function sendOnThread(
   body: string,
   attachments: EmailAttachment[] = [],
 ): Promise<void> {
-  // Append the sender's saved signature (if any) to outgoing mail.
-  const signature = await loadSignature(supabase, owner.id);
-  const fullBody = signature ? `${body}\n\n${signature}` : body;
-  const html = htmlFromText(fullBody);
+  // Append the sender's saved signature (if any) to outgoing mail. Supports both
+  // rich HTML signatures and legacy plain-text ones.
+  const sigRaw = await loadSignature(supabase, owner.id);
+  let sigHtml = "";
+  let sigText = "";
+  if (sigRaw) {
+    if (isHtmlSignature(sigRaw)) {
+      sigHtml = sanitizeSignatureHtml(sigRaw);
+      sigText = signatureToPlainText(sigHtml);
+    } else {
+      sigHtml = htmlFromText(sigRaw);
+      sigText = sigRaw;
+    }
+  }
+  const fullBody = sigText ? `${body}\n\n${sigText}` : body;
+  const html = sigHtml ? `${htmlFromText(body)}<br/><br/>${sigHtml}` : htmlFromText(body);
 
   // Pull attachment bytes from storage → base64 for Resend.
   const resendAttachments: Array<{ filename: string; content: string }> = [];
