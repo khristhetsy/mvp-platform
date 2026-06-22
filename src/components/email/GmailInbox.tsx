@@ -7,6 +7,7 @@ import { EmailBody } from "./EmailBody";
 import { ComposeModal } from "./ComposeModal";
 import { SenderHeader } from "./SenderHeader";
 import { buildPrefill, type ComposeMode, type ComposePrefill } from "@/lib/email/compose-prefill";
+import type { EmailAttachment } from "@/lib/email/inbox";
 import type { ComposeDraft, Sender } from "./types";
 
 type GmailFolder = "inbox" | "sent" | "all" | "spam" | "trash" | "drafts";
@@ -60,8 +61,28 @@ export function GmailInbox() {
   const [composePrefill, setComposePrefill] = useState<ComposePrefill | undefined>(undefined);
   const [composeContext, setComposeContext] = useState<ComposeContext>({ mode: "new", threadId: null });
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [replying, setReplying] = useState(false);
+
+  /** Upload compose attachments to the shared email-attachments bucket; returns stored refs. */
+  const uploadComposeFiles = useCallback(async (files: FileList): Promise<EmailAttachment[]> => {
+    setUploading(true);
+    const out: EmailAttachment[] = [];
+    try {
+      for (const file of Array.from(files)) {
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await fetch("/api/email/attachments", { method: "POST", body: fd });
+        const data = await res.json();
+        if (res.ok && data.attachment) out.push(data.attachment);
+        else setError(typeof data.error === "string" ? data.error : "Upload failed.");
+      }
+    } finally {
+      setUploading(false);
+    }
+    return out;
+  }, []);
 
   const connectUrl = `/api/integrations/google/connect?returnTo=${encodeURIComponent(pathname ?? "/admin/inbox")}`;
 
@@ -169,7 +190,7 @@ export function GmailInbox() {
     setError(null);
     try {
       const res = await fetch("/api/integrations/google/gmail/send", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: draft.to.trim(), subject: draft.subject.trim(), body: draft.body }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: draft.to.trim(), subject: draft.subject.trim(), body: draft.body, attachments: draft.attachments }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Send failed.");
@@ -367,6 +388,8 @@ export function GmailInbox() {
         error={composeOpen ? error : null}
         onSend={(d) => void onSend(d)}
         onClose={closeCompose}
+        uploadFiles={uploadComposeFiles}
+        uploading={uploading}
       />
     </div>
   );

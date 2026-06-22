@@ -3,18 +3,57 @@ import { getValidGoogleAccessToken } from "@/lib/integrations/google-access-toke
 const GMAIL_SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
 const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
 
-/** Encode a plain-text email as base64url RFC 2822 for the Gmail API. */
-function encodeRawEmail(to: string, subject: string, body: string): string {
-  const message = [
+export interface GmailAttachment {
+  name: string;
+  mimeType: string;
+  content: Buffer;
+}
+
+/** base64 split into 76-char lines per RFC 2045. */
+function b64lines(buf: Buffer): string {
+  return buf.toString("base64").replace(/(.{76})/g, "$1\r\n");
+}
+
+/** Encode an email (optionally with attachments) as base64url RFC 2822 for the Gmail API. */
+function encodeRawEmail(to: string, subject: string, body: string, attachments: GmailAttachment[] = []): string {
+  if (attachments.length === 0) {
+    const message = [
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      "Content-Type: text/plain; charset=utf-8",
+      "MIME-Version: 1.0",
+      "",
+      body,
+    ].join("\r\n");
+    return Buffer.from(message).toString("base64url");
+  }
+
+  const boundary = `b_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`;
+  const parts: string[] = [
     `To: ${to}`,
     `Subject: ${subject}`,
-    "Content-Type: text/plain; charset=utf-8",
     "MIME-Version: 1.0",
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
     "",
-    body,
-  ].join("\r\n");
-
-  return Buffer.from(message).toString("base64url");
+    `--${boundary}`,
+    "Content-Type: text/plain; charset=utf-8",
+    "Content-Transfer-Encoding: base64",
+    "",
+    b64lines(Buffer.from(body, "utf-8")),
+  ];
+  for (const a of attachments) {
+    const safe = a.name.replace(/"/g, "");
+    parts.push(
+      `--${boundary}`,
+      `Content-Type: ${a.mimeType || "application/octet-stream"}; name="${safe}"`,
+      "Content-Transfer-Encoding: base64",
+      `Content-Disposition: attachment; filename="${safe}"`,
+      "",
+      b64lines(a.content),
+    );
+  }
+  parts.push(`--${boundary}--`, "");
+  return Buffer.from(parts.join("\r\n")).toString("base64url");
 }
 
 export type GmailSendResult =
@@ -31,13 +70,14 @@ export async function sendViaGmail(input: {
   to: string;
   subject: string;
   body: string;
+  attachments?: GmailAttachment[];
 }): Promise<GmailSendResult> {
   const tokenResult = await getValidGoogleAccessToken(input.userId);
   if ("error" in tokenResult || !tokenResult.accessToken) {
     return { error: tokenResult.error ?? new Error("No Gmail access token available.") };
   }
 
-  const raw = encodeRawEmail(input.to, input.subject, input.body);
+  const raw = encodeRawEmail(input.to, input.subject, input.body, input.attachments ?? []);
 
   const response = await fetch(GMAIL_SEND_URL, {
     method: "POST",

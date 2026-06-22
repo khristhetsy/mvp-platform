@@ -1,13 +1,22 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { sendViaGmail } from "@/lib/integrations/gmail-send";
+import { sendViaGmail, type GmailAttachment } from "@/lib/integrations/gmail-send";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+
+const attachmentSchema = z.object({
+  name: z.string().max(200),
+  path: z.string().max(400),
+  size: z.number().int().nonnegative(),
+  content_type: z.string().nullish(),
+});
 
 const sendSchema = z.object({
   to: z.string().email(),
   subject: z.string().min(1).max(200),
   body: z.string().min(1).max(5000),
+  attachments: z.array(attachmentSchema).max(10).optional(),
 });
 
 export async function POST(request: Request) {
@@ -43,11 +52,28 @@ export async function POST(request: Request) {
     );
   }
 
+  // Fetch attachment bytes from storage (paths are namespaced by profile id).
+  let attachments: GmailAttachment[] = [];
+  if (parsed.data.attachments && parsed.data.attachments.length > 0) {
+    const admin = createServiceRoleClient();
+    const owned = parsed.data.attachments.filter((a) => a.path.startsWith(`${user.id}/`));
+    const fetched = await Promise.all(
+      owned.map(async (a) => {
+        const { data, error } = await admin.storage.from("email-attachments").download(a.path);
+        if (error || !data) return null;
+        const content = Buffer.from(await data.arrayBuffer());
+        return { name: a.name, mimeType: a.content_type ?? "application/octet-stream", content } as GmailAttachment;
+      }),
+    );
+    attachments = fetched.filter((a): a is GmailAttachment => a !== null);
+  }
+
   const result = await sendViaGmail({
     userId: user.id,
     to: parsed.data.to,
     subject: parsed.data.subject,
     body: parsed.data.body,
+    attachments,
   });
 
   if ("error" in result) {
