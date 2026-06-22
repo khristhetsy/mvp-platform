@@ -21,9 +21,10 @@ export async function saveSignature(
   signature: string,
 ): Promise<void> {
   const now = new Date().toISOString();
-  await raw(supabase)
+  const { error } = await raw(supabase)
     .from("user_preferences")
     .upsert({ profile_id: profileId, email_signature: signature, updated_at: now }, { onConflict: "profile_id" });
+  if (error) throw new Error(error.message);
 }
 
 // ── Rich-signature helpers ──────────────────────────────────────────────────

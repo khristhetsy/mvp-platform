@@ -1,0 +1,73 @@
+import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
+import { requireStaffApi } from "@/lib/api/admin";
+import { track } from "@/lib/analytics/posthog";
+import { updateTaskSchema } from "@/lib/admin-tasks/schemas";
+import { archiveTask, getTaskDetail, getTaskRow, updateTask } from "@/lib/admin-tasks/queries";
+import { logActivity } from "@/lib/admin-tasks/activity";
+
+export const dynamic = "force-dynamic";
+
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+  const auth = await requireStaffApi();
+  if ("error" in auth) return auth.error;
+  try {
+    const { id } = await params;
+    const detail = await getTaskDetail(auth.supabase, id);
+    if (!detail) return NextResponse.json({ error: "Task not found." }, { status: 404 });
+    return NextResponse.json(detail);
+  } catch (err) {
+    Sentry.captureException(err);
+    return NextResponse.json({ error: "Failed to load task." }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+  const auth = await requireStaffApi();
+  if ("error" in auth) return auth.error;
+  try {
+    const { id } = await params;
+    const parsed = updateTaskSchema.safeParse(await req.json().catch(() => ({})));
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
+
+    const before = await getTaskRow(auth.supabase, id);
+    if (!before) return NextResponse.json({ error: "Task not found." }, { status: 404 });
+
+    // On a board move (status change without an explicit position), drop the
+    // task at the end of the destination column.
+    const updateInput = { ...parsed.data };
+    if (parsed.data.status !== undefined && parsed.data.status !== before.status && parsed.data.position === undefined) {
+      updateInput.position = Date.now();
+    }
+
+    const task = await updateTask(auth.supabase, id, updateInput);
+
+    if (parsed.data.status !== undefined && parsed.data.status !== before.status) {
+      await logActivity(auth.supabase, id, auth.profile.id, "status_changed", { payload: { from: before.status, to: task.status } });
+      track("admin_task_status_changed", { userId: auth.profile.id, taskId: id, from: before.status, to: task.status });
+    } else if (parsed.data.priority !== undefined && parsed.data.priority !== before.priority) {
+      await logActivity(auth.supabase, id, auth.profile.id, "priority_changed", { payload: { from: before.priority, to: task.priority } });
+    } else {
+      await logActivity(auth.supabase, id, auth.profile.id, "updated", { payload: {} });
+    }
+
+    return NextResponse.json({ task });
+  } catch (err) {
+    Sentry.captureException(err);
+    return NextResponse.json({ error: "Failed to update task." }, { status: 500 });
+  }
+}
+
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+  const auth = await requireStaffApi();
+  if ("error" in auth) return auth.error;
+  try {
+    const { id } = await params;
+    await archiveTask(auth.supabase, id);
+    await logActivity(auth.supabase, id, auth.profile.id, "archived", { payload: {} });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    Sentry.captureException(err);
+    return NextResponse.json({ error: "Failed to archive task." }, { status: 500 });
+  }
+}

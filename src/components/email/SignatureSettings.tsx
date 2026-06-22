@@ -87,11 +87,14 @@ export function SignatureSettings() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ signature: html }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(typeof data.error === "string" ? data.error : "Save failed.");
+      }
       setMsg({ text: "Signature saved.", ok: true });
       setTimeout(() => setMsg(null), 2500);
-    } catch {
-      setMsg({ text: "Save failed.", ok: false });
+    } catch (err) {
+      setMsg({ text: err instanceof Error ? err.message : "Save failed.", ok: false });
     } finally {
       setSaving(false);
     }

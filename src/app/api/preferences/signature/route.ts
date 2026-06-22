@@ -22,6 +22,11 @@ export async function PUT(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
   const clean = sanitizeSignatureHtml(parsed.data.signature);
-  await saveSignature(auth.supabase, auth.profile.id, clean);
+  try {
+    await saveSignature(auth.supabase, auth.profile.id, clean);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Could not save signature.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
   return NextResponse.json({ signature: clean });
 }
