@@ -374,7 +374,7 @@ export default async function FounderJourneyPage() {
             Documents
           </Link>
           <Link
-            href="/founder/deal-rooms"
+            href="/founder/deal-room"
             className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
           >
             Deal rooms
