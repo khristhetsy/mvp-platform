@@ -9,6 +9,7 @@ import type { ComposeDraft, Sender } from "./types";
 import { ComposeModal } from "./ComposeModal";
 import { SenderHeader } from "./SenderHeader";
 import { EmailBody } from "./EmailBody";
+import { ListRowsSkeleton } from "@/components/ui/Skeleton";
 
 type FolderId = MailFolder | "drafts";
 
@@ -630,7 +631,7 @@ export function EmailInbox() {
           <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
             {folder === "drafts" ? (
               loading ? (
-                <p className="px-4 py-8 text-sm text-slate-400">Loading…</p>
+                <ListRowsSkeleton />
               ) : drafts.length === 0 ? (
                 <p className="px-4 py-10 text-center text-sm text-slate-400">No drafts. Start one from Compose, then Save draft.</p>
               ) : (
@@ -648,7 +649,7 @@ export function EmailInbox() {
                 </ul>
               )
             ) : loading ? (
-              <p className="px-4 py-8 text-sm text-slate-400">Loading…</p>
+              <ListRowsSkeleton />
             ) : threads.length === 0 ? (
               <p className="px-4 py-10 text-center text-sm text-slate-400">{folder === "trash" ? "Trash is empty." : folder === "sent" ? "No sent mail yet." : "No conversations yet. Compose to start one."}</p>
             ) : filtered.length === 0 ? (

@@ -6,6 +6,7 @@ import { Mail, RefreshCw, ArrowLeft, ExternalLink, Inbox as InboxIcon, Send, Fil
 import { EmailBody } from "./EmailBody";
 import { ComposeModal } from "./ComposeModal";
 import { SenderHeader } from "./SenderHeader";
+import { ListRowsSkeleton } from "@/components/ui/Skeleton";
 import { buildPrefill, type ComposeMode, type ComposePrefill } from "@/lib/email/compose-prefill";
 import type { EmailAttachment } from "@/lib/email/inbox";
 import type { ComposeDraft, Sender } from "./types";
@@ -428,7 +429,7 @@ export function GmailInbox() {
 
               <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
                 {loading ? (
-                  <p className="px-4 py-8 text-sm text-slate-400">Loading your Gmail…</p>
+                  <ListRowsSkeleton />
                 ) : filtered.length === 0 ? (
                   <p className="px-4 py-10 text-center text-sm text-slate-400">{search ? `No mail matches “${search}”.` : `Nothing in ${FOLDERS.find((f) => f.id === folder)?.label}.`}</p>
                 ) : (
