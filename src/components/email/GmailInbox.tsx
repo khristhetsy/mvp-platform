@@ -51,6 +51,7 @@ export function GmailInbox() {
   const [search, setSearch] = useState("");
   const [connected, setConnected] = useState(true);
   const [needsReadScope, setNeedsReadScope] = useState(false);
+  const [readNeedsReconnect, setReadNeedsReconnect] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -133,25 +134,36 @@ export function GmailInbox() {
       if (!res.ok) throw new Error(data.error ?? "Failed to open.");
       setThread(data.thread);
       setOpenCardId(null);
-      // Mark the thread read: optimistic list update, then clear Gmail's UNREAD
-      // label (needs gmail.modify) and refresh the badge. Best-effort.
-      setItems((prev) => prev.map((t) => (t.threadId === threadId ? { ...t, unread: false } : t)));
+      // Mark the thread read. Optimistically un-bold the row AND drop the Inbox
+      // badge by one immediately (Gmail's own label count lags a few seconds).
+      let wasUnread = false;
+      setItems((prev) => prev.map((t) => {
+        if (t.threadId === threadId && t.unread) { wasUnread = true; return { ...t, unread: false }; }
+        return t;
+      }));
+      if (wasUnread) setCounts((c) => ({ ...c, inbox: Math.max(0, c.inbox - 1) }));
+      // Clear Gmail's UNREAD label (needs gmail.modify). Best-effort.
       void (async () => {
         try {
           const r = await fetch(`/api/integrations/google/gmail/threads/${threadId}/actions`, {
             method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "read" }),
           });
-          if (r.ok) { void loadCounts(); }
-          else {
+          if (r.ok) {
+            setReadNeedsReconnect(false);
+          } else {
             const d = await r.json().catch(() => ({}));
-            if (d?.needsReconnect) setNotice("Reconnect Google to let CapitalOS mark Gmail messages as read.");
+            // Server couldn't persist the read — undo the optimistic badge drop.
+            if (wasUnread) setCounts((c) => ({ ...c, inbox: c.inbox + 1 }));
+            if (d?.needsReconnect) setReadNeedsReconnect(true);
           }
-        } catch { /* best-effort */ }
+        } catch {
+          if (wasUnread) setCounts((c) => ({ ...c, inbox: c.inbox + 1 }));
+        }
       })();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to open.");
     }
-  }, [loadCounts]);
+  }, []);
 
   const act = useCallback(async (threadId: string, action: GmailActionId) => {
     setItems((prev) => prev.filter((t) => t.threadId !== threadId));
@@ -307,6 +319,14 @@ export function GmailInbox() {
 
       {error && !composeOpen ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
       {notice ? <p className="rounded-lg border border-[#B5D4F4] bg-[#E6F1FB] px-3 py-2 text-sm text-[#0C447C]">{notice}</p> : null}
+      {readNeedsReconnect ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#B5D4F4] bg-[#E6F1FB] px-3 py-2 text-sm text-[#0C447C]">
+          <span>Reconnect Google to let CapitalOS mark Gmail messages as read.</span>
+          <a href={connectUrl} className="inline-flex items-center gap-1.5 rounded-lg bg-[#2f6cb0] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#234f86]">
+            <ExternalLink className="h-3.5 w-3.5" /> Reconnect Google
+          </a>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[156px_minmax(0,1fr)]">
         <aside>
