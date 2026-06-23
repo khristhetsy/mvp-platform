@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { confirmDialog } from "@/components/ui/ConfirmDialog";
 
 type Suppression = { email: string; reason: string | null; unsubscribed_at: string };
 
@@ -70,7 +71,7 @@ export function SuppressionsClient({ suppressions: initial }: { suppressions: Su
   }
 
   async function remove(email: string) {
-    if (!confirm(`Remove ${email} from suppression list? They will be eligible to receive emails again.`)) return;
+    if (!(await confirmDialog({ message: `Remove ${email} from suppression list? They will be eligible to receive emails again.`, danger: true, confirmLabel: "Remove" }))) return;
     setRemoving(email);
     try {
       await fetch(`/api/marketing/suppressions?email=${encodeURIComponent(email)}`, { method: "DELETE" });

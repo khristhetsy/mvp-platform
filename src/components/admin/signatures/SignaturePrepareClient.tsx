@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pen, Calendar, Building2, Type, Trash2, Save, Loader2, Download, Ban } from "lucide-react";
 import { useToast } from "@/components/ui/ToastProvider";
+import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { FieldType } from "@/lib/esignature/types";
 
 type PlacedField = {
@@ -160,7 +161,7 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
   }, [fields, requestId, toast]);
 
   const voidEnvelope = useCallback(async () => {
-    if (!window.confirm("Void this envelope? The signer will no longer be able to sign it.")) return;
+    if (!(await confirmDialog({ message: "Void this envelope? The signer will no longer be able to sign it.", danger: true, confirmLabel: "Void" }))) return;
     setVoiding(true);
     try {
       const res = await fetch(`/api/admin/signatures/${requestId}/void`, { method: "POST" });

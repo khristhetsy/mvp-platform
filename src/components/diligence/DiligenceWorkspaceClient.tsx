@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Plus, Trash2, Sparkles, Loader2, Send, Undo2, FileDown, FilePen } from "lucide-react";
 import { useToast } from "@/components/ui/ToastProvider";
+import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import { StateChip } from "./StateChip";
 import { ConfidenceMeter } from "./ConfidenceMeter";
 import { VisibilityGate, type GateMap } from "./VisibilityGate";
@@ -199,7 +200,7 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
   }, [postJson, ceoName, ceoEmail, reload, toast]);
 
   const doRelease = useCallback(async () => {
-    if (!window.confirm("Release this engagement to investors? This is final.")) return;
+    if (!(await confirmDialog({ message: "Release this engagement to investors? This is final.", confirmLabel: "Release" }))) return;
     setActing(true);
     try {
       const data = await postJson("/release", "POST", {});

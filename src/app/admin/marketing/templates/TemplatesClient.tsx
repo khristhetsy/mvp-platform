@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { MarketingTemplate } from "@/lib/marketing/types";
 
 const STATUS_MAP: Record<string, { bg: string; color: string }> = {
@@ -115,7 +116,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this template?")) return;
+    if (!(await confirmDialog({ message: "Delete this template?", danger: true, confirmLabel: "Delete" }))) return;
     try {
       await fetch(`/api/marketing/templates/${id}`, { method: "DELETE" });
       router.refresh();

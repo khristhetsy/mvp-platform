@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { confirmDialog } from "@/components/ui/ConfirmDialog";
 
 type Member = {
   id: string;
@@ -113,7 +114,7 @@ export function TeamManagementPanel({ currentUserId }: { currentUserId: string }
   }
 
   async function handleRemove(id: string, label: string) {
-    if (!confirm(`Remove ${label}?`)) return;
+    if (!(await confirmDialog({ message: `Remove ${label}?`, danger: true, confirmLabel: "Remove" }))) return;
     const res = await fetch(`/api/founder/team/${id}`, { method: "DELETE" });
     const data = await res.json() as { error?: string };
     if (!res.ok) {

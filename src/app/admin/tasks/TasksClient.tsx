@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
+import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { Task, TaskStatus, TaskPriority, TaskCategory, InternalUser } from "@/lib/tasks/types";
 import type { GoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 
@@ -735,7 +736,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this task?")) return;
+    if (!(await confirmDialog({ message: "Delete this task?", danger: true, confirmLabel: "Delete" }))) return;
     try {
       await fetch(`/api/tasks/${id}`, { method: "DELETE" });
       reload();

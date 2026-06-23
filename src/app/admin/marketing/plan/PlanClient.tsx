@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type {
   MarketingPlan,
   MarketingPlanItem,
@@ -224,7 +225,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
   }
 
   async function deletePlan(id: string, name: string) {
-    if (!confirm(`Delete "${name}"? This also removes all its initiatives.`)) return;
+    if (!(await confirmDialog({ message: `Delete "${name}"? This also removes all its initiatives.`, danger: true, confirmLabel: "Delete" }))) return;
     setBusy("plan-del-" + id);
     try {
       await fetch(`/api/marketing/plans/${id}`, { method: "DELETE" });
@@ -324,7 +325,7 @@ export function PlanClient({ plans, aiEnabled }: Props) {
   }
 
   async function deleteItem(item: MarketingPlanItem) {
-    if (!confirm(`Delete "${item.title}"?`)) return;
+    if (!(await confirmDialog({ message: `Delete "${item.title}"?`, danger: true, confirmLabel: "Delete" }))) return;
     setBusy("del-" + item.id);
     try {
       await fetch(`/api/marketing/plans/items/${item.id}`, { method: "DELETE" });

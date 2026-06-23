@@ -7,6 +7,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Send, X, Paperclip, FileText, Minus, Maximize2 } from "lucide-react";
+import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { EmailAttachment } from "@/lib/email/inbox";
 import type { ComposeDraft, ComposePrefill } from "./types";
 import { useFocusTrap, useOnEscape } from "./a11y";
@@ -80,14 +81,14 @@ export function ComposeModal({
 
   const draft = (): ComposeDraft => ({ to, cc, bcc, subject, body, attachments });
 
-  const requestClose = () => {
+  const requestClose = async () => {
     if (dirty) {
       if (onSaveDraft) {
         onSaveDraft(draft()); // never discard silently — persist first
         onClose();
         return;
       }
-      if (!window.confirm("Discard this draft?")) return;
+      if (!(await confirmDialog({ message: "Discard this draft?", danger: true, confirmLabel: "Discard" }))) return;
     }
     onClose();
   };

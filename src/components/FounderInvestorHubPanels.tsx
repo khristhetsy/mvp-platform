@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import { FounderOutreachPipelinePanel } from "@/components/FounderOutreachPipelinePanel";
 import { FounderSocialDraftsPanel } from "@/components/FounderSocialDraftsPanel";
 import { InvestorOutreachCoach } from "@/components/founder/InvestorOutreachCoach";
@@ -774,7 +775,7 @@ function CampaignRow({
       onMessage("Complete outreach readiness requirements before queueing.");
       return;
     }
-    if (!window.confirm("Queue draft messages internally? No emails will be sent in this phase.")) {
+    if (!(await confirmDialog({ message: "Queue draft messages internally? No emails will be sent in this phase.", confirmLabel: "Queue" }))) {
       return;
     }
     onLoading(true);

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { MarketingList } from "@/lib/marketing/types";
 
 type ListWithCount = MarketingList & { contact_count: number };
@@ -55,7 +56,7 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
   }
 
   async function del(id: string) {
-    if (!confirm("Delete this list? Contacts are not deleted.")) return;
+    if (!(await confirmDialog({ message: "Delete this list? Contacts are not deleted.", danger: true, confirmLabel: "Delete" }))) return;
     setDeleting(id);
     try {
       await fetch(`/api/marketing/lists/${id}`, { method: "DELETE" });
