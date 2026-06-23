@@ -225,6 +225,16 @@ export async function getGmailThread(userId: string, threadId: string): Promise<
   return { id: data.id, subject: messages[0]?.subject ?? "(no subject)", messages };
 }
 
+/** Distinct thread ids of unread INBOX messages (for read-mark-aware counts). */
+export async function listUnreadInboxThreadIds(userId: string): Promise<string[]> {
+  const accessToken = await token(userId);
+  const list = await gmailGet<{ messages?: Array<{ id: string; threadId: string }> }>(
+    accessToken,
+    `/messages?maxResults=100&labelIds=INBOX&q=${encodeURIComponent("is:unread")}`,
+  );
+  return [...new Set((list.messages ?? []).map((m) => m.threadId))];
+}
+
 /** Download the raw bytes of a Gmail attachment (uses gmail.readonly). */
 export async function fetchGmailAttachment(
   userId: string,

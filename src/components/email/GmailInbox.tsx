@@ -156,9 +156,19 @@ export function GmailInbox() {
       if (!res.ok) throw new Error(data.error ?? "Failed to open.");
       setThread(data.thread);
       setOpenCardId(null);
-      // Read-only: un-bold the opened row locally for feedback. Gmail keeps the
-      // real read/unread state; the badge reflects it on the next refresh.
-      setItems((prev) => prev.map((t) => (t.threadId === threadId ? { ...t, unread: false } : t)));
+      // Read-only: un-bold the row now, drop the badge by one, and persist a
+      // CapitalOS-side read mark so it stays read across refreshes/devices.
+      let wasUnread = false;
+      setItems((prev) => prev.map((t) => {
+        if (t.threadId === threadId && t.unread) { wasUnread = true; return { ...t, unread: false }; }
+        return t;
+      }));
+      if (wasUnread) {
+        setCounts((c) => ({ ...c, inbox: Math.max(0, c.inbox - 1) }));
+        void fetch("/api/integrations/google/gmail/read-marks", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ threadId }),
+        }).catch(() => { /* best-effort */ });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to open.");
     }

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { GMAIL_READ_SCOPE } from "@/lib/integrations/google-oauth";
-import { getGmailFolderCounts, GmailScopeError } from "@/lib/integrations/gmail-read";
+import { getGmailFolderCounts, listUnreadInboxThreadIds, GmailScopeError } from "@/lib/integrations/gmail-read";
+import { getReadThreadIds } from "@/lib/integrations/gmail-read-marks";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -21,6 +22,15 @@ export async function GET(): Promise<Response> {
 
   try {
     const counts = await getGmailFolderCounts(auth.profile.id);
+    // Subtract threads the user has read inside CapitalOS from the inbox badge.
+    const [unreadIds, readIds] = await Promise.all([
+      listUnreadInboxThreadIds(auth.profile.id),
+      getReadThreadIds(auth.supabase, auth.profile.id),
+    ]);
+    if (readIds.size > 0) {
+      const stillUnread = unreadIds.filter((id) => !readIds.has(id)).length;
+      counts.inbox = Math.min(counts.inbox, stillUnread);
+    }
     return NextResponse.json({ counts });
   } catch (err) {
     // Badges are non-critical — never break the Gmail view over a count.

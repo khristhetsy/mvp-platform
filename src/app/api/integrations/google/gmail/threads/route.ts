@@ -3,6 +3,7 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { GMAIL_READ_SCOPE } from "@/lib/integrations/google-oauth";
 import { listGmailThreads, isGmailFolder, GmailScopeError } from "@/lib/integrations/gmail-read";
+import { getReadThreadIds } from "@/lib/integrations/gmail-read-marks";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -24,7 +25,10 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   try {
     const threads = await listGmailThreads(auth.profile.id, { folder, q });
-    return NextResponse.json({ connected: true, needsReadScope: false, email: status.email, threads });
+    // Apply CapitalOS-side read marks (read-only Gmail can't clear UNREAD itself).
+    const readIds = await getReadThreadIds(auth.supabase, auth.profile.id);
+    const marked = readIds.size > 0 ? threads.map((t) => (readIds.has(t.threadId) ? { ...t, unread: false } : t)) : threads;
+    return NextResponse.json({ connected: true, needsReadScope: false, email: status.email, threads: marked });
   } catch (err) {
     if (err instanceof GmailScopeError) return NextResponse.json({ connected: true, needsReadScope: true, threads: [] });
     return NextResponse.json({ error: err instanceof Error ? err.message : "Failed to load Gmail." }, { status: 500 });
