@@ -133,10 +133,25 @@ export function GmailInbox() {
       if (!res.ok) throw new Error(data.error ?? "Failed to open.");
       setThread(data.thread);
       setOpenCardId(null);
+      // Mark the thread read: optimistic list update, then clear Gmail's UNREAD
+      // label (needs gmail.modify) and refresh the badge. Best-effort.
+      setItems((prev) => prev.map((t) => (t.threadId === threadId ? { ...t, unread: false } : t)));
+      void (async () => {
+        try {
+          const r = await fetch(`/api/integrations/google/gmail/threads/${threadId}/actions`, {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "read" }),
+          });
+          if (r.ok) { void loadCounts(); }
+          else {
+            const d = await r.json().catch(() => ({}));
+            if (d?.needsReconnect) setNotice("Reconnect Google to let CapitalOS mark Gmail messages as read.");
+          }
+        } catch { /* best-effort */ }
+      })();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to open.");
     }
-  }, []);
+  }, [loadCounts]);
 
   const act = useCallback(async (threadId: string, action: GmailActionId) => {
     setItems((prev) => prev.filter((t) => t.threadId !== threadId));
