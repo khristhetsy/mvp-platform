@@ -55,6 +55,7 @@ export function EmailInbox() {
   const [folder, setFolder] = useState<FolderId>("inbox");
   const [drafts, setDrafts] = useState<EmailDraft[]>([]);
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
+  const [counts, setCounts] = useState<{ inbox: number; drafts: number; spam: number }>({ inbox: 0, drafts: 0, spam: 0 });
 
   const [active, setActive] = useState<ActiveThread | null>(null);
   const [messages, setMessages] = useState<EmailMessage[]>([]);
@@ -115,7 +116,17 @@ export function EmailInbox() {
     } catch { /* best-effort */ }
   }, []);
 
+  /** Folder badge counts (inbox unread, drafts total, spam total). Best-effort. */
+  const loadCounts = useCallback(async () => {
+    try {
+      const res = await fetch("/api/email/counts");
+      const data = await res.json();
+      if (res.ok && data.counts) setCounts(data.counts);
+    } catch { /* best-effort */ }
+  }, []);
+
   const loadThreads = useCallback(async () => {
+    void loadCounts();
     if (folder === "drafts") { setLoading(true); await loadDrafts(); setLoading(false); return; }
     setLoading(true);
     try {
@@ -128,10 +139,16 @@ export function EmailInbox() {
     } finally {
       setLoading(false);
     }
-  }, [folder, loadDrafts]);
+  }, [folder, loadDrafts, loadCounts]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void loadThreads(); }, [loadThreads]);
+
+  // Keep badges fresh while the inbox is open (catches newly-arrived mail).
+  useEffect(() => {
+    const id = setInterval(() => { void loadCounts(); }, 30000);
+    return () => clearInterval(id);
+  }, [loadCounts]);
 
   // ── F3 single compose entry point ─────────────────────────────────────────
   const openCompose = useCallback(
@@ -186,17 +203,19 @@ export function EmailInbox() {
       setMessages(data.messages ?? []);
       setOpenCardId(null);
       setThreads((prev) => prev.map((t) => (t.id === id ? { ...t, unread: false } : t)));
+      void loadCounts();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to open.");
     }
-  }, []);
+  }, [loadCounts]);
 
   const markUnread = useCallback(async (id: string) => {
     setThreads((prev) => prev.map((t) => (t.id === id ? { ...t, unread: true } : t)));
     try {
       await fetch(`/api/email/threads/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ unread: true }) });
+      void loadCounts();
     } catch { /* best-effort */ }
-  }, []);
+  }, [loadCounts]);
 
   const deleteThread = useCallback(async (id: string) => {
     setThreads((prev) => prev.filter((t) => t.id !== id));
@@ -227,8 +246,9 @@ export function EmailInbox() {
     if (active?.id === id) { setActive(null); setMessages([]); }
     try {
       await fetch(`/api/email/threads/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ spam }) });
+      void loadCounts();
     } catch { void loadThreads(); }
-  }, [active, loadThreads]);
+  }, [active, loadThreads, loadCounts]);
 
   // ── Reply / Reply all / Forward → open the wide compose modal (F3) ─────────
   const recipientsOf = useCallback((): string[] => {
@@ -344,8 +364,8 @@ export function EmailInbox() {
 
   const discardDraft = useCallback(async (id: string) => {
     setDrafts((prev) => prev.filter((d) => d.id !== id));
-    try { await fetch("/api/email/drafts", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); } catch { void loadDrafts(); }
-  }, [loadDrafts]);
+    try { await fetch("/api/email/drafts", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); void loadCounts(); } catch { void loadDrafts(); }
+  }, [loadDrafts, loadCounts]);
 
   const sendReply = useCallback(async () => {
     if (!active || !reply.trim()) return;
@@ -404,6 +424,12 @@ export function EmailInbox() {
             {FOLDERS.map((f) => {
               const Icon = f.icon;
               const isActive = !f.soon && folder === f.id;
+              const rawCount = f.id === "inbox" ? counts.inbox : f.id === "drafts" ? counts.drafts : f.id === "spam" ? counts.spam : 0;
+              const badge = rawCount > 99 ? "99+" : String(rawCount);
+              // Inbox unread reads as emphasis (navy); drafts/spam are muted tallies.
+              const badgeClass = f.id === "inbox"
+                ? "bg-[#185FA5] text-white"
+                : "bg-slate-100 text-slate-500";
               return (
                 <button
                   key={f.id}
@@ -414,7 +440,9 @@ export function EmailInbox() {
                 >
                   <Icon className="h-4 w-4 shrink-0" aria-hidden />
                   <span className="flex-1 text-left">{f.label}</span>
-                  {f.id === "inbox" && unreadCount > 0 ? <span className="text-[11px]">{unreadCount}</span> : null}
+                  {rawCount > 0 ? (
+                    <span className={`inline-flex min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-medium leading-5 ${badgeClass}`}>{badge}</span>
+                  ) : null}
                   {f.soon ? <span className="rounded border border-slate-200 px-1 text-[9px]">soon</span> : null}
                 </button>
               );

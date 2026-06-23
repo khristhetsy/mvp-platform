@@ -281,6 +281,41 @@ export async function countUnreadThreads(
   return count ?? 0;
 }
 
+/** Per-folder badge counts for the inbox sidebar. */
+export interface FolderCounts {
+  inbox: number; // unread inbox threads
+  drafts: number; // total saved drafts
+  spam: number; // total spam threads
+}
+
+/**
+ * Counts that power the folder badges, fetched in parallel. Inbox mirrors the
+ * inbox-folder filter (received/new, not trashed, not spam) but only unread.
+ */
+export async function countFolders(
+  supabase: SupabaseClient<Database>,
+  ownerId: string,
+): Promise<FolderCounts> {
+  const threads = () =>
+    raw(supabase).from("email_threads").select("id", { count: "exact", head: true }).eq("owner_id", ownerId);
+
+  const [inboxRes, spamRes, draftsRes] = await Promise.all([
+    threads()
+      .eq("unread", true)
+      .is("trashed_at", null)
+      .is("spam_at", null)
+      .or("last_direction.is.null,last_direction.eq.inbound"),
+    threads().is("trashed_at", null).not("spam_at", "is", null),
+    raw(supabase).from("email_drafts").select("id", { count: "exact", head: true }).eq("owner_id", ownerId),
+  ]);
+
+  return {
+    inbox: inboxRes.count ?? 0,
+    drafts: draftsRes.count ?? 0,
+    spam: spamRes.count ?? 0,
+  };
+}
+
 /** Move a thread to Trash (soft delete). Reversible via restoreThread. */
 export async function trashThread(
   supabase: SupabaseClient<Database>,

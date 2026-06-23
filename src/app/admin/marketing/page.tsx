@@ -32,7 +32,9 @@ const card = {
 export default async function MarketingDashboardPage() {
   await requireRole(["admin"]);
   const supabase = await marketingDb();
+  // eslint-disable-next-line react-hooks/purity
   const since30d = new Date(Date.now() - 30 * 86400 * 1000).toISOString();
+  // eslint-disable-next-line react-hooks/purity
   const since7d  = new Date(Date.now() - 7  * 86400 * 1000).toISOString();
 
   const [

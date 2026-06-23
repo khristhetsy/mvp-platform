@@ -145,6 +145,7 @@ export function InvestorPortfolioPageClient() {
     const slug = searchParams?.get("slug") ?? "";
     const iid  = searchParams?.get("interest_id") ?? "";
     const amt  = searchParams?.get("pledge_amount") ?? "";
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm({
       ...EMPTY_FORM,
       company_id:      cid,

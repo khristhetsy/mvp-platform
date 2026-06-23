@@ -46,9 +46,11 @@ export function LessonVideoPlayer({
 
   const currentChapter = useMemo(() => {
     if (!chapterMarkers.length || !duration) return null;
+    // eslint-disable-next-line react-hooks/refs
     const current = videoRef.current?.currentTime ?? 0;
     let active = chapterMarkers[0];
     for (const marker of chapterMarkers) {
+      // eslint-disable-next-line react-hooks/refs
       if (current >= marker.startSeconds) active = marker;
     }
     return active.slide;

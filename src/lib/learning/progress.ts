@@ -272,7 +272,7 @@ function computeActivityStreakDays(activityTimestamps: string[]) {
   const daySet = new Set(activityTimestamps.map((timestamp) => timestamp.slice(0, 10)));
   const now = new Date();
   const todayKey = now.toISOString().slice(0, 10);
-  let offset = daySet.has(todayKey) ? 0 : 1;
+  const offset = daySet.has(todayKey) ? 0 : 1;
 
   let streak = 0;
   for (let i = offset; i < 400; i += 1) {

@@ -215,39 +215,39 @@ export async function getAICoachRecommendations(
     const categoryMatches = modules.filter(
       (module) => module.related_remediation_category === task.category,
     );
-    for (const module of categoryMatches) {
-      upsert(module, taskScore, formatCoachGapReason(task.category, module.title, task.title));
+    for (const mod of categoryMatches) {
+      upsert(mod, taskScore, formatCoachGapReason(task.category, mod.title, task.title));
     }
 
     const slug = resolveModuleSlugForRemediation(task.source_key, task.category);
     if (slug) {
-      const module = modules.find((item) => item.slug === slug);
-      if (module) {
+      const mod = modules.find((item) => item.slug === slug);
+      if (mod) {
         upsert(
-          module,
+          mod,
           taskScore + 5,
-          formatCoachGapReason(task.category, module.title, task.title),
+          formatCoachGapReason(task.category, mod.title, task.title),
         );
       }
     }
   }
 
   if (readinessScore < READINESS_SCORE_THRESHOLD) {
-    for (const module of modules.filter((item) => item.related_remediation_category === "readiness")) {
+    for (const mod of modules.filter((item) => item.related_remediation_category === "readiness")) {
       upsert(
-        module,
+        mod,
         25,
-        `Your readiness score is ${readinessScore}% (below ${READINESS_SCORE_THRESHOLD}) — ${module.title} helps close institutional gaps.`,
+        `Your readiness score is ${readinessScore}% (below ${READINESS_SCORE_THRESHOLD}) — ${mod.title} helps close institutional gaps.`,
       );
     }
   }
 
   if (onboarding.percent < 100) {
-    for (const module of modules.filter((item) => item.related_remediation_category === "company_profile")) {
+    for (const mod of modules.filter((item) => item.related_remediation_category === "company_profile")) {
       upsert(
-        module,
+        mod,
         22,
-        `Onboarding is ${onboarding.percent}% complete — ${module.title} strengthens your investor-ready profile.`,
+        `Onboarding is ${onboarding.percent}% complete — ${mod.title} strengthens your investor-ready profile.`,
       );
     }
   }

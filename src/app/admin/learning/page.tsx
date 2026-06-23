@@ -145,7 +145,7 @@ export default async function AdminLearningDashboardPage() {
                 Approval workflow: draft → pending_review → approved → published → archived.
               </li>
               <li>
-                Certificates are "Certificate of Completion" only. No regulatory or qualification claims.
+                Certificates are &quot;Certificate of Completion&quot; only. No regulatory or qualification claims.
               </li>
             </ul>
           </WorkspacePanel>

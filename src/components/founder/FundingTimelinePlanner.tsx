@@ -235,6 +235,7 @@ export function FundingTimelinePlanner() {
 
   useEffect(() => {
     if (loaded && savedData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRoundType((savedData.roundType as RoundType) ?? "seed");
       setCloseDate(savedData.closeDate ?? (() => { const d = new Date(); d.setMonth(d.getMonth() + 5); return d.toISOString().split("T")[0]; })());
     }
@@ -279,6 +280,7 @@ export function FundingTimelinePlanner() {
       if (today >= phaseStarts[i]) return i;
     }
     return 0;
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
   }, [today, startDate, phases, phaseStarts]);
 
   const isLate = weeksUntilStart < 0 && weeksUntilClose > 0;

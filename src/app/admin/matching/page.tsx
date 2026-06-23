@@ -15,7 +15,7 @@ export default async function AdminMatchingPage() {
 
   let setupError: string | null = null;
   let snapshot: Awaited<ReturnType<typeof loadAdminMatchingCenterSnapshot>> | null = null;
-  let existingActivity: Array<{ investorId: string; companyId: string }> = [];
+  const existingActivity: Array<{ investorId: string; companyId: string }> = [];
 
   try {
     const admin = createServiceRoleClient();

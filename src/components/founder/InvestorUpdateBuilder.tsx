@@ -210,6 +210,7 @@ export function InvestorUpdateBuilder() {
 
   useEffect(() => {
     if (loaded && savedData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStage((savedData.stage as RaiseStage) ?? "seed");
       setFrequency((savedData.frequency as UpdateFrequency) ?? "monthly");
       setValues(savedData.values ?? Object.fromEntries(SECTIONS.map((s) => [s.id, ""])));

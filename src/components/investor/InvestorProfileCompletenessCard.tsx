@@ -93,7 +93,7 @@ export function InvestorProfileCompletenessCard({
         <div>
           <p className="text-sm font-semibold text-emerald-900">Profile complete</p>
           <p className="text-xs text-emerald-700">
-            Your profile is fully filled out — you'll get the best match scores and AI deal briefs.
+            Your profile is fully filled out — you&apos;ll get the best match scores and AI deal briefs.
           </p>
         </div>
       </div>

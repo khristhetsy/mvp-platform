@@ -88,6 +88,7 @@ export function AdminLessonMediaUpload({
   }, [pollStatus, stopPolling]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (initialRenderStatus === "rendering") startPolling();
     return () => stopPolling();
   }, [initialRenderStatus, startPolling, stopPolling]);

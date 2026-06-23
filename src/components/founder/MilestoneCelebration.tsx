@@ -52,6 +52,7 @@ export function MilestoneCelebration({ achieved }: Props) {
     const shown = getShown();
     const next = achieved.find((k) => !shown.has(k)) ?? null;
     if (next) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrent(next);
       markShown(next);
       // Small delay so it feels intentional

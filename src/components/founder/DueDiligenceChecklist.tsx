@@ -274,6 +274,7 @@ export function DueDiligenceChecklist() {
 
   useEffect(() => {
     if (loaded && savedData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCheckedIds(new Set(savedData.checkedIds ?? []));
     }
   }, [loaded]);
@@ -375,7 +376,7 @@ export function DueDiligenceChecklist() {
       {/* Disclaimer */}
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-[11px] leading-relaxed text-slate-500">
         <span className="font-semibold text-slate-600">Note: </span>
-        Every investor and deal is different. This checklist reflects common institutional expectations but is not legal advice. Work with your counsel to determine what's appropriate to share at each stage of your process.
+        Every investor and deal is different. This checklist reflects common institutional expectations but is not legal advice. Work with your counsel to determine what&apos;s appropriate to share at each stage of your process.
       </div>
     </div>
   );

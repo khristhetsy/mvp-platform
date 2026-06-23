@@ -245,6 +245,7 @@ export function BoardMeetingPrepKit() {
 
   useEffect(() => {
     if (loaded && savedData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStage((savedData.stage as BoardStage) ?? "seed");
       setMetrics(savedData.metrics ?? {});
       setCompany(savedData.company ?? "");

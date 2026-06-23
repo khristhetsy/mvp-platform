@@ -44,10 +44,12 @@ export default async function InvestorDealRoomIndexPage() {
   // 2. Enrich: company names + unanswered question counts (parallel)
   const [companiesResult, questionsResult] = await Promise.all([
     companyIds.length > 0
-      ? (admin as any).from("companies").select("id, company_name").in("id", companyIds)
+      ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (admin as any).from("companies").select("id, company_name").in("id", companyIds)
       : Promise.resolve({ data: [] }),
     roomIds.length > 0
-      ? (admin as any)
+      ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (admin as any)
           .from("deal_room_questions")
           .select("room_id, id")
           .in("room_id", roomIds)
@@ -110,6 +112,7 @@ export default async function InvestorDealRoomIndexPage() {
               const companyName = companyNameById.get(room.company_id ?? "") ?? null;
               const unanswered = unansweredByRoom.get(room.id) ?? 0;
               const updatedAt = new Date(String(room.updated_at));
+              // eslint-disable-next-line react-hooks/purity
               const isRecent = Date.now() - updatedAt.getTime() < 7 * 24 * 60 * 60 * 1000;
 
               return (

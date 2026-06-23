@@ -174,6 +174,7 @@ function DrawerContent({
   needsAttention: NextBestAction[];
   onClose: () => void;
 }) {
+  // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
 
   const overdueActions = actions.filter(

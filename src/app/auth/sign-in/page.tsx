@@ -10,7 +10,7 @@ export default function SignInPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Platform access</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Login</h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Enter your credentials to access your workspace. You'll be redirected based on your account role.
+            Enter your credentials to access your workspace. You&apos;ll be redirected based on your account role.
           </p>
           <Suspense fallback={<p className="mt-8 text-sm text-slate-500">Loading...</p>}>
             <AuthForm mode="sign-in" />

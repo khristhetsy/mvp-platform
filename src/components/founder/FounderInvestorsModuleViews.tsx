@@ -42,6 +42,7 @@ function PipelineDonut({ counts }: Readonly<{ counts: [number, number, number, n
   const slices = counts.map((count, i) => {
     const sweep = (count / total) * 360;
     const start = angle;
+    // eslint-disable-next-line react-hooks/immutability
     angle += sweep;
     if (sweep < 1) return null;
     return {

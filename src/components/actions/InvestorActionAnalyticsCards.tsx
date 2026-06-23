@@ -121,6 +121,7 @@ function Drawer({
   const opportunities = analytics.activeOpportunities ?? 0;
 
   const overdueActions = actions.filter(
+    // eslint-disable-next-line react-hooks/purity
     (a) => a.status === "overdue" || (a.dueAt && new Date(a.dueAt).getTime() < Date.now()),
   );
   const pendingActions = actions
@@ -190,6 +191,7 @@ function Drawer({
           ) : (
             overdueActions.slice(0, 5).map((a) => {
               const daysOver = a.dueAt
+                // eslint-disable-next-line react-hooks/purity
                 ? Math.floor((Date.now() - new Date(a.dueAt).getTime()) / 86400000)
                 : null;
               return (

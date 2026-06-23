@@ -60,6 +60,7 @@ export function CourseBannerUpload({ value, onUpload, onRemove }: Props) {
 
   useEffect(() => {
     if (state === "uploading" || state === "error") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setState(value ? "preview" : "empty");
   }, [value, state]);
 

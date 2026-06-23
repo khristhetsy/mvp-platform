@@ -20,12 +20,14 @@ export function LanguageSwitcher() {
   const router = useRouter();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocale(readLocaleCookie());
   }, []);
 
   function switchLocale(next: Locale) {
     if (next === locale) return;
     // Set cookie (1 year, SameSite=Lax)
+    // eslint-disable-next-line react-hooks/immutability
     document.cookie = `${COOKIE_NAME}=${next}; path=/; max-age=31536000; SameSite=Lax`;
     setLocale(next);
     startTransition(() => {

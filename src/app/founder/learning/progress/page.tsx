@@ -87,8 +87,8 @@ export default async function MyProgressPage() {
   );
 
   const admin = createServiceRoleClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: rawOverrideRows } = company
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ? await (admin as any).from("admin_learning_stage_overrides").select("capital_stage, is_unlocked").eq("founder_id", profile.id).eq("company_id", company.id)
     : { data: [] };
   type OverrideRow = { capital_stage: string; is_unlocked: boolean };

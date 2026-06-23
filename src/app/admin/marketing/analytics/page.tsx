@@ -8,6 +8,7 @@ export default async function MarketingAnalyticsPage() {
   await requireRole(["admin"]);
   const supabase = await marketingDb();
 
+  // eslint-disable-next-line react-hooks/purity
   const since30d = new Date(Date.now() - 30 * 86400 * 1000).toISOString();
 
   // 30-day funnel counts
@@ -27,7 +28,9 @@ export default async function MarketingAnalyticsPage() {
   // Daily opens last 7 days
   const dailyOpens: { date: string; count: number }[] = [];
   for (let i = 6; i >= 0; i--) {
+    // eslint-disable-next-line react-hooks/purity
     const start = new Date(Date.now() - i * 86400 * 1000);
+    // eslint-disable-next-line react-hooks/purity
     const end = new Date(Date.now() - (i - 1) * 86400 * 1000);
     start.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);

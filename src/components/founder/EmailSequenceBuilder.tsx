@@ -465,6 +465,7 @@ export function EmailSequenceBuilder() {
 
   useEffect(() => {
     if (loaded && savedData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setInvestorType((savedData.investorType as InvestorType) ?? "vc");
       setVars({ ...DEFAULT_VARS, ...savedData.vars });
     }

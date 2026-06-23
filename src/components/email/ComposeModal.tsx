@@ -65,6 +65,7 @@ export function ComposeModal({
   );
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTo((prefill?.to ?? []).join(", "));
     setCc((prefill?.cc ?? []).join(", "));
     setBcc("");

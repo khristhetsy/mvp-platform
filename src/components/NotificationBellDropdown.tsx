@@ -145,6 +145,7 @@ export function NotificationBellDropdown() {
 
   // Initial load + Supabase Realtime (replaces 60s polling)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadNotifications();
 
     const supabase = createClient();

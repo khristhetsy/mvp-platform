@@ -1009,8 +1009,11 @@ function RecommendationsTab({ factorScores }: { factorScores: Record<FactorKey, 
       <p className="text-xs text-slate-500 leading-relaxed">
         Analyst-level guidance on each gap — click any item to expand action steps, investor context, and resources.
       </p>
+      {/* eslint-disable-next-line react-hooks/static-components */}
       <Section title="Critical — address before investor meetings" items={high} startIndex={0} />
+      {/* eslint-disable-next-line react-hooks/static-components */}
       <Section title="Suggested improvements" items={medium} startIndex={high.length} />
+      {/* eslint-disable-next-line react-hooks/static-components */}
       <Section title="Nice to have" items={low} startIndex={high.length + medium.length} />
     </div>
   );

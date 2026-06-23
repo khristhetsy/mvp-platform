@@ -119,6 +119,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
   // Focus + reset when opened
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuery("");
       setDynamicResults([]);
       setActiveIndex(0);

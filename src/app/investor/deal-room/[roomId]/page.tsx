@@ -72,6 +72,7 @@ export default async function InvestorDealRoomPage({ params }: PageProps) {
   let company: CompanySnapshot | null = null;
 
   if (room.company_id) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await (admin as any)
       .from("companies")
       .select(

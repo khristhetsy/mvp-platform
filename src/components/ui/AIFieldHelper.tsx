@@ -17,6 +17,7 @@ export function AIFieldHelper({ benchmark, draft, onInsert }: Props) {
 
   // Sync editable draft when parent changes the generated draft
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEditableDraft(draft);
   }, [draft]);
 

@@ -95,13 +95,15 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Invalid onboarding payload.", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  let { data: company, error: companyError } = await auth.supabase
+  const companyQuery = await auth.supabase
     .from("companies")
     .select("*")
     .eq("founder_id", auth.profile.id)
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
+  let company = companyQuery.data;
+  const companyError = companyQuery.error;
 
   // First-time founder: create a stub company via service role (bypasses RLS INSERT restriction)
   if (!company && !companyError) {

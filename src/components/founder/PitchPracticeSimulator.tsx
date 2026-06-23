@@ -279,7 +279,7 @@ function QuestionCard({ q }: { q: PitchQuestion }) {
             {pct < 50 ? (
               <p className="text-xs text-slate-600">Your answer is shorter than ideal. Aim to cover all {q.framework.length} points in the framework — each one adds credibility.</p>
             ) : pct < 80 ? (
-              <p className="text-xs text-slate-600">Good start. Make sure you've covered every step in the framework, especially the closing signal that demonstrates depth.</p>
+              <p className="text-xs text-slate-600">Good start. Make sure you&apos;ve covered every step in the framework, especially the closing signal that demonstrates depth.</p>
             ) : (
               <p className="text-xs text-slate-600">Good length. Compare your answer against the strong example and check: did you lead with the most important metric or fact?</p>
             )}
@@ -305,6 +305,7 @@ export function PitchPracticeSimulator() {
 
   useEffect(() => {
     if (loaded && savedData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveCategory(savedData.activeCategory ?? null);
       setActiveDifficulty((savedData.activeDifficulty as Difficulty | null) ?? null);
     }

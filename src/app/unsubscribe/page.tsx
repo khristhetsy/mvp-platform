@@ -18,7 +18,7 @@ export default async function UnsubscribePage({ searchParams }: Props) {
           <h1 style={heading}>Invalid link</h1>
           <p style={body}>
             This unsubscribe link is invalid or has expired. If you want to
-            unsubscribe, please reply to the email with "unsubscribe" in the
+            unsubscribe, please reply to the email with &quot;unsubscribe&quot; in the
             subject line.
           </p>
         </div>

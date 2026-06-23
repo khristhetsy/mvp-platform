@@ -186,6 +186,7 @@ export function DealRoomActivityPanel({ roomId }: { roomId: string }) {
   }, [roomId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
     const interval = window.setInterval(() => void load(), 30_000);
     return () => window.clearInterval(interval);

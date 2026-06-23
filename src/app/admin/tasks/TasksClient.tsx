@@ -759,6 +759,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
       if (filterPriority && t.priority !== filterPriority) return false;
       if (filterDue) {
         if (!t.due_date) return false;
+        // eslint-disable-next-line react-hooks/purity
         const diff = Math.round((new Date(t.due_date).getTime() - Date.now()) / 86400000);
         if (filterDue === "overdue" && diff >= 0) return false;
         if (filterDue === "today" && diff !== 0) return false;

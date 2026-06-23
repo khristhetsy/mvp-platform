@@ -479,6 +479,7 @@ export function FounderKPIGlossary() {
 
   useEffect(() => {
     if (loaded && savedData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSearch(savedData.search ?? "");
       setActiveCategory((savedData.activeCategory as KPICategory | null) ?? null);
     }
