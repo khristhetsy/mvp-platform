@@ -3,6 +3,7 @@ import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TipOfTheDay } from "@/components/tips/TipOfTheDay";
+import { StageUnlockBanner } from "@/components/founder/StageUnlockBanner";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingProgressCard";
 import { FounderRemediationActionPlan } from "@/components/FounderRemediationActionPlan";
@@ -138,6 +139,8 @@ export default async function FounderDashboardPage() {
             </div>
           }
         />
+
+        <StageUnlockBanner />
 
         <TipOfTheDay profileId={profile.id} audience="founder" />
 
