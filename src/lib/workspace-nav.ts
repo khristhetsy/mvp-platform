@@ -279,30 +279,30 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
 
 export const investorWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/investor/dashboard", label: "Dashboard" },
-  { href: "/investor/actions", label: "Actions" },
+  { href: "/investor/actions", label: "Action Center" },
   { href: "/investor/onboarding", label: "Onboarding" },
   {
+    href: "/investor/inbox",
+    label: "Communications",
+    children: [
+      { href: "/investor/inbox", label: "Inbox" },
+      { href: "/investor/messages", label: "Messages" },
+    ],
+  },
+  {
     href: "/investor/opportunities",
-    label: "Deal Flow",
+    label: "Deals",
     children: [
       { href: "/investor/opportunities", label: "Opportunities" },
       { href: "/investor/watchlist", label: "Watchlist" },
       { href: "/investor/interest-pipeline", label: "Interest Pipeline" },
+      { href: "/investor/deal-room", label: "Deal Room" },
+      { href: "/investor/deals", label: "Diligence" },
+      { href: "/investor/spvs", label: "SPVs" },
+      { href: "/investor/portfolio", label: "Portfolio" },
       { href: "/investor/activity", label: "Recent Activity" },
     ],
   },
-  {
-    href: "/investor/portfolio",
-    label: "Portfolio & Deals",
-    children: [
-      { href: "/investor/portfolio", label: "Portfolio" },
-      { href: "/investor/deals", label: "Diligence" },
-      { href: "/investor/deal-room", label: "Deal Room" },
-      { href: "/investor/spvs", label: "SPVs" },
-    ],
-  },
-  { href: "/investor/messages", label: "Messages" },
-  { href: "/investor/inbox", label: "Inbox" },
   {
     href: "/investor/calendar",
     label: "Calendar",
