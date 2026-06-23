@@ -1,10 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
-export type FeatureKey = "inbox" | "calendar" | "scheduling" | "tasks" | "signatures" | "diligence";
+export type FeatureKey = "inbox" | "calendar" | "scheduling" | "tasks" | "signatures" | "diligence" | "regcf";
 export type FeatureAudience = "founder" | "investor" | "admin";
 
-export const FEATURE_KEYS: FeatureKey[] = ["inbox", "calendar", "scheduling", "tasks", "signatures", "diligence"];
+export const FEATURE_KEYS: FeatureKey[] = ["inbox", "calendar", "scheduling", "tasks", "signatures", "diligence", "regcf"];
 export const FEATURE_AUDIENCES: FeatureAudience[] = ["founder", "investor", "admin"];
 
 export const FEATURE_LABELS: Record<FeatureKey, string> = {
@@ -14,6 +14,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   tasks: "Tasks",
   signatures: "E-Signatures",
   diligence: "Diligence",
+  regcf: "Reg CF Generator",
 };
 
 /**
@@ -26,6 +27,7 @@ export const FEATURE_HREFS: Record<FeatureAudience, Partial<Record<FeatureKey, s
     inbox: ["/founder/inbox"],
     calendar: ["/founder/calendar"],
     scheduling: ["/founder/schedule"],
+    regcf: ["/founder/reg-cf"],
   },
   investor: {
     inbox: ["/investor/inbox"],

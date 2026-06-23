@@ -31,7 +31,7 @@ const putSchema = z.object({
     .array(
       z.object({
         audience: z.enum(["founder", "investor", "admin"]),
-        feature: z.enum(["inbox", "calendar", "scheduling", "tasks", "signatures", "diligence"]),
+        feature: z.enum(["inbox", "calendar", "scheduling", "tasks", "signatures", "diligence", "regcf"]),
         enabled: z.boolean(),
       }),
     )

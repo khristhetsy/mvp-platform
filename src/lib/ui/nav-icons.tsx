@@ -38,6 +38,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/founder/readiness/missing": AlertTriangle,
   "/founder/documents": FileText,
   "/founder/inbox": MessageSquare,
+  "/founder/reg-cf": Sparkles,
   "/founder/investors": TrendingUp,
   "/founder/investors/outreach": MessageSquare,
   "/founder/investors/matches": Sparkles,
