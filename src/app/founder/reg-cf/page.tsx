@@ -22,7 +22,7 @@ export default async function FounderRegCfPage() {
       profileName={profile.full_name ?? profile.email ?? "Founder"}
       profileSubtitle="Reg CF Materials"
     >
-      <FounderJourneyGate minStage="qualify">
+      <FounderJourneyGate minStage="deploy">
         <PageHeader
           eyebrow="Raise Toolkit"
           title="Reg CF Materials Generator"
