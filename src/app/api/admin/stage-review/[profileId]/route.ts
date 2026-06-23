@@ -8,9 +8,18 @@ import { createNotification } from "@/lib/notifications/notifications";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const stageReviewSchema = z.object({
-  action: z.enum(["approve", "reject"]),
+  action: z.enum(["approve", "reject", "set"]),
   feedback: z.string().optional(),
+  stage: z.enum(["initialize", "qualify", "deploy", "optimize"]).optional(),
+  reason: z.string().max(500).optional(),
 });
+
+const STAGE_LABEL: Record<string, string> = {
+  initialize: "Initialize",
+  qualify: "Qualify",
+  deploy: "Deploy",
+  optimize: "Optimize",
+};
 
 type ProfileRow = {
   id: string;
@@ -21,6 +30,26 @@ type ProfileRow = {
 // Raw untyped client to work around missing journey columns in generated DB types
 function rawClient(supabase: SupabaseClient): SupabaseClient {
   return supabase as unknown as SupabaseClient;
+}
+
+export async function GET(
+  _request: Request,
+  { params }: Readonly<{ params: Promise<{ profileId: string }> }>,
+) {
+  const { profileId } = await params;
+  const auth = await requireStaffApi(["admin", "analyst"]);
+  if ("error" in auth) return auth.error as NextResponse;
+
+  const { data } = await rawClient(auth.supabase)
+    .from("profiles")
+    .select("id, journey_stage, stage_approval_status")
+    .eq("id", profileId)
+    .maybeSingle();
+  const row = data as ProfileRow | null;
+  return NextResponse.json({
+    journey_stage: row?.journey_stage ?? "initialize",
+    stage_approval_status: row?.stage_approval_status ?? null,
+  });
 }
 
 export async function POST(
@@ -73,11 +102,17 @@ export async function POST(
 
   const { action, feedback } = parsed.data;
 
+  const { stage, reason } = parsed.data;
+
   if (action === "reject" && !feedback?.trim()) {
     return NextResponse.json(
       { error: "Feedback is required when rejecting." },
       { status: 400 },
     );
+  }
+
+  if (action === "set" && !stage) {
+    return NextResponse.json({ error: "A target stage is required." }, { status: 400 });
   }
 
   const rc = rawClient(auth.supabase);
@@ -92,6 +127,20 @@ export async function POST(
         stage_approval_status: "approved",
         stage_approved_by: auth.profile.id,
         stage_approved_at: new Date().toISOString(),
+      })
+      .eq("id", profileId);
+    updateError = result.error;
+  } else if (action === "set") {
+    // Admin override: set the journey stage directly (advance or roll back).
+    const advanced = stage === "deploy" || stage === "optimize";
+    const result = await rc
+      .from("profiles")
+      .update({
+        journey_stage: stage,
+        stage_approval_status: advanced ? "approved" : null,
+        stage_approved_by: auth.profile.id,
+        stage_approved_at: new Date().toISOString(),
+        stage_feedback: null,
       })
       .eq("id", profileId);
     updateError = result.error;
@@ -119,23 +168,30 @@ export async function POST(
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
+  const auditAction =
+    action === "approve" ? "founder_stage_approved" : action === "set" ? "founder_stage_overridden" : "founder_stage_rejected";
+
   await writeAuditLog(auth.supabase, {
     userId: auth.profile.id,
-    action: action === "approve" ? "founder_stage_approved" : "founder_stage_rejected",
+    action: auditAction,
     entityType: "profile",
     entityId: profileId,
-    metadata: { action, feedback: feedback?.trim() ?? null },
+    metadata: { action, stage: stage ?? null, reason: reason?.trim() ?? null, feedback: feedback?.trim() ?? null },
   });
+
+  const notif =
+    action === "approve"
+      ? { title: "You're approved to Deploy", message: "Your Qualify submission was approved. Your raise workspace is now unlocked." }
+      : action === "set"
+        ? { title: "Your journey stage was updated", message: `An admin set your journey stage to ${STAGE_LABEL[stage ?? ""] ?? stage}.` }
+        : { title: "Changes requested on your submission", message: `An admin requested changes: ${feedback?.trim() ?? ""}`.trim() };
 
   await createNotification({
     recipientUserId: profileId,
     actorUserId: auth.profile.id,
     type: "founder_stage_review",
-    title: action === "approve" ? "You're approved to Deploy" : "Changes requested on your submission",
-    message:
-      action === "approve"
-        ? "Your Qualify submission was approved. Your raise workspace is now unlocked."
-        : `An admin requested changes: ${feedback?.trim() ?? ""}`.trim(),
+    title: notif.title,
+    message: notif.message,
     entityType: "profile",
     entityId: profileId,
     deepLink: "/founder/journey",

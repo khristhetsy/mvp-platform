@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AdminActionHealthProvider } from "@/components/AdminActionHealthProvider";
 import { AdminCompanyWorkspace } from "@/components/admin/company-workspace/AdminCompanyWorkspace";
 import { DeleteUserDangerZone } from "@/components/admin/DeleteUserDangerZone";
+import { FounderStageOverride } from "@/components/admin/FounderStageOverride";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { getAdminCompanyWorkspace } from "@/lib/admin/company-workspace";
@@ -91,11 +92,17 @@ export default async function AdminCompanyWorkspacePage({ params }: PageProps) {
                 riskSignals={companyRiskSignals}
               />
               {workspace.founder?.id ? (
-                <DeleteUserDangerZone
-                  userId={workspace.founder.id}
-                  userName={workspace.founder.full_name ?? null}
-                  userEmail={workspace.founder.email ?? null}
-                />
+                <>
+                  <FounderStageOverride
+                    founderId={workspace.founder.id}
+                    founderName={workspace.founder.full_name ?? workspace.founder.email ?? null}
+                  />
+                  <DeleteUserDangerZone
+                    userId={workspace.founder.id}
+                    userName={workspace.founder.full_name ?? null}
+                    userEmail={workspace.founder.email ?? null}
+                  />
+                </>
               ) : null}
             </>
           ) : null}
