@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { AdminIntroQueue } from "@/components/admin/AdminIntroQueue";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PageErrorAlert } from "@/components/ui/PageErrorAlert";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { formatError } from "@/lib/errors/format-error";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -88,11 +89,7 @@ export default async function AdminIntroRequestsPage({
           description="Review, facilitate, or decline investor intro requests. Notifications are sent automatically on status change."
         />
 
-        {loadError ? (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            Failed to load intro requests: {loadError}
-          </div>
-        ) : null}
+        {loadError ? <PageErrorAlert message={`Failed to load intro requests: ${loadError}`} className="mb-6" /> : null}
 
         {/* Filter tabs */}
         <div className="mb-6 flex flex-wrap gap-2">

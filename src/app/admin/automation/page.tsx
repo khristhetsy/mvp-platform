@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { AppShell } from "@/components/AppShell";
 import { AdminAutomationConsole } from "@/components/admin/automation/AdminAutomationConsole";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PageErrorAlert } from "@/components/ui/PageErrorAlert";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { loadAutomationConsole, parseAutomationConsoleFilters } from "@/lib/automation/admin-console";
 import { WorkspaceModulePlaceholder } from "@/components/ui/WorkspaceModulePlaceholder";
@@ -75,7 +76,7 @@ export default async function AdminAutomationPage({ searchParams }: PageProps) {
           description="Monitor rules-based automation runs, dependencies, guards, and bounded manual execution."
         />
         {loadError ? (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">{loadError}</p>
+          <PageErrorAlert message={loadError} />
         ) : payload ? (
           <Suspense fallback={<p className="text-sm text-slate-600">Loading filters…</p>}>
             <AdminAutomationConsole payload={payload} isAdmin={isAdmin} />

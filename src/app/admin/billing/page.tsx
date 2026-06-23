@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { PageErrorAlert } from "@/components/ui/PageErrorAlert";
 import { listUpgradeRequestsForAdmin } from "@/lib/billing/upgrade-requests";
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -58,7 +59,7 @@ export default async function AdminBillingPage() {
         subtitle={`${upgradeRequests.length} recent requests · ${pendingCount ?? 0} pending`}
       >
         {loadError ? (
-          <p className="text-sm text-red-700">{loadError}</p>
+          <PageErrorAlert message={loadError} />
         ) : upgradeRequests.length === 0 ? (
           <p className="text-sm text-slate-600">No upgrade requests yet.</p>
         ) : (

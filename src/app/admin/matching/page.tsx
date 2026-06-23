@@ -2,6 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { AdminMatchingCenterPanel } from "@/components/admin/AdminMatchingCenterPanel";
 import { AdminUncontactedMatchesPanel } from "@/components/admin/AdminUncontactedMatchesPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PageErrorAlert } from "@/components/ui/PageErrorAlert";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { formatError } from "@/lib/errors/format-error";
 import { loadAdminMatchingCenterSnapshot } from "@/lib/matching/matching-center";
@@ -54,7 +55,7 @@ export default async function AdminMatchingPage() {
         />
 
         {setupError ? (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{setupError}</p>
+          <PageErrorAlert message={setupError} />
         ) : snapshot ? (
           <>
             {/* Uncontacted high-match pairs — surface gaps in the funnel */}

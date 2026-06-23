@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { AdminQueuesPanel } from "@/components/admin/AdminQueuesPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PageErrorAlert } from "@/components/ui/PageErrorAlert";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { getAllAdminQueuesSnapshot } from "@/lib/queues/admin-queues";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -30,10 +31,11 @@ export default async function AdminQueuesPage({ searchParams }: PageProps) {
     },
   };
 
+  let loadFailed = false;
   try {
     snapshot = await getAllAdminQueuesSnapshot(admin);
   } catch {
-    // Page renders with empty queues if tables are unavailable.
+    loadFailed = true;
   }
 
   return (
@@ -50,6 +52,7 @@ export default async function AdminQueuesPage({ searchParams }: PageProps) {
           title="Operations Queues"
           description="Actionable admin queues across company reviews, investor approvals, compliance, SPV readiness, remediation, and imports."
         />
+        {loadFailed ? <PageErrorAlert message="Couldn't load the operations queues." /> : null}
         <AdminQueuesPanel snapshot={snapshot} initialQueue={params.queue} />
       </WorkspacePageContainer>
     </AppShell>
