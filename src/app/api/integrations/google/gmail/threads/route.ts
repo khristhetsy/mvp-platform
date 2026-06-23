@@ -20,9 +20,10 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const folderParam = req.nextUrl.searchParams.get("folder") ?? "inbox";
   const folder = isGmailFolder(folderParam) ? folderParam : "inbox";
+  const q = req.nextUrl.searchParams.get("q")?.slice(0, 250) ?? "";
 
   try {
-    const threads = await listGmailThreads(auth.profile.id, { folder });
+    const threads = await listGmailThreads(auth.profile.id, { folder, q });
     return NextResponse.json({ connected: true, needsReadScope: false, email: status.email, threads });
   } catch (err) {
     if (err instanceof GmailScopeError) return NextResponse.json({ connected: true, needsReadScope: true, threads: [] });

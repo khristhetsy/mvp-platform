@@ -159,6 +159,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         children: [
           { href: "/admin/calendar", label: "Calendar"   },
           { href: "/admin/schedule", label: "Scheduling" },
+          { href: "/admin/meet",     label: "Meet"       },
         ],
       },
       { href: "/admin/inbox",     label: "Inbox",            requiredPermission: "view_admin_dashboard" },

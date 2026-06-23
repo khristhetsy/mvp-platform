@@ -155,11 +155,12 @@ async function metaToItem(accessToken: string, ids: string[]): Promise<GmailList
 /** List a folder, deduped to one row per thread (most recent message). */
 export async function listGmailThreads(
   userId: string,
-  opts: { folder?: GmailFolder; max?: number } = {},
+  opts: { folder?: GmailFolder; max?: number; q?: string } = {},
 ): Promise<GmailListItem[]> {
   const accessToken = await token(userId);
   const folder = opts.folder ?? "inbox";
   const max = opts.max ?? 25;
+  const search = (opts.q ?? "").trim();
 
   if (folder === "drafts") {
     const list = await gmailGet<{ drafts?: Array<{ id: string; message?: { id: string } }> }>(accessToken, `/drafts?maxResults=${max}`);
@@ -168,8 +169,9 @@ export async function listGmailThreads(
     return metaToItem(accessToken, ids);
   }
 
-  const q = folderQuery(folder);
-  const list = await gmailGet<{ messages?: Array<{ id: string }> }>(accessToken, `/messages?maxResults=${max}${q ? `&${q}` : ""}`);
+  const folderParam = folderQuery(folder);
+  const qParam = search ? `&q=${encodeURIComponent(search)}` : "";
+  const list = await gmailGet<{ messages?: Array<{ id: string }> }>(accessToken, `/messages?maxResults=${max}${folderParam ? `&${folderParam}` : ""}${qParam}`);
   const ids = (list.messages ?? []).map((m) => m.id);
   if (ids.length === 0) return [];
   return metaToItem(accessToken, ids);

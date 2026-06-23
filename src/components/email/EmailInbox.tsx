@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Mail, Send, Plus, X, RefreshCw, Trash2, MailOpen, ArrowLeft, Search, Inbox as InboxIcon, FileText, Layers, AlertTriangle, RotateCcw, Paperclip, Reply, ReplyAll, Forward } from "lucide-react";
+import { Mail, Send, Plus, X, RefreshCw, Trash2, MailOpen, ArrowLeft, Search, Inbox as InboxIcon, FileText, Layers, AlertTriangle, RotateCcw, Paperclip, Reply, ReplyAll, Forward, ChevronDown } from "lucide-react";
 import type { ThreadListItem, EmailMessage, MailFolder, EmailAttachment } from "@/lib/email/inbox";
 import type { EmailDraft } from "@/lib/email/drafts";
 import { buildPrefill, type ComposeMode, type ComposePrefill } from "@/lib/email/compose-prefill";
@@ -53,6 +53,11 @@ export function EmailInbox() {
   const [notice, setNotice] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [folder, setFolder] = useState<FolderId>("inbox");
+  const [onlyUnread, setOnlyUnread] = useState(false);
+  const [onlyAttachments, setOnlyAttachments] = useState(false);
+  const [dateRange, setDateRange] = useState<"all" | "1d" | "7d" | "30d">("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectMenuOpen, setSelectMenuOpen] = useState(false);
   const [drafts, setDrafts] = useState<EmailDraft[]>([]);
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
   const [counts, setCounts] = useState<{ inbox: number; drafts: number; spam: number }>({ inbox: 0, drafts: 0, spam: 0 });
@@ -184,15 +189,21 @@ export function EmailInbox() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return threads;
-    return threads.filter(
-      (t) =>
+    // eslint-disable-next-line react-hooks/purity
+    const cutoff = dateRange === "all" ? 0 : Date.now() - { "1d": 1, "7d": 7, "30d": 30 }[dateRange] * 86400000;
+    return threads.filter((t) => {
+      if (onlyUnread && !t.unread) return false;
+      if (onlyAttachments && !t.has_attachments) return false;
+      if (cutoff && new Date(t.last_message_at).getTime() < cutoff) return false;
+      if (q && !(
         (t.contact_name ?? "").toLowerCase().includes(q) ||
         t.contact_email.toLowerCase().includes(q) ||
         (t.subject ?? "").toLowerCase().includes(q) ||
-        (t.snippet ?? "").toLowerCase().includes(q),
-    );
-  }, [threads, search]);
+        (t.snippet ?? "").toLowerCase().includes(q)
+      )) return false;
+      return true;
+    });
+  }, [threads, search, onlyUnread, onlyAttachments, dateRange]);
 
   const openThread = useCallback(async (id: string) => {
     try {
@@ -285,7 +296,43 @@ export function EmailInbox() {
     setMessages([]);
     setSearch("");
     setOpenCardId(null);
+    setSelected(new Set());
+    setOnlyUnread(false);
+    setOnlyAttachments(false);
+    setDateRange("all");
   }, []);
+
+  // ── Selection + bulk actions ──────────────────────────────────────────────
+  const toggleSelect = useCallback((id: string) => {
+    setSelected((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  }, []);
+  const selectBy = useCallback((mode: "all" | "none" | "read" | "unread") => {
+    setSelectMenuOpen(false);
+    setSelected(() => {
+      if (mode === "none") return new Set();
+      const ids = filtered.filter((t) => mode === "all" || (mode === "unread" ? t.unread : !t.unread)).map((t) => t.id);
+      return new Set(ids);
+    });
+  }, [filtered]);
+
+  const runBulk = useCallback(async (action: "read" | "unread" | "spam" | "delete") => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    setSelected(new Set());
+    if (action === "read" || action === "unread") {
+      const unread = action === "unread";
+      setThreads((prev) => prev.map((t) => (selected.has(t.id) ? { ...t, unread } : t)));
+    } else {
+      setThreads((prev) => prev.filter((t) => !selected.has(t.id)));
+    }
+    await Promise.allSettled(ids.map((id) => {
+      if (action === "delete") return fetch(`/api/email/threads/${id}`, { method: "DELETE" });
+      const body = action === "spam" ? { spam: true } : { unread: action === "unread" };
+      return fetch(`/api/email/threads/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    }));
+    void loadCounts();
+    if (action === "spam" || action === "delete") void loadThreads();
+  }, [selected, loadCounts, loadThreads]);
 
   // ── Compose modal send / save-draft ───────────────────────────────────────
   const onSaveDraft = useCallback(async (draft: ComposeDraft) => {
@@ -540,6 +587,46 @@ export function EmailInbox() {
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search mail" className="w-full bg-transparent text-sm focus:outline-none" />
           </div>
 
+          {folder !== "drafts" ? (
+            selected.size > 0 ? (
+              <div className="flex flex-wrap items-center gap-3 rounded-lg bg-[#E6F1FB] px-3 py-2 text-[#0C447C]">
+                <span className="text-xs font-semibold">{selected.size} selected</span>
+                {folder !== "trash" && folder !== "spam" ? (
+                  <>
+                    <button type="button" onClick={() => void runBulk("read")} className="inline-flex items-center gap-1 text-xs hover:underline"><MailOpen className="h-3.5 w-3.5" /> Mark read</button>
+                    <button type="button" onClick={() => void runBulk("unread")} className="inline-flex items-center gap-1 text-xs hover:underline"><Mail className="h-3.5 w-3.5" /> Unread</button>
+                    <button type="button" onClick={() => void runBulk("spam")} className="inline-flex items-center gap-1 text-xs hover:underline"><AlertTriangle className="h-3.5 w-3.5" /> Spam</button>
+                  </>
+                ) : null}
+                <button type="button" onClick={() => void runBulk("delete")} className="inline-flex items-center gap-1 text-xs hover:underline"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
+                <button type="button" onClick={() => setSelected(new Set())} className="ml-auto text-xs text-slate-500 hover:underline">Clear</button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative">
+                  <button type="button" onClick={() => setSelectMenuOpen((v) => !v)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-50">
+                    <input type="checkbox" readOnly checked={false} className="h-3.5 w-3.5" aria-label="Select" /> <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
+                  {selectMenuOpen ? (
+                    <div className="absolute left-0 top-full z-10 mt-1 w-32 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                      {(["all", "none", "read", "unread"] as const).map((m) => (
+                        <button key={m} type="button" onClick={() => selectBy(m)} className="block w-full px-3 py-1.5 text-left text-xs capitalize text-slate-700 hover:bg-slate-100">{m}</button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+                <button type="button" onClick={() => setOnlyUnread((v) => !v)} className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${onlyUnread ? "border-[#185FA5] bg-[#E6F1FB] text-[#0C447C]" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}><MailOpen className="h-3.5 w-3.5" /> Unread</button>
+                <button type="button" onClick={() => setOnlyAttachments((v) => !v)} className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${onlyAttachments ? "border-[#185FA5] bg-[#E6F1FB] text-[#0C447C]" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}><Paperclip className="h-3.5 w-3.5" /> Has attachment</button>
+                <select value={dateRange} onChange={(e) => setDateRange(e.target.value as typeof dateRange)} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-600 focus:outline-none">
+                  <option value="all">Any time</option>
+                  <option value="1d">Today</option>
+                  <option value="7d">Last 7 days</option>
+                  <option value="30d">Last 30 days</option>
+                </select>
+              </div>
+            )
+          ) : null}
+
           <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
             {folder === "drafts" ? (
               loading ? (
@@ -575,8 +662,9 @@ export function EmailInbox() {
                     tabIndex={0}
                     onClick={() => void openThread(t.id)}
                     onKeyDown={(e) => { if (e.key === "Enter") void openThread(t.id); }}
-                    className={`group flex cursor-pointer items-center gap-3 border-b border-slate-100 px-4 py-2.5 last:border-0 ${t.unread ? "bg-white hover:bg-slate-50" : "bg-slate-50/40 hover:bg-slate-50"}`}
+                    className={`group flex cursor-pointer items-center gap-3 border-b border-slate-100 px-4 py-2.5 last:border-0 ${selected.has(t.id) ? "bg-[#E6F1FB]" : t.unread ? "bg-white hover:bg-slate-50" : "bg-slate-50/40 hover:bg-slate-50"}`}
                   >
+                    <input type="checkbox" checked={selected.has(t.id)} onClick={(e) => e.stopPropagation()} onChange={() => toggleSelect(t.id)} className="h-3.5 w-3.5 shrink-0" aria-label="Select conversation" />
                     <span className={`w-44 shrink-0 truncate text-sm ${t.unread ? "font-semibold text-slate-950" : "text-slate-600"}`}>
                       {t.contact_name ?? t.contact_email}
                     </span>
@@ -584,6 +672,7 @@ export function EmailInbox() {
                       <span className={t.unread ? "font-semibold text-slate-950" : "text-slate-700"}>{t.subject ?? "(no subject)"}</span>
                       {t.snippet ? <span className="text-slate-400"> — {t.snippet}</span> : null}
                     </span>
+                    {t.has_attachments ? <Paperclip className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-label="Has attachment" /> : null}
                     <span className="hidden shrink-0 items-center gap-2 group-hover:flex">
                       {folder === "trash" ? (
                         <>

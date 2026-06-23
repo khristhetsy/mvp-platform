@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Mail, RefreshCw, ArrowLeft, ExternalLink, Inbox as InboxIcon, Send, FileText, Layers, AlertTriangle, Trash2, Plus, Loader2, Archive, RotateCcw, CornerUpLeft, Search, Reply, ReplyAll, Forward, Paperclip } from "lucide-react";
+import { Mail, RefreshCw, ArrowLeft, ExternalLink, Inbox as InboxIcon, Send, FileText, Layers, AlertTriangle, Trash2, Plus, Loader2, Archive, RotateCcw, CornerUpLeft, Search, Reply, ReplyAll, Forward, Paperclip, ChevronDown, MailOpen } from "lucide-react";
 import { EmailBody } from "./EmailBody";
 import { ComposeModal } from "./ComposeModal";
 import { SenderHeader } from "./SenderHeader";
@@ -11,7 +11,7 @@ import type { EmailAttachment } from "@/lib/email/inbox";
 import type { ComposeDraft, Sender } from "./types";
 
 type GmailFolder = "inbox" | "sent" | "all" | "spam" | "trash" | "drafts";
-type GmailActionId = "archive" | "spam" | "notspam" | "trash" | "untrash";
+type GmailActionId = "archive" | "spam" | "notspam" | "trash" | "untrash" | "read" | "unread";
 type GmailItem = { id: string; threadId: string; from: string; subject: string; date: string; snippet: string; unread: boolean };
 type GmailAttachmentRef = { attachmentId: string; messageId: string; filename: string; mimeType: string; size: number };
 type GmailMessage = { id: string; from: string; to: string; date: string; subject: string; text: string | null; html: string | null; snippet: string; attachments?: GmailAttachmentRef[] };
@@ -56,6 +56,11 @@ export function GmailInbox() {
   const [folder, setFolder] = useState<GmailFolder>("inbox");
   const [items, setItems] = useState<GmailItem[]>([]);
   const [search, setSearch] = useState("");
+  const [onlyUnread, setOnlyUnread] = useState(false);
+  const [onlyAttachments, setOnlyAttachments] = useState(false);
+  const [dateRange, setDateRange] = useState<"all" | "1d" | "7d" | "30d">("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectMenuOpen, setSelectMenuOpen] = useState(false);
   const [connected, setConnected] = useState(true);
   const [needsReadScope, setNeedsReadScope] = useState(false);
   const [readNeedsReconnect, setReadNeedsReconnect] = useState(false);
@@ -104,12 +109,22 @@ export function GmailInbox() {
     } catch { /* best-effort */ }
   }, []);
 
+  // Filter chips → a Gmail search query, applied server-side.
+  const gmailQuery = useMemo(() => {
+    const parts: string[] = [];
+    if (onlyUnread) parts.push("is:unread");
+    if (onlyAttachments) parts.push("has:attachment");
+    if (dateRange !== "all") parts.push(`newer_than:${dateRange}`);
+    return parts.join(" ");
+  }, [onlyUnread, onlyAttachments, dateRange]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     void loadCounts();
     try {
-      const res = await fetch(`/api/integrations/google/gmail/threads?folder=${folder}`);
+      const qs = gmailQuery ? `&q=${encodeURIComponent(gmailQuery)}` : "";
+      const res = await fetch(`/api/integrations/google/gmail/threads?folder=${folder}${qs}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to load Gmail.");
       setConnected(data.connected);
@@ -120,7 +135,7 @@ export function GmailInbox() {
     } finally {
       setLoading(false);
     }
-  }, [folder, loadCounts]);
+  }, [folder, loadCounts, gmailQuery]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
@@ -131,7 +146,28 @@ export function GmailInbox() {
     return () => clearInterval(id);
   }, [loadCounts]);
 
-  const selectFolder = useCallback((f: GmailFolder) => { setFolder(f); setThread(null); setSearch(""); setOpenCardId(null); }, []);
+  const selectFolder = useCallback((f: GmailFolder) => {
+    setFolder(f); setThread(null); setSearch(""); setOpenCardId(null);
+    setSelected(new Set()); setOnlyUnread(false); setOnlyAttachments(false); setDateRange("all");
+  }, []);
+
+  const toggleSelect = useCallback((threadId: string) => {
+    setSelected((prev) => { const n = new Set(prev); if (n.has(threadId)) n.delete(threadId); else n.add(threadId); return n; });
+  }, []);
+
+  const runBulk = useCallback(async (action: GmailActionId) => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    setSelected(new Set());
+    if (action !== "read" && action !== "unread") setItems((prev) => prev.filter((t) => !ids.includes(t.threadId)));
+    const results = await Promise.allSettled(ids.map((id) =>
+      fetch(`/api/integrations/google/gmail/threads/${id}/actions`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }),
+      }).then(async (r) => { if (!r.ok) { const d = await r.json().catch(() => ({})); if (d?.needsReconnect) setReadNeedsReconnect(true); throw new Error(); } }),
+    ));
+    if (results.some((r) => r.status === "rejected")) void load();
+    void loadCounts();
+  }, [selected, load, loadCounts]);
 
   const openThread = useCallback(async (threadId: string) => {
     setError(null);
@@ -420,6 +456,45 @@ export function GmailInbox() {
                 <Search className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
                 <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search mail" className="w-full bg-transparent text-sm focus:outline-none" />
               </div>
+
+              {selected.size > 0 ? (
+                <div className="mb-2 flex flex-wrap items-center gap-3 rounded-lg bg-[#E6F1FB] px-3 py-2 text-[#0C447C]">
+                  <span className="text-xs font-semibold">{selected.size} selected</span>
+                  {folder !== "trash" && folder !== "spam" ? (
+                    <>
+                      <button type="button" onClick={() => void runBulk("read")} className="inline-flex items-center gap-1 text-xs hover:underline"><MailOpen className="h-3.5 w-3.5" /> Mark read</button>
+                      <button type="button" onClick={() => void runBulk("unread")} className="inline-flex items-center gap-1 text-xs hover:underline"><Mail className="h-3.5 w-3.5" /> Unread</button>
+                      <button type="button" onClick={() => void runBulk("spam")} className="inline-flex items-center gap-1 text-xs hover:underline"><AlertTriangle className="h-3.5 w-3.5" /> Spam</button>
+                    </>
+                  ) : null}
+                  <button type="button" onClick={() => void runBulk("trash")} className="inline-flex items-center gap-1 text-xs hover:underline"><Trash2 className="h-3.5 w-3.5" /> Trash</button>
+                  <button type="button" onClick={() => setSelected(new Set())} className="ml-auto text-xs text-slate-500 hover:underline">Clear</button>
+                </div>
+              ) : (
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <div className="relative">
+                    <button type="button" onClick={() => setSelectMenuOpen((v) => !v)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-50">
+                      <input type="checkbox" readOnly checked={false} className="h-3.5 w-3.5" aria-label="Select" /> <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                    {selectMenuOpen ? (
+                      <div className="absolute left-0 top-full z-10 mt-1 w-32 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                        {(["all", "none", "read", "unread"] as const).map((m) => (
+                          <button key={m} type="button" onClick={() => { setSelectMenuOpen(false); setSelected(m === "none" ? new Set() : new Set(filtered.filter((t) => m === "all" || (m === "unread" ? t.unread : !t.unread)).map((t) => t.threadId))); }} className="block w-full px-3 py-1.5 text-left text-xs capitalize text-slate-700 hover:bg-slate-100">{m}</button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                  <button type="button" onClick={() => setOnlyUnread((v) => !v)} className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${onlyUnread ? "border-[#185FA5] bg-[#E6F1FB] text-[#0C447C]" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}><MailOpen className="h-3.5 w-3.5" /> Unread</button>
+                  <button type="button" onClick={() => setOnlyAttachments((v) => !v)} className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${onlyAttachments ? "border-[#185FA5] bg-[#E6F1FB] text-[#0C447C]" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}><Paperclip className="h-3.5 w-3.5" /> Has attachment</button>
+                  <select value={dateRange} onChange={(e) => setDateRange(e.target.value as typeof dateRange)} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-600 focus:outline-none">
+                    <option value="all">Any time</option>
+                    <option value="1d">Today</option>
+                    <option value="7d">Last 7 days</option>
+                    <option value="30d">Last 30 days</option>
+                  </select>
+                </div>
+              )}
+
               <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
                 {loading ? (
                   <p className="px-4 py-8 text-sm text-slate-400">Loading your Gmail…</p>
@@ -429,7 +504,8 @@ export function GmailInbox() {
                   <ul>
                     {filtered.map((t) => (
                       <li key={t.threadId} role="button" tabIndex={0} onClick={() => void openThread(t.threadId)} onKeyDown={(e) => { if (e.key === "Enter") void openThread(t.threadId); }}
-                        className={`group flex cursor-pointer items-center gap-3 border-b border-slate-100 px-4 py-2.5 last:border-0 ${t.unread ? "bg-white hover:bg-slate-50" : "bg-slate-50/40 hover:bg-slate-50"}`}>
+                        className={`group flex cursor-pointer items-center gap-3 border-b border-slate-100 px-4 py-2.5 last:border-0 ${selected.has(t.threadId) ? "bg-[#E6F1FB]" : t.unread ? "bg-white hover:bg-slate-50" : "bg-slate-50/40 hover:bg-slate-50"}`}>
+                        <input type="checkbox" checked={selected.has(t.threadId)} onClick={(e) => e.stopPropagation()} onChange={() => toggleSelect(t.threadId)} className="h-3.5 w-3.5 shrink-0" aria-label="Select conversation" />
                         <span className={`w-44 shrink-0 truncate text-sm ${t.unread ? "font-semibold text-slate-950" : "text-slate-600"}`}>{fromName(t.from)}</span>
                         <span className="min-w-0 flex-1 truncate text-sm">
                           <span className={t.unread ? "font-semibold text-slate-950" : "text-slate-700"}>{t.subject}</span>

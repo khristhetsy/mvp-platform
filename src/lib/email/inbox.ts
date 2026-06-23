@@ -66,7 +66,7 @@ function htmlFromText(text: string): string {
   return escaped.split(/\n{2,}/).map((p) => `<p>${p.replace(/\n/g, "<br/>")}</p>`).join("");
 }
 
-export type ThreadListItem = EmailThread & { snippet: string | null };
+export type ThreadListItem = EmailThread & { snippet: string | null; has_attachments: boolean };
 export type MailFolder = "inbox" | "sent" | "all" | "trash" | "spam";
 
 export function isMailFolder(v: string): v is MailFolder {
@@ -98,17 +98,23 @@ export async function listThreads(
   const ids = threads.map((t) => t.id);
   const { data: msgs } = await raw(supabase)
     .from("email_messages")
-    .select("thread_id, body_text, created_at")
+    .select("thread_id, body_text, created_at, attachments")
     .in("thread_id", ids)
     .order("created_at", { ascending: false });
 
   const snippetByThread = new Map<string, string>();
-  for (const m of (msgs ?? []) as Array<{ thread_id: string; body_text: string | null }>) {
+  const withAttachments = new Set<string>();
+  for (const m of (msgs ?? []) as Array<{ thread_id: string; body_text: string | null; attachments: unknown }>) {
     if (!snippetByThread.has(m.thread_id) && m.body_text) {
       snippetByThread.set(m.thread_id, m.body_text.replace(/\s+/g, " ").trim().slice(0, 140));
     }
+    if (Array.isArray(m.attachments) && m.attachments.length > 0) withAttachments.add(m.thread_id);
   }
-  return threads.map((t) => ({ ...t, snippet: snippetByThread.get(t.id) ?? null }));
+  return threads.map((t) => ({
+    ...t,
+    snippet: snippetByThread.get(t.id) ?? null,
+    has_attachments: withAttachments.has(t.id),
+  }));
 }
 
 export async function setThreadUnread(
