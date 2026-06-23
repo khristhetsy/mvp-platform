@@ -145,6 +145,29 @@ export async function listGmailThreads(
   return metaToItem(accessToken, ids);
 }
 
+export interface GmailFolderCounts {
+  inbox: number; // unread threads in INBOX
+  drafts: number; // total drafts
+  spam: number; // total threads in SPAM
+}
+
+/**
+ * Per-folder badge counts from the Gmail label metadata (one cheap call each).
+ * Inbox = unread threads; drafts/spam = totals. Best-effort: any failure → 0s.
+ */
+export async function getGmailFolderCounts(userId: string): Promise<GmailFolderCounts> {
+  const accessToken = await token(userId);
+  type Label = { messagesTotal?: number; messagesUnread?: number; threadsTotal?: number; threadsUnread?: number };
+  const get = (id: string) => gmailGet<Label>(accessToken, `/labels/${id}`).catch(() => null);
+
+  const [inbox, draft, spam] = await Promise.all([get("INBOX"), get("DRAFT"), get("SPAM")]);
+  return {
+    inbox: inbox?.threadsUnread ?? 0,
+    drafts: draft?.messagesTotal ?? 0,
+    spam: spam?.threadsTotal ?? 0,
+  };
+}
+
 export async function getGmailThread(userId: string, threadId: string): Promise<GmailThread> {
   const accessToken = await token(userId);
   const data = await gmailGet<{ id: string; messages?: Array<{ id: string; snippet: string; payload?: GmailPayload }> }>(

@@ -56,6 +56,7 @@ export function GmailInbox() {
   const [notice, setNotice] = useState<string | null>(null);
   const [thread, setThread] = useState<GmailThread | null>(null);
   const [openCardId, setOpenCardId] = useState<string | null>(null);
+  const [counts, setCounts] = useState<{ inbox: number; drafts: number; spam: number }>({ inbox: 0, drafts: 0, spam: 0 });
 
   const [composeOpen, setComposeOpen] = useState(false);
   const [composePrefill, setComposePrefill] = useState<ComposePrefill | undefined>(undefined);
@@ -86,9 +87,19 @@ export function GmailInbox() {
 
   const connectUrl = `/api/integrations/google/connect?returnTo=${encodeURIComponent(pathname ?? "/admin/inbox")}`;
 
+  /** Gmail folder badge counts (inbox unread, drafts total, spam total). Best-effort. */
+  const loadCounts = useCallback(async () => {
+    try {
+      const res = await fetch("/api/integrations/google/gmail/counts");
+      const data = await res.json();
+      if (res.ok && data.counts) setCounts(data.counts);
+    } catch { /* best-effort */ }
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    void loadCounts();
     try {
       const res = await fetch(`/api/integrations/google/gmail/threads?folder=${folder}`);
       const data = await res.json();
@@ -101,10 +112,16 @@ export function GmailInbox() {
     } finally {
       setLoading(false);
     }
-  }, [folder]);
+  }, [folder, loadCounts]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
+
+  // Keep Gmail badges fresh while the view is open.
+  useEffect(() => {
+    const id = setInterval(() => { void loadCounts(); }, 60000);
+    return () => clearInterval(id);
+  }, [loadCounts]);
 
   const selectFolder = useCallback((f: GmailFolder) => { setFolder(f); setThread(null); setSearch(""); setOpenCardId(null); }, []);
 
@@ -282,10 +299,17 @@ export function GmailInbox() {
             {FOLDERS.map((f) => {
               const Icon = f.icon;
               const active = folder === f.id;
+              const rawCount = f.id === "inbox" ? counts.inbox : f.id === "drafts" ? counts.drafts : f.id === "spam" ? counts.spam : 0;
+              const badge = rawCount > 99 ? "99+" : String(rawCount);
+              // Inbox unread reads as emphasis (navy); drafts/spam are muted tallies.
+              const badgeClass = f.id === "inbox" ? "bg-[#185FA5] text-white" : "bg-slate-100 text-slate-500";
               return (
                 <button key={f.id} type="button" onClick={() => selectFolder(f.id)} className={`flex w-full items-center gap-2.5 rounded-full px-3 py-2 text-sm ${active ? "bg-[#E6F1FB] font-medium text-[#0C447C]" : "text-slate-600 hover:bg-slate-100"}`}>
                   <Icon className="h-4 w-4 shrink-0" aria-hidden />
                   <span className="flex-1 text-left">{f.label}</span>
+                  {rawCount > 0 ? (
+                    <span className={`inline-flex min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-medium leading-5 ${badgeClass}`}>{badge}</span>
+                  ) : null}
                 </button>
               );
             })}
