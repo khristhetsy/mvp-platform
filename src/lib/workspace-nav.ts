@@ -102,7 +102,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     title: "Operation",
     items: [
-      { href: "/admin/actions",          label: "Actions",         requiredPermission: "view_actions"         },
+      { href: "/admin/actions",          label: "Action Center",   requiredPermission: "view_actions"         },
       {
         href: "/admin/learning",
         label: "Learning",
@@ -171,6 +171,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/integrations",    label: "Integrations"    },
           { href: "/admin/queues",          label: "Queues"          },
           { href: "/admin/automation",      label: "Automation"      },
+          { href: "/admin/page-builder-lab", label: "Page Builder"   },
           { href: "/admin/system-health",   label: "System Health"   },
           { href: "/admin/imports",         label: "Import / Export" },
           { href: "/admin/beta-operations", label: "Beta Operations" },
