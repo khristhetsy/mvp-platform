@@ -15,6 +15,14 @@ export type GmailListItem = {
   unread: boolean;
 };
 
+export type GmailAttachmentRef = {
+  attachmentId: string;
+  messageId: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+};
+
 export type GmailMessage = {
   id: string;
   from: string;
@@ -24,6 +32,7 @@ export type GmailMessage = {
   snippet: string;
   text: string | null;
   html: string | null;
+  attachments: GmailAttachmentRef[];
 };
 
 export type GmailThread = { id: string; subject: string; messages: GmailMessage[] };
@@ -57,10 +66,31 @@ function decodeBody(data: string | undefined): string {
 
 type GmailPayload = {
   mimeType?: string;
-  body?: { data?: string };
+  filename?: string;
+  body?: { data?: string; attachmentId?: string; size?: number };
   parts?: GmailPayload[];
   headers?: Array<{ name: string; value: string }>;
 };
+
+/** Collect real attachment parts (named parts backed by an attachmentId). */
+function extractAttachments(payload: GmailPayload | undefined, messageId: string): GmailAttachmentRef[] {
+  const out: GmailAttachmentRef[] = [];
+  const walk = (p?: GmailPayload) => {
+    if (!p) return;
+    if (p.filename && p.body?.attachmentId) {
+      out.push({
+        attachmentId: p.body.attachmentId,
+        messageId,
+        filename: p.filename,
+        mimeType: p.mimeType ?? "application/octet-stream",
+        size: p.body.size ?? 0,
+      });
+    }
+    for (const part of p.parts ?? []) walk(part);
+  };
+  walk(payload);
+  return out;
+}
 
 /** Walk the MIME tree collecting the first text/plain and text/html parts. */
 function extractBodies(payload: GmailPayload | undefined): { text: string | null; html: string | null } {
@@ -186,8 +216,20 @@ export async function getGmailThread(userId: string, threadId: string): Promise<
       snippet: m.snippet ?? "",
       text,
       html,
+      attachments: extractAttachments(m.payload, m.id),
     };
   });
 
   return { id: data.id, subject: messages[0]?.subject ?? "(no subject)", messages };
+}
+
+/** Download the raw bytes of a Gmail attachment (uses gmail.readonly). */
+export async function fetchGmailAttachment(
+  userId: string,
+  messageId: string,
+  attachmentId: string,
+): Promise<Buffer> {
+  const accessToken = await token(userId);
+  const data = await gmailGet<{ data?: string }>(accessToken, `/messages/${messageId}/attachments/${attachmentId}`);
+  return Buffer.from((data.data ?? "").replace(/-/g, "+").replace(/_/g, "/"), "base64");
 }

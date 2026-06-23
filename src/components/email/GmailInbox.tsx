@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Mail, RefreshCw, ArrowLeft, ExternalLink, Inbox as InboxIcon, Send, FileText, Layers, AlertTriangle, Trash2, Plus, Loader2, Archive, RotateCcw, CornerUpLeft, Search, Reply, ReplyAll, Forward } from "lucide-react";
+import { Mail, RefreshCw, ArrowLeft, ExternalLink, Inbox as InboxIcon, Send, FileText, Layers, AlertTriangle, Trash2, Plus, Loader2, Archive, RotateCcw, CornerUpLeft, Search, Reply, ReplyAll, Forward, Paperclip } from "lucide-react";
 import { EmailBody } from "./EmailBody";
 import { ComposeModal } from "./ComposeModal";
 import { SenderHeader } from "./SenderHeader";
@@ -13,7 +13,8 @@ import type { ComposeDraft, Sender } from "./types";
 type GmailFolder = "inbox" | "sent" | "all" | "spam" | "trash" | "drafts";
 type GmailActionId = "archive" | "spam" | "notspam" | "trash" | "untrash";
 type GmailItem = { id: string; threadId: string; from: string; subject: string; date: string; snippet: string; unread: boolean };
-type GmailMessage = { id: string; from: string; to: string; date: string; subject: string; text: string | null; html: string | null; snippet: string };
+type GmailAttachmentRef = { attachmentId: string; messageId: string; filename: string; mimeType: string; size: number };
+type GmailMessage = { id: string; from: string; to: string; date: string; subject: string; text: string | null; html: string | null; snippet: string; attachments?: GmailAttachmentRef[] };
 type GmailThread = { id: string; subject: string; messages: GmailMessage[] };
 type ComposeContext = { mode: ComposeMode; threadId: string | null };
 
@@ -42,6 +43,12 @@ function when(ts: string): string {
   const now = new Date();
   if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+function formatSize(bytes: number): string {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function GmailInbox() {
@@ -378,6 +385,20 @@ export function GmailInbox() {
                       <span className="shrink-0 text-xs text-slate-400">{when(m.date)}</span>
                     </div>
                     <div className="mt-2"><EmailBody html={m.html} text={m.text || m.snippet} /></div>
+                    {m.attachments && m.attachments.length > 0 ? (
+                      <div className="mt-2.5 flex flex-wrap gap-2">
+                        {m.attachments.map((a) => (
+                          <a
+                            key={a.attachmentId}
+                            href={`/api/integrations/google/gmail/attachments?messageId=${encodeURIComponent(a.messageId)}&attachmentId=${encodeURIComponent(a.attachmentId)}&filename=${encodeURIComponent(a.filename)}&mimeType=${encodeURIComponent(a.mimeType)}`}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                          >
+                            <Paperclip className="h-3.5 w-3.5 text-slate-400" /> {a.filename}
+                            {a.size ? <span className="text-slate-400">{formatSize(a.size)}</span> : null}
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
