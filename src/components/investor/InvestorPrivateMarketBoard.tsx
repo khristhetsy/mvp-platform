@@ -77,10 +77,27 @@ export function InvestorPrivateMarketBoard({
   const [sortBy, setSortBy] = useState<SortBy>("match");
 
   const sorted = useMemo(() => {
+    const bySymbol = (a: PrivateMarketDeal, b: PrivateMarketDeal) => a.symbol.localeCompare(b.symbol);
     return [...deals].sort((a, b) => {
-      if (sortBy === "readiness") return (b.readinessScore ?? 0) - (a.readinessScore ?? 0);
-      if (sortBy === "fill") return (b.fillPct ?? -1) - (a.fillPct ?? -1);
-      return b.matchScore - a.matchScore;
+      if (sortBy === "readiness") {
+        return (
+          (b.readinessScore ?? 0) - (a.readinessScore ?? 0) ||
+          b.matchScore - a.matchScore ||
+          bySymbol(a, b)
+        );
+      }
+      if (sortBy === "fill") {
+        return (
+          (b.fillPct ?? -1) - (a.fillPct ?? -1) ||
+          b.totalIndicated - a.totalIndicated ||
+          bySymbol(a, b)
+        );
+      }
+      return (
+        b.matchScore - a.matchScore ||
+        (b.readinessScore ?? 0) - (a.readinessScore ?? 0) ||
+        bySymbol(a, b)
+      );
     });
   }, [deals, sortBy]);
 
