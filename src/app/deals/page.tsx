@@ -1,6 +1,8 @@
-import { Gauge, Star, LayoutGrid } from "lucide-react";
+import Link from "next/link";
+import { Gauge, Star, LayoutGrid, ArrowRight } from "lucide-react";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
+import { MarketingMarketPreview } from "@/components/marketing/MarketingMarketPreview";
 import { MarketingMarketplacePlaceholder } from "@/components/marketing/MarketingMarketplacePlaceholder";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { OpportunityCard } from "@/components/OpportunityCard";
@@ -41,20 +43,32 @@ export default async function DealsPage() {
       {/* Hero */}
       <section
         className="px-4 py-12 lg:px-8 lg:py-16"
-        style={{ background: "radial-gradient(960px 460px at 50% -10%, var(--blue-muted), transparent 70%)" }}
+        style={{ background: "radial-gradient(960px 460px at 75% -10%, var(--blue-muted), transparent 70%)" }}
       >
-        <div className="mx-auto max-w-4xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-[var(--blue-border)] bg-[var(--blue-muted)] px-3.5 py-1.5 font-mono text-[11.5px] text-[var(--blue)]">
-            <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--blue)] text-[var(--blue)]" />
-            Investor marketplace
-          </span>
-          <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight text-[var(--navy)] md:text-5xl">
-            The <span className="text-[var(--blue)]">Private Market</span> where readiness meets capital.
-          </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-600">
-            Browse admin-approved, published companies with full diligence context. Listings are shown for informational
-            purposes only and are not investment recommendations.
-          </p>
+        <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--blue-border)] bg-[var(--blue-muted)] px-3.5 py-1.5 font-mono text-[11.5px] text-[var(--blue)]">
+              <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--blue)] text-[var(--blue)]" />
+              Investor marketplace
+            </span>
+            <h1 className="mt-5 max-w-[16ch] text-4xl font-semibold leading-[1.08] tracking-tight text-[var(--navy)] md:text-5xl">
+              The <span className="text-[var(--blue)]">Private Market</span> where readiness meets capital.
+            </h1>
+            <p className="mt-5 max-w-[46ch] text-base leading-7 text-slate-600">
+              Scored founders, quality investors, and indicated interest in the open. Listings are shown for
+              informational purposes only and are not investment recommendations.
+            </p>
+            <div className="mt-7 flex flex-col gap-2.5 sm:flex-row">
+              <Link href="/auth/sign-up" className="cap-btn-primary inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold">
+                Request access
+                <ArrowRight className="h-4 w-4" strokeWidth={2} aria-hidden />
+              </Link>
+              <Link href="/investors" className="cap-btn-secondary inline-flex items-center justify-center rounded-lg px-5 py-3 text-sm font-semibold">
+                How it works →
+              </Link>
+            </div>
+          </div>
+          <MarketingMarketPreview />
         </div>
       </section>
 
