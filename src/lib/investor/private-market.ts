@@ -6,6 +6,8 @@
  * velocity logic lives here — those are deferred to the snapshot fast-follow.
  */
 
+import type { ReadinessTrend } from "@/lib/investor/metric-trends";
+
 export type ReadinessBandKey = "high" | "mid" | "low" | "none";
 
 export type PrivateMarketDeal = {
@@ -23,6 +25,10 @@ export type PrivateMarketDeal = {
   /** 0–100, or null when no target is known. */
   fillPct: number | null;
   currency: string;
+  /** Readiness trend from metric snapshots; null until enough history exists. */
+  trend?: ReadinessTrend | null;
+  /** Whether indicated interest is growing fast over the recent window. */
+  fillingFast?: boolean;
 };
 
 export type PrivateMarketSummary = {
@@ -32,6 +38,8 @@ export type PrivateMarketSummary = {
   /** Number of distinct deals the investor indicated on in the last 30 days. */
   indicated30dCount: number;
   avgReadiness: number | null;
+  /** Count of matched deals currently filling fast. */
+  fillingFastCount: number;
 };
 
 /** Percent of a fundraise target that has been indicated. Null when target is unknown. */

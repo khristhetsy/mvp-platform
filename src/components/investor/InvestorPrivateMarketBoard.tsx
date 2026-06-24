@@ -2,11 +2,44 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, LayoutGrid } from "lucide-react";
+import { ChevronRight, LayoutGrid, Flame } from "lucide-react";
+import type { ReadinessTrend } from "@/lib/investor/metric-trends";
 import {
   readinessBand,
   type PrivateMarketDeal,
 } from "@/lib/investor/private-market";
+
+function Sparkline({ trend }: { trend?: ReadinessTrend | null }) {
+  const pts = trend?.sparkline ?? [];
+  if (pts.length < 2 || trend?.delta == null) {
+    return (
+      <span className="font-mono text-xs text-slate-300" title="Trend builds as daily snapshots accrue">
+        —
+      </span>
+    );
+  }
+  const w = 46;
+  const h = 16;
+  const min = Math.min(...pts);
+  const max = Math.max(...pts);
+  const span = max - min || 1;
+  const step = w / (pts.length - 1);
+  const coords = pts
+    .map((v, i) => `${(i * step).toFixed(1)},${(h - ((v - min) / span) * h).toFixed(1)}`)
+    .join(" ");
+  const down = trend.direction === "down";
+  const color = down ? "#A32D2D" : "var(--teal)";
+  return (
+    <div className="flex flex-col items-end gap-0.5">
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} fill="none" aria-hidden>
+        <polyline points={coords} stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <span className="font-mono text-[11px] font-semibold" style={{ color }}>
+        {down ? "▼" : "▲"} {Math.abs(trend.delta).toFixed(1)}
+      </span>
+    </div>
+  );
+}
 
 type SortBy = "match" | "readiness" | "fill";
 
@@ -123,8 +156,15 @@ export function InvestorPrivateMarketBoard({
                   {deal.symbol.slice(0, 3)}
                 </span>
                 <div className="min-w-0">
-                  <div className="font-mono text-[13px] font-semibold text-[var(--navy)]">
-                    {deal.symbol}
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-[13px] font-semibold text-[var(--navy)]">
+                      {deal.symbol}
+                    </span>
+                    {deal.fillingFast ? (
+                      <span className="inline-flex items-center gap-0.5 rounded-md bg-[var(--teal-muted)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--teal)]" title="Indicated interest growing fast">
+                        <Flame className="h-2.5 w-2.5" /> Fast
+                      </span>
+                    ) : null}
                   </div>
                   <div className="truncate text-[11.5px] text-slate-400">
                     {deal.companyName}
@@ -142,12 +182,9 @@ export function InvestorPrivateMarketBoard({
                 </div>
               </div>
 
-              {/* trend — placeholder until score-history snapshots land */}
-              <div
-                className="hidden text-right font-mono text-xs text-slate-300 md:block"
-                title="Trend data coming soon"
-              >
-                —
+              {/* trend — real sparkline once snapshots accrue, else "—" */}
+              <div className="hidden justify-items-end md:grid">
+                <Sparkline trend={deal.trend} />
               </div>
 
               {/* match */}

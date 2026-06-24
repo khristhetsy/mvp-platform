@@ -4,7 +4,9 @@ import { InvestorPrivateMarketBoard } from "@/components/investor/InvestorPrivat
 import { InvestorPrivateMarketSummary } from "@/components/investor/InvestorPrivateMarketSummary";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
-import { getCompanyPledgeSummaries } from "@/lib/data/investor-pledges";
+import { getCompanyPledgeSummaries, type CompanyPledgeSummary } from "@/lib/data/investor-pledges";
+import { getCompanyMetricHistory } from "@/lib/investor/metric-snapshots";
+import { isFillingFast, readinessTrend, type MetricSnapshot } from "@/lib/investor/metric-trends";
 import {
   averageReadiness,
   fillPercent,
@@ -40,15 +42,22 @@ export default async function InvestorOpportunitiesPage() {
   const rankedMatches = matches ?? [];
   const companyIds = rankedMatches.map((row) => row.company.id);
 
-  // Aggregate indicated interest per company (across all investors) → fill bars.
-  const pledgeSummaries = companyIds.length
-    ? await getCompanyPledgeSummaries(supabase, companyIds)
-    : {};
+  // Aggregate indicated interest per company (fill bars) + snapshot history (trend / filling fast).
+  let pledgeSummaries: Record<string, CompanyPledgeSummary> = {};
+  let history = new Map<string, MetricSnapshot[]>();
+  if (companyIds.length) {
+    [pledgeSummaries, history] = await Promise.all([
+      getCompanyPledgeSummaries(supabase, companyIds),
+      getCompanyMetricHistory(supabase, companyIds, 30),
+    ]);
+  }
 
   const deals: PrivateMarketDeal[] = rankedMatches.map((row) => {
     const summary = pledgeSummaries[row.company.id];
     const totalIndicated = summary?.totalPledged ?? 0;
     const fundingTarget = row.company.fundingAmount ?? null;
+    const snaps = history.get(row.company.id) ?? [];
+    const trend = readinessTrend(snaps);
     return {
       companyId: row.company.id,
       companyName: row.company.companyName,
@@ -61,6 +70,8 @@ export default async function InvestorOpportunitiesPage() {
       fundingTarget,
       fillPct: fillPercent(totalIndicated, fundingTarget),
       currency: summary?.currency ?? "USD",
+      trend,
+      fillingFast: isFillingFast(snaps),
     };
   });
 
@@ -79,6 +90,7 @@ export default async function InvestorOpportunitiesPage() {
     indicated30d,
     indicated30dCount,
     avgReadiness: averageReadiness(deals.map((d) => d.readinessScore)),
+    fillingFastCount: deals.filter((d) => d.fillingFast).length,
   };
 
   return (

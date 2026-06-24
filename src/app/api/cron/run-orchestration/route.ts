@@ -6,8 +6,19 @@ import {
   validateCronSecret,
 } from "@/lib/notifications/cron/auth";
 import { runCronOrchestrationPass } from "@/lib/notifications/orchestration/run-cron-pass";
+import { captureCompanyMetricSnapshots } from "@/lib/investor/metric-snapshots";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const maxDuration = 60;
+
+/** Best-effort daily metric snapshot. Never allowed to fail the cron pass. */
+async function captureMetricSnapshotsSafely(): Promise<{ captured: number } | { error: string }> {
+  try {
+    return await captureCompanyMetricSnapshots(createServiceRoleClient());
+  } catch (error) {
+    return { error: error instanceof Error ? error.message.slice(0, 200) : "snapshot failed" };
+  }
+}
 
 async function handleCron(request: Request) {
   if (!getCronSecret()) {
@@ -23,7 +34,8 @@ async function handleCron(request: Request) {
 
   try {
     const result = await runCronOrchestrationPass({ triggerSource: "cron", forceDigest });
-    return NextResponse.json(result, { status: result.success ? 200 : 207 });
+    const snapshots = await captureMetricSnapshotsSafely();
+    return NextResponse.json({ ...result, snapshots }, { status: result.success ? 200 : 207 });
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 200) : "Orchestration pass failed.";
     return NextResponse.json(

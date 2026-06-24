@@ -1,4 +1,4 @@
-import { LayoutGrid, Wallet, Gauge } from "lucide-react";
+import { LayoutGrid, Wallet, Gauge, Flame } from "lucide-react";
 import type { PrivateMarketSummary } from "@/lib/investor/private-market";
 
 function money(amount: number, currency = "USD") {
@@ -25,6 +25,14 @@ export function InvestorPrivateMarketSummary({
       bg: "var(--indigo-soft)",
     },
     {
+      icon: Flame,
+      label: "Filling fast",
+      value: String(summary.fillingFastCount),
+      sub: "gaining indicated interest",
+      tint: "var(--teal)",
+      bg: "var(--teal-muted)",
+    },
+    {
       icon: Wallet,
       label: "Your indicated · 30d",
       value: money(summary.indicated30d, currency),
@@ -32,8 +40,8 @@ export function InvestorPrivateMarketSummary({
         summary.indicated30dCount > 0
           ? `across ${summary.indicated30dCount} deal${summary.indicated30dCount === 1 ? "" : "s"} · non-binding`
           : "non-binding indications",
-      tint: "var(--teal)",
-      bg: "var(--teal-muted)",
+      tint: "var(--blue)",
+      bg: "var(--blue-muted)",
     },
     {
       icon: Gauge,
@@ -46,7 +54,7 @@ export function InvestorPrivateMarketSummary({
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {cards.map((c) => {
         const Icon = c.icon;
         return (
