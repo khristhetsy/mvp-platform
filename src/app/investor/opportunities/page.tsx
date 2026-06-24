@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { InvestorPrivateMarketBoard } from "@/components/investor/InvestorPrivateMarketBoard";
 import { InvestorPrivateMarketSummary } from "@/components/investor/InvestorPrivateMarketSummary";
+import { InvestorPrivateMarketTicker } from "@/components/investor/InvestorPrivateMarketTicker";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { getCompanyPledgeSummaries, type CompanyPledgeSummary } from "@/lib/data/investor-pledges";
@@ -120,6 +121,8 @@ export default async function InvestorOpportunitiesPage() {
             </p>
           }
         />
+
+        <InvestorPrivateMarketTicker deals={deals} />
 
         <InvestorPrivateMarketSummary summary={summary} />
 
