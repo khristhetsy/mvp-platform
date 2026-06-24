@@ -198,9 +198,9 @@ export default async function Home() {
             </div>
           ) : null}
 
-          {/* Real stats card */}
+          {/* Stats + deal board — one connected card */}
           <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[var(--shadow-card)]">
-            <div className="grid grid-cols-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 border-b border-slate-200 sm:grid-cols-4">
               {statCells.map((s, i) => (
                 <div
                   key={s.l}
@@ -211,11 +211,8 @@ export default async function Home() {
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Real deal board, or honest empty state */}
-          {dealRows.length > 0 ? (
-            <div className="mt-6">
+            {dealRows.length > 0 ? (
               <MarketingScoredBoard
                 title="Diligence-ready deals"
                 meta={`${dealRows.length} live · ranked by readiness`}
@@ -223,14 +220,15 @@ export default async function Home() {
                 metricLabel="Indicated"
                 rows={dealRows}
                 note="Live"
+                bare
               />
-            </div>
-          ) : (
-            <p className="mt-6 rounded-2xl border border-slate-200 bg-white px-5 py-6 text-center text-sm text-slate-500 shadow-sm">
-              No published deals on the marketplace yet. Approved companies appear here once diligence and publication are
-              complete.
-            </p>
-          )}
+            ) : (
+              <p className="px-5 py-6 text-center text-sm text-slate-500">
+                No published deals on the marketplace yet. Approved companies appear here once diligence and publication
+                are complete.
+              </p>
+            )}
+          </div>
         </div>
       </section>
 
