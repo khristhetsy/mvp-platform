@@ -15,14 +15,6 @@ const trustBadges = [
   { icon: ShieldCheck, label: "Built for Compliance" },
 ];
 
-const READINESS_DIMS = [
-  { label: "Narrative", pct: 88 },
-  { label: "Financials", pct: 79 },
-  { label: "Materials", pct: 85 },
-  { label: "Governance", pct: 82 },
-  { label: "Diligence", pct: 86 },
-];
-
 const featureCards = [
   { title: "AI Diligence", copy: "Summarize documents, flag gaps, and generate investor-ready diligence briefs with human review checkpoints.", icon: Brain, iconBg: "bg-[var(--blue-muted)]", iconColor: "text-[var(--blue)]" },
   { title: "Investor Readiness", copy: "Structured readiness scoring, remediation tasks, and campaign preparation aligned to institutional review.", icon: BarChart3, iconBg: "bg-[var(--teal-muted)]", iconColor: "text-[var(--teal)]" },
@@ -68,6 +60,16 @@ export default async function Home() {
 
   const tickerLoop = [...stats.deals, ...stats.deals];
 
+  // Hero readiness card — wired to real platform data.
+  const avg = stats.avgReadiness;
+  const gaugeOffset = 182 - (182 * Math.min(100, Math.max(0, avg))) / 100;
+  const readinessLabel = avg <= 0 ? "Awaiting data" : avg >= 80 ? "Strong" : avg >= 70 ? "Moderate" : "Building";
+  const readinessRows = stats.deals.slice(0, 5).map((d) => ({
+    label: d.symbol,
+    pct: d.readiness != null ? Math.min(100, Math.max(0, d.readiness)) : 0,
+    value: d.readiness != null ? Math.round(d.readiness).toString() : "—",
+  }));
+
   return (
     <MarketingShell>
       {/* Hero */}
@@ -107,35 +109,43 @@ export default async function Home() {
             </div>
           </div>
 
-          {/* Readiness proof card (product preview) */}
+          {/* Market readiness card — real platform data */}
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[var(--shadow-card)]">
             <div className="flex items-center gap-4">
               <div className="relative h-[72px] w-[72px] shrink-0">
                 <svg width="72" height="72" style={{ transform: "rotate(-90deg)" }}>
                   <circle cx="36" cy="36" r="29" fill="none" stroke="#e2e8f0" strokeWidth="6" />
-                  <circle cx="36" cy="36" r="29" fill="none" stroke="var(--teal)" strokeWidth="6" strokeLinecap="round" strokeDasharray="182" strokeDashoffset="29" />
+                  <circle cx="36" cy="36" r="29" fill="none" stroke="var(--teal)" strokeWidth="6" strokeLinecap="round" strokeDasharray="182" strokeDashoffset={gaugeOffset} />
                 </svg>
-                <span className="absolute inset-0 flex items-center justify-center font-mono text-[21px] font-bold text-[var(--teal)]">84</span>
+                <span className="absolute inset-0 flex items-center justify-center font-mono text-[21px] font-bold text-[var(--teal)]">
+                  {avg > 0 ? Math.round(avg) : 0}
+                </span>
               </div>
               <div>
-                <div className="font-mono text-[9.5px] uppercase tracking-[0.1em] text-slate-400">Your readiness</div>
-                <div className="mt-0.5 text-[17px] font-bold text-[var(--navy)]">Strong</div>
-                <div className="font-mono text-[11px] text-[var(--teal)]">▲ 3.2 this week</div>
+                <div className="font-mono text-[9.5px] uppercase tracking-[0.1em] text-slate-400">Avg readiness</div>
+                <div className="mt-0.5 text-[17px] font-bold text-[var(--navy)]">{readinessLabel}</div>
+                <div className="font-mono text-[11px] text-slate-400">{stats.diligenceReady} diligence-ready</div>
               </div>
             </div>
             <div className="mt-5 flex flex-col gap-2.5">
-              {READINESS_DIMS.map((d) => (
-                <div key={d.label} className="grid grid-cols-[78px_1fr_28px] items-center gap-2.5 text-[11.5px] text-slate-500">
-                  <span>{d.label}</span>
-                  <span className="h-1.5 overflow-hidden rounded-full bg-slate-200">
-                    <span className="block h-full rounded-full bg-[var(--teal)]" style={{ width: `${d.pct}%` }} />
-                  </span>
-                  <span className="text-right font-mono font-semibold text-[var(--navy)]">{d.pct}</span>
-                </div>
-              ))}
+              {readinessRows.length > 0 ? (
+                readinessRows.map((d) => (
+                  <div key={d.label} className="grid grid-cols-[78px_1fr_28px] items-center gap-2.5 text-[11.5px] text-slate-500">
+                    <span className="truncate font-mono text-[10.5px] text-[var(--navy)]">{d.label}</span>
+                    <span className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+                      <span className="block h-full rounded-full bg-[var(--teal)]" style={{ width: `${d.pct}%` }} />
+                    </span>
+                    <span className="text-right font-mono font-semibold text-[var(--navy)]">{d.value}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="py-3 text-center text-[12px] text-slate-400">
+                  No published companies yet — scores appear as the marketplace fills.
+                </p>
+              )}
             </div>
-            <Link href="/founders" className="mt-5 block rounded-lg bg-[var(--navy)] py-2.5 text-center text-[13px] font-semibold text-white">
-              View your readiness →
+            <Link href="/deals" className="mt-5 block rounded-lg bg-[var(--navy)] py-2.5 text-center text-[13px] font-semibold text-white">
+              Explore the market →
             </Link>
           </div>
         </div>
