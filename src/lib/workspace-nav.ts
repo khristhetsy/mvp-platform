@@ -216,6 +216,7 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
     ],
   },
   { href: "/founder/documents", label: "Documents", minStage: "qualify" },
+  { href: "/founder/private-market", label: "Private Market" },
   {
     href: "/founder/investors",
     label: "Fundraising",
@@ -293,9 +294,9 @@ export const investorWorkspaceNav: WorkspaceNavItem[] = [
   },
   {
     href: "/investor/opportunities",
-    label: "Deals",
+    label: "Private Market",
     children: [
-      { href: "/investor/opportunities", label: "Opportunities" },
+      { href: "/investor/opportunities", label: "Overview" },
       { href: "/investor/watchlist", label: "Watchlist" },
       { href: "/investor/interest-pipeline", label: "Interest Pipeline" },
       { href: "/investor/deal-room", label: "Deal Room" },
