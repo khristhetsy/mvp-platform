@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { Bot, Lock, ShieldCheck, Sparkles, Brain, BarChart3, Building2, TrendingUp, Star, Coins, Eye } from "lucide-react";
+import { Bot, Lock, ShieldCheck, Sparkles, Brain, BarChart3, Building2 } from "lucide-react";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
-import { MarketingDashboardPreview } from "@/components/marketing/MarketingDashboardPreview";
 import { MarketingFooter } from "@/components/MarketingFooter";
-import { MarketingLiveTicker, type TickerItem } from "@/components/marketing/MarketingLiveTicker";
 import { MarketingScoredBoard, type ScoredBoardRow } from "@/components/marketing/MarketingScoredBoard";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { CapitalOSLogo } from "@/components/CapitalOSLogo";
+import { loadPublicMarketStats } from "@/lib/marketing/market-stats";
+
+export const dynamic = "force-dynamic";
 
 const trustBadges = [
   { icon: Sparkles, label: "AI-Powered Diligence" },
@@ -14,20 +15,12 @@ const trustBadges = [
   { icon: ShieldCheck, label: "Built for Compliance" },
 ];
 
-const TICKER: TickerItem[] = [
-  { Icon: TrendingUp, tone: "amber", label: "NVST·AK", detail: "$2.1M deployed", when: "3m" },
-  { Icon: Star, tone: "indigo", label: "MRDN·7", detail: "→ FOX·EYES", when: "11m" },
-  { Icon: Coins, tone: "teal", label: "NVST·AK", detail: "+$500K → FOX·EYES", when: "18m" },
-  { Icon: Eye, tone: "blue", label: "HLO·CAP", detail: "reviewed HEART·SX", when: "26m" },
-  { Icon: TrendingUp, tone: "teal", label: "VRT·X", detail: "quality 73.2", when: "35m" },
-  { Icon: Star, tone: "indigo", label: "HLO·CAP", detail: "→ DMND·AI", when: "1h" },
-];
-
-const DEAL_ROWS: ScoredBoardRow[] = [
-  { symbol: "FOX·EYES", name: "FoxEyes Vision AI", score: 84.0, band: "high", metricMain: "72% indicated", metricSub: "$1.8M / $2.5M", tags: ["AI", "Vision"] },
-  { symbol: "DMND·AI", name: "Diamond AI", score: 80.5, band: "high", metricMain: "60% indicated", metricSub: "$1.2M / $2.0M", tags: ["AI", "Infra"] },
-  { symbol: "HEART·SX", name: "HeartScoreX MRI", score: 76.4, band: "mid", metricMain: "44% indicated", metricSub: "$880K / $2.0M", tags: ["Health"] },
-  { symbol: "VRDE·Ca", name: "Verde Cargo", score: 62.8, band: "low", metricMain: "18% indicated", metricSub: "$270K / $1.5M", tags: ["Climate"] },
+const READINESS_DIMS = [
+  { label: "Narrative", pct: 88 },
+  { label: "Financials", pct: 79 },
+  { label: "Materials", pct: 85 },
+  { label: "Governance", pct: 82 },
+  { label: "Diligence", pct: 86 },
 ];
 
 const featureCards = [
@@ -37,7 +30,44 @@ const featureCards = [
   { title: "Marketplace Access", copy: "Publish admin-approved opportunities with disclosures, risk context, and non-binding investor actions.", icon: Building2, iconBg: "bg-amber-50", iconColor: "text-amber-600" },
 ];
 
-export default function Home() {
+function money(n: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    notation: n >= 1_000_000 ? "compact" : "standard",
+    maximumFractionDigits: n >= 1_000_000 ? 1 : 0,
+  }).format(n);
+}
+
+function band(readiness: number | null): "high" | "mid" | "low" {
+  if (readiness == null) return "low";
+  if (readiness >= 80) return "high";
+  if (readiness >= 70) return "mid";
+  return "low";
+}
+
+export default async function Home() {
+  const stats = await loadPublicMarketStats();
+
+  const statCells = [
+    { v: money(stats.indicated30d), l: "indicated · 30d", tone: "text-[var(--teal)]" },
+    { v: String(stats.activeInvestors), l: "active investors", tone: "text-[var(--navy)]" },
+    { v: String(stats.diligenceReady), l: "diligence-ready", tone: "text-[var(--navy)]" },
+    { v: stats.avgReadiness > 0 ? stats.avgReadiness.toFixed(1) : "0", l: "avg readiness", tone: "text-[var(--indigo)]" },
+  ];
+
+  const dealRows: ScoredBoardRow[] = stats.deals.map((d) => ({
+    symbol: d.symbol,
+    name: d.name,
+    score: d.readiness ?? 0,
+    band: band(d.readiness),
+    metricMain: d.fillPct != null ? `${d.fillPct}% indicated` : "—",
+    metricSub: d.fundingTarget != null ? `${money(d.totalIndicated)} / ${money(d.fundingTarget)}` : "no target",
+    tags: d.sector ? [d.sector] : [],
+  }));
+
+  const tickerLoop = [...stats.deals, ...stats.deals];
+
   return (
     <MarketingShell>
       {/* Hero */}
@@ -45,25 +75,26 @@ export default function Home() {
         className="px-4 py-10 lg:px-8 lg:py-14"
         style={{ background: "radial-gradient(960px 460px at 75% -10%, var(--blue-muted), transparent 70%)" }}
       >
-        <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr] xl:items-start">
+        <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr] xl:items-center">
           <div className="flex flex-col justify-center">
             <CapitalOSLogo height={52} priority className="mb-6" />
-            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--blue-border)] bg-[var(--blue-muted)] px-3.5 py-1.5 font-mono text-[11.5px] text-[var(--blue)]">
-              <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--blue)] text-[var(--blue)]" />
-              One private market where readiness meets capital
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--indigo-soft)] bg-[var(--indigo-soft)] px-3.5 py-1.5 font-mono text-[11.5px] text-[var(--indigo)]">
+              <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--indigo)] text-[var(--indigo)]" />
+              Live · {money(stats.indicated30d)} indicated · 30d
             </span>
             <h1 className="mt-5 max-w-2xl text-4xl font-semibold leading-tight tracking-tight text-[var(--navy)] md:text-5xl lg:text-[3.25rem]">
-              The operating system for capital-ready companies.
+              The operating system for <span className="text-[var(--indigo)]">capital-ready</span> companies.
             </h1>
             <p className="mt-4 max-w-xl text-base leading-7 text-slate-600 md:text-lg">
-              AI diligence, investor readiness, data rooms, and marketplace preparation — all in one institutional platform.
+              AI diligence, investor readiness, secure data rooms, and a private market where scored founders meet
+              quality investors.
             </p>
             <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
-              <Link href="/auth/sign-up" className="cap-btn-primary rounded-lg px-5 py-2.5 text-center text-sm font-semibold">
-                Get Started as Founder
+              <Link href="/auth/sign-up" className="cap-btn-primary rounded-lg px-5 py-3 text-center text-sm font-semibold">
+                Get started as founder
               </Link>
-              <Link href="/investors" className="cap-btn-secondary rounded-lg px-5 py-2.5 text-center text-sm font-semibold">
-                Explore as Investor
+              <Link href="/investors" className="cap-btn-secondary rounded-lg px-5 py-3 text-center text-sm font-semibold">
+                Explore as investor
               </Link>
             </div>
             <div className="mt-6 flex flex-wrap gap-2">
@@ -75,7 +106,38 @@ export default function Home() {
               ))}
             </div>
           </div>
-          <MarketingDashboardPreview />
+
+          {/* Readiness proof card (product preview) */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[var(--shadow-card)]">
+            <div className="flex items-center gap-4">
+              <div className="relative h-[72px] w-[72px] shrink-0">
+                <svg width="72" height="72" style={{ transform: "rotate(-90deg)" }}>
+                  <circle cx="36" cy="36" r="29" fill="none" stroke="#e2e8f0" strokeWidth="6" />
+                  <circle cx="36" cy="36" r="29" fill="none" stroke="var(--teal)" strokeWidth="6" strokeLinecap="round" strokeDasharray="182" strokeDashoffset="29" />
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center font-mono text-[21px] font-bold text-[var(--teal)]">84</span>
+              </div>
+              <div>
+                <div className="font-mono text-[9.5px] uppercase tracking-[0.1em] text-slate-400">Your readiness</div>
+                <div className="mt-0.5 text-[17px] font-bold text-[var(--navy)]">Strong</div>
+                <div className="font-mono text-[11px] text-[var(--teal)]">▲ 3.2 this week</div>
+              </div>
+            </div>
+            <div className="mt-5 flex flex-col gap-2.5">
+              {READINESS_DIMS.map((d) => (
+                <div key={d.label} className="grid grid-cols-[78px_1fr_28px] items-center gap-2.5 text-[11.5px] text-slate-500">
+                  <span>{d.label}</span>
+                  <span className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+                    <span className="block h-full rounded-full bg-[var(--teal)]" style={{ width: `${d.pct}%` }} />
+                  </span>
+                  <span className="text-right font-mono font-semibold text-[var(--navy)]">{d.pct}</span>
+                </div>
+              ))}
+            </div>
+            <Link href="/founders" className="mt-5 block rounded-lg bg-[var(--navy)] py-2.5 text-center text-[13px] font-semibold text-white">
+              View your readiness →
+            </Link>
+          </div>
         </div>
 
         <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-y border-slate-200/80 py-5">
@@ -91,28 +153,74 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Live private market preview */}
+      {/* Live private market — real data */}
       <section className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-14 lg:px-8">
         <div className="mx-auto max-w-5xl">
           <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">The Private Market</p>
           <h2 className="mt-3 text-center text-2xl font-semibold tracking-tight text-[var(--navy)] md:text-3xl">
-            Both sides scored. Both sides see the market move.
+            Scored founders. Quality investors. Real activity.
           </h2>
-          <p className="mx-auto mt-3 max-w-[52ch] text-center text-sm text-slate-600">
-            Scored founders, quality investors, and indicated interest in the open — a preview of the surface members use.
-          </p>
-          <div className="mt-8">
-            <MarketingLiveTicker items={TICKER} label="Sample · Private Market activity" />
+
+          {/* Real-deal ticker (only when there are deals) */}
+          {stats.deals.length > 0 ? (
+            <div className="cap-marquee-host mt-8">
+              <div className="relative flex h-11 items-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <span className="z-10 flex h-full items-center gap-2 border-r border-slate-200 bg-white px-4 font-mono text-[10.5px] uppercase tracking-[0.1em] text-[var(--teal)]">
+                  <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--teal)] text-[var(--teal)]" />
+                  Live
+                </span>
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-slate-50 to-transparent" aria-hidden />
+                <div className="cap-marquee flex w-max items-center whitespace-nowrap">
+                  {tickerLoop.map((d, i) => (
+                    <span key={`${d.symbol}-${i}`} className="flex h-5 items-center gap-2 border-r border-slate-200 px-5 text-[12.5px]">
+                      <span className="font-mono text-[12px] font-semibold text-[var(--navy)]">{d.symbol}</span>
+                      {d.sector ? <span className="font-mono text-[11px] text-slate-400">{d.sector}</span> : null}
+                      <span className="font-mono text-[11px] text-slate-500">
+                        {d.readiness != null ? `readiness ${d.readiness.toFixed(1)}` : "readiness —"}
+                      </span>
+                      <span className="font-mono text-[11px] font-semibold text-[var(--teal)]">
+                        {d.fillPct != null ? `${d.fillPct}% indicated` : "—"}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Real stats card */}
+          <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[var(--shadow-card)]">
+            <div className="grid grid-cols-2 sm:grid-cols-4">
+              {statCells.map((s, i) => (
+                <div
+                  key={s.l}
+                  className={`border-slate-200 px-5 py-5 text-center ${i < statCells.length - 1 ? "sm:border-r" : ""} ${i % 2 === 0 ? "border-r" : ""} ${i < 2 ? "border-b sm:border-b-0" : ""}`}
+                >
+                  <div className={`font-mono text-[23px] font-semibold ${s.tone}`}>{s.v}</div>
+                  <div className="mt-1.5 font-mono text-[10px] text-slate-400">{s.l}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="mt-6">
-            <MarketingScoredBoard
-              title="Diligence-ready deals"
-              meta="4 deals · ranked by readiness"
-              scoreLabel="Readiness"
-              metricLabel="Indicated"
-              rows={DEAL_ROWS}
-            />
-          </div>
+
+          {/* Real deal board, or honest empty state */}
+          {dealRows.length > 0 ? (
+            <div className="mt-6">
+              <MarketingScoredBoard
+                title="Diligence-ready deals"
+                meta={`${dealRows.length} live · ranked by readiness`}
+                scoreLabel="Readiness"
+                metricLabel="Indicated"
+                rows={dealRows}
+                note="Live"
+              />
+            </div>
+          ) : (
+            <p className="mt-6 rounded-2xl border border-slate-200 bg-white px-5 py-6 text-center text-sm text-slate-500 shadow-sm">
+              No published deals on the marketplace yet. Approved companies appear here once diligence and publication are
+              complete.
+            </p>
+          )}
         </div>
       </section>
 

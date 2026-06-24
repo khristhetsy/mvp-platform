@@ -36,12 +36,14 @@ export function MarketingScoredBoard({
   scoreLabel,
   metricLabel,
   rows,
+  note = "Illustrative",
 }: Readonly<{
   title: string;
   meta: string;
   scoreLabel: string;
   metricLabel: string;
   rows: ScoredBoardRow[];
+  note?: string;
 }>) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[var(--shadow-card)]">
@@ -55,7 +57,7 @@ export function MarketingScoredBoard({
             <p className="font-mono text-[11px] text-slate-400">{meta}</p>
           </div>
         </div>
-        <span className="font-mono text-[11px] text-slate-400">Illustrative</span>
+        <span className="font-mono text-[11px] text-slate-400">{note}</span>
       </div>
 
       <div className="hidden grid-cols-[1.7fr_0.9fr_1.1fr_0.8fr] gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 font-mono text-[9.5px] uppercase tracking-wide text-slate-400 sm:grid">
