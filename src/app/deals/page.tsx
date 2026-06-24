@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { Gauge, Star, LayoutGrid, ArrowRight } from "lucide-react";
+import { Gauge, Star, LayoutGrid, ArrowRight, TrendingUp, Coins } from "lucide-react";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
+import { MarketingLiveTicker, type TickerItem } from "@/components/marketing/MarketingLiveTicker";
 import { MarketingMarketPreview } from "@/components/marketing/MarketingMarketPreview";
 import { MarketingMarketplacePlaceholder } from "@/components/marketing/MarketingMarketplacePlaceholder";
+import { MarketingScoredBoard, type ScoredBoardRow } from "@/components/marketing/MarketingScoredBoard";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { OpportunityCard } from "@/components/OpportunityCard";
 import { getCompanyPledgeSummaries, emptyCompanyPledgeSummary } from "@/lib/data/investor-pledges";
@@ -17,6 +19,28 @@ const TWO_SIDED = [
   { icon: Gauge, title: "Founders earn readiness", copy: "A 0–100 Capital Readiness Score across five diligence dimensions. Only diligence-ready deals reach the market.", color: "bg-[var(--teal-muted)] text-[var(--teal)]" },
   { icon: Star, title: "Investors earn quality", copy: "A two-sided rating means founders see investor quality too — who's active, who deploys, who follows through.", color: "bg-[var(--indigo-soft)] text-[var(--indigo)]" },
   { icon: LayoutGrid, title: "Activity in the open", copy: "Indicated interest, reviews, and score moves are visible — so both sides see a market that's genuinely alive.", color: "bg-[var(--blue-muted)] text-[var(--blue)]" },
+];
+
+const DEAL_TICKER: TickerItem[] = [
+  { Icon: Coins, tone: "teal", label: "AI vision deal", detail: "+$500K indicated", when: "2d" },
+  { Icon: TrendingUp, tone: "teal", label: "Healthtech deal", detail: "84 readiness", when: "3d" },
+  { Icon: Star, tone: "indigo", label: "Top-quartile investor", detail: "reviewed a deal", when: "4d" },
+  { Icon: TrendingUp, tone: "amber", label: "AI deal", detail: "72% indicated", when: "5d" },
+  { Icon: Coins, tone: "teal", label: "Climate deal", detail: "+$300K indicated", when: "6d" },
+];
+
+const MARKET_STATS = [
+  { v: "$4.2M", l: "indicated · 30d", tone: "text-[var(--teal)]" },
+  { v: "42", l: "active investors", tone: "text-[var(--navy)]" },
+  { v: "23", l: "diligence-ready", tone: "text-[var(--navy)]" },
+  { v: "76.8", l: "avg readiness", tone: "text-[var(--indigo)]" },
+];
+
+const DEAL_ROWS: ScoredBoardRow[] = [
+  { symbol: "FOX·EYES", name: "FoxEyes Vision AI", score: 84.0, band: "high", metricMain: "72% indicated", metricSub: "$1.8M / $2.5M", tags: ["AI", "Vision"] },
+  { symbol: "DMND·AI", name: "Diamond AI", score: 80.5, band: "high", metricMain: "60% indicated", metricSub: "$1.2M / $2.0M", tags: ["AI", "Infra"] },
+  { symbol: "HEART·SX", name: "HeartScoreX MRI", score: 76.4, band: "mid", metricMain: "44% indicated", metricSub: "$880K / $2.0M", tags: ["Health"] },
+  { symbol: "VRDE·Ca", name: "Verde Cargo", score: 62.8, band: "low", metricMain: "18% indicated", metricSub: "$270K / $1.5M", tags: ["Climate"] },
 ];
 
 export default async function DealsPage() {
@@ -69,6 +93,41 @@ export default async function DealsPage() {
             </div>
           </div>
           <MarketingMarketPreview />
+        </div>
+      </section>
+
+      {/* Illustrative deal activity + market preview */}
+      <section className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-12 lg:px-8">
+        <div className="mx-auto max-w-5xl">
+          <MarketingLiveTicker items={DEAL_TICKER} label="Sample · deal activity" />
+
+          <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[var(--shadow-card)]">
+            <div className="grid grid-cols-2 sm:grid-cols-4">
+              {MARKET_STATS.map((s, i) => (
+                <div
+                  key={s.l}
+                  className={`border-slate-200 px-5 py-5 text-center ${i < MARKET_STATS.length - 1 ? "sm:border-r" : ""} ${i % 2 === 0 ? "border-r" : ""} ${i < 2 ? "border-b sm:border-b-0" : ""}`}
+                >
+                  <div className={`font-mono text-[23px] font-semibold ${s.tone}`}>{s.v}</div>
+                  <div className="mt-1.5 font-mono text-[10px] text-slate-400">{s.l}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <MarketingScoredBoard
+              title="Diligence-ready deals"
+              meta="4 deals · ranked by readiness"
+              scoreLabel="Readiness"
+              metricLabel="Indicated"
+              rows={DEAL_ROWS}
+            />
+          </div>
+
+          <p className="mt-3 text-center font-mono text-[10px] text-slate-400">
+            Illustrative preview — sample figures, not live platform data.
+          </p>
         </div>
       </section>
 
