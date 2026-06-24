@@ -23,6 +23,14 @@
   --gold-hover: #3C3489;
   --gold-muted: #EEEDFB;
 
+  /* Indigo (alias of brand gold) + teal — Private Market surfaces */
+  --indigo: #534AB7;
+  --indigo-hover: #3C3489;
+  --indigo-soft: #EEEDFB;
+  --teal: #0D9488;
+  --teal-hover: #0f766e;
+  --teal-muted: #ecfdf5;
+
   /* Primary blue accent (Full Light theme) */
   --blue: #2563eb;
   --blue-hover: #1d4ed8;

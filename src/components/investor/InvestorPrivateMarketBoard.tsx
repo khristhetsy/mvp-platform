@@ -1,0 +1,211 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { ChevronRight, LayoutGrid } from "lucide-react";
+import {
+  readinessBand,
+  type PrivateMarketDeal,
+} from "@/lib/investor/private-market";
+
+type SortBy = "match" | "readiness" | "fill";
+
+const SORTS: { key: SortBy; label: string }[] = [
+  { key: "match", label: "Match" },
+  { key: "readiness", label: "Readiness" },
+  { key: "fill", label: "Filling" },
+];
+
+function compactMoney(amount: number, currency = "USD") {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    notation: amount >= 1_000_000 ? "compact" : "standard",
+    maximumFractionDigits: amount >= 1_000_000 ? 1 : 0,
+  }).format(amount);
+}
+
+const BAND_STYLE: Record<string, { sigil: string; price: string }> = {
+  high: { sigil: "bg-[var(--teal-muted)] text-[var(--teal)]", price: "text-[var(--teal)]" },
+  mid: { sigil: "bg-[var(--blue-muted)] text-[var(--blue)]", price: "text-[var(--navy)]" },
+  low: { sigil: "bg-slate-100 text-slate-400", price: "text-slate-600" },
+  none: { sigil: "bg-slate-100 text-slate-400", price: "text-slate-500" },
+};
+
+function dealHref(deal: PrivateMarketDeal) {
+  return deal.slug
+    ? `/deals/${deal.slug}`
+    : `/investor/opportunities/${deal.companyId}/report`;
+}
+
+export function InvestorPrivateMarketBoard({
+  deals,
+}: Readonly<{ deals: PrivateMarketDeal[] }>) {
+  const [sortBy, setSortBy] = useState<SortBy>("match");
+
+  const sorted = useMemo(() => {
+    return [...deals].sort((a, b) => {
+      if (sortBy === "readiness") return (b.readinessScore ?? 0) - (a.readinessScore ?? 0);
+      if (sortBy === "fill") return (b.fillPct ?? -1) - (a.fillPct ?? -1);
+      return b.matchScore - a.matchScore;
+    });
+  }, [deals, sortBy]);
+
+  if (deals.length === 0) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">
+        No marketplace listings match your thesis yet. Complete investor onboarding to
+        improve match quality, or browse the full marketplace.
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      {/* header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--navy)] font-mono text-[11px] font-semibold text-white">
+            <LayoutGrid className="h-4 w-4" />
+          </span>
+          <div>
+            <h2 className="text-[15px] font-semibold text-[var(--navy)]">Deals</h2>
+            <p className="font-mono text-[11px] text-slate-400">
+              {deals.length} diligence-ready · ranked to your thesis
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-1.5">
+          {SORTS.map((s) => (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => setSortBy(s.key)}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                sortBy === s.key
+                  ? "border-[var(--indigo)] bg-[var(--indigo-soft)] text-[var(--indigo)]"
+                  : "border-slate-200 bg-white text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* legend */}
+      <div className="hidden grid-cols-[1.7fr_0.9fr_0.6fr_0.8fr_1.2fr_0.8fr_24px] gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 font-mono text-[9.5px] uppercase tracking-wide text-slate-400 md:grid">
+        <div>Symbol</div>
+        <div className="text-right">Readiness</div>
+        <div className="text-right">Trend</div>
+        <div className="text-right">Your match</div>
+        <div>Indicated interest</div>
+        <div>Sector</div>
+        <div />
+      </div>
+
+      {/* rows */}
+      <div>
+        {sorted.map((deal) => {
+          const band = readinessBand(deal.readinessScore);
+          const style = BAND_STYLE[band.key];
+          return (
+            <Link
+              key={deal.companyId}
+              href={dealHref(deal)}
+              className="group grid grid-cols-[1fr_auto] items-center gap-3 border-b border-slate-100 px-5 py-4 transition-colors last:border-b-0 hover:bg-[var(--blue-muted)] md:grid-cols-[1.7fr_0.9fr_0.6fr_0.8fr_1.2fr_0.8fr_24px]"
+            >
+              {/* symbol */}
+              <div className="flex min-w-0 items-center gap-3">
+                <span
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-mono text-[12px] font-semibold ${style.sigil}`}
+                >
+                  {deal.symbol.slice(0, 3)}
+                </span>
+                <div className="min-w-0">
+                  <div className="font-mono text-[13px] font-semibold text-[var(--navy)]">
+                    {deal.symbol}
+                  </div>
+                  <div className="truncate text-[11.5px] text-slate-400">
+                    {deal.companyName}
+                  </div>
+                </div>
+              </div>
+
+              {/* readiness */}
+              <div className="hidden text-right md:block">
+                <div className={`font-mono text-[19px] font-semibold leading-none ${style.price}`}>
+                  {deal.readinessScore != null ? deal.readinessScore.toFixed(1) : "—"}
+                </div>
+                <div className="mt-1 font-mono text-[9px] uppercase tracking-wide text-slate-400">
+                  {band.label}
+                </div>
+              </div>
+
+              {/* trend — placeholder until score-history snapshots land */}
+              <div
+                className="hidden text-right font-mono text-xs text-slate-300 md:block"
+                title="Trend data coming soon"
+              >
+                —
+              </div>
+
+              {/* match */}
+              <div className="hidden text-right md:block">
+                <div className="font-mono text-[15px] font-semibold text-[var(--indigo)]">
+                  {deal.matchScore}
+                </div>
+                <div className="font-mono text-[9px] uppercase tracking-wide text-slate-400">
+                  match
+                </div>
+              </div>
+
+              {/* fill */}
+              <div className="col-span-2 mt-3 md:col-span-1 md:mt-0">
+                {deal.fillPct != null ? (
+                  <>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+                      <div
+                        className="h-full rounded-full bg-[var(--teal)]"
+                        style={{ width: `${deal.fillPct}%` }}
+                      />
+                    </div>
+                    <div className="mt-1.5 flex justify-between font-mono text-[10px] text-slate-400">
+                      <span className="font-semibold text-slate-600">
+                        {deal.fillPct}% indicated
+                      </span>
+                      <span>
+                        {compactMoney(deal.totalIndicated, deal.currency)}
+                        {deal.fundingTarget != null
+                          ? ` / ${compactMoney(deal.fundingTarget, deal.currency)}`
+                          : ""}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <span className="font-mono text-[11px] text-slate-300">
+                    no target set
+                  </span>
+                )}
+              </div>
+
+              {/* sector */}
+              <div className="hidden flex-wrap gap-1.5 md:flex">
+                {deal.industry ? (
+                  <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[10px] text-slate-600">
+                    {deal.industry}
+                  </span>
+                ) : (
+                  <span className="font-mono text-[10px] text-slate-300">—</span>
+                )}
+              </div>
+
+              {/* caret */}
+              <ChevronRight className="hidden h-[18px] w-[18px] justify-self-end text-slate-300 transition-colors group-hover:text-[var(--indigo)] md:block" />
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
