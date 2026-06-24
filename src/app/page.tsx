@@ -237,6 +237,12 @@ export default async function Home() {
       {/* Features */}
       <section className="px-4 py-14 lg:px-8">
         <div className="mx-auto max-w-6xl">
+          <div className="mb-9 text-center">
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">The platform</p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--navy)] md:text-3xl">
+              Everything you need, in one institutional platform.
+            </h2>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {featureCards.map((card) => (
               <article key={card.title} className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)] transition hover:shadow-[var(--shadow-card)]">
