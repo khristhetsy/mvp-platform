@@ -1,6 +1,7 @@
 import { LayoutGrid, Star, Gauge } from "lucide-react";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderPrivateMarketBoard } from "@/components/founder/FounderPrivateMarketBoard";
+import { FounderPrivateMarketTicker } from "@/components/founder/FounderPrivateMarketTicker";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
@@ -44,6 +45,8 @@ export default async function FounderPrivateMarketPage() {
           </WorkspacePanel>
         ) : (
           <>
+            <FounderPrivateMarketTicker rows={board.rows} />
+
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {cards.map((c) => {
                 const Icon = c.icon;
