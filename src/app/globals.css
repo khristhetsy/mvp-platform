@@ -180,6 +180,45 @@ select {
   background: var(--background);
 }
 
+/* Marketing "live" motion — ticker marquee + pulsing blip. */
+@keyframes cap-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes cap-ping {
+  to {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+.cap-marquee {
+  animation: cap-marquee 46s linear infinite;
+}
+.cap-marquee-host:hover .cap-marquee {
+  animation-play-state: paused;
+}
+.cap-ping {
+  position: relative;
+}
+.cap-ping::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 9999px;
+  border: 1.5px solid currentColor;
+  opacity: 0.5;
+  animation: cap-ping 1.8s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cap-marquee {
+    animation: none;
+  }
+  .cap-ping::after {
+    animation: none;
+  }
+}
+
 .cap-surface-card {
   @apply rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)];
 }
