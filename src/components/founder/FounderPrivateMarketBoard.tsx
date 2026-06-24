@@ -13,6 +13,23 @@ const PRICE: Record<string, string> = {
 };
 const BAND_LABEL: Record<string, string> = { high: "Strong", mid: "Moderate", low: "Building" };
 
+function money(n: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    notation: n >= 1_000_000 ? "compact" : "standard",
+    maximumFractionDigits: n >= 1_000_000 ? 1 : 0,
+  }).format(n);
+}
+
+function Pulse({ momentum }: { momentum: FounderInvestorRow["momentum"] }) {
+  if (momentum === "active") return <span className="cap-ping inline-block h-2 w-2 rounded-full bg-[var(--teal)] text-[var(--teal)]" />;
+  if (momentum === "warm") return <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />;
+  return <span className="inline-block h-2 w-2 rounded-full bg-slate-300" />;
+}
+
+const COLS = "sm:grid-cols-[1.7fr_0.8fr_0.65fr_1.1fr_0.85fr_0.8fr]";
+
 export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInvestorRow[] }>) {
   if (rows.length === 0) {
     return (
@@ -38,19 +55,22 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
         <span className="font-mono text-[11px] text-slate-400">Identities hidden</span>
       </div>
 
-      <div className="hidden grid-cols-[1.7fr_0.9fr_1fr_0.9fr] gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 font-mono text-[9.5px] uppercase tracking-wide text-slate-400 sm:grid">
+      <div className={`hidden gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 font-mono text-[9.5px] uppercase tracking-wide text-slate-400 sm:grid ${COLS}`}>
         <div>Investor</div>
-        <div className="text-right">Your match</div>
-        <div>Check size</div>
-        <div>Sector focus</div>
+        <div className="text-right">Match</div>
+        <div className="text-right">Trend</div>
+        <div className="text-right">Pledge interest</div>
+        <div>Momentum</div>
+        <div>Sector</div>
       </div>
 
       <div>
         {rows.map((r) => (
           <div
             key={r.symbol}
-            className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-slate-100 px-5 py-4 transition-colors last:border-b-0 hover:bg-[var(--blue-muted)] sm:grid-cols-[1.7fr_0.9fr_1fr_0.9fr]"
+            className={`grid grid-cols-[1fr_auto] items-center gap-3 border-b border-slate-100 px-5 py-4 transition-colors last:border-b-0 hover:bg-[var(--blue-muted)] sm:grid ${COLS}`}
           >
+            {/* investor */}
             <div className="flex min-w-0 items-center gap-3">
               <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-mono text-[12px] font-semibold ${SIGIL[r.band]}`}>
                 {r.symbol.replace("INV·", "").slice(0, 3)}
@@ -61,15 +81,41 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
               </div>
             </div>
 
+            {/* match */}
             <div className="text-right">
-              <div className={`font-mono text-[19px] font-semibold leading-none ${PRICE[r.band]}`}>
-                {r.matchScore}
-              </div>
+              <div className={`font-mono text-[19px] font-semibold leading-none ${PRICE[r.band]}`}>{r.matchScore}</div>
               <div className="mt-1 font-mono text-[9px] uppercase tracking-wide text-slate-400">{BAND_LABEL[r.band]}</div>
             </div>
 
-            <div className="hidden font-mono text-[12.5px] font-semibold text-slate-700 sm:block">{r.checkSize}</div>
+            {/* trend — no investor-side history yet */}
+            <div className="hidden text-right font-mono text-xs text-slate-300 sm:block" title="Investor trend needs score history (not collected yet)">
+              —
+            </div>
 
+            {/* pledge interest */}
+            <div className="hidden text-right sm:block">
+              {r.pledgeCount > 0 ? (
+                <>
+                  <div className="font-mono text-[12.5px] font-semibold text-slate-700">
+                    {r.pledgeCount} pledge{r.pledgeCount === 1 ? "" : "s"}
+                  </div>
+                  <div className="font-mono text-[10px] text-slate-400">{money(r.indicated)} indicated</div>
+                </>
+              ) : (
+                <>
+                  <div className="font-mono text-[12.5px] font-semibold text-slate-400">0 pledges</div>
+                  <div className="font-mono text-[10px] text-slate-300">—</div>
+                </>
+              )}
+            </div>
+
+            {/* momentum */}
+            <div className="hidden items-center gap-2 font-mono text-[11px] text-slate-500 sm:flex">
+              <Pulse momentum={r.momentum} />
+              <span>{r.lastActiveLabel ?? "—"}</span>
+            </div>
+
+            {/* sector */}
             <div className="hidden flex-wrap gap-1.5 sm:flex">
               {r.sectors.length > 0 ? (
                 r.sectors.map((t) => (
