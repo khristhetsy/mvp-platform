@@ -40,6 +40,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ url: checkoutUrl });
   } catch (err) {
     console.error("[billing/checkout]", err);
-    return NextResponse.json({ error: "Failed to create checkout session." }, { status: 500 });
+    const detail = err instanceof Error ? err.message : String(err);
+    return NextResponse.json(
+      { error: `Checkout failed. ${detail.slice(0, 400)}` },
+      { status: 500 },
+    );
   }
 }
