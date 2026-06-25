@@ -53,7 +53,8 @@ export default async function Home() {
     name: d.name,
     score: d.readiness ?? 0,
     band: band(d.readiness),
-    metricMain: d.fillPct != null ? `${d.fillPct}% indicated` : "—",
+    trendDelta: d.trendDelta,
+    metricMain: d.fillPct != null ? `${d.fillPct}% indicated` : "0% indicated",
     metricSub: d.fundingTarget != null ? `${money(d.totalIndicated)} / ${money(d.fundingTarget)}` : "no target",
     tags: d.sector ? [d.sector] : [],
   }));
@@ -171,15 +172,16 @@ export default async function Home() {
             Scored founders. Quality investors. Real activity.
           </h2>
 
-          {/* Real-deal ticker (only when there are deals) */}
-          {stats.deals.length > 0 ? (
-            <div className="cap-marquee-host mt-8">
-              <div className="relative flex h-11 items-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          {/* Ticker + stats + deal board — one connected card */}
+          <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[var(--shadow-card)]">
+            {/* ticker = connected top strip */}
+            {stats.deals.length > 0 ? (
+              <div className="cap-marquee-host relative flex h-11 items-center overflow-hidden border-b border-slate-200">
                 <span className="z-10 flex h-full items-center gap-2 border-r border-slate-200 bg-white px-4 font-mono text-[10.5px] uppercase tracking-[0.1em] text-[var(--teal)]">
                   <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--teal)] text-[var(--teal)]" />
                   Live
                 </span>
-                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-slate-50 to-transparent" aria-hidden />
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-white to-transparent" aria-hidden />
                 <div className="cap-marquee flex w-max items-center whitespace-nowrap">
                   {tickerLoop.map((d, i) => (
                     <span key={`${d.symbol}-${i}`} className="flex h-5 items-center gap-2 border-r border-slate-200 px-5 text-[12.5px]">
@@ -189,17 +191,15 @@ export default async function Home() {
                         {d.readiness != null ? `readiness ${d.readiness.toFixed(1)}` : "readiness —"}
                       </span>
                       <span className="font-mono text-[11px] font-semibold text-[var(--teal)]">
-                        {d.fillPct != null ? `${d.fillPct}% indicated` : "—"}
+                        {d.fillPct != null ? `${d.fillPct}% indicated` : "0% indicated"}
                       </span>
                     </span>
                   ))}
                 </div>
               </div>
-            </div>
-          ) : null}
+            ) : null}
 
-          {/* Stats + deal board — one connected card */}
-          <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[var(--shadow-card)]">
+            {/* stats */}
             <div className="grid grid-cols-2 border-b border-slate-200 sm:grid-cols-4">
               {statCells.map((s, i) => (
                 <div
@@ -212,6 +212,7 @@ export default async function Home() {
               ))}
             </div>
 
+            {/* deal board */}
             {dealRows.length > 0 ? (
               <MarketingScoredBoard
                 title="Diligence-ready deals"
@@ -221,6 +222,7 @@ export default async function Home() {
                 rows={dealRows}
                 note="Live"
                 bare
+                showTrend
               />
             ) : (
               <p className="px-5 py-6 text-center text-sm text-slate-500">

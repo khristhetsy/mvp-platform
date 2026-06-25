@@ -8,6 +8,8 @@ export type ScoredBoardRow = {
   metricMain: string;
   metricSub: string;
   tags: string[];
+  /** Readiness Δ; shown only when the board has showTrend. 0 renders as "0". */
+  trendDelta?: number | null;
 };
 
 const SIGIL: Record<string, string> = {
@@ -26,9 +28,21 @@ const BAND_LABEL: Record<string, string> = {
   low: "Building",
 };
 
+function TrendCell({ delta }: { delta?: number | null }) {
+  if (delta == null || delta === 0) {
+    return <span className="font-mono text-[12.5px] font-semibold text-slate-300">0</span>;
+  }
+  const down = delta < 0;
+  return (
+    <span className={`font-mono text-[12.5px] font-semibold ${down ? "text-[var(--red,#A32D2D)]" : "text-[var(--teal)]"}`} style={down ? { color: "#A32D2D" } : undefined}>
+      {down ? "▼" : "▲"} {Math.abs(delta).toFixed(1)}
+    </span>
+  );
+}
+
 /**
- * Illustrative scored board for marketing pages (investors or deals). Sample
- * data only — presents the product surface, not live platform activity.
+ * Scored board for marketing pages (investors or deals). Sample data unless fed
+ * real rows (note="Live"). `showTrend` adds a Trend column (readiness Δ, 0 when none).
  */
 export function MarketingScoredBoard({
   title,
@@ -38,6 +52,7 @@ export function MarketingScoredBoard({
   rows,
   note = "Illustrative",
   bare = false,
+  showTrend = false,
 }: Readonly<{
   title: string;
   meta: string;
@@ -46,7 +61,12 @@ export function MarketingScoredBoard({
   rows: ScoredBoardRow[];
   note?: string;
   bare?: boolean;
+  showTrend?: boolean;
 }>) {
+  const cols = showTrend
+    ? "sm:grid-cols-[1.7fr_0.9fr_0.7fr_1.2fr_0.8fr]"
+    : "sm:grid-cols-[1.7fr_0.9fr_1.1fr_0.8fr]";
+
   return (
     <div className={bare ? "" : "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[var(--shadow-card)]"}>
       <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
@@ -62,18 +82,19 @@ export function MarketingScoredBoard({
         <span className="font-mono text-[11px] text-slate-400">{note}</span>
       </div>
 
-      <div className="hidden grid-cols-[1.7fr_0.9fr_1.1fr_0.8fr] gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 font-mono text-[9.5px] uppercase tracking-wide text-slate-400 sm:grid">
+      <div className={`hidden gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 font-mono text-[9.5px] uppercase tracking-wide text-slate-400 sm:grid ${cols}`}>
         <div>Symbol</div>
         <div className="text-right">{scoreLabel}</div>
+        {showTrend ? <div className="text-right">Trend</div> : null}
         <div>{metricLabel}</div>
-        <div>Sector</div>
+        <div className="text-right">Sector</div>
       </div>
 
       <div>
         {rows.map((r) => (
           <div
             key={r.symbol}
-            className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-slate-100 px-5 py-4 transition-colors last:border-b-0 hover:bg-[var(--blue-muted)] sm:grid-cols-[1.7fr_0.9fr_1.1fr_0.8fr]"
+            className={`grid grid-cols-[1fr_auto] items-center gap-3 border-b border-slate-100 px-5 py-4 transition-colors last:border-b-0 hover:bg-[var(--blue-muted)] sm:grid ${cols}`}
           >
             <div className="flex min-w-0 items-center gap-3">
               <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-mono text-[12px] font-semibold ${SIGIL[r.band]}`}>
@@ -94,12 +115,18 @@ export function MarketingScoredBoard({
               </div>
             </div>
 
+            {showTrend ? (
+              <div className="hidden text-right sm:block">
+                <TrendCell delta={r.trendDelta} />
+              </div>
+            ) : null}
+
             <div className="hidden sm:block">
               <div className="font-mono text-[12.5px] font-semibold text-slate-700">{r.metricMain}</div>
               <div className="font-mono text-[10px] text-slate-400">{r.metricSub}</div>
             </div>
 
-            <div className="hidden flex-wrap gap-1.5 sm:flex">
+            <div className="hidden flex-wrap justify-end gap-1.5 sm:flex">
               {r.tags.map((t) => (
                 <span key={t} className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[10px] text-slate-600">
                   {t}

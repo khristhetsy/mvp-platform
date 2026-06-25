@@ -1,6 +1,8 @@
 import { getCompanyPledgeSummaries, type CompanyPledgeSummary } from "@/lib/data/investor-pledges";
 import { loadApprovedInvestorMatchProfiles, loadMarketplaceCompanyMatchProfiles } from "@/lib/matching/load-matching-data";
 import { fillPercent, toSymbol } from "@/lib/investor/private-market";
+import { getCompanyMetricHistory } from "@/lib/investor/metric-snapshots";
+import { readinessTrend, type MetricSnapshot } from "@/lib/investor/metric-trends";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export type PublicMarketDeal = {
@@ -11,6 +13,8 @@ export type PublicMarketDeal = {
   fillPct: number | null;
   totalIndicated: number;
   fundingTarget: number | null;
+  /** Readiness Δ over the recent window; 0 until snapshot history exists. */
+  trendDelta: number;
 };
 
 export type PublicMarketStats = {
@@ -46,7 +50,7 @@ export async function loadPublicMarketStats(): Promise<PublicMarketStats> {
     const companyIds = profiles.map((p) => p.id);
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    const [pledges, indicatedRes] = await Promise.all([
+    const [pledges, indicatedRes, history] = await Promise.all([
       companyIds.length
         ? getCompanyPledgeSummaries(admin, companyIds)
         : Promise.resolve<Record<string, CompanyPledgeSummary>>({}),
@@ -55,6 +59,9 @@ export async function loadPublicMarketStats(): Promise<PublicMarketStats> {
         .select("pledge_amount")
         .not("pledge_amount", "is", null)
         .gte("pledge_amount_updated_at", since),
+      companyIds.length
+        ? getCompanyMetricHistory(admin, companyIds, 30)
+        : Promise.resolve(new Map<string, MetricSnapshot[]>()),
     ]);
 
     const indicated30d = (indicatedRes.data ?? []).reduce(
@@ -73,6 +80,7 @@ export async function loadPublicMarketStats(): Promise<PublicMarketStats> {
     const deals: PublicMarketDeal[] = profiles.slice(0, 6).map((p) => {
       const total = pledges[p.id]?.totalPledged ?? 0;
       const target = p.fundingAmount ?? null;
+      const trend = readinessTrend(history.get(p.id) ?? []);
       return {
         symbol: toSymbol(p.companyName),
         name: p.companyName,
@@ -81,6 +89,7 @@ export async function loadPublicMarketStats(): Promise<PublicMarketStats> {
         fillPct: fillPercent(total, target),
         totalIndicated: total,
         fundingTarget: target,
+        trendDelta: trend.delta ?? 0,
       };
     });
 
