@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Gauge, Star, LayoutGrid, ArrowRight, TrendingUp, Coins } from "lucide-react";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
-import { MarketingLiveTicker, type TickerItem } from "@/components/marketing/MarketingLiveTicker";
+import type { TickerItem } from "@/components/marketing/MarketingLiveTicker";
 import { MarketingMarketPreview } from "@/components/marketing/MarketingMarketPreview";
 import { MarketingMarketplacePlaceholder } from "@/components/marketing/MarketingMarketplacePlaceholder";
 import { MarketingScoredBoard, type ScoredBoardRow } from "@/components/marketing/MarketingScoredBoard";
@@ -28,6 +28,13 @@ const DEAL_TICKER: TickerItem[] = [
   { Icon: TrendingUp, tone: "amber", label: "AI deal", detail: "72% indicated", when: "5d" },
   { Icon: Coins, tone: "teal", label: "Climate deal", detail: "+$300K indicated", when: "6d" },
 ];
+
+const TICKER_TONE: Record<string, string> = {
+  teal: "bg-[var(--teal-muted)] text-[var(--teal)]",
+  indigo: "bg-[var(--indigo-soft)] text-[var(--indigo)]",
+  blue: "bg-[var(--blue-muted)] text-[var(--blue)]",
+  amber: "bg-amber-50 text-amber-600",
+};
 
 const MARKET_STATS = [
   { v: "$4.2M", l: "indicated · 30d", tone: "text-[var(--teal)]" },
@@ -69,7 +76,7 @@ export default async function DealsPage() {
         className="px-4 py-12 lg:px-8 lg:py-16"
         style={{ background: "radial-gradient(960px 460px at 75% -10%, var(--blue-muted), transparent 70%)" }}
       >
-        <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+        <div className="mx-auto grid max-w-5xl gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full border border-[var(--blue-border)] bg-[var(--blue-muted)] px-3.5 py-1.5 font-mono text-[11.5px] text-[var(--blue)]">
               <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--blue)] text-[var(--blue)]" />
@@ -99,10 +106,34 @@ export default async function DealsPage() {
       {/* Illustrative deal activity + market preview */}
       <section className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-12 lg:px-8">
         <div className="mx-auto max-w-5xl">
-          <MarketingLiveTicker items={DEAL_TICKER} label="Sample · deal activity" />
+          {/* Ticker + stats + board — one connected card */}
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[var(--shadow-card)]">
+            {/* ticker = connected top strip */}
+            <div className="cap-marquee-host relative flex h-11 items-center overflow-hidden border-b border-slate-200">
+              <span className="z-10 flex h-full items-center gap-2 border-r border-slate-200 bg-white px-4 font-mono text-[10.5px] uppercase tracking-[0.1em] text-[var(--teal)]">
+                <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--teal)] text-[var(--teal)]" />
+                Sample
+              </span>
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-white to-transparent" aria-hidden />
+              <div className="cap-marquee flex w-max items-center whitespace-nowrap">
+                {[...DEAL_TICKER, ...DEAL_TICKER].map((e, i) => {
+                  const Icon = e.Icon;
+                  return (
+                    <span key={`${e.label}-${i}`} className="flex h-5 items-center gap-2 border-r border-slate-200 px-5 text-[12.5px] text-slate-600">
+                      <span className={`flex h-[18px] w-[18px] items-center justify-center rounded-md ${TICKER_TONE[e.tone]}`}>
+                        <Icon className="h-3 w-3" strokeWidth={2} />
+                      </span>
+                      <span className="font-mono text-[12px] font-semibold text-[var(--navy)]">{e.label}</span>
+                      {e.detail ? <span className="font-mono text-[11px] text-slate-500">{e.detail}</span> : null}
+                      <span className="font-mono text-[10px] text-slate-400">{e.when}</span>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
 
-          <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[var(--shadow-card)]">
-            <div className="grid grid-cols-2 sm:grid-cols-4">
+            {/* stats */}
+            <div className="grid grid-cols-2 border-b border-slate-200 sm:grid-cols-4">
               {MARKET_STATS.map((s, i) => (
                 <div
                   key={s.l}
@@ -113,15 +144,16 @@ export default async function DealsPage() {
                 </div>
               ))}
             </div>
-          </div>
 
-          <div className="mt-6">
+            {/* board */}
             <MarketingScoredBoard
               title="Diligence-ready deals"
               meta="4 deals · ranked by readiness"
               scoreLabel="Readiness"
               metricLabel="Indicated"
               rows={DEAL_ROWS}
+              note="Illustrative"
+              bare
             />
           </div>
 
@@ -133,7 +165,7 @@ export default async function DealsPage() {
 
       {/* Live listings (real data) */}
       <section className="border-t border-slate-200/80 px-4 py-12 lg:px-8">
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-5xl">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">Live marketplace</p>
