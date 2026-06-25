@@ -22,6 +22,20 @@ function headers() {
   };
 }
 
+/**
+ * Resolve the store id. Prefers LEMONSQUEEZY_STORE_ID if set; otherwise looks it
+ * up from the API key's own store (always the correct store for the key's mode),
+ * so operators don't have to find/set it manually.
+ */
+async function resolveStoreId(): Promise<string | null> {
+  const fromEnv = process.env.LEMONSQUEEZY_STORE_ID?.trim();
+  if (fromEnv) return fromEnv;
+  const res = await fetch(`${LS_API}/stores`, { headers: headers() });
+  if (!res.ok) return null;
+  const json = (await res.json()) as { data?: Array<{ id: string }> };
+  return json.data?.[0]?.id ?? null;
+}
+
 // ─── Checkout ─────────────────────────────────────────────────────────────────
 
 export async function createCheckoutUrl({
@@ -35,8 +49,8 @@ export async function createCheckoutUrl({
   profileId: string;
   successUrl: string;
 }): Promise<string> {
-  const storeId = process.env.LEMONSQUEEZY_STORE_ID;
-  if (!storeId) throw new Error("LEMONSQUEEZY_STORE_ID not set");
+  const storeId = await resolveStoreId();
+  if (!storeId) throw new Error("Could not resolve a Lemon Squeezy store for this API key (check the key / mode).");
 
   const res = await fetch(`${LS_API}/checkouts`, {
     method: "POST",
