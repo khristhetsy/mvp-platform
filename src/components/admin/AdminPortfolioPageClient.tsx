@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
+import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { AdminPortfolioRow } from "@/lib/portfolio/types";
 import { STAGE_LABELS, STALE_VAL_DAYS } from "@/lib/portfolio/types";
 import type { InvestmentStage } from "@/lib/portfolio/types";
@@ -55,6 +57,7 @@ export function AdminPortfolioPageClient() {
   const [stats, setStats]             = useState<Stats | null>(null);
   const [loading, setLoading]         = useState(true);
   const [notifySent, setNotifySent]   = useState(false);
+  const [notifying, setNotifying]     = useState(false);
 
   const [filterInvestor, setFilterInvestor] = useState("");
   const [filterStage, setFilterStage]       = useState("");
@@ -103,6 +106,24 @@ export function AdminPortfolioPageClient() {
 
   const staleRows = investments.filter(isStale);
 
+  async function handleNotify() {
+    const ok = await confirmDialog({
+      title: "Notify investors?",
+      message: `${staleRows.length} investor record${staleRows.length === 1 ? "" : "s"} with stale or missing valuations will receive an in-app notification asking them to update.`,
+      confirmLabel: "Send notifications",
+    });
+    if (!ok) return;
+    setNotifying(true);
+    try {
+      const res = await fetch("/api/admin/portfolio/notify", { method: "POST" });
+      if (res.ok) setNotifySent(true);
+    } catch {
+      /* ignore — button stays actionable */
+    } finally {
+      setNotifying(false);
+    }
+  }
+
   return (
     <div style={{ fontFamily: "var(--font-sans)" }}>
       {/* Stat cards */}
@@ -150,8 +171,8 @@ export function AdminPortfolioPageClient() {
             self-reported valuations older than {STALE_VAL_DAYS} days or no valuation on record.
           </p>
           <button
-            onClick={() => setNotifySent(true)}
-            disabled={notifySent}
+            onClick={handleNotify}
+            disabled={notifySent || notifying}
             style={{
               flexShrink: 0,
               fontSize: 11.5,
@@ -160,11 +181,11 @@ export function AdminPortfolioPageClient() {
               background: notifySent ? "#E1F5EE" : "#FAEEDA",
               border: `0.5px solid ${notifySent ? "#5DCAA5" : "#EF9F27"}`,
               color: notifySent ? "#085041" : "#633806",
-              cursor: notifySent ? "default" : "pointer",
+              cursor: notifySent || notifying ? "default" : "pointer",
               whiteSpace: "nowrap",
             }}
           >
-            {notifySent ? "✓ Notified" : "Notify investors"}
+            {notifying ? "Sending…" : notifySent ? "✓ Notified" : "Notify investors"}
           </button>
         </div>
       )}
@@ -358,8 +379,24 @@ export function AdminPortfolioPageClient() {
                           </span>
                         ) : <span style={{ color: "var(--color-text-secondary)" }}>—</span>}
                       </td>
-                      <td style={{ textAlign: "center", padding: "10px 10px" }}>
-                        <span style={{ color: "#534AB7", fontSize: 11, cursor: "pointer", fontWeight: 500 }}>View →</span>
+                      <td style={{ textAlign: "center", padding: "10px 10px" }} onClick={(e) => e.stopPropagation()}>
+                        {inv.company_id ? (
+                          <Link
+                            href={`/admin/companies/${inv.company_id}`}
+                            style={{ color: "#534AB7", fontSize: 11, fontWeight: 500, textDecoration: "none" }}
+                          >
+                            View →
+                          </Link>
+                        ) : inv.company_slug ? (
+                          <Link
+                            href={`/deals/${inv.company_slug}`}
+                            style={{ color: "#534AB7", fontSize: 11, fontWeight: 500, textDecoration: "none" }}
+                          >
+                            View →
+                          </Link>
+                        ) : (
+                          <span style={{ color: "var(--color-text-secondary)", fontSize: 11 }} title="No linked company record">—</span>
+                        )}
                       </td>
                     </tr>
                   );
