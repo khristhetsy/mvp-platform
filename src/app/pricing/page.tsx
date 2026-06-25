@@ -7,7 +7,7 @@ import { PlanComparisonSection } from "@/components/PlanComparisonSection";
 export default function PricingPage() {
   return (
     <MarketingShell>
-      <section className="mx-auto max-w-7xl px-4 py-12 lg:px-6 lg:py-16">
+      <section className="mx-auto max-w-5xl px-4 py-12 lg:px-8 lg:py-16">
         <div className="max-w-3xl">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--gold)]">Pricing</p>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight text-[var(--navy)] md:text-5xl">

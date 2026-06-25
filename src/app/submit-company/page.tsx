@@ -10,7 +10,7 @@ export default function SubmitCompanyPage() {
   return (
     <MarketingShell>
       <section className="px-4 py-8 lg:px-8 lg:py-10">
-        <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
+        <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
             <CapitalOSLogo height={48} priority className="mb-6" />
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--gold)]">Submit company</p>
@@ -20,6 +20,9 @@ export default function SubmitCompanyPage() {
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">
               Share company basics, funding goals, traction context, and diligence materials. This does not guarantee
               funding or investor participation.
+            </p>
+            <p className="mt-4 inline-flex rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+              Preview — create a free account to fill this out and save your readiness draft.
             </p>
           </div>
           <form className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
@@ -50,9 +53,12 @@ export default function SubmitCompanyPage() {
                 >
                   Continue full onboarding
                 </Link>
-                <button className="cap-btn-primary rounded-lg px-4 py-2.5 text-sm font-semibold" type="button">
-                  Save readiness draft
-                </button>
+                <Link
+                  href="/auth/sign-up"
+                  className="cap-btn-primary rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
+                >
+                  Create account to submit
+                </Link>
               </div>
             </div>
           </form>
