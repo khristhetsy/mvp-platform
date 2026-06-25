@@ -85,7 +85,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         ...patch,
         profile_id:          profileId,
         role:                "founder",
-        monthly_price_cents: planType === "founder_professional" ? 100000 : 50000,
+        monthly_price_cents: planType === "founder_professional" ? 100000 : 49900,
         currency:            "USD",
       },
       { onConflict: "profile_id" }

@@ -64,7 +64,7 @@ export const PLAN_LABELS: Record<PlanType, string> = {
 
 export const PLAN_PRICES: Record<PlanType, number> = {
   founder_trial: 0,
-  founder_basic: 50000,
+  founder_basic: 49900,
   founder_professional: 100000,
   investor_free: 0,
   investor_pro: 50000,

@@ -14,8 +14,8 @@ export default function PricingPage() {
             Enterprise-ready plans for founders and investors.
           </h1>
           <p className="mt-6 text-base leading-7 text-slate-600 md:text-lg">
-            Start with a 3-day founder trial, scale into Basic or Professional when you are ready. Investor accounts are
-            always free. Payment checkout is coming soon — request an upgrade today.
+            Start with a 3-day founder trial, then upgrade to Basic or Professional anytime from your billing page.
+            Investor accounts are always free.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/auth/sign-up" className="cap-btn-primary rounded-lg px-5 py-2.5 text-sm font-semibold">
