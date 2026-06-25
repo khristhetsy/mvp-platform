@@ -207,14 +207,14 @@ export function LearningScheduleClient() {
   const [saved, setSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [openDay, setOpenDay] = useState<DayOfWeek | null>(null);
-
-  const streakDays = 7;
+  const [streakDays, setStreakDays] = useState(0);
 
   // Load saved schedule on mount
   useEffect(() => {
     fetch("/api/learning/schedule")
       .then((r) => (r.ok ? r.json() : null))
       .then((json) => {
+        if (typeof json?.streak === "number") setStreakDays(json.streak);
         const d = json?.data;
         if (d) {
           if (Array.isArray(d.study_days) && d.study_days.length > 0)
@@ -526,8 +526,10 @@ export function LearningScheduleClient() {
               <IcoFlame />
             </div>
             <p className="mt-2 text-3xl font-bold text-slate-900">{streakDays}</p>
-            <p className="text-xs text-slate-500">day streak</p>
-            <p className="mt-1 text-xs font-semibold text-green-700">Personal best!</p>
+            <p className="text-xs text-slate-500">day{streakDays === 1 ? "" : "s"} streak</p>
+            <p className="mt-1 text-xs font-semibold text-green-700">
+              {streakDays > 0 ? "Keep it going!" : "Start your streak today"}
+            </p>
             <div className="mt-3 flex justify-center gap-1">
               {Array.from({ length: 7 }).map((_, i) => (
                 <div
@@ -536,7 +538,7 @@ export function LearningScheduleClient() {
                 />
               ))}
             </div>
-            <p className="mt-1.5 text-[10px] text-slate-400">Mon → Sun this week</p>
+            <p className="mt-1.5 text-[10px] text-slate-400">Consecutive days with learning activity</p>
           </div>
         </div>
       </div>

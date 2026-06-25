@@ -61,15 +61,6 @@ export function FounderInvestorMatchCard({
         </ul>
       ) : null}
 
-      {!onClick && (
-        <div className="mt-4">
-          <span className="inline-flex rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-800">
-            Add to outreach
-          </span>
-          <span className="sr-only">Investor {investorId}</span>
-        </div>
-      )}
-
       {onClick && (
         <p className="mt-4 text-[10px] font-semibold text-indigo-400 opacity-0 transition group-hover:opacity-100">
           View details →
@@ -82,6 +73,7 @@ export function FounderInvestorMatchCard({
     return (
       <button
         type="button"
+        data-investor-id={investorId}
         onClick={onClick}
         className="group w-full text-left rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-indigo-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500/20 active:scale-[0.99]"
       >
@@ -91,7 +83,7 @@ export function FounderInvestorMatchCard({
   }
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <article data-investor-id={investorId} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       {inner}
     </article>
   );

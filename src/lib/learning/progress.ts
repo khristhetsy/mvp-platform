@@ -286,6 +286,34 @@ function computeActivityStreakDays(activityTimestamps: string[]) {
   return streak;
 }
 
+/** Real consecutive-day study streak for a founder, from lesson + module activity. */
+export async function getFounderStudyStreak(founderId: string, companyId: string): Promise<number> {
+  const admin = createServiceRoleClient();
+  const [{ data: lessonProgress }, { data: moduleProgress }] = await Promise.all([
+    admin
+      .from("founder_lesson_progress")
+      .select("completed_at, last_viewed_at")
+      .eq("founder_id", founderId)
+      .eq("company_id", companyId),
+    admin
+      .from("learning_progress")
+      .select("last_viewed_at")
+      .eq("founder_id", founderId)
+      .eq("company_id", companyId),
+  ]);
+
+  const activityTimestamps: string[] = [];
+  for (const row of lessonProgress ?? []) {
+    if (row.last_viewed_at) activityTimestamps.push(row.last_viewed_at);
+    if (row.completed_at) activityTimestamps.push(row.completed_at);
+  }
+  for (const row of moduleProgress ?? []) {
+    if (row.last_viewed_at) activityTimestamps.push(row.last_viewed_at);
+  }
+
+  return computeActivityStreakDays(activityTimestamps);
+}
+
 export async function checkAndAwardBadges(founderId: string, companyId: string) {
   const admin = createServiceRoleClient();
   const [{ data: badges }, { data: earned }, { data: moduleProgress }, { data: lessonProgress }, { data: quizAttempts }] =

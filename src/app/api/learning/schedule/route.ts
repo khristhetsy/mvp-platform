@@ -2,23 +2,27 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { getFounderStudyStreak } from "@/lib/learning/progress";
 
 export async function GET() {
   try {
     const profile = await requireRole(["founder"]);
     const company = await ensureFounderCompanyForUser(profile);
-    if (!company) return NextResponse.json({ data: null });
+    if (!company) return NextResponse.json({ data: null, streak: 0 });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = createServiceRoleClient() as any;
-    const { data } = await db
-      .from("learning_course_schedules")
-      .select("*")
-      .eq("founder_id", profile.id)
-      .eq("company_id", company.id)
-      .maybeSingle();
+    const [{ data }, streak] = await Promise.all([
+      db
+        .from("learning_course_schedules")
+        .select("*")
+        .eq("founder_id", profile.id)
+        .eq("company_id", company.id)
+        .maybeSingle(),
+      getFounderStudyStreak(profile.id, company.id),
+    ]);
 
-    return NextResponse.json({ data: data ?? null });
+    return NextResponse.json({ data: data ?? null, streak });
   } catch (error) {
     console.error("[api/learning/schedule GET]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
