@@ -4,6 +4,8 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { PlanComparisonSection } from "@/components/PlanComparisonSection";
 import { UpgradeRequestActions } from "@/components/UpgradeRequestActions";
+import { CheckoutButton } from "@/components/billing/CheckoutButton";
+import { isPaymentsEnabled } from "@/lib/billing/pricing-guard";
 import {
   getBillingLifecycleLabel,
   getBillingLifecycleStatus,
@@ -45,6 +47,8 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
 
   const lifecycle = subscription ? getBillingLifecycleStatus(subscription, requestedPlan) : null;
   const featureLock = featureKey ? getFeatureLockCopy(featureKey) : null;
+  const paymentsEnabled = isPaymentsEnabled();
+  const founderCanCheckout = paymentsEnabled && profile?.role === "founder";
 
   return (
     <>
@@ -57,7 +61,9 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
           <p className="mt-4 text-lg leading-8 text-slate-600">
             {featureLock
               ? featureLock.description
-              : "Compare founder plans, request an upgrade, or get notified when billing goes live. No payment is collected in this phase."}
+              : paymentsEnabled
+                ? "Compare founder plans and upgrade instantly. Billing is powered by Lemon Squeezy."
+                : "Compare founder plans, request an upgrade, or get notified when billing goes live. No payment is collected in this phase."}
           </p>
         </div>
 
@@ -114,7 +120,18 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
           </div>
         )}
 
-        {profile ? (
+        {founderCanCheckout ? (
+          <div className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-950">Upgrade your plan</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Pick a plan and check out securely with Lemon Squeezy. Your access updates immediately after payment.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <CheckoutButton planType="founder_basic" label="Founder Basic — $499/mo" />
+              <CheckoutButton planType="founder_professional" label="Founder Professional — $1,000/mo" recommended />
+            </div>
+          </div>
+        ) : profile ? (
           <div className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-950">Request an upgrade</h2>
             <p className="mt-2 text-sm text-slate-600">
@@ -133,8 +150,10 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
           <PlanComparisonSection
             currentPlan={subscription?.plan_type ?? null}
             showInvestor={!profile || profile.role !== "founder"}
-            founderCtaHref={profile ? getUpgradeUrl(featureKey, highlightPlan) : "/auth/sign-up"}
-            founderCtaLabel={profile ? "Select plan" : "Get started"}
+            founderCtaHref={
+              founderCanCheckout ? "/billing" : profile ? getUpgradeUrl(featureKey, highlightPlan) : "/auth/sign-up"
+            }
+            founderCtaLabel={founderCanCheckout ? "Go to checkout" : profile ? "Select plan" : "Get started"}
           />
         </div>
 
