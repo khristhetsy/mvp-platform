@@ -54,7 +54,7 @@ export default async function InvestorsPage() {
         className="px-4 py-12 lg:px-8 lg:py-16"
         style={{ background: "radial-gradient(960px 460px at 78% -10%, var(--indigo-soft), transparent 70%)" }}
       >
-        <div className="grid gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+        <div className="mx-auto grid max-w-5xl gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full border border-[var(--indigo-soft)] bg-[var(--indigo-soft)] px-3.5 py-1.5 font-mono text-[11.5px] text-[var(--indigo)]">
               <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--indigo)] text-[var(--indigo)]" />
@@ -120,7 +120,7 @@ export default async function InvestorsPage() {
 
       {/* Live ticker */}
       <section className="px-4 pb-2 pt-12 lg:px-8">
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-5xl">
           <MarketingLiveTicker items={TICKER} label="Sample · what investors are doing" />
         </div>
       </section>
@@ -150,7 +150,7 @@ export default async function InvestorsPage() {
 
       {/* Live listings (real data) */}
       <section className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-14 lg:px-8">
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-5xl">
           <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">Live marketplace</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--navy)]">Published opportunities</h2>
           <p className="mt-2 text-sm text-slate-500">

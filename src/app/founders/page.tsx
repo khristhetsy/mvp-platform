@@ -75,7 +75,7 @@ export default function FoundersPage() {
         className="px-4 py-12 lg:px-8 lg:py-16"
         style={{ background: "radial-gradient(960px 460px at 78% -10%, var(--teal-muted), transparent 70%)" }}
       >
-        <div className="grid gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+        <div className="mx-auto grid max-w-5xl gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
           <div>
             <CapitalOSLogo height={44} priority className="mb-6" />
             <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-[var(--teal-muted)] px-3.5 py-1.5 font-mono text-[11.5px] text-[var(--teal)]">

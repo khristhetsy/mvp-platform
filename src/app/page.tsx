@@ -78,7 +78,7 @@ export default async function Home() {
         className="px-4 py-10 lg:px-8 lg:py-14"
         style={{ background: "radial-gradient(960px 460px at 75% -10%, var(--blue-muted), transparent 70%)" }}
       >
-        <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr] xl:items-center">
+        <div className="mx-auto grid max-w-5xl gap-8 xl:grid-cols-[1.05fr_0.95fr] xl:items-center">
           <div className="flex flex-col justify-center">
             <CapitalOSLogo height={52} priority className="mb-6" />
             <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--indigo-soft)] bg-[var(--indigo-soft)] px-3.5 py-1.5 font-mono text-[11.5px] text-[var(--indigo)]">
@@ -151,7 +151,7 @@ export default async function Home() {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-y border-slate-200/80 py-5">
+        <div className="mx-auto mt-10 flex max-w-5xl flex-wrap items-center justify-between gap-4 border-y border-slate-200/80 py-5">
           <CapitalOSLogo height={40} />
           <div className="flex flex-wrap items-center gap-6 text-xs font-medium text-slate-500">
             <span>Trusted by founders preparing institutional raises</span>
@@ -236,7 +236,7 @@ export default async function Home() {
 
       {/* Features */}
       <section className="px-4 py-14 lg:px-8">
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-5xl">
           <div className="mb-9 text-center">
             <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">The platform</p>
             <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--navy)] md:text-3xl">
