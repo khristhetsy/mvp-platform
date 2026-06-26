@@ -145,6 +145,8 @@ export interface LsWebhookPayload {
     attributes: {
       status:              LsSubscriptionStatus;
       variant_id:          number;
+      variant_name?:       string | null;
+      product_name?:       string | null;
       customer_id:         number;
       user_email:          string;
       renews_at:           string | null;

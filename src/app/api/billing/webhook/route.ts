@@ -17,12 +17,22 @@ function mapStatus(ls: LsSubscriptionStatus): SubscriptionStatus {
   }
 }
 
-// Map LS variant ID → plan type
-function variantToPlan(variantId: number): PlanType | null {
+// Map LS order → plan type. Prefer numeric variant IDs (if configured in env),
+// then fall back to the product/variant name in the payload — so the webhook
+// upgrades correctly even when the numeric IDs aren't set (e.g. live mode).
+function variantToPlan(
+  variantId: number,
+  variantName?: string | null,
+  productName?: string | null,
+): PlanType | null {
   const basic = process.env.LEMONSQUEEZY_VARIANT_ID_BASIC;
   const pro   = process.env.LEMONSQUEEZY_VARIANT_ID_PROFESSIONAL;
-  if (basic && String(variantId) === basic)   return "founder_basic";
-  if (pro   && String(variantId) === pro)     return "founder_professional";
+  if (basic && String(variantId) === basic) return "founder_basic";
+  if (pro   && String(variantId) === pro)   return "founder_professional";
+
+  const name = `${productName ?? ""} ${variantName ?? ""}`.toLowerCase();
+  if (name.includes("professional")) return "founder_professional";
+  if (name.includes("basic"))        return "founder_basic";
   return null;
 }
 
@@ -61,7 +71,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const { data: existing } = await query.maybeSingle() as { data: { id: string; profile_id: string } | null };
 
-  const planType  = variantToPlan(attributes.variant_id);
+  const planType  = variantToPlan(attributes.variant_id, attributes.variant_name, attributes.product_name);
   const status    = mapStatus(attributes.status);
   const now       = new Date().toISOString();
 

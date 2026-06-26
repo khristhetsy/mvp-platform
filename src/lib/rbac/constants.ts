@@ -31,6 +31,7 @@ export const INTERNAL_PERMISSIONS = [
   "view_system_health",
   "manage_beta_operations",
   "approve_marketplace",
+  "manage_events",
   // Admin only
   "manage_users",
   "assign_roles",
@@ -64,6 +65,7 @@ export const INTERNAL_PERMISSION_LABELS: Record<InternalPermission, string> = {
   view_system_health: "View System Health",
   manage_beta_operations: "Manage Beta Operations",
   approve_marketplace: "Approve Marketplace",
+  manage_events: "Manage Events",
   manage_users: "Manage Users",
   assign_roles: "Assign Roles",
   manage_settings: "Manage Settings",

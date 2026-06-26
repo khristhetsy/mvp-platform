@@ -115,6 +115,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       },
       { href: "/admin/portfolio",        label: "Portfolio",       requiredPermission: "view_admin_dashboard" },
       { href: "/admin/readiness",        label: "Readiness Scores",requiredPermission: "manage_companies"    },
+      { href: "/admin/events",           label: "Events",          requiredPermission: "manage_events"       },
     ],
   },
   {
