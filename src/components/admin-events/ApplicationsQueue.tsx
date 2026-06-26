@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import { RUBRIC_DIMENSIONS } from "@/lib/icfo-events/types";
 import type { SpeakerApplication, SpeakerApplicationStatus } from "@/lib/icfo-events/types";
+import type { ApplicationReview, ReviewSummary, ReviewRecommendation } from "@/lib/icfo-events/reviews";
 
 const STATUS_STYLES: Record<SpeakerApplicationStatus, string> = {
   submitted: "bg-blue-50 text-blue-700",
@@ -40,6 +41,48 @@ function ReviewPanel({
   const [note, setNote] = useState(application.decisionNote ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recommendation, setRecommendation] = useState<ReviewRecommendation>("approve");
+  const [reviews, setReviews] = useState<ApplicationReview[]>([]);
+  const [summary, setSummary] = useState<ReviewSummary | null>(null);
+  const [savingReview, setSavingReview] = useState(false);
+  const [reviewSaved, setReviewSaved] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetch(`/api/admin/events/applications/${application.id}/review`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (!active || !json) return;
+        if (Array.isArray(json.reviews)) setReviews(json.reviews);
+        if (json.summary) setSummary(json.summary);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [application.id]);
+
+  async function saveReview() {
+    setSavingReview(true);
+    setError(null);
+    setReviewSaved(false);
+    try {
+      const res = await fetch(`/api/admin/events/applications/${application.id}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recommendation, rubricScores: scores, note: note || null }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not save review.");
+      if (Array.isArray(json.reviews)) setReviews(json.reviews);
+      if (json.summary) setSummary(json.summary);
+      setReviewSaved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save review.");
+    } finally {
+      setSavingReview(false);
+    }
+  }
 
   async function decide(action: "approve" | "decline") {
     if (action === "decline" && !note.trim()) {
@@ -68,6 +111,29 @@ function ReviewPanel({
 
   return (
     <div className="mt-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-sunken)] p-4">
+      {summary && summary.count > 0 && (
+        <div className="mb-4 rounded-lg border border-[var(--border-subtle)] bg-white p-3">
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            <span className="font-semibold text-[var(--text-secondary)]">Panel ({summary.count})</span>
+            <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">{summary.approve} approve</span>
+            <span className="rounded-full bg-rose-50 px-2 py-0.5 font-medium text-rose-700">{summary.decline} decline</span>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-500">{summary.abstain} abstain</span>
+            <span className="text-[var(--text-muted)]">avg {summary.averageTotal.toFixed(1)} / 20</span>
+          </div>
+          <ul className="mt-2 space-y-1">
+            {reviews.map((rv) => (
+              <li key={rv.id} className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
+                <span>{rv.reviewerName ?? "Reviewer"}</span>
+                <span className="flex items-center gap-2">
+                  <span className="capitalize">{rv.recommendation}</span>
+                  <span className="text-[var(--text-muted)]">{rv.total}/20</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="grid gap-3 sm:grid-cols-2">
         {RUBRIC_DIMENSIONS.map((d) => (
           <label key={d} className="flex items-center justify-between gap-3 text-sm">
@@ -94,23 +160,49 @@ function ReviewPanel({
         className="mt-3 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
       />
 
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <span className="text-xs font-medium text-[var(--text-secondary)]">My recommendation:</span>
+        {(["approve", "decline", "abstain"] as const).map((r) => (
+          <label key={r} className="flex items-center gap-1 text-xs text-[var(--text-secondary)]">
+            <input
+              type="radio"
+              name={`rec-${application.id}`}
+              checked={recommendation === r}
+              onChange={() => setRecommendation(r)}
+            />
+            <span className="capitalize">{r}</span>
+          </label>
+        ))}
+        <button
+          onClick={saveReview}
+          disabled={savingReview}
+          className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50"
+        >
+          {savingReview ? "Saving…" : "Save my review"}
+        </button>
+        {reviewSaved && <span className="text-xs text-emerald-700">Saved</span>}
+      </div>
+
       {error && <p className="mt-2 text-sm text-rose-700">{error}</p>}
 
-      <div className="mt-3 flex gap-2">
-        <button
-          disabled={busy}
-          onClick={() => decide("approve")}
-          className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-        >
-          Approve
-        </button>
-        <button
-          disabled={busy}
-          onClick={() => decide("decline")}
-          className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] disabled:opacity-50"
-        >
-          Decline
-        </button>
+      <div className="mt-4 border-t border-[var(--border-subtle)] pt-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Final decision</p>
+        <div className="mt-2 flex gap-2">
+          <button
+            disabled={busy}
+            onClick={() => decide("approve")}
+            className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          >
+            Approve
+          </button>
+          <button
+            disabled={busy}
+            onClick={() => decide("decline")}
+            className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] disabled:opacity-50"
+          >
+            Decline
+          </button>
+        </div>
       </div>
     </div>
   );
