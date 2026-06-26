@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { SponsorPortalClient } from "@/components/events/SponsorPortalClient";
+import { RepOnlineToggle } from "@/components/events/RepOnlineToggle";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { getOwnedSponsor, listSponsorLeads, getSponsorBooth } from "@/lib/icfo-events/sponsors";
@@ -33,6 +34,9 @@ export default async function SponsorPortalPage({ params }: { params: Promise<{ 
         <Link href={`/events/sponsors/${id}`} className="mt-1 inline-block text-sm text-[var(--blue)] hover:underline">
           View public booth →
         </Link>
+        <div className="mt-3">
+          <RepOnlineToggle sponsorId={id} repName={sponsor.name} />
+        </div>
 
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
           <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">

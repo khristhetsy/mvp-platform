@@ -6,6 +6,7 @@ import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { SponsorIntroButton } from "@/components/events/SponsorIntroButton";
+import { BoothPresenceIndicator } from "@/components/events/BoothPresenceIndicator";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { track } from "@/lib/analytics/posthog";
@@ -91,6 +92,10 @@ export default async function SponsorBoothPage({ params }: { params: Promise<{ i
             Visit website <ExternalLink className="h-3.5 w-3.5" />
           </a>
         )}
+
+        <div className="mt-3">
+          <BoothPresenceIndicator sponsorId={booth.id} />
+        </div>
 
         <div className="mt-6">
           <SponsorIntroButton sponsorId={booth.id} sponsorName={booth.name} isAuthenticated={Boolean(profile)} />

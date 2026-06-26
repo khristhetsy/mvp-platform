@@ -12,6 +12,7 @@ import { NetworkingConnections } from "@/components/events/NetworkingConnections
 import { SessionVideo } from "@/components/events/SessionVideo";
 import { LiveSessionPanel } from "@/components/events/LiveSessionPanel";
 import { CallInBar } from "@/components/events/CallInBar";
+import { OnStageGuests } from "@/components/events/OnStageGuests";
 import { loadSessionQuestions, loadSessionChat, loadCallInQueue } from "@/lib/icfo-events/live-session";
 import type { SessionQuestion, SessionChatMessage, CallInEntry } from "@/lib/icfo-events/live-session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -20,6 +21,8 @@ import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { getEventBySlug } from "@/lib/icfo-events/queries";
 import { getLeaderboard, getMemberStats } from "@/lib/icfo-events/gamification";
 import type { LeaderboardEntry, MemberStats } from "@/lib/icfo-events/gamification";
+import { getMissionProgress } from "@/lib/icfo-events/missions";
+import type { MissionProgress } from "@/lib/icfo-events/missions";
 import { listEventPresenters } from "@/lib/icfo-events/applications";
 import { listEventSponsors } from "@/lib/icfo-events/sponsors";
 import { getRegistration } from "@/lib/icfo-events/registrations";
@@ -206,6 +209,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
   );
   const playback = new Map<string, string | null>(playbackEntries);
   const sponsorNames = new Map(sponsors.map((s) => [s.id, s.name]));
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
 
   // Live-session interaction (Q&A + chat) — only for signed-in viewers, live sessions.
   const isStaffViewer = ["admin", "analyst"].includes(role);
@@ -228,6 +233,10 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
   // Gamification (status only). Leaderboard needs cross-member reads → service role.
   const adminClient = createServiceRoleClient();
+  // Missions first — completing one awards a bonus before we tally member points.
+  const missions: MissionProgress[] = profile
+    ? await getMissionProgress(adminClient, event.id, profile.id).catch(() => [])
+    : [];
   const [leaderboard, memberStats]: [LeaderboardEntry[], MemberStats | null] = await Promise.all([
     getLeaderboard(adminClient, event.id).catch(() => [] as LeaderboardEntry[]),
     profile ? getMemberStats(adminClient, event.id, profile.id).catch(() => null) : Promise.resolve(null),
@@ -358,8 +367,18 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                       className="mt-3 aspect-video w-full rounded-lg border border-[var(--border-subtle)]"
                     />
                   ) : playback.get(s.id) ? (
-                    <SessionVideo src={playback.get(s.id) as string} eventId={event.id} sessionId={s.id} />
+                    s.startsAt && new Date(s.startsAt).getTime() > nowMs ? (
+                      <div className="mt-3 rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--surface-sunken)] px-4 py-6 text-center">
+                        <p className="text-sm font-medium text-[var(--navy)]">
+                          Premieres {new Date(s.startsAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">The recording unlocks at the premiere time.</p>
+                      </div>
+                    ) : (
+                      <SessionVideo src={playback.get(s.id) as string} eventId={event.id} sessionId={s.id} />
+                    )
                   ) : null}
+                  {s.status === "live" && s.type === "talk_show" && <OnStageGuests sessionId={s.id} />}
                   {s.status === "live" && profile && s.type === "talk_show" && (
                     <CallInBar
                       sessionId={s.id}
@@ -417,6 +436,33 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                 <span key={b} className="rounded-full border border-[var(--indigo)] bg-[var(--indigo-soft)] px-3 py-1 text-xs font-medium text-[var(--indigo)]">
                   {b}
                 </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {missions.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Missions</h2>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {missions.map((m) => (
+                <div key={m.id} className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-[var(--navy)]">{m.title}</span>
+                    {m.done ? (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Complete +{m.bonusPoints}</span>
+                    ) : (
+                      <span className="text-xs text-[var(--text-muted)]">{m.completedActions.length}/{m.requiredActions.length}</span>
+                    )}
+                  </div>
+                  {m.description && <p className="mt-1 text-xs text-[var(--text-muted)]">{m.description}</p>}
+                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className="h-full rounded-full bg-[var(--indigo)]"
+                      style={{ width: `${m.requiredActions.length ? (m.completedActions.length / m.requiredActions.length) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
               ))}
             </div>
           </div>

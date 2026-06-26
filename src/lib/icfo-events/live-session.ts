@@ -71,6 +71,38 @@ export async function loadSessionQuestions(
   });
 }
 
+export type GuestStatus = "backstage" | "onstage";
+
+export interface SessionGuest {
+  id: string;
+  sessionId: string;
+  displayName: string;
+  roleLabel: string | null;
+  status: GuestStatus;
+}
+
+export function mapSessionGuest(r: Row): SessionGuest {
+  return {
+    id: String(r.id),
+    sessionId: String(r.session_id),
+    displayName: String(r.display_name),
+    roleLabel: (r.role_label as string | null) ?? null,
+    status: r.status as GuestStatus,
+  };
+}
+
+export async function loadSessionGuests(
+  supabase: SupabaseClient<Database>,
+  sessionId: string,
+): Promise<SessionGuest[]> {
+  const { data } = await raw(supabase)
+    .from("session_guests")
+    .select("*")
+    .eq("session_id", sessionId)
+    .order("position", { ascending: true });
+  return ((data ?? []) as Row[]).map(mapSessionGuest);
+}
+
 export type CallInStatus = "requested" | "invited" | "onstage" | "done";
 
 export interface CallInEntry {

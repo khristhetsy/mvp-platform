@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
+import { GuestRoster } from "@/components/events/GuestRoster";
 import type {
   EventWithDetail,
   EventSession,
@@ -151,6 +152,7 @@ export function EventDetailManager({
   const [sAbstract, setSAbstract] = useState("");
   const [sSector, setSSector] = useState<string>(event.sectors[0]?.sectorSlug ?? "");
   const [sHost, setSHost] = useState<string>("");
+  const [sStartsAt, setSStartsAt] = useState<string>("");
   const [addingSession, setAddingSession] = useState(false);
 
   // sponsor attach
@@ -172,6 +174,7 @@ export function EventDetailManager({
           abstract: sAbstract || null,
           sectorSlug: sSector || null,
           hostSponsorId: sHost || null,
+          startsAt: sStartsAt ? new Date(sStartsAt).toISOString() : null,
           position: sessions.length,
         }),
       });
@@ -298,6 +301,7 @@ export function EventDetailManager({
                 </div>
                 <SessionLiveControls session={s} onUpdated={onSessionUpdated} />
                 <SessionVideoUpload eventId={event.id} session={s} onUpdated={onSessionUpdated} />
+                {s.type === "talk_show" && <GuestRoster sessionId={s.id} eventId={event.id} />}
               </div>
             ))
           )}
@@ -341,6 +345,15 @@ export function EventDetailManager({
             placeholder="Abstract (optional)"
             className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
           />
+          <label className="text-xs text-[var(--text-muted)]">
+            Premiere / start time (optional — recorded sessions unlock at this time)
+            <input
+              type="datetime-local"
+              value={sStartsAt}
+              onChange={(e) => setSStartsAt(e.target.value)}
+              className="mt-1 block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+            />
+          </label>
           <div className="flex justify-end">
             <button type="submit" disabled={addingSession || !sTitle.trim()} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50">
               {addingSession ? "Adding…" : "Add session"}
