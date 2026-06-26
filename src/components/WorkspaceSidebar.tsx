@@ -368,7 +368,7 @@ export function WorkspaceSidebar({
         <nav
           aria-label={`${label} navigation`}
           aria-hidden={drilled ? true : undefined}
-          className={`absolute inset-0 space-y-0.5 overflow-y-auto px-2 py-2.5 transition-transform duration-[260ms] ease-out ${
+          className={`absolute inset-0 space-y-0.5 overflow-y-auto bg-[var(--surface-sidebar)] px-2 py-2.5 transition-transform duration-[260ms] ease-out ${
             drilled ? "pointer-events-none -translate-x-[24%]" : "translate-x-0"
           }`}
         >
@@ -389,7 +389,7 @@ export function WorkspaceSidebar({
         {/* Drilled sub-menu — slides in from the right */}
         <div
           aria-hidden={drilled ? undefined : true}
-          className={`absolute inset-0 overflow-y-auto px-2 py-2.5 transition-transform duration-[260ms] ease-out ${
+          className={`absolute inset-0 overflow-y-auto bg-[var(--surface-sidebar)] px-2 py-2.5 transition-transform duration-[260ms] ease-out ${
             drilled ? "translate-x-0" : "pointer-events-none translate-x-full"
           }`}
         >
