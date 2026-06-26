@@ -34,7 +34,7 @@ export default async function EventLobbyPage({ params }: { params: Promise<{ slu
   if (!event || event.status === "draft" || event.status === "archived") notFound();
 
   const firstSector = event.sectors[0]?.sectorSlug;
-  const tracksHref = firstSector ? `/events/sectors/${firstSector}` : `/events/${slug}#tracks`;
+  const tracksHref = firstSector ? `/events/sectors/${firstSector}` : `/events/${slug}#agenda`;
 
   const hotspots = [
     {
