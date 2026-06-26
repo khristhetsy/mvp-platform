@@ -6,6 +6,7 @@ import { track } from "@/lib/analytics/posthog";
 import { createNotification } from "@/lib/notifications/notifications";
 import { getEventById } from "@/lib/icfo-events/queries";
 import { registerForEvent } from "@/lib/icfo-events/registrations";
+import { awardPoints } from "@/lib/icfo-events/gamification";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,7 @@ export async function POST(
         deepLink: `/events/${event.slug}`,
       });
       track("event_registered", { userId: profile.id, eventId: event.id });
+      await awardPoints(event.id, profile.id, "register");
     }
 
     return NextResponse.json({ registration, created }, { status: created ? 201 : 200 });

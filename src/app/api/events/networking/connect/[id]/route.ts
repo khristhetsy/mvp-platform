@@ -5,6 +5,7 @@ import { requireUserProfile } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createNotification } from "@/lib/notifications/notifications";
 import { respondToConnection } from "@/lib/icfo-events/networking";
+import { awardPoints } from "@/lib/icfo-events/gamification";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,9 @@ export async function POST(
         entityId: id,
         deepLink: "/events",
       });
+      // Both parties earn connection points (status, not prizes).
+      await awardPoints(data.event_id, data.from_id, "connection_accepted", id);
+      await awardPoints(data.event_id, profile.id, "connection_accepted", id);
     }
 
     return NextResponse.json({ ok: true });

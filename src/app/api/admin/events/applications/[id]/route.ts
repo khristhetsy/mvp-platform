@@ -10,6 +10,7 @@ import {
   createPresenter,
 } from "@/lib/icfo-events/applications";
 import { logEventActivity } from "@/lib/icfo-events/activity";
+import { awardPoints } from "@/lib/icfo-events/gamification";
 import type { SpeakerApplicationStatus } from "@/lib/icfo-events/types";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +56,7 @@ export async function POST(
         displayName: application.applicantName ?? "Presenter",
         roleLabel: roleLabel ?? application.topic,
       });
+      await awardPoints(application.eventId, application.applicantId, "approved");
     }
 
     if (action !== "review") {

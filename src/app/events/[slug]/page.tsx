@@ -9,9 +9,13 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { RegisterButton } from "@/components/events/RegisterButton";
 import { NetworkingOptIn } from "@/components/events/NetworkingOptIn";
 import { NetworkingConnections } from "@/components/events/NetworkingConnections";
+import { SessionVideo } from "@/components/events/SessionVideo";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { getEventBySlug } from "@/lib/icfo-events/queries";
+import { getLeaderboard, getMemberStats } from "@/lib/icfo-events/gamification";
+import type { LeaderboardEntry, MemberStats } from "@/lib/icfo-events/gamification";
 import { listEventPresenters } from "@/lib/icfo-events/applications";
 import { listEventSponsors } from "@/lib/icfo-events/sponsors";
 import { getRegistration } from "@/lib/icfo-events/registrations";
@@ -184,6 +188,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
   );
   const playback = new Map<string, string | null>(playbackEntries);
 
+  // Gamification (status only). Leaderboard needs cross-member reads → service role.
+  const adminClient = createServiceRoleClient();
+  const [leaderboard, memberStats]: [LeaderboardEntry[], MemberStats | null] = await Promise.all([
+    getLeaderboard(adminClient, event.id).catch(() => [] as LeaderboardEntry[]),
+    profile ? getMemberStats(adminClient, event.id, profile.id).catch(() => null) : Promise.resolve(null),
+  ]);
+
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Event",
@@ -284,14 +295,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                   <h3 className="mt-2 font-semibold text-[var(--navy)]">{s.title}</h3>
                   {s.abstract && <p className="mt-1 text-sm text-[var(--text-secondary)]">{s.abstract}</p>}
                   {playback.get(s.id) && (
-                    <video
-                      controls
-                      preload="none"
-                      src={playback.get(s.id) ?? undefined}
-                      className="mt-3 w-full rounded-lg border border-[var(--border-subtle)] bg-black"
-                    >
-                      Your browser doesn&apos;t support embedded video.
-                    </video>
+                    <SessionVideo src={playback.get(s.id) as string} eventId={event.id} sessionId={s.id} />
                   )}
                 </li>
               ))}
@@ -314,6 +318,44 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                 initialConnections={connections}
               />
             )}
+          </div>
+        )}
+
+        {memberStats && memberStats.badges.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              Your participation
+            </h2>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-[var(--navy)] px-3 py-1 text-sm font-semibold text-white">
+                {memberStats.points} pts
+              </span>
+              {memberStats.badges.map((b) => (
+                <span key={b} className="rounded-full border border-[var(--indigo)] bg-[var(--indigo-soft)] px-3 py-1 text-xs font-medium text-[var(--indigo)]">
+                  {b}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {leaderboard.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Leaderboard</h2>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
+              Points reward participation — status, not prizes.
+            </p>
+            <ol className="mt-3 divide-y divide-[var(--border-subtle)] overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white">
+              {leaderboard.map((m) => (
+                <li key={m.profileId} className="flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <span className="w-5 text-sm font-semibold text-[var(--text-muted)]">{m.rank}</span>
+                    <span className="text-sm font-medium text-[var(--navy)]">{m.displayName}</span>
+                  </div>
+                  <span className="text-sm font-semibold text-[var(--indigo)]">{m.points} pts</span>
+                </li>
+              ))}
+            </ol>
           </div>
         )}
       </section>

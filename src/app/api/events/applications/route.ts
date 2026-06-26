@@ -6,6 +6,7 @@ import { track } from "@/lib/analytics/posthog";
 import { notifyStaffIfNotRecent } from "@/lib/notifications/notifications";
 import { speakerApplicationSchema } from "@/lib/icfo-events/schemas";
 import { createApplication } from "@/lib/icfo-events/applications";
+import { awardPoints } from "@/lib/icfo-events/gamification";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       withinHours: 1,
     });
     track("event_presenter_applied", { userId: profile.id, eventId: application.eventId, kind: application.kind });
+    await awardPoints(application.eventId, profile.id, "applied");
 
     return NextResponse.json({ application }, { status: 201 });
   } catch (err) {

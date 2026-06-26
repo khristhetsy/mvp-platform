@@ -5,6 +5,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { track } from "@/lib/analytics/posthog";
 import { networkingOptinSchema } from "@/lib/icfo-events/schemas";
 import { upsertOptin } from "@/lib/icfo-events/networking";
+import { awardPoints } from "@/lib/icfo-events/gamification";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       parsed.data.interests,
     );
     track("event_networking_optin", { userId: profile.id, eventId: parsed.data.eventId, optedIn: optin.optedIn });
+    if (optin.optedIn) await awardPoints(parsed.data.eventId, profile.id, "networking_optin");
     return NextResponse.json({ optin });
   } catch (err) {
     Sentry.captureException(err);
