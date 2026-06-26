@@ -10,6 +10,9 @@ import { RegisterButton } from "@/components/events/RegisterButton";
 import { NetworkingOptIn } from "@/components/events/NetworkingOptIn";
 import { NetworkingConnections } from "@/components/events/NetworkingConnections";
 import { SessionVideo } from "@/components/events/SessionVideo";
+import { LiveSessionPanel } from "@/components/events/LiveSessionPanel";
+import { loadSessionQuestions, loadSessionChat } from "@/lib/icfo-events/live-session";
+import type { SessionQuestion, SessionChatMessage } from "@/lib/icfo-events/live-session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
@@ -203,6 +206,22 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
   const playback = new Map<string, string | null>(playbackEntries);
   const sponsorNames = new Map(sponsors.map((s) => [s.id, s.name]));
 
+  // Live-session interaction (Q&A + chat) — only for signed-in viewers, live sessions.
+  const isStaffViewer = ["admin", "analyst"].includes(role);
+  const liveData = new Map<string, { questions: SessionQuestion[]; chat: SessionChatMessage[] }>();
+  if (profile) {
+    const liveSessions = visibleSessions.filter((s) => s.status === "live");
+    await Promise.all(
+      liveSessions.map(async (s) => {
+        const [questions, chat] = await Promise.all([
+          loadSessionQuestions(supabase, s.id, profile.id).catch(() => [] as SessionQuestion[]),
+          loadSessionChat(supabase, s.id).catch(() => [] as SessionChatMessage[]),
+        ]);
+        liveData.set(s.id, { questions, chat });
+      }),
+    );
+  }
+
   // Gamification (status only). Leaderboard needs cross-member reads → service role.
   const adminClient = createServiceRoleClient();
   const [leaderboard, memberStats]: [LeaderboardEntry[], MemberStats | null] = await Promise.all([
@@ -337,6 +356,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                   ) : playback.get(s.id) ? (
                     <SessionVideo src={playback.get(s.id) as string} eventId={event.id} sessionId={s.id} />
                   ) : null}
+                  {s.status === "live" && profile && (
+                    <LiveSessionPanel
+                      sessionId={s.id}
+                      eventId={event.id}
+                      me={{ id: profile.id, name: profile.full_name ?? profile.email ?? "You" }}
+                      isStaff={isStaffViewer}
+                      initialQuestions={liveData.get(s.id)?.questions ?? []}
+                      initialChat={liveData.get(s.id)?.chat ?? []}
+                    />
+                  )}
                 </li>
               ))}
             </ol>

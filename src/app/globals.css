@@ -218,6 +218,11 @@ select {
   opacity: 0.5;
   animation: cap-ping 1.8s ease-out infinite;
 }
+@keyframes cap-float {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-80px) scale(1.4); opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cap-marquee {
     animation: none;
