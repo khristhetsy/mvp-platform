@@ -32,7 +32,19 @@ export function MarketingLiveTicker({
         <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--teal)] text-[var(--teal)]" />
         {label}
       </div>
-      <div className="relative flex h-[52px] items-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[var(--shadow-panel)]">
+      {/* Static, screen-reader-only list — announces each item once, no motion. */}
+      <ul className="sr-only">
+        {items.map((it, i) => (
+          <li key={`sr-${it.label}-${i}`}>
+            {it.label}
+            {it.detail ? `, ${it.detail}` : ""} — {it.when}
+          </li>
+        ))}
+      </ul>
+      <div
+        aria-hidden="true"
+        className="relative flex h-[52px] items-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[var(--shadow-panel)]"
+      >
         <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-white to-transparent" aria-hidden />
         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-white to-transparent" aria-hidden />
         <div className="cap-marquee flex w-max items-center whitespace-nowrap pl-6">

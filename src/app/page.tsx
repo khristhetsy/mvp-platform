@@ -4,6 +4,7 @@ import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingScoredBoard, type ScoredBoardRow } from "@/components/marketing/MarketingScoredBoard";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
+import { TrackedCTA } from "@/components/marketing/TrackedCTA";
 import { CapitalOSLogo } from "@/components/CapitalOSLogo";
 import { loadPublicMarketStats } from "@/lib/marketing/market-stats";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -106,12 +107,22 @@ export default async function Home() {
               quality investors.
             </p>
             <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
-              <Link href="/auth/sign-up" className="cap-btn-primary rounded-lg px-5 py-3 text-center text-sm font-semibold">
+              <TrackedCTA
+                href="/auth/sign-up"
+                event="founder_signup_cta"
+                properties={{ location: "home_hero" }}
+                className="cap-btn-primary rounded-lg px-5 py-3 text-center text-sm font-semibold"
+              >
                 Get started as founder
-              </Link>
-              <Link href="/investors" className="cap-btn-secondary rounded-lg px-5 py-3 text-center text-sm font-semibold">
+              </TrackedCTA>
+              <TrackedCTA
+                href="/investors"
+                event="investor_explore_cta"
+                properties={{ location: "home_hero" }}
+                className="cap-btn-secondary rounded-lg px-5 py-3 text-center text-sm font-semibold"
+              >
                 Explore as investor
-              </Link>
+              </TrackedCTA>
             </div>
             <div className="mt-6 flex flex-wrap gap-2">
               {trustBadges.map(({ icon: Icon, label }) => (
@@ -189,13 +200,21 @@ export default async function Home() {
           <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[var(--shadow-card)]">
             {/* ticker = connected top strip */}
             {stats.deals.length > 0 ? (
-              <div className="cap-marquee-host relative flex h-11 items-center overflow-hidden border-b border-slate-200">
+              <div className="cap-marquee-host relative flex h-11 items-center overflow-hidden border-b border-slate-200" role="group" aria-label="Live private market activity">
+                {/* Static screen-reader list — single pass, no motion announced. */}
+                <ul className="sr-only">
+                  {stats.deals.map((d) => (
+                    <li key={`sr-${d.symbol}`}>
+                      {d.symbol}{d.sector ? `, ${d.sector}` : ""}, readiness {d.readiness != null ? d.readiness.toFixed(1) : "not yet rated"}, {d.fillPct != null ? `${d.fillPct}% indicated` : "0% indicated"}
+                    </li>
+                  ))}
+                </ul>
                 <span className="z-10 flex h-full items-center gap-2 border-r border-slate-200 bg-white px-4 font-mono text-[10.5px] uppercase tracking-[0.1em] text-[var(--teal)]">
                   <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--teal)] text-[var(--teal)]" />
                   Live
                 </span>
                 <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-white to-transparent" aria-hidden />
-                <div className="cap-marquee flex w-max items-center whitespace-nowrap">
+                <div className="cap-marquee flex w-max items-center whitespace-nowrap" aria-hidden="true">
                   {tickerLoop.map((d, i) => (
                     <span key={`${d.symbol}-${i}`} className="flex h-5 items-center gap-2 border-r border-slate-200 px-5 text-[12.5px]">
                       <span className="font-mono text-[12px] font-semibold text-[var(--navy)]">{d.symbol}</span>

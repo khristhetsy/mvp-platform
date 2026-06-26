@@ -5,6 +5,7 @@ import { CapitalOSLogo } from "@/components/CapitalOSLogo";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingScoredBoard, type ScoredBoardRow } from "@/components/marketing/MarketingScoredBoard";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
+import { TrackedCTA } from "@/components/marketing/TrackedCTA";
 
 export const metadata = {
   title: "For founders — become capital-ready",
@@ -102,13 +103,23 @@ export default function FoundersPage() {
               investors actively deploying capital.
             </p>
             <div className="mt-7 flex flex-col gap-2.5 sm:flex-row">
-              <Link href="/submit-company" className="cap-btn-primary inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold">
+              <TrackedCTA
+                href="/submit-company"
+                event="submit_company_cta"
+                properties={{ location: "founders_hero" }}
+                className="cap-btn-primary inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold"
+              >
                 Get started as founder
                 <ArrowRight className="h-4 w-4" strokeWidth={2} aria-hidden />
-              </Link>
-              <Link href="/auth/sign-in" className="cap-btn-secondary inline-flex items-center justify-center rounded-lg px-5 py-3 text-sm font-semibold">
+              </TrackedCTA>
+              <TrackedCTA
+                href="/auth/sign-in"
+                event="capital_readiness_start"
+                properties={{ location: "founders_hero" }}
+                className="cap-btn-secondary inline-flex items-center justify-center rounded-lg px-5 py-3 text-sm font-semibold"
+              >
                 Check your readiness →
-              </Link>
+              </TrackedCTA>
             </div>
           </div>
 

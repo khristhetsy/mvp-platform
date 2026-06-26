@@ -121,13 +121,20 @@ export default async function DealsPage() {
           {/* Ticker + stats + board — one connected card */}
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[var(--shadow-card)]">
             {/* ticker = connected top strip */}
-            <div className="cap-marquee-host relative flex h-11 items-center overflow-hidden border-b border-slate-200">
+            <div className="cap-marquee-host relative flex h-11 items-center overflow-hidden border-b border-slate-200" role="group" aria-label="Sample marketplace activity">
+              <ul className="sr-only">
+                {DEAL_TICKER.map((e, i) => (
+                  <li key={`sr-${e.label}-${i}`}>
+                    {e.label}{e.detail ? `, ${e.detail}` : ""} — {e.when}
+                  </li>
+                ))}
+              </ul>
               <span className="z-10 flex h-full items-center gap-2 border-r border-slate-200 bg-white px-4 font-mono text-[10.5px] uppercase tracking-[0.1em] text-[var(--teal)]">
                 <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--teal)] text-[var(--teal)]" />
                 Sample
               </span>
               <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-white to-transparent" aria-hidden />
-              <div className="cap-marquee flex w-max items-center whitespace-nowrap">
+              <div className="cap-marquee flex w-max items-center whitespace-nowrap" aria-hidden="true">
                 {[...DEAL_TICKER, ...DEAL_TICKER].map((e, i) => {
                   const Icon = e.Icon;
                   return (
