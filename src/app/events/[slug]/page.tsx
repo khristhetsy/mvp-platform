@@ -258,12 +258,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Sector tracks</h2>
             <div className="mt-3 flex flex-wrap gap-2">
               {event.sectors.map((s) => (
-                <span
+                <Link
                   key={s.id}
-                  className="rounded-full border border-[var(--border-subtle)] bg-white px-3 py-1 text-sm font-medium text-[var(--text-secondary)]"
+                  href={`/events/sectors/${s.sectorSlug}`}
+                  className="rounded-full border border-[var(--border-subtle)] bg-white px-3 py-1 text-sm font-medium text-[var(--text-secondary)] transition hover:border-[var(--indigo)] hover:text-[var(--indigo)]"
                 >
                   {s.label || sectorLabel(s.sectorSlug)}
-                </span>
+                </Link>
               ))}
             </div>
           </div>

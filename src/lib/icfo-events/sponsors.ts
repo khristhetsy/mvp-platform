@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { SponsorInput } from "./schemas";
-import type { EventSponsor, Sponsor } from "./types";
+import type { EventSponsor, Sponsor, SponsorLead } from "./types";
 
 export const SPONSOR_LOGO_BUCKET = "event-sponsor-logos";
 
@@ -26,6 +26,7 @@ function mapSponsor(r: Row): Sponsor {
     sectorSlug: (r.sector_slug as string | null) ?? null,
     category: r.category as Sponsor["category"],
     categoryExclusive: Boolean(r.category_exclusive),
+    ownerId: (r.owner_id as string | null) ?? null,
   };
 }
 
@@ -49,6 +50,14 @@ export async function createSponsor(
     .single();
   if (error) throw new Error(error.message);
   return mapSponsor(data as Row);
+}
+
+export async function getSponsorById(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<Sponsor | null> {
+  const { data } = await raw(supabase).from("sponsors").select("*").eq("id", id).maybeSingle();
+  return data ? mapSponsor(data as Row) : null;
 }
 
 export async function listSponsors(supabase: SupabaseClient<Database>): Promise<Sponsor[]> {
@@ -177,6 +186,102 @@ export async function getSponsorBooth(
     .filter((x): x is SponsorBoothEvent => x !== null);
 
   return { ...sponsor, logoUrl: await signedLogoUrl(sponsor.logoPath), events };
+}
+
+// ── sponsor self-service (owner) ──────────────────────────────────────────────
+
+/** Admin: link/unlink a sponsor to a managing user. */
+export async function setSponsorOwner(
+  supabase: SupabaseClient<Database>,
+  sponsorId: string,
+  ownerId: string | null,
+): Promise<void> {
+  const { error } = await raw(supabase).from("sponsors").update({ owner_id: ownerId }).eq("id", sponsorId);
+  if (error) throw new Error(error.message);
+}
+
+/** Sponsors managed by a given user. */
+export async function listSponsorsByOwner(
+  supabase: SupabaseClient<Database>,
+  ownerId: string,
+): Promise<Sponsor[]> {
+  const { data, error } = await raw(supabase).from("sponsors").select("*").eq("owner_id", ownerId);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(mapSponsor);
+}
+
+/** A sponsor if (and only if) the given user owns it. */
+export async function getOwnedSponsor(
+  supabase: SupabaseClient<Database>,
+  sponsorId: string,
+  ownerId: string,
+): Promise<Sponsor | null> {
+  const { data } = await raw(supabase)
+    .from("sponsors")
+    .select("*")
+    .eq("id", sponsorId)
+    .eq("owner_id", ownerId)
+    .maybeSingle();
+  return data ? mapSponsor(data as Row) : null;
+}
+
+/** Owner-editable booth fields. RLS enforces ownership. */
+export async function updateSponsorBooth(
+  supabase: SupabaseClient<Database>,
+  sponsorId: string,
+  fields: { blurb?: string | null; website?: string | null },
+): Promise<Sponsor> {
+  const patch: Record<string, unknown> = {};
+  if (fields.blurb !== undefined) patch.blurb = fields.blurb;
+  if (fields.website !== undefined) patch.website = fields.website;
+  const { data, error } = await raw(supabase)
+    .from("sponsors")
+    .update(patch)
+    .eq("id", sponsorId)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return mapSponsor(data as Row);
+}
+
+/** Opt-in leads for a sponsor (visible to its owner + staff via RLS). */
+export async function listSponsorLeads(
+  supabase: SupabaseClient<Database>,
+  sponsorId: string,
+): Promise<SponsorLead[]> {
+  const { data, error } = await raw(supabase)
+    .from("sponsor_leads")
+    .select("*, profiles:profile_id(full_name,email), events:event_id(title)")
+    .eq("sponsor_id", sponsorId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as Row[]).map((r) => {
+    const p = r.profiles as { full_name?: string | null; email?: string | null } | null;
+    const e = r.events as { title?: string | null } | null;
+    return {
+      id: String(r.id),
+      sponsorId: String(r.sponsor_id),
+      profileId: String(r.profile_id),
+      attendeeName: p?.full_name ?? p?.email ?? null,
+      eventId: (r.event_id as string | null) ?? null,
+      eventTitle: e?.title ?? null,
+      message: (r.message as string | null) ?? null,
+      createdAt: String(r.created_at),
+    };
+  });
+}
+
+/** Find a profile id by email (admin owner assignment). */
+export async function findProfileIdByEmail(
+  supabase: SupabaseClient<Database>,
+  email: string,
+): Promise<string | null> {
+  const { data } = await raw(supabase)
+    .from("profiles")
+    .select("id")
+    .ilike("email", email.trim())
+    .maybeSingle();
+  return data ? String((data as Row).id) : null;
 }
 
 /** Record an opt-in intro request (attendee chose to connect with the sponsor). */

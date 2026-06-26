@@ -8,6 +8,7 @@ import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { SponsorIntroButton } from "@/components/events/SponsorIntroButton";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
+import { track } from "@/lib/analytics/posthog";
 import { getSponsorBooth } from "@/lib/icfo-events/sponsors";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import type { SponsorBooth } from "@/lib/icfo-events/sponsors";
@@ -49,6 +50,7 @@ export default async function SponsorBoothPage({ params }: { params: Promise<{ i
   if (!booth) notFound();
 
   const profile = await getCurrentUserProfile();
+  track("event_sponsor_viewed", { sponsorId: id, userId: profile?.id ?? null });
 
   return (
     <MarketingShell>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
 import { requireUserProfile } from "@/lib/supabase/auth";
+import { track } from "@/lib/analytics/posthog";
 import { awardPoints } from "@/lib/icfo-events/gamification";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ export async function POST(
     }
     // Idempotent per session — only the first view scores.
     await awardPoints(parsed.data.eventId, profile.id, "session_viewed", sessionId);
+    track("event_session_viewed", { userId: profile.id, eventId: parsed.data.eventId, sessionId });
     return NextResponse.json({ ok: true });
   } catch (err) {
     Sentry.captureException(err);

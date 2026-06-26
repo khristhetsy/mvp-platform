@@ -117,6 +117,18 @@ export interface Sponsor {
   sectorSlug: string | null;
   category: SponsorCategory;
   categoryExclusive: boolean;
+  ownerId: string | null;
+}
+
+export interface SponsorLead {
+  id: string;
+  sponsorId: string;
+  profileId: string;
+  attendeeName: string | null;
+  eventId: string | null;
+  eventTitle: string | null;
+  message: string | null;
+  createdAt: string;
 }
 
 export interface EventSponsor extends Sponsor {

@@ -19,6 +19,63 @@ const CATEGORIES: { value: SponsorCategory; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 
+function AssignOwner({ sponsorId, hasOwner }: { sponsorId: string; hasOwner: boolean }) {
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [assigned, setAssigned] = useState(hasOwner);
+  const [error, setError] = useState<string | null>(null);
+
+  async function assign(clear: boolean) {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/sponsors/${sponsorId}/owner`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: clear ? null : email }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Failed.");
+      setAssigned(!clear);
+      if (clear) setEmail("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (assigned) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-emerald-700">Linked ✓</span>
+        <button onClick={() => assign(true)} disabled={busy} className="text-xs text-rose-600 hover:underline">
+          Unlink
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="owner email"
+        className="w-32 rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs"
+      />
+      <button
+        onClick={() => assign(false)}
+        disabled={busy || !email.trim()}
+        className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50"
+      >
+        Link
+      </button>
+      {error && <span className="text-xs text-rose-600">{error}</span>}
+    </div>
+  );
+}
+
 function LogoUpload({
   sponsorId,
   hasLogo,
@@ -163,6 +220,7 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
                 <th className="px-4 py-3 font-semibold">Tier</th>
                 <th className="px-4 py-3 font-semibold">Category</th>
                 <th className="px-4 py-3 font-semibold">Logo</th>
+                <th className="px-4 py-3 font-semibold">Owner</th>
               </tr>
             </thead>
             <tbody>
@@ -173,6 +231,9 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
                   <td className="px-4 py-3 capitalize text-[var(--text-secondary)]">{s.category}</td>
                   <td className="px-4 py-3">
                     <LogoUpload sponsorId={s.id} hasLogo={Boolean(s.logoPath)} onUploaded={onLogoUploaded} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <AssignOwner sponsorId={s.id} hasOwner={Boolean(s.ownerId)} />
                   </td>
                 </tr>
               ))}

@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { requirePermissionApi } from "@/lib/api/permissions";
 import { linkSponsorSchema } from "@/lib/icfo-events/schemas";
-import { linkSponsorToEvent, unlinkSponsorFromEvent } from "@/lib/icfo-events/sponsors";
+import {
+  linkSponsorToEvent,
+  unlinkSponsorFromEvent,
+  getSponsorById,
+  listEventSponsors,
+} from "@/lib/icfo-events/sponsors";
 import { logEventActivity } from "@/lib/icfo-events/activity";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +25,20 @@ export async function POST(
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
+    // Enforce category exclusivity: one anchor per category per event.
+    const incoming = await getSponsorById(auth.supabase, parsed.data.sponsorId);
+    if (!incoming) return NextResponse.json({ error: "Sponsor not found." }, { status: 404 });
+    const existing = await listEventSponsors(auth.supabase, id);
+    const sameCategory = existing.filter(
+      (es) => es.id !== incoming.id && es.category === incoming.category,
+    );
+    if (sameCategory.length > 0 && (incoming.categoryExclusive || sameCategory.some((es) => es.categoryExclusive))) {
+      return NextResponse.json(
+        { error: `A ${incoming.category} sponsor with category exclusivity is already attached to this event.` },
+        { status: 409 },
+      );
+    }
+
     await linkSponsorToEvent(auth.supabase, id, parsed.data.sponsorId, parsed.data.placement);
     await logEventActivity(auth.supabase, id, auth.profile.id, "sponsor_added", {
       sponsorId: parsed.data.sponsorId,

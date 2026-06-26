@@ -94,6 +94,30 @@ export async function listPublicEvents(supabase: SupabaseClient<Database>): Prom
   return (data ?? []).map(mapEvent);
 }
 
+/** Published events that have a track in the given sector. */
+export async function listEventsBySector(
+  supabase: SupabaseClient<Database>,
+  sectorSlug: string,
+): Promise<EventRecord[]> {
+  const { data, error } = await raw(supabase)
+    .from("event_sectors")
+    .select("events:event_id(*)")
+    .eq("sector_slug", sectorSlug);
+  if (error) throw new Error(error.message);
+
+  const events = ((data ?? []) as EventRow[])
+    .map((row) => row.events as EventRow | null)
+    .filter((e): e is EventRow => e !== null)
+    .map(mapEvent)
+    .filter((e) => ["published", "live", "ended"].includes(e.status));
+
+  // De-dupe (an event could match once per sector row) and sort by start.
+  const seen = new Set<string>();
+  return events
+    .filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true)))
+    .sort((a, b) => (a.startsAt ?? "").localeCompare(b.startsAt ?? ""));
+}
+
 async function loadSectors(
   supabase: SupabaseClient<Database>,
   eventId: string,
