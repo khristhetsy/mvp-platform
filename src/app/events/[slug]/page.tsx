@@ -84,7 +84,7 @@ function SponsorLockup({ sponsors }: { sponsors: EventSponsor[] }) {
   const presenting = sponsors.filter((s) => s.placement === "presenting");
   const others = sponsors.filter((s) => s.placement !== "presenting");
   return (
-    <div className="mt-10">
+    <div id="partners" className="mt-10 scroll-mt-24">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Partners</h2>
       {presenting.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -266,6 +266,20 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               Apply to present
             </Link>
           )}
+          <Link
+            href={`/events/${event.slug}/lobby`}
+            className="inline-flex items-center rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
+          >
+            Enter lobby
+          </Link>
+          {profile && (event.status === "published" || event.status === "live") && (
+            <Link
+              href={`/events/${event.slug}/lounge`}
+              className="inline-flex items-center rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
+            >
+              Networking lounge
+            </Link>
+          )}
         </div>
 
         {event.sectors.length > 0 && (
@@ -289,7 +303,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
         <SponsorLockup sponsors={sponsors} />
 
-        <div className="mt-10">
+        <div id="agenda" className="mt-10 scroll-mt-24">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Agenda</h2>
           {visibleSessions.length === 0 ? (
             <p className="mt-3 text-sm text-[var(--text-muted)]">Sessions will be announced soon.</p>
@@ -330,7 +344,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
         </div>
 
         {profile && (
-          <div className="mt-10">
+          <div id="networking" className="mt-10 scroll-mt-24">
             <NetworkingOptIn
               eventId={event.id}
               initialOptedIn={Boolean(optin?.optedIn)}
