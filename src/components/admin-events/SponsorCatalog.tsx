@@ -19,6 +19,50 @@ const CATEGORIES: { value: SponsorCategory; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 
+function LogoUpload({
+  sponsorId,
+  hasLogo,
+  onUploaded,
+}: {
+  sponsorId: string;
+  hasLogo: boolean;
+  onUploaded: (sponsor: Sponsor) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function upload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/admin/events/sponsors/${sponsorId}/logo`, { method: "POST", body: fd });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Upload failed.");
+      onUploaded(json.sponsor as Sponsor);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setBusy(false);
+      e.target.value = "";
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <label className="cursor-pointer text-xs font-medium text-[var(--blue)] hover:underline">
+        {busy ? "Uploading…" : hasLogo ? "Replace logo" : "Upload logo"}
+        <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={upload} disabled={busy} className="hidden" />
+      </label>
+      {hasLogo && <span className="text-xs text-emerald-700">✓</span>}
+      {error && <span className="text-xs text-rose-600">{error}</span>}
+    </div>
+  );
+}
+
 export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[] }) {
   const [sponsors, setSponsors] = useState<Sponsor[]>(initialSponsors);
   const [name, setName] = useState("");
@@ -30,6 +74,10 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
   const [categoryExclusive, setCategoryExclusive] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function onLogoUploaded(updated: Sponsor) {
+    setSponsors((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+  }
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -114,7 +162,7 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
                 <th className="px-4 py-3 font-semibold">Name</th>
                 <th className="px-4 py-3 font-semibold">Tier</th>
                 <th className="px-4 py-3 font-semibold">Category</th>
-                <th className="px-4 py-3 font-semibold">Exclusive</th>
+                <th className="px-4 py-3 font-semibold">Logo</th>
               </tr>
             </thead>
             <tbody>
@@ -123,7 +171,9 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
                   <td className="px-4 py-3 font-medium text-[var(--navy)]">{s.name}</td>
                   <td className="px-4 py-3 capitalize text-[var(--text-secondary)]">{s.tier}</td>
                   <td className="px-4 py-3 capitalize text-[var(--text-secondary)]">{s.category}</td>
-                  <td className="px-4 py-3 text-[var(--text-secondary)]">{s.categoryExclusive ? "Yes" : "—"}</td>
+                  <td className="px-4 py-3">
+                    <LogoUpload sponsorId={s.id} hasLogo={Boolean(s.logoPath)} onUploaded={onLogoUploaded} />
+                  </td>
                 </tr>
               ))}
             </tbody>

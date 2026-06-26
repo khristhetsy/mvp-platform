@@ -101,3 +101,77 @@ export async function listSuggestions(
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
 }
+
+// ── connection handshake (Phase 3) ────────────────────────────────────────────
+
+export type NetworkingConnectionStatus = "requested" | "accepted" | "declined";
+
+export interface NetworkingConnection {
+  id: string;
+  eventId: string;
+  fromId: string;
+  toId: string;
+  status: NetworkingConnectionStatus;
+  direction: "outgoing" | "incoming";
+  otherName: string;
+  otherProfileId: string;
+}
+
+export async function createConnectionRequest(
+  supabase: SupabaseClient<Database>,
+  eventId: string,
+  fromId: string,
+  toId: string,
+): Promise<{ id: string }> {
+  const { data, error } = await raw(supabase)
+    .from("networking_connections")
+    .insert({ event_id: eventId, from_id: fromId, to_id: toId })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  return { id: String((data as Row).id) };
+}
+
+export async function respondToConnection(
+  supabase: SupabaseClient<Database>,
+  connectionId: string,
+  responderId: string,
+  accept: boolean,
+): Promise<void> {
+  const { error } = await raw(supabase)
+    .from("networking_connections")
+    .update({ status: accept ? "accepted" : "declined", responded_at: new Date().toISOString() })
+    .eq("id", connectionId)
+    .eq("to_id", responderId);
+  if (error) throw new Error(error.message);
+}
+
+/** All connections touching this member at an event, annotated with direction + other party. */
+export async function listConnections(
+  supabase: SupabaseClient<Database>,
+  eventId: string,
+  profileId: string,
+): Promise<NetworkingConnection[]> {
+  const { data } = await raw(supabase)
+    .from("networking_connections")
+    .select("*, fromp:from_id(full_name), top:to_id(full_name)")
+    .eq("event_id", eventId)
+    .or(`from_id.eq.${profileId},to_id.eq.${profileId}`);
+
+  const rows = (data ?? []) as Row[];
+  return rows.map((r) => {
+    const outgoing = String(r.from_id) === profileId;
+    const fromp = r.fromp as { full_name?: string | null } | null;
+    const top = r.top as { full_name?: string | null } | null;
+    return {
+      id: String(r.id),
+      eventId: String(r.event_id),
+      fromId: String(r.from_id),
+      toId: String(r.to_id),
+      status: r.status as NetworkingConnectionStatus,
+      direction: outgoing ? "outgoing" : "incoming",
+      otherName: (outgoing ? top?.full_name : fromp?.full_name) ?? "Attendee",
+      otherProfileId: outgoing ? String(r.to_id) : String(r.from_id),
+    };
+  });
+}

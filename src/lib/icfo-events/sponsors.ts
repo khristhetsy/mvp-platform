@@ -57,6 +57,44 @@ export async function listSponsors(supabase: SupabaseClient<Database>): Promise<
   return (data ?? []).map(mapSponsor);
 }
 
+/** Object path for a sponsor logo: <sponsorId>/<timestamp>-<sanitized name>. */
+export function buildSponsorLogoPath(sponsorId: string, fileName: string): string {
+  const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return `${sponsorId}/${Date.now()}-${safe}`;
+}
+
+export async function uploadSponsorLogo(
+  supabase: SupabaseClient<Database>,
+  path: string,
+  bytes: ArrayBuffer | Buffer | Uint8Array,
+  contentType: string,
+): Promise<void> {
+  const { error } = await raw(supabase).storage
+    .from(SPONSOR_LOGO_BUCKET)
+    .upload(path, bytes, { contentType, upsert: true });
+  if (error) throw new Error(`Logo upload failed: ${error.message}`);
+}
+
+export async function setSponsorLogoPath(
+  supabase: SupabaseClient<Database>,
+  sponsorId: string,
+  logoPath: string,
+): Promise<Sponsor> {
+  const { data, error } = await raw(supabase)
+    .from("sponsors")
+    .update({ logo_path: logoPath })
+    .eq("id", sponsorId)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return mapSponsor(data as Row);
+}
+
+/** Signed logo URL for a single sponsor (admin preview). */
+export async function sponsorLogoSignedUrl(path: string | null): Promise<string | null> {
+  return signedLogoUrl(path);
+}
+
 export async function linkSponsorToEvent(
   supabase: SupabaseClient<Database>,
   eventId: string,

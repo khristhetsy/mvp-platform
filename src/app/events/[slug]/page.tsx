@@ -8,13 +8,15 @@ import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { RegisterButton } from "@/components/events/RegisterButton";
 import { NetworkingOptIn } from "@/components/events/NetworkingOptIn";
+import { NetworkingConnections } from "@/components/events/NetworkingConnections";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { getEventBySlug } from "@/lib/icfo-events/queries";
 import { listEventPresenters } from "@/lib/icfo-events/applications";
 import { listEventSponsors } from "@/lib/icfo-events/sponsors";
 import { getRegistration } from "@/lib/icfo-events/registrations";
-import { getOptin } from "@/lib/icfo-events/networking";
+import { getOptin, listSuggestions, listConnections } from "@/lib/icfo-events/networking";
+import type { NetworkingSuggestion, NetworkingConnection } from "@/lib/icfo-events/networking";
 import { sessionVideoSignedUrl } from "@/lib/icfo-events/video/storage";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import type { EventWithDetail, EventSession, EventPresenter, EventSponsor } from "@/lib/icfo-events/types";
@@ -154,6 +156,15 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
     profile ? getOptin(supabase, event.id, profile.id).catch(() => null) : Promise.resolve(null),
   ]);
 
+  // If the viewer has opted into networking, fetch their matches + connections.
+  const [suggestions, connections]: [NetworkingSuggestion[], NetworkingConnection[]] =
+    profile && optin?.optedIn
+      ? await Promise.all([
+          listSuggestions(supabase, event.id, profile.id).catch(() => [] as NetworkingSuggestion[]),
+          listConnections(supabase, event.id, profile.id).catch(() => [] as NetworkingConnection[]),
+        ])
+      : [[], []];
+
   const visibleSessions = event.sessions.filter((s) => s.status !== "draft");
 
   // Sign playback URLs for any visible session that has a recording.
@@ -287,6 +298,14 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               initialOptedIn={Boolean(optin?.optedIn)}
               initialInterests={optin?.interests ?? []}
             />
+
+            {optin?.optedIn && (
+              <NetworkingConnections
+                eventId={event.id}
+                suggestions={suggestions}
+                initialConnections={connections}
+              />
+            )}
           </div>
         )}
       </section>

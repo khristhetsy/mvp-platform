@@ -123,6 +123,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/events",              label: "All events"   },
           { href: "/admin/events/applications", label: "Applications" },
           { href: "/admin/events/sponsors",     label: "Sponsors"     },
+          { href: "/admin/events/analytics",    label: "Analytics"    },
         ],
       },
     ],
@@ -227,6 +228,7 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
   },
   { href: "/founder/documents", label: "Documents", minStage: "qualify" },
   { href: "/founder/private-market", label: "Private Market" },
+  { href: "/events", label: "Events" },
   {
     href: "/founder/investors",
     label: "Fundraising",
@@ -324,6 +326,7 @@ export const investorWorkspaceNav: WorkspaceNavItem[] = [
       { href: "/investor/schedule", label: "Scheduling" },
     ],
   },
+  { href: "/events", label: "Events" },
   { href: "/investor/analytics", label: "Analytics" },
   { href: "/investor/tasks", label: "Tasks" },
   { href: "/notifications", label: "Notifications" },
