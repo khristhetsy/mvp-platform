@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronRight, ChevronLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { InternalPermission } from "@/lib/rbac/constants";
 import type { WorkspaceId, WorkspaceNavItem } from "@/lib/workspace-nav";
@@ -255,70 +255,39 @@ export function WorkspaceSidebar({
     return item.children?.some((child) => isNavItemActive(child.href)) ?? false;
   }
 
-  function NavItemWithChildren({ item }: Readonly<{ item: WorkspaceNavItem }>) {
-    const parentActive = isChildActive(item);
-    const [open, setOpen] = useState(parentActive);
-    const Icon = getWorkspaceNavIcon(item.href);
+  // ── Drill-in sub-menu (Vercel-style) ──────────────────────────────────────
+  const allNavItems = useMemo<WorkspaceNavItem[]>(
+    () => (adminSections ? adminSections.flatMap((s) => s.items) : items),
+    [adminSections, items],
+  );
 
-    return (
-      <div>
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
-            parentActive
-              ? "bg-[var(--blue-muted)] text-[var(--blue-hover)]"
-              : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
-          }`}
-        >
-          <Icon
-            className={`h-4 w-4 shrink-0 ${parentActive ? "text-[var(--blue)]" : "text-slate-400"}`}
-            strokeWidth={1.75}
-            aria-hidden
-          />
-          <span className="truncate">{tLabel(item.label)}</span>
-          <ChevronDown
-            className={`ml-auto h-3.5 w-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""} ${parentActive ? "text-[var(--blue)]" : "text-slate-400"}`}
-            strokeWidth={2}
-            aria-hidden
-          />
-        </button>
-        {open ? (
-          <div className="ml-3 mt-0.5 space-y-0.5 border-l border-slate-200 pl-3">
-            {item.children!.map((child) => {
-              const childActive = pathname === child.href;
-              const ChildIcon = getWorkspaceNavIcon(child.href);
-              return (
-                <Link
-                  key={child.href}
-                  href={child.href}
-                  onClick={onClose}
-                  aria-current={childActive ? "page" : undefined}
-                  className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px] font-medium transition-colors ${
-                    childActive
-                      ? "bg-[var(--blue-muted)] text-[var(--blue-hover)]"
-                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"
-                  }`}
-                >
-                  <ChildIcon
-                    className={`h-3.5 w-3.5 shrink-0 ${childActive ? "text-[var(--blue)]" : "text-slate-400"}`}
-                    strokeWidth={1.75}
-                    aria-hidden
-                  />
-                  <span className="truncate">{tLabel(child.label)}</span>
-                </Link>
-              );
-            })}
-          </div>
-        ) : null}
-      </div>
+  // The section the current route belongs to (deep-links / refresh open it).
+  const routeDrilled = useMemo(() => {
+    const parent = allNavItems.find(
+      (it) => it.children?.length && it.children.some((c) => pathname === c.href || pathname.startsWith(`${c.href}/`)),
     );
-  }
+    return parent?.href ?? null;
+  }, [allNavItems, pathname]);
 
-  function renderNavLink(item: WorkspaceNavItem) {
-    if (item.children && item.children.length > 0) {
-      return <NavItemWithChildren key={item.href} item={item} />;
-    }
+  // Manual drill/back overrides the route default — but only on the current page,
+  // so navigating elsewhere falls back to that route's section automatically.
+  const [userDrill, setUserDrill] = useState<{ at: string; value: string | null } | null>(null);
+  const drilled = userDrill && userDrill.at === pathname ? userDrill.value : routeDrilled;
+  const drilledItem = drilled
+    ? allNavItems.find((it) => it.href === drilled && it.children?.length) ?? null
+    : null;
+
+  // Escape backs out of a drilled sub-menu.
+  useEffect(() => {
+    if (!drilled) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setUserDrill({ at: pathname, value: null });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drilled, pathname]);
+
+  function renderLeafLink(item: WorkspaceNavItem) {
     const active = isNavItemActive(item.href);
     const Icon = getWorkspaceNavIcon(item.href);
     return (
@@ -348,6 +317,39 @@ export function WorkspaceSidebar({
     );
   }
 
+  function renderTopLevel(item: WorkspaceNavItem) {
+    if (item.children && item.children.length > 0) {
+      const parentActive = isChildActive(item);
+      const Icon = getWorkspaceNavIcon(item.href);
+      return (
+        <button
+          key={item.href}
+          type="button"
+          aria-haspopup="true"
+          onClick={() => setUserDrill({ at: pathname, value: item.href })}
+          className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
+            parentActive
+              ? "bg-[var(--blue-muted)] text-[var(--blue-hover)]"
+              : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+          }`}
+        >
+          <Icon
+            className={`h-4 w-4 shrink-0 ${parentActive ? "text-[var(--blue)]" : "text-slate-400"}`}
+            strokeWidth={1.75}
+            aria-hidden
+          />
+          <span className="truncate">{tLabel(item.label)}</span>
+          <ChevronRight
+            className={`ml-auto h-3.5 w-3.5 shrink-0 ${parentActive ? "text-[var(--blue)]" : "text-slate-400"}`}
+            strokeWidth={2}
+            aria-hidden
+          />
+        </button>
+      );
+    }
+    return renderLeafLink(item);
+  }
+
   const nav = (
     <>
       <div className="border-b border-slate-200/80 bg-[var(--surface-sidebar)] px-4 py-4">
@@ -361,20 +363,51 @@ export function WorkspaceSidebar({
           </span>
         ) : null}
       </div>
-      <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 py-2.5" aria-label={`${label} navigation`}>
-        {adminSections
-          ? adminSections.map((section, index) => (
-              <div key={section.title ?? `section-${index}`} className={section.title ? "pt-1" : undefined}>
-                {section.title ? (
-                  <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-                    {tLabel(section.title)}
-                  </p>
-                ) : null}
-                <div className="space-y-0.5">{section.items.map(renderNavLink)}</div>
-              </div>
-            ))
-          : items.map(renderNavLink)}
-      </nav>
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        {/* Main list */}
+        <nav
+          aria-label={`${label} navigation`}
+          aria-hidden={drilled ? true : undefined}
+          className={`absolute inset-0 space-y-0.5 overflow-y-auto px-2 py-2.5 transition-transform duration-[260ms] ease-out ${
+            drilled ? "pointer-events-none -translate-x-[24%]" : "translate-x-0"
+          }`}
+        >
+          {adminSections
+            ? adminSections.map((section, index) => (
+                <div key={section.title ?? `section-${index}`} className={section.title ? "pt-1" : undefined}>
+                  {section.title ? (
+                    <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                      {tLabel(section.title)}
+                    </p>
+                  ) : null}
+                  <div className="space-y-0.5">{section.items.map(renderTopLevel)}</div>
+                </div>
+              ))
+            : items.map(renderTopLevel)}
+        </nav>
+
+        {/* Drilled sub-menu — slides in from the right */}
+        <div
+          aria-hidden={drilled ? undefined : true}
+          className={`absolute inset-0 overflow-y-auto px-2 py-2.5 transition-transform duration-[260ms] ease-out ${
+            drilled ? "translate-x-0" : "pointer-events-none translate-x-full"
+          }`}
+        >
+          {drilledItem ? (
+            <nav aria-label={`${tLabel(drilledItem.label)} navigation`} className="space-y-0.5">
+              <button
+                type="button"
+                onClick={() => setUserDrill({ at: pathname, value: null })}
+                className="mb-1 flex w-full items-center gap-1.5 rounded-lg px-2 py-2 text-[13.5px] font-semibold text-[var(--navy)] transition-colors hover:bg-slate-100"
+              >
+                <ChevronLeft className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                <span className="truncate">{tLabel(drilledItem.label)}</span>
+              </button>
+              {drilledItem.children!.map((child) => renderLeafLink(child))}
+            </nav>
+          ) : null}
+        </div>
+      </div>
       <div className="space-y-2 border-t border-slate-200/80 bg-[var(--surface-sidebar)] p-3">
         {planBadge ? <div>{planBadge}</div> : null}
         <LanguageSwitcher />
