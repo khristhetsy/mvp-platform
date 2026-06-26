@@ -28,6 +28,7 @@ export interface EventSession {
   videoProvider: string | null;
   videoRef: string | null;
   recordingPath: string | null;
+  hostSponsorId: string | null;
   position: number;
 }
 
@@ -104,7 +105,15 @@ export interface EventPresenter {
   displayName: string;
   roleLabel: string | null;
   headshotPath: string | null;
+  headline: string | null;
+  bio: string | null;
+  links: string[];
   position: number;
+}
+
+export interface SponsorDownload {
+  label: string;
+  url: string;
 }
 
 export interface Sponsor {
@@ -118,6 +127,7 @@ export interface Sponsor {
   category: SponsorCategory;
   categoryExclusive: boolean;
   ownerId: string | null;
+  downloads: SponsorDownload[];
 }
 
 export interface SponsorLead {

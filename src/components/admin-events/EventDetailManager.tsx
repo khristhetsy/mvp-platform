@@ -83,6 +83,7 @@ export function EventDetailManager({
   const [sType, setSType] = useState<SessionType>("keynote");
   const [sAbstract, setSAbstract] = useState("");
   const [sSector, setSSector] = useState<string>(event.sectors[0]?.sectorSlug ?? "");
+  const [sHost, setSHost] = useState<string>("");
   const [addingSession, setAddingSession] = useState(false);
 
   // sponsor attach
@@ -103,6 +104,7 @@ export function EventDetailManager({
           type: sType,
           abstract: sAbstract || null,
           sectorSlug: sSector || null,
+          hostSponsorId: sHost || null,
           position: sessions.length,
         }),
       });
@@ -253,6 +255,14 @@ export function EventDetailManager({
               <option value="">No specific track</option>
               {event.sectors.map((s) => (
                 <option key={s.id} value={s.sectorSlug}>{s.label}</option>
+              ))}
+            </select>
+          )}
+          {eventSponsors.length > 0 && (
+            <select value={sHost} onChange={(e) => setSHost(e.target.value)} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm">
+              <option value="">No host sponsor</option>
+              {eventSponsors.map((s) => (
+                <option key={s.id} value={s.id}>Hosted by {s.name}</option>
               ))}
             </select>
           )}

@@ -133,14 +133,27 @@ function Presenters({ presenters }: { presenters: EventPresenter[] }) {
       <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Speakers</h2>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {presenters.map((p) => (
-          <div key={p.id} className="flex items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-white px-4 py-3">
-            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[var(--indigo-soft)] text-sm font-semibold text-[var(--indigo)]">
-              {initials(p.displayName)}
+          <div key={p.id} className="rounded-xl border border-[var(--border-subtle)] bg-white px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[var(--indigo-soft)] text-sm font-semibold text-[var(--indigo)]">
+                {initials(p.displayName)}
+              </div>
+              <div>
+                <div className="font-medium text-[var(--navy)]">{p.displayName}</div>
+                {p.roleLabel && <div className="text-xs capitalize text-[var(--text-muted)]">{p.roleLabel}</div>}
+              </div>
             </div>
-            <div>
-              <div className="font-medium text-[var(--navy)]">{p.displayName}</div>
-              {p.roleLabel && <div className="text-xs text-[var(--text-muted)]">{p.roleLabel}</div>}
-            </div>
+            {p.headline && <p className="mt-2 text-sm font-medium text-[var(--text-secondary)]">{p.headline}</p>}
+            {p.bio && <p className="mt-1 text-sm text-[var(--text-muted)]">{p.bio}</p>}
+            {p.links.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {p.links.map((l) => (
+                  <a key={l} href={l} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--blue)] underline">
+                    {l.replace(/^https?:\/\//, "").slice(0, 32)}
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -187,6 +200,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
     ]),
   );
   const playback = new Map<string, string | null>(playbackEntries);
+  const sponsorNames = new Map(sponsors.map((s) => [s.id, s.name]));
 
   // Gamification (status only). Leaderboard needs cross-member reads → service role.
   const adminClient = createServiceRoleClient();
@@ -294,6 +308,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                     )}
                   </div>
                   <h3 className="mt-2 font-semibold text-[var(--navy)]">{s.title}</h3>
+                  {s.hostSponsorId && sponsorNames.get(s.hostSponsorId) && (
+                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">Hosted by {sponsorNames.get(s.hostSponsorId)}</p>
+                  )}
                   {s.abstract && <p className="mt-1 text-sm text-[var(--text-secondary)]">{s.abstract}</p>}
                   {playback.get(s.id) && (
                     <SessionVideo src={playback.get(s.id) as string} eventId={event.id} sessionId={s.id} />

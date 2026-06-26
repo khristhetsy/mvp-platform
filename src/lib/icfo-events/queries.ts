@@ -67,6 +67,7 @@ function mapSession(r: EventRow): EventSession {
     videoProvider: (r.video_provider as string | null) ?? null,
     videoRef: (r.video_ref as string | null) ?? null,
     recordingPath: (r.recording_path as string | null) ?? null,
+    hostSponsorId: (r.host_sponsor_id as string | null) ?? null,
     position: Number(r.position ?? 0),
   };
 }

@@ -49,6 +49,9 @@ function mapPresenter(r: Row): EventPresenter {
     displayName: String(r.display_name),
     roleLabel: (r.role_label as string | null) ?? null,
     headshotPath: (r.headshot_path as string | null) ?? null,
+    headline: (r.headline as string | null) ?? null,
+    bio: (r.bio as string | null) ?? null,
+    links: Array.isArray(r.links) ? (r.links as string[]) : [],
     position: Number(r.position ?? 0),
   };
 }
@@ -143,6 +146,9 @@ export async function createPresenter(
     sessionId?: string | null;
     displayName: string;
     roleLabel?: string | null;
+    headline?: string | null;
+    bio?: string | null;
+    links?: string[];
   },
 ): Promise<EventPresenter> {
   const { data, error } = await raw(supabase)
@@ -154,6 +160,9 @@ export async function createPresenter(
       session_id: input.sessionId ?? null,
       display_name: input.displayName,
       role_label: input.roleLabel ?? null,
+      headline: input.headline ?? null,
+      bio: input.bio ?? null,
+      links: input.links ?? [],
     })
     .select("*")
     .single();

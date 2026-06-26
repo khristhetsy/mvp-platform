@@ -96,6 +96,43 @@ export default async function SponsorBoothPage({ params }: { params: Promise<{ i
           <SponsorIntroButton sponsorId={booth.id} sponsorName={booth.name} isAuthenticated={Boolean(profile)} />
         </div>
 
+        {booth.downloads.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Resources</h2>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {booth.downloads.map((d) => (
+                <a
+                  key={d.url}
+                  href={d.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--border-subtle)] bg-white px-3 py-2 text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--indigo)]"
+                >
+                  {d.label} <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {booth.hostedSessions.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Sessions hosted</h2>
+            <div className="mt-3 space-y-2">
+              {booth.hostedSessions.map((s) => (
+                <Link
+                  key={s.sessionId}
+                  href={`/events/${s.eventSlug}`}
+                  className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] bg-white px-4 py-3 hover:border-[var(--indigo)]"
+                >
+                  <span className="font-medium text-[var(--navy)]">{s.title}</span>
+                  <span className="text-xs text-[var(--text-muted)]">{s.eventTitle}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {booth.events.length > 0 && (
           <div className="mt-10">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Partnering at</h2>

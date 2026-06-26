@@ -10,6 +10,10 @@ export const dynamic = "force-dynamic";
 const schema = z.object({
   blurb: z.string().max(1000).nullable().optional(),
   website: z.string().url().nullable().optional(),
+  downloads: z
+    .array(z.object({ label: z.string().min(1).max(80), url: z.string().url() }))
+    .max(8)
+    .optional(),
 });
 
 /** Sponsor owner edits their own booth fields. */

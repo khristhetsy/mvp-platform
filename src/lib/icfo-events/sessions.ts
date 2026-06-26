@@ -25,6 +25,7 @@ function mapSession(r: Row): EventSession {
     videoProvider: (r.video_provider as string | null) ?? null,
     videoRef: (r.video_ref as string | null) ?? null,
     recordingPath: (r.recording_path as string | null) ?? null,
+    hostSponsorId: (r.host_sponsor_id as string | null) ?? null,
     position: Number(r.position ?? 0),
   };
 }
@@ -46,6 +47,7 @@ export async function createSession(
       starts_at: input.startsAt ?? null,
       ends_at: input.endsAt ?? null,
       recording_path: input.recordingPath ?? null,
+      host_sponsor_id: input.hostSponsorId ?? null,
       position: input.position,
     })
     .select("*")
@@ -68,6 +70,7 @@ export async function updateSession(
   if (input.startsAt !== undefined) patch.starts_at = input.startsAt;
   if (input.endsAt !== undefined) patch.ends_at = input.endsAt;
   if (input.recordingPath !== undefined) patch.recording_path = input.recordingPath;
+  if (input.hostSponsorId !== undefined) patch.host_sponsor_id = input.hostSponsorId;
   if (input.position !== undefined) patch.position = input.position;
   const { data, error } = await raw(supabase)
     .from("sessions")

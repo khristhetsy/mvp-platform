@@ -65,6 +65,7 @@ export const sessionInput = z.object({
   startsAt: z.string().datetime().nullable().optional(),
   endsAt: z.string().datetime().nullable().optional(),
   recordingPath: z.string().max(500).nullable().optional(),
+  hostSponsorId: z.string().uuid().nullable().optional(),
   position: z.number().default(0),
 });
 export type SessionInput = z.infer<typeof sessionInput>;

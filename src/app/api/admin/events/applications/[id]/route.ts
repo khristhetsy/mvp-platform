@@ -54,7 +54,10 @@ export async function POST(
         profileId: application.applicantId,
         sessionId: sessionId ?? null,
         displayName: application.applicantName ?? "Presenter",
-        roleLabel: roleLabel ?? application.topic,
+        roleLabel: roleLabel ?? application.kind.replace("_", " "),
+        headline: application.topic,
+        bio: application.bio,
+        links: application.links,
       });
       await awardPoints(application.eventId, application.applicantId, "approved");
     }

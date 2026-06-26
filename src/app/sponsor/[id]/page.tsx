@@ -53,6 +53,7 @@ export default async function SponsorPortalPage({ params }: { params: Promise<{ 
           sponsorId={id}
           initialBlurb={sponsor.blurb}
           initialWebsite={sponsor.website}
+          initialDownloads={sponsor.downloads}
           leads={leads}
         />
       </section>

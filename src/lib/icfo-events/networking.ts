@@ -68,6 +68,12 @@ export interface NetworkingSuggestion {
  * or raw contact data (the opt-in trust model). Returns [] if the caller hasn't
  * opted in.
  */
+function isComplementary(a: string, b: string): boolean {
+  const x = a.toLowerCase();
+  const y = b.toLowerCase();
+  return (x === "founder" && y === "investor") || (x === "investor" && y === "founder");
+}
+
 export async function listSuggestions(
   supabase: SupabaseClient<Database>,
   eventId: string,
@@ -77,9 +83,13 @@ export async function listSuggestions(
   const me = await getOptin(supabase, eventId, profileId);
   if (!me || !me.optedIn) return [];
 
+  // The viewer's own role, for complementarity weighting (founder ↔ investor).
+  const { data: meProfile } = await raw(supabase).from("profiles").select("role").eq("id", profileId).maybeSingle();
+  const myRole = String((meProfile as { role?: string | null } | null)?.role ?? "");
+
   const { data } = await raw(supabase)
     .from("networking_optins")
-    .select("profile_id, interests, profiles:profile_id(full_name)")
+    .select("profile_id, interests, profiles:profile_id(full_name, role)")
     .eq("event_id", eventId)
     .eq("opted_in", true)
     .neq("profile_id", profileId);
@@ -90,14 +100,18 @@ export async function listSuggestions(
     .map((r) => {
       const interests = Array.isArray(r.interests) ? (r.interests as string[]) : [];
       const shared = interests.filter((i) => mine.has(i));
-      const profile = r.profiles as { full_name?: string | null } | null;
+      const profile = r.profiles as { full_name?: string | null; role?: string | null } | null;
+      // Sector overlap is weighted ×2; a complementary founder↔investor pairing
+      // adds a fixed bonus so the right people surface even without shared sectors.
+      const complementaryBonus = profile?.role && isComplementary(myRole, profile.role) ? 3 : 0;
       return {
         profileId: String(r.profile_id),
         displayName: profile?.full_name ?? "Attendee",
         sharedInterests: shared,
-        score: shared.length,
+        score: shared.length * 2 + complementaryBonus,
       };
     })
+    .filter((s) => s.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
 }

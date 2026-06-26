@@ -27,6 +27,7 @@ function mapSponsor(r: Row): Sponsor {
     category: r.category as Sponsor["category"],
     categoryExclusive: Boolean(r.category_exclusive),
     ownerId: (r.owner_id as string | null) ?? null,
+    downloads: Array.isArray(r.downloads) ? (r.downloads as Sponsor["downloads"]) : [],
   };
 }
 
@@ -149,9 +150,17 @@ export interface SponsorBoothEvent {
   status: string;
 }
 
+export interface SponsorHostedSession {
+  sessionId: string;
+  title: string;
+  eventSlug: string;
+  eventTitle: string;
+}
+
 export interface SponsorBooth extends Sponsor {
   logoUrl: string | null;
   events: SponsorBoothEvent[];
+  hostedSessions: SponsorHostedSession[];
 }
 
 /** Public booth: a sponsor profile + the published events they partner. */
@@ -185,7 +194,25 @@ export async function getSponsorBooth(
     })
     .filter((x): x is SponsorBoothEvent => x !== null);
 
-  return { ...sponsor, logoUrl: await signedLogoUrl(sponsor.logoPath), events };
+  const { data: hosted } = await raw(supabase)
+    .from("sessions")
+    .select("id, title, events:event_id(slug, title, status)")
+    .eq("host_sponsor_id", sponsorId);
+
+  const hostedSessions: SponsorHostedSession[] = ((hosted ?? []) as Row[])
+    .map((row) => {
+      const e = row.events as Row | null;
+      if (!e || !["published", "live", "ended"].includes(String(e.status))) return null;
+      return {
+        sessionId: String(row.id),
+        title: String(row.title),
+        eventSlug: String(e.slug),
+        eventTitle: String(e.title),
+      };
+    })
+    .filter((x): x is SponsorHostedSession => x !== null);
+
+  return { ...sponsor, logoUrl: await signedLogoUrl(sponsor.logoPath), events, hostedSessions };
 }
 
 // ── sponsor self-service (owner) ──────────────────────────────────────────────
@@ -229,11 +256,12 @@ export async function getOwnedSponsor(
 export async function updateSponsorBooth(
   supabase: SupabaseClient<Database>,
   sponsorId: string,
-  fields: { blurb?: string | null; website?: string | null },
+  fields: { blurb?: string | null; website?: string | null; downloads?: { label: string; url: string }[] },
 ): Promise<Sponsor> {
   const patch: Record<string, unknown> = {};
   if (fields.blurb !== undefined) patch.blurb = fields.blurb;
   if (fields.website !== undefined) patch.website = fields.website;
+  if (fields.downloads !== undefined) patch.downloads = fields.downloads;
   const { data, error } = await raw(supabase)
     .from("sponsors")
     .update(patch)

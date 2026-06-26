@@ -1,35 +1,51 @@
 "use client";
 
 import { useState } from "react";
-import type { SponsorLead } from "@/lib/icfo-events/types";
+import type { SponsorLead, SponsorDownload } from "@/lib/icfo-events/types";
 
 export function SponsorPortalClient({
   sponsorId,
   initialBlurb,
   initialWebsite,
+  initialDownloads,
   leads,
 }: {
   sponsorId: string;
   initialBlurb: string | null;
   initialWebsite: string | null;
+  initialDownloads: SponsorDownload[];
   leads: SponsorLead[];
 }) {
   const [blurb, setBlurb] = useState(initialBlurb ?? "");
   const [website, setWebsite] = useState(initialWebsite ?? "");
+  const [downloads, setDownloads] = useState<SponsorDownload[]>(initialDownloads);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function updateDownload(i: number, field: "label" | "url", value: string) {
+    setDownloads((prev) => prev.map((d, idx) => (idx === i ? { ...d, [field]: value } : d)));
+    setSaved(false);
+  }
+  function addDownload() {
+    if (downloads.length >= 8) return;
+    setDownloads((prev) => [...prev, { label: "", url: "" }]);
+  }
+  function removeDownload(i: number) {
+    setDownloads((prev) => prev.filter((_, idx) => idx !== i));
+  }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     setSaved(false);
+    const cleanDownloads = downloads.filter((d) => d.label.trim() && d.url.trim());
     try {
       const res = await fetch(`/api/sponsor/${sponsorId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blurb: blurb || null, website: website || null }),
+        body: JSON.stringify({ blurb: blurb || null, website: website || null, downloads: cleanDownloads }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not save.");
@@ -65,6 +81,36 @@ export function SponsorPortalClient({
             placeholder="https://…"
           />
         </label>
+        <div className="mt-4">
+          <span className="text-sm font-medium text-[var(--text-secondary)]">Resources / downloads</span>
+          <div className="mt-2 space-y-2">
+            {downloads.map((d, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  value={d.label}
+                  onChange={(e) => updateDownload(i, "label", e.target.value)}
+                  placeholder="Label"
+                  className="w-1/3 rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-sm"
+                />
+                <input
+                  value={d.url}
+                  onChange={(e) => updateDownload(i, "url", e.target.value)}
+                  placeholder="https://…"
+                  className="flex-1 rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-sm"
+                />
+                <button type="button" onClick={() => removeDownload(i)} className="text-xs text-rose-600 hover:underline">
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+          {downloads.length < 8 && (
+            <button type="button" onClick={addDownload} className="mt-2 text-xs font-medium text-[var(--blue)] hover:underline">
+              + Add resource
+            </button>
+          )}
+        </div>
+
         {error && <p className="mt-2 text-sm text-rose-700">{error}</p>}
         <div className="mt-3 flex items-center gap-2">
           <button type="submit" disabled={busy} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
