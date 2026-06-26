@@ -11,8 +11,9 @@ import type { PlanType } from "@/lib/subscriptions/plans";
  * ?checkout[custom][profile_id] so the webhook can map the order to a profile.
  */
 const DEFAULTS: Partial<Record<PlanType, string>> = {
-  founder_basic: "https://capitalos.lemonsqueezy.com/checkout/buy/11c46b5b-d314-46d8-808b-8e64c9f2f291",
-  founder_professional: "https://capitalos.lemonsqueezy.com/checkout/buy/65e4c9a9-1d9f-4d96-9d95-f55d1415bcf0",
+  // Live-mode buy links (Share button, Test mode OFF).
+  founder_basic: "https://capitalos.lemonsqueezy.com/checkout/buy/cb9549ed-db43-4b53-8f40-43584b3397f0",
+  founder_professional: "https://capitalos.lemonsqueezy.com/checkout/buy/e105f3d0-5c41-48ec-8616-d7ddc9608f9c",
 };
 
 export const BUY_LINKS: Partial<Record<PlanType, string>> = {
