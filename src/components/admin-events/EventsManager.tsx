@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { EVENT_SECTORS } from "@/lib/icfo-events/sectors";
 import type { EventFormat, EventRecord, EventStatus, EventVisibility } from "@/lib/icfo-events/types";
 
@@ -241,6 +242,12 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
+                      <Link
+                        href={`/admin/events/${ev.id}`}
+                        className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] hover:bg-slate-50"
+                      >
+                        Manage
+                      </Link>
                       {ev.status === "draft" && (
                         <button
                           disabled={busyId === ev.id}

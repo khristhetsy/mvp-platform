@@ -115,7 +115,16 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       },
       { href: "/admin/portfolio",        label: "Portfolio",       requiredPermission: "view_admin_dashboard" },
       { href: "/admin/readiness",        label: "Readiness Scores",requiredPermission: "manage_companies"    },
-      { href: "/admin/events",           label: "Events",          requiredPermission: "manage_events"       },
+      {
+        href: "/admin/events",
+        label: "Events",
+        requiredPermission: "manage_events",
+        children: [
+          { href: "/admin/events",              label: "All events"   },
+          { href: "/admin/events/applications", label: "Applications" },
+          { href: "/admin/events/sponsors",     label: "Sponsors"     },
+        ],
+      },
     ],
   },
   {

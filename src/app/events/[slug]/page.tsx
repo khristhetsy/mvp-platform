@@ -1,14 +1,22 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { CalendarDays } from "lucide-react";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { RegisterButton } from "@/components/events/RegisterButton";
+import { NetworkingOptIn } from "@/components/events/NetworkingOptIn";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { getEventBySlug } from "@/lib/icfo-events/queries";
+import { listEventPresenters } from "@/lib/icfo-events/applications";
+import { listEventSponsors } from "@/lib/icfo-events/sponsors";
+import { getRegistration } from "@/lib/icfo-events/registrations";
+import { getOptin } from "@/lib/icfo-events/networking";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
-import type { EventWithDetail, EventSession } from "@/lib/icfo-events/types";
+import type { EventWithDetail, EventSession, EventPresenter, EventSponsor } from "@/lib/icfo-events/types";
 
 export const dynamic = "force-dynamic";
 
@@ -59,14 +67,91 @@ function fmtRange(start: string | null, end: string | null): string {
   return `${s.toLocaleDateString(undefined, { month: "long", day: "numeric" })} – ${e.toLocaleDateString(undefined, opts)}`;
 }
 
+function initials(name: string): string {
+  return name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+}
+
+function SponsorLockup({ sponsors }: { sponsors: EventSponsor[] }) {
+  if (sponsors.length === 0) return null;
+  const presenting = sponsors.filter((s) => s.placement === "presenting");
+  const others = sponsors.filter((s) => s.placement !== "presenting");
+  return (
+    <div className="mt-10">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Partners</h2>
+      {presenting.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          {presenting.map((s) => (
+            <div key={s.eventSponsorId} className="flex items-center gap-3 rounded-xl border border-[var(--indigo)] bg-[var(--indigo-soft)] px-4 py-3">
+              <span className="text-xs font-medium uppercase tracking-wide text-[var(--indigo)]">Presented with</span>
+              {s.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={s.logoUrl} alt={s.name} className="h-7 object-contain" />
+              ) : (
+                <span className="font-semibold text-[var(--navy)]">{s.name}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {others.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-4">
+          {others.map((s) => (
+            <div key={s.eventSponsorId} className="flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-white px-3 py-2">
+              {s.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={s.logoUrl} alt={s.name} className="h-6 object-contain" />
+              ) : (
+                <span className="text-sm font-medium text-[var(--text-secondary)]">{s.name}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Presenters({ presenters }: { presenters: EventPresenter[] }) {
+  if (presenters.length === 0) return null;
+  return (
+    <div className="mt-10">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Speakers</h2>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {presenters.map((p) => (
+          <div key={p.id} className="flex items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-white px-4 py-3">
+            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[var(--indigo-soft)] text-sm font-semibold text-[var(--indigo)]">
+              {initials(p.displayName)}
+            </div>
+            <div>
+              <div className="font-medium text-[var(--navy)]">{p.displayName}</div>
+              {p.roleLabel && <div className="text-xs text-[var(--text-muted)]">{p.roleLabel}</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default async function EventDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const event = await loadEvent(slug);
 
-  // Drafts/archived aren't public (RLS also blocks anon, but guard the staff path too).
   if (!event || event.status === "draft" || event.status === "archived") {
     notFound();
   }
+
+  const supabase = await createServerSupabaseClient();
+  const profile = await getCurrentUserProfile();
+  const role = String(profile?.role ?? "").toLowerCase();
+  const canApply = role === "founder" || role === "investor";
+
+  const [presenters, sponsors, registration, optin] = await Promise.all([
+    listEventPresenters(supabase, event.id).catch(() => [] as EventPresenter[]),
+    listEventSponsors(supabase, event.id).catch(() => [] as EventSponsor[]),
+    profile ? getRegistration(supabase, event.id, profile.id).catch(() => null) : Promise.resolve(null),
+    profile ? getOptin(supabase, event.id, profile.id).catch(() => null) : Promise.resolve(null),
+  ]);
 
   const visibleSessions = event.sessions.filter((s) => s.status !== "draft");
 
@@ -109,6 +194,25 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
         {event.summary && <p className="mt-5 max-w-2xl text-[var(--text-secondary)]">{event.summary}</p>}
 
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          {event.status !== "ended" && (
+            <RegisterButton
+              eventId={event.id}
+              slug={event.slug}
+              isAuthenticated={Boolean(profile)}
+              alreadyRegistered={Boolean(registration)}
+            />
+          )}
+          {canApply && (
+            <Link
+              href={`/events/${event.slug}/apply`}
+              className="inline-flex items-center rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
+            >
+              Apply to present
+            </Link>
+          )}
+        </div>
+
         {event.sectors.length > 0 && (
           <div className="mt-8">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Sector tracks</h2>
@@ -124,6 +228,10 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             </div>
           </div>
         )}
+
+        <Presenters presenters={presenters} />
+
+        <SponsorLockup sponsors={sponsors} />
 
         <div className="mt-10">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Agenda</h2>
@@ -151,6 +259,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             </ol>
           )}
         </div>
+
+        {profile && (
+          <div className="mt-10">
+            <NetworkingOptIn
+              eventId={event.id}
+              initialOptedIn={Boolean(optin?.optedIn)}
+              initialInterests={optin?.interests ?? []}
+            />
+          </div>
+        )}
       </section>
 
       <ComplianceBlock />
