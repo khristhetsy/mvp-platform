@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CapitalOS — Founder Digest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#0c2340;--indigo:#534AB7;--indigo-soft:#eeedfe;--blue:#2563eb;--blue-50:#eff6ff;--blue-mid:#185FA5;--teal:#0D9488;--teal-700:#0f766e;--teal-50:#ecfdf5;--red:#A32D2D;--amber-50:#fffbeb;--bg:#f8fafc;--panel:#fff;--line:#e2e8f0;--line-soft:#eef2ff;--txt:#0f172b;--txt-dim:#475569;--txt-faint:#94a3b8;--sans:"Geist",system-ui,sans-serif;--mono:"Geist Mono",ui-monospace,Menlo,monospace;--r-sm:9px;--r-md:13px;--sh:0 8px 30px rgba(12,35,64,.08)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);font-family:var(--sans);padding:40px 16px 80px;color:var(--txt);-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
+  .meta-bar{max-width:600px;margin:0 auto 16px;font-family:var(--mono);font-size:11px;color:var(--txt-faint);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  .meta-bar b{color:var(--txt-dim);font-weight:500}
+  .email{max-width:600px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--sh)}
+  .hd{padding:24px 32px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .hd .brand{display:flex;align-items:center;gap:10px}
+  .hd .mark{width:30px;height:30px;border-radius:9px;background:var(--navy);display:grid;place-items:center;font-family:var(--mono);font-weight:600;color:#fff;font-size:15px}
+  .hd .word{font-weight:600;font-size:15px;color:var(--navy)}
+  .hd .wk{font-family:var(--mono);font-size:10px;color:var(--txt-faint);text-align:right;line-height:1.4}
+  .hero{padding:30px 32px 26px;border-bottom:1px solid var(--line)}
+  .hero .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);margin-bottom:11px}
+  .hero h1{font-size:25px;font-weight:700;line-height:1.2;letter-spacing:-.025em;color:var(--navy)}
+  .hero h1 em{font-style:normal;color:var(--indigo)}
+  .hero p{color:var(--txt-dim);font-size:13.5px;margin-top:10px;line-height:1.55}
+  .you{display:flex;align-items:center;gap:16px;padding:18px 32px;background:var(--teal-50);border-bottom:1px solid var(--line)}
+  .you .gauge{width:46px;height:46px;flex:none;position:relative}
+  .you .gauge .num{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--mono);font-size:14px;font-weight:600;color:var(--teal)}
+  .you .txt{flex:1} .you .txt .l{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-faint)} .you .txt .v{font-size:14px;color:var(--txt);font-weight:600;margin-top:3px} .you .txt .v b{color:var(--teal);font-family:var(--mono)}
+  .you .delta{font-family:var(--mono);font-size:12px;color:var(--teal);text-align:right}
+  .sec{padding:22px 32px 6px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--txt-faint);display:flex;align-items:center;gap:10px}
+  .sec::after{content:"";flex:1;height:1px;background:var(--line)}
+  .acts{padding:6px 20px}
+  .act{display:flex;align-items:center;gap:13px;padding:13px;border-radius:var(--r-md);transition:.13s}
+  .act:hover{background:var(--bg)}
+  .act .ic{width:34px;height:34px;border-radius:10px;flex:none;display:grid;place-items:center;font-size:14px}
+  .act .body{flex:1;min-width:0} .act .body .l1{font-size:13.5px;color:var(--txt);line-height:1.4} .act .body .l1 b{font-family:var(--mono);font-weight:600;font-size:13px;color:var(--navy)} .act .body .l1 .deal{font-family:var(--mono);color:var(--teal);font-weight:600} .act .body .l2{font-size:11.5px;color:var(--txt-faint);margin-top:3px;font-family:var(--mono)}
+  .act .when{font-family:var(--mono);font-size:10.5px;color:var(--txt-faint);white-space:nowrap}
+  .a-interest .ic{background:var(--indigo-soft);color:var(--indigo)} .a-review .ic{background:var(--blue-50);color:var(--blue)} .a-pledge .ic{background:var(--teal-50);color:var(--teal)}
+  .hl{margin:16px 32px 4px;padding:18px 20px;border:1px solid var(--indigo-soft);border-left:3px solid var(--indigo);border-radius:var(--r-md);background:var(--indigo-soft)}
+  .hl .t{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--indigo);margin-bottom:8px}
+  .hl .m{font-size:14px;color:var(--txt);line-height:1.5} .hl .m b{color:var(--teal);font-family:var(--mono);font-weight:600}
+  .hl .cta{display:inline-block;margin-top:13px;font-size:12.5px;font-weight:600;color:#fff;background:var(--navy);padding:10px 17px;border-radius:var(--r-sm);text-decoration:none}
+  .pulse-grid{padding:8px 32px 4px;display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .pcard{border:1px solid var(--line);border-radius:var(--r-md);padding:15px 16px;background:var(--bg)}
+  .pcard .lbl{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-faint)} .pcard .big{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--navy);margin-top:6px} .pcard .big.teal{color:var(--teal)} .pcard .sub{font-size:11px;color:var(--txt-dim);margin-top:5px} .pcard .sub .up{color:var(--teal);font-family:var(--mono)}
+  .movers{padding:6px 32px 4px}
+  .mover{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)} .mover:last-child{border-bottom:0}
+  .mover .sig{width:30px;height:30px;border-radius:8px;flex:none;display:grid;place-items:center;font-family:var(--mono);font-weight:600;font-size:11px;background:var(--teal-50);color:var(--teal)}
+  .mover .nm{flex:1;min-width:0} .mover .nm .s{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--navy)} .mover .nm .d{font-size:11px;color:var(--txt-faint)}
+  .mover .score{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--teal);text-align:right} .mover .score .c{display:block;font-size:10.5px;color:var(--teal);font-weight:500}
+  .cta-block{padding:24px 32px 28px;text-align:center;border-top:1px solid var(--line);margin-top:16px}
+  .cta-block .big-btn{display:inline-block;font-size:14px;font-weight:600;color:#fff;background:var(--navy);padding:14px 32px;border-radius:var(--r-sm);text-decoration:none}
+  .cta-block .sub{font-size:11.5px;color:var(--txt-faint);margin-top:12px;font-family:var(--mono)}
+  .ft{padding:22px 32px 26px;border-top:1px solid var(--line);background:var(--bg)}
+  .ft .row1{font-family:var(--mono);font-size:11px;color:var(--txt-dim);letter-spacing:.04em} .ft .links{margin-top:11px;display:flex;gap:16px;flex-wrap:wrap;font-size:11px} .ft .links a{color:var(--txt-dim);text-decoration:none} .ft .legal{margin-top:13px;font-size:10.5px;color:var(--txt-faint);line-height:1.55}
+  .annot{max-width:600px;margin:20px auto 0;font-size:11.5px;color:var(--txt-faint);border-left:2px solid var(--line);padding-left:12px;line-height:1.6} .annot b{color:var(--txt-dim)}
+</style>
+</head>
+<body>
+<div class="meta-bar"><span><b>From:</b> CapitalOS &lt;notifications@icapos.com&gt;</span><span><b>Subject:</b> 3 investors active on your deal this week</span></div>
+<div class="email">
+  <div class="hd"><div class="brand"><div class="mark">C</div><div class="word">CapitalOS</div></div><div class="wk">FOUNDER DIGEST<br>Jun 16–22</div></div>
+  <div class="hero"><div class="eyebrow">This week on the Private Market</div><h1>Brandon — <em>three investors</em> moved on your deal.</h1><p>Activity is picking up in AI & vision. Here's who's deploying, who's reviewing, and where your readiness stands.</p></div>
+  <div class="you"><div class="gauge"><svg width="46" height="46" style="transform:rotate(-90deg)"><circle cx="23" cy="23" r="19" fill="none" stroke="#d1fae5" stroke-width="4"/><circle cx="23" cy="23" r="19" fill="none" stroke="#0D9488" stroke-width="4" stroke-linecap="round" stroke-dasharray="119" stroke-dashoffset="19"/></svg><div class="num">84</div></div><div class="txt"><div class="l">Your readiness · FOX·EYES</div><div class="v"><b>84.0</b> · Strong — top quartile of live deals</div></div><div class="delta">▲3.2<br><span style="color:var(--txt-faint);font-size:10px">this week</span></div></div>
+  <div class="sec">Investors active on your deal</div>
+  <div class="acts">
+    <div class="act a-pledge"><div class="ic">◈</div><div class="body"><div class="l1"><b>Ardent Keel</b> indicated <span class="deal">$500K</span> interest → your round</div><div class="l2">Quality 91.4 · AI / SaaS · non-binding</div></div><div class="when">2d ago</div></div>
+    <div class="act a-review"><div class="ic">◉</div><div class="body"><div class="l1"><b>Meridian Seven</b> reviewed your data room</div><div class="l2">Quality 87.0 · viewed financials + cap table</div></div><div class="when">3d ago</div></div>
+    <div class="act a-interest"><div class="ic">★</div><div class="body"><div class="l1"><b>Halo Bridge</b> added FOX·EYES to watchlist</div><div class="l2">Quality 78.6 · consumer + marketplace</div></div><div class="when">5d ago</div></div>
+  </div>
+  <div class="hl"><div class="t">Worth a move</div><div class="m">Ardent Keel indicated <b>$500K</b> and reviewed twice this week. Now's a strong moment to open a direct line.</div><a class="cta" href="#">Respond to Ardent Keel →</a></div>
+  <div class="sec">The Private Market this week</div>
+  <div class="pulse-grid"><div class="pcard"><div class="lbl">Active investors</div><div class="big teal">42</div><div class="sub"><span class="up">▲6</span> vs last week</div></div><div class="pcard"><div class="lbl">Indicated · 7d</div><div class="big">$4.2M</div><div class="sub">across 11 deals</div></div></div>
+  <div class="sec">Climbing investors — worth watching</div>
+  <div class="movers">
+    <div class="mover"><div class="sig">VRT</div><div class="nm"><div class="s">VRT·X</div><div class="d">Vertex Lane · Climate, Industrial</div></div><div class="score">73.2<span class="c">▲2.4</span></div></div>
+    <div class="mover"><div class="sig">NVS</div><div class="nm"><div class="s">NVST·AK</div><div class="d">Ardent Keel · AI, SaaS, Fintech</div></div><div class="score">91.4<span class="c">▲3.2</span></div></div>
+  </div>
+  <div class="cta-block"><a class="big-btn" href="#">Open the Private Market →</a><div class="sub">5 investors active on deals like yours</div></div>
+  <div class="ft"><div class="row1">CapitalOS · iCFO Capital Global, Inc.</div><div class="links"><a href="#">Private Market</a><a href="#">Your readiness</a><a href="#">Settings</a><a href="#">Unsubscribe</a></div><div class="legal">You're receiving the weekly founder digest because you have an active deal on CapitalOS. Pledge figures are non-binding indications of interest, not commitments. CapitalOS is an advisory and technology platform — not a broker-dealer, placement agent, or investment adviser. Nothing here is investment advice or a guarantee of funding.</div></div>
+</div>
+</body>
+</html>

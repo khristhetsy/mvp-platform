@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CapitalOS — Sidebar submenu patterns (mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#0c2340;--indigo:#534AB7;--indigo-soft:#EEEDFE;--bg:#f8fafc;--panel:#fff;--line:#e8eaed;--line-soft:#f1f2f4;--txt:#0f172b;--txt-2:#52525b;--txt-3:#8a8f98;--hover:#f4f4f5;--active:#EEEDFE;--sans:"Geist",system-ui,sans-serif;--mono:"Geist Mono",ui-monospace,Menlo,monospace}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);font-family:var(--sans);color:var(--txt);-webkit-font-smoothing:antialiased;letter-spacing:-.006em}
+  .app{display:grid;grid-template-columns:264px 1fr;min-height:100vh}
+  .side{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
+  .side-scroll{flex:1;overflow:visible;padding:8px 10px}
+  .ws{display:flex;align-items:center;gap:10px;margin:10px 10px 4px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;cursor:pointer}
+  .ws:hover{background:var(--hover)}
+  .ws .mark{width:26px;height:26px;border-radius:7px;background:var(--navy);display:grid;place-items:center;color:#fff;font-family:var(--mono);font-weight:600;font-size:13px;flex:none}
+  .ws .meta{flex:1}.ws .meta .n{font-size:13px;font-weight:600;color:var(--navy);line-height:1.2}.ws .meta .r{font-size:11px;color:var(--txt-3);font-family:var(--mono)}
+  .ws .sw{color:var(--txt-3)}
+  .search{display:flex;align-items:center;gap:8px;margin:8px 10px 6px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;color:var(--txt-3);font-size:13px}
+  .search input{border:0;outline:0;flex:1;font-size:13px;background:transparent}
+  .kbd{font-family:var(--mono);font-size:10.5px;color:var(--txt-3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;background:var(--bg)}
+  .group{padding:6px 0}.group+.group{border-top:1px solid var(--line-soft);margin-top:2px}
+  .glabel{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-3);padding:8px 12px 4px}
+  .nav{display:flex;align-items:center;gap:11px;padding:7px 11px;margin:1px 2px;border-radius:7px;color:var(--txt-2);font-size:13.5px;font-weight:500;cursor:pointer;transition:.1s;text-decoration:none}
+  .nav:hover{background:var(--hover);color:var(--txt)}
+  .nav.on{background:var(--active);color:var(--indigo);font-weight:600}
+  .nav i{width:17px;height:17px;flex:none}
+  .nav .lbl{flex:1;white-space:nowrap}
+  .nav .chev{width:15px;height:15px;color:var(--txt-3);transition:transform .18s}
+  .nav .chev.open{transform:rotate(90deg)}
+  .tag{font-size:8.5px;font-weight:600;color:var(--indigo);background:var(--indigo-soft);border-radius:4px;padding:1px 5px;letter-spacing:.03em}
+
+  /* A — accordion (drop down) */
+  .sub{margin:0 2px 4px 28px;border-left:1px solid var(--line);padding-left:6px;display:grid;grid-template-rows:0fr;transition:grid-template-rows .2s ease;overflow:hidden}
+  .sub.open{grid-template-rows:1fr}
+  .sub-inner{min-height:0;overflow:hidden;display:flex;flex-direction:column}
+  .sub a{padding:6px 10px;border-radius:6px;font-size:12.5px;color:var(--txt-2);text-decoration:none}
+  .sub a:hover{background:var(--hover);color:var(--txt)}
+  .sub a.on{color:var(--indigo);font-weight:600}
+
+  /* B — flyout (slide out) */
+  .has-flyout{position:relative}
+  .flyout{position:absolute;left:calc(100% + 8px);top:-4px;width:208px;background:var(--panel);border:1px solid var(--line);border-radius:11px;box-shadow:0 12px 34px rgba(12,35,64,.13);padding:7px;opacity:0;transform:translateX(-8px);pointer-events:none;transition:.16s cubic-bezier(.32,.72,0,1);z-index:30}
+  .has-flyout:hover .flyout{opacity:1;transform:translateX(0);pointer-events:auto}
+  .flyout .ft{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--txt-3);padding:5px 9px 6px}
+  .flyout a{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;font-size:12.5px;color:var(--txt-2);text-decoration:none}
+  .flyout a:hover{background:var(--hover);color:var(--txt)}
+  .flyout a i{width:15px;height:15px;color:var(--txt-3)}
+
+  .acct{border-top:1px solid var(--line);padding:8px 10px;display:flex;align-items:center;gap:10px}
+  .acct .av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--indigo),#22b8a6)}
+  .acct .who{flex:1}.acct .who .n{font-size:12.5px;font-weight:600}.acct .who .e{font-size:11px;color:var(--txt-3)}
+  .acct .ic{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;color:var(--txt-3);cursor:pointer}.acct .ic:hover{background:var(--hover)}
+
+  .main{padding:0}
+  .content{padding:40px 36px;max-width:640px}
+  .content h1{font-size:24px;font-weight:700;letter-spacing:-.02em;color:var(--navy)}
+  .pat{margin-top:22px;border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:18px 20px}
+  .pat h3{font-size:14px;font-weight:600;color:var(--navy);display:flex;align-items:center;gap:8px}
+  .pat h3 .b{font-family:var(--mono);font-size:11px;color:#fff;background:var(--indigo);border-radius:6px;padding:2px 7px}
+  .pat p{margin-top:7px;font-size:13px;color:var(--txt-2);line-height:1.55}
+  .pat .try{margin-top:8px;font-size:12px;color:var(--indigo);font-weight:600}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="ws"><div class="mark">C</div><div class="meta"><div class="n">FoxEyes</div><div class="r">Founder workspace</div></div><i data-lucide="chevrons-up-down" class="sw" style="width:15px;height:15px"></i></div>
+    <div class="search"><i data-lucide="search" style="width:15px;height:15px"></i><input placeholder="Search…" /><span class="kbd">⌘K</span></div>
+
+    <div class="side-scroll">
+      <div class="group">
+        <a class="nav"><i data-lucide="layout-dashboard"></i><span class="lbl">Overview</span></a>
+        <a class="nav"><i data-lucide="target"></i><span class="lbl">Readiness</span></a>
+        <a class="nav on"><i data-lucide="trending-up"></i><span class="lbl">Private Market</span></a>
+      </div>
+
+      <div class="group">
+        <div class="glabel">Raise</div>
+
+        <!-- A: ACCORDION / DROP DOWN -->
+        <a class="nav" id="accBtn" onclick="toggleAcc(event)">
+          <i data-lucide="landmark"></i><span class="lbl">Fundraising</span>
+          <span class="tag">A · drop-down</span>
+          <i data-lucide="chevron-right" class="chev" id="accChev"></i>
+        </a>
+        <div class="sub" id="accSub">
+          <div class="sub-inner">
+            <a class="on">Investors</a><a>AI match center</a><a>Pipeline</a><a>Capital Raise</a>
+          </div>
+        </div>
+
+        <!-- B: FLYOUT / SLIDE OUT -->
+        <div class="has-flyout">
+          <a class="nav">
+            <i data-lucide="briefcase"></i><span class="lbl">Raise Toolkit</span>
+            <span class="tag">B · slide-out</span>
+            <i data-lucide="chevron-right" class="chev"></i>
+          </a>
+          <div class="flyout">
+            <div class="ft">Raise Toolkit</div>
+            <a><i data-lucide="file-signature"></i>Term sheet explainer</a>
+            <a><i data-lucide="mic"></i>Pitch practice</a>
+            <a><i data-lucide="mail"></i>Email sequences</a>
+            <a><i data-lucide="sparkles"></i>Reg CF materials</a>
+            <a><i data-lucide="presentation"></i>Pitch deck analyzer</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="glabel">Workspace</div>
+        <a class="nav"><i data-lucide="bar-chart-3"></i><span class="lbl">Analytics</span></a>
+        <a class="nav"><i data-lucide="settings"></i><span class="lbl">Settings</span></a>
+      </div>
+    </div>
+
+    <div class="acct"><div class="av"></div><div class="who"><div class="n">Jane Founder</div><div class="e">jane@foxeyes.ai</div></div><div class="ic"><i data-lucide="bell" style="width:16px;height:16px"></i></div></div>
+  </aside>
+
+  <div class="main">
+    <div class="content">
+      <h1>Two submenu patterns — pick one</h1>
+
+      <div class="pat">
+        <h3><span class="b">A</span> Drop-down (accordion)</h3>
+        <p>The parent stays in the sidebar; clicking it expands the sub-items <strong>in place</strong>, pushing everything below it down. Best when you want sub-items always visible once opened, and you have room. This is the most common app-sidebar pattern.</p>
+        <p class="try">→ Click “Fundraising” in the sidebar to expand/collapse it.</p>
+      </div>
+
+      <div class="pat">
+        <h3><span class="b">B</span> Slide-out (flyout submenu)</h3>
+        <p>The parent reveals a <strong>panel that slides out to the right</strong> on hover, floating over the content — the sidebar itself never grows. Best for deep menus or to keep the sidebar compact. This is closer to a macOS / command-bar feel.</p>
+        <p class="try">→ Hover “Raise Toolkit” to see the panel slide out.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script>
+  lucide.createIcons();
+  function toggleAcc(e){
+    e.preventDefault();
+    document.getElementById('accSub').classList.toggle('open');
+    document.getElementById('accChev').classList.toggle('open');
+  }
+</script>
+</body>
+</html>

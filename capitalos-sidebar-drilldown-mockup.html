@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CapitalOS — Vercel-style drill-in sidebar (mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#0c2340;--indigo:#534AB7;--indigo-soft:#EEEDFE;--bg:#f8fafc;--panel:#fff;--line:#e8eaed;--line-soft:#f1f2f4;--txt:#0f172b;--txt-2:#52525b;--txt-3:#8a8f98;--hover:#f4f4f5;--active:#EEEDFE;--sans:"Geist",system-ui,sans-serif;--mono:"Geist Mono",ui-monospace,Menlo,monospace}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);font-family:var(--sans);color:var(--txt);-webkit-font-smoothing:antialiased;letter-spacing:-.006em}
+  .app{display:grid;grid-template-columns:266px 1fr;min-height:100vh}
+  .side{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow:hidden}
+  .ws{display:flex;align-items:center;gap:10px;margin:10px 10px 4px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;cursor:pointer}
+  .ws:hover{background:var(--hover)}
+  .ws .mark{width:26px;height:26px;border-radius:7px;background:var(--navy);display:grid;place-items:center;color:#fff;font-family:var(--mono);font-weight:600;font-size:13px;flex:none}
+  .ws .meta{flex:1}.ws .meta .n{font-size:13px;font-weight:600;color:var(--navy);line-height:1.2}.ws .meta .r{font-size:11px;color:var(--txt-3);font-family:var(--mono)}
+  .ws .sw{color:var(--txt-3)}.ws .badge{font-size:9.5px;font-weight:600;color:var(--indigo);background:var(--indigo-soft);border-radius:5px;padding:2px 6px}
+  .search{display:flex;align-items:center;gap:8px;margin:8px 10px 6px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;color:var(--txt-3);font-size:13px}
+  .search input{border:0;outline:0;flex:1;font-size:13px;background:transparent}
+  .kbd{font-family:var(--mono);font-size:10.5px;color:var(--txt-3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;background:var(--bg)}
+
+  /* drill-in panes */
+  .panes{position:relative;flex:1;overflow:hidden}
+  .pane{position:absolute;inset:0;overflow-y:auto;padding:6px 10px;transition:transform .27s cubic-bezier(.32,.72,0,1)}
+  .pane-main{transform:translateX(0)}
+  .pane-sub{transform:translateX(100%)}
+  .side.drilled .pane-main{transform:translateX(-26%)}
+  .side.drilled .pane-sub{transform:translateX(0)}
+
+  .group{padding:6px 0}.group+.group{border-top:1px solid var(--line-soft);margin-top:2px}
+  .glabel{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-3);padding:8px 12px 4px}
+  .nav{display:flex;align-items:center;gap:11px;padding:7px 11px;margin:1px 2px;border-radius:7px;color:var(--txt-2);font-size:13.5px;font-weight:500;cursor:pointer;transition:.1s;text-decoration:none;width:100%;border:0;background:transparent;text-align:left;font-family:inherit}
+  .nav:hover{background:var(--hover);color:var(--txt)}
+  .nav.on{background:var(--active);color:var(--indigo);font-weight:600}
+  .nav i{width:17px;height:17px;flex:none}
+  .nav .lbl{flex:1;white-space:nowrap}
+  .nav .chev{width:15px;height:15px;color:var(--txt-3)}
+
+  .subhead{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 6px;margin-bottom:2px}
+  .backbtn{display:flex;align-items:center;gap:6px;border:0;background:transparent;cursor:pointer;font-family:inherit;color:var(--navy);font-size:13.5px;font-weight:600;padding:4px 6px;border-radius:7px}
+  .backbtn:hover{background:var(--hover)}
+  .backbtn i{width:16px;height:16px}
+
+  .acct{border-top:1px solid var(--line);padding:8px 10px;display:flex;align-items:center;gap:10px}
+  .acct .av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--indigo),#22b8a6)}
+  .acct .who{flex:1}.acct .who .n{font-size:12.5px;font-weight:600}.acct .who .e{font-size:11px;color:var(--txt-3)}
+  .acct .ic{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;color:var(--txt-3);cursor:pointer}.acct .ic:hover{background:var(--hover)}
+
+  .content{padding:40px 36px;max-width:620px}
+  .content h1{font-size:24px;font-weight:700;letter-spacing:-.02em;color:var(--navy)}
+  .content p{margin-top:9px;font-size:14px;color:var(--txt-2);line-height:1.6}
+  .content .try{margin-top:14px;font-size:13px;color:var(--indigo);font-weight:600}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side">
+    <div class="ws"><div class="mark">C</div><div class="meta"><div class="n">FoxEyes</div><div class="r">Founder workspace</div></div><span class="badge">Pro</span><i data-lucide="chevrons-up-down" class="sw" style="width:15px;height:15px"></i></div>
+    <div class="search"><i data-lucide="search" style="width:15px;height:15px"></i><input placeholder="Search…" /><span class="kbd">⌘K</span></div>
+
+    <div class="panes">
+      <!-- MAIN list -->
+      <div class="pane pane-main">
+        <div class="group">
+          <a class="nav"><i data-lucide="layout-dashboard"></i><span class="lbl">Overview</span></a>
+          <button class="nav" onclick="drill('readiness')"><i data-lucide="target"></i><span class="lbl">Readiness</span><i data-lucide="chevron-right" class="chev"></i></button>
+          <a class="nav on"><i data-lucide="trending-up"></i><span class="lbl">Private Market</span></a>
+          <a class="nav"><i data-lucide="file-text"></i><span class="lbl">Documents</span></a>
+        </div>
+        <div class="group">
+          <div class="glabel">Raise</div>
+          <button class="nav" onclick="drill('fundraising')"><i data-lucide="landmark"></i><span class="lbl">Fundraising</span><i data-lucide="chevron-right" class="chev"></i></button>
+          <button class="nav" onclick="drill('toolkit')"><i data-lucide="briefcase"></i><span class="lbl">Raise Toolkit</span><i data-lucide="chevron-right" class="chev"></i></button>
+          <button class="nav" onclick="drill('learning')"><i data-lucide="graduation-cap"></i><span class="lbl">Learning</span><i data-lucide="chevron-right" class="chev"></i></button>
+        </div>
+        <div class="group">
+          <div class="glabel">Workspace</div>
+          <a class="nav"><i data-lucide="bar-chart-3"></i><span class="lbl">Analytics</span></a>
+          <a class="nav"><i data-lucide="settings"></i><span class="lbl">Settings</span></a>
+        </div>
+      </div>
+
+      <!-- SUB list (drilled-in) -->
+      <div class="pane pane-sub">
+        <div class="subhead">
+          <button class="backbtn" onclick="back()"><i data-lucide="chevron-left"></i><span id="subTitle">Fundraising</span></button>
+        </div>
+        <div id="subBody"></div>
+      </div>
+    </div>
+
+    <div class="acct"><div class="av"></div><div class="who"><div class="n">Jane Founder</div><div class="e">jane@foxeyes.ai</div></div><div class="ic"><i data-lucide="bell" style="width:16px;height:16px"></i></div></div>
+  </aside>
+
+  <div class="main">
+    <div class="content">
+      <h1>Drill-in sidebar — the real Vercel pattern</h1>
+      <p>Top-level items with a <strong>›</strong> don't expand in place and don't fly out. Clicking one <strong>slides the whole list to the left</strong> and slides the sub-menu in from the right, with a <strong>‹ back</strong> header to return. Search and your account stay fixed.</p>
+      <p class="try">→ Click “Fundraising”, “Raise Toolkit”, “Readiness”, or “Learning” in the sidebar — then hit the ‹ back arrow.</p>
+    </div>
+  </div>
+</div>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script>
+  const SUBS = {
+    readiness: { title: "Readiness", groups: [
+      { items: [["Checklist","list-checks"],["Score wizard","wand-2"],["Diligence & review","shield-check"],["Document checklist","file-text"],["AI diligence report","sparkles"]] },
+    ]},
+    fundraising: { title: "Fundraising", groups: [
+      { label: "Investors", items: [["Investors","users"],["AI match center","sparkles"],["Pipeline","kanban"],["Outreach (CRM)","mail"],["Matches","heart-handshake"]] },
+      { label: "Capital", items: [["Deal Room","door-open"],["Capital Raise","landmark"],["SPVs","layers"]] },
+    ]},
+    toolkit: { title: "Raise Toolkit", groups: [
+      { items: [["Term sheet explainer","file-signature"],["Pitch practice","mic"],["Email sequences","mail"],["Due diligence","clipboard-check"],["Investor update","megaphone"],["Funding timeline","calendar-range"],["Board meeting prep","presentation"],["KPI glossary","book-open"],["Pitch deck analyzer","line-chart"],["Reg CF materials","sparkles"]] },
+    ]},
+    learning: { title: "Learning", groups: [
+      { items: [["Overview","graduation-cap"],["Browse courses","book-open"],["My learning plan","list-checks"],["My schedule","calendar"],["My progress","trending-up"]] },
+    ]},
+  };
+
+  function drill(key){
+    const s = SUBS[key];
+    document.getElementById('subTitle').textContent = s.title;
+    const body = document.getElementById('subBody');
+    body.innerHTML = s.groups.map(g => `
+      <div class="group">
+        ${g.label ? `<div class="glabel">${g.label}</div>` : ''}
+        ${g.items.map(([lbl,ic]) => `<a class="nav"><i data-lucide="${ic}"></i><span class="lbl">${lbl}</span></a>`).join('')}
+      </div>`).join('');
+    document.getElementById('side').classList.add('drilled');
+    lucide.createIcons();
+  }
+  function back(){ document.getElementById('side').classList.remove('drilled'); }
+  lucide.createIcons();
+</script>
+</body>
+</html>

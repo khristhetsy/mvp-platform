@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CapitalOS — Vercel-style sidebar (mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0c2340;--indigo:#534AB7;--indigo-soft:#EEEDFE;--bg:#f8fafc;--panel:#fff;
+    --line:#e8eaed;--line-soft:#f1f2f4;--txt:#0f172b;--txt-2:#52525b;--txt-3:#8a8f98;
+    --hover:#f4f4f5;--active:#EEEDFE;
+    --sans:"Geist",system-ui,-apple-system,sans-serif;--mono:"Geist Mono",ui-monospace,Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);font-family:var(--sans);color:var(--txt);-webkit-font-smoothing:antialiased;letter-spacing:-.006em}
+  .app{display:grid;grid-template-columns:264px 1fr;min-height:100vh}
+
+  /* sidebar */
+  .side{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
+  .side-scroll{flex:1;overflow-y:auto;padding:8px 10px}
+
+  /* workspace switcher */
+  .ws{display:flex;align-items:center;gap:10px;margin:10px 10px 4px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;cursor:pointer;transition:.12s}
+  .ws:hover{background:var(--hover)}
+  .ws .mark{width:26px;height:26px;border-radius:7px;background:var(--navy);display:grid;place-items:center;color:#fff;font-family:var(--mono);font-weight:600;font-size:13px;flex:none}
+  .ws .meta{flex:1;min-width:0}
+  .ws .meta .n{font-size:13px;font-weight:600;color:var(--navy);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ws .meta .r{font-size:11px;color:var(--txt-3);font-family:var(--mono)}
+  .ws .sw{color:var(--txt-3);flex:none}
+  .ws .badge{font-size:9.5px;font-weight:600;color:var(--indigo);background:var(--indigo-soft);border-radius:5px;padding:2px 6px;letter-spacing:.02em}
+
+  /* search */
+  .search{display:flex;align-items:center;gap:8px;margin:8px 10px 6px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;color:var(--txt-3);font-size:13px;cursor:text;transition:.12s}
+  .search:hover{border-color:#d6d9dd}
+  .search input{border:0;outline:0;flex:1;font-family:var(--sans);font-size:13px;color:var(--txt);background:transparent}
+  .search input::placeholder{color:var(--txt-3)}
+  .kbd{font-family:var(--mono);font-size:10.5px;color:var(--txt-3);border:1px solid var(--line);border-radius:5px;padding:1px 6px;background:var(--bg)}
+
+  /* nav */
+  .group{padding:6px 0}
+  .group + .group{border-top:1px solid var(--line-soft);margin-top:2px}
+  .glabel{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-3);padding:8px 12px 4px}
+  .nav{display:flex;align-items:center;gap:11px;padding:7px 11px;margin:1px 2px;border-radius:7px;color:var(--txt-2);font-size:13.5px;font-weight:500;cursor:pointer;transition:.1s;text-decoration:none;position:relative}
+  .nav:hover{background:var(--hover);color:var(--txt)}
+  .nav.on{background:var(--active);color:var(--indigo);font-weight:600}
+  .nav i{width:17px;height:17px;flex:none;stroke-width:1.75}
+  .nav .lbl{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nav .chev{width:15px;height:15px;color:var(--txt-3);transition:transform .15s}
+  .nav .chev.open{transform:rotate(90deg)}
+  .nav .pill{font-size:9px;font-weight:600;color:var(--txt-3);background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+  .nav .count{font-family:var(--mono);font-size:10.5px;color:#fff;background:var(--indigo);border-radius:9px;min-width:17px;height:17px;display:grid;place-items:center;padding:0 5px}
+
+  /* nested */
+  .sub{margin:0 2px 4px 28px;border-left:1px solid var(--line);padding-left:6px;display:flex;flex-direction:column}
+  .sub a{padding:6px 10px;border-radius:6px;font-size:12.5px;color:var(--txt-2);text-decoration:none;transition:.1s}
+  .sub a:hover{background:var(--hover);color:var(--txt)}
+  .sub a.on{color:var(--indigo);font-weight:600}
+
+  /* account */
+  .acct{border-top:1px solid var(--line);padding:8px 10px;display:flex;align-items:center;gap:10px}
+  .acct .av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--indigo),#22b8a6);flex:none}
+  .acct .who{flex:1;min-width:0}
+  .acct .who .n{font-size:12.5px;font-weight:600;color:var(--txt);line-height:1.2}
+  .acct .who .e{font-size:11px;color:var(--txt-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .acct .ic{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;color:var(--txt-3);cursor:pointer;position:relative}
+  .acct .ic:hover{background:var(--hover);color:var(--txt)}
+  .acct .ic .dot{position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--indigo)}
+
+  /* main (context only) */
+  .main{padding:0}
+  .topbar{display:flex;align-items:center;gap:10px;height:56px;border-bottom:1px solid var(--line);padding:0 24px;font-size:13px;color:var(--txt-3)}
+  .topbar b{color:var(--txt);font-weight:600}
+  .content{padding:34px 28px}
+  .content h1{font-size:26px;font-weight:700;letter-spacing:-.02em;color:var(--navy)}
+  .content p{margin-top:8px;color:var(--txt-2);font-size:14px;max-width:60ch}
+  .ph{margin-top:24px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .phc{height:96px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+  .callout{margin:18px 24px 0;font-family:var(--mono);font-size:11px;color:var(--indigo)}
+</style>
+</head>
+<body>
+<div class="callout">↙ Vercel-style sidebar: workspace switcher · search · grouped nav · subtle active state · account pinned bottom</div>
+<div class="app">
+  <aside class="side">
+    <!-- workspace switcher -->
+    <div class="ws">
+      <div class="mark">C</div>
+      <div class="meta"><div class="n">FoxEyes</div><div class="r">Founder workspace</div></div>
+      <span class="badge">Pro</span>
+      <i data-lucide="chevrons-up-down" class="sw" style="width:15px;height:15px"></i>
+    </div>
+
+    <!-- search -->
+    <div class="search">
+      <i data-lucide="search" style="width:15px;height:15px"></i>
+      <input placeholder="Search…" />
+      <span class="kbd">⌘K</span>
+    </div>
+
+    <div class="side-scroll">
+      <!-- primary -->
+      <div class="group">
+        <a class="nav"><i data-lucide="layout-dashboard"></i><span class="lbl">Overview</span></a>
+        <a class="nav"><i data-lucide="route"></i><span class="lbl">My Journey</span></a>
+        <a class="nav"><i data-lucide="gauge"></i><span class="lbl">Command Center</span></a>
+        <a class="nav"><i data-lucide="list-checks"></i><span class="lbl">Action Center</span></a>
+        <a class="nav"><i data-lucide="target"></i><span class="lbl">Readiness</span><i data-lucide="chevron-right" class="chev"></i></a>
+        <a class="nav"><i data-lucide="file-text"></i><span class="lbl">Documents</span></a>
+        <a class="nav on"><i data-lucide="trending-up"></i><span class="lbl">Private Market</span></a>
+      </div>
+
+      <!-- raise -->
+      <div class="group">
+        <div class="glabel">Raise</div>
+        <a class="nav"><i data-lucide="landmark"></i><span class="lbl">Fundraising</span><i data-lucide="chevron-right" class="chev open"></i></a>
+        <div class="sub">
+          <a class="on">Investors</a>
+          <a>AI match center</a>
+          <a>Pipeline</a>
+          <a>Capital Raise</a>
+        </div>
+        <a class="nav"><i data-lucide="briefcase"></i><span class="lbl">Raise Toolkit</span><i data-lucide="chevron-right" class="chev"></i></a>
+        <a class="nav"><i data-lucide="graduation-cap"></i><span class="lbl">Learning</span><i data-lucide="chevron-right" class="chev"></i></a>
+      </div>
+
+      <!-- workspace -->
+      <div class="group">
+        <div class="glabel">Workspace</div>
+        <a class="nav"><i data-lucide="bar-chart-3"></i><span class="lbl">Analytics</span></a>
+        <a class="nav"><i data-lucide="flag"></i><span class="lbl">Milestones</span></a>
+        <a class="nav"><i data-lucide="check-square"></i><span class="lbl">Tasks</span></a>
+        <a class="nav"><i data-lucide="bell"></i><span class="lbl">Notifications</span><span class="count">9</span></a>
+        <a class="nav"><i data-lucide="settings"></i><span class="lbl">Settings</span></a>
+      </div>
+    </div>
+
+    <!-- account -->
+    <div class="acct">
+      <div class="av"></div>
+      <div class="who"><div class="n">Jane Founder</div><div class="e">jane@foxeyes.ai</div></div>
+      <div class="ic"><i data-lucide="bell" style="width:16px;height:16px"></i><span class="dot"></span></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">Founder&nbsp;/&nbsp;<b>Private Market</b></div>
+    <div class="content">
+      <h1>Private Market</h1>
+      <p>Approved investors ranked by fit to your company. The redesigned sidebar matches Vercel: a workspace switcher, search, grouped sections with quiet active states, and your account pinned to the bottom.</p>
+      <div class="ph"><div class="phc"></div><div class="phc"></div><div class="phc"></div></div>
+    </div>
+  </div>
+</div>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script>lucide.createIcons();</script>
+</body>
+</html>

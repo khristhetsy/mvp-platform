@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CapitalOS — Connected Market Card (mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#0c2340;--indigo:#534AB7;--indigo-soft:#eeedfe;--blue:#2563eb;--blue-50:#eff6ff;--teal:#0D9488;--teal-700:#0f766e;--teal-50:#ecfdf5;--red:#A32D2D;--bg:#f8fafc;--panel:#fff;--line:#e2e8f0;--txt:#0f172b;--txt-dim:#475569;--txt-faint:#94a3b8;--sans:"Geist",system-ui,sans-serif;--mono:"Geist Mono",ui-monospace,Menlo,monospace;--sh:0 10px 30px rgba(12,35,64,.08)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);font-family:var(--sans);color:var(--txt);padding:40px 20px;-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
+  .wrap{max-width:980px;margin:0 auto}
+  .eyebrow{text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:12px}
+  h2{text-align:center;font-size:29px;font-weight:700;letter-spacing:-.022em;color:var(--navy);margin-bottom:28px}
+  .card{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--panel);box-shadow:var(--sh)}
+  /* ticker = top strip */
+  .ticker{position:relative;display:flex;align-items:center;height:46px;border-bottom:1px solid var(--line);overflow:hidden;background:var(--panel)}
+  .live{z-index:4;display:flex;align-items:center;gap:7px;height:100%;padding:0 16px;border-right:1px solid var(--line);font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--teal);font-weight:600}
+  .live .blip{width:6px;height:6px;border-radius:50%;background:var(--teal);position:relative}
+  .live .blip::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1.5px solid var(--teal);opacity:.55;animation:ping 1.8s ease-out infinite}
+  @keyframes ping{to{transform:scale(2.4);opacity:0}}
+  .track{display:inline-flex;align-items:center;white-space:nowrap;animation:scroll 36s linear infinite}
+  @keyframes scroll{to{transform:translateX(-50%)}}
+  .ev{display:inline-flex;align-items:center;gap:7px;height:20px;padding:0 18px;border-right:1px solid var(--line);font-size:12.5px;color:var(--txt-dim)}
+  .ev .ic{width:18px;height:18px;border-radius:6px;display:grid;place-items:center;font-size:10px}
+  .ev .sym{font-family:var(--mono);font-weight:600;font-size:12px;color:var(--navy)}
+  .ev .val{font-family:var(--mono);font-weight:600;color:var(--teal)}
+  .ev time{font-family:var(--mono);font-size:10px;color:var(--txt-faint)}
+  .fade{position:absolute;top:0;bottom:0;right:0;width:48px;background:linear-gradient(270deg,#fff,transparent);z-index:3}
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+  .stat{padding:20px 16px;text-align:center;border-right:1px solid var(--line)} .stat:last-child{border-right:0}
+  .stat .v{font-family:var(--mono);font-size:23px;font-weight:600;color:var(--navy)} .stat .v.teal{color:var(--teal)} .stat .v.indigo{color:var(--indigo)}
+  .stat .l{font-family:var(--mono);font-size:10px;color:var(--txt-faint);margin-top:6px}
+  /* board head */
+  .bhead{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+  .bhead .ttl{display:flex;align-items:center;gap:11px}
+  .bhead .gl{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--navy);color:#fff;font-family:var(--mono);font-size:11px;font-weight:600}
+  .bhead h3{font-size:15px;font-weight:600;color:var(--navy)} .bhead .meta{font-family:var(--mono);font-size:11px;color:var(--txt-faint);margin-top:1px}
+  .bhead .note{font-family:var(--mono);font-size:11px;color:var(--txt-faint)}
+  /* aligned grid: Symbol | Readiness | Trend | Indicated | Sector */
+  .grid{display:grid;grid-template-columns:1.7fr .9fr .7fr 1.2fr .8fr;gap:14px;align-items:center}
+  .legend{padding:10px 20px;border-bottom:1px solid var(--line);background:var(--bg);font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--txt-faint)}
+  .legend .r{text-align:right}
+  .row{padding:15px 20px;border-bottom:1px solid #f1f5f9} .row:last-child{border-bottom:0}
+  .sym{display:flex;align-items:center;gap:12px;min-width:0}
+  .sigil{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-family:var(--mono);font-weight:600;font-size:12px;background:var(--teal-50);color:var(--teal);flex:none}
+  .sigil.b{background:var(--blue-50);color:var(--blue)} .sigil.l{background:var(--bg);color:var(--txt-faint)}
+  .tk{font-family:var(--mono);font-weight:600;font-size:13px;color:var(--navy)} .nm{font-size:11.5px;color:var(--txt-faint);margin-top:1px}
+  .score{text-align:right;font-family:var(--mono);font-size:19px;font-weight:600} .score.h{color:var(--teal)} .score.m{color:var(--navy)} .score.l{color:var(--txt-dim)}
+  .score .bd{display:block;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-faint);margin-top:4px}
+  .trend{text-align:right;font-family:var(--mono);font-size:12.5px;font-weight:600}
+  .trend.up{color:var(--teal)} .trend.down{color:var(--red)} .trend.zero{color:var(--txt-faint)}
+  .ind{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--txt)} .ind .s{display:block;font-size:10px;color:var(--txt-faint);font-weight:400}
+  .ind.zero{color:var(--txt-faint)}
+  .sector{display:flex;gap:5px;justify-content:flex-end}
+  .tag{font-size:10px;color:var(--txt-dim);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-family:var(--mono)}
+  .callout{text-align:center;font-family:var(--mono);font-size:11px;color:var(--teal);margin:0 0 8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">The Private Market</div>
+  <h2>Scored founders. Quality investors. Real activity.</h2>
+  <div class="callout">ticker = top strip · added Trend column · Indicated kept · zero shows 0</div>
+
+  <div class="card">
+    <div class="ticker">
+      <div class="live"><span class="blip"></span>LIVE</div>
+      <div class="track" id="track"></div>
+      <div class="fade"></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="v teal">$4.2M</div><div class="l">indicated · 30d</div></div>
+      <div class="stat"><div class="v">42</div><div class="l">active investors</div></div>
+      <div class="stat"><div class="v">23</div><div class="l">diligence-ready</div></div>
+      <div class="stat"><div class="v indigo">76.8</div><div class="l">avg readiness</div></div>
+    </div>
+
+    <div class="bhead"><div class="ttl"><div class="gl">PM</div><div><h3>Diligence-ready deals</h3><div class="meta">ranked by readiness</div></div></div><div class="note">Live</div></div>
+
+    <div class="legend grid"><div>Symbol</div><div class="r">Readiness</div><div class="r">Trend</div><div>Indicated</div><div class="r">Sector</div></div>
+
+    <div class="row grid"><div class="sym"><div class="sigil">FOX</div><div><div class="tk">FOX·EYES</div><div class="nm">FoxEyes Vision AI</div></div></div><div class="score h">84.0<span class="bd">Strong</span></div><div class="trend up">▲ 3.2</div><div class="ind">72% indicated<span class="s">$1.8M / $2.5M</span></div><div class="sector"><span class="tag">AI</span></div></div>
+
+    <div class="row grid"><div class="sym"><div class="sigil b">DMN</div><div><div class="tk">DMND·AI</div><div class="nm">Diamond AI</div></div></div><div class="score m">80.5<span class="bd">Strong</span></div><div class="trend up">▲ 1.9</div><div class="ind">60% indicated<span class="s">$1.2M / $2.0M</span></div><div class="sector"><span class="tag">AI</span></div></div>
+
+    <div class="row grid"><div class="sym"><div class="sigil l">SUM</div><div><div class="tk">SUMMIT</div><div class="nm">Summit Quantum Labs</div></div></div><div class="score l">0.0<span class="bd">Building</span></div><div class="trend zero">0</div><div class="ind zero">0% indicated<span class="s">$0 / $5M</span></div><div class="sector"><span class="tag">HealthTech</span></div></div>
+  </div>
+</div>
+<script>
+const events=[
+  {ic:"◈",bg:"#ecfdf5",c:"#0D9488",sym:"FOX·EYES",val:"+$500K",when:"2d"},
+  {ic:"▲",bg:"#ecfdf5",c:"#0D9488",sym:"HEART·SX",val:"84 readiness",when:"3d"},
+  {ic:"★",bg:"#eeedfe",c:"#534AB7",sym:"MRDN·7",val:"reviewed",when:"4d"},
+  {ic:"↑",bg:"#fffbeb",c:"#b45309",sym:"DMND·AI",val:"72% indicated",when:"5d"},
+  {ic:"◈",bg:"#ecfdf5",c:"#0D9488",sym:"VRDE·Ca",val:"+$300K",when:"6d"},
+];
+function line(e){return `<span class="ev"><span class="ic" style="background:${e.bg};color:${e.c}">${e.ic}</span><span class="sym">${e.sym}</span><span class="val">${e.val}</span><time>${e.when}</time></span>`}
+document.getElementById("track").innerHTML=events.concat(events).map(line).join('');
+</script>
+</body>
+</html>

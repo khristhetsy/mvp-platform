@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CapitalOS — Marketplace connected cards (mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#0c2340;--indigo:#534AB7;--blue:#2563eb;--blue-50:#eff6ff;--teal:#0D9488;--teal-50:#ecfdf5;--bg:#f8fafc;--panel:#fff;--line:#e2e8f0;--txt:#0f172b;--txt-dim:#475569;--txt-faint:#94a3b8;--sans:"Geist",system-ui,sans-serif;--mono:"Geist Mono",ui-monospace,Menlo,monospace;--sh:0 10px 30px rgba(12,35,64,.08);--shp:0 1px 2px rgba(12,35,64,.05),0 2px 8px rgba(12,35,64,.04)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);font-family:var(--sans);color:var(--txt);padding:34px 20px;-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
+  /* one shared container width = aligned page */
+  .wrap{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+  .callout{text-align:center;font-family:var(--mono);font-size:11px;color:var(--teal);margin-bottom:4px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue)}
+  .seclabel{text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--txt-faint);margin-bottom:-6px}
+
+  /* CONNECTED market card */
+  .card{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--panel);box-shadow:var(--sh)}
+  .ticker{position:relative;display:flex;align-items:center;height:46px;border-bottom:1px solid var(--line);overflow:hidden;background:var(--panel)}
+  .live{z-index:4;display:flex;align-items:center;gap:7px;height:100%;padding:0 16px;border-right:1px solid var(--line);font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--teal);font-weight:600}
+  .live .blip{width:6px;height:6px;border-radius:50%;background:var(--teal);position:relative}
+  .live .blip::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1.5px solid var(--teal);opacity:.55;animation:ping 1.8s ease-out infinite}
+  @keyframes ping{to{transform:scale(2.4);opacity:0}}
+  .track{display:inline-flex;align-items:center;white-space:nowrap;animation:scroll 34s linear infinite}
+  @keyframes scroll{to{transform:translateX(-50%)}}
+  .ev{display:inline-flex;align-items:center;gap:7px;height:20px;padding:0 18px;border-right:1px solid var(--line);font-size:12.5px;color:var(--txt-dim)}
+  .ev .ic{width:18px;height:18px;border-radius:6px;display:grid;place-items:center;font-size:10px;background:var(--teal-50);color:var(--teal)}
+  .ev b{color:var(--navy);font-weight:600} .ev time{font-family:var(--mono);font-size:10px;color:var(--txt-faint)}
+  .fade{position:absolute;top:0;bottom:0;right:0;width:48px;background:linear-gradient(270deg,#fff,transparent);z-index:3}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+  .stat{padding:20px 16px;text-align:center;border-right:1px solid var(--line)} .stat:last-child{border-right:0}
+  .stat .v{font-family:var(--mono);font-size:23px;font-weight:600;color:var(--navy)} .stat .v.teal{color:var(--teal)} .stat .v.indigo{color:var(--indigo)}
+  .stat .l{font-family:var(--mono);font-size:10px;color:var(--txt-faint);margin-top:6px}
+  .bhead{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+  .bhead .ttl{display:flex;align-items:center;gap:11px}
+  .bhead .gl{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--navy);color:#fff;font-family:var(--mono);font-size:11px;font-weight:600}
+  .bhead h3{font-size:15px;font-weight:600;color:var(--navy)} .bhead .meta{font-family:var(--mono);font-size:11px;color:var(--txt-faint);margin-top:1px} .bhead .note{font-family:var(--mono);font-size:11px;color:var(--txt-faint)}
+  .grid{display:grid;grid-template-columns:1.7fr .9fr 1.2fr .8fr;gap:14px;align-items:center}
+  .legend{padding:10px 20px;border-bottom:1px solid var(--line);background:var(--bg);font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--txt-faint)} .legend .r{text-align:right}
+  .row{padding:15px 20px;border-bottom:1px solid #f1f5f9} .row:last-child{border-bottom:0}
+  .sym{display:flex;align-items:center;gap:12px}
+  .sigil{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-family:var(--mono);font-weight:600;font-size:12px;background:var(--teal-50);color:var(--teal)} .sigil.b{background:var(--blue-50);color:var(--blue)}
+  .tk{font-family:var(--mono);font-weight:600;font-size:13px;color:var(--navy)} .nm{font-size:11.5px;color:var(--txt-faint);margin-top:1px}
+  .score{text-align:right;font-family:var(--mono);font-size:19px;font-weight:600;color:var(--teal)} .score.m{color:var(--navy)} .score .bd{display:block;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-faint);margin-top:4px}
+  .ind{font-family:var(--mono);font-size:12.5px;font-weight:600} .ind .s{display:block;font-size:10px;color:var(--txt-faint);font-weight:400}
+  .sector{display:flex;gap:5px;justify-content:flex-end} .tag{font-size:10px;color:var(--txt-dim);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-family:var(--mono)}
+
+  /* other aligned cards */
+  .panel{border:1px solid var(--line);border-radius:16px;background:var(--panel);box-shadow:var(--shp);padding:22px}
+  .panel h3{font-size:18px;font-weight:600;color:var(--navy)} .panel .sub{font-size:13px;color:var(--txt-dim);margin-top:4px}
+  .placeholder{margin-top:16px;border:1px dashed var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--txt-faint);font-size:13px}
+  .three{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .mini{border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shp);padding:20px}
+  .mini .ic{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-size:17px;background:var(--teal-50);color:var(--teal);margin-bottom:12px}
+  .mini.b .ic{background:#eeedfe;color:var(--indigo)} .mini.c .ic{background:var(--blue-50);color:var(--blue)}
+  .mini h4{font-size:14.5px;font-weight:600;color:var(--navy)} .mini p{font-size:12.5px;color:var(--txt-dim);margin-top:6px;line-height:1.5}
+  .guide{border-left:3px solid var(--teal);padding-left:10px;font-size:12px;color:var(--txt-dim)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="callout">Marketplace — ticker + stats + board merged into one card · every block aligned to the same width</div>
+
+  <div class="seclabel">The Private Market — live</div>
+
+  <!-- CONNECTED CARD -->
+  <div class="card">
+    <div class="ticker">
+      <div class="live"><span class="blip"></span>SAMPLE</div>
+      <div class="track" id="track"></div>
+      <div class="fade"></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="v teal">$4.2M</div><div class="l">indicated · 30d</div></div>
+      <div class="stat"><div class="v">42</div><div class="l">active investors</div></div>
+      <div class="stat"><div class="v">23</div><div class="l">diligence-ready</div></div>
+      <div class="stat"><div class="v indigo">76.8</div><div class="l">avg readiness</div></div>
+    </div>
+    <div class="bhead"><div class="ttl"><div class="gl">PM</div><div><h3>Diligence-ready deals</h3><div class="meta">ranked by readiness</div></div></div><div class="note">Illustrative</div></div>
+    <div class="legend grid"><div>Symbol</div><div class="r">Readiness</div><div>Indicated</div><div class="r">Sector</div></div>
+    <div class="row grid"><div class="sym"><div class="sigil">FOX</div><div><div class="tk">FOX·EYES</div><div class="nm">FoxEyes Vision AI</div></div></div><div class="score">84.0<span class="bd">Strong</span></div><div class="ind" style="color:var(--txt)">72% indicated<span class="s">$1.8M / $2.5M</span></div><div class="sector"><span class="tag">AI</span></div></div>
+    <div class="row grid"><div class="sym"><div class="sigil b">DMN</div><div><div class="tk">DMND·AI</div><div class="nm">Diamond AI</div></div></div><div class="score m">80.5<span class="bd">Strong</span></div><div class="ind" style="color:var(--txt)">60% indicated<span class="s">$1.2M / $2.0M</span></div><div class="sector"><span class="tag">AI</span></div></div>
+  </div>
+
+  <!-- Published opportunities (same width) -->
+  <div class="panel">
+    <div class="eyebrow">Live marketplace</div>
+    <h3 style="margin-top:6px">Published opportunities</h3>
+    <div class="sub">0 listings live · admin-approved</div>
+    <div class="placeholder">Admin-reviewed companies appear here once diligence and publication are complete.</div>
+  </div>
+
+  <!-- Two-sided (same width) -->
+  <div class="three">
+    <div class="mini"><div class="ic">◎</div><h4>Founders earn readiness</h4><p>A 0–100 score across five diligence dimensions.</p></div>
+    <div class="mini b"><div class="ic">★</div><h4>Investors earn quality</h4><p>Two-sided rating — founders see investor quality too.</p></div>
+    <div class="mini c"><div class="ic">◫</div><h4>Activity in the open</h4><p>Indicated interest and score moves are visible.</p></div>
+  </div>
+
+  <div class="guide">All four blocks share one max-width and the same left/right edges → the page reads as an aligned column.</div>
+</div>
+<script>
+const events=[
+  {sym:"AI vision deal",val:"+$500K indicated",when:"2d"},
+  {sym:"Healthtech deal",val:"84 readiness",when:"3d"},
+  {sym:"Top-quartile investor",val:"reviewed a deal",when:"4d"},
+  {sym:"AI deal",val:"72% indicated",when:"5d"},
+  {sym:"Climate deal",val:"+$300K indicated",when:"6d"},
+];
+function line(e){return `<span class="ev"><span class="ic">◈</span><span><b>${e.sym}</b> ${e.val}</span><time>${e.when}</time></span>`}
+document.getElementById("track").innerHTML=events.concat(events).map(line).join('');
+</script>
+</body>
+</html>

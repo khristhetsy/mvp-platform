@@ -3,18 +3,12 @@ import { requireUserProfile } from "@/lib/supabase/auth";
 import { createCheckoutUrl } from "@/lib/lemonsqueezy";
 import { LS_VARIANT_IDS } from "@/lib/billing/pricing";
 import { isPaymentsEnabled } from "@/lib/billing/pricing-guard";
+import { BUY_LINKS } from "@/lib/billing/buy-links";
 import type { PlanType } from "@/lib/subscriptions/plans";
 
 const PLAN_TO_VARIANT: Partial<Record<PlanType, string>> = {
   founder_basic: LS_VARIANT_IDS.founder_basic,
   founder_professional: LS_VARIANT_IDS.founder_professional,
-};
-
-// Direct Lemon Squeezy "Buy" links — copied from the dashboard (Share button).
-// No API key / store / variant lookup needed, so no mode-mismatch 404s.
-const PLAN_TO_BUY_URL: Partial<Record<PlanType, string | undefined>> = {
-  founder_basic: process.env.LEMONSQUEEZY_CHECKOUT_URL_BASIC,
-  founder_professional: process.env.LEMONSQUEEZY_CHECKOUT_URL_PROFESSIONAL,
 };
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -31,7 +25,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     // Preferred path: redirect straight to the Lemon Squeezy buy link, attaching
     // the founder's email + profile_id (the webhook reads custom_data.profile_id).
-    const buyUrl = PLAN_TO_BUY_URL[planType];
+    const buyUrl = BUY_LINKS[planType];
     if (buyUrl) {
       const url = new URL(buyUrl);
       if (profile.email) url.searchParams.set("checkout[email]", profile.email);

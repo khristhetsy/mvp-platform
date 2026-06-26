@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CapitalOS — Private Market</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0c2340; --navy-2:#0f2147; --ink-900:#020618; --slate-900:#0f172b;
+    --indigo:#534AB7; --indigo-bright:#625fff; --indigo-soft:#eeedfe; --indigo-200:#cecbf6;
+    --blue:#2563eb; --blue-dark:#1d4ed8; --blue-mid:#185FA5; --blue-50:#eff6ff; --blue-100:#dbeafe;
+    --teal:#0D9488; --teal-700:#0f766e; --teal-50:#ecfdf5; --green:#1d7a4d;
+    --red:#A32D2D; --red-50:#fef2f2; --amber-50:#fffbeb; --amber-200:#fee685;
+    --bg:#f8fafc; --panel:#ffffff; --line:#e2e8f0; --line-soft:#eef2ff;
+    --txt:#0f172b; --txt-dim:#475569; --txt-faint:#94a3b8;
+    --sans:"Geist",system-ui,-apple-system,sans-serif;
+    --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --r-sm:9px; --r-md:13px; --r-lg:18px; --r-xl:22px;
+    --sh:0 1px 3px rgba(12,35,64,.05),0 1px 2px rgba(12,35,64,.03);
+    --sh-md:0 10px 30px rgba(12,35,64,.08);
+    --sh-lg:0 22px 60px rgba(12,35,64,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font-family:var(--sans);line-height:1.5;letter-spacing:-.005em;-webkit-font-smoothing:antialiased}
+
+  .app{display:grid;grid-template-columns:244px 1fr;min-height:100vh}
+
+  /* sidebar */
+  .side{background:var(--panel);border-right:1px solid var(--line);padding:22px 16px;display:flex;flex-direction:column;gap:3px;position:sticky;top:0;height:100vh}
+  .logo{display:flex;align-items:center;gap:10px;padding:6px 8px 20px}
+  .logo .mark{width:31px;height:31px;border-radius:9px;background:var(--navy);display:grid;place-items:center;font-family:var(--mono);font-weight:600;color:#fff;font-size:15px}
+  .logo .word{font-weight:600;font-size:15px;letter-spacing:-.01em;color:var(--navy)}
+  .navlbl{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--txt-faint);padding:15px 8px 6px}
+  .nav{display:flex;align-items:center;gap:11px;padding:10px 11px;border-radius:var(--r-sm);color:var(--txt-dim);font-size:13.5px;font-weight:500;cursor:pointer;transition:.15s;text-decoration:none}
+  .nav:hover{background:var(--bg);color:var(--txt)}
+  .nav.on{background:var(--indigo-soft);color:var(--indigo);font-weight:600}
+  .nav .gl{width:17px;text-align:center;font-size:14px}
+  .side .foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--line)}
+  .who{display:flex;align-items:center;gap:10px;padding:6px 8px}
+  .who .av{width:33px;height:33px;border-radius:50%;background:linear-gradient(135deg,var(--indigo),var(--teal));flex:none}
+  .who .n{font-size:12.5px;color:var(--txt);font-weight:600;line-height:1.2}
+  .who .r{font-family:var(--mono);font-size:10px;color:var(--txt-faint)}
+
+  .main{display:flex;flex-direction:column;min-width:0}
+
+  /* topbar */
+  .top{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:15px 32px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.85);backdrop-filter:blur(10px);position:sticky;top:0;z-index:20}
+  .crumbs{font-size:13px;color:var(--txt-faint)}
+  .crumbs b{color:var(--txt);font-weight:600}
+  .top-right{display:flex;align-items:center;gap:14px}
+  .readiness{display:flex;align-items:center;gap:11px;padding:7px 15px 7px 11px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--panel);box-shadow:var(--sh)}
+  .gauge{width:34px;height:34px;flex:none;position:relative}
+  .gauge .num{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--teal)}
+  .readiness .lbl .t{font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--txt-faint);font-family:var(--mono)}
+  .readiness .lbl .s{font-size:12.5px;color:var(--txt);font-weight:600}
+  .btn-primary{font-family:var(--sans);font-size:13px;font-weight:600;color:#fff;background:var(--navy);border:0;padding:10px 18px;border-radius:var(--r-sm);cursor:pointer;transition:.15s;box-shadow:var(--sh)}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:var(--sh-md)}
+
+  /* ticker */
+  .ticker{position:relative;overflow:hidden;border-bottom:1px solid var(--line);background:var(--panel);height:46px;display:flex;align-items:center}
+  .ticker::before,.ticker::after{content:"";position:absolute;top:0;bottom:0;width:52px;z-index:3;pointer-events:none}
+  .ticker::before{left:0;background:linear-gradient(90deg,var(--panel),transparent)}
+  .ticker::after{right:0;background:linear-gradient(270deg,var(--panel),transparent)}
+  .live{position:absolute;left:0;top:0;bottom:0;z-index:4;display:flex;align-items:center;gap:7px;padding:0 16px 0 32px;background:var(--panel);border-right:1px solid var(--line);font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--teal);font-weight:600}
+  .live .blip{width:6px;height:6px;border-radius:50%;background:var(--teal);position:relative}
+  .live .blip::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1.5px solid var(--teal);opacity:.55;animation:ping 1.8s ease-out infinite}
+  @keyframes ping{to{transform:scale(2.4);opacity:0}}
+  .track{display:inline-flex;align-items:center;white-space:nowrap;padding-left:155px;animation:scroll 48s linear infinite}
+  .ticker:hover .track{animation-play-state:paused}
+  @keyframes scroll{to{transform:translateX(-50%)}}
+  @media (prefers-reduced-motion:reduce){.track{animation:none;padding-left:165px;overflow-x:auto}}
+  .ev{display:inline-flex;align-items:center;gap:8px;padding:0 20px;border-right:1px solid var(--line);height:20px;font-size:12.5px;color:var(--txt-dim)}
+  .ev .ic{font-size:10px;width:18px;height:18px;border-radius:6px;display:inline-grid;place-items:center;flex:none}
+  .ev .sym{font-family:var(--mono);font-weight:600;font-size:12px;color:var(--navy)}
+  .ev .val{font-family:var(--mono);font-weight:600}
+  .ev .arrow{color:var(--txt-faint);font-size:10px}
+  .ev .deal{font-family:var(--mono);font-size:11.5px;color:var(--txt-dim)}
+  .ev time{font-family:var(--mono);font-size:10px;color:var(--txt-faint)}
+  .t-pledge .ic{background:var(--teal-50);color:var(--teal)} .t-pledge .val{color:var(--teal)}
+  .t-interest .ic{background:var(--indigo-soft);color:var(--indigo)} .t-interest .val{color:var(--indigo)}
+  .t-review .ic{background:var(--blue-50);color:var(--blue)}
+  .t-traction .ic{background:var(--amber-50);color:#b45309} .t-traction .val{color:#b45309}
+  .t-score .ic{background:var(--teal-50);color:var(--teal)} .t-score .val{color:var(--teal)}
+
+  /* page */
+  .page{padding:30px 32px 64px;max-width:1200px}
+  .ph{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:4px}
+  .ph h1{font-size:29px;font-weight:700;letter-spacing:-.025em;line-height:1.1;color:var(--navy)}
+  .ph p{color:var(--txt-dim);font-size:13.5px;margin-top:8px;max-width:58ch;line-height:1.55}
+  .controls{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{font-family:var(--sans);font-size:12px;color:var(--txt-dim);background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.15s;font-weight:500;box-shadow:var(--sh)}
+  .chip:hover{border-color:var(--indigo-200);color:var(--txt);transform:translateY(-1px)}
+  .chip.on{background:var(--indigo-soft);border-color:var(--indigo-200);color:var(--indigo)}
+
+  /* compliance notice */
+  .notice{display:flex;gap:10px;align-items:flex-start;margin:20px 0 4px;padding:14px 17px;border:1px solid var(--line-soft);border-left:3px solid var(--indigo);border-radius:var(--r-md);background:var(--indigo-soft);font-size:12px;color:var(--txt-dim);line-height:1.55}
+  .notice b{color:var(--navy)}
+
+  /* board */
+  .board{margin-top:22px;border:1px solid var(--line);border-radius:var(--r-xl);overflow:hidden;background:var(--panel);box-shadow:var(--sh-md)}
+  .bhead{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+  .bhead .ttl{display:flex;align-items:center;gap:12px}
+  .bhead .gl{width:32px;height:32px;border-radius:var(--r-sm);display:grid;place-items:center;background:var(--navy);font-family:var(--mono);font-size:11px;color:#fff;font-weight:600}
+  .bhead h2{font-size:16px;font-weight:600;color:var(--navy)}
+  .bhead .meta{font-family:var(--mono);font-size:11px;color:var(--txt-faint);margin-top:1px}
+  .bhead .srt{font-family:var(--mono);font-size:11px;color:var(--txt-dim);padding:6px 11px;border:1px solid var(--line);border-radius:7px}
+
+  .legend{display:grid;grid-template-columns:1.7fr .9fr .8fr 1fr 1.05fr .7fr 24px;gap:14px;padding:11px 22px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--txt-faint);background:var(--bg)}
+  .legend .num{text-align:right}
+  .row{display:grid;grid-template-columns:1.7fr .9fr .8fr 1fr 1.05fr .7fr 24px;gap:14px;align-items:center;padding:17px 22px;border-bottom:1px solid var(--line);cursor:pointer;transition:.13s;position:relative}
+  .row:last-child{border-bottom:0}
+  .row:hover{background:var(--blue-50)}
+  .row::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent;transition:.13s}
+  .row:hover::before{background:var(--indigo)}
+  .sym{display:flex;align-items:center;gap:12px;min-width:0}
+  .sigil{width:36px;height:36px;border-radius:var(--r-md);flex:none;display:grid;place-items:center;font-family:var(--mono);font-weight:600;font-size:12px}
+  .s-high{background:var(--teal-50);color:var(--teal)} .s-mid{background:var(--blue-50);color:var(--blue-mid)} .s-low{background:var(--bg);color:var(--txt-faint)}
+  .tk{font-family:var(--mono);font-weight:600;font-size:13px;color:var(--navy)}
+  .nm{font-size:11.5px;color:var(--txt-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+  .price{font-family:var(--mono);font-size:19px;font-weight:600;text-align:right;line-height:1}
+  .price .band{display:block;font-size:9px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;margin-top:5px;font-family:var(--mono)}
+  .b-high{color:var(--teal)} .b-high .band{color:var(--teal-700)}
+  .b-mid{color:var(--navy)} .b-mid .band{color:var(--txt-faint)}
+  .b-low{color:var(--txt-dim)} .b-low .band{color:var(--txt-faint)}
+  .trend{font-family:var(--mono);font-size:12.5px;text-align:right;font-weight:600;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+  .spark{width:50px;height:15px}
+  .up{color:var(--teal)} .down{color:var(--red)}
+  .vol{text-align:right;font-family:var(--mono)}
+  .vol .big{font-size:13.5px;color:var(--txt);font-weight:600}
+  .vol .lbl{font-size:10px;color:var(--txt-faint)}
+  .mom{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--txt-dim)}
+  .pulse{width:8px;height:8px;border-radius:50%;flex:none;position:relative}
+  .pulse.active{background:var(--teal)}
+  .pulse.active::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1.5px solid var(--teal);opacity:.55;animation:ping 1.8s ease-out infinite}
+  .pulse.warm{background:#d97706} .pulse.quiet{background:var(--txt-faint)}
+  .sector{display:flex;gap:5px;flex-wrap:wrap}
+  .tag{font-size:10px;color:var(--txt-dim);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-family:var(--mono)}
+  .caret{justify-self:end;color:var(--txt-faint);transition:.15s;font-size:18px}
+  .row:hover .caret{color:var(--indigo);transform:translateX(2px)}
+
+  @media (max-width:980px){
+    .app{grid-template-columns:1fr}.side{display:none}.legend{display:none}
+    .row{grid-template-columns:1fr auto auto;grid-template-areas:"sym price caret" "vol vol vol" "mom sector sector";row-gap:11px}
+    .row .sym{grid-area:sym}.row .price{grid-area:price}.row .caret{grid-area:caret;align-self:center}
+    .row .trend{display:none}.row .vol{grid-area:vol}.row .mom{grid-area:mom}.row .sector{grid-area:sector;justify-content:flex-end}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="logo"><div class="mark">C</div><div class="word">CapitalOS</div></div>
+    <div class="navlbl">Founder</div>
+    <a class="nav"><span class="gl">◇</span>Overview</a>
+    <a class="nav"><span class="gl">◎</span>Readiness Score</a>
+    <a class="nav on"><span class="gl">◫</span>Private Market</a>
+    <a class="nav"><span class="gl">◈</span>Investor Interest</a>
+    <a class="nav"><span class="gl">▤</span>Data Room</a>
+    <a class="nav"><span class="gl">◷</span>Activity</a>
+    <div class="navlbl">Prepare</div>
+    <a class="nav"><span class="gl">✎</span>Diligence Tasks</a>
+    <a class="nav"><span class="gl">▷</span>Courses</a>
+    <div class="foot"><div class="who"><div class="av"></div><div><div class="n">Brandon McNally</div><div class="r">FoxEyes · Founder</div></div></div></div>
+  </aside>
+
+  <div class="main">
+    <div class="top">
+      <div class="crumbs">Founder / <b>Private Market</b></div>
+      <div class="top-right">
+        <div class="readiness">
+          <div class="gauge"><svg width="34" height="34" style="transform:rotate(-90deg)"><circle cx="17" cy="17" r="14" fill="none" stroke="#e2e8f0" stroke-width="3.5"/><circle cx="17" cy="17" r="14" fill="none" stroke="#0D9488" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="88" stroke-dashoffset="14"/></svg><div class="num">84</div></div>
+          <div class="lbl"><div class="t">Readiness</div><div class="s">Strong · ▲3.2</div></div>
+        </div>
+        <button class="btn-primary">Submit update</button>
+      </div>
+    </div>
+
+    <div class="ticker">
+      <div class="live"><span class="blip"></span>LIVE</div>
+      <div class="track" id="track"></div>
+    </div>
+
+    <div class="page">
+      <div class="ph">
+        <div>
+          <h1>Private Market</h1>
+          <p>Vetted investors, scored and live. See who's deploying, who's reviewing deals like yours, and whose quality score is climbing.</p>
+        </div>
+        <div class="controls">
+          <span class="chip on">▾ Sort: Score</span>
+          <span class="chip">Active now</span>
+          <span class="chip">Reviewing</span>
+          <span class="chip">All sectors</span>
+        </div>
+      </div>
+
+      <div class="notice">
+        <span>ⓘ</span>
+        <span><b>Information display only.</b> Scores and activity are informational signals. Pledges are non-binding indications of interest, not commitments. Nothing here is investment advice, a recommendation, or a guarantee of funding.</span>
+      </div>
+
+      <div class="board">
+        <div class="bhead">
+          <div class="ttl"><div class="gl">PM</div><div><h2>Investors</h2><div class="meta">5 vetted investors · sorted by quality score</div></div></div>
+          <div class="srt">30D ▾</div>
+        </div>
+        <div class="legend"><div>Symbol</div><div class="num">Quality</div><div class="num">Trend</div><div class="num">Pledge interest</div><div>Momentum</div><div>Sector</div><div></div></div>
+        <div id="rows"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const events=[
+  {type:"traction",sym:"NVST·AK",ic:"↑",val:"$2.1M",when:"3m"},
+  {type:"interest",sym:"MRDN·7",ic:"★",deal:"FOX·EYES",when:"11m"},
+  {type:"pledge",sym:"NVST·AK",ic:"◈",val:"+$500K",deal:"FOX·EYES",when:"18m"},
+  {type:"review",sym:"HLO·CAP",ic:"◉",deal:"HEART·SX",when:"26m"},
+  {type:"score",sym:"VRT·X",ic:"▲",val:"73.2",when:"35m"},
+  {type:"traction",sym:"MRDN·7",ic:"↑",val:"3 deals 60d",when:"48m"},
+  {type:"interest",sym:"HLO·CAP",ic:"★",deal:"DMND·AI",when:"1h"},
+  {type:"pledge",sym:"VRT·X",ic:"◈",val:"+$300K",deal:"VRDE·Ca",when:"1h"},
+  {type:"review",sym:"NVST·AK",ic:"◉",val:"5 deals",when:"2h"},
+  {type:"score",sym:"MRDN·7",ic:"▲",val:"87.0",when:"2h"},
+];
+function evLine(e){let mid="";if((e.type==="interest"||e.type==="review")&&e.deal){mid=`<span class="arrow">→</span><span class="deal">${e.deal}</span>`}else if(e.type==="pledge"){mid=`<span class="val">${e.val}</span><span class="arrow">→</span><span class="deal">${e.deal}</span>`}else if(e.val){mid=`<span class="val">${e.val}</span>`}return `<span class="ev t-${e.type}"><span class="ic">${e.ic}</span><span class="sym">${e.sym}</span>${mid}<time>${e.when}</time></span>`}
+document.getElementById("track").innerHTML=events.concat(events).map(evLine).join('');
+
+const investors=[
+  {sym:"NVST·AK",nm:"Ardent Keel Capital",score:91.4,band:"high",chg:3.2,up:true,vol:"4 pledges",voln:"$2.1M indicated",mom:"active",momT:"2m",tags:["AI","SaaS"]},
+  {sym:"MRDN·7",nm:"Meridian Seven",score:87.0,band:"high",chg:1.1,up:true,vol:"3 pledges",voln:"$1.4M indicated",mom:"active",momT:"18m",tags:["Healthtech"]},
+  {sym:"HLO·CAP",nm:"Halo Bridge Partners",score:78.6,band:"mid",chg:-0.8,up:false,vol:"2 pledges",voln:"$700K indicated",mom:"warm",momT:"5h",tags:["Consumer"]},
+  {sym:"VRT·X",nm:"Vertex Lane",score:73.2,band:"mid",chg:2.4,up:true,vol:"1 pledge",voln:"$300K indicated",mom:"active",momT:"40m",tags:["Climate"]},
+  {sym:"OAK·9",nm:"Oakline Syndicate",score:64.9,band:"low",chg:-1.6,up:false,vol:"0 pledges",voln:"—",mom:"quiet",momT:"6d",tags:["Generalist"]},
+];
+function spark(up){const p=up?"0,12 9,10 18,11 27,6 36,7 45,2 50,1":"0,3 9,5 18,4 27,8 36,7 45,11 50,12";return `<svg class="spark" viewBox="0 0 50 15" fill="none"><polyline points="${p}" stroke="${up?'#0D9488':'#A32D2D'}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`}
+function bl(b){return b==="high"?"Strong":b==="mid"?"Moderate":"Building"}
+document.getElementById("rows").innerHTML=investors.map(d=>`
+  <div class="row">
+    <div class="sym"><div class="sigil s-${d.band}">${d.sym.split('·')[0].slice(0,3)}</div><div><div class="tk">${d.sym}</div><div class="nm">${d.nm}</div></div></div>
+    <div class="price b-${d.band}">${d.score.toFixed(1)}<span class="band">${bl(d.band)}</span></div>
+    <div class="trend ${d.up?'up':'down'}">${spark(d.up)}<span>${d.up?'▲':'▼'} ${Math.abs(d.chg).toFixed(1)}</span></div>
+    <div class="vol"><div class="big">${d.vol}</div><div class="lbl">${d.voln}</div></div>
+    <div class="mom"><span class="pulse ${d.mom}"></span><span>${d.momT}</span></div>
+    <div class="sector">${d.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+    <span class="caret">›</span>
+  </div>`).join('');
+</script>
+</body>
+</html>
