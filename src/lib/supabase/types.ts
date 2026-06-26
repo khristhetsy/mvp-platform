@@ -34,6 +34,7 @@ export type Company = {
   approved_by: string | null;
   is_published: boolean;
   marketplace_visible: boolean;
+  is_sample: boolean;
   published_at: string | null;
   slug: string | null;
   founder_goals?: string | null;

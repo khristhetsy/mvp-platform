@@ -276,6 +276,7 @@ export function mapAdminCompaniesToCardData(
       review_status: company.review_status,
       is_published: company.is_published ?? false,
       marketplace_visible: company.marketplace_visible ?? false,
+      is_sample: (company as { is_sample?: boolean | null }).is_sample ?? false,
       published_at: company.published_at ?? null,
       slug: company.slug,
       business_description: company.business_description,

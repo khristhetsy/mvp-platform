@@ -18,6 +18,7 @@ export type AdminCompanyCardData = {
   review_status: string | null;
   is_published: boolean;
   marketplace_visible: boolean;
+  is_sample?: boolean | null;
   published_at: string | null;
   slug: string | null;
   business_description: string | null;
@@ -77,6 +78,7 @@ export function AdminCompanyCard({ company }: Props) {
   const [reviewStatus, setReviewStatus] = useState(company.review_status);
   const [isPublished, setIsPublished] = useState(company.is_published);
   const [marketplaceVisible, setMarketplaceVisible] = useState(company.marketplace_visible);
+  const [isSample, setIsSample] = useState(Boolean(company.is_sample));
   const [publishedAt, setPublishedAt] = useState(company.published_at);
 
   useEffect(() => {
@@ -314,6 +316,16 @@ export function AdminCompanyCard({ company }: Props) {
     });
   }
 
+  async function toggleSample() {
+    await runAction("toggle_sample", async () => {
+      const payload = await callApi("toggle_sample", `/api/admin/companies/${company.id}/sample`, {
+        isSample: !isSample,
+      });
+      const updated = payload.company as { is_sample?: boolean } | undefined;
+      setIsSample(Boolean(updated?.is_sample));
+    });
+  }
+
   async function saveFeedbackOnly() {
     if (!feedback.trim()) {
       failAction("Save Feedback", "Feedback cannot be empty.");
@@ -539,6 +551,23 @@ export function AdminCompanyCard({ company }: Props) {
               className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50"
             >
               {loading === "unpublish" ? "Unpublishing..." : "Unpublish from Marketplace"}
+            </button>
+            <button
+              type="button"
+              disabled={isBusy}
+              onClick={() => void toggleSample()}
+              className={`rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
+                isSample
+                  ? "bg-amber-100 text-amber-800 border border-amber-300"
+                  : "border border-slate-300 text-slate-700"
+              }`}
+              title="Sample companies are hidden from all public surfaces and can't be published."
+            >
+              {loading === "toggle_sample"
+                ? "Saving..."
+                : isSample
+                  ? "Sample · hidden from public"
+                  : "Mark as sample"}
             </button>
           </div>
 

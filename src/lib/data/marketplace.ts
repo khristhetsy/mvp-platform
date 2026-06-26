@@ -148,12 +148,13 @@ function mapCompanyToListing(
 export function isCompanyMarketplaceListed(company: Pick<
   Company,
   "review_status" | "is_published" | "marketplace_visible" | "published_at"
->) {
+> & { is_sample?: boolean | null }) {
   return (
     company.review_status === "approved" &&
     company.is_published === true &&
     company.marketplace_visible === true &&
-    Boolean(company.published_at)
+    Boolean(company.published_at) &&
+    company.is_sample !== true
   );
 }
 
@@ -217,6 +218,7 @@ export async function listMarketplaceListings(supabase: SupabaseClient<Database>
     .eq("review_status", "approved")
     .eq("is_published", true)
     .eq("marketplace_visible", true)
+    .eq("is_sample", false)
     .not("published_at", "is", null)
     .order("published_at", { ascending: false });
 
@@ -301,6 +303,10 @@ export async function setCompanyMarketplaceVisibility(
 
   if (company.review_status !== "approved") {
     return { error: { message: "Company must be approved before marketplace publication." } };
+  }
+
+  if (input.publish && (company as Company & { is_sample?: boolean | null }).is_sample === true) {
+    return { error: { message: "Sample companies cannot be published to the marketplace." } };
   }
 
   const now = new Date().toISOString();

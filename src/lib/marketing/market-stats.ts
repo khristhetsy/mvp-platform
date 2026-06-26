@@ -54,11 +54,16 @@ export async function loadPublicMarketStats(): Promise<PublicMarketStats> {
       companyIds.length
         ? getCompanyPledgeSummaries(admin, companyIds)
         : Promise.resolve<Record<string, CompanyPledgeSummary>>({}),
-      admin
-        .from("investor_interests")
-        .select("pledge_amount")
-        .not("pledge_amount", "is", null)
-        .gte("pledge_amount_updated_at", since),
+      // Scope indicated total to public (non-sample) companies only, so sample
+      // pledges never inflate the headline number.
+      companyIds.length
+        ? admin
+            .from("investor_interests")
+            .select("pledge_amount")
+            .in("company_id", companyIds)
+            .not("pledge_amount", "is", null)
+            .gte("pledge_amount_updated_at", since)
+        : Promise.resolve({ data: [] as { pledge_amount: number | null }[] }),
       companyIds.length
         ? getCompanyMetricHistory(admin, companyIds, 30)
         : Promise.resolve(new Map<string, MetricSnapshot[]>()),
