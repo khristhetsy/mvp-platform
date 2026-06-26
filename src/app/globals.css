@@ -27,8 +27,9 @@
   --indigo: #534AB7;
   --indigo-hover: #3C3489;
   --indigo-soft: #EEEDFB;
-  --teal: #0D9488;
-  --teal-hover: #0f766e;
+  /* #0F766E passes WCAG AA (5.4:1) on white for text; #0D9488 did not (3.7:1). */
+  --teal: #0f766e;
+  --teal-hover: #0c5f53;
   --teal-muted: #ecfdf5;
 
   /* Primary blue accent (Full Light theme) */
@@ -85,6 +86,13 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Guaranteed visible keyboard focus on all interactive elements (WCAG 2.4.7). */
+:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 input,

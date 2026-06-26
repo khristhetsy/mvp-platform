@@ -39,9 +39,8 @@ export default function OpengraphImage() {
           </div>
           <div style={{ fontSize: 42, fontWeight: 700 }}>CapitalOS</div>
         </div>
-        <div style={{ marginTop: 44, fontSize: 66, fontWeight: 700, lineHeight: 1.08, maxWidth: 940 }}>
-          The operating system for{" "}
-          <span style={{ color: "#5B8DEF" }}>capital-ready</span> companies.
+        <div style={{ marginTop: 44, fontSize: 66, fontWeight: 700, lineHeight: 1.08, maxWidth: 940, color: "#ffffff" }}>
+          The operating system for capital-ready companies.
         </div>
         <div style={{ marginTop: 30, fontSize: 28, color: "#9DB2D9" }}>
           AI diligence · investor readiness · private market
