@@ -4,7 +4,6 @@ import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingScoredBoard, type ScoredBoardRow } from "@/components/marketing/MarketingScoredBoard";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
-import { TrackedCTA } from "@/components/marketing/TrackedCTA";
 import { CapitalOSLogo } from "@/components/CapitalOSLogo";
 import { loadPublicMarketStats } from "@/lib/marketing/market-stats";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -107,22 +106,12 @@ export default async function Home() {
               quality investors.
             </p>
             <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
-              <TrackedCTA
-                href="/auth/sign-up"
-                event="founder_signup_cta"
-                properties={{ location: "home_hero" }}
-                className="cap-btn-primary rounded-lg px-5 py-3 text-center text-sm font-semibold"
-              >
+              <Link href="/auth/sign-up" className="cap-btn-primary rounded-lg px-5 py-3 text-center text-sm font-semibold">
                 Get started as founder
-              </TrackedCTA>
-              <TrackedCTA
-                href="/investors"
-                event="investor_explore_cta"
-                properties={{ location: "home_hero" }}
-                className="cap-btn-secondary rounded-lg px-5 py-3 text-center text-sm font-semibold"
-              >
+              </Link>
+              <Link href="/investors" className="cap-btn-secondary rounded-lg px-5 py-3 text-center text-sm font-semibold">
                 Explore as investor
-              </TrackedCTA>
+              </Link>
             </div>
             <div className="mt-6 flex flex-wrap gap-2">
               {trustBadges.map(({ icon: Icon, label }) => (
