@@ -20,6 +20,51 @@ const SESSION_TYPES: { value: SessionType; label: string }[] = [
   { value: "workshop", label: "Workshop" },
 ];
 
+function SessionVideoUpload({
+  eventId,
+  session,
+  onUpdated,
+}: {
+  eventId: string;
+  session: EventSession;
+  onUpdated: (s: EventSession) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function upload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("eventId", eventId);
+      const res = await fetch(`/api/admin/events/sessions/${session.id}/video`, { method: "POST", body: fd });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Upload failed.");
+      onUpdated(json.session as EventSession);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setBusy(false);
+      e.target.value = "";
+    }
+  }
+
+  return (
+    <div className="mt-2 flex items-center gap-2">
+      <label className="cursor-pointer text-xs font-medium text-[var(--blue)] hover:underline">
+        {busy ? "Uploading…" : session.recordingPath ? "Replace recording" : "Upload recording"}
+        <input type="file" accept="video/mp4,video/webm,video/quicktime" onChange={upload} disabled={busy} className="hidden" />
+      </label>
+      <span className="text-xs text-[var(--text-muted)]">MP4 / WebM / MOV, up to 500 MB</span>
+      {error && <span className="text-xs text-rose-600">{error}</span>}
+    </div>
+  );
+}
+
 export function EventDetailManager({
   event,
   sponsorCatalog,
@@ -71,6 +116,10 @@ export function EventDetailManager({
     } finally {
       setAddingSession(false);
     }
+  }
+
+  function onSessionUpdated(updated: EventSession) {
+    setSessions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
   }
 
   async function removeSession(id: string) {
@@ -162,17 +211,23 @@ export function EventDetailManager({
             <p className="text-sm text-[var(--text-muted)]">No sessions yet.</p>
           ) : (
             sessions.map((s) => (
-              <div key={s.id} className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] px-3 py-2">
-                <div>
-                  <span className="rounded bg-[var(--indigo-soft)] px-2 py-0.5 text-xs font-medium text-[var(--indigo)]">
-                    {SESSION_TYPES.find((t) => t.value === s.type)?.label ?? s.type}
-                  </span>
-                  <span className="ml-2 text-sm font-medium text-[var(--navy)]">{s.title}</span>
-                  {s.sectorSlug && <span className="ml-2 text-xs text-[var(--text-muted)]">{sectorLabel(s.sectorSlug)}</span>}
+              <div key={s.id} className="rounded-lg border border-[var(--border-subtle)] px-3 py-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="rounded bg-[var(--indigo-soft)] px-2 py-0.5 text-xs font-medium text-[var(--indigo)]">
+                      {SESSION_TYPES.find((t) => t.value === s.type)?.label ?? s.type}
+                    </span>
+                    <span className="ml-2 text-sm font-medium text-[var(--navy)]">{s.title}</span>
+                    {s.sectorSlug && <span className="ml-2 text-xs text-[var(--text-muted)]">{sectorLabel(s.sectorSlug)}</span>}
+                    {s.recordingPath && (
+                      <span className="ml-2 rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Recorded</span>
+                    )}
+                  </div>
+                  <button onClick={() => removeSession(s.id)} className="text-xs text-rose-600 hover:underline">
+                    Remove
+                  </button>
                 </div>
-                <button onClick={() => removeSession(s.id)} className="text-xs text-rose-600 hover:underline">
-                  Remove
-                </button>
+                <SessionVideoUpload eventId={event.id} session={s} onUpdated={onSessionUpdated} />
               </div>
             ))
           )}

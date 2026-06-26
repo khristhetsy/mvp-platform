@@ -15,6 +15,7 @@ import { listEventPresenters } from "@/lib/icfo-events/applications";
 import { listEventSponsors } from "@/lib/icfo-events/sponsors";
 import { getRegistration } from "@/lib/icfo-events/registrations";
 import { getOptin } from "@/lib/icfo-events/networking";
+import { sessionVideoSignedUrl } from "@/lib/icfo-events/video/storage";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import type { EventWithDetail, EventSession, EventPresenter, EventSponsor } from "@/lib/icfo-events/types";
 
@@ -155,6 +156,15 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
   const visibleSessions = event.sessions.filter((s) => s.status !== "draft");
 
+  // Sign playback URLs for any visible session that has a recording.
+  const playbackEntries = await Promise.all(
+    visibleSessions.map(async (s): Promise<[string, string | null]> => [
+      s.id,
+      s.recordingPath ? await sessionVideoSignedUrl(s.recordingPath) : null,
+    ]),
+  );
+  const playback = new Map<string, string | null>(playbackEntries);
+
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Event",
@@ -254,6 +264,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                   </div>
                   <h3 className="mt-2 font-semibold text-[var(--navy)]">{s.title}</h3>
                   {s.abstract && <p className="mt-1 text-sm text-[var(--text-secondary)]">{s.abstract}</p>}
+                  {playback.get(s.id) && (
+                    <video
+                      controls
+                      preload="none"
+                      src={playback.get(s.id) ?? undefined}
+                      className="mt-3 w-full rounded-lg border border-[var(--border-subtle)] bg-black"
+                    >
+                      Your browser doesn&apos;t support embedded video.
+                    </video>
+                  )}
                 </li>
               ))}
             </ol>
