@@ -6,8 +6,21 @@ import { MarketingScoredBoard, type ScoredBoardRow } from "@/components/marketin
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { CapitalOSLogo } from "@/components/CapitalOSLogo";
 import { loadPublicMarketStats } from "@/lib/marketing/market-stats";
+import { JsonLd } from "@/components/seo/JsonLd";
+import {
+  ORGANIZATION_JSONLD,
+  SOFTWARE_APPLICATION_JSONLD,
+  FAQ_ITEMS,
+  faqPageJsonLd,
+} from "@/lib/seo/structured-data";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = {
+  title: { absolute: "CapitalOS — The operating system for capital-ready companies" },
+  alternates: { canonical: "/" },
+  openGraph: { url: "/" },
+};
 
 const trustBadges = [
   { icon: Sparkles, label: "AI-Powered Diligence" },
@@ -256,6 +269,28 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* FAQ */}
+      <section className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-14 lg:px-8">
+        <div className="mx-auto max-w-5xl">
+          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">FAQ</p>
+          <h2 className="mt-3 text-center text-2xl font-semibold tracking-tight text-[var(--navy)] md:text-3xl">
+            Common questions
+          </h2>
+          <dl className="mx-auto mt-9 max-w-3xl divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            {FAQ_ITEMS.map((item) => (
+              <div key={item.q} className="px-6 py-5">
+                <dt className="text-sm font-semibold text-[var(--navy)]">{item.q}</dt>
+                <dd className="mt-2 text-sm leading-6 text-slate-600">{item.a}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+
+      <JsonLd data={ORGANIZATION_JSONLD} />
+      <JsonLd data={SOFTWARE_APPLICATION_JSONLD} />
+      <JsonLd data={faqPageJsonLd(FAQ_ITEMS)} />
 
       <ComplianceBlock />
       <MarketingFooter />

@@ -15,6 +15,18 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  title: "Private Market — diligence-ready opportunities",
+  description:
+    "Browse admin-approved companies with full diligence context. Shown for informational purposes only; not investment recommendations.",
+  alternates: { canonical: "/deals" },
+  openGraph: {
+    title: "The Private Market · CapitalOS",
+    description: "Admin-approved, diligence-ready opportunities. Informational only.",
+    url: "/deals",
+  },
+};
+
 const TWO_SIDED = [
   { icon: Gauge, title: "Founders earn readiness", copy: "A 0–100 Capital Readiness Score across five diligence dimensions. Only diligence-ready deals reach the market.", color: "bg-[var(--teal-muted)] text-[var(--teal)]" },
   { icon: Star, title: "Investors earn quality", copy: "A two-sided rating means founders see investor quality too — who's active, who deploys, who follows through.", color: "bg-[var(--indigo-soft)] text-[var(--indigo)]" },

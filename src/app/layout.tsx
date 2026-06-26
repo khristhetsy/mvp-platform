@@ -22,8 +22,29 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CapitalOS | AI Due Diligence Platform",
-  description: "CapitalOS — AI due diligence and campaign review portal for founders, admins, analysts, and approved investors.",
+  metadataBase: new URL("https://icapos.com"),
+  title: {
+    default: "CapitalOS — The operating system for capital-ready companies",
+    template: "%s · CapitalOS",
+  },
+  description:
+    "AI diligence, investor readiness, secure data rooms, and a private market where scored founders meet quality investors.",
+  applicationName: "CapitalOS",
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "CapitalOS",
+    url: "https://icapos.com",
+    title: "CapitalOS — The operating system for capital-ready companies",
+    description:
+      "AI diligence, investor readiness, secure data rooms, and a private market where scored founders meet quality investors.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CapitalOS — The operating system for capital-ready companies",
+    description: "AI diligence, investor readiness, secure data rooms, and a private market.",
+  },
+  robots: { index: true, follow: true },
 };
 
 export default async function RootLayout({

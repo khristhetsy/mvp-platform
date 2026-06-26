@@ -13,6 +13,18 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  title: "For investors — diligence-ready deal flow",
+  description:
+    "Pre-screened, scored opportunities matched to your thesis, with complete data rooms and disclosure context. No cold inbound.",
+  alternates: { canonical: "/investors" },
+  openGraph: {
+    title: "For investors — diligence-ready deal flow · CapitalOS",
+    description: "Scored opportunities matched to your thesis, with complete data rooms.",
+    url: "/investors",
+  },
+};
+
 const TICKER: TickerItem[] = [
   { Icon: TrendingUp, tone: "amber", label: "NVST·AK", detail: "$2.1M deployed", when: "3m" },
   { Icon: Star, tone: "indigo", label: "MRDN·7", detail: "→ FOX·EYES", when: "11m" },

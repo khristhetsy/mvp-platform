@@ -4,6 +4,18 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { PlanComparisonSection } from "@/components/PlanComparisonSection";
 
+export const metadata = {
+  title: "Pricing — founder plans",
+  description:
+    "Start with a 3-day founder trial, then upgrade to Basic or Professional anytime. Investor accounts are always free.",
+  alternates: { canonical: "/pricing" },
+  openGraph: {
+    title: "Pricing · CapitalOS",
+    description: "3-day founder trial, then Basic or Professional. Investor accounts free.",
+    url: "/pricing",
+  },
+};
+
 export default function PricingPage() {
   return (
     <MarketingShell>

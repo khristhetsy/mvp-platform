@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CounselReviewBanner } from "@/components/legal/CounselReviewBanner";
 
 export const metadata = { title: "Terms of Service – CapitalOS" };
 
@@ -16,6 +17,8 @@ export default function TermsPage() {
           <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-950">Terms of Service</h1>
           <p className="mt-2 text-sm text-slate-500">Effective date: {effective}</p>
         </div>
+
+        <CounselReviewBanner />
 
         <div className="prose prose-slate max-w-none text-sm leading-7 text-slate-700">
           <p>

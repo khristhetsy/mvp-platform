@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  async redirects() {
+    return [
+      // /login duplicated /auth/sign-in — consolidate to the canonical auth route.
+      { source: "/login", destination: "/auth/sign-in", permanent: true },
+    ];
+  },
 };
 
 export default withSentryConfig(withNextIntl(nextConfig), {

@@ -6,6 +6,18 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingScoredBoard, type ScoredBoardRow } from "@/components/marketing/MarketingScoredBoard";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 
+export const metadata = {
+  title: "For founders — become capital-ready",
+  description:
+    "Score your readiness, close diligence gaps with AI, and get in front of vetted investors actively deploying capital.",
+  alternates: { canonical: "/founders" },
+  openGraph: {
+    title: "For founders — become capital-ready · CapitalOS",
+    description: "Score your readiness, close diligence gaps with AI, and reach vetted investors.",
+    url: "/founders",
+  },
+};
+
 const READINESS_DIMS = [
   { label: "Narrative", pct: 88 },
   { label: "Financials", pct: 79 },
