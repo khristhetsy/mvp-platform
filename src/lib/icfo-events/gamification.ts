@@ -18,6 +18,7 @@ export type PointAction =
   | "networking_optin"
   | "connection_accepted";
 
+/** Code-level defaults — used to seed the DB and as a fallback if a rule row is missing. */
 export const POINT_VALUES: Record<PointAction, number> = {
   register: 10,
   session_viewed: 15,
@@ -26,6 +27,50 @@ export const POINT_VALUES: Record<PointAction, number> = {
   networking_optin: 5,
   connection_accepted: 15,
 };
+
+export const POINT_ACTION_LABELS: Record<PointAction, string> = {
+  register: "Register for an event",
+  session_viewed: "Watch a session",
+  applied: "Apply to present",
+  approved: "Get approved to present",
+  networking_optin: "Opt into networking",
+  connection_accepted: "Accept a connection",
+};
+
+/** Configured point value for an action (falls back to the code default). */
+async function resolvePoints(action: PointAction): Promise<number> {
+  try {
+    const admin = createServiceRoleClient() as unknown as SupabaseClient;
+    const { data } = await raw(admin).from("event_point_rules").select("points").eq("action", action).maybeSingle();
+    const configured = (data as { points?: number } | null)?.points;
+    return typeof configured === "number" ? configured : POINT_VALUES[action];
+  } catch {
+    return POINT_VALUES[action];
+  }
+}
+
+/** Read all point rules (staff config screen). Missing rows fall back to defaults. */
+export async function getPointRules(
+  supabase: SupabaseClient<Database>,
+): Promise<Record<PointAction, number>> {
+  const { data } = await raw(supabase as unknown as SupabaseClient).from("event_point_rules").select("action, points");
+  const out = { ...POINT_VALUES };
+  for (const r of (data ?? []) as Array<{ action: string; points: number }>) {
+    if (r.action in out) out[r.action as PointAction] = r.points;
+  }
+  return out;
+}
+
+export async function setPointRule(
+  supabase: SupabaseClient<Database>,
+  action: PointAction,
+  points: number,
+): Promise<void> {
+  const { error } = await raw(supabase as unknown as SupabaseClient)
+    .from("event_point_rules")
+    .upsert({ action, points }, { onConflict: "action" });
+  if (error) throw new Error(error.message);
+}
 
 /**
  * Award points for an action. Idempotent: re-awarding the same
@@ -39,11 +84,12 @@ export async function awardPoints(
   ref = "",
 ): Promise<void> {
   try {
+    const points = await resolvePoints(action);
     const admin = createServiceRoleClient() as unknown as SupabaseClient;
     await raw(admin)
       .from("event_points")
       .upsert(
-        { event_id: eventId, profile_id: profileId, action, ref, points: POINT_VALUES[action] },
+        { event_id: eventId, profile_id: profileId, action, ref, points },
         { onConflict: "event_id,profile_id,action,ref", ignoreDuplicates: true },
       );
   } catch {
