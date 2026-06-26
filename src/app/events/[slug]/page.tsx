@@ -84,7 +84,11 @@ function SponsorLockup({ sponsors }: { sponsors: EventSponsor[] }) {
       {presenting.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-3">
           {presenting.map((s) => (
-            <div key={s.eventSponsorId} className="flex items-center gap-3 rounded-xl border border-[var(--indigo)] bg-[var(--indigo-soft)] px-4 py-3">
+            <Link
+              key={s.eventSponsorId}
+              href={`/events/sponsors/${s.id}`}
+              className="flex items-center gap-3 rounded-xl border border-[var(--indigo)] bg-[var(--indigo-soft)] px-4 py-3 transition hover:brightness-95"
+            >
               <span className="text-xs font-medium uppercase tracking-wide text-[var(--indigo)]">Presented with</span>
               {s.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -92,21 +96,25 @@ function SponsorLockup({ sponsors }: { sponsors: EventSponsor[] }) {
               ) : (
                 <span className="font-semibold text-[var(--navy)]">{s.name}</span>
               )}
-            </div>
+            </Link>
           ))}
         </div>
       )}
       {others.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-4">
           {others.map((s) => (
-            <div key={s.eventSponsorId} className="flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-white px-3 py-2">
+            <Link
+              key={s.eventSponsorId}
+              href={`/events/sponsors/${s.id}`}
+              className="flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-white px-3 py-2 transition hover:border-[var(--indigo)]"
+            >
               {s.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={s.logoUrl} alt={s.name} className="h-6 object-contain" />
               ) : (
                 <span className="text-sm font-medium text-[var(--text-secondary)]">{s.name}</span>
               )}
-            </div>
+            </Link>
           ))}
         </div>
       )}

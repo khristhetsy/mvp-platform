@@ -132,6 +132,70 @@ async function signedLogoUrl(path: string | null): Promise<string | null> {
   }
 }
 
+export interface SponsorBoothEvent {
+  eventId: string;
+  title: string;
+  slug: string;
+  placement: EventSponsor["placement"];
+  status: string;
+}
+
+export interface SponsorBooth extends Sponsor {
+  logoUrl: string | null;
+  events: SponsorBoothEvent[];
+}
+
+/** Public booth: a sponsor profile + the published events they partner. */
+export async function getSponsorBooth(
+  supabase: SupabaseClient<Database>,
+  sponsorId: string,
+): Promise<SponsorBooth | null> {
+  const { data, error } = await raw(supabase).from("sponsors").select("*").eq("id", sponsorId).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  const sponsor = mapSponsor(data as Row);
+
+  const { data: links } = await raw(supabase)
+    .from("event_sponsors")
+    .select("placement, events:event_id(id, title, slug, status)")
+    .eq("sponsor_id", sponsorId);
+
+  const events: SponsorBoothEvent[] = ((links ?? []) as Row[])
+    .map((row) => {
+      const e = row.events as Row | null;
+      if (!e) return null;
+      const status = String(e.status);
+      if (!["published", "live", "ended"].includes(status)) return null;
+      return {
+        eventId: String(e.id),
+        title: String(e.title),
+        slug: String(e.slug),
+        placement: row.placement as EventSponsor["placement"],
+        status,
+      };
+    })
+    .filter((x): x is SponsorBoothEvent => x !== null);
+
+  return { ...sponsor, logoUrl: await signedLogoUrl(sponsor.logoPath), events };
+}
+
+/** Record an opt-in intro request (attendee chose to connect with the sponsor). */
+export async function createSponsorLead(
+  supabase: SupabaseClient<Database>,
+  sponsorId: string,
+  profileId: string,
+  eventId: string | null,
+  message: string | null,
+): Promise<{ id: string }> {
+  const { data, error } = await raw(supabase)
+    .from("sponsor_leads")
+    .insert({ sponsor_id: sponsorId, profile_id: profileId, event_id: eventId, message })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  return { id: String((data as Row).id) };
+}
+
 /** Sponsors attached to an event, joined with placement + a signed logo URL. */
 export async function listEventSponsors(
   supabase: SupabaseClient<Database>,
