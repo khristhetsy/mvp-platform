@@ -20,6 +20,73 @@ const SESSION_TYPES: { value: SessionType; label: string }[] = [
   { value: "workshop", label: "Workshop" },
 ];
 
+function SessionLiveControls({
+  session,
+  onUpdated,
+}: {
+  session: EventSession;
+  onUpdated: (s: EventSession) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function goLive() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/sessions/${session.id}/go-live`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Couldn't go live.");
+      onUpdated(json.session as EventSession);
+      if (json.hostUrl) window.open(json.hostUrl as string, "_blank", "noopener");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't go live.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function endLive() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/sessions/${session.id}/go-live`, { method: "DELETE" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Couldn't end.");
+      onUpdated(json.session as EventSession);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't end.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-2 flex items-center gap-2">
+      {session.status === "live" ? (
+        <>
+          <span className="rounded bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">● Live</span>
+          {session.videoRef && (
+            <a href={session.videoRef} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[var(--blue)] hover:underline">
+              Open host room
+            </a>
+          )}
+          <button onClick={endLive} disabled={busy} className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-50">
+            {busy ? "…" : "End session"}
+          </button>
+        </>
+      ) : session.status !== "ended" ? (
+        <button onClick={goLive} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
+          {busy ? "Starting…" : "Go live"}
+        </button>
+      ) : (
+        <span className="text-xs text-[var(--text-muted)]">Ended</span>
+      )}
+      {error && <span className="text-xs text-rose-600">{error}</span>}
+    </div>
+  );
+}
+
 function SessionVideoUpload({
   eventId,
   session,
@@ -229,6 +296,7 @@ export function EventDetailManager({
                     Remove
                   </button>
                 </div>
+                <SessionLiveControls session={s} onUpdated={onSessionUpdated} />
                 <SessionVideoUpload eventId={event.id} session={s} onUpdated={onSessionUpdated} />
               </div>
             ))

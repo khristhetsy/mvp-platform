@@ -22,6 +22,7 @@ import { getRegistration } from "@/lib/icfo-events/registrations";
 import { getOptin, listSuggestions, listConnections } from "@/lib/icfo-events/networking";
 import type { NetworkingSuggestion, NetworkingConnection } from "@/lib/icfo-events/networking";
 import { sessionVideoSignedUrl } from "@/lib/icfo-events/video/storage";
+import { getVideoProvider } from "@/lib/icfo-events/video/provider";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import type { EventWithDetail, EventSession, EventPresenter, EventSponsor } from "@/lib/icfo-events/types";
 
@@ -312,9 +313,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                     <p className="mt-0.5 text-xs text-[var(--text-muted)]">Hosted by {sponsorNames.get(s.hostSponsorId)}</p>
                   )}
                   {s.abstract && <p className="mt-1 text-sm text-[var(--text-secondary)]">{s.abstract}</p>}
-                  {playback.get(s.id) && (
+                  {s.status === "live" && s.videoProvider === "whereby" && s.videoRef ? (
+                    <iframe
+                      title={s.title}
+                      src={getVideoProvider("whereby").embedUrl(s.videoRef)}
+                      allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
+                      className="mt-3 aspect-video w-full rounded-lg border border-[var(--border-subtle)]"
+                    />
+                  ) : playback.get(s.id) ? (
                     <SessionVideo src={playback.get(s.id) as string} eventId={event.id} sessionId={s.id} />
-                  )}
+                  ) : null}
                 </li>
               ))}
             </ol>

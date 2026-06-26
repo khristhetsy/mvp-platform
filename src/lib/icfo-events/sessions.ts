@@ -86,3 +86,35 @@ export async function deleteSession(supabase: SupabaseClient<Database>, id: stri
   const { error } = await raw(supabase).from("sessions").delete().eq("id", id);
   if (error) throw new Error(error.message);
 }
+
+/** Attach a live room to a session and mark it live. */
+export async function setSessionLiveRoom(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  provider: string,
+  ref: string,
+): Promise<EventSession> {
+  const { data, error } = await raw(supabase)
+    .from("sessions")
+    .update({ video_provider: provider, video_ref: ref, status: "live" })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return mapSession(data as Row);
+}
+
+/** End a live session (status → ended). The room URL stays for reference. */
+export async function endLiveSession(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<EventSession> {
+  const { data, error } = await raw(supabase)
+    .from("sessions")
+    .update({ status: "ended" })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return mapSession(data as Row);
+}

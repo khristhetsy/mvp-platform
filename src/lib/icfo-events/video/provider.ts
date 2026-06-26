@@ -4,6 +4,7 @@
 // without touching the session UI.
 
 import { sessionVideoSignedUrl } from "./storage";
+import { WherebyVideoProvider } from "./whereby";
 
 export interface CreateRoomInput {
   sessionId: string;
@@ -50,9 +51,11 @@ export class RecordedVideoProvider implements VideoProvider {
   }
 }
 
-/** Resolve the active provider. Defaults to recorded; swap when a live provider lands. */
+/** Resolve the active provider. Defaults to recorded; "whereby" enables live. */
 export function getVideoProvider(providerName?: string | null): VideoProvider {
   switch (providerName) {
+    case "whereby":
+      return new WherebyVideoProvider();
     case "recorded":
     default:
       return new RecordedVideoProvider();
