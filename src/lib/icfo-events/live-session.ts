@@ -71,6 +71,43 @@ export async function loadSessionQuestions(
   });
 }
 
+export type CallInStatus = "requested" | "invited" | "onstage" | "done";
+
+export interface CallInEntry {
+  id: string;
+  profileId: string;
+  name: string;
+  status: CallInStatus;
+  createdAt: string;
+}
+
+/** Host sees the full queue; an attendee sees only their own hand. */
+export async function loadCallInQueue(
+  supabase: SupabaseClient<Database>,
+  sessionId: string,
+  myId: string,
+  isStaff: boolean,
+): Promise<CallInEntry[]> {
+  let q = raw(supabase)
+    .from("session_callin_queue")
+    .select("*, profiles:profile_id(full_name)")
+    .eq("session_id", sessionId)
+    .neq("status", "done")
+    .order("created_at", { ascending: true });
+  if (!isStaff) q = q.eq("profile_id", myId);
+  const { data } = await q;
+  return ((data ?? []) as Row[]).map((r) => {
+    const profile = r.profiles as { full_name?: string | null } | null;
+    return {
+      id: String(r.id),
+      profileId: String(r.profile_id),
+      name: profile?.full_name ?? "Attendee",
+      status: r.status as CallInStatus,
+      createdAt: String(r.created_at),
+    };
+  });
+}
+
 export async function loadSessionChat(
   supabase: SupabaseClient<Database>,
   sessionId: string,

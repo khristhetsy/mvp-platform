@@ -11,8 +11,9 @@ import { NetworkingOptIn } from "@/components/events/NetworkingOptIn";
 import { NetworkingConnections } from "@/components/events/NetworkingConnections";
 import { SessionVideo } from "@/components/events/SessionVideo";
 import { LiveSessionPanel } from "@/components/events/LiveSessionPanel";
-import { loadSessionQuestions, loadSessionChat } from "@/lib/icfo-events/live-session";
-import type { SessionQuestion, SessionChatMessage } from "@/lib/icfo-events/live-session";
+import { CallInBar } from "@/components/events/CallInBar";
+import { loadSessionQuestions, loadSessionChat, loadCallInQueue } from "@/lib/icfo-events/live-session";
+import type { SessionQuestion, SessionChatMessage, CallInEntry } from "@/lib/icfo-events/live-session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
@@ -208,16 +209,19 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
   // Live-session interaction (Q&A + chat) — only for signed-in viewers, live sessions.
   const isStaffViewer = ["admin", "analyst"].includes(role);
-  const liveData = new Map<string, { questions: SessionQuestion[]; chat: SessionChatMessage[] }>();
+  const liveData = new Map<string, { questions: SessionQuestion[]; chat: SessionChatMessage[]; queue: CallInEntry[] }>();
   if (profile) {
     const liveSessions = visibleSessions.filter((s) => s.status === "live");
     await Promise.all(
       liveSessions.map(async (s) => {
-        const [questions, chat] = await Promise.all([
+        const [questions, chat, queue] = await Promise.all([
           loadSessionQuestions(supabase, s.id, profile.id).catch(() => [] as SessionQuestion[]),
           loadSessionChat(supabase, s.id).catch(() => [] as SessionChatMessage[]),
+          s.type === "talk_show"
+            ? loadCallInQueue(supabase, s.id, profile.id, isStaffViewer).catch(() => [] as CallInEntry[])
+            : Promise.resolve([] as CallInEntry[]),
         ]);
-        liveData.set(s.id, { questions, chat });
+        liveData.set(s.id, { questions, chat, queue });
       }),
     );
   }
@@ -356,6 +360,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                   ) : playback.get(s.id) ? (
                     <SessionVideo src={playback.get(s.id) as string} eventId={event.id} sessionId={s.id} />
                   ) : null}
+                  {s.status === "live" && profile && s.type === "talk_show" && (
+                    <CallInBar
+                      sessionId={s.id}
+                      eventId={event.id}
+                      me={{ id: profile.id, name: profile.full_name ?? profile.email ?? "You" }}
+                      isStaff={isStaffViewer}
+                      roomUrl={s.videoRef}
+                      initialQueue={liveData.get(s.id)?.queue ?? []}
+                    />
+                  )}
                   {s.status === "live" && profile && (
                     <LiveSessionPanel
                       sessionId={s.id}
