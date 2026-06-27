@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { checkFounderStageAccess } from "@/lib/founder-journey/stage-gate";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -15,6 +16,10 @@ export async function gateCapTableApi(): Promise<CapTableGate> {
   const auth = await requireApiProfile(["founder"]);
   if ("error" in auth) {
     return { error: auth.error ?? NextResponse.json({ error: "Authentication required." }, { status: 401 }) };
+  }
+  const flags = await loadFeatureFlags(auth.supabase);
+  if (!isFeatureEnabled(flags, "founder", "cap_table")) {
+    return { error: NextResponse.json({ error: "This feature is not available." }, { status: 403 }) };
   }
   const access = await checkFounderStageAccess("qualify");
   if (!access.allowed) {
