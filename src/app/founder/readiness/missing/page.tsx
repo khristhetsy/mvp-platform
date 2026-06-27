@@ -52,19 +52,27 @@ export default async function FounderReadinessMissingPage() {
               ) : (
                 <ul className="grid gap-2 text-sm text-slate-700">
                   {missingDocuments.map((item) => {
-                    const isBusinessPlan = item.label.toLowerCase() === "business plan" || item.code === "BUSINESS_PLAN";
+                    const label = item.label.toLowerCase();
+                    const isBusinessPlan = label === "business plan" || item.code === "BUSINESS_PLAN";
+                    const isFinancialModel =
+                      label === "financial model" || item.code === "FINANCIAL_MODEL" || item.code === "FINANCIAL_STATEMENTS";
+                    const cta = isBusinessPlan
+                      ? { href: "/founder/business-plan", text: "Don't have one? Generate it with AI →" }
+                      : isFinancialModel
+                        ? { href: "/founder/financial-model", text: "Build it here with our model →" }
+                        : null;
                     return (
                       <li
                         key={item.code}
                         className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3"
                       >
                         <span>{item.label}</span>
-                        {isBusinessPlan ? (
+                        {cta ? (
                           <Link
-                            href="/founder/business-plan"
+                            href={cta.href}
                             className="inline-flex flex-none items-center gap-1 rounded-md border border-indigo-300 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
                           >
-                            Don&apos;t have one? Generate it with AI →
+                            {cta.text}
                           </Link>
                         ) : null}
                       </li>
