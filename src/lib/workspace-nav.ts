@@ -194,110 +194,150 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
   },
 ];
 
-export const founderWorkspaceNav: WorkspaceNavItem[] = [
-  { href: "/founder", label: "Dashboard" },
-  { href: "/founder/journey", label: "My Journey" },
-  { href: "/founder/command-center", label: "Command Center" },
-  { href: "/founder/actions", label: "Action Center" },
+export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
   {
-    href: "/founder/inbox",
-    label: "Communications",
-    children: [
-      { href: "/founder/inbox", label: "Inbox" },
-      { href: "/founder/messages", label: "Messages", minStage: "deploy" },
-      { href: "/founder/updates", label: "Investor Updates", minStage: "deploy" },
+    items: [
+      { href: "/founder", label: "Dashboard" },
     ],
   },
   {
-    href: "/founder/calendar",
-    label: "Calendar",
-    children: [
-      { href: "/founder/calendar", label: "Calendar" },
-      { href: "/founder/schedule", label: "Scheduling" },
+    title: "My raise",
+    items: [
+      { href: "/founder/journey", label: "My Journey" },
+      { href: "/founder/command-center", label: "Command Center" },
+      { href: "/founder/actions", label: "Action Center" },
+      { href: "/founder/tasks", label: "Tasks", minStage: "qualify" },
     ],
   },
   {
-    href: "/founder/readiness",
-    label: "Readiness",
-    minStage: "qualify",
-    children: [
-      { href: "/founder/readiness", label: "Checklist", minStage: "qualify" },
-      { href: "/founder/readiness/data-room", label: "Data room", minStage: "qualify" },
-      { href: "/founder/readiness/wizard", label: "Score wizard", minStage: "qualify" },
-      { href: "/founder/readiness/diligence", label: "Diligence & review", minStage: "deploy" },
-      { href: "/founder/readiness/documents", label: "Document checklist", minStage: "deploy" },
-      { href: "/founder/report", label: "AI diligence report", minStage: "deploy" },
-    ],
-  },
-  { href: "/founder/documents", label: "Documents", minStage: "qualify" },
-  { href: "/founder/private-market", label: "Private Market", minStage: "qualify" },
-  { href: "/events", label: "Events", minStage: "qualify" },
-  {
-    href: "/founder/investors",
-    label: "Fundraising",
-    minStage: "deploy",
-    children: [
-      { href: "/founder/investors", label: "Investors", minStage: "deploy" },
-      { href: "/founder/matching", label: "AI match center", minStage: "deploy" },
-      { href: "/founder/investor-pipeline", label: "Pipeline", minStage: "deploy" },
-      { href: "/founder/investors/outreach", label: "Outreach (CRM)", minStage: "deploy" },
-      { href: "/founder/investors/matches", label: "Matches", minStage: "deploy" },
-      { href: "/founder/deal-room", label: "Deal Room", minStage: "deploy" },
-      { href: "/founder/capital-raise", label: "Capital Raise", minStage: "deploy" },
-      { href: "/founder/spvs", label: "SPVs" },
+    title: "Readiness",
+    items: [
+      {
+        href: "/founder/readiness",
+        label: "Readiness",
+        minStage: "qualify",
+        children: [
+          { href: "/founder/readiness", label: "Checklist", minStage: "qualify" },
+          { href: "/founder/readiness/data-room", label: "Data room", minStage: "qualify" },
+          { href: "/founder/readiness/wizard", label: "Score wizard", minStage: "qualify" },
+          { href: "/founder/readiness/diligence", label: "Diligence & review", minStage: "deploy" },
+          { href: "/founder/readiness/documents", label: "Document checklist", minStage: "deploy" },
+          { href: "/founder/report", label: "AI diligence report", minStage: "deploy" },
+        ],
+      },
+      { href: "/founder/documents", label: "Documents", minStage: "qualify" },
     ],
   },
   {
-    href: "/founder/raise-toolkit",
-    label: "Raise Toolkit",
-    children: [
-      { href: "/founder/term-sheet", label: "Term sheet explainer", minStage: "qualify" },
-      { href: "/founder/pitch-practice", label: "Pitch practice", minStage: "qualify" },
-      { href: "/founder/email-sequence", label: "Email sequences", minStage: "qualify" },
-      { href: "/founder/due-diligence", label: "Due diligence checklist", minStage: "qualify" },
-      { href: "/founder/investor-update", label: "Investor update builder", minStage: "qualify" },
-      { href: "/founder/funding-timeline", label: "Funding timeline", minStage: "qualify" },
-      { href: "/founder/board-prep", label: "Board meeting prep", minStage: "qualify" },
-      { href: "/founder/kpi-glossary", label: "KPI glossary", minStage: "qualify" },
-      { href: "/founder/pitch-deck-analyzer", label: "Pitch deck analyzer", minStage: "qualify" },
-      { href: "/founder/business-plan", label: "Business plan", minStage: "qualify" },
-      { href: "/founder/financial-model", label: "Financial model", minStage: "qualify" },
-      { href: "/founder/cap-table", label: "Cap table", minStage: "qualify" },
-      { href: "/founder/reg-cf", label: "Reg CF materials", minStage: "deploy" },
+    title: "Investors",
+    items: [
+      { href: "/founder/private-market", label: "Private Market", minStage: "qualify" },
+      {
+        href: "/founder/investors",
+        label: "Fundraising",
+        minStage: "deploy",
+        children: [
+          { href: "/founder/investors", label: "Investors", minStage: "deploy" },
+          { href: "/founder/matching", label: "AI match center", minStage: "deploy" },
+          { href: "/founder/investor-pipeline", label: "Pipeline", minStage: "deploy" },
+          { href: "/founder/investors/outreach", label: "Outreach (CRM)", minStage: "deploy" },
+          { href: "/founder/investors/matches", label: "Matches", minStage: "deploy" },
+          { href: "/founder/deal-room", label: "Deal Room", minStage: "deploy" },
+          { href: "/founder/capital-raise", label: "Capital Raise", minStage: "deploy" },
+          { href: "/founder/spvs", label: "SPVs" },
+        ],
+      },
+      {
+        href: "/founder/raise-toolkit",
+        label: "Raise Toolkit",
+        children: [
+          { href: "/founder/term-sheet", label: "Term sheet explainer", minStage: "qualify" },
+          { href: "/founder/pitch-practice", label: "Pitch practice", minStage: "qualify" },
+          { href: "/founder/email-sequence", label: "Email sequences", minStage: "qualify" },
+          { href: "/founder/due-diligence", label: "Due diligence checklist", minStage: "qualify" },
+          { href: "/founder/investor-update", label: "Investor update builder", minStage: "qualify" },
+          { href: "/founder/funding-timeline", label: "Funding timeline", minStage: "qualify" },
+          { href: "/founder/board-prep", label: "Board meeting prep", minStage: "qualify" },
+          { href: "/founder/kpi-glossary", label: "KPI glossary", minStage: "qualify" },
+          { href: "/founder/pitch-deck-analyzer", label: "Pitch deck analyzer", minStage: "qualify" },
+          { href: "/founder/business-plan", label: "Business plan", minStage: "qualify" },
+          { href: "/founder/financial-model", label: "Financial model", minStage: "qualify" },
+          { href: "/founder/cap-table", label: "Cap table", minStage: "qualify" },
+          { href: "/founder/reg-cf", label: "Reg CF materials", minStage: "deploy" },
+        ],
+      },
+      { href: "/events", label: "Events", minStage: "qualify" },
     ],
   },
   {
-    href: "/founder/learning",
-    label: "Learning",
-    minStage: "qualify",
-    children: [
-      { href: "/founder/learning", label: "Overview", minStage: "qualify" },
-      { href: "/founder/learning/courses", label: "Browse courses", minStage: "qualify" },
-      { href: "/founder/learning/plan", label: "My learning plan", minStage: "qualify" },
-      { href: "/founder/learning/schedule", label: "My Schedule", minStage: "qualify" },
-      { href: "/founder/learning/progress", label: "My progress", minStage: "qualify" },
-      { href: "/founder/learning/stages/stage_0", label: "Stage 0 — Foundation", minStage: "qualify" },
-      { href: "/founder/learning/stages/stage_1", label: "Stage 1 — Seed Round", minStage: "qualify" },
-      { href: "/founder/learning/stages/stage_2", label: "Stage 2 — Series A", minStage: "qualify" },
-      { href: "/founder/learning/stages/stage_3", label: "Stage 3 — Exit", minStage: "qualify" },
+    title: "Inbox & calendar",
+    items: [
+      {
+        href: "/founder/inbox",
+        label: "Communications",
+        children: [
+          { href: "/founder/inbox", label: "Inbox" },
+          { href: "/founder/messages", label: "Messages", minStage: "deploy" },
+          { href: "/founder/updates", label: "Investor Updates", minStage: "deploy" },
+        ],
+      },
+      {
+        href: "/founder/calendar",
+        label: "Calendar",
+        children: [
+          { href: "/founder/calendar", label: "Calendar" },
+          { href: "/founder/schedule", label: "Scheduling" },
+        ],
+      },
+      { href: "/notifications", label: "Notifications", minStage: "qualify" },
     ],
   },
-  { href: "/founder/milestones", label: "Milestones", minStage: "optimize" },
-  { href: "/founder/analytics", label: "Analytics", minStage: "optimize" },
-  { href: "/founder/tasks", label: "Tasks", minStage: "qualify" },
-  { href: "/notifications", label: "Notifications", minStage: "qualify" },
   {
-    href: "/founder/settings",
-    label: "Settings",
-    children: [
-      { href: "/founder/settings", label: "Company profile" },
-      { href: "/founder/settings/team", label: "Team" },
-      { href: "/founder/settings/billing", label: "Billing & subscription" },
-      { href: "/founder/settings/integrations", label: "Integrations" },
-      { href: "/founder/settings/feedback", label: "Feedback" },
+    title: "Grow",
+    items: [
+      {
+        href: "/founder/learning",
+        label: "Learning",
+        minStage: "qualify",
+        children: [
+          { href: "/founder/learning", label: "Overview", minStage: "qualify" },
+          { href: "/founder/learning/courses", label: "Browse courses", minStage: "qualify" },
+          { href: "/founder/learning/plan", label: "My learning plan", minStage: "qualify" },
+          { href: "/founder/learning/schedule", label: "My Schedule", minStage: "qualify" },
+          { href: "/founder/learning/progress", label: "My progress", minStage: "qualify" },
+          { href: "/founder/learning/stages/stage_0", label: "Stage 0 — Foundation", minStage: "qualify" },
+          { href: "/founder/learning/stages/stage_1", label: "Stage 1 — Seed Round", minStage: "qualify" },
+          { href: "/founder/learning/stages/stage_2", label: "Stage 2 — Series A", minStage: "qualify" },
+          { href: "/founder/learning/stages/stage_3", label: "Stage 3 — Exit", minStage: "qualify" },
+        ],
+      },
+      { href: "/founder/milestones", label: "Milestones", minStage: "optimize" },
+      { href: "/founder/analytics", label: "Analytics", minStage: "optimize" },
+    ],
+  },
+  {
+    title: "Account",
+    items: [
+      {
+        href: "/founder/settings",
+        label: "Settings",
+        children: [
+          { href: "/founder/settings", label: "Company profile" },
+          { href: "/founder/settings/team", label: "Team" },
+          { href: "/founder/settings/billing", label: "Billing & subscription" },
+          { href: "/founder/settings/integrations", label: "Integrations" },
+          { href: "/founder/settings/feedback", label: "Feedback" },
+        ],
+      },
     ],
   },
 ];
+
+export const founderWorkspaceNav: WorkspaceNavItem[] = founderWorkspaceNavSections.flatMap((section) => section.items);
+
+export function getFounderWorkspaceNavSections(): WorkspaceNavSection[] {
+  return founderWorkspaceNavSections;
+}
 
 export const investorWorkspaceNav: WorkspaceNavItem[] = [
   { href: "/investor/dashboard", label: "Dashboard" },

@@ -8,7 +8,7 @@ import { ChevronRight, ChevronLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { InternalPermission } from "@/lib/rbac/constants";
 import type { WorkspaceId, WorkspaceNavItem } from "@/lib/workspace-nav";
-import { getAdminWorkspaceNavSections, getWorkspaceNav, workspaceLabel } from "@/lib/workspace-nav";
+import { getAdminWorkspaceNavSections, getFounderWorkspaceNavSections, getWorkspaceNav, workspaceLabel } from "@/lib/workspace-nav";
 import { getWorkspaceNavIcon } from "@/lib/ui/nav-icons";
 import { useToast } from "@/components/ui/ToastProvider";
 import { CapitalOSLogo } from "@/components/CapitalOSLogo";
@@ -226,10 +226,16 @@ export function WorkspaceSidebar({
       });
   }, [canShowNavItem, workspace, disabledHrefs]);
 
-  const adminSections = useMemo(() => {
-    if (workspace !== "admin") return null;
+  const sections = useMemo(() => {
+    const source =
+      workspace === "admin"
+        ? getAdminWorkspaceNavSections()
+        : workspace === "founder"
+          ? getFounderWorkspaceNavSections()
+          : null;
+    if (!source) return null;
     const hidden = new Set(disabledHrefs);
-    return getAdminWorkspaceNavSections()
+    return source
       .map((section) => ({
         ...section,
         items: section.items
@@ -257,8 +263,8 @@ export function WorkspaceSidebar({
 
   // ── Drill-in sub-menu (Vercel-style) ──────────────────────────────────────
   const allNavItems = useMemo<WorkspaceNavItem[]>(
-    () => (adminSections ? adminSections.flatMap((s) => s.items) : items),
-    [adminSections, items],
+    () => (sections ? sections.flatMap((s) => s.items) : items),
+    [sections, items],
   );
 
   // The section the current route belongs to (deep-links / refresh open it).
@@ -372,8 +378,8 @@ export function WorkspaceSidebar({
             drilled ? "pointer-events-none -translate-x-[24%]" : "translate-x-0"
           }`}
         >
-          {adminSections
-            ? adminSections.map((section, index) => (
+          {sections
+            ? sections.map((section, index) => (
                 <div key={section.title ?? `section-${index}`} className={section.title ? "pt-1" : undefined}>
                   {section.title ? (
                     <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
