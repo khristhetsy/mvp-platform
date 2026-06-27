@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -50,14 +51,25 @@ export default async function FounderReadinessMissingPage() {
                 <p className="text-sm text-emerald-700">All key documents are uploaded.</p>
               ) : (
                 <ul className="grid gap-2 text-sm text-slate-700">
-                  {missingDocuments.map((item) => (
-                    <li
-                      key={item.code}
-                      className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3"
-                    >
-                      {item.label}
-                    </li>
-                  ))}
+                  {missingDocuments.map((item) => {
+                    const isBusinessPlan = item.label.toLowerCase() === "business plan" || item.code === "BUSINESS_PLAN";
+                    return (
+                      <li
+                        key={item.code}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3"
+                      >
+                        <span>{item.label}</span>
+                        {isBusinessPlan ? (
+                          <Link
+                            href="/founder/business-plan"
+                            className="inline-flex flex-none items-center gap-1 rounded-md border border-indigo-300 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
+                          >
+                            Don&apos;t have one? Generate it with AI →
+                          </Link>
+                        ) : null}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
               {Array.isArray(diligenceReport?.missing_documents) &&

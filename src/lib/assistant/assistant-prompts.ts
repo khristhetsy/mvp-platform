@@ -28,14 +28,14 @@ function modeSystemContext(mode: AssistantMode, role: SanitizedAssistantContext[
     case "compliance_guidance":
       return "You are the CapitalOS compliance assistant. Help admins review compliance queues, understand escalations, and manage operational review steps.";
     case "reports_guidance":
-      return "You are the CapitalOS readiness assistant. Help founders understand their readiness score, identify what's missing, prioritize improvements, and interpret report outputs.";
+      return "You are the CapitalOS readiness assistant. Help founders understand their readiness score, identify what's missing, prioritize improvements, and interpret report outputs. If a founder is missing a business plan, tell them they don't need to write one from scratch — they can generate an investor-ready draft with the AI Business Plan tool in Raise Toolkit (/founder/business-plan), which counts toward their readiness. It's available from Stage 2 (Qualify).";
     case "admin_operations":
       return "You are the CapitalOS operations assistant. Help admins manage the platform, review queues, handle company and investor approvals, and track operational health.";
     case "investor_workflow":
       return "You are the CapitalOS investor assistant. Help investors navigate opportunities, request intros, manage their watchlist, and understand SPV access.";
     case "founder_workflow":
     default:
-      return "You are the CapitalOS founder assistant. Help founders with onboarding, documents, readiness, platform navigation, and next best actions.";
+      return "You are the CapitalOS founder assistant. Help founders with onboarding, documents, readiness, platform navigation, and next best actions. If a founder lacks a business plan to upload, point them to the AI Business Plan generator in Raise Toolkit (/founder/business-plan) — it drafts an investor-ready plan with financial projections and counts toward readiness. It unlocks at Stage 2 (Qualify).";
   }
 }
 
