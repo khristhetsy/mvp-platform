@@ -339,48 +339,83 @@ export function getFounderWorkspaceNavSections(): WorkspaceNavSection[] {
   return founderWorkspaceNavSections;
 }
 
-export const investorWorkspaceNav: WorkspaceNavItem[] = [
-  { href: "/investor/dashboard", label: "Dashboard" },
-  { href: "/investor/actions", label: "Action Center" },
-  { href: "/investor/onboarding", label: "Onboarding" },
+export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
   {
-    href: "/investor/inbox",
-    label: "Communications",
-    children: [
-      { href: "/investor/inbox", label: "Inbox" },
-      { href: "/investor/messages", label: "Messages" },
+    items: [
+      { href: "/investor/dashboard", label: "Dashboard" },
     ],
   },
   {
-    href: "/investor/opportunities",
-    label: "Private Market",
-    children: [
-      { href: "/investor/opportunities", label: "Overview" },
-      { href: "/investor/watchlist", label: "Watchlist" },
-      { href: "/investor/interest-pipeline", label: "Interest Pipeline" },
-      { href: "/investor/deal-room", label: "Deal Room" },
-      { href: "/investor/deals", label: "Diligence" },
-      { href: "/investor/spvs", label: "SPVs" },
-      { href: "/investor/portfolio", label: "Portfolio" },
-      { href: "/investor/activity", label: "Recent Activity" },
+    title: "Deal flow",
+    items: [
+      {
+        href: "/investor/opportunities",
+        label: "Private Market",
+        children: [
+          { href: "/investor/opportunities", label: "Overview" },
+          { href: "/investor/watchlist", label: "Watchlist" },
+          { href: "/investor/interest-pipeline", label: "Interest Pipeline" },
+          { href: "/investor/deal-room", label: "Deal Room" },
+          { href: "/investor/deals", label: "Diligence" },
+          { href: "/investor/spvs", label: "SPVs" },
+          { href: "/investor/portfolio", label: "Portfolio" },
+          { href: "/investor/activity", label: "Recent Activity" },
+        ],
+      },
+      { href: "/events", label: "Events" },
     ],
   },
   {
-    href: "/investor/calendar",
-    label: "Calendar",
-    children: [
-      { href: "/investor/calendar", label: "Calendar" },
-      { href: "/investor/schedule", label: "Scheduling" },
+    title: "Workflow",
+    items: [
+      { href: "/investor/actions", label: "Action Center" },
+      { href: "/investor/tasks", label: "Tasks" },
+      { href: "/notifications", label: "Notifications" },
     ],
   },
-  { href: "/events", label: "Events" },
-  { href: "/investor/analytics", label: "Analytics" },
-  { href: "/investor/tasks", label: "Tasks" },
-  { href: "/notifications", label: "Notifications" },
-  { href: "/investor/learning", label: "Learning" },
-  { href: "/investor/partner-score", label: "Partner Score" },
-  { href: "/investor/settings", label: "Settings" },
+  {
+    title: "Inbox & calendar",
+    items: [
+      {
+        href: "/investor/inbox",
+        label: "Communications",
+        children: [
+          { href: "/investor/inbox", label: "Inbox" },
+          { href: "/investor/messages", label: "Messages" },
+        ],
+      },
+      {
+        href: "/investor/calendar",
+        label: "Calendar",
+        children: [
+          { href: "/investor/calendar", label: "Calendar" },
+          { href: "/investor/schedule", label: "Scheduling" },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Grow",
+    items: [
+      { href: "/investor/learning", label: "Learning" },
+      { href: "/investor/partner-score", label: "Partner Score" },
+      { href: "/investor/analytics", label: "Analytics" },
+    ],
+  },
+  {
+    title: "Account",
+    items: [
+      { href: "/investor/onboarding", label: "Onboarding" },
+      { href: "/investor/settings", label: "Settings" },
+    ],
+  },
 ];
+
+export const investorWorkspaceNav: WorkspaceNavItem[] = investorWorkspaceNavSections.flatMap((section) => section.items);
+
+export function getInvestorWorkspaceNavSections(): WorkspaceNavSection[] {
+  return investorWorkspaceNavSections;
+}
 
 export const adminWorkspaceNav: WorkspaceNavItem[] = adminWorkspaceNavSections.flatMap((section) => section.items);
 

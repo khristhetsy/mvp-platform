@@ -4,11 +4,12 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, ChevronLeft } from "lucide-react";
+import { ChevronRight, ChevronLeft, Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { InternalPermission } from "@/lib/rbac/constants";
+import { JOURNEY_STAGES, type JourneyStage } from "@/lib/founder-journey/types";
 import type { WorkspaceId, WorkspaceNavItem } from "@/lib/workspace-nav";
-import { getAdminWorkspaceNavSections, getFounderWorkspaceNavSections, getWorkspaceNav, workspaceLabel } from "@/lib/workspace-nav";
+import { getAdminWorkspaceNavSections, getFounderWorkspaceNavSections, getInvestorWorkspaceNavSections, getWorkspaceNav, workspaceLabel } from "@/lib/workspace-nav";
 import { getWorkspaceNavIcon } from "@/lib/ui/nav-icons";
 import { useToast } from "@/components/ui/ToastProvider";
 import { CapitalOSLogo } from "@/components/CapitalOSLogo";
@@ -232,7 +233,7 @@ export function WorkspaceSidebar({
         ? getAdminWorkspaceNavSections()
         : workspace === "founder"
           ? getFounderWorkspaceNavSections()
-          : null;
+          : getInvestorWorkspaceNavSections();
     if (!source) return null;
     const hidden = new Set(disabledHrefs);
     return source
@@ -252,6 +253,23 @@ export function WorkspaceSidebar({
   }, [canShowNavItem, workspace, disabledHrefs]);
 
   const label = workspaceLabel(workspace);
+
+  // Stage-aware lock state (founder only). Tools above the founder's current
+  // stage are shown dimmed with a lock + "unlocks at Stage N" hint, rather than
+  // hidden — so the roadmap stays visible without cluttering what's actionable now.
+  const currentStageIndex = useMemo(() => {
+    if (workspace !== "founder" || !founderStage) return null;
+    const idx = JOURNEY_STAGES.indexOf(founderStage as JourneyStage);
+    return idx >= 0 ? idx : null;
+  }, [workspace, founderStage]);
+
+  const isLocked = useMemo(
+    () => (item: WorkspaceNavItem) => {
+      if (currentStageIndex == null || !item.minStage) return false;
+      return JOURNEY_STAGES.indexOf(item.minStage) > currentStageIndex;
+    },
+    [currentStageIndex],
+  );
 
   function isNavItemActive(href: string) {
     return pathname === href || pathname.startsWith(`${href}/`);
@@ -293,7 +311,12 @@ export function WorkspaceSidebar({
     return () => window.removeEventListener("keydown", onKey);
   }, [drilled, pathname]);
 
-  function renderLeafLink(item: WorkspaceNavItem) {
+  function lockHint(item: WorkspaceNavItem): string | undefined {
+    if (!item.minStage) return undefined;
+    return `Unlocks at ${STAGE_LABELS[item.minStage] ?? item.minStage}`;
+  }
+
+  function renderLeafLink(item: WorkspaceNavItem, locked = false) {
     const active = isNavItemActive(item.href);
     const Icon = getWorkspaceNavIcon(item.href);
     return (
@@ -302,11 +325,12 @@ export function WorkspaceSidebar({
         href={item.href}
         onClick={onClose}
         aria-current={active ? "page" : undefined}
+        title={locked ? lockHint(item) : undefined}
         className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
           active
             ? "bg-[var(--blue-muted)] text-[var(--blue-hover)]"
             : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
-        }`}
+        } ${locked ? "opacity-55" : ""}`}
       >
         <Icon
           className={`h-4 w-4 shrink-0 ${active ? "text-[var(--blue)]" : "text-slate-400"}`}
@@ -314,7 +338,9 @@ export function WorkspaceSidebar({
           aria-hidden
         />
         <span className="truncate">{tLabel(item.label)}</span>
-        {item.href.endsWith("/inbox") && unreadEmail > 0 ? (
+        {locked ? (
+          <Lock className="ml-auto h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={1.75} aria-hidden />
+        ) : item.href.endsWith("/inbox") && unreadEmail > 0 ? (
           <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#534AB7] px-1.5 text-[11px] font-semibold text-white">
             {unreadEmail > 99 ? "99+" : unreadEmail}
           </span>
@@ -323,7 +349,7 @@ export function WorkspaceSidebar({
     );
   }
 
-  function renderTopLevel(item: WorkspaceNavItem) {
+  function renderTopLevel(item: WorkspaceNavItem, locked = false) {
     if (item.children && item.children.length > 0) {
       const parentActive = isChildActive(item);
       const Icon = getWorkspaceNavIcon(item.href);
@@ -332,12 +358,13 @@ export function WorkspaceSidebar({
           key={item.href}
           type="button"
           aria-haspopup="true"
+          title={locked ? lockHint(item) : undefined}
           onClick={() => setUserDrill({ at: pathname, value: item.href })}
           className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
             parentActive
               ? "bg-[var(--blue-muted)] text-[var(--blue-hover)]"
               : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
-          }`}
+          } ${locked ? "opacity-55" : ""}`}
         >
           <Icon
             className={`h-4 w-4 shrink-0 ${parentActive ? "text-[var(--blue)]" : "text-slate-400"}`}
@@ -345,15 +372,19 @@ export function WorkspaceSidebar({
             aria-hidden
           />
           <span className="truncate">{tLabel(item.label)}</span>
-          <ChevronRight
-            className={`ml-auto h-3.5 w-3.5 shrink-0 ${parentActive ? "text-[var(--blue)]" : "text-slate-400"}`}
-            strokeWidth={2}
-            aria-hidden
-          />
+          {locked ? (
+            <Lock className="ml-auto h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={1.75} aria-hidden />
+          ) : (
+            <ChevronRight
+              className={`ml-auto h-3.5 w-3.5 shrink-0 ${parentActive ? "text-[var(--blue)]" : "text-slate-400"}`}
+              strokeWidth={2}
+              aria-hidden
+            />
+          )}
         </button>
       );
     }
-    return renderLeafLink(item);
+    return renderLeafLink(item, locked);
   }
 
   const nav = (
@@ -386,10 +417,10 @@ export function WorkspaceSidebar({
                       {tLabel(section.title)}
                     </p>
                   ) : null}
-                  <div className="space-y-0.5">{section.items.map(renderTopLevel)}</div>
+                  <div className="space-y-0.5">{section.items.map((it) => renderTopLevel(it, isLocked(it)))}</div>
                 </div>
               ))
-            : items.map(renderTopLevel)}
+            : items.map((it) => renderTopLevel(it, isLocked(it)))}
         </nav>
 
         {/* Drilled sub-menu — slides in from the right */}
@@ -409,7 +440,7 @@ export function WorkspaceSidebar({
                 <ChevronLeft className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
                 <span className="truncate">{tLabel(drilledItem.label)}</span>
               </button>
-              {drilledItem.children!.map((child) => renderLeafLink(child))}
+              {drilledItem.children!.map((child) => renderLeafLink(child, isLocked(child)))}
             </nav>
           ) : null}
         </div>
