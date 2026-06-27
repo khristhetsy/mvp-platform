@@ -6,7 +6,9 @@ import {
   loadFeatureFlags,
   isFeatureEnabled,
   featuresForAudience,
+  appliesTo,
   FEATURE_AUDIENCES,
+  FEATURE_KEY_SET,
 } from "@/lib/feature-controls";
 
 export const dynamic = "force-dynamic";
@@ -31,11 +33,13 @@ const putSchema = z.object({
     .array(
       z.object({
         audience: z.enum(["founder", "investor", "admin"]),
-        feature: z.enum(["inbox", "calendar", "scheduling", "tasks", "signatures", "diligence", "regcf"]),
+        // Validated against the registry rather than a hardcoded list so new
+        // features are accepted automatically.
+        feature: z.string().refine((f) => FEATURE_KEY_SET.has(f), "Unknown feature"),
         enabled: z.boolean(),
       }),
     )
-    .max(40),
+    .max(300),
 });
 
 export async function PUT(req: NextRequest): Promise<Response> {
@@ -48,7 +52,11 @@ export async function PUT(req: NextRequest): Promise<Response> {
   }
 
   const now = new Date().toISOString();
-  const rows = parsed.data.updates.map((u) => ({ ...u, updated_at: now }));
+  // Only persist pairs that actually apply to the audience.
+  const rows = parsed.data.updates
+    .filter((u) => appliesTo(u.audience, u.feature))
+    .map((u) => ({ ...u, updated_at: now }));
+  if (rows.length === 0) return NextResponse.json({ success: true });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (auth.supabase as any)
     .from("feature_flags")
