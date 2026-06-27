@@ -27,6 +27,7 @@ import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { CapitalReadinessSection } from "@/components/founder/CapitalReadinessSection";
+import { DataRoomReadinessCard } from "@/components/founder/DataRoomReadinessCard";
 import { DashboardPipelinePanel } from "@/components/founder/DashboardPipelinePanel";
 import { UpcomingMeetingsCard } from "@/components/calendar/UpcomingMeetingsCard";
 import { FounderProactiveInsights } from "@/components/founder/FounderProactiveInsights";
@@ -146,7 +147,12 @@ export default async function FounderDashboardPage() {
 
         {onboardingProgress ? <FounderOnboardingProgressCard progress={onboardingProgress} /> : null}
 
-        {/* 1. Capital readiness — FIRST */}
+        {/* 0. Data room completion — the #1 priority: finish diligence docs */}
+        <div className="mb-8">
+          <DataRoomReadinessCard documents={documents ?? []} />
+        </div>
+
+        {/* 1. Capital readiness */}
         <div className="mb-8">
           <CapitalReadinessSection
             readinessScore={readinessScore}

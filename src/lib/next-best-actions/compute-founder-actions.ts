@@ -3,6 +3,7 @@ import { buildActionId, createNextBestAction } from "@/lib/next-best-actions/act
 import type { NextBestAction } from "@/lib/next-best-actions/types";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { computeReadinessScore, getLatestDiligenceReport } from "@/lib/data/founder-readiness";
+import { computeDataRoomState, type DataRoomState } from "@/lib/data-room/completeness";
 import { listFounderCompanyUpdates } from "@/lib/company-updates/company-updates";
 import { listFounderInvestorContacts } from "@/lib/founder-crm/contacts";
 import { evaluateFounderOutreachReadiness } from "@/lib/founder-crm/outreach-readiness";
@@ -24,6 +25,7 @@ export type FounderNbaContext = {
   onboardingComplete: boolean;
   currentOnboardingStep: string;
   pitchDeckUploaded: boolean;
+  dataRoom: DataRoomState;
   readinessScore: number | null;
   remediationHighOpen: number;
   remediationActive: number;
@@ -51,6 +53,7 @@ export async function loadFounderNbaContext(
     onboardingComplete: false,
     currentOnboardingStep: "company_profile",
     pitchDeckUploaded: false,
+    dataRoom: computeDataRoomState([]),
     readinessScore: null,
     remediationHighOpen: 0,
     remediationActive: 0,
@@ -149,6 +152,7 @@ export async function loadFounderNbaContext(
     onboardingComplete: onboarding.isComplete,
     currentOnboardingStep: onboarding.currentStep,
     pitchDeckUploaded: onboarding.pitchDeckUploaded,
+    dataRoom: computeDataRoomState(docs),
     readinessScore,
     remediationHighOpen: highOpen,
     remediationActive: remediation.summary.active,
@@ -218,21 +222,45 @@ export function computeFounderActions(ctx: FounderNbaContext, entityFilter?: { e
     );
   }
 
-  if (!ctx.pitchDeckUploaded) {
+  // Data room — the #1 priority. Drive founders to complete diligence docs.
+  const dr = ctx.dataRoom;
+  if (!dr.coreComplete) {
+    const missingNames = dr.coreMissing.map((i) => i.label).join(", ");
+    const next = dr.nextItem;
     actions.push(
       createNextBestAction({
-        id: buildActionId(["founder", "pitch_deck", company.id]),
+        id: buildActionId(["founder", "data_room_core", company.id]),
         role: "founder",
-        title: "Upload pitch deck",
-        description: "Investors and diligence workflows expect a pitch deck in your document library.",
+        title: "Complete your investor-access documents",
+        description: `${dr.coreCompleted}/${dr.coreTotal} essentials done. Missing: ${missingNames}. These unlock investor visibility and introductions.`,
+        priority: "critical",
+        category: "documents",
+        entityType: "company",
+        entityId: company.id,
+        companyId: company.id,
+        href: next?.href ?? "/founder/readiness/data-room",
+        sourceModule: "documents",
+        reason: "Required diligence documents are missing — investors cannot be reached until these are in.",
+        blockers: dr.coreMissing.map((i) => `Missing: ${i.label}`),
+        createdFrom: "founder_nba",
+        urgencyAt: new Date().toISOString(),
+      }),
+    );
+  } else if (!dr.fullComplete) {
+    actions.push(
+      createNextBestAction({
+        id: buildActionId(["founder", "data_room_full", company.id]),
+        role: "founder",
+        title: "Finish your data room",
+        description: `Your data room is ${dr.percent}% complete — ${dr.missingCount} document${dr.missingCount === 1 ? "" : "s"} left for a full diligence package.`,
         priority: "high",
         category: "documents",
         entityType: "company",
         entityId: company.id,
         companyId: company.id,
-        href: "/founder/documents",
+        href: "/founder/readiness/data-room",
         sourceModule: "documents",
-        reason: "Pitch deck is missing from required materials.",
+        reason: "A complete data room speeds diligence and strengthens investor confidence.",
         createdFrom: "founder_nba",
       }),
     );

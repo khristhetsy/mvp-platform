@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { computeDataRoomState } from "@/lib/data-room/completeness";
+import type { DocumentRecord } from "@/lib/supabase/types";
 
 /* ─────────────────────────── types ──────────────────────────── */
 
@@ -164,6 +167,7 @@ export function FounderWeeklyDigest({
 
   const wk          = weekNumber(companyCreatedAt);
   const dateRange   = currentWeekRange();
+  const dataRoom    = computeDataRoomState(documents as unknown as DocumentRecord[]);
   const activity    = computeActivity(rooms, documents);
   const priorities  = computePriorities({ rooms, unresolvedQCount, readinessScore, strongMatchCount });
   const firstName   = founderName.split(" ")[0] || founderName;
@@ -221,6 +225,27 @@ export function FounderWeeklyDigest({
           <p className="mb-5 text-sm text-slate-600">
             Here&apos;s your capital raise briefing for the week, {firstName}.
           </p>
+
+          {/* Data room completeness — top priority when incomplete */}
+          {!dataRoom.fullComplete ? (
+            <Link
+              href="/founder/readiness/data-room"
+              className="mb-5 flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
+              style={{ borderColor: dataRoom.coreComplete ? "#C0DDE0" : "#FAC775", background: dataRoom.coreComplete ? "#F0F9FB" : "#FDF6EA" }}
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-900">
+                  Data room {dataRoom.percent}% complete
+                </p>
+                <p className="text-xs text-slate-600">
+                  {dataRoom.coreComplete
+                    ? `${dataRoom.missingCount} document${dataRoom.missingCount === 1 ? "" : "s"} left for a full diligence package.`
+                    : `Missing investor-access essentials: ${dataRoom.coreMissing.map((i) => i.label).join(", ")}.`}
+                </p>
+              </div>
+              <span className="flex-none rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white">Finish →</span>
+            </Link>
+          ) : null}
 
           {/* Highlights row */}
           <div className="mb-5 grid grid-cols-3 gap-3">

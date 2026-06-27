@@ -3,6 +3,8 @@ import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { ensureCompanySlug } from "@/lib/data/marketplace";
+import { listCompanyDocuments } from "@/lib/data/documents";
+import { computeDataRoomState } from "@/lib/data-room/completeness";
 import type { Database } from "@/lib/supabase/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -36,6 +38,21 @@ export async function POST(request: Request) {
   }
 
   if (parsed.data.action === "publish") {
+    // Hard gate: a founder cannot list to investors until the core diligence
+    // documents (pitch deck, financials, cap table) are in.
+    const { data: docs } = await listCompanyDocuments(admin, company.id);
+    const dataRoom = computeDataRoomState(docs ?? []);
+    if (!dataRoom.coreComplete) {
+      return NextResponse.json(
+        {
+          error: "Complete your data room essentials before listing to investors.",
+          missing: dataRoom.coreMissing.map((i) => i.label),
+          href: "/founder/readiness/data-room",
+        },
+        { status: 403 },
+      );
+    }
+
     // Ensure slug exists
     const slug = await ensureCompanySlug(admin, {
       id: company.id,

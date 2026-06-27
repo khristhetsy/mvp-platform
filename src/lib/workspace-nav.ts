@@ -221,6 +221,7 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
     minStage: "qualify",
     children: [
       { href: "/founder/readiness", label: "Checklist", minStage: "qualify" },
+      { href: "/founder/readiness/data-room", label: "Data room", minStage: "qualify" },
       { href: "/founder/readiness/wizard", label: "Score wizard", minStage: "qualify" },
       { href: "/founder/readiness/diligence", label: "Diligence & review", minStage: "deploy" },
       { href: "/founder/readiness/documents", label: "Document checklist", minStage: "deploy" },

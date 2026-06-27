@@ -1,5 +1,6 @@
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
+import { computeDataRoomState } from "@/lib/data-room/completeness";
 import { computeFounderOnboardingProgress } from "@/lib/onboarding/progress";
 import { getFounderFeatureAccess } from "@/lib/subscriptions/founder-access";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -49,7 +50,7 @@ export async function evaluateFounderOutreachReadiness(
     storedStepState: company.onboarding_step_state,
   });
 
-  const pitchDeck = (documents ?? []).some((doc) => doc.document_type === "PITCH_DECK");
+  const dataRoom = computeDataRoomState(documents ?? []);
   const businessPlan = (documents ?? []).some((doc) => doc.document_type === "BUSINESS_PLAN");
   const descriptionOk = (company.business_description?.trim().length ?? 0) >= 50;
   const raiseOk = company.funding_amount != null && Number(company.funding_amount) > 0;
@@ -80,10 +81,10 @@ export async function evaluateFounderOutreachReadiness(
       href: "/founder/onboarding",
     },
     {
-      key: "pitch_deck",
-      label: "Pitch deck uploaded",
-      met: pitchDeck,
-      href: "/founder/documents",
+      key: "data_room_core",
+      label: "Data room essentials uploaded (pitch deck, financials, cap table)",
+      met: dataRoom.coreComplete,
+      href: "/founder/readiness/data-room",
     },
     {
       key: "business_plan",
@@ -120,8 +121,10 @@ export async function evaluateFounderOutreachReadiness(
   const metAll = access.allowed && requirements.every((row) => row.met);
 
   const learningRecommendations: string[] = [];
-  if (!pitchDeck) {
-    learningRecommendations.push("Upload your pitch deck in Documents.");
+  if (!dataRoom.coreComplete) {
+    learningRecommendations.push(
+      `Complete your data room essentials (missing: ${dataRoom.coreMissing.map((i) => i.label).join(", ")}) — these unlock investor access.`,
+    );
   }
   if (!businessPlan) {
     learningRecommendations.push("Upload your business plan in Documents.");
