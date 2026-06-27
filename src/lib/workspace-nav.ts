@@ -258,6 +258,7 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
       { href: "/founder/board-prep", label: "Board meeting prep" },
       { href: "/founder/kpi-glossary", label: "KPI glossary" },
       { href: "/founder/pitch-deck-analyzer", label: "Pitch deck analyzer" },
+      { href: "/founder/business-plan", label: "Business plan", minStage: "qualify" },
       { href: "/founder/reg-cf", label: "Reg CF materials", minStage: "deploy" },
     ],
   },

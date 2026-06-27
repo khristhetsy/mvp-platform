@@ -62,6 +62,7 @@ export const founderOnboardingStepSchema = z.object({
     .optional(),
   // All string fields accept empty strings — empty means "skip this field"
   company_name: z.string().optional(),
+  contact_phone: z.string().optional(),
   website: z.string().optional(),
   industry: z.string().optional(),
   country: z.string().optional(),

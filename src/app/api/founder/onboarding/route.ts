@@ -32,6 +32,7 @@ function companyPatchFromStep(parsed: ReturnType<typeof founderOnboardingStepSch
   const patch: Partial<Company> = {};
 
   if (parsed.company_name?.trim()) patch.company_name = parsed.company_name.trim();
+  if (parsed.contact_phone?.trim()) patch.contact_phone = parsed.contact_phone.trim();
   if (parsed.website?.trim()) patch.website = parsed.website.trim();
   else if (parsed.website === "") patch.website = null;
   if (parsed.industry?.trim()) patch.industry = parsed.industry.trim();

@@ -44,6 +44,12 @@ function raiseHint(stage: string | null): string {
   }
 }
 
+/** Loose phone check — at least 7 digits, allowing +, spaces, dashes, parens. */
+function isValidPhone(value: string): boolean {
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 7 && digits.length <= 15;
+}
+
 function formatAmount(n: number): string {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
   if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`;
@@ -227,6 +233,7 @@ export function FounderConversationalOnboarding({
   const [err, setErr]               = useState<string | null>(null);
 
   const [companyName, setCompanyName] = useState(company.company_name ?? "");
+  const [phone, setPhone]             = useState(company.contact_phone ?? "");
   const [industry, setIndustry]       = useState<string | null>(company.industry ?? null);
   const [stage, setStage]             = useState<string | null>(company.revenue_stage ?? null);
   const [amount, setAmount]           = useState(company.funding_amount?.toString() ?? "");
@@ -250,7 +257,7 @@ export function FounderConversationalOnboarding({
 
   function canAdvance(): boolean {
     switch (step) {
-      case 1: return companyName.trim().length >= 2;
+      case 1: return companyName.trim().length >= 2 && isValidPhone(phone);
       case 2: return Boolean(industry);
       case 3: return Boolean(stage);
       case 4: return Number(amount) > 0;
@@ -273,6 +280,7 @@ export function FounderConversationalOnboarding({
           step: "company_profile",
           advanceToStep: "funding_information",
           company_name: companyName.trim(),
+          contact_phone: phone.trim(),
           industry: industry ?? "",
           country: company.country ?? "",
           business_description: description.trim(),
@@ -424,10 +432,28 @@ export function FounderConversationalOnboarding({
                 placeholder="e.g. Acme Labs"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && canAdvance()) void handleNext(); }}
               />
+
+              <label className="mt-4 block text-sm font-medium text-slate-700">
+                Contact phone number <span className="text-rose-600">*</span>
+              </label>
+              <input
+                type="tel"
+                inputMode="tel"
+                className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                placeholder="e.g. +1 (555) 123-4567"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && canAdvance()) void handleNext(); }}
+                aria-required="true"
+              />
+              {phone.trim().length > 0 && !isValidPhone(phone) ? (
+                <p className="mt-1.5 text-xs text-rose-600">Enter a valid phone number (7–15 digits).</p>
+              ) : null}
+
               <ContextCard>
-                Your company name is the first thing investors see. Use your legal or trade name — you can always update it in Settings.
+                Your company name is the first thing investors see. Your phone number is required so our team can reach
+                you about your raise — it stays private and is never shown publicly.
               </ContextCard>
             </>
           ) : step === 2 ? (

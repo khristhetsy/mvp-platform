@@ -28,6 +28,7 @@ export type Company = {
   revenue_stage: string | null;
   team_summary: string | null;
   cap_table_summary: string | null;
+  contact_phone: string | null;
   status: string | null;
   review_status: ReviewStatus | string | null;
   approved_at: string | null;

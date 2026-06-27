@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AdminCompanyCard } from "@/components/AdminCompanyCard";
 import { CompanyCompliancePanel } from "@/components/admin/company-workspace/CompanyCompliancePanel";
 import { CompanyDocumentsPanel } from "@/components/admin/company-workspace/CompanyDocumentsPanel";
+import { CompanyBusinessPlanPanel } from "@/components/admin/company-workspace/CompanyBusinessPlanPanel";
 import { CompanyInvestorActivityPanel } from "@/components/admin/company-workspace/CompanyInvestorActivityPanel";
 import { CompanyQueuesPanel } from "@/components/admin/company-workspace/CompanyQueuesPanel";
 import { CompanyReadinessPanel } from "@/components/admin/company-workspace/CompanyReadinessPanel";
@@ -104,6 +105,10 @@ export function AdminCompanyWorkspace({
           <CompanyDocumentsPanel documents={data.documents} companyId={data.company.id} />
         </PageSection>
       </div>
+
+      <PageSection title="Business plan" subtitle="Founder's AI-assisted plan — sections, projections, and assumptions">
+        <CompanyBusinessPlanPanel companyId={data.company.id} />
+      </PageSection>
 
       <PageSection title="Active queues" subtitle="Items affecting this company across operational queues">
         <CompanyQueuesPanel items={data.queueItems} companyId={data.company.id} />
