@@ -7,6 +7,7 @@ import {
 } from "@/lib/notifications/cron/auth";
 import { runCronOrchestrationPass } from "@/lib/notifications/orchestration/run-cron-pass";
 import { captureCompanyMetricSnapshots } from "@/lib/investor/metric-snapshots";
+import { runDataRoomReminderPass } from "@/lib/data-room/reminder-pass";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const maxDuration = 60;
@@ -17,6 +18,15 @@ async function captureMetricSnapshotsSafely(): Promise<{ captured: number } | { 
     return await captureCompanyMetricSnapshots(createServiceRoleClient());
   } catch (error) {
     return { error: error instanceof Error ? error.message.slice(0, 200) : "snapshot failed" };
+  }
+}
+
+/** Best-effort data-room reminder cadence. Never allowed to fail the cron pass. */
+async function runDataRoomRemindersSafely() {
+  try {
+    return await runDataRoomReminderPass();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message.slice(0, 200) : "data-room reminders failed" };
   }
 }
 
@@ -35,7 +45,8 @@ async function handleCron(request: Request) {
   try {
     const result = await runCronOrchestrationPass({ triggerSource: "cron", forceDigest });
     const snapshots = await captureMetricSnapshotsSafely();
-    return NextResponse.json({ ...result, snapshots }, { status: result.success ? 200 : 207 });
+    const dataRoomReminders = await runDataRoomRemindersSafely();
+    return NextResponse.json({ ...result, snapshots, dataRoomReminders }, { status: result.success ? 200 : 207 });
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 200) : "Orchestration pass failed.";
     return NextResponse.json(
