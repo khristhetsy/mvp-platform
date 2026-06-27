@@ -5,6 +5,8 @@ import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
+import { notFound } from "next/navigation";
 import { PitchDeckAnalyzerClient } from "@/components/founder/PitchDeckAnalyzerClient";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +15,9 @@ export default async function PitchDeckAnalyzerPage() {
   const profile = await requireRole(["founder"]);
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
+
+  const flags = await loadFeatureFlags(supabase);
+  if (!isFeatureEnabled(flags, "founder", "pitch_deck_analyzer")) notFound();
 
   // Check if a pitch deck is already uploaded
   const { data: pitchDeck } = company
