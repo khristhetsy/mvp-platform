@@ -56,11 +56,14 @@ export default async function FounderReadinessMissingPage() {
                     const isBusinessPlan = label === "business plan" || item.code === "BUSINESS_PLAN";
                     const isFinancialModel =
                       label === "financial model" || item.code === "FINANCIAL_MODEL" || item.code === "FINANCIAL_STATEMENTS";
+                    const isCapTable = label === "cap table" || item.code === "CAP_TABLE";
                     const cta = isBusinessPlan
                       ? { href: "/founder/business-plan", text: "Don't have one? Generate it with AI →" }
                       : isFinancialModel
                         ? { href: "/founder/financial-model", text: "Build it here with our model →" }
-                        : null;
+                        : isCapTable
+                          ? { href: "/founder/cap-table", text: "Build it here →" }
+                          : null;
                     return (
                       <li
                         key={item.code}

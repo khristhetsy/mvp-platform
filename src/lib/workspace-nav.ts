@@ -260,6 +260,7 @@ export const founderWorkspaceNav: WorkspaceNavItem[] = [
       { href: "/founder/pitch-deck-analyzer", label: "Pitch deck analyzer", minStage: "qualify" },
       { href: "/founder/business-plan", label: "Business plan", minStage: "qualify" },
       { href: "/founder/financial-model", label: "Financial model", minStage: "qualify" },
+      { href: "/founder/cap-table", label: "Cap table", minStage: "qualify" },
       { href: "/founder/reg-cf", label: "Reg CF materials", minStage: "deploy" },
     ],
   },
