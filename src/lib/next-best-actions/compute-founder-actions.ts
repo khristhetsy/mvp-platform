@@ -24,7 +24,6 @@ export type FounderNbaContext = {
   onboardingPercent: number;
   onboardingComplete: boolean;
   currentOnboardingStep: string;
-  pitchDeckUploaded: boolean;
   dataRoom: DataRoomState;
   readinessScore: number | null;
   remediationHighOpen: number;
@@ -52,7 +51,6 @@ export async function loadFounderNbaContext(
     onboardingPercent: 0,
     onboardingComplete: false,
     currentOnboardingStep: "company_profile",
-    pitchDeckUploaded: false,
     dataRoom: computeDataRoomState([]),
     readinessScore: null,
     remediationHighOpen: 0,
@@ -151,7 +149,6 @@ export async function loadFounderNbaContext(
     onboardingPercent: onboarding.percent,
     onboardingComplete: onboarding.isComplete,
     currentOnboardingStep: onboarding.currentStep,
-    pitchDeckUploaded: onboarding.pitchDeckUploaded,
     dataRoom: computeDataRoomState(docs),
     readinessScore,
     remediationHighOpen: highOpen,
