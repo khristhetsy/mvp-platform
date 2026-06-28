@@ -25,7 +25,7 @@ function brandedFrom(): string {
     process.env.TRANSACTIONAL_EMAIL_FROM?.trim() ?? process.env.EMAIL_FROM?.trim() ?? "";
   // Extract a bare address if EMAIL_FROM is in "Name <addr>" form.
   const addrMatch = configured.match(/<([^>]+)>/);
-  const address = addrMatch?.[1] ?? (configured.includes("@") ? configured : "no-reply@mail.capitalos.io");
+  const address = addrMatch?.[1] ?? (configured.includes("@") ? configured : "no-reply@mail.icapos.com");
   return `${BRAND.emailSender} <${address}>`;
 }
 

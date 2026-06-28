@@ -8,7 +8,7 @@ const SENDER = "iCFO Venture Group";
 function brandedFrom(): string {
   const configured = process.env.TRANSACTIONAL_EMAIL_FROM?.trim() ?? process.env.EMAIL_FROM?.trim() ?? "";
   const m = configured.match(/<([^>]+)>/);
-  const address = m?.[1] ?? (configured.includes("@") ? configured : "no-reply@mail.capitalos.io");
+  const address = m?.[1] ?? (configured.includes("@") ? configured : "no-reply@mail.icapos.com");
   return `${SENDER} <${address}>`;
 }
 

@@ -3,10 +3,10 @@ import { pickField, extractReplyToken, parseFromHeader } from "./inbound-parse";
 
 describe("extractReplyToken", () => {
   it("pulls the token from a plus-address", () => {
-    expect(extractReplyToken("reply+abc123@mail.capitalos.io")).toBe("abc123");
+    expect(extractReplyToken("reply+abc123@mail.icapos.com")).toBe("abc123");
   });
   it("is case-insensitive on the prefix and finds it inside a header", () => {
-    expect(extractReplyToken('"Inbox" <Reply+Tok9@mail.capitalos.io>')).toBe("Tok9");
+    expect(extractReplyToken('"Inbox" <Reply+Tok9@mail.icapos.com>')).toBe("Tok9");
   });
   it("returns null when there's no token", () => {
     expect(extractReplyToken("hello@example.com")).toBeNull();

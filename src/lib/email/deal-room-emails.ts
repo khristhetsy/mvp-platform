@@ -8,7 +8,7 @@ import { sendEmail } from "@/lib/email/send-email";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 const ACCENT = "#534AB7";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.capitalos.io";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
 
 // ── Shared HTML wrapper ───────────────────────────────────────────────────────
 

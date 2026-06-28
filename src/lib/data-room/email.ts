@@ -6,7 +6,7 @@ import { sendEmail } from "@/lib/email/send-email";
 import type { DataRoomState } from "@/lib/data-room/completeness";
 
 function appUrl(): string {
-  return (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.capitalos.io").replace(/\/$/, "");
+  return (process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com").replace(/\/$/, "");
 }
 
 export function buildDataRoomReminderEmail(input: {

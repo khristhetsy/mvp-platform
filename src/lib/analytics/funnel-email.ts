@@ -7,7 +7,7 @@ import { notifyStaffIfNotRecent } from "@/lib/notifications/notifications";
 import { loadActivationFunnels, type FunnelStep } from "@/lib/analytics/activation-funnels";
 
 function appUrl(): string {
-  return (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.capitalos.io").replace(/\/$/, "");
+  return (process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com").replace(/\/$/, "");
 }
 
 function pct(n: number | null): string {

@@ -53,7 +53,7 @@ const MSG_COLS =
   "id, thread_id, owner_id, direction, from_email, from_name, to_email, subject, body_text, body_html, provider_id, attachments, created_at";
 
 export function inboundDomain(): string {
-  return process.env.INBOUND_EMAIL_DOMAIN ?? "mail.capitalos.io";
+  return process.env.INBOUND_EMAIL_DOMAIN ?? "mail.icapos.com";
 }
 
 /** The plus-addressed reply target that routes inbound mail back to a thread. */

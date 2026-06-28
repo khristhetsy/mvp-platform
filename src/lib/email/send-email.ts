@@ -5,7 +5,7 @@
  *
  * Required env vars:
  *   RESEND_API_KEY   — from https://resend.com/api-keys
- *   EMAIL_FROM       — e.g. "iCapOS <no-reply@mail.capitalos.io>"
+ *   EMAIL_FROM       — e.g. "iCapOS <no-reply@mail.icapos.com>"
  */
 
 const RESEND_API = "https://api.resend.com/emails";
@@ -24,7 +24,7 @@ export type EmailPayload = {
   attachments?: Array<{ filename: string; content: string }>;
 };
 
-const DEFAULT_FROM = "iCapOS <no-reply@mail.capitalos.io>";
+const DEFAULT_FROM = "iCapOS <no-reply@mail.icapos.com>";
 
 /** Bare address from EMAIL_FROM, whether it's "Name <addr>" or just "addr". */
 function baseFromAddress(): string {

@@ -46,8 +46,8 @@ describe("replyAllRecipients", () => {
   it("puts sender in to and others in cc, excluding self", () => {
     const r = replyAllRecipients({
       sender: "founder@startup.com",
-      recipients: ["me@capitalos.io", "partner@vc.com", "founder@startup.com"],
-      self: "me@capitalos.io",
+      recipients: ["me@icapos.com", "partner@vc.com", "founder@startup.com"],
+      self: "me@icapos.com",
     });
     expect(r.to).toEqual(["founder@startup.com"]);
     expect(r.cc).toEqual(["partner@vc.com"]); // self removed, sender not duplicated in cc
