@@ -5,7 +5,8 @@ import { InvestorOnboardingProgressCard } from "@/components/InvestorOnboardingP
 import { investorCompanyLabel, loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
 import { loadInvestorRecommendedMatches } from "@/lib/matching/load-investor-recommendations";
 import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
-import { computeInvestorOnboardingProgress } from "@/lib/investor/profile";
+import { computeInvestorOnboardingProgress, isInvestorProfileComplete } from "@/lib/investor/profile";
+import { InvestorStatusCard } from "@/components/investor/InvestorStatusCard";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
@@ -20,6 +21,8 @@ export default async function InvestorDashboardPage() {
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
   const { investorProfile } = await loadInvestorWorkspaceContext(profile);
   const investorProgress = investorProfile ? computeInvestorOnboardingProgress(investorProfile) : null;
+  const approvalStatus = investorProfile?.approval_status ?? "draft";
+  const profileComplete = investorProfile ? isInvestorProfileComplete(investorProfile) : false;
 
   const [{ workspace, crmActivity }, { matches }, nextBestActions] = await Promise.all([
     loadInvestorWorkspacePageData(investorId),
@@ -47,6 +50,8 @@ export default async function InvestorDashboardPage() {
       <TipOfTheDay profileId={profile.id} audience="investor" />
 
       {investorProgress ? <InvestorOnboardingProgressCard progress={investorProgress} /> : null}
+
+      <InvestorStatusCard approvalStatus={approvalStatus} profileComplete={profileComplete} />
 
       <InvestorMetricCards
         data={{
