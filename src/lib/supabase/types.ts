@@ -20,6 +20,7 @@ export type Company = {
   industry: string | null;
   country: string | null;
   state: string | null;
+  incorporation_jurisdiction: string | null;
   business_description: string | null;
   website?: string | null;
   logo_url?: string | null;

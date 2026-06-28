@@ -57,11 +57,19 @@ function isNewListing(publishedAt: string | null): boolean {
   return ageMs < NEW_LISTING_DAYS * 24 * 60 * 60 * 1000;
 }
 
+/** Country is the trailing segment of the "State, Country" location label. */
+function deriveCountry(location: string | null): string | null {
+  if (!location) return null;
+  const parts = location.split(",");
+  return parts[parts.length - 1].trim() || null;
+}
+
 function filterMatches(
   rows: InvestorOpportunityRow[],
   query: string,
   industryFilter: string,
   stageFilter: string,
+  countryFilter: string,
 ) {
   let result = rows;
   if (industryFilter) {
@@ -69,6 +77,9 @@ function filterMatches(
   }
   if (stageFilter) {
     result = result.filter((r) => r.stage === stageFilter);
+  }
+  if (countryFilter) {
+    result = result.filter((r) => deriveCountry(r.location) === countryFilter);
   }
   const q = query.trim().toLowerCase();
   if (q) {
@@ -324,6 +335,7 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
   const [view, setView] = useState<ViewMode>("list");
   const [industryFilter, setIndustryFilter] = useState("");
   const [stageFilter, setStageFilter] = useState("");
+  const [countryFilter, setCountryFilter] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("match");
 
   // Derive unique option lists from the full matches array
@@ -335,15 +347,19 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
     () => [...new Set(matches.map((r) => r.stage).filter((v): v is string => !!v))].sort(),
     [matches],
   );
+  const countries = useMemo(
+    () => [...new Set(matches.map((r) => deriveCountry(r.location)).filter((v): v is string => !!v))].sort(),
+    [matches],
+  );
 
   const filtered = useMemo(
-    () => filterMatches(matches, query, industryFilter, stageFilter),
-    [matches, query, industryFilter, stageFilter],
+    () => filterMatches(matches, query, industryFilter, stageFilter, countryFilter),
+    [matches, query, industryFilter, stageFilter, countryFilter],
   );
 
   const sorted = useMemo(() => sortMatches(filtered, sortBy), [filtered, sortBy]);
 
-  const hasFilters = !!query || !!industryFilter || !!stageFilter;
+  const hasFilters = !!query || !!industryFilter || !!stageFilter || !!countryFilter;
 
   if (matches.length === 0) {
     return (
@@ -378,6 +394,14 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
           options={stages}
           onChange={setStageFilter}
         />
+        {countries.length > 0 && (
+          <FilterSelect
+            label="All countries"
+            value={countryFilter}
+            options={countries}
+            onChange={setCountryFilter}
+          />
+        )}
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortBy)}
@@ -408,7 +432,7 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
         {hasFilters && (
           <button
             type="button"
-            onClick={() => { setQuery(""); setIndustryFilter(""); setStageFilter(""); }}
+            onClick={() => { setQuery(""); setIndustryFilter(""); setStageFilter(""); setCountryFilter(""); }}
             className="text-xs font-medium text-slate-400 hover:text-slate-700 transition-colors"
           >
             Clear filters

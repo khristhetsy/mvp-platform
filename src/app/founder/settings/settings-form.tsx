@@ -118,6 +118,7 @@ const settingsSchema = z.object({
   team_summary: z.string().max(1000).optional(),
   country: z.string().optional(),
   state: z.string().optional(),
+  incorporation_jurisdiction: z.string().optional(),
 });
 
 type Props = {
@@ -148,6 +149,7 @@ export function CompanySettingsForm({ company }: Props) {
   const [teamSummary, setTeamSummary] = useState(company?.team_summary ?? "");
   const [country, setCountry] = useState(company?.country ?? "");
   const [state, setState] = useState(company?.state ?? "");
+  const [incorporationJurisdiction, setIncorporationJurisdiction] = useState(company?.incorporation_jurisdiction ?? "");
 
   // Logo upload
   const [logoUploading, setLogoUploading] = useState(false);
@@ -206,6 +208,7 @@ export function CompanySettingsForm({ company }: Props) {
       team_summary: teamSummary.trim() || undefined,
       country: country.trim() || undefined,
       state: state.trim() || undefined,
+      incorporation_jurisdiction: incorporationJurisdiction.trim() || undefined,
     });
     if (!ok) return;
 
@@ -225,6 +228,7 @@ export function CompanySettingsForm({ company }: Props) {
     if (teamSummary.trim()) payload.team_summary = teamSummary.trim();
     if (country.trim()) payload.country = country.trim();
     if (state.trim()) payload.state = state.trim();
+    if (incorporationJurisdiction.trim()) payload.incorporation_jurisdiction = incorporationJurisdiction.trim();
 
     const response = await fetch(`/api/companies/${company.id}`, {
       method: "PATCH",
@@ -475,6 +479,16 @@ export function CompanySettingsForm({ company }: Props) {
             onChange={(e) => { setState(e.target.value); clearError("state"); }}
             disabled={isSaving}
             placeholder="e.g. California"
+          />
+        </FormField>
+
+        <FormField label="Country of incorporation" error={getError("incorporation_jurisdiction")} hint="The legal entity investors would invest into — often different from where you operate.">
+          <input
+            className={`${BASE_INPUT} ${inputCls("incorporation_jurisdiction")}`}
+            value={incorporationJurisdiction}
+            onChange={(e) => { setIncorporationJurisdiction(e.target.value); clearError("incorporation_jurisdiction"); }}
+            disabled={isSaving}
+            placeholder="e.g. Delaware C-Corp, UK Ltd, Singapore Pte"
           />
         </FormField>
       </div>

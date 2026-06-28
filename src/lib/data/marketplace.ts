@@ -10,6 +10,8 @@ export type MarketplaceListing = {
   industry: string | null;
   stage: string | null;
   location: string | null;
+  country: string | null;
+  incorporationJurisdiction: string | null;
   shortSummary: string | null;
   fundingTarget: string | null;
   minimumInvestment: string | null;
@@ -126,6 +128,8 @@ function mapCompanyToListing(
     industry: company.industry,
     stage: company.revenue_stage,
     location: formatLocation(company),
+    country: company.country,
+    incorporationJurisdiction: company.incorporation_jurisdiction,
     shortSummary: company.business_description,
     fundingTarget: formatCurrency(campaign?.funding_target ?? company.funding_amount),
     minimumInvestment: formatCurrency(campaign?.minimum_investment),

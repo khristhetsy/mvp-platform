@@ -36,6 +36,7 @@ export const companyUpdateSchema = z.object({
   logo_url: z.string().url().optional().or(z.literal("")),
   country: z.string().min(2).optional(),
   state: z.string().optional(),
+  incorporation_jurisdiction: z.string().max(120).optional(),
   funding_amount: z.coerce.number().positive().optional(),
   use_of_funds: z.string().min(10).optional(),
   revenue_stage: z.string().min(2).optional(),

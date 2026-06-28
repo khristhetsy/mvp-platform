@@ -67,6 +67,7 @@ export default async function InvestorDealRoomPage({ params }: PageProps) {
     onboarding_progress_percent: number | null;
     country: string | null;
     state: string | null;
+    incorporation_jurisdiction: string | null;
   };
 
   let company: CompanySnapshot | null = null;
@@ -76,7 +77,7 @@ export default async function InvestorDealRoomPage({ params }: PageProps) {
     const result = await (admin as any)
       .from("companies")
       .select(
-        "company_name, industry, business_description, funding_amount, revenue_stage, onboarding_progress_percent, country, state",
+        "company_name, industry, business_description, funding_amount, revenue_stage, onboarding_progress_percent, country, state, incorporation_jurisdiction",
       )
       .eq("id", room.company_id)
       .maybeSingle();
@@ -146,6 +147,11 @@ export default async function InvestorDealRoomPage({ params }: PageProps) {
                 {location && (
                   <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">
                     {location}
+                  </span>
+                )}
+                {company.incorporation_jurisdiction && (
+                  <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">
+                    Incorporated: {company.incorporation_jurisdiction}
                   </span>
                 )}
                 {company.onboarding_progress_percent != null && (
