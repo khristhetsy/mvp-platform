@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/meeting-reminders",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/weekly-funnel-digest",
+      "schedule": "0 13 * * 1"
     }
   ]
 }
