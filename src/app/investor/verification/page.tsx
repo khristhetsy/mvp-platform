@@ -59,6 +59,8 @@ export default async function InvestorVerificationPage() {
             kycFeedback={investorProfile.kyc_feedback}
             items={items}
             canSubmit={state.canSubmit}
+            legalName={investorProfile.legal_name}
+            kycConsent={investorProfile.kyc_consent}
           />
         </div>
       </WorkspacePageContainer>

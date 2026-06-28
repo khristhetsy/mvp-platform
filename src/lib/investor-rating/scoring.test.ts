@@ -15,7 +15,7 @@ function inputs(over: Partial<PartnerScoreInputs> = {}): PartnerScoreInputs {
     medianResponseHours: 18,
     daysSinceLastActive: 5,
     accredited: true,
-    kycVerified: true,
+    accreditationVerified: true,
     profileCompleteness: 1,
     amountPledgesMade: 4,
     pledgesWithinRange: 4,
@@ -54,25 +54,25 @@ describe("computePillars", () => {
 
   it("treats no-pledges as neutral consistency (not a penalty)", () => {
     const p = computePillars(
-      inputs({ kycVerified: true, profileCompleteness: 1, amountPledgesMade: 0, pledgesWithinRange: 0 }),
+      inputs({ accreditationVerified: true, profileCompleteness: 1, amountPledgesMade: 0, pledgesWithinRange: 0 }),
     );
     expect(p.credibility).toBe(100); // 50(verified) + 30(profile) + 20(neutral consistency)
   });
 
-  it("makes verified KYC the dominant credibility signal over self-attestation", () => {
+  it("makes verified accreditation the dominant credibility signal over self-attestation", () => {
     const base = { profileCompleteness: 1, amountPledgesMade: 0, pledgesWithinRange: 0 };
-    const verified = computePillars(inputs({ ...base, kycVerified: true, accredited: true }));
-    const selfAttested = computePillars(inputs({ ...base, kycVerified: false, accredited: true }));
-    const unverified = computePillars(inputs({ ...base, kycVerified: false, accredited: false }));
+    const verified = computePillars(inputs({ ...base, accreditationVerified: true, accredited: true }));
+    const selfAttested = computePillars(inputs({ ...base, accreditationVerified: false, accredited: true }));
+    const unverified = computePillars(inputs({ ...base, accreditationVerified: false, accredited: false }));
     expect(verified.credibility).toBe(100); // 50 + 30 + 20
     expect(selfAttested.credibility).toBe(57.5); // 7.5 + 30 + 20
     expect(unverified.credibility).toBe(50); // 0 + 30 + 20
     expect(verified.credibility - selfAttested.credibility).toBeGreaterThan(40);
   });
 
-  it("lifts the overall score when an investor completes KYC verification", () => {
-    const verified = computePartnerScore(inputs({ kycVerified: true }));
-    const selfAttested = computePartnerScore(inputs({ kycVerified: false }));
+  it("lifts the overall score when an investor verifies accreditation", () => {
+    const verified = computePartnerScore(inputs({ accreditationVerified: true }));
+    const selfAttested = computePartnerScore(inputs({ accreditationVerified: false }));
     expect(verified.score).not.toBeNull();
     expect(selfAttested.score).not.toBeNull();
     // Credibility is 20% of the score; the ~42.5-point pillar lift ≈ +8–9 overall.
@@ -121,7 +121,7 @@ describe("computePartnerScore", () => {
       medianResponseHours: null,
       daysSinceLastActive: null,
       accredited: false,
-      kycVerified: false,
+      accreditationVerified: false,
       profileCompleteness: 0,
       amountPledgesMade: 0,
       pledgesWithinRange: 0,

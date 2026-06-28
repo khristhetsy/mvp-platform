@@ -52,7 +52,7 @@ export type PartnerScoreInputs = {
   // Credibility — amount pledges come from marketplace interests (which carry
   // an amount); consistency = how many fell within the stated check-size range.
   accredited: boolean; // self-attested accreditation checkbox
-  kycVerified: boolean; // identity + accreditation verified by staff (Stage 2)
+  accreditationVerified: boolean; // accreditation evidence verified by staff (optional)
   profileCompleteness: number; // 0..1
   amountPledgesMade: number; // interest pledges that carry an amount
   pledgesWithinRange: number; // of those, how many fell within the check-size range

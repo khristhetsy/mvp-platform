@@ -29,53 +29,28 @@ export function isEntityInvestorType(investorType: string | null | undefined): b
   );
 }
 
-const INDIVIDUAL_CHECKLIST: KycChecklistItem[] = [
+// Light verification — same for every investor type. Identity is the only
+// required upload; accreditation evidence is optional and boosts the score.
+const LIGHT_CHECKLIST: KycChecklistItem[] = [
   {
     code: "government_id",
-    label: "Government-issued ID",
-    description: "Passport or driver's license so we can verify your identity.",
+    label: "Form of identification",
+    description: "A passport or driver's license to confirm your identity.",
     required: true,
   },
   {
     code: "accreditation_evidence",
     label: "Accreditation evidence",
-    description: "A letter from a CPA, attorney, or broker — or income / net-worth documentation.",
-    required: true,
-  },
-  {
-    code: "source_of_funds",
-    label: "Source of funds",
-    description: "Optional short attestation of the source of your investable funds.",
+    description: "Optional — a CPA/attorney letter or income proof. Boosts your Partner Score when verified.",
     required: false,
   },
 ];
 
-const ENTITY_CHECKLIST: KycChecklistItem[] = [
-  {
-    code: "entity_formation",
-    label: "Entity formation document",
-    description: "Certificate of incorporation, LP/LLC agreement, or equivalent.",
-    required: true,
-  },
-  {
-    code: "beneficial_ownership",
-    label: "Beneficial ownership & signatory",
-    description: "Authorized signatory plus beneficial owners holding more than 25%.",
-    required: true,
-  },
-  {
-    code: "accreditation_evidence",
-    label: "Entity accreditation evidence",
-    description: "Evidence the entity qualifies — AUM, total assets, or all-accredited owners.",
-    required: true,
-  },
-];
-
-export function kycChecklist(investorType: string | null | undefined): KycChecklistItem[] {
-  return isEntityInvestorType(investorType) ? ENTITY_CHECKLIST : INDIVIDUAL_CHECKLIST;
+export function kycChecklist(_investorType?: string | null): KycChecklistItem[] {
+  return LIGHT_CHECKLIST;
 }
 
-export function isKycDocType(value: string, investorType: string | null | undefined): value is KycDocType {
+export function isKycDocType(value: string, investorType?: string | null): value is KycDocType {
   return kycChecklist(investorType).some((item) => item.code === value);
 }
 
@@ -227,13 +202,23 @@ export async function createKycSignedUrl(filePath: string, expiresIn = 300) {
   return admin.storage.from(KYC_BUCKET).createSignedUrl(filePath, expiresIn);
 }
 
-/** Move the investor into the 'pending' KYC review queue. */
-export async function submitInvestorKyc(investorProfileId: string): Promise<InvestorProfileRecord> {
+/** Move the investor into the 'pending' KYC review queue, saving legal name + consent. */
+export async function submitInvestorKyc(
+  investorProfileId: string,
+  opts: { legalName: string; consent: boolean },
+): Promise<InvestorProfileRecord> {
   const admin = createServiceRoleClient();
   const now = new Date().toISOString();
   const { data, error } = await admin
     .from("investor_profiles")
-    .update({ kyc_status: "pending", kyc_submitted_at: now, kyc_feedback: null, updated_at: now })
+    .update({
+      kyc_status: "pending",
+      kyc_submitted_at: now,
+      kyc_feedback: null,
+      legal_name: opts.legalName.trim(),
+      kyc_consent: opts.consent,
+      updated_at: now,
+    })
     .eq("id", investorProfileId)
     .select("*")
     .single();

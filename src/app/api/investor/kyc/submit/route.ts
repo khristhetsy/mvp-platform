@@ -7,7 +7,7 @@ import { computeKycChecklistState, listKycDocuments, submitInvestorKyc } from "@
 
 export const dynamic = "force-dynamic";
 
-export async function POST(): Promise<Response> {
+export async function POST(request: Request): Promise<Response> {
   const auth = await requireInvestorApi();
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -23,12 +23,22 @@ export async function POST(): Promise<Response> {
     return NextResponse.json({ error: "Your account is already verified." }, { status: 400 });
   }
 
+  const body = (await request.json().catch(() => null)) as { legalName?: string; consent?: boolean } | null;
+  const legalName = body?.legalName?.trim() ?? "";
+  const consent = body?.consent === true;
+  if (legalName.length < 2) {
+    return NextResponse.json({ error: "Enter your legal name as it appears on your ID.", code: "legal_name_required" }, { status: 400 });
+  }
+  if (!consent) {
+    return NextResponse.json({ error: "Please consent to storing your ID for verification.", code: "consent_required" }, { status: 400 });
+  }
+
   const documents = await listKycDocuments(profile.id);
   const state = computeKycChecklistState(profile.investor_type, documents);
   if (!state.canSubmit) {
     return NextResponse.json(
       {
-        error: "Upload all required documents before submitting for verification.",
+        error: "Upload your form of identification before submitting for verification.",
         code: "kyc_incomplete",
         missing: state.missingRequired.map((m) => ({ code: m.code, label: m.label })),
       },
@@ -37,7 +47,7 @@ export async function POST(): Promise<Response> {
   }
 
   try {
-    const updated = await submitInvestorKyc(profile.id);
+    const updated = await submitInvestorKyc(profile.id, { legalName, consent });
     const admin = createServiceRoleClient();
     await writeAuditLog(admin, {
       userId: auth.profile.id,

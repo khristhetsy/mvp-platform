@@ -1326,6 +1326,11 @@ export type Database = {
           address_state: string | null;
           address_postal_code: string | null;
           address_country: string | null;
+          legal_name: string | null;
+          kyc_consent: boolean;
+          accreditation_verified: boolean;
+          accreditation_reviewed_at: string | null;
+          accreditation_reviewed_by: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -1356,6 +1361,11 @@ export type Database = {
           address_state?: string | null;
           address_postal_code?: string | null;
           address_country?: string | null;
+          legal_name?: string | null;
+          kyc_consent?: boolean;
+          accreditation_verified?: boolean;
+          accreditation_reviewed_at?: string | null;
+          accreditation_reviewed_by?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -1384,6 +1394,11 @@ export type Database = {
           address_state?: string | null;
           address_postal_code?: string | null;
           address_country?: string | null;
+          legal_name?: string | null;
+          kyc_consent?: boolean;
+          accreditation_verified?: boolean;
+          accreditation_reviewed_at?: string | null;
+          accreditation_reviewed_by?: string | null;
           updated_at?: string;
         };
         Relationships: [];

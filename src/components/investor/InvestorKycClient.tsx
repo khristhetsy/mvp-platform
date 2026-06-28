@@ -48,21 +48,29 @@ export function InvestorKycClient({
   kycFeedback,
   items,
   canSubmit,
+  legalName: initialLegalName,
+  kycConsent,
 }: Readonly<{
   kycStatus: InvestorKycStatus;
   kycFeedback: string | null;
   items: KycItemView[];
   canSubmit: boolean;
+  legalName: string | null;
+  kycConsent: boolean;
 }>) {
   const router = useRouter();
   const [busyCode, setBusyCode] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dragCode, setDragCode] = useState<string | null>(null);
+  const [legalName, setLegalName] = useState(initialLegalName ?? "");
+  const [consent, setConsent] = useState(kycConsent);
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const locked = kycStatus === "pending" || kycStatus === "verified";
   const banner = STATUS_BANNER[kycStatus];
   const BannerIcon = banner.icon;
+  const readyToSubmit = canSubmit && legalName.trim().length >= 2 && consent;
 
   async function upload(code: string, file: File) {
     setError(null);
@@ -86,7 +94,11 @@ export function InvestorKycClient({
     setError(null);
     setSubmitting(true);
     try {
-      const res = await fetch("/api/investor/kyc/submit", { method: "POST" });
+      const res = await fetch("/api/investor/kyc/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ legalName: legalName.trim(), consent }),
+      });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error ?? "Could not submit for verification.");
       router.refresh();
@@ -114,6 +126,21 @@ export function InvestorKycClient({
 
       {error ? (
         <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700">{error}</p>
+      ) : null}
+
+      {!locked ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <label className="block text-sm font-semibold text-slate-900" htmlFor="kyc-legal-name">
+            Legal name <span className="text-[11px] font-normal text-slate-400">· as it appears on your ID</span>
+          </label>
+          <input
+            id="kyc-legal-name"
+            value={legalName}
+            onChange={(e) => setLegalName(e.target.value)}
+            placeholder="e.g. Jordan A. Investor"
+            className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
+          />
+        </div>
       ) : null}
 
       <div className="space-y-3">
@@ -167,19 +194,38 @@ export function InvestorKycClient({
                       e.target.value = "";
                     }}
                   />
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => inputs.current[item.code]?.click()}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-[13px] font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Upload ${item.label}`}
+                    onClick={() => !busy && inputs.current[item.code]?.click()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") inputs.current[item.code]?.click();
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragCode(item.code);
+                    }}
+                    onDragLeave={() => setDragCode(null)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragCode(null);
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) void upload(item.code, file);
+                    }}
+                    className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed px-3 py-3 text-[13px] font-medium transition ${
+                      dragCode === item.code
+                        ? "border-indigo-400 bg-indigo-50 text-indigo-700"
+                        : "border-slate-300 text-slate-600 hover:bg-slate-50"
+                    }`}
                   >
                     {busy ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2} aria-hidden />
+                      <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} aria-hidden />
                     ) : (
-                      <Upload className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+                      <Upload className="h-4 w-4" strokeWidth={2} aria-hidden />
                     )}
-                    {item.uploaded ? "Replace file" : "Upload file"}
-                  </button>
+                    {item.uploaded ? "Drag & drop to replace, or click" : "Drag & drop your file, or click to browse"}
+                  </div>
                 </div>
               ) : null}
             </div>
@@ -188,23 +234,39 @@ export function InvestorKycClient({
       </div>
 
       {kycStatus !== "verified" ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-[13px] text-slate-600">
-            {locked
-              ? `Status: ${KYC_STATUS_LABELS[kycStatus]}.`
-              : canSubmit
-                ? "All required documents uploaded. Submit for verification."
-                : "Upload all required documents to submit."}
-          </p>
-          <button
-            type="button"
-            onClick={submit}
-            disabled={!canSubmit || locked || submitting}
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} aria-hidden /> : null}
-            Submit for verification
-          </button>
+        <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          {!locked ? (
+            <label className="flex items-start gap-2.5 text-[13px] text-slate-600">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+              />
+              <span>
+                I consent to CapitalOS storing this document to verify my identity. It&apos;s encrypted, private, and never
+                shown to founders.
+              </span>
+            </label>
+          ) : null}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-[13px] text-slate-600">
+              {locked
+                ? `Status: ${KYC_STATUS_LABELS[kycStatus]}.`
+                : readyToSubmit
+                  ? "Ready — submit for verification."
+                  : "Add your legal name, upload your ID, and consent to submit."}
+            </p>
+            <button
+              type="button"
+              onClick={submit}
+              disabled={!readyToSubmit || locked || submitting}
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} aria-hidden /> : null}
+              Submit for verification
+            </button>
+          </div>
         </div>
       ) : null}
     </div>

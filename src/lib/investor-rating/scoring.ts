@@ -57,7 +57,7 @@ export function computePillars(input: PartnerScoreInputs): PartnerPillars {
   // biggest credibility lever an investor controls.
   const consistency =
     input.amountPledgesMade > 0 ? rate(input.pledgesWithinRange, input.amountPledgesMade) : 1;
-  const accreditationScore = input.kycVerified ? 1 : input.accredited ? 0.15 : 0;
+  const accreditationScore = input.accreditationVerified ? 1 : input.accredited ? 0.15 : 0;
   const credibility = clamp(
     50 * accreditationScore +
       30 * clamp(input.profileCompleteness, 0, 1) +
