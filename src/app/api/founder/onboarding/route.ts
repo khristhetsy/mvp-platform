@@ -38,6 +38,7 @@ function companyPatchFromStep(parsed: ReturnType<typeof founderOnboardingStepSch
   if (parsed.industry?.trim()) patch.industry = parsed.industry.trim();
   if (parsed.country?.trim()) patch.country = parsed.country.trim();
   if (parsed.state !== undefined) patch.state = parsed.state || null;
+  if (parsed.incorporation_jurisdiction !== undefined) patch.incorporation_jurisdiction = parsed.incorporation_jurisdiction || null;
   if (parsed.business_description?.trim()) patch.business_description = parsed.business_description.trim();
   if (parsed.founder_goals?.trim()) patch.founder_goals = parsed.founder_goals.trim();
   if (parsed.funding_amount != null) patch.funding_amount = parsed.funding_amount;

@@ -248,6 +248,9 @@ export function FounderConversationalOnboarding({
       : [],
   );
   const [timeline, setTimeline]       = useState<string | null>(null);
+  const [country, setCountry]         = useState(company.country ?? "");
+  const [companyState, setCompanyState] = useState(company.state ?? "");
+  const [jurisdiction, setJurisdiction] = useState(company.incorporation_jurisdiction ?? "");
 
   function toggleFund(label: string) {
     setUseOfFunds((prev) =>
@@ -257,11 +260,11 @@ export function FounderConversationalOnboarding({
 
   function canAdvance(): boolean {
     switch (step) {
-      case 1: return companyName.trim().length >= 2 && isValidPhone(phone);
+      case 1: return companyName.trim().length >= 2 && isValidPhone(phone) && country.trim().length >= 2;
       case 2: return Boolean(industry);
       case 3: return Boolean(stage);
       case 4: return Number(amount) > 0;
-      case 5: return description.trim().length >= 10;
+      case 5: return description.trim().length >= 20;
       case 6: return true;
       default: return true;
     }
@@ -282,11 +285,12 @@ export function FounderConversationalOnboarding({
           company_name: companyName.trim(),
           contact_phone: phone.trim(),
           industry: industry ?? "",
-          country: company.country ?? "",
+          country: country.trim(),
+          state: companyState.trim(),
+          incorporation_jurisdiction: jurisdiction.trim(),
           business_description: description.trim(),
           founder_goals: timeline ? `Looking to close: ${timeline}` : "",
           website: company.website ?? "",
-          state: company.state ?? "",
         }),
       });
       if (!r1.ok) throw new Error("Could not save company profile.");
@@ -453,6 +457,41 @@ export function FounderConversationalOnboarding({
               {phone.trim().length > 0 && !isValidPhone(phone) ? (
                 <p className="mt-1.5 text-xs text-rose-600">Enter a valid phone number (7–15 digits).</p>
               ) : null}
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">
+                    Country <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                    placeholder="e.g. United States"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    aria-required="true"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">State / Province</label>
+                  <input
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                    placeholder="e.g. California"
+                    value={companyState}
+                    onChange={(e) => setCompanyState(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <label className="mt-4 block text-sm font-medium text-slate-700">Country of incorporation</label>
+              <input
+                className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                placeholder="e.g. Delaware C-Corp, UK Ltd, Singapore Pte"
+                value={jurisdiction}
+                onChange={(e) => setJurisdiction(e.target.value)}
+              />
+              <p className="mt-1.5 text-xs text-slate-400">
+                Where your company is legally incorporated — often different from where you operate. Investors use this to assess fit.
+              </p>
 
               <ContextCard>
                 Your company name is the first thing investors see. Your phone number is required so our team can reach

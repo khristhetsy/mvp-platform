@@ -91,14 +91,16 @@ export function parseOnboardingStepState(value: unknown): {
 }
 
 function isCompanyProfileComplete(company: Company) {
+  // Essentials only: name, industry, country (now collected in onboarding), and a
+  // real description. founder_goals is derived from an optional timeline, so it is
+  // NOT required — requiring it silently stranded founders below 100%.
   const description = company.business_description?.trim() ?? "";
   return (
     Boolean(company.company_name?.trim()) &&
     Boolean(company.industry?.trim()) &&
     Boolean(company.country?.trim()) &&
     description.length >= 20 &&
-    description !== AUTO_DESCRIPTION &&
-    Boolean(company.founder_goals?.trim() && company.founder_goals.trim().length >= 10)
+    description !== AUTO_DESCRIPTION
   );
 }
 

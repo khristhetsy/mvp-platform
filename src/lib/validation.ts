@@ -68,6 +68,7 @@ export const founderOnboardingStepSchema = z.object({
   industry: z.string().optional(),
   country: z.string().optional(),
   state: z.string().optional(),
+  incorporation_jurisdiction: z.string().optional(),
   business_description: z.string().optional(),
   founder_goals: z.string().optional(),
   funding_amount: z.coerce.number().positive().optional(),
