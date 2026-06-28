@@ -1,17 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActionOrchestrationBadges } from "@/components/actions/ActionOrchestrationBadges";
 import {
-  formatPriorityLabel,
-  formatStatusLabel,
-  panelTitleForRole,
   priorityBadgeClass,
   statusBadgeClass,
 } from "@/lib/next-best-actions/display";
 import { actionCenterBasePath } from "@/lib/actions/filters";
-import { NBA_DISCLAIMER } from "@/lib/next-best-actions/types";
 import type { NextBestAction, NextBestActionRole } from "@/lib/next-best-actions/types";
 
 type NextBestActionsPanelProps = {
@@ -29,11 +26,11 @@ type NextBestActionsPanelProps = {
 type LifecycleAction = "complete" | "dismiss" | "snooze" | "escalate";
 type ViewTab = "all" | "critical" | "overdue" | "escalated";
 
-const VIEW_TABS: { id: ViewTab; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "critical", label: "Critical" },
-  { id: "overdue", label: "Overdue" },
-  { id: "escalated", label: "Escalated" },
+const VIEW_TABS: { id: ViewTab; labelKey: "tabAll" | "tabCritical" | "tabOverdue" | "tabEscalated" }[] = [
+  { id: "all", labelKey: "tabAll" },
+  { id: "critical", labelKey: "tabCritical" },
+  { id: "overdue", labelKey: "tabOverdue" },
+  { id: "escalated", labelKey: "tabEscalated" },
 ];
 
 function filterByTab(actions: NextBestAction[], tab: ViewTab): NextBestAction[] {
@@ -55,6 +52,9 @@ export function NextBestActionsPanel({
   showEscalate = false,
   viewAllHref,
 }: Readonly<NextBestActionsPanelProps>) {
+  const t = useTranslations("actions");
+  const panelTitle =
+    role === "investor" ? t("titleInvestor") : role === "admin" || role === "analyst" ? t("titleAdmin") : t("title");
   const allActionsHref = viewAllHref ?? actionCenterBasePath(role);
   const [actions, setActions] = useState<NextBestAction[]>(initialActions ?? []);
   const [loading, setLoading] = useState(!initialActions);
@@ -72,11 +72,11 @@ export function NextBestActionsPanel({
     const response = await fetch(`/api/next-best-actions?${params.toString()}`);
     if (!response.ok) {
       const body = (await response.json().catch(() => ({}))) as { error?: string };
-      throw new Error(body.error ?? "Unable to load actions.");
+      throw new Error(body.error ?? t("unableLoad"));
     }
     const data = (await response.json()) as { actions: NextBestAction[] };
     return data.actions ?? [];
-  }, [role, limit, contextPath, entityType, entityId]);
+  }, [role, limit, contextPath, entityType, entityId, t]);
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- hydrate or fetch next-best actions */
@@ -98,7 +98,7 @@ export function NextBestActionsPanel({
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Unable to load actions.");
+          setError(err instanceof Error ? err.message : t("unableLoad"));
           setActions([]);
         }
       })
@@ -110,7 +110,7 @@ export function NextBestActionsPanel({
       cancelled = true;
     };
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [initialActions, fetchActions]);
+  }, [initialActions, fetchActions, t]);
 
   async function runLifecycle(persistedId: string, lifecycle: LifecycleAction) {
     setPendingId(persistedId);
@@ -135,14 +135,14 @@ export function NextBestActionsPanel({
 
       if (!response.ok) {
         const payload = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(payload.error ?? "Unable to update action.");
+        throw new Error(payload.error ?? t("unableUpdate"));
       }
 
       const refreshed = await fetchActions();
       setActions(refreshed);
     } catch (err) {
       setActions(previous);
-      setActionError(err instanceof Error ? err.message : "Unable to update action.");
+      setActionError(err instanceof Error ? err.message : t("unableUpdate"));
     } finally {
       setPendingId(null);
     }
@@ -165,18 +165,18 @@ export function NextBestActionsPanel({
   return (
     <section
       className={`rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)] ${className}`}
-      aria-label={panelTitleForRole(role)}
+      aria-label={panelTitle}
     >
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:px-5 sm:py-4">
         <div>
-          <h2 className="text-sm font-semibold text-slate-950">{panelTitleForRole(role)}</h2>
-          <p className="mt-1 text-xs text-slate-500">Prioritized workflow actions with lifecycle tracking</p>
+          <h2 className="text-sm font-semibold text-slate-950">{panelTitle}</h2>
+          <p className="mt-1 text-xs text-slate-500">{t("subtitle")}</p>
         </div>
         <Link
           href={allActionsHref}
           className="shrink-0 text-xs font-semibold text-[var(--blue)] hover:text-[var(--blue-hover)]"
         >
-          View all actions
+          {t("viewAll")}
         </Link>
       </div>
 
@@ -195,7 +195,7 @@ export function NextBestActionsPanel({
                   : "border-transparent text-slate-500 hover:text-slate-700"
               }`}
             >
-              {tab.label}
+              {t(tab.labelKey)}
               {count > 0 ? (
                 <span
                   className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
@@ -215,7 +215,7 @@ export function NextBestActionsPanel({
       <div className="px-4 py-4 sm:px-5 sm:py-4">
         {loading ? (
           <p className="text-sm text-slate-500" role="status" aria-live="polite">
-            Loading suggested actions…
+            {t("loading")}
           </p>
         ) : error ? (
           <p className="text-sm text-red-700" role="alert">
@@ -223,9 +223,7 @@ export function NextBestActionsPanel({
           </p>
         ) : visibleActions.length === 0 ? (
           <p className="text-sm text-slate-600">
-            {activeTab === "all"
-              ? "You are caught up on prioritized items. Check back as your workflow state changes."
-              : `No ${activeTab} actions right now.`}
+            {activeTab === "all" ? t("caughtUp") : t("noneInTab")}
           </p>
         ) : (
           <ul className="space-y-3">
@@ -243,13 +241,13 @@ export function NextBestActionsPanel({
                       <span
                         className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${priorityBadgeClass(action.priority)}`}
                       >
-                        {formatPriorityLabel(action.priority)}
+                        {t(`priority.${action.priority}`)}
                       </span>
                       {action.status ? (
                         <span
                           className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusBadgeClass(action.status)}`}
                         >
-                          {formatStatusLabel(action.status)}
+                          {t(`status.${action.status}`)}
                         </span>
                       ) : null}
                       <ActionOrchestrationBadges action={action} />
@@ -261,12 +259,12 @@ export function NextBestActionsPanel({
                     <p className="mt-1 text-xs text-slate-500">{action.reason}</p>
                     {action.dueAt ? (
                       <p className="mt-1 text-xs text-slate-600">
-                        Suggested due: {new Date(action.dueAt).toLocaleString()}
+                        {t("suggestedDue", { date: new Date(action.dueAt).toLocaleString() })}
                       </p>
                     ) : null}
                     {action.blockers.length > 0 ? (
                       <p className="mt-1 text-xs text-amber-800">
-                        Blockers: {action.blockers.slice(0, 3).join("; ")}
+                        {t("blockers", { items: action.blockers.slice(0, 3).join("; ") })}
                       </p>
                     ) : null}
                   </div>
@@ -276,46 +274,46 @@ export function NextBestActionsPanel({
                       href={action.href}
                       className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[var(--blue)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--blue-hover)]"
                     >
-                      Open
+                      {t("open")}
                     </Link>
                     {action.persistedId ? (
                       <>
                         <button
                           type="button"
                           disabled={isPending}
-                          aria-label={`Complete action: ${action.title}`}
+                          aria-label={t("completeAria", { title: action.title })}
                           onClick={() => void runLifecycle(action.persistedId!, "complete")}
                           className="min-h-11 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-xs font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
                         >
-                          Complete
+                          {t("complete")}
                         </button>
                         <button
                           type="button"
                           disabled={isPending}
-                          aria-label={`Dismiss action: ${action.title}`}
+                          aria-label={t("dismissAria", { title: action.title })}
                           onClick={() => void runLifecycle(action.persistedId!, "dismiss")}
                           className="min-h-11 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                         >
-                          Dismiss
+                          {t("dismiss")}
                         </button>
                         <button
                           type="button"
                           disabled={isPending}
-                          aria-label={`Snooze action for 24 hours: ${action.title}`}
+                          aria-label={t("snoozeAria", { title: action.title })}
                           onClick={() => void runLifecycle(action.persistedId!, "snooze")}
                           className="min-h-11 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-2 text-xs font-medium text-violet-800 hover:bg-violet-100 disabled:opacity-50"
                         >
-                          Snooze 24h
+                          {t("snooze")}
                         </button>
                         {canEscalate ? (
                           <button
                             type="button"
                             disabled={isPending}
-                            aria-label={`Escalate action: ${action.title}`}
+                            aria-label={t("escalateAria", { title: action.title })}
                             onClick={() => void runLifecycle(action.persistedId!, "escalate")}
                             className="min-h-11 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs font-medium text-amber-900 hover:bg-amber-100 disabled:opacity-50"
                           >
-                            Escalate
+                            {t("escalate")}
                           </button>
                         ) : null}
                       </>
@@ -333,7 +331,7 @@ export function NextBestActionsPanel({
           </p>
         ) : null}
 
-        <p className="mt-4 text-[10px] leading-relaxed text-slate-500">{NBA_DISCLAIMER}</p>
+        <p className="mt-4 text-[10px] leading-relaxed text-slate-500">{t("disclaimer")}</p>
       </div>
     </section>
   );

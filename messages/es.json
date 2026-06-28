@@ -71,6 +71,68 @@
     "report": "Informe",
     "none": "Ninguno"
   },
+  "admin": {
+    "dashboard": {
+      "eyebrow": "Administración de iCapOS",
+      "title": "Panel"
+    },
+    "platformHealth": {
+      "title": "Estado de la plataforma",
+      "critical": "{count, plural, one {# crítico} other {# críticos}}",
+      "needsAttention": "{count, plural, one {# requiere atención} other {# requieren atención}}",
+      "allClear": "Todo en orden",
+      "companiesPendingReview": "Empresas pendientes de revisión",
+      "introRequestsPending": "Solicitudes de presentación pendientes",
+      "criticalCompliance": "Cumplimiento crítico",
+      "investorApprovals": "Aprobaciones de inversores",
+      "allReviewed": "Todo revisado",
+      "nonePending": "Nada pendiente",
+      "noCriticalEvents": "Sin eventos críticos"
+    }
+  },
+  "actions": {
+    "title": "Qué hacer a continuación",
+    "titleAdmin": "Prioridades operativas",
+    "titleInvestor": "Lo que importa ahora",
+    "subtitle": "Acciones de flujo de trabajo priorizadas con seguimiento del ciclo de vida",
+    "viewAll": "Ver todas las acciones",
+    "tabAll": "Todas",
+    "tabCritical": "Críticas",
+    "tabOverdue": "Vencidas",
+    "tabEscalated": "Escaladas",
+    "loading": "Cargando acciones sugeridas…",
+    "caughtUp": "Estás al día con los elementos priorizados. Vuelve cuando cambie el estado de tu flujo de trabajo.",
+    "noneInTab": "No hay acciones en esta vista por ahora.",
+    "suggestedDue": "Vencimiento sugerido: {date}",
+    "blockers": "Bloqueos: {items}",
+    "open": "Abrir",
+    "complete": "Completar",
+    "dismiss": "Descartar",
+    "snooze": "Posponer 24 h",
+    "escalate": "Escalar",
+    "completeAria": "Completar acción: {title}",
+    "dismissAria": "Descartar acción: {title}",
+    "snoozeAria": "Posponer acción 24 horas: {title}",
+    "escalateAria": "Escalar acción: {title}",
+    "unableLoad": "No se pudieron cargar las acciones.",
+    "unableUpdate": "No se pudo actualizar la acción.",
+    "disclaimer": "Las acciones sugeridas son únicamente orientación operativa y no constituyen asesoramiento legal, fiscal, de inversión ni sobre valores.",
+    "priority": {
+      "critical": "Crítica",
+      "high": "Alta",
+      "medium": "Media",
+      "low": "Baja"
+    },
+    "status": {
+      "open": "Abierta",
+      "snoozed": "Pospuesta",
+      "dismissed": "Descartada",
+      "completed": "Completada",
+      "overdue": "Vencida",
+      "escalated": "Escalada",
+      "blocked": "Bloqueada"
+    }
+  },
   "lang": {
     "en": "EN",
     "es": "ES",

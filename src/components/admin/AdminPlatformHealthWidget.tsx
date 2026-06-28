@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 type Severity = "ok" | "warning" | "critical";
@@ -30,6 +31,7 @@ const COUNT_CLASS: Record<Severity, string> = {
 };
 
 export async function AdminPlatformHealthWidget() {
+  const t = await getTranslations("admin.platformHealth");
   const admin = createServiceRoleClient();
 
   const [
@@ -66,32 +68,32 @@ export async function AdminPlatformHealthWidget() {
 
   const items: HealthItem[] = [
     {
-      label: "Companies pending review",
+      label: t("companiesPendingReview"),
       count: pendingReviews,
       href: "/admin/companies?filter=pending",
       severity: getSeverity(pendingReviews, 1, 10),
-      emptyLabel: "All reviewed",
+      emptyLabel: t("allReviewed"),
     },
     {
-      label: "Intro requests pending",
+      label: t("introRequestsPending"),
       count: pendingIntros,
       href: "/admin/intro-requests?filter=pending",
       severity: getSeverity(pendingIntros, 1, 15),
-      emptyLabel: "None pending",
+      emptyLabel: t("nonePending"),
     },
     {
-      label: "Critical compliance",
+      label: t("criticalCompliance"),
       count: criticalCompliance,
       href: "/admin/companies",
       severity: getSeverity(criticalCompliance, 1, 5),
-      emptyLabel: "No critical events",
+      emptyLabel: t("noCriticalEvents"),
     },
     {
-      label: "Investor approvals",
+      label: t("investorApprovals"),
       count: pendingApprovals,
       href: "/admin/investors",
       severity: getSeverity(pendingApprovals, 1, 25),
-      emptyLabel: "All reviewed",
+      emptyLabel: t("allReviewed"),
     },
   ];
 
@@ -103,20 +105,20 @@ export async function AdminPlatformHealthWidget() {
     <div className="mb-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
-        <h2 className="text-sm font-semibold text-slate-900">Platform health</h2>
+        <h2 className="text-sm font-semibold text-slate-900">{t("title")}</h2>
         {criticalCount > 0 && (
           <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
-            {criticalCount} critical
+            {t("critical", { count: criticalCount })}
           </span>
         )}
         {warningCount > 0 && criticalCount === 0 && (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
-            {warningCount} needs attention
+            {t("needsAttention", { count: warningCount })}
           </span>
         )}
         {allClear && (
           <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-            All clear
+            {t("allClear")}
           </span>
         )}
       </div>

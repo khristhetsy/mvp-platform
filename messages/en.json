@@ -71,6 +71,68 @@
     "report": "Report",
     "none": "None"
   },
+  "admin": {
+    "dashboard": {
+      "eyebrow": "iCapOS admin",
+      "title": "Dashboard"
+    },
+    "platformHealth": {
+      "title": "Platform health",
+      "critical": "{count, plural, one {# critical} other {# critical}}",
+      "needsAttention": "{count, plural, one {# needs attention} other {# need attention}}",
+      "allClear": "All clear",
+      "companiesPendingReview": "Companies pending review",
+      "introRequestsPending": "Intro requests pending",
+      "criticalCompliance": "Critical compliance",
+      "investorApprovals": "Investor approvals",
+      "allReviewed": "All reviewed",
+      "nonePending": "None pending",
+      "noCriticalEvents": "No critical events"
+    }
+  },
+  "actions": {
+    "title": "What to do next",
+    "titleAdmin": "Operational priorities",
+    "titleInvestor": "What matters now",
+    "subtitle": "Prioritized workflow actions with lifecycle tracking",
+    "viewAll": "View all actions",
+    "tabAll": "All",
+    "tabCritical": "Critical",
+    "tabOverdue": "Overdue",
+    "tabEscalated": "Escalated",
+    "loading": "Loading suggested actions…",
+    "caughtUp": "You are caught up on prioritized items. Check back as your workflow state changes.",
+    "noneInTab": "No actions in this view right now.",
+    "suggestedDue": "Suggested due: {date}",
+    "blockers": "Blockers: {items}",
+    "open": "Open",
+    "complete": "Complete",
+    "dismiss": "Dismiss",
+    "snooze": "Snooze 24h",
+    "escalate": "Escalate",
+    "completeAria": "Complete action: {title}",
+    "dismissAria": "Dismiss action: {title}",
+    "snoozeAria": "Snooze action for 24 hours: {title}",
+    "escalateAria": "Escalate action: {title}",
+    "unableLoad": "Unable to load actions.",
+    "unableUpdate": "Unable to update action.",
+    "disclaimer": "Suggested actions are operational guidance only and do not constitute legal, tax, investment, or securities advice.",
+    "priority": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "status": {
+      "open": "Open",
+      "snoozed": "Snoozed",
+      "dismissed": "Dismissed",
+      "completed": "Completed",
+      "overdue": "Overdue",
+      "escalated": "Escalated",
+      "blocked": "Blocked"
+    }
+  },
   "lang": {
     "en": "EN",
     "es": "ES",

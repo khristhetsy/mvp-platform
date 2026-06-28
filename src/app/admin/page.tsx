@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { AdminDashboardShell } from "@/components/AdminDashboardShell";
 import { getAdminDashboardMetrics, listAdminCompanies, mapAdminCompaniesToCardData } from "@/lib/data/admin";
@@ -26,6 +27,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("admin.dashboard");
   const supabase = createServiceRoleClient();
   const loadedAt = new Date().toISOString();
   const adminRole = profile.role === "analyst" ? "analyst" : "admin";
@@ -119,8 +121,8 @@ export default async function AdminDashboardPage() {
       <div className="mb-6 rounded-xl px-5 py-4" style={{ background: "#0c2340" }}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium" style={{ color: "#AFA9EC" }}>iCapOS admin</p>
-            <h1 className="text-lg font-medium text-white">Dashboard</h1>
+            <p className="text-xs font-medium" style={{ color: "#AFA9EC" }}>{t("eyebrow")}</p>
+            <h1 className="text-lg font-medium text-white">{t("title")}</h1>
           </div>
           <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: "#534AB7", color: "#EEEDFE" }}>
             {profile.role}
