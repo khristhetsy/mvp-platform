@@ -25,6 +25,21 @@ function fmtDate(v: string | null): string {
   return new Date(v).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+/** Turn an API error payload into a readable message. The API may return a string
+ *  or a Zod fieldErrors object ({ field: ["msg", ...] }) — flatten the latter so
+ *  validation failures aren't hidden behind a generic fallback. */
+function formatApiError(error: unknown, fallback: string): string {
+  if (typeof error === "string" && error.trim()) return error;
+  if (error && typeof error === "object") {
+    const parts = Object.entries(error as Record<string, unknown>).map(([field, msgs]) => {
+      const text = Array.isArray(msgs) ? msgs.join(", ") : String(msgs);
+      return `${field}: ${text}`;
+    });
+    if (parts.length) return `${fallback} (${parts.join("; ")})`;
+  }
+  return fallback;
+}
+
 export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] }) {
   const [events, setEvents] = useState<EventRecord[]>(initialEvents);
   const [showForm, setShowForm] = useState(false);
@@ -63,7 +78,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not create event.");
+      if (!res.ok) throw new Error(formatApiError(json.error, "Could not create event."));
       setEvents((prev) => [json.event as EventRecord, ...prev]);
       setTitle("");
       setSummary("");
@@ -88,7 +103,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
         body: JSON.stringify({ action }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not update status.");
+      if (!res.ok) throw new Error(formatApiError(json.error, "Could not update status."));
       setEvents((prev) => prev.map((ev) => (ev.id === id ? (json.event as EventRecord) : ev)));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update status.");

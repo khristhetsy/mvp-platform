@@ -1,7 +1,10 @@
 import { z } from "zod";
-import { isValidSectorSlug } from "./sectors";
+import { EVENT_SECTORS, isValidSectorSlug } from "./sectors";
 
 const sectorSlug = z.string().refine(isValidSectorSlug, { message: "Unknown sector" });
+
+/** An event may span every available sector track. */
+const MAX_SECTOR_TRACKS = EVENT_SECTORS.length;
 
 export const sectorTrackInput = z.object({
   sectorSlug,
@@ -15,7 +18,7 @@ export const createEventSchema = z.object({
   visibility: z.enum(["public", "members"]).default("public"),
   startsAt: z.string().datetime().nullable().optional(),
   endsAt: z.string().datetime().nullable().optional(),
-  sectors: z.array(sectorTrackInput).max(8).default([]),
+  sectors: z.array(sectorTrackInput).max(MAX_SECTOR_TRACKS).default([]),
 });
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 
@@ -26,7 +29,7 @@ export const updateEventSchema = z.object({
   visibility: z.enum(["public", "members"]).optional(),
   startsAt: z.string().datetime().nullable().optional(),
   endsAt: z.string().datetime().nullable().optional(),
-  sectors: z.array(sectorTrackInput).max(8).optional(),
+  sectors: z.array(sectorTrackInput).max(MAX_SECTOR_TRACKS).optional(),
 });
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 
