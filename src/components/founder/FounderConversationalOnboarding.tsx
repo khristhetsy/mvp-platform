@@ -329,11 +329,14 @@ export function FounderConversationalOnboarding({
             >
               🎉
             </div>
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
-              You&apos;re all set, {firstName}.
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+              ✓ Stage 1 complete
+            </span>
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
+              Nice work, {firstName} — you&apos;re in Stage 2.
             </h2>
-            <p className="mt-2 text-sm text-slate-500 max-w-xs">
-              Here&apos;s where you stand. Complete these three actions to attract your first investor matches.
+            <p className="mt-2 text-sm text-slate-500 max-w-sm">
+              Onboarding&apos;s done and your workspace is unlocked. Here&apos;s what to do next to get investor-ready.
             </p>
 
             <div className="mt-6">
@@ -342,13 +345,13 @@ export function FounderConversationalOnboarding({
                 Capital Readiness Score
               </p>
               <p className="mt-1 text-xs text-slate-400 max-w-[220px]">
-                Based on your profile so far. Upload documents and complete readiness checklist to increase it.
+                Your Stage 2 progress. Add your documents and complete the readiness checklist to raise it.
               </p>
             </div>
           </div>
 
           <div className="mt-8">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Your first 3 actions</p>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Your next steps in Stage 2</p>
             <div className="space-y-3">
               {actionPlan.map((action, i) => (
                 <div

@@ -26,9 +26,9 @@ export function FounderOnboardingProgressCard({
           </svg>
         </div>
         <div>
-          <p className="text-sm font-semibold text-emerald-900">Onboarding complete</p>
+          <p className="text-sm font-semibold text-emerald-900">Stage 1 complete — you&apos;re now in Qualify</p>
           <p className="text-xs leading-5 text-emerald-700">
-            Company profile, funding information, and pitch deck are all set. Your profile is ready for investors.
+            Your company profile and funding are in. Next: build your data room and readiness from your dashboard to reach investors.
           </p>
         </div>
       </section>
