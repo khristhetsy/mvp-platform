@@ -50,14 +50,18 @@ export function computePillars(input: PartnerScoreInputs): PartnerPillars {
       (0.6 * 100 * replyRate + 0.4 * responseTimeScore(input.medianResponseHours)),
   );
 
-  // Credibility (20%) — accreditation + profile completeness + pledge consistency.
-  // No amount-pledges yet → consistency is neutral (1), not a penalty.
+  // Credibility (20%) — verification + profile completeness + pledge consistency.
+  // Verified KYC (Stage 2) is the dominant signal: it earns the full
+  // accreditation weight, a self-attested checkbox earns only a token amount,
+  // and unverified earns nothing. This makes completing Stage 2 the single
+  // biggest credibility lever an investor controls.
   const consistency =
     input.amountPledgesMade > 0 ? rate(input.pledgesWithinRange, input.amountPledgesMade) : 1;
+  const accreditationScore = input.kycVerified ? 1 : input.accredited ? 0.15 : 0;
   const credibility = clamp(
-    40 * (input.accredited ? 1 : 0) +
+    50 * accreditationScore +
       30 * clamp(input.profileCompleteness, 0, 1) +
-      30 * consistency,
+      20 * consistency,
   );
 
   // Portfolio readiness (10%) — descriptor; null → neutral so it neither helps nor

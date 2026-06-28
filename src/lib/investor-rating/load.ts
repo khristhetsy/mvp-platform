@@ -120,6 +120,7 @@ export async function loadPartnerScore(
   // 4. Investor profile — credibility inputs.
   type ProfileRow = {
     accredited_status: boolean | null;
+    kyc_status: string | null;
     check_size_min: number | null;
     check_size_max: number | null;
     investment_thesis: string | null;
@@ -130,7 +131,7 @@ export async function loadPartnerScore(
   const profileRes = await supabase
     .from("investor_profiles")
     .select(
-      "accredited_status, check_size_min, check_size_max, investment_thesis, preferred_sectors, preferred_stages, created_at",
+      "accredited_status, kyc_status, check_size_min, check_size_max, investment_thesis, preferred_sectors, preferred_stages, created_at",
     )
     .eq("profile_id", investorId)
     .maybeSingle();
@@ -205,6 +206,7 @@ export async function loadPartnerScore(
     medianResponseHours: median(responseHours),
     daysSinceLastActive,
     accredited: Boolean(profile?.accredited_status),
+    kycVerified: profile?.kyc_status === "verified",
     profileCompleteness,
     // Amount-pledges (for check-size consistency) come from marketplace interests.
     amountPledgesMade: pledges.length,
