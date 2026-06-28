@@ -61,8 +61,8 @@ describe("requireApiProfile", () => {
     expect("error" in result).toBe(true);
     if ("error" in result) {
       expect(result.error).toBeInstanceOf(NextResponse);
-      expect(result.error.status).toBe(401);
-      const body = await readJsonResponse(result.error);
+      expect(result.error!.status).toBe(401);
+      const body = await readJsonResponse(result.error!);
       expect(body.error).toBe("Authentication required.");
     }
   });
@@ -78,8 +78,8 @@ describe("requireApiProfile", () => {
 
     expect("error" in result).toBe(true);
     if ("error" in result) {
-      expect(result.error.status).toBe(403);
-      const body = await readJsonResponse(result.error);
+      expect(result.error!.status).toBe(403);
+      const body = await readJsonResponse(result.error!);
       expect(body.error).toBe("Profile not found.");
     }
   });
@@ -98,8 +98,8 @@ describe("requireApiProfile", () => {
 
     expect("error" in result).toBe(true);
     if ("error" in result) {
-      expect(result.error.status).toBe(403);
-      const body = await readJsonResponse(result.error);
+      expect(result.error!.status).toBe(403);
+      const body = await readJsonResponse(result.error!);
       expect(body.error).toBe("Insufficient permissions.");
     }
   });

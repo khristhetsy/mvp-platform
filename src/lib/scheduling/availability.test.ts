@@ -109,7 +109,7 @@ describe("availableSlots (end-to-end)", () => {
 describe("configFromSettings", () => {
   it("carries through settings and resolves the offset", () => {
     const cfg = configFromSettings(
-      { timezone: "UTC", slotMinutes: 45, bufferMinutes: 10, weeklyRules: [] },
+      { timezone: "UTC", slotMinutes: 45, bufferMinutes: 10, weeklyRules: [], meetingTitle: "", questions: [] },
       new Date("2026-06-22T12:00:00Z"),
     );
     expect(cfg.slotMinutes).toBe(45);

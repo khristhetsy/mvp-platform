@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   const auth = await requireApiProfile(["admin", "analyst"]);
 
   if ("error" in auth) {
-    return auth.error;
+    return auth.error ?? NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
 
   const body = await request.json().catch(() => null);

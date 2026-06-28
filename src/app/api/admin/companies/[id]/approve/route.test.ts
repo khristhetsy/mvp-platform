@@ -80,10 +80,10 @@ describe("POST /api/admin/companies/[id]/approve", () => {
     });
     mockApplyCompanyReview.mockResolvedValue({
       data: {
-        company: { id: companyId, slug: "acme-corp", review_status: "approved" },
-        review: { id: "review-1" },
+        company: { id: companyId, slug: "acme-corp", review_status: "approved" } as never,
+        review: { id: "review-1" } as never,
       },
-      error: null,
+      error: undefined,
     });
 
     const response = await POST(new Request(`http://localhost/api/admin/companies/${companyId}/approve`, { method: "POST" }), {
