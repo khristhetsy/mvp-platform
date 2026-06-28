@@ -139,6 +139,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         requiredPermission: "view_analytics",
         children: [
           { href: "/admin/analytics", label: "Analytics" },
+          { href: "/admin/funnels",   label: "Activation funnels" },
           { href: "/admin/reports",   label: "Reports"   },
           { href: "/admin/insights",  label: "Insights"  },
         ],
