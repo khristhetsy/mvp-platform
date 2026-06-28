@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { ensureCompanySlug } from "@/lib/data/marketplace";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { computeDataRoomState } from "@/lib/data-room/completeness";
+import { track } from "@/lib/analytics/posthog";
 import type { Database } from "@/lib/supabase/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
+    track("company_published", { founderId: auth.profile.id, companyId: company.id });
     return NextResponse.json({ slug, is_published: true });
   }
 

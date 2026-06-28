@@ -8,7 +8,10 @@ import {
   buildStoragePath,
   createDocumentRecord,
   getStorageBucket,
+  listCompanyDocuments,
 } from "@/lib/data/documents";
+import { computeDataRoomState } from "@/lib/data-room/completeness";
+import { track } from "@/lib/analytics/posthog";
 import {
   ensureFounderCompanyForUser,
   userHasCompanyAccess,
@@ -466,6 +469,30 @@ export async function POST(request: Request) {
         bucket,
       },
     });
+  }
+
+  // Activation analytics for the founder funnel (best-effort; never blocks upload).
+  try {
+    const isCore = ["PITCH_DECK", "FINANCIAL_STATEMENTS", "FINANCIALS", "CAP_TABLE"].includes(normalizedDocumentType);
+    track("document_uploaded", {
+      founderId: auth.profile.id,
+      companyId,
+      documentType: normalizedDocumentType,
+      isCore,
+      operation,
+    });
+    if (isCore) {
+      const { data: allDocs } = await listCompanyDocuments(admin, companyId);
+      const state = computeDataRoomState(allDocs ?? []);
+      if (state.coreComplete) {
+        track("data_room_core_complete", { founderId: auth.profile.id, companyId, percent: state.percent });
+      }
+      if (state.fullComplete) {
+        track("data_room_complete", { founderId: auth.profile.id, companyId });
+      }
+    }
+  } catch {
+    // analytics is best-effort
   }
 
   return NextResponse.json({

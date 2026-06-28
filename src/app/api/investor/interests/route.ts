@@ -8,6 +8,7 @@ import { notifyFounderInvestorInterest } from "@/lib/notifications/investor-even
 import { emailFounderInvestorInterest } from "@/lib/email/deal-room-emails";
 import { getCompanyFounderId } from "@/lib/notifications/notifications";
 import { investorInterestSchema } from "@/lib/validation";
+import { track } from "@/lib/analytics/posthog";
 
 async function parseBody(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";
@@ -115,6 +116,8 @@ export async function POST(request: Request) {
       }
     })();
   }
+
+  track("investor_interest_expressed", { userId: auth.profile.id, companyId: data.company_id, status: data.status });
 
   return NextResponse.json({ interest: data });
 }

@@ -1,3 +1,4 @@
+import { track } from "@/lib/analytics/posthog";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { InvestorApprovalStatus, InvestorProfileRecord } from "@/lib/investor/types";
 
@@ -148,6 +149,13 @@ export async function applyInvestorReview(input: {
 
   if (error || !data) {
     throw new Error(error?.message ?? "Unable to update investor profile review.");
+  }
+
+  if (input.action === "approve") {
+    track("investor_approved", {
+      userId: (data as { profile_id?: string }).profile_id ?? input.investorProfileId,
+      investorProfileId: input.investorProfileId,
+    });
   }
 
   return data as InvestorProfileRecord;

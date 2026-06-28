@@ -5,6 +5,7 @@ import { ensureInvestorProfileForUser, isInvestorProfileComplete, parseCommaList
 import { notifyStaff } from "@/lib/notifications/notifications";
 import type { InvestorApprovalStatus } from "@/lib/investor/types";
 import { investorOnboardingSchema } from "@/lib/validation";
+import { track } from "@/lib/analytics/posthog";
 
 export async function GET() {
   const auth = await requireApiProfile(["investor"]);
@@ -97,6 +98,7 @@ export async function PATCH(request: Request) {
   });
 
   if (shouldSubmit) {
+    track("investor_profile_submitted", { userId: auth.profile.id, investorProfileId: data.id });
     void notifyStaff({
       actorUserId: auth.profile.id,
       type: "investor_onboarding_submitted",
