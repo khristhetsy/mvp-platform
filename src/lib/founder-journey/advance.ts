@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/supabase/types';
 import { JOURNEY_STAGES } from './types';
 import type { JourneyStage, FounderJourneyState } from './types';
-import { createNotification } from '@/lib/notifications/notifications';
+import { createNotification, notifyStaffIfNotRecent } from '@/lib/notifications/notifications';
 
 // Cast helper — the new journey columns exist in the DB after the migration but are not
 // yet reflected in the generated Database types. We use a raw untyped client reference
@@ -47,6 +47,39 @@ export async function autoAdvanceStage(
       .eq('id', profileId);
     currentStage = 'qualify';
     await notifyStageAdvance(profileId, "You've reached Qualify", "Build your fundraise readiness to unlock the investor workspace.");
+  }
+
+  // Qualify → Deploy: auto-submit for admin review once the founder meets every
+  // requirement (readiness ≥ 75 + the 3 core docs). The admin still approves —
+  // this just removes the manual "request review" step so qualified founders are
+  // never left waiting on a button. Idempotent: skips if already pending/approved.
+  if (
+    currentStage === 'qualify' &&
+    state.conditions.readinessQualified &&
+    state.conditions.requiredDocsUploaded &&
+    state.approvalStatus !== 'pending' &&
+    state.approvalStatus !== 'approved'
+  ) {
+    await rawClient(supabase)
+      .from('profiles')
+      .update({
+        stage_approval_status: 'pending',
+        stage_approval_requested_at: new Date().toISOString(),
+      })
+      .eq('id', profileId);
+    await notifyStageAdvance(
+      profileId,
+      "You're submitted for review",
+      "You've met every Qualify requirement. Our team is reviewing your readiness to unlock the Deploy stage.",
+    );
+    await notifyStaffIfNotRecent({
+      type: 'founder_stage_review',
+      title: 'Founder ready for Deploy review',
+      message: 'A founder met all Qualify requirements and was auto-submitted for stage approval.',
+      entityType: 'profile',
+      entityId: profileId,
+      withinHours: 24,
+    }).catch(() => { /* non-critical */ });
   }
 
   // Deploy → Optimize: when deal room exists OR investor has expressed interest

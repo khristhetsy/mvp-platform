@@ -4,6 +4,8 @@ import { JOURNEY_STAGES } from './types';
 import type { JourneyStage, StageApprovalStatus, StageConditions, FounderJourneyState } from './types';
 import { allQualifyDocsUploaded } from './documents';
 import { computeReadinessScore } from '@/lib/data/founder-readiness';
+import { computeFounderOnboardingProgress } from '@/lib/onboarding/progress';
+import type { Company, DocumentRecord } from '@/lib/supabase/types';
 
 export async function evaluateFounderJourney(
   supabase: SupabaseClient<Database>,
@@ -40,13 +42,18 @@ export async function evaluateFounderJourney(
 
   const approvalFeedback = profileData?.stage_feedback ?? null;
 
-  // 2. Query companies for onboarding_progress_percent
-  type CompanyRow = { id: string; onboarding_progress_percent: number | null };
+  // 2. Query companies for onboarding state. Select the full set of columns the
+  //    onboarding calculator reads so we can derive completeness LIVE (the stored
+  //    onboarding_progress_percent column only refreshes on the onboarding route
+  //    and can go stale — leaving founders stuck below Qualify).
+  type CompanyRow = { id: string; onboarding_progress_percent: number | null } & Record<string, unknown>;
   let companyData: CompanyRow | null = null;
   {
     const result = await supabase
       .from('companies')
-      .select('id, onboarding_progress_percent')
+      .select(
+        'id, onboarding_progress_percent, company_name, industry, country, business_description, founder_goals, funding_amount, revenue_stage, use_of_funds, onboarding_step_state, onboarding_completed_at, review_status, status',
+      )
       .eq('founder_id', profileId)
       .maybeSingle();
     const { data } = result as { data: CompanyRow | null };
@@ -55,7 +62,6 @@ export async function evaluateFounderJourney(
 
   const companyId = companyData?.id ?? null;
   const onboardingPercent = companyData?.onboarding_progress_percent ?? 0;
-  const onboardingComplete = onboardingPercent >= 100;
 
   // 3. Query diligence_reports for latest readiness_score
   type DiligenceRow = { readiness_score: number | null };
@@ -86,6 +92,19 @@ export async function evaluateFounderJourney(
 
   const uploadedTypes = documentRows.map((d) => d.document_type);
   const requiredDocsUploaded = allQualifyDocsUploaded(uploadedTypes);
+
+  // Onboarding completeness derived LIVE from the founder-actionable steps
+  // (company profile, funding info, pitch deck) — never from the admin-only
+  // steps. The stored column is kept as a permissive fallback so nothing
+  // regresses for founders whose column already reads 100.
+  const liveOnboardingComplete = companyData
+    ? computeFounderOnboardingProgress({
+        company: companyData as unknown as Company,
+        documents: documentRows as unknown as DocumentRecord[],
+        diligenceReportExists: Boolean(diligenceData),
+      }).isComplete
+    : false;
+  const onboardingComplete = liveOnboardingComplete || onboardingPercent >= 100;
 
   // Readiness score: prefer the admin-generated diligence score, but fall back
   // to the same self-service computed score the readiness page shows. The AI
