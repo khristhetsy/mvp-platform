@@ -48,3 +48,6 @@ next-env.d.ts
 # repo hygiene — stray nested clone (accidental embedded git repo) and loose patches
 /mvp-platform/
 *.patch
+
+# Local agent cache
+.claude/
