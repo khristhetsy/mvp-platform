@@ -32,7 +32,7 @@ export default async function InvestorCoursePage({
           <span>By {course.instructor}</span>
         </div>
         <p className="mt-4 rounded-lg bg-white/10 px-4 py-2.5 text-xs text-white/80 max-w-xl">
-          This course is part of the CapitalOS founder eLearning program. Content is for founder
+          This course is part of the iCapOS founder eLearning program. Content is for founder
           training and investor preparation only — not legal, tax, securities, or investment advice.
         </p>
       </div>

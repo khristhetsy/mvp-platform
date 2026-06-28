@@ -29,7 +29,7 @@ export default async function InvestorPartnerScorePage() {
         <PageHeader
           eyebrow="Your standing"
           title="Partner Score"
-          description="How you show up as a partner to founders, based on your activity on CapitalOS — and the specific ways to strengthen it."
+          description="How you show up as a partner to founders, based on your activity on iCapOS — and the specific ways to strengthen it."
         />
         <div className="max-w-2xl">
           <InvestorPartnerScorePanel score={score} coaching={coaching} />

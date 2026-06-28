@@ -69,7 +69,7 @@ export function renderCapTablePdf(companyName: string, cap: CapTable): Promise<B
 
       doc.moveDown(1.2);
       doc.font("Helvetica-Oblique").fontSize(8).fillColor(MUTED).text(
-        "Prepared by the founder on CapitalOS. Illustrative cap table based on founder-provided figures. Not a valuation, an offer of securities, a forecast of returns, or investment advice.",
+        "Prepared by the founder on iCapOS. Illustrative cap table based on founder-provided figures. Not a valuation, an offer of securities, a forecast of returns, or investment advice.",
         { lineGap: 1 },
       );
 

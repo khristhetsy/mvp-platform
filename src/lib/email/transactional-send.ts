@@ -22,7 +22,7 @@ export async function sendTransactionalEmail(input: {
   const from =
     process.env.TRANSACTIONAL_EMAIL_FROM?.trim() ??
     process.env.EMAIL_FROM?.trim() ??
-    "CapitalOS <no-reply@mail.capitalos.io>";
+    "iCapOS <no-reply@mail.capitalos.io>";
 
   if (apiKey && input.to.includes("@")) {
     const response = await fetch(RESEND_API_URL, {

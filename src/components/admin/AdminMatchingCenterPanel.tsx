@@ -83,7 +83,7 @@ export function AdminMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: Admi
         <MetricCard
           label="Approved investors"
           value={String(snapshot.stats.approvedInvestorCount)}
-          detail="Eligible for CapitalOS matching"
+          detail="Eligible for iCapOS matching"
           accent="slate"
           href="/admin/investors"
         />

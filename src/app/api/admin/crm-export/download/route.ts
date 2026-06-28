@@ -44,7 +44,7 @@ export async function GET(request: Request) {
       headers: {
         "Content-Type": "application/json; charset=utf-8",
         "Content-Disposition": `attachment; filename="${filename}"`,
-        "X-CapitalOS-CRM-Sync": "disabled",
+        "X-iCapOS-CRM-Sync": "disabled",
       },
     });
   }
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${filename}"`,
-      "X-CapitalOS-CRM-Sync": "disabled",
+      "X-iCapOS-CRM-Sync": "disabled",
     },
   });
 }

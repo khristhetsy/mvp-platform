@@ -490,7 +490,7 @@ export function FounderInvestorHubPanels({
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-950">Platform matched investors</h2>
-        <p className="mt-1 text-sm text-slate-600">CapitalOS registered investors — separate from your private CRM.</p>
+        <p className="mt-1 text-sm text-slate-600">iCapOS registered investors — separate from your private CRM.</p>
         <div className="mt-4 divide-y divide-slate-100">
           {platformMatches.length === 0 ? (
             <p className="py-3 text-sm text-slate-500">No platform matches available yet.</p>

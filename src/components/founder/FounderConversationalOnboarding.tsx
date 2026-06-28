@@ -533,7 +533,7 @@ export function FounderConversationalOnboarding({
                 ))}
               </div>
               <ContextCard>
-                Most founders on CapitalOS are raising at Pre-revenue or Early revenue stage. Knowing your stage helps us surface stage-appropriate investors — ones who already back companies like yours.
+                Most founders on iCapOS are raising at Pre-revenue or Early revenue stage. Knowing your stage helps us surface stage-appropriate investors — ones who already back companies like yours.
               </ContextCard>
             </>
           ) : step === 4 ? (

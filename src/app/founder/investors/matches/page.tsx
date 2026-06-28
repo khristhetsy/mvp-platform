@@ -32,7 +32,7 @@ export default async function FounderInvestorMatchesPage() {
           <PageHeader
             eyebrow="Investors"
             title="Platform matches"
-            description="CapitalOS registered investors matched to your company — separate from your private CRM."
+            description="iCapOS registered investors matched to your company — separate from your private CRM."
           />
 
           {!company ? (

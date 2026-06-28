@@ -232,7 +232,7 @@ function MetricDrawerContent({
         <div className="mb-4 flex items-start justify-between">
           <div>
             <p className="text-base font-semibold text-slate-900">Approved investors</p>
-            <p className="mt-0.5 text-xs text-slate-500">The CapitalOS active matching pool</p>
+            <p className="mt-0.5 text-xs text-slate-500">The iCapOS active matching pool</p>
           </div>
           {closeBtn}
         </div>
@@ -264,7 +264,7 @@ function MetricDrawerContent({
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
           <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
           <p className="text-xs leading-relaxed text-slate-600">
-            {`The CapitalOS pool has ${snapshot.approvedInvestorCount} approved investor${snapshot.approvedInvestorCount === 1 ? "" : "s"} — these are verified, active investors with complete profiles. ${high > 0 ? `${high} of them score 70%+ against your company, giving you a concrete shortlist for outreach.` : "Currently none score 70%+ against your profile — complete your company profile to improve matching accuracy."}`}
+            {`The iCapOS pool has ${snapshot.approvedInvestorCount} approved investor${snapshot.approvedInvestorCount === 1 ? "" : "s"} — these are verified, active investors with complete profiles. ${high > 0 ? `${high} of them score 70%+ against your company, giving you a concrete shortlist for outreach.` : "Currently none score 70%+ against your profile — complete your company profile to improve matching accuracy."}`}
           </p>
         </div>
 
@@ -884,7 +884,7 @@ export function FounderMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: Fo
         <MatchMetricBtn
           label="Approved investors"
           value={String(snapshot.approvedInvestorCount)}
-          detail="In the CapitalOS matching pool"
+          detail="In the iCapOS matching pool"
           accent="violet"
           onClick={() => setOpenMetric("approvedInvestors")}
         />
@@ -973,7 +973,7 @@ export function FounderMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: Fo
       {/* Investor match cards */}
       <PageSection
         title="Ranked investor matches"
-        subtitle={`Sorted by CapitalOS match score for ${snapshot.companyName}`}
+        subtitle={`Sorted by iCapOS match score for ${snapshot.companyName}`}
       >
         {filteredMatches.length === 0 ? (
           <p className="text-sm text-slate-600">

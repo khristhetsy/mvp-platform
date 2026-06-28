@@ -21,7 +21,7 @@ export function AdminCommandHeader({
 
   return (
     <PageHeader
-      eyebrow="CapitalOS admin"
+      eyebrow="iCapOS admin"
       title="Operations Command Center"
       description="Institutional oversight for company reviews, investor approvals, compliance, SPV operations, and platform health."
       metadata={

@@ -88,7 +88,7 @@ export function RegCfGeneratorClient() {
       <div className="flex items-start gap-3 rounded-lg border border-[#FAC775] bg-[#FAEEDA] px-4 py-3">
         <Info className="h-5 w-5 shrink-0 text-[#854F0B]" aria-hidden />
         <p className="text-sm leading-6 text-[#633806]">
-          <strong>Drafts only — not legal or investment advice.</strong> You own these documents and are responsible for them; have counsel review before use. CapitalOS does not post, offer, solicit, host, or transact any securities, and is not the issuer or intermediary.
+          <strong>Drafts only — not legal or investment advice.</strong> You own these documents and are responsible for them; have counsel review before use. iCapOS does not post, offer, solicit, host, or transact any securities, and is not the issuer or intermediary.
         </p>
       </div>
 

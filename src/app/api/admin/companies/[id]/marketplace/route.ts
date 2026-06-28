@@ -91,7 +91,7 @@ export async function POST(
       actorUserId: auth.profile.id,
       type: "company_published",
       title: "Company published to marketplace",
-      message: "Your company is now published and visible on the CapitalOS marketplace.",
+      message: "Your company is now published and visible on the iCapOS marketplace.",
       entityType: "company",
       entityId: id,
     });

@@ -81,7 +81,7 @@ export async function loadFounderCourseCatalog(profile: Profile) {
       description: p.description,
       longDescription:
         "Educational content only — not legal, tax, securities, or investment advice. No guarantee of funding outcomes.",
-      instructor: "CapitalOS Faculty",
+      instructor: "iCapOS Faculty",
       category: p.category ?? "Admin Learning",
       level,
       thumbnailAccent: "from-indigo-600 to-slate-900",
@@ -100,7 +100,7 @@ export async function loadFounderCourseCatalog(profile: Profile) {
     };
   });
 
-  const courses = [...coreCourses.map((c) => ({ ...c, category: `CapitalOS Core · ${c.category}` })), ...adminCourses];
+  const courses = [...coreCourses.map((c) => ({ ...c, category: `iCapOS Core · ${c.category}` })), ...adminCourses];
   const overallPercent =
     courses.length > 0
       ? Math.round(courses.reduce((sum, c) => sum + c.percentComplete, 0) / courses.length)

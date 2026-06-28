@@ -99,7 +99,7 @@ export const EXPANDED_MODULE_CONTENT: Record<string, LearningModuleContent> = {
             "They are never reviewed",
             "Only required after IPO",
           ]),
-          q("gq3", "Platform readiness progress means:", "Improved investor preparation on CapitalOS — not legal certification", [
+          q("gq3", "Platform readiness progress means:", "Improved investor preparation on iCapOS — not legal certification", [
             "Guaranteed funding approval",
             "SEC registration complete",
           ]),

@@ -16,7 +16,7 @@ export function buildDemoLayout(pageSlug: PageBuilderSlug): PageLayoutDocument {
   if (pageSlug === "founders") {
     hero.props.headline = "Become capital-ready before entering the market.";
     hero.props.subheadline =
-      "CapitalOS helps founders organize diligence, validate traction, and prepare for investor review.";
+      "iCapOS helps founders organize diligence, validate traction, and prepare for investor review.";
     hero.props.primaryCtaLabel = "Submit your company";
     hero.props.secondaryCtaLabel = "";
     blocks.push(testimonial, faq);
@@ -39,7 +39,7 @@ export function buildDemoLayout(pageSlug: PageBuilderSlug): PageLayoutDocument {
     hero.props.secondaryCtaLabel = "";
     blocks.unshift(compliance);
     compliance.props.body =
-      "Opportunities shown here are for review only. CapitalOS does not guarantee funding, returns, or investment outcomes.";
+      "Opportunities shown here are for review only. iCapOS does not guarantee funding, returns, or investment outcomes.";
   }
 
   if (pageSlug === "login") {

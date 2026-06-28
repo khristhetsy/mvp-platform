@@ -124,7 +124,7 @@ export async function buildDueDiligencePdf(
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    doc.fontSize(20).fillColor("#312e81").text("CapitalOS", { align: "left" });
+    doc.fontSize(20).fillColor("#312e81").text("iCapOS", { align: "left" });
     doc.fontSize(14).fillColor("#0f172a").text("Due Diligence Report", { align: "left" });
     doc.moveDown(0.5);
     doc.fontSize(9).fillColor("#475569");
@@ -260,7 +260,7 @@ export async function buildSpvReadinessPdf(
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    doc.fontSize(20).fillColor("#312e81").text("CapitalOS", { align: "left" });
+    doc.fontSize(20).fillColor("#312e81").text("iCapOS", { align: "left" });
     doc.fontSize(14).fillColor("#0f172a").text("SPV Operational Readiness Report", { align: "left" });
     doc.moveDown(0.5);
     doc.fontSize(9).fillColor("#475569");

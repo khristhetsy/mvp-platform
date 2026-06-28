@@ -337,7 +337,7 @@ export async function sendIntegrationTest(
       })
     : buildSanitizedPayload({
         event_type: "workflow_action_created",
-        title: "CapitalOS integration test",
+        title: "iCapOS integration test",
         severity: "info",
         metadata: { test: true },
       });

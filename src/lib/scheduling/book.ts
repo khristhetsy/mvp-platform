@@ -8,7 +8,7 @@ import type { CalendarEventRecord, TimeInterval } from "./types";
 
 export interface BookSlotInput {
   hostId: string;
-  /** id is null for guest bookers (no CapitalOS account). */
+  /** id is null for guest bookers (no iCapOS account). */
   booker: { id: string | null; email: string | null; name: string | null; phone?: string | null };
   startTime: string;
   endTime: string;
@@ -97,7 +97,7 @@ export async function bookSlot(input: BookSlotInput): Promise<BookSlotResult> {
     addMeet: true,
   });
 
-  // Mirror onto the booker's own calendar (only if they have a CapitalOS account) —
+  // Mirror onto the booker's own calendar (only if they have a iCapOS account) —
   // local only, since the host's Google event already invites them.
   if (input.booker.id) {
     await insertLocalEvent(admin, input.booker.id, {

@@ -19,7 +19,7 @@ function buildSubject(
   const company = ctx.companyName ?? "your company";
   const subjects: Record<EmailDraftRequest["templateType"], string> = {
     founder_investor_intro_followup: `Following up — ${company}`,
-    founder_onboarding_reminder: `Reminder: complete your CapitalOS onboarding`,
+    founder_onboarding_reminder: `Reminder: complete your iCapOS onboarding`,
     investor_spv_requirement_reminder: `Reminder: outstanding SPV requirements`,
     admin_company_review_followup: `Follow-up: company review — ${company}`,
     admin_investor_approval_followup: `Follow-up: investor profile review`,
@@ -43,7 +43,7 @@ function buildBody(
   const bodies: Record<EmailDraftRequest["templateType"], string> = {
     founder_investor_intro_followup: `${greeting}
 
-Thank you for your interest in ${company}. I wanted to follow up on our recent introduction through CapitalOS.
+Thank you for your interest in ${company}. I wanted to follow up on our recent introduction through iCapOS.
 
 We would welcome the opportunity to share more about our progress when convenient. There is no obligation, and any next steps remain entirely at your discretion.
 
@@ -51,15 +51,15 @@ Best regards`,
 
     founder_onboarding_reminder: `${greeting}
 
-This is a friendly reminder to complete remaining onboarding steps in CapitalOS for ${company}.
+This is a friendly reminder to complete remaining onboarding steps in iCapOS for ${company}.
 
-Completing your profile and document uploads helps our team review readiness. CapitalOS does not guarantee funding or approval.
+Completing your profile and document uploads helps our team review readiness. iCapOS does not guarantee funding or approval.
 
 Best regards`,
 
     investor_spv_requirement_reminder: `${greeting}
 
-This is a reminder that ${spv} has outstanding participation requirements in CapitalOS.
+This is a reminder that ${spv} has outstanding participation requirements in iCapOS.
 
 Please sign in to your investor workspace to review and upload any pending items. Submission does not guarantee allocation or approval.
 
@@ -67,34 +67,34 @@ Best regards`,
 
     admin_company_review_followup: `${greeting}
 
-We are following up regarding the review status for ${company} on CapitalOS.
+We are following up regarding the review status for ${company} on iCapOS.
 
 Please let us know if additional information is needed. This message is operational coordination only, not legal or investment advice.
 
 Best regards,
-CapitalOS Operations`,
+iCapOS Operations`,
 
     admin_investor_approval_followup: `${greeting}
 
-We are following up on your investor profile review in CapitalOS.
+We are following up on your investor profile review in iCapOS.
 
 If additional information is required, we will note it in your workspace. Approval is not guaranteed.
 
 Best regards,
-CapitalOS Operations`,
+iCapOS Operations`,
 
     compliance_followup: `${greeting}
 
-We are following up on an open compliance item for ${company} in CapitalOS.
+We are following up on an open compliance item for ${company} in iCapOS.
 
 Please review the compliance workspace for next steps. This is not legal advice.
 
 Best regards,
-CapitalOS Compliance Operations`,
+iCapOS Compliance Operations`,
 
     meeting_followup: `${greeting}
 
-Thank you for taking the time to meet. As discussed, here is a brief recap of next steps we noted in CapitalOS.
+Thank you for taking the time to meet. As discussed, here is a brief recap of next steps we noted in iCapOS.
 
 Please reply with any corrections. No commitment to invest or participate is implied.
 
@@ -102,12 +102,12 @@ Best regards`,
 
     import_failure_notice: `${greeting}
 
-A recent data import in CapitalOS did not complete successfully. Please review the import details in your admin workspace and retry when ready.
+A recent data import in iCapOS did not complete successfully. Please review the import details in your admin workspace and retry when ready.
 
 No data was sent externally by this notice.
 
 Best regards,
-CapitalOS Operations`,
+iCapOS Operations`,
   };
 
   let body = bodies[templateType];
@@ -134,7 +134,7 @@ function resolveRecipients(
       suggested.push({ email: "(founder email — add manually)", label: "Founder contact" });
     }
     if (role === "investor") {
-      suggested.push({ email: "(operations — add manually if needed)", label: "CapitalOS operations" });
+      suggested.push({ email: "(operations — add manually if needed)", label: "iCapOS operations" });
     }
   }
 

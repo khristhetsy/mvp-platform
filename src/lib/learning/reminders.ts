@@ -11,7 +11,7 @@ import type { LearningReminderRecord, LearningReminderType } from "@/lib/learnin
 
 function appendLearningEmailFooter(body: string) {
   const appUrl = getAppUrl() ?? "http://localhost:3000";
-  return `${body.trim()}\n\n---\nCapitalOS founder learning — educational content only, not legal, tax, or investment advice.\nContinue learning: ${appUrl}/founder/learning`;
+  return `${body.trim()}\n\n---\niCapOS founder learning — educational content only, not legal, tax, or investment advice.\nContinue learning: ${appUrl}/founder/learning`;
 }
 
 function greeting(name: string | null) {
@@ -43,7 +43,7 @@ async function buildInactivityNudgeEmail(input: {
     ? `Pick up where you left off with "${resumeModule.title}" (${inProgress[0]?.percent_complete ?? 0}% complete).`
     : "Browse your learning catalog and start your next module when you have a few minutes.";
 
-  const subject = `Your CapitalOS learning path — ${daysInactive} days since your last session`;
+  const subject = `Your iCapOS learning path — ${daysInactive} days since your last session`;
   const body = appendLearningEmailFooter(`${greeting(input.founderName)}
 
 You haven't logged in to your learning path in ${daysInactive} days. ${resumeLine}
@@ -71,7 +71,7 @@ async function buildMilestoneCelebrationEmail(input: {
   const subject = "Congratulations on your learning milestone";
   const body = appendLearningEmailFooter(`${greeting(input.founderName)}
 
-${milestone} for ${input.companyName}. Keep going — consistent learning progress strengthens your investor-readiness story on CapitalOS.
+${milestone} for ${input.companyName}. Keep going — consistent learning progress strengthens your investor-readiness story on iCapOS.
 
 Open your learning workspace to continue the next recommended module.`);
 
@@ -95,7 +95,7 @@ async function buildWeeklyDigestEmail(input: {
   };
   const nextModule = recommendations[0];
 
-  const subject = `Your weekly CapitalOS learning summary — ${summary.percentComplete}% complete`;
+  const subject = `Your weekly iCapOS learning summary — ${summary.percentComplete}% complete`;
   const body = appendLearningEmailFooter(`${greeting(input.founderName)}
 
 Your weekly learning summary for ${input.companyName}:

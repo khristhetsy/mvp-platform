@@ -26,7 +26,7 @@ export default async function InvestorAnalyticsPage() {
       <PageHeader
         eyebrow="Investor workspace"
         title="Analytics"
-        description="Your engagement command center — saved deals, interests, messaging, and match signals from CapitalOS data only."
+        description="Your engagement command center — saved deals, interests, messaging, and match signals from iCapOS data only."
       />
 
       <InvestorFeatureGate>

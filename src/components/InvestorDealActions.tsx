@@ -111,7 +111,7 @@ export function InvestorDealActions({
       await callApi("/api/investor/follow-up", {
         companyId,
         companySlug,
-        message: message.trim() || `CapitalOS follow-up requested for ${companyName}.`,
+        message: message.trim() || `iCapOS follow-up requested for ${companyName}.`,
       });
     });
   }
@@ -240,7 +240,7 @@ export function InvestorDealActions({
           onClick={() => requestFollowUp()}
           className="rounded-full border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm font-semibold text-indigo-900 disabled:opacity-50"
         >
-          {loading === "follow_up" ? "Submitting..." : "Contact Platform / Request CapitalOS Follow-up"}
+          {loading === "follow_up" ? "Submitting..." : "Contact Platform / Request iCapOS Follow-up"}
         </button>
       </div>
     </aside>

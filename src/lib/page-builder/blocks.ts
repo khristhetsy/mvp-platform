@@ -84,7 +84,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     description: "Full-width image with optional caption",
     defaultProps: {
       imageUrl: "/capitalos-wordmark.png",
-      alt: "CapitalOS",
+      alt: "iCapOS",
       caption: "Lab preview image — replace URL as needed",
     },
   },
@@ -99,7 +99,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     label: "Testimonial",
     description: "Customer or partner quote with attribution",
     defaultProps: {
-      quote: "CapitalOS helped our team organize diligence and present a credible investor narrative.",
+      quote: "iCapOS helped our team organize diligence and present a credible investor narrative.",
       name: "Jordan Lee",
       title: "CEO, Northwind Analytics",
       avatarUrl: "",
@@ -158,7 +158,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     description: "Regulatory disclaimer block for investor-facing pages",
     defaultProps: {
       title: "Important disclosure",
-      body: "CapitalOS provides educational and workflow tools. Nothing on this page constitutes an offer, solicitation, or investment advice.",
+      body: "iCapOS provides educational and workflow tools. Nothing on this page constitutes an offer, solicitation, or investment advice.",
       style: "legal",
       required: true,
     },
@@ -183,8 +183,8 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
     defaultProps: {
       title: "Trusted by capital-ready teams",
       logos: [
-        { imageUrl: "/capitalos-wordmark.png", alt: "CapitalOS" },
-        { imageUrl: "/capitalos-icon.png", alt: "CapitalOS icon" },
+        { imageUrl: "/capitalos-wordmark.png", alt: "iCapOS" },
+        { imageUrl: "/capitalos-icon.png", alt: "iCapOS icon" },
       ],
     },
   },
@@ -196,13 +196,13 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
       title: "Readiness impact",
       items: [
         {
-          category: "Before CapitalOS",
+          category: "Before iCapOS",
           label: "Diligence completeness",
           value: "54%",
           description: "Fragmented documents and inconsistent updates.",
         },
         {
-          category: "After CapitalOS",
+          category: "After iCapOS",
           label: "Diligence completeness",
           value: "92%",
           description: "Structured workflow with review-ready context.",

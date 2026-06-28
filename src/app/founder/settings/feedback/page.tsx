@@ -19,7 +19,7 @@ export default async function FounderSettingsFeedbackPage() {
       <PageHeader
         eyebrow="Settings"
         title="Feedback"
-        description="Help us improve CapitalOS — your input shapes the roadmap."
+        description="Help us improve iCapOS — your input shapes the roadmap."
       />
 
       <SettingsSidebarNav active="feedback" />
@@ -27,7 +27,7 @@ export default async function FounderSettingsFeedbackPage() {
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
           <h2 className="text-sm font-semibold text-slate-900">Feedback</h2>
-          <p className="mt-0.5 text-xs text-slate-500">Help us improve CapitalOS</p>
+          <p className="mt-0.5 text-xs text-slate-500">Help us improve iCapOS</p>
         </div>
         <div className="p-6">
           <BetaFeedbackForm />

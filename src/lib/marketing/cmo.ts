@@ -176,7 +176,7 @@ export async function generatePlanDraft(brief: CmoBrief): Promise<CmoPlanDraft> 
   const signals = await gatherSignals();
 
   const system =
-    "You are an experienced CMO for CapitalOS, a capital operating system " +
+    "You are an experienced CMO for iCapOS, a capital operating system " +
     "platform serving startup founders and investors. Produce a concrete, " +
     "channel-specific marketing plan grounded in the workspace's real signals. " +
     "Be specific and realistic; avoid generic filler. Respond with ONLY a " +

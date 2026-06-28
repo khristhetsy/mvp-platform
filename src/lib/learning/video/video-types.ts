@@ -39,4 +39,4 @@ export type FounderLessonVideoAssetRecord = {
 };
 
 export const VIDEO_LESSON_DISCLAIMER =
-  "CapitalOS video lessons are educational only and do not constitute legal, tax, investment, securities, or fundraising advice.";
+  "iCapOS video lessons are educational only and do not constitute legal, tax, investment, securities, or fundraising advice.";

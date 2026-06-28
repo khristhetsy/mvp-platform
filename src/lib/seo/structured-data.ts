@@ -4,18 +4,18 @@ export const ORGANIZATION_JSONLD: Record<string, unknown> = {
   "@context": "https://schema.org",
   "@type": "Organization",
   name: "iCFO Capital Global, Inc.",
-  alternateName: "CapitalOS",
+  alternateName: "iCapOS",
   url: SITE,
   logo: `${SITE}/capitalos-logo.png`,
   description:
-    "CapitalOS is an AI-powered capital readiness and private market platform for founders and investors.",
+    "iCapOS is an AI-powered capital readiness and private market platform for founders and investors.",
   sameAs: [],
 };
 
 export const SOFTWARE_APPLICATION_JSONLD: Record<string, unknown> = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "CapitalOS",
+  name: "iCapOS",
   applicationCategory: "BusinessApplication",
   applicationSubCategory: "Capital readiness & private market platform",
   operatingSystem: "Web",
@@ -26,12 +26,12 @@ export const SOFTWARE_APPLICATION_JSONLD: Record<string, unknown> = {
 /** Visible FAQ content — reused for both the on-page block and FAQPage JSON-LD. */
 export const FAQ_ITEMS: { q: string; a: string }[] = [
   {
-    q: "What is CapitalOS?",
-    a: "CapitalOS is an AI-powered capital readiness and private market platform. It scores a founder's readiness across five diligence dimensions, helps close gaps, and connects diligence-ready companies with vetted investors.",
+    q: "What is iCapOS?",
+    a: "iCapOS is an AI-powered capital readiness and private market platform. It scores a founder's readiness across five diligence dimensions, helps close gaps, and connects diligence-ready companies with vetted investors.",
   },
   {
-    q: "Is CapitalOS a broker-dealer or investment adviser?",
-    a: "No. CapitalOS is a technology and diligence platform — not a broker-dealer, placement agent, or investment adviser. Investor actions on the platform are non-binding indications of interest, not commitments or transactions.",
+    q: "Is iCapOS a broker-dealer or investment adviser?",
+    a: "No. iCapOS is a technology and diligence platform — not a broker-dealer, placement agent, or investment adviser. Investor actions on the platform are non-binding indications of interest, not commitments or transactions.",
   },
   {
     q: "How does the founder trial work?",

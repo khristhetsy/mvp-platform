@@ -73,7 +73,7 @@ export async function scheduleAcceptedMeetingOnGoogle(input: {
 
   const title =
     input.meeting.meeting_title?.trim() ||
-    `CapitalOS intro — ${company?.company_name ?? "Meeting"}`;
+    `iCapOS intro — ${company?.company_name ?? "Meeting"}`;
 
   try {
     const event = await createCalendarEventWithMeet(

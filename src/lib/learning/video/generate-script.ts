@@ -28,13 +28,13 @@ function buildSlidesFromLesson(lesson: CourseLesson, courseTitle: string): Video
   }));
   const outro: VideoSlide = {
     id: `slide-${contentSlides.length + 2}`,
-    title: "Apply on CapitalOS",
+    title: "Apply on iCapOS",
     bulletPoints: [
       "Update your profile and document room",
       "Complete the lesson quiz if applicable",
       "Mark the lesson complete when ready",
     ],
-    narrationCue: "Apply these ideas in your CapitalOS workspace. This is not legal or investment advice.",
+    narrationCue: "Apply these ideas in your iCapOS workspace. This is not legal or investment advice.",
     durationSeconds: 15,
   };
   return [intro, ...contentSlides, outro];
@@ -65,7 +65,7 @@ export function buildFallbackVideoScript(course: Course, lesson: CourseLesson): 
       `Welcome to ${lesson.title}, part of ${course.title}.`,
       lesson.content,
       ...(lesson.keyPoints ?? []).map((p) => `Key point: ${p}`),
-      "This CapitalOS video lesson is educational founder training for investor preparation — not legal, tax, investment, or securities advice.",
+      "This iCapOS video lesson is educational founder training for investor preparation — not legal, tax, investment, or securities advice.",
       lesson.type === "quiz"
         ? "Use the lesson quiz to check your understanding. Study the concepts rather than looking for answer keys."
         : "Pause to reflect and apply these ideas to your company materials.",

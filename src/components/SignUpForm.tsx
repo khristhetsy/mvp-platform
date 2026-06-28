@@ -164,7 +164,7 @@ export function SignUpForm({ privateBetaMode = false }: Readonly<{ privateBetaMo
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-sm font-bold text-white shadow-sm">
             C
           </span>
-          <span className="text-lg font-semibold tracking-tight text-slate-950">CapitalOS</span>
+          <span className="text-lg font-semibold tracking-tight text-slate-950">iCapOS</span>
         </Link>
       </div>
 
@@ -175,12 +175,12 @@ export function SignUpForm({ privateBetaMode = false }: Readonly<{ privateBetaMo
             Private Beta
           </span>
         ) : null}
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Join CapitalOS</h1>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Join iCapOS</h1>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           {privateBetaMode
             ? role === "investor"
-              ? "Create your investor account. Access is granted after CapitalOS staff reviews and approves your profile."
-              : "Create your founder account and complete onboarding. CapitalOS staff may review your company before marketplace publication."
+              ? "Create your investor account. Access is granted after iCapOS staff reviews and approves your profile."
+              : "Create your founder account and complete onboarding. iCapOS staff may review your company before marketplace publication."
             : "Choose your workspace, select a plan, and create your secure account. No credit card required to start."}
         </p>
       </div>

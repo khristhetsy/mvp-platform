@@ -76,7 +76,7 @@ export function FloatingFounderAICoach({
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="CapitalOS AI Coach"
+          aria-label="iCapOS AI Coach"
           className="fixed inset-x-0 bottom-0 z-[100] flex max-h-[85vh] w-full flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-2xl sm:inset-x-auto sm:bottom-[4.5rem] sm:right-4 sm:left-auto sm:w-[380px] sm:max-h-[min(540px,82vh)] sm:rounded-2xl"
         >
           {/* Gradient accent bar */}
@@ -95,7 +95,7 @@ export function FloatingFounderAICoach({
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-900">AI Coach</p>
-                <p className="text-[10px] leading-none text-slate-500">CapitalOS Learning</p>
+                <p className="text-[10px] leading-none text-slate-500">iCapOS Learning</p>
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">

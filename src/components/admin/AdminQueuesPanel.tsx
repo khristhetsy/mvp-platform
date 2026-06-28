@@ -74,7 +74,7 @@ export function AdminQueuesPanel({
 
   return (
     <div className="space-y-8">
-      <PageSection title="Queue summary" subtitle="Live operational counts across CapitalOS">
+      <PageSection title="Queue summary" subtitle="Live operational counts across iCapOS">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {snapshot.summary.map((card) => (
             <QueueSummaryCard

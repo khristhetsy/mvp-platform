@@ -370,7 +370,7 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
               Review status: <strong>{company.review_status ?? company.status ?? "draft"}</strong>
             </p>
             <p className="text-sm text-slate-600">
-              Complete your profile to unlock stronger investor visibility. CapitalOS preserves your onboarding data
+              Complete your profile to unlock stronger investor visibility. iCapOS preserves your onboarding data
               even after trial expiration.
             </p>
           </div>

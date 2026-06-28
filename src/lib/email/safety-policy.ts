@@ -1,5 +1,5 @@
 export const EMAIL_DRAFT_SAFETY_NOTES = [
-  "Draft only — CapitalOS does not send this email automatically.",
+  "Draft only — iCapOS does not send this email automatically.",
   "Not investment, legal, or tax advice.",
   "Do not guarantee funding, returns, approval, or investment outcomes.",
   "Avoid securities offering language and high-pressure urgency.",
@@ -28,7 +28,7 @@ export function validateDraftContent(subject: string, body: string): string[] {
 }
 
 export function appendSafetyFooter(body: string): string {
-  return `${body.trim()}\n\n---\nThis draft was generated in CapitalOS for your review. Nothing is sent until you copy and send from your own email client. CapitalOS does not provide legal or investment advice.`;
+  return `${body.trim()}\n\n---\nThis draft was generated in iCapOS for your review. Nothing is sent until you copy and send from your own email client. iCapOS does not provide legal or investment advice.`;
 }
 
 export function mergeSafetyNotes(extra: string[] = []): string[] {

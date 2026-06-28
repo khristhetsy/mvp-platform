@@ -96,7 +96,7 @@ export async function POST(
       ? {
           type: "company_approved" as const,
           title: "Company approved",
-          message: "Your company submission was approved by CapitalOS admin review.",
+          message: "Your company submission was approved by iCapOS admin review.",
         }
       : action === "reject"
         ? {

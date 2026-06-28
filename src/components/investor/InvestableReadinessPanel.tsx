@@ -954,7 +954,7 @@ function RecommendationCard({ rec, index }: { rec: Recommendation; index: number
           {/* eLearning courses */}
           {rec.courses.length > 0 && (
             <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-4 py-3">
-              <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-2">📚 Recommended courses on CapitalOS</p>
+              <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-2">📚 Recommended courses on iCapOS</p>
               <div className="flex flex-col gap-1.5">
                 {rec.courses.map((c) => (
                   <a

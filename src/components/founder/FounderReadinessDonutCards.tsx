@@ -133,7 +133,7 @@ export function FounderReadinessDonutCards({
         : "Investors can see all your key information. Keep it updated as your company details change.",
       profilePercent >= 100
         ? "Full profiles receive 40% more investor views on average. Your listing is fully optimised."
-        : "At 100% profile completion, CapitalOS boosts your marketplace visibility score by a full tier — worth the 5-minute effort.",
+        : "At 100% profile completion, iCapOS boosts your marketplace visibility score by a full tier — worth the 5-minute effort.",
     ];
   }
 

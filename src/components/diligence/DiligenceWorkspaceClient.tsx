@@ -275,7 +275,7 @@ export function DiligenceWorkspaceClient({ engagementId }: { engagementId: strin
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
           <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl">
             <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900"><Send className="h-5 w-5 text-[#2f6cb0]" /> Send to founder</h2>
-            <p className="mt-1 text-sm text-slate-600">The founder must already have a CapitalOS account. Set what they (and investors, on release) can see — this is deliberate, never silent.</p>
+            <p className="mt-1 text-sm text-slate-600">The founder must already have a iCapOS account. Set what they (and investors, on release) can see — this is deliberate, never silent.</p>
             <label className="mt-3 block">
               <span className="mb-1 block text-sm font-medium text-slate-700">Founder email</span>
               <input type="email" value={founderEmail} onChange={(e) => setFounderEmail(e.target.value)} placeholder="founder@company.com" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />

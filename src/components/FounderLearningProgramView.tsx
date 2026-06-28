@@ -143,7 +143,7 @@ export function FounderLearningProgramView({
       </WorkspacePanel>
 
       <p className="text-xs text-slate-500">
-        Program path: {programHref(program.slug)} — contributes to CapitalOS readiness tier and investor preparation
+        Program path: {programHref(program.slug)} — contributes to iCapOS readiness tier and investor preparation
         status.
       </p>
     </div>

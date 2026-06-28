@@ -25,7 +25,7 @@ function parseJsonBlock(text: string) {
 }
 
 export async function generateScriptWithOpenAI(input: LessonScriptInput): Promise<VideoScriptBundle> {
-  const system = `You create educational founder training video scripts for CapitalOS. Output valid JSON only with keys: script, narrationText, captions, slides.
+  const system = `You create educational founder training video scripts for iCapOS. Output valid JSON only with keys: script, narrationText, captions, slides.
 slides is an array of { id, title, bulletPoints[], narrationCue, durationSeconds }.
 COMPLIANCE: Educational only. No legal, tax, investment, securities, or fundraising advice. No funding guarantees or investor approval claims.
 QUIZ: Never include quiz correct answers or "choose option A/B/C/D". Teach concepts only.

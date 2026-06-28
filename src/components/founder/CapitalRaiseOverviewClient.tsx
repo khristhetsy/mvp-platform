@@ -306,7 +306,7 @@ function DrawerContent({
             ? `${interestCount} investor${interestCount === 1 ? " has" : "s have"} expressed formal interest. Send each a personalised message with your latest metrics and a calendar link — converting 1–2 into intro calls this week will compound your pipeline.`
             : savedCount > 0
             ? `${savedCount} investor${savedCount === 1 ? " has" : "s have"} saved your deal — they're tracking it without committing. A direct message referencing recent company progress can re-activate their interest.`
-            : "Build your pipeline by sharing your CapitalOS profile with warm contacts. Personal introductions convert to pledges at 3–5× the rate of cold discovery.",
+            : "Build your pipeline by sharing your iCapOS profile with warm contacts. Personal introductions convert to pledges at 3–5× the rate of cold discovery.",
           pledgeSummary.investorCount + totalSignals > 0
             ? `Investor velocity matters as much as total count. ${pledgeSummary.investorCount + totalSignals} total engaged investors is a real signal — log every interaction and track response rates to identify which outreach channels are working.`
             : "Once you have your first investor engaged, focus on deepening that relationship before broadening outreach — one strong reference investor anchors your round credibility.",

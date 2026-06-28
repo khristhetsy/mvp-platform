@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "CapitalOS — The operating system for capital-ready companies";
+export const alt = "iCapOS — The operating system for capital-ready companies";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -37,7 +37,7 @@ export default function OpengraphImage() {
           >
             C
           </div>
-          <div style={{ fontSize: 42, fontWeight: 700 }}>CapitalOS</div>
+          <div style={{ fontSize: 42, fontWeight: 700 }}>iCapOS</div>
         </div>
         <div style={{ marginTop: 44, fontSize: 66, fontWeight: 700, lineHeight: 1.08, maxWidth: 940, color: "#ffffff" }}>
           The operating system for capital-ready companies.

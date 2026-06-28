@@ -15,7 +15,7 @@ export default async function InvestorDealsPage() {
     <AppShell role="INVESTOR" workspace="investor" profileName={profile.full_name ?? profile.email ?? "Investor"} profileSubtitle="Deals">
       <div className="space-y-5">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#2f6cb0]">iCFO CapitalOS</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#2f6cb0]">iCFO iCapOS</p>
           <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold text-slate-950">
             <ShieldCheck className="h-6 w-6 text-[#2f6cb0]" strokeWidth={1.75} aria-hidden /> Deals
           </h1>

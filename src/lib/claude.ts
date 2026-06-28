@@ -2,7 +2,7 @@
  * Shared Anthropic Claude API helper — no SDK required, uses native fetch.
  * Env var: ANTHROPIC_API_KEY
  *
- * All AI features in CapitalOS (CMO chat, diligence, assistant, learning coach,
+ * All AI features in iCapOS (CMO chat, diligence, assistant, learning coach,
  * deal-room summary, video scripts) route through here.
  */
 

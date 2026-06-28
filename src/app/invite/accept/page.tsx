@@ -108,7 +108,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       }}>
         <div style={{ marginBottom: 24 }}>
           <span style={{ fontSize: 20, fontWeight: 800, color: ACCENT, letterSpacing: "-0.02em" }}>
-            CapitalOS
+            iCapOS
           </span>
         </div>
         {children}

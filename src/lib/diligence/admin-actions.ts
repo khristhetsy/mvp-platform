@@ -55,7 +55,7 @@ export async function sendToFounder(
     if (!founder) throw new ActionError("No founder is linked to this engagement. Enter the founder's email to send.");
   }
 
-  if (!founder) throw new ActionError("No account found for that email. The founder must have a CapitalOS account first.");
+  if (!founder) throw new ActionError("No account found for that email. The founder must have a iCapOS account first.");
   if (String(founder.role).toLowerCase() !== "founder") throw new ActionError("That account is not a founder.");
 
   await raw(supabase).from("dd_engagement_members").upsert(

@@ -19,7 +19,7 @@ export const metadata = {
     "Pre-screened, scored opportunities matched to your thesis, with complete data rooms and disclosure context. No cold inbound.",
   alternates: { canonical: "/investors" },
   openGraph: {
-    title: "For investors — diligence-ready deal flow · CapitalOS",
+    title: "For investors — diligence-ready deal flow · iCapOS",
     description: "Scored opportunities matched to your thesis, with complete data rooms.",
     url: "/investors",
   },
@@ -140,7 +140,7 @@ export default async function InvestorsPage() {
       {/* Why cards */}
       <section className="px-4 py-14 lg:px-8">
         <div className="mx-auto max-w-5xl">
-          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--indigo)]">Why investors use CapitalOS</p>
+          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--indigo)]">Why investors use iCapOS</p>
           <h2 className="mt-3 text-center text-2xl font-semibold tracking-tight text-[var(--navy)] md:text-3xl">
             Quality deal flow, without the work.
           </h2>

@@ -175,7 +175,7 @@ export async function createIcfoFollowUpRequest(
 ) {
   return createIntroRequest(clients, {
     ...input,
-    message: input.message ?? "Investor requested CapitalOS platform follow-up.",
+    message: input.message ?? "Investor requested iCapOS platform follow-up.",
   });
 }
 

@@ -48,7 +48,7 @@ function buildPackageReadiness(
         packageReady: false,
         packageStatus: null,
         blockedReason: "Placeholder for future side letters — not tracked in Phase 1",
-        nextRequiredStep: "Define side letter terms outside CapitalOS when applicable",
+        nextRequiredStep: "Define side letter terms outside iCapOS when applicable",
         placeholderOnly: true,
       };
     }

@@ -14,7 +14,7 @@ export const HUBSPOT_COMPANY_FIELDS: HubspotFieldDef[] = [
   { sourceField: "review_status", hubspotField: "capitalos_review_status", label: "Review status" },
   { sourceField: "readiness_score", hubspotField: "capitalos_readiness_score", label: "Readiness score" },
   { sourceField: "country", hubspotField: "country", label: "Country" },
-  { sourceField: "capitalos_company_id", hubspotField: "capitalos_company_id", label: "CapitalOS ID" },
+  { sourceField: "capitalos_company_id", hubspotField: "capitalos_company_id", label: "iCapOS ID" },
 ];
 
 export const HUBSPOT_CONTACT_FIELDS: HubspotFieldDef[] = [
@@ -27,7 +27,7 @@ export const HUBSPOT_CONTACT_FIELDS: HubspotFieldDef[] = [
   { sourceField: "preferred_sectors", hubspotField: "capitalos_preferred_sectors", label: "Preferred sectors" },
   { sourceField: "linkedin_url", hubspotField: "linkedinbio", label: "LinkedIn" },
   { sourceField: "approval_status", hubspotField: "capitalos_approval_status", label: "Approval status" },
-  { sourceField: "capitalos_record_id", hubspotField: "capitalos_record_id", label: "CapitalOS ID" },
+  { sourceField: "capitalos_record_id", hubspotField: "capitalos_record_id", label: "iCapOS ID" },
 ];
 
 export const HUBSPOT_ACTIVITY_FIELDS: HubspotFieldDef[] = [

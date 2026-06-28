@@ -198,7 +198,7 @@ function DrawerContent({
         <div className="mb-4 flex items-start justify-between">
           <div>
             <p className="text-base font-semibold text-slate-900">Social drafts</p>
-            <p className="mt-0.5 text-xs text-slate-500">AI-generated content produced in CapitalOS</p>
+            <p className="mt-0.5 text-xs text-slate-500">AI-generated content produced in iCapOS</p>
           </div>
           {closeBtn}
         </div>
@@ -571,7 +571,7 @@ export function AnalyticsChartPanelsClient({ analytics }: { analytics: FounderAn
         </PanelCard>
 
         {/* Social drafts */}
-        <PanelCard title="Social drafts" subtitle="Generated in CapitalOS" onClick={() => setOpen("social")}>
+        <PanelCard title="Social drafts" subtitle="Generated in iCapOS" onClick={() => setOpen("social")}>
           <div className="space-y-3">
             {socialRows.map((row) => (
               <div key={row.label}>

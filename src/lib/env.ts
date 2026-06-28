@@ -1,5 +1,5 @@
 /**
- * CapitalOS environment helpers — server-side only.
+ * iCapOS environment helpers — server-side only.
  * Never import service-role accessors from client components.
  */
 

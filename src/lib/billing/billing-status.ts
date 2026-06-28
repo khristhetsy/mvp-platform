@@ -99,7 +99,7 @@ export function getBillingStatusMessage(
     case "free_investor":
       return "Investor accounts are free with full workspace access.";
     case "internal":
-      return "Internal CapitalOS access — no billing restrictions.";
+      return "Internal iCapOS access — no billing restrictions.";
     case "subscription_inactive":
       return "Your subscription is inactive. Request an upgrade to restore premium access.";
     default:

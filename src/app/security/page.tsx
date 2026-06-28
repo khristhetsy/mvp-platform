@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CounselReviewBanner } from "@/components/legal/CounselReviewBanner";
 
-export const metadata = { title: "Security – CapitalOS" };
+export const metadata = { title: "Security – iCapOS" };
 
 /**
  * Security overview — structure and headings only. Substantive security
@@ -23,17 +23,17 @@ export default function SecurityPage() {
       <div className="mx-auto max-w-3xl px-6 py-16">
         <div className="mb-10">
           <Link href="/" className="text-sm font-semibold text-[var(--navy)] hover:underline">
-            ← Back to CapitalOS
+            ← Back to iCapOS
           </Link>
           <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-950">Security</h1>
-          <p className="mt-2 text-sm text-slate-500">How CapitalOS protects platform data.</p>
+          <p className="mt-2 text-sm text-slate-500">How iCapOS protects platform data.</p>
         </div>
 
         <CounselReviewBanner />
 
         <div className="text-sm leading-7 text-slate-700">
           <p>
-            CapitalOS is a technology and diligence platform. This page outlines our security approach. Final
+            iCapOS is a technology and diligence platform. This page outlines our security approach. Final
             commitments below are pending security-team and counsel review.
           </p>
           {sections.map((s) => (
@@ -53,7 +53,7 @@ export default function SecurityPage() {
 
         <div className="mt-12 border-t border-slate-200 pt-8 text-xs text-slate-400">
           <p>
-            CapitalOS · icapos.com ·{" "}
+            iCapOS · icapos.com ·{" "}
             <Link href="/privacy" className="hover:underline">Privacy</Link>
             {" · "}
             <Link href="/terms" className="hover:underline">Terms</Link>

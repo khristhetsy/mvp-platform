@@ -42,8 +42,8 @@ export function generateSocialOutreachDraft(input: {
     readinessScore != null ? `Institutional readiness score: ${readinessScore}/100.` : "";
   const onboardingLine = `Onboarding progress: ${onboardingPercent}%.`;
   const publishedLine = isPublished
-    ? `${name} is published on CapitalOS for qualified investor discovery.`
-    : `${name} is preparing for qualified investor visibility on CapitalOS.`;
+    ? `${name} is published on iCapOS for qualified investor discovery.`
+    : `${name} is preparing for qualified investor visibility on iCapOS.`;
   const remediationLine =
     remediationOpenCount > 0
       ? `We are actively addressing ${remediationOpenCount} readiness item(s).`
@@ -82,7 +82,7 @@ This update uses approved public information only. ${hint}`,
     case "readiness_milestone":
       return {
         title: `Readiness milestone — ${name}`,
-        body: `${name} reached a readiness milestone on CapitalOS.
+        body: `${name} reached a readiness milestone on iCapOS.
 
 ${onboardingLine}
 ${readinessLine ? `${readinessLine}\n` : ""}${remediationLine}

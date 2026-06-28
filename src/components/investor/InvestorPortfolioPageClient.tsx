@@ -763,7 +763,7 @@ export function InvestorPortfolioPageClient() {
                 />
                 {form.company_slug && (
                   <p className="mt-1 text-[11px] text-[#534AB7]">
-                    Platform company — linked to CapitalOS profile
+                    Platform company — linked to iCapOS profile
                   </p>
                 )}
               </div>

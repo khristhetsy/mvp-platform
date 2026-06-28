@@ -69,7 +69,7 @@ export function renderBusinessPlanPdf(
 
       doc.moveDown(1.2);
       doc.font("Helvetica-Oblique").fontSize(8).fillColor(MUTED).text(
-        "Prepared by the founder with AI assistance on CapitalOS. Illustrative projections based on founder-provided assumptions. Educational material — not an offer of securities, a valuation, a forecast of returns, or investment advice.",
+        "Prepared by the founder with AI assistance on iCapOS. Illustrative projections based on founder-provided assumptions. Educational material — not an offer of securities, a valuation, a forecast of returns, or investment advice.",
         { lineGap: 1 },
       );
 

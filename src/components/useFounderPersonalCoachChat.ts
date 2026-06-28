@@ -110,6 +110,6 @@ export function getCoachQuickPrompts({
   return [
     "Which course should I start with?",
     "Help with pitch deck education",
-    "How do I navigate CapitalOS learning?",
+    "How do I navigate iCapOS learning?",
   ];
 }

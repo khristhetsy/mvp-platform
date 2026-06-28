@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CounselReviewBanner } from "@/components/legal/CounselReviewBanner";
 
-export const metadata = { title: "Privacy Policy – CapitalOS" };
+export const metadata = { title: "Privacy Policy – iCapOS" };
 
 export default function PrivacyPage() {
   const effective = "June 1, 2025";
@@ -12,7 +12,7 @@ export default function PrivacyPage() {
         {/* Header */}
         <div className="mb-10">
           <Link href="/" className="text-sm font-semibold text-[var(--navy)] hover:underline">
-            ← Back to CapitalOS
+            ← Back to iCapOS
           </Link>
           <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-950">Privacy Policy</h1>
           <p className="mt-2 text-sm text-slate-500">Effective date: {effective}</p>
@@ -22,7 +22,7 @@ export default function PrivacyPage() {
 
         <div className="prose prose-slate max-w-none text-sm leading-7 text-slate-700">
           <p>
-            CapitalOS (&ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;) is committed to protecting your
+            iCapOS (&ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;) is committed to protecting your
             privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use
             our platform.
           </p>
@@ -98,7 +98,7 @@ export default function PrivacyPage() {
 
         <div className="mt-12 border-t border-slate-200 pt-8 text-xs text-slate-400">
           <p>
-            CapitalOS · icapos.com ·{" "}
+            iCapOS · icapos.com ·{" "}
             <Link href="/terms" className="hover:underline">
               Terms of Service
             </Link>

@@ -56,7 +56,7 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
         <div className="max-w-3xl">
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-indigo-600">Upgrade</p>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950 md:text-5xl">
-            {featureLock ? featureLock.headline : "Upgrade your CapitalOS workspace"}
+            {featureLock ? featureLock.headline : "Upgrade your iCapOS workspace"}
           </h1>
           <p className="mt-4 text-lg leading-8 text-slate-600">
             {featureLock

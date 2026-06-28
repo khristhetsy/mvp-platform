@@ -69,7 +69,7 @@ export function CapitalOSAssistant() {
       suggestedPromptChips({
         role: workspace === "admin" ? "admin" : workspace === "investor" ? "investor" : "founder",
         mode,
-        workspaceLabel: "CapitalOS",
+        workspaceLabel: "iCapOS",
         currentPath: pathname,
         entity: null,
         summary: {},
@@ -238,7 +238,7 @@ export function CapitalOSAssistant() {
               </div>
               <div>
                 <p id="capitalos-assistant-title" className="text-sm font-semibold text-slate-900">
-                  {mode === "cmo_marketing" ? "CMO AI" : mode === "investor_pipeline" || mode === "investor_portfolio" || mode === "investor_matching" ? "Analysis AI" : "CapitalOS AI"}
+                  {mode === "cmo_marketing" ? "CMO AI" : mode === "investor_pipeline" || mode === "investor_portfolio" || mode === "investor_matching" ? "Analysis AI" : "iCapOS AI"}
                 </p>
                 <p className="truncate text-[10px] leading-none text-slate-500" style={{ maxWidth: 180 }}>
                   {intro.length > 44 ? intro.slice(0, 44) + "…" : intro}
@@ -364,7 +364,7 @@ export function CapitalOSAssistant() {
 
           <div className="flex shrink-0 items-center gap-2 border-t border-slate-100 p-3">
             <label htmlFor="capitalos-assistant-message" className="sr-only">
-              Message CapitalOS Assistant
+              Message iCapOS Assistant
             </label>
             <input
               id="capitalos-assistant-message"
@@ -398,7 +398,7 @@ export function CapitalOSAssistant() {
       {/* FAB toggle */}
       <button
         type="button"
-        aria-label={open ? "Close CapitalOS Assistant" : "Open CapitalOS Assistant"}
+        aria-label={open ? "Close iCapOS Assistant" : "Open iCapOS Assistant"}
         aria-expanded={open}
         aria-controls="capitalos-assistant-dialog"
         onClick={() => setOpen((value) => !value)}

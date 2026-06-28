@@ -110,7 +110,7 @@ function defaultQuiz(lesson: LearningLesson, moduleSlug: string, lessonId: strin
             id: "q2",
             prompt: "Platform readiness progress means:",
             choices: [
-              { id: "a", label: "Improved investor preparation on CapitalOS — not a legal certification" },
+              { id: "a", label: "Improved investor preparation on iCapOS — not a legal certification" },
               { id: "b", label: "Guaranteed funding approval" },
               { id: "c", label: "SEC registration complete" },
             ],
@@ -150,7 +150,7 @@ export function enrichLesson(
       categories: [module.category, module.readiness_stage],
       points: 4,
       description:
-        "Contributes to platform readiness progress and CapitalOS readiness tier — not legal or investment certification.",
+        "Contributes to platform readiness progress and iCapOS readiness tier — not legal or investment certification.",
     },
     resourcePlaceholder:
       lesson.resourcePlaceholder ??

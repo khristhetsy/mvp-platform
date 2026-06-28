@@ -15,7 +15,7 @@ export default function SubmitCompanyPage() {
             <CapitalOSLogo height={48} priority className="mb-6" />
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--gold)]">Submit company</p>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight text-[var(--navy)] md:text-5xl">
-              Start your CapitalOS readiness review.
+              Start your iCapOS readiness review.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">
               Share company basics, funding goals, traction context, and diligence materials. This does not guarantee

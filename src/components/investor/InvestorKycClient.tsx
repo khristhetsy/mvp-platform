@@ -27,7 +27,7 @@ const STATUS_BANNER: Record<InvestorKycStatus, { tone: string; icon: typeof Cloc
     tone: "border-[#B5D4F4] bg-[#E6F1FB] text-[#0C447C]",
     icon: Clock,
     title: "Verification under review",
-    body: "Your documents are with the CapitalOS team. We'll email you the moment you're verified — usually within a day or two.",
+    body: "Your documents are with the iCapOS team. We'll email you the moment you're verified — usually within a day or two.",
   },
   verified: {
     tone: "border-emerald-200 bg-emerald-50 text-emerald-900",
@@ -244,7 +244,7 @@ export function InvestorKycClient({
                 onChange={(e) => setConsent(e.target.checked)}
               />
               <span>
-                I consent to CapitalOS storing this document to verify my identity. It&apos;s encrypted, private, and never
+                I consent to iCapOS storing this document to verify my identity. It&apos;s encrypted, private, and never
                 shown to founders.
               </span>
             </label>

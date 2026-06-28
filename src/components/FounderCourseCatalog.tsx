@@ -142,7 +142,7 @@ export function FounderCourseCatalog({
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="CapitalOS founder academy"
+        eyebrow="iCapOS founder academy"
         title="Online courses"
         description="Educational founder training — investor preparation and learning progress. Not legal, tax, securities, or investment advice."
         metadata={`${courses.length} courses · ${overallPercent}% overall learning progress`}
@@ -193,7 +193,7 @@ export function FounderCourseCatalog({
                     <p className="truncate text-xs font-medium text-slate-700">
                       {formatCategoryLabel(course.category)}
                     </p>
-                    <p className="text-[11px] text-slate-400">CapitalOS Core</p>
+                    <p className="text-[11px] text-slate-400">iCapOS Core</p>
                   </div>
                 </div>
 

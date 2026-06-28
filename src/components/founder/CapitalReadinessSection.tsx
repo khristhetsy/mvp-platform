@@ -264,7 +264,7 @@ export function CapitalReadinessSection({
     },
     raise: {
       title: "Raise progress",
-      sub: "Status of your active capital raise on CapitalOS",
+      sub: "Status of your active capital raise on iCapOS",
       stats: [
         { label: "Listing status", value: raiseProgress },
         { label: "Funding target", value: target > 0 ? formatPledgeTotal(target, pledgeSummary.currency) : "TBD" },
@@ -284,7 +284,7 @@ export function CapitalReadinessSection({
         raiseProgress !== "Published"
           ? `Your listing is not live. Complete your company profile and submit for admin review — you are invisible to investors until published.`
           : pledgeSummary.investorCount === 0
-          ? `You're published but have 0 pledges. Review your pitch deck for clarity, ensure your funding target is realistic, and share your CapitalOS profile directly with warm contacts.`
+          ? `You're published but have 0 pledges. Review your pitch deck for clarity, ensure your funding target is realistic, and share your iCapOS profile directly with warm contacts.`
           : `You have ${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"} pledging ${formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}. Schedule calls with each to move from indication to commitment.`,
         missingTypes.length > 0
           ? `Your data room is incomplete — ${missingTypes.length} document${missingTypes.length === 1 ? "" : "s"} missing. Investors who open your profile expect a full data room. Uploading ${missingTypes[0] ? DOC_LABELS[missingTypes[0]] ?? missingTypes[0] : "missing documents"} first is highest priority.`

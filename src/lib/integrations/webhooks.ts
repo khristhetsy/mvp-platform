@@ -72,12 +72,12 @@ export async function postWebhookDelivery(
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      "User-Agent": "CapitalOS-Integrations/1.0",
-      "X-CapitalOS-Event": payload.event_type,
+      "User-Agent": "iCapOS-Integrations/1.0",
+      "X-iCapOS-Event": payload.event_type,
     };
 
     if (target.signingSecret) {
-      headers["X-CapitalOS-Signature"] = signWebhookPayload(body, target.signingSecret);
+      headers["X-iCapOS-Signature"] = signWebhookPayload(body, target.signingSecret);
     }
 
     const res = await fetch(target.webhookUrl, {

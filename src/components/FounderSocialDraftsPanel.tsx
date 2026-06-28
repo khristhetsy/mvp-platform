@@ -392,7 +392,7 @@ export function FounderSocialDraftsPanel({
               Archive
             </button>
           </div>
-          <p className="mt-3 text-xs text-slate-500">Copy manually to LinkedIn or X — CapitalOS does not post on your behalf.</p>
+          <p className="mt-3 text-xs text-slate-500">Copy manually to LinkedIn or X — iCapOS does not post on your behalf.</p>
         </section>
       )}
 

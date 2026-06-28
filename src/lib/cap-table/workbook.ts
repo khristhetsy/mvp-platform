@@ -19,7 +19,7 @@ function styleHeaderRow(row: ExcelJS.Row) {
 export async function renderCapTableWorkbook(companyName: string, cap: CapTable): Promise<Buffer> {
   const sum = summarize(cap.holders);
   const wb = new ExcelJS.Workbook();
-  wb.creator = "CapitalOS";
+  wb.creator = "iCapOS";
   wb.created = new Date();
 
   // ── Sheet 1: Summary ───────────────────────────────────────────────────
@@ -87,7 +87,7 @@ export async function renderCapTableWorkbook(companyName: string, cap: CapTable)
 
   // Disclaimer on the summary sheet.
   s.addRow([]);
-  s.addRow(["Illustrative cap table prepared by the founder on CapitalOS. Not a valuation, an offer of securities, or investment advice."]).getCell(1).font = {
+  s.addRow(["Illustrative cap table prepared by the founder on iCapOS. Not a valuation, an offer of securities, or investment advice."]).getCell(1).font = {
     italic: true,
     size: 9,
     color: { argb: "FF94A3B8" },

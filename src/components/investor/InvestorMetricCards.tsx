@@ -115,7 +115,7 @@ function AiBox({ insight, actions }: { insight: string; actions: string[] }) {
         <div style={{ width: 28, height: 28, background: "#6366f1", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 }}>AI</div>
         <div>
           <div style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>Investor Intelligence</div>
-          <div style={{ fontSize: 10, color: "#a5b4fc" }}>Powered by Claude · CapitalOS</div>
+          <div style={{ fontSize: 10, color: "#a5b4fc" }}>Powered by Claude · iCapOS</div>
         </div>
       </div>
       <div style={{ height: "0.5px", background: "rgba(255,255,255,.12)", marginBottom: 12 }} />

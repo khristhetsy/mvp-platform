@@ -310,7 +310,7 @@ export function LessonPageClient({
         {activeSection === "modules" && hasModules && (
           <div className="space-y-4">
             <p className="text-xs text-slate-500">
-              Additional course modules linked by your CapitalOS team for{" "}
+              Additional course modules linked by your iCapOS team for{" "}
               <span className="font-semibold">{dbCourse?.title ?? mod.title}</span>.
             </p>
             {dbModules.map((dbMod) => (

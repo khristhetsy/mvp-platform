@@ -36,7 +36,7 @@ export default async function FounderMatchingPage() {
           <PageHeader
             eyebrow="Founder workspace"
             title="Matching Center"
-            description="Ranked platform investor matches for your company using the existing CapitalOS matching engine."
+            description="Ranked platform investor matches for your company using the existing iCapOS matching engine."
           />
 
           {!company ? (

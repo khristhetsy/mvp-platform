@@ -33,7 +33,7 @@ export async function renderDiligenceMemoPdf(payload: ReportPayload, role: "admi
     const bullet = (t: string) => doc.font("Times-Roman").fontSize(10).fillColor(INK).text(`•  ${t}`, { indent: 10 });
 
     // Masthead
-    doc.font("Helvetica-Bold").fontSize(16).fillColor(BRAND).text("iCFO CapitalOS");
+    doc.font("Helvetica-Bold").fontSize(16).fillColor(BRAND).text("iCFO iCapOS");
     doc.font("Helvetica").fontSize(9).fillColor(MUTED).text("The Capital Readiness Platform · iCFO Venture Group");
     doc.moveDown(0.6);
     doc.font("Helvetica-Bold").fontSize(12).fillColor(INK).text(`Diligence Memorandum — ${company}`);
@@ -110,7 +110,7 @@ export async function renderDiligenceMemoPdf(payload: ReportPayload, role: "admi
 
     // Appendix F — Consent & sign-off
     h1("Appendix F · Consent & sign-off");
-    small("Consent is captured via the iCFO CapitalOS in-platform e-signature. Sealed versions are hash-anchored and immutable.");
+    small("Consent is captured via the iCFO iCapOS in-platform e-signature. Sealed versions are hash-anchored and immutable.");
 
     // Running header/footer on every page.
     const range = doc.bufferedPageRange();
@@ -120,7 +120,7 @@ export async function renderDiligenceMemoPdf(payload: ReportPayload, role: "admi
       doc.font("Helvetica").fontSize(7.5).fillColor(MUTED);
       doc.text(`Re: Diligence — ${company}   ·   As of ${asOf}`, left, top, { width, align: "left" });
       const bottom = doc.page.height - doc.page.margins.bottom + 14;
-      doc.text(`iCFO CapitalOS · Confidential${role !== "admin" ? " · Recipient cut" : ""}`, left, bottom, { width, align: "left" });
+      doc.text(`iCFO iCapOS · Confidential${role !== "admin" ? " · Recipient cut" : ""}`, left, bottom, { width, align: "left" });
       doc.text(`Page ${i + 1} of ${range.count}`, left, bottom, { width, align: "right" });
     }
 

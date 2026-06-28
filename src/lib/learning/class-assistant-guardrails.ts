@@ -1,5 +1,5 @@
 export const COACH_DISCLAIMER =
-  "CapitalOS provides educational support only. This is not legal, tax, investment, securities, or fundraising advice.";
+  "iCapOS provides educational support only. This is not legal, tax, investment, securities, or fundraising advice.";
 
 export const QUIZ_REFUSAL_REPLY =
   "I can't give the quiz answer directly, but I can explain the concept so you can choose confidently.";

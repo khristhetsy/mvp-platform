@@ -22,7 +22,7 @@ export default function SignUpPage() {
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-sm font-bold text-white shadow-lg shadow-indigo-900/30">
                 C
               </span>
-              <span className="text-xl font-semibold tracking-tight text-white">CapitalOS</span>
+              <span className="text-xl font-semibold tracking-tight text-white">iCapOS</span>
             </Link>
             <p className="mt-10 text-xs font-semibold uppercase tracking-[0.24em] text-indigo-300">
               Venture readiness platform
@@ -31,7 +31,7 @@ export default function SignUpPage() {
               Build, diligence, and raise with one connected workspace.
             </h2>
             <p className="mt-4 max-w-md text-sm leading-7 text-slate-300">
-              CapitalOS brings together AI diligence, document readiness, investor CRM, and capital raise tools in a
+              iCapOS brings together AI diligence, document readiness, investor CRM, and capital raise tools in a
               secure founder and investor platform.
             </p>
             <ul className="mt-8 space-y-3">

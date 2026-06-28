@@ -10,7 +10,7 @@ export default function RootError({
     <RouteSegmentError
       error={error}
       reset={reset}
-      eyebrow="CapitalOS"
+      eyebrow="iCapOS"
       homeHref="/"
       homeLabel="Back home"
     />

@@ -24,7 +24,7 @@ function contentFor(status: InvestorApprovalStatus | string): StatusContent {
         tone: "blue",
         eyebrow: "Profile under review",
         title: "We're reviewing your profile",
-        body: "Your profile is with the CapitalOS team — we'll email you the moment it's approved (usually within a day or two). In the meantime you can browse live opportunities. Saving deals, expressing interest, and messaging unlock once you're approved.",
+        body: "Your profile is with the iCapOS team — we'll email you the moment it's approved (usually within a day or two). In the meantime you can browse live opportunities. Saving deals, expressing interest, and messaging unlock once you're approved.",
         primary: { href: "/investor/opportunities", label: "Browse opportunities" },
       };
     case "rejected":
@@ -33,7 +33,7 @@ function contentFor(status: InvestorApprovalStatus | string): StatusContent {
         tone: "red",
         eyebrow: "Changes requested",
         title: "Your profile needs a quick update",
-        body: "The CapitalOS team has asked for a few changes before approving your account. Review the note below, update your profile, and resubmit.",
+        body: "The iCapOS team has asked for a few changes before approving your account. Review the note below, update your profile, and resubmit.",
         primary: { href: "/investor/onboarding", label: "Update profile" },
       };
     default: // draft / unknown
@@ -55,7 +55,7 @@ function contentForKyc(status: InvestorKycStatus | string): StatusContent {
         tone: "blue",
         eyebrow: "Verification under review",
         title: "We're verifying your documents",
-        body: "Your identity and accreditation documents are with the CapitalOS team. Full deal-flow access unlocks the moment they're verified — usually within a day or two.",
+        body: "Your identity and accreditation documents are with the iCapOS team. Full deal-flow access unlocks the moment they're verified — usually within a day or two.",
         primary: { href: "/investor/verification", label: "View verification" },
       };
     case "rejected":

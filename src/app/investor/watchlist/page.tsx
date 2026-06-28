@@ -65,7 +65,7 @@ export default async function InvestorWatchlistPage() {
         <PageHeader
           eyebrow="Investor workspace"
           title="Watchlist"
-          description="Saved deals and companies you are tracking across the CapitalOS marketplace."
+          description="Saved deals and companies you are tracking across the iCapOS marketplace."
         />
         <InvestorFeatureGate>
           <InvestorWatchlistAISummary rows={rows} />

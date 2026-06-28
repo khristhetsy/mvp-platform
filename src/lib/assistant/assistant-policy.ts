@@ -1,11 +1,11 @@
 import { COACH_DISCLAIMER, isQuizAnswerRequest, isRestrictedAdviceRequest } from "@/lib/learning/class-assistant-guardrails";
 
 export const ASSISTANT_DISCLAIMER =
-  "CapitalOS Assistant provides operational workflow guidance only. This is not legal, tax, investment, or securities advice. Approval, funding, and investor outcomes are never guaranteed.";
+  "iCapOS Assistant provides operational workflow guidance only. This is not legal, tax, investment, or securities advice. Approval, funding, and investor outcomes are never guaranteed.";
 
 export const ASSISTANT_SAFETY_NOTES = [
   "Guidance is based on your permitted workspace summaries — not raw documents or private messages.",
-  "Contact qualified counsel or CapitalOS admin/compliance teams for legal or regulatory decisions.",
+  "Contact qualified counsel or iCapOS admin/compliance teams for legal or regulatory decisions.",
   "Investor interest indicators are non-binding and do not represent committed capital.",
 ] as const;
 
@@ -14,7 +14,7 @@ export function getAssistantGuardrailReply(message: string): string | null {
     return "I can't provide quiz answers. Use Founder Learning courses for educational content, or ask me to explain a readiness workflow step.";
   }
   if (isRestrictedAdviceRequest(message)) {
-    return "I can't provide legal, tax, investment, or securities advice. I can explain CapitalOS workflow steps, required documents, and where to go next in your workspace.";
+    return "I can't provide legal, tax, investment, or securities advice. I can explain iCapOS workflow steps, required documents, and where to go next in your workspace.";
   }
   return null;
 }

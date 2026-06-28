@@ -251,7 +251,7 @@ export function InvestorCompanyReportView({
       </WorkspacePanel>
 
       <section className="grid gap-6 lg:grid-cols-[1fr_0.42fr]">
-        <WorkspacePanel title="Next steps" subtitle="Engage with the founder on CapitalOS">
+        <WorkspacePanel title="Next steps" subtitle="Engage with the founder on iCapOS">
           <p className="text-sm text-slate-600">
             Use the actions panel to express indicative interest, request an introduction, or open a message thread
             when messaging is enabled for this listing.

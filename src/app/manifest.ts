@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "CapitalOS",
-    short_name: "CapitalOS",
+    name: "iCapOS",
+    short_name: "iCapOS",
     description: "Capital readiness platform for founders",
     start_url: "/founder/dashboard",
     display: "standalone",

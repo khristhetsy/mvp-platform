@@ -281,7 +281,7 @@ export default function AnalyticsClient({ metrics, dailyOpens }: Props) {
           <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#534AB7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 11, color: "#fff", fontWeight: 500 }}>AI</div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 500 }}>Virtual CMO</div>
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Powered by Claude · CapitalOS Marketing</div>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Powered by Claude · iCapOS Marketing</div>
           </div>
         </div>
 

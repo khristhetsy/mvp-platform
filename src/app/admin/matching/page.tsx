@@ -51,7 +51,7 @@ export default async function AdminMatchingPage() {
         <PageHeader
           eyebrow="Admin workspace"
           title="Matching Center"
-          description="Platform-wide investor–company matching intelligence using the existing CapitalOS rules engine."
+          description="Platform-wide investor–company matching intelligence using the existing iCapOS rules engine."
         />
 
         {setupError ? (

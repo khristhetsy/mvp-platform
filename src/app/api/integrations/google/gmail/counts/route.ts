@@ -22,7 +22,7 @@ export async function GET(): Promise<Response> {
 
   try {
     const counts = await getGmailFolderCounts(auth.profile.id);
-    // Subtract threads the user has read inside CapitalOS from the inbox badge.
+    // Subtract threads the user has read inside iCapOS from the inbox badge.
     const [unreadIds, readIds] = await Promise.all([
       listUnreadInboxThreadIds(auth.profile.id),
       getReadThreadIds(auth.supabase, auth.profile.id),

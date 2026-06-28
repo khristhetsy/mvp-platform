@@ -18,7 +18,7 @@ function emailShell(content: string): string {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>CapitalOS</title>
+  <title>iCapOS</title>
 </head>
 <body style="margin:0;padding:0;background:#F8F9FC;font-family:system-ui,-apple-system,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#F8F9FC;padding:40px 16px;">
@@ -28,7 +28,7 @@ function emailShell(content: string): string {
           <!-- Header -->
           <tr>
             <td style="background:${ACCENT};padding:24px 32px;">
-              <span style="font-size:18px;font-weight:800;color:white;letter-spacing:-0.02em;">CapitalOS</span>
+              <span style="font-size:18px;font-weight:800;color:white;letter-spacing:-0.02em;">iCapOS</span>
             </td>
           </tr>
           <!-- Body -->
@@ -41,7 +41,7 @@ function emailShell(content: string): string {
           <tr>
             <td style="padding:20px 32px;border-top:1px solid #f3f4f6;background:#fafafa;">
               <p style="margin:0;font-size:11px;color:#9ca3af;line-height:1.6;">
-                You are receiving this because you have an active company on CapitalOS.
+                You are receiving this because you have an active company on iCapOS.
                 <a href="${APP_URL}/founder/settings" style="color:${ACCENT};">Manage email preferences</a>
               </p>
             </td>
@@ -201,7 +201,7 @@ export async function emailFounderInvestorInterest(input: {
     <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${ACCENT};text-transform:uppercase;letter-spacing:.08em;">Investor activity</p>
     <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#111827;">New investor interest</h2>
     <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">
-      <strong>${investorName}</strong> has expressed interest in <strong>${input.companyName}</strong> on CapitalOS.
+      <strong>${investorName}</strong> has expressed interest in <strong>${input.companyName}</strong> on iCapOS.
     </p>
     <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.6;">
       This is an early signal. Log into your dashboard to review their profile and decide on next steps.
@@ -228,7 +228,7 @@ export async function emailTeamInvite(input: {
     <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${ACCENT};text-transform:uppercase;letter-spacing:.08em;">Team invitation</p>
     <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#111827;">You&rsquo;ve been invited to join ${input.companyName}</h2>
     <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">
-      <strong>${input.inviterName}</strong> has invited you to join the <strong>${input.companyName}</strong> workspace on CapitalOS as a team member.
+      <strong>${input.inviterName}</strong> has invited you to join the <strong>${input.companyName}</strong> workspace on iCapOS as a team member.
     </p>
     <p style="margin:0 0 16px;font-size:14px;color:#6b7280;line-height:1.6;">
       As a team member you can collaborate on investor outreach, review deal rooms, and track fundraising progress alongside your co-founder.
@@ -239,8 +239,8 @@ export async function emailTeamInvite(input: {
 
   await sendEmail({
     to: input.inviteeEmail,
-    subject: `You're invited to join ${input.companyName} on CapitalOS`,
+    subject: `You're invited to join ${input.companyName} on iCapOS`,
     html,
-    text: `${input.inviterName} invited you to join ${input.companyName} on CapitalOS. Accept here: ${acceptUrl}`,
+    text: `${input.inviterName} invited you to join ${input.companyName} on iCapOS. Accept here: ${acceptUrl}`,
   });
 }

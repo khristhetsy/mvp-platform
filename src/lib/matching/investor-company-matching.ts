@@ -292,7 +292,7 @@ export function buildFounderInvestorFitSignals(input: {
 
   if (input.strongMatchCount > 0) {
     signals.push(
-      `${input.strongMatchCount} approved investor${input.strongMatchCount === 1 ? "" : "s"} show strong CapitalOS match signals for your profile.`,
+      `${input.strongMatchCount} approved investor${input.strongMatchCount === 1 ? "" : "s"} show strong iCapOS match signals for your profile.`,
     );
   } else if (input.approvedInvestorMatchCount > 0) {
     signals.push(

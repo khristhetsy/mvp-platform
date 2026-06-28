@@ -66,7 +66,7 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
     template_id: templates[0]?.id ?? "",
     delay_days: "0",
     condition: "always",
-    from_name: "CapitalOS",
+    from_name: "iCapOS",
     from_email: "outreach@mail.myicfos.com",
   });
 

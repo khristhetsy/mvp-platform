@@ -40,7 +40,7 @@ export function FounderLearningDashboard({
         eyebrow="Institutional readiness intelligence"
         title="Learning command center"
         description="Structured programs, lessons, and readiness milestones tied to your diligence and remediation data — not a generic course marketplace."
-        metadata={`CapitalOS readiness tier · ${learning.completedLessonsCount} lessons completed`}
+        metadata={`iCapOS readiness tier · ${learning.completedLessonsCount} lessons completed`}
         queueIndicator={
           <StatusBadge label={learning.readinessTier.label} status="info" dot />
         }
@@ -60,7 +60,7 @@ export function FounderLearningDashboard({
           accent="indigo"
         />
         <OperationalMetric
-          label="CapitalOS tier"
+          label="iCapOS tier"
           value={`T${learning.readinessTier.tier}`}
           detail={learning.readinessTier.label}
           accent="blue"

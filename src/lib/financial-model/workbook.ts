@@ -44,7 +44,7 @@ export async function renderFinancialModelWorkbook(input: FinancialModelInput): 
   const { companyName, assumptions, projections, monthly, source } = input;
   const currency = input.currency || "USD";
   const wb = new ExcelJS.Workbook();
-  wb.creator = "CapitalOS";
+  wb.creator = "iCapOS";
   wb.created = new Date();
 
   // ── Sheet 1: Assumptions ───────────────────────────────────────────────
@@ -54,7 +54,7 @@ export async function renderFinancialModelWorkbook(input: FinancialModelInput): 
   aSheet.getCell("A1").font = { bold: true, size: 16 };
   aSheet.getCell("A3").value = "Drivers";
   aSheet.getCell("A3").font = { bold: true, size: 12 };
-  aSheet.getCell("C3").value = source === "business-plan" ? "Imported from AI Business Plan" : "Built in CapitalOS";
+  aSheet.getCell("C3").value = source === "business-plan" ? "Imported from AI Business Plan" : "Built in iCapOS";
   aSheet.getCell("C3").font = { italic: true, color: { argb: "FF6366F1" } };
 
   const aHeader = aSheet.addRow(["Driver", "Value", "Notes"]);

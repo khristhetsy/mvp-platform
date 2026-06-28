@@ -63,7 +63,7 @@ export default async function BillingPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Billing</p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Billing overview</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-          CapitalOS billing is powered by Lemon Squeezy. Choose a plan below to start your subscription.
+          iCapOS billing is powered by Lemon Squeezy. Choose a plan below to start your subscription.
         </p>
 
         <dl className="mt-8 grid gap-4 text-sm text-slate-700 md:grid-cols-2 lg:grid-cols-3">

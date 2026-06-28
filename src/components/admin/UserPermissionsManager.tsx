@@ -241,7 +241,7 @@ export function UserPermissionsManager() {
             User Permissions
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600">
-            Assign internal levels and fine-grained permissions for CapitalOS staff. Changes are audited and enforced
+            Assign internal levels and fine-grained permissions for iCapOS staff. Changes are audited and enforced
             immediately.
           </p>
         </div>

@@ -32,7 +32,7 @@ export const LEARNING_MODULE_CONTENT: Record<string, LearningModuleContent> = {
       lesson(
         "profile-checklist",
         "Profile completion checklist",
-        "CapitalOS onboarding maps directly to investor-ready profile requirements.",
+        "iCapOS onboarding maps directly to investor-ready profile requirements.",
         [
           "Complete industry, geography, and business description",
           "Document founder goals and use of funds",
@@ -150,7 +150,7 @@ export const LEARNING_MODULE_CONTENT: Record<string, LearningModuleContent> = {
     lessons: [
       lesson(
         "dd-workflow",
-        "Diligence workflow on CapitalOS",
+        "Diligence workflow on iCapOS",
         "Readiness combines document completeness, AI report, and admin review.",
         [
           "Complete document checklist before requesting analysis",

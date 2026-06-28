@@ -8,7 +8,7 @@ export type PartnerCoaching = {
   source: "ai" | "fallback";
 };
 
-const SYSTEM_PROMPT = `You are a supportive coach helping an investor be a stronger partner to founders on CapitalOS.
+const SYSTEM_PROMPT = `You are a supportive coach helping an investor be a stronger partner to founders on iCapOS.
 
 Write a short (2–3 sentence) encouraging paragraph based ONLY on the facts and suggested actions provided.
 

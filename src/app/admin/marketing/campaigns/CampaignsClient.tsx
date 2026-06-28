@@ -39,7 +39,7 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
     name: "",
     list_id: lists[0]?.id ?? "",
     template_id: templates[0]?.id ?? "",
-    from_name: "CapitalOS",
+    from_name: "iCapOS",
     from_email: "outreach@mail.myicfos.com",
     reply_to: "",
     scheduled_at: "",

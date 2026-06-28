@@ -158,7 +158,7 @@ export function GmailInbox() {
       setThread(data.thread);
       setOpenCardId(null);
       // Read-only: un-bold the row now, drop the badge by one, and persist a
-      // CapitalOS-side read mark so it stays read across refreshes/devices.
+      // iCapOS-side read mark so it stays read across refreshes/devices.
       let wasUnread = false;
       setItems((prev) => prev.map((t) => {
         if (t.threadId === threadId && t.unread) { wasUnread = true; return { ...t, unread: false }; }
@@ -307,7 +307,7 @@ export function GmailInbox() {
       <div className="rounded-xl border border-[#B5D4F4] bg-[#E6F1FB] p-6 text-center">
         <Mail className="mx-auto h-7 w-7 text-[#2f6cb0]" strokeWidth={1.5} />
         <h2 className="mt-2 text-base font-semibold text-[#0C447C]">{connected ? "Grant inbox access" : "Connect your Google account"}</h2>
-        <p className="mt-1 text-sm text-[#234f86]">{connected ? "Reconnect Google to allow CapitalOS to read your Gmail inbox." : "Connect Google to read your real email here."}</p>
+        <p className="mt-1 text-sm text-[#234f86]">{connected ? "Reconnect Google to allow iCapOS to read your Gmail inbox." : "Connect Google to read your real email here."}</p>
         <a href={connectUrl} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[#2f6cb0] px-4 py-2 text-sm font-semibold text-white hover:bg-[#234f86]">
           <ExternalLink className="h-4 w-4" /> {connected ? "Reconnect Google" : "Connect Google"}
         </a>

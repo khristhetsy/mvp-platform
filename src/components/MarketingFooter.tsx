@@ -5,7 +5,7 @@ export function MarketingFooter() {
     <footer className="border-t border-slate-200 bg-white">
       <div className="mx-auto flex max-w-7xl flex-col justify-between gap-6 px-6 py-8 text-sm text-slate-500 md:flex-row md:items-center">
         <div>
-          <p className="font-semibold text-[var(--navy)]">CapitalOS</p>
+          <p className="font-semibold text-[var(--navy)]">iCapOS</p>
           <p className="mt-1">The operating system for capital-ready companies.</p>
           <p className="mt-0.5 text-xs text-slate-400">Capital readiness and private market infrastructure.</p>
         </div>

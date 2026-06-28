@@ -35,7 +35,7 @@ export async function POST(request: Request) {
 
     const message =
       requestType === "notify_billing_live"
-        ? "You will be notified when CapitalOS billing goes live."
+        ? "You will be notified when iCapOS billing goes live."
         : requestType === "contact_sales"
           ? "Sales request received. Our team will follow up shortly."
           : "Upgrade request received. Billing activation will be handled when checkout is enabled.";

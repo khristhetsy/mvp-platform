@@ -74,6 +74,6 @@ export async function formatEmailDraftForAssistant(
     "**Safety notes:**",
     ...draft.safetyNotes.map((n) => `- ${n}`),
     "",
-    "Copy this into your own email client to send. CapitalOS does not send emails automatically.",
+    "Copy this into your own email client to send. iCapOS does not send emails automatically.",
   ].join("\n");
 }

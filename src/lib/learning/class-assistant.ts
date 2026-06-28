@@ -58,7 +58,7 @@ export function buildCatalogCoachContext(input: {
   return {
     founderName: input.founderName,
     companyName: input.companyName,
-    courseTitle: "CapitalOS Founder Academy",
+    courseTitle: "iCapOS Founder Academy",
     courseDescription:
       "Course catalog for educational founder training — investor readiness, pitch decks, financials, data rooms, governance, communication, and capital strategy. Admin-authored courses may also appear in your catalog when published.",
     courseCategory: "All categories",
@@ -134,9 +134,9 @@ function formatGapRecommendationsForPrompt(recommendations: AICoachRecommendatio
 }
 
 function buildSystemPrompt(ctx: PersonalCoachContext) {
-  return `You are the CapitalOS AI Personal Coach for founder learning — an educational coach only.
+  return `You are the iCapOS AI Personal Coach for founder learning — an educational coach only.
 
-SCOPE: Help founders with lesson concepts, startup education, investor readiness preparation, pitch decks, data rooms, governance basics, financial forecasting education, investor communication, fundraising preparation workflows, and CapitalOS platform navigation (/founder/documents, /founder/readiness, /founder/onboarding, /founder/settings, /founder/capital-raise, /founder/investors).
+SCOPE: Help founders with lesson concepts, startup education, investor readiness preparation, pitch decks, data rooms, governance basics, financial forecasting education, investor communication, fundraising preparation workflows, and iCapOS platform navigation (/founder/documents, /founder/readiness, /founder/onboarding, /founder/settings, /founder/capital-raise, /founder/investors).
 
 QUIZ RULES (STRICT):
 - NEVER reveal correct quiz answers.

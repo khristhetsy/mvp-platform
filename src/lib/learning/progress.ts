@@ -198,7 +198,7 @@ async function checkCapitalReadyMilestone(founderId: string, companyId: string) 
     type: "learning_milestone",
     title: "Capital Ready",
     message:
-      "Congratulations — you completed foundation through engagement learning stages. You are Capital Ready for institutional outreach on CapitalOS.",
+      "Congratulations — you completed foundation through engagement learning stages. You are Capital Ready for institutional outreach on iCapOS.",
     entityType: "company",
     entityId: companyId,
   });

@@ -45,7 +45,7 @@ function LetterPreview({ template, compact = false }: { template: Partial<Market
     <div style={{ background: "#fff", border: "0.5px solid #E5E3DC", borderRadius: 8, padding: "32px 40px", fontFamily: "Georgia, serif", maxWidth: 560, margin: "0 auto", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
       {/* Letterhead */}
       <div style={{ borderBottom: "2px solid #534AB7", paddingBottom: 12, marginBottom: 20 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: "#534AB7", letterSpacing: "0.04em" }}>CapitalOS</div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: "#534AB7", letterSpacing: "0.04em" }}>iCapOS</div>
         <div style={{ fontSize: 11, color: "#888780", marginTop: 2 }}>outreach@mail.myicfos.com · icapos.com</div>
       </div>
 
@@ -75,7 +75,7 @@ function LetterPreview({ template, compact = false }: { template: Partial<Market
       {/* Closing */}
       <div style={{ fontSize: 14, color: "#2C2C2A", marginBottom: 8 }}>Sincerely,</div>
       <div style={{ fontSize: 14, fontWeight: 600, color: "#2C2C2A" }}>{"{{sender_name}}"}</div>
-      <div style={{ fontSize: 12, color: "#888780" }}>CapitalOS · icapos.com</div>
+      <div style={{ fontSize: 12, color: "#888780" }}>iCapOS · icapos.com</div>
 
       {/* Footer rule */}
       <div style={{ borderTop: "0.5px solid #D3D1C7", marginTop: 28, paddingTop: 12 }}>

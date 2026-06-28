@@ -17,7 +17,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: { absolute: "CapitalOS — The operating system for capital-ready companies" },
+  title: { absolute: "iCapOS — The operating system for capital-ready companies" },
   alternates: { canonical: "/" },
   openGraph: { url: "/" },
 };

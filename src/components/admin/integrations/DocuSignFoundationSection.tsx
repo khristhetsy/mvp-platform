@@ -10,7 +10,7 @@ export function DocuSignFoundationSection() {
         <StatusBadge label="Readiness only" status="success" />
       </div>
       <p className="mt-3 text-xs text-slate-600">
-        CapitalOS tracks document package execution readiness and signer prerequisites for SPV workflows. No envelopes
+        iCapOS tracks document package execution readiness and signer prerequisites for SPV workflows. No envelopes
         are created and no documents are sent for signature in Phase 1.
       </p>
       <p className="mt-2 text-xs font-medium text-slate-700">Supported in a future phase</p>

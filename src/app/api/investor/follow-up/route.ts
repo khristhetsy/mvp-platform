@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       investorId: auth.profile.id,
       companyId: parsed.data.companyId,
       companySlug: parsed.data.companySlug,
-      message: parsed.data.message ?? "Investor requested CapitalOS platform follow-up.",
+      message: parsed.data.message ?? "Investor requested iCapOS platform follow-up.",
     },
   );
 
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
       createdBy: auth.profile.id,
       introRequestId: data.id,
       messageType: "follow_up",
-      body: data.message?.trim() || "Investor requested CapitalOS platform follow-up.",
+      body: data.message?.trim() || "Investor requested iCapOS platform follow-up.",
     });
   }
 

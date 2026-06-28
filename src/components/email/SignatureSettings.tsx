@@ -17,7 +17,7 @@ const SWATCHES = ["#0F2147", "#185FA5", "#0D9488", "#475569", "#A32D2D", "#00000
 
 /**
  * Rich email-signature editor (contentEditable). Produces HTML that's sanitized
- * server-side and appended to outgoing CapitalOS mail.
+ * server-side and appended to outgoing iCapOS mail.
  */
 export function SignatureSettings() {
   const ref = useRef<HTMLDivElement>(null);

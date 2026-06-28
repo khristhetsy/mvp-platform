@@ -21,7 +21,7 @@ export const metadata = {
     "Browse admin-approved companies with full diligence context. Shown for informational purposes only; not investment recommendations.",
   alternates: { canonical: "/deals" },
   openGraph: {
-    title: "The Private Market · CapitalOS",
+    title: "The Private Market · iCapOS",
     description: "Admin-approved, diligence-ready opportunities. Informational only.",
     url: "/deals",
   },

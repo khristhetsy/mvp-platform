@@ -35,7 +35,7 @@ export function buildInvestorStageCoach(input: InvestorCoachInput): InvestorStag
         return {
           ...base,
           headline: "Your profile is under review",
-          body: "The CapitalOS team is reviewing your profile — usually a day or two. You can browse opportunities while you wait.",
+          body: "The iCapOS team is reviewing your profile — usually a day or two. You can browse opportunities while you wait.",
           action: { label: "Browse opportunities", href: "/investor/opportunities" },
         };
       }
@@ -116,7 +116,7 @@ export function buildInvestorStageCoach(input: InvestorCoachInput): InvestorStag
   }
 }
 
-const SYSTEM_PROMPT = `You are a supportive coach guiding an investor through their next step on CapitalOS.
+const SYSTEM_PROMPT = `You are a supportive coach guiding an investor through their next step on iCapOS.
 
 Rewrite the provided next-step into one warm, concise sentence (max 2 sentences).
 

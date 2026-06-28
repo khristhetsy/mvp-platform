@@ -295,9 +295,9 @@ function DrawerContent({
           <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {isPublished
-              ? `Your listing is live on the CapitalOS marketplace. Investors can discover your company, review your data room, and express interest. You currently have ${interestCount + introCount + savedCount} total investor interactions.`
+              ? `Your listing is live on the iCapOS marketplace. Investors can discover your company, review your data room, and express interest. You currently have ${interestCount + introCount + savedCount} total investor interactions.`
               : reviewStatus === "pending"
-              ? "Your listing is under review by the CapitalOS team. Once approved it will be published to the marketplace and visible to investors. This typically takes 1–3 business days."
+              ? "Your listing is under review by the iCapOS team. Once approved it will be published to the marketplace and visible to investors. This typically takes 1–3 business days."
               : reviewStatus === "rejected"
               ? "Your listing was not approved in its current form. Review the feedback in your settings and resubmit — most rejections are resolved with minor profile updates."
               : "Your listing has not been submitted for review yet. Complete your company profile and submit — investors cannot find you until you're published."}
@@ -316,7 +316,7 @@ function DrawerContent({
             isPublished && pledgeSummary.investorCount > 0
               ? `You have ${pledgeSummary.investorCount} investor${pledgeSummary.investorCount === 1 ? "" : "s"} pledging — now is the time to schedule follow-up calls and convert pledges to commitments.`
               : isPublished
-              ? "You're live but have no pledges yet. Share your CapitalOS profile URL directly with warm contacts to accelerate first engagement."
+              ? "You're live but have no pledges yet. Share your iCapOS profile URL directly with warm contacts to accelerate first engagement."
               : "Before submitting, ensure your pitch deck is uploaded and your funding target is set — these are the two fields most commonly missing at review.",
             isPublished
               ? `Listings with complete data rooms receive ${pledgeSummary.totalPledged === 0 ? "3–5×" : "significantly"} more investor interactions. ${pledgeSummary.totalPledged === 0 ? "Upload any missing documents to improve your discoverability." : "Keep your documents current to maintain investor confidence."}`
@@ -417,7 +417,7 @@ function DrawerContent({
           target > 0 && remaining > 0
             ? `You need ${formatPledgeTotal(remaining, pledgeSummary.currency)} more to reach your target. With ${interestCount + introCount} active signals in your pipeline, converting even half of these would ${(interestCount + introCount) > 0 ? "materially close the gap" : "require expanding your investor outreach"}.`
             : target === 0
-            ? "A realistic target also helps CapitalOS match you with investors whose check sizes align — set it to improve your match quality."
+            ? "A realistic target also helps iCapOS match you with investors whose check sizes align — set it to improve your match quality."
             : "You're at or near your target. Confirm commitments with a signed term sheet before closing the round to new investors.",
         ]}
       />

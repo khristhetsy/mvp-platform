@@ -125,13 +125,13 @@ function buildDetails(score: PartnerScore): Record<string, DrawerDetail> {
       title: "Portfolio readiness",
       chip: `${Math.round(p.portfolioReadiness)} / 100 · 10% of score`,
       explain:
-        "The average CapitalOS readiness of companies you've backed. Deliberately light — backing rough early-stage companies isn't penalized.",
+        "The average iCapOS readiness of companies you've backed. Deliberately light — backing rough early-stage companies isn't penalized.",
       rows: [{ label: "Avg backed readiness", value: readiness }],
     },
     p_trackRecord: {
       title: "Track record",
       chip: `${Math.round(p.trackRecord)} / 100 · 10% of score`,
-      explain: "Grows with real outcomes — closed deals and your tenure on CapitalOS.",
+      explain: "Grows with real outcomes — closed deals and your tenure on iCapOS.",
       rows: [
         { label: "Deals closed", value: String(f.closedDeals) },
         { label: "Also counts", value: "Time on the platform" },
@@ -159,7 +159,7 @@ function buildDetails(score: PartnerScore): Record<string, DrawerDetail> {
       title: "Accreditation",
       chip: accreditedValue,
       explain:
-        "Whether your accredited-investor status is verified on CapitalOS. Founders use it to gauge whether you can participate in a given round.",
+        "Whether your accredited-investor status is verified on iCapOS. Founders use it to gauge whether you can participate in a given round.",
       rows: [
         { label: "Status", value: accreditedValue, highlight: !f.accredited },
         { label: "Feeds", value: "Credibility (20%)" },

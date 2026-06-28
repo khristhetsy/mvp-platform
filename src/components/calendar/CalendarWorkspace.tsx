@@ -154,7 +154,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
   useEffect(() => { void load(); }, [load]);
 
   // Merge local (editable) events with the Google overlay (read-only), dropping
-  // Google copies of events we already synced from CapitalOS.
+  // Google copies of events we already synced from iCapOS.
   const display = useMemo<DisplayEvent[]>(() => {
     const syncedIds = new Set(events.map((e) => e.external_event_id).filter((id): id is string => Boolean(id)));
     const local: DisplayEvent[] = events.map((e) => ({
@@ -316,7 +316,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
             {!sel.editable ? <a href={googleDayUrl(sel.start_time)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-[#B5D4F4] bg-[#E6F1FB] px-3 py-1.5 text-xs font-medium text-[#0C447C] hover:bg-[#B5D4F4]"><ExternalLink className="h-3.5 w-3.5" /> Open in Google</a> : null}
             <button type="button" disabled={saving} onClick={() => void deleteEvent(sel)} className="inline-flex items-center gap-1 rounded-lg border border-[#F7C1C1] bg-white px-3 py-1.5 text-xs font-medium text-[#A32D2D] hover:bg-[#FCEBEB] disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
           </div>
-          <p className="px-5 pb-3 text-[11px] text-slate-400">{sel.editable ? "CapitalOS event · synced to Google" : "Google Calendar event · edits sync to Google"}</p>
+          <p className="px-5 pb-3 text-[11px] text-slate-400">{sel.editable ? "iCapOS event · synced to Google" : "Google Calendar event · edits sync to Google"}</p>
         </div>
       </div>
     );
@@ -345,7 +345,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden items-center gap-3 sm:flex">
-            <span className="flex items-center gap-1.5 text-[11px] text-slate-500"><span className="h-2 w-2 rounded-full bg-[#7F77DD]" /> CapitalOS</span>
+            <span className="flex items-center gap-1.5 text-[11px] text-slate-500"><span className="h-2 w-2 rounded-full bg-[#7F77DD]" /> iCapOS</span>
             <span className="flex items-center gap-1.5 text-[11px] text-slate-500"><span className="h-2 w-2 rounded-full bg-[#378ADD]" /> Google</span>
           </div>
           <button type="button" onClick={() => setForm(emptyForm(new Date()))} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800">

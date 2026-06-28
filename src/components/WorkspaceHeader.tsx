@@ -216,7 +216,7 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profi
         <Link href="/" className="flex shrink-0 items-center self-center">
           <Image
             src={CAPITALOS_LOGO_SRC.wordmark}
-            alt="CapitalOS"
+            alt="iCapOS"
             width={824}
             height={543}
             className="h-7 w-auto max-h-[calc(var(--workspace-header-height)-1rem)] max-w-[140px] shrink-0 object-contain object-left sm:max-w-[160px] lg:max-w-[200px]"

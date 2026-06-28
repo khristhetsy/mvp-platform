@@ -81,7 +81,7 @@ export function UpgradeRequestActions({ requestedPlan, featureKey, compact = fal
       {error ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
       {!compact ? (
         <p className="text-xs text-slate-500">
-          Payment checkout is not enabled yet. Requests are logged for the CapitalOS team — no charges will be made.
+          Payment checkout is not enabled yet. Requests are logged for the iCapOS team — no charges will be made.
         </p>
       ) : null}
     </div>

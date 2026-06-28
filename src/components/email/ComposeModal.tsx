@@ -28,7 +28,7 @@ export interface ComposeModalProps {
   onSaveDraft?: (draft: ComposeDraft) => void;
   onSend: (draft: ComposeDraft) => void;
   onClose: () => void;
-  /** Optional attachment support (CapitalOS inbox). Returns the stored attachments. */
+  /** Optional attachment support (iCapOS inbox). Returns the stored attachments. */
   uploadFiles?: (files: FileList) => Promise<EmailAttachment[]>;
   uploading?: boolean;
   initialAttachments?: EmailAttachment[];

@@ -68,7 +68,7 @@ function fallbackResult(
       stageMatch
         ? `Stage fit: The company is at ${stage ?? "this stage"}, which matches your preferred investment stages.`
         : `Note: the company's stage may differ from your stated preferences — verify this fits your fund mandate.`,
-      `The company has a published marketplace profile with a CapitalOS readiness score — review the diligence report below for details.`,
+      `The company has a published marketplace profile with a iCapOS readiness score — review the diligence report below for details.`,
     ],
     watchOuts: [
       "AI-powered brief not available (add ANTHROPIC_API_KEY). Review the company profile manually to assess thesis fit.",

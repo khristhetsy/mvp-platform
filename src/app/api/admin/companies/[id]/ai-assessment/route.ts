@@ -16,7 +16,7 @@ export type AIAssessmentResult = {
   source: "claude" | "fallback";
 };
 
-const SYSTEM_PROMPT = `You are a senior venture platform analyst reviewing whether a company should be approved for marketplace listing on CapitalOS.
+const SYSTEM_PROMPT = `You are a senior venture platform analyst reviewing whether a company should be approved for marketplace listing on iCapOS.
 
 Given a company's profile, readiness score, documents status, and investor activity, provide a concise review assessment.
 

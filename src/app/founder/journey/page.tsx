@@ -23,7 +23,7 @@ const STAGE_LABELS: Record<JourneyStage, string> = {
 };
 
 const STAGE_DESCRIPTIONS: Record<JourneyStage, string> = {
-  initialize: "Set up your founder profile and company details to get started on CapitalOS.",
+  initialize: "Set up your founder profile and company details to get started on iCapOS.",
   qualify:
     "Upload required documents, complete your readiness assessment, and request admin review to unlock investor access.",
   deploy:
@@ -208,7 +208,7 @@ export default async function FounderJourneyPage() {
     >
       <PageHeader
         eyebrow="Founder journey"
-        title="Your CapitalOS Journey"
+        title="Your iCapOS Journey"
         description="Track your progress through each stage — from profile setup to active investor engagement."
       />
 

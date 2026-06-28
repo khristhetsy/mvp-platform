@@ -7,7 +7,7 @@ import { MailboxTabs } from "./MailboxTabs";
 import type { Mailbox } from "./types";
 
 const MAILBOXES: Mailbox[] = [
-  { id: "capitalos", label: "CapitalOS" },
+  { id: "capitalos", label: "iCapOS" },
   { id: "gmail", label: "Gmail" },
 ];
 

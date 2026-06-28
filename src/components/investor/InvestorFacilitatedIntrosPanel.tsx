@@ -68,7 +68,7 @@ export async function InvestorFacilitatedIntrosPanel({
         <div>
           <h2 className="text-base font-semibold text-slate-900">Facilitated connections</h2>
           <p className="mt-0.5 text-xs text-slate-500">
-            Companies where your intro request was facilitated by the CapitalOS team
+            Companies where your intro request was facilitated by the iCapOS team
           </p>
         </div>
         <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">

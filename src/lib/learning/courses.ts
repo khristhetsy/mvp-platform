@@ -50,7 +50,7 @@ const screeningQuiz = quizLesson(
     },
     {
       id: "q2",
-      prompt: "Educational founder training on CapitalOS means:",
+      prompt: "Educational founder training on iCapOS means:",
       choices: [
         { id: "a", label: "Investor preparation learning — not investment advice" },
         { id: "b", label: "Guaranteed funding approval" },
@@ -68,7 +68,7 @@ export const FOUNDER_COURSES: Course[] = [
     description: "A structured masterclass on how investors screen, evaluate, and engage with early-stage companies.",
     longDescription:
       "This educational course walks founders through institutional investor behavior, profile positioning, and credibility signals. Content is for founder training and investor preparation only — not legal, tax, securities, or investment advice.",
-    instructor: "CapitalOS Faculty",
+    instructor: "iCapOS Faculty",
     category: "Investor Readiness",
     level: "Beginner",
     thumbnailAccent: "from-indigo-600 to-slate-900",
@@ -147,7 +147,7 @@ export const FOUNDER_COURSES: Course[] = [
     description: "Design and narrative structure for a first-meeting institutional deck.",
     longDescription:
       "Learn slide architecture, storytelling flow, and disclosure discipline for educational founder training. This is not securities compliance advice.",
-    instructor: "CapitalOS Faculty",
+    instructor: "iCapOS Faculty",
     category: "Fundraising",
     level: "Beginner",
     thumbnailAccent: "from-violet-600 to-indigo-900",
@@ -212,7 +212,7 @@ export const FOUNDER_COURSES: Course[] = [
     description: "Build investor-diligence-friendly forecasts and assumptions.",
     longDescription:
       "Founder training on projections, unit economics, and scenario framing for investor preparation — not tax or investment advice.",
-    instructor: "CapitalOS Faculty",
+    instructor: "iCapOS Faculty",
     category: "Finance",
     level: "Intermediate",
     thumbnailAccent: "from-emerald-600 to-slate-900",
@@ -259,13 +259,13 @@ export const FOUNDER_COURSES: Course[] = [
     description: "Organize a diligence-ready document room for institutional review.",
     longDescription:
       "Educational course on folder structure, disclosure discipline, and completeness checks for investor preparation.",
-    instructor: "CapitalOS Faculty",
+    instructor: "iCapOS Faculty",
     category: "Diligence",
     level: "Intermediate",
     thumbnailAccent: "from-sky-600 to-slate-900",
     whatYouWillLearn: [
       "Core diligence folders and artifacts",
-      "Completeness workflows on CapitalOS",
+      "Completeness workflows on iCapOS",
       "Disclosure and versioning hygiene",
     ],
     sections: [
@@ -299,7 +299,7 @@ export const FOUNDER_COURSES: Course[] = [
     description: "Corporate hygiene and board-ready operating rhythms for founders.",
     longDescription:
       "Educational founder training on governance artifacts — not legal advice. Consult qualified counsel for entity-specific requirements.",
-    instructor: "CapitalOS Faculty",
+    instructor: "iCapOS Faculty",
     category: "Governance",
     level: "Beginner",
     thumbnailAccent: "from-amber-600 to-slate-900",
@@ -331,7 +331,7 @@ export const FOUNDER_COURSES: Course[] = [
     description: "Investor updates, outreach tone, and institutional communication patterns.",
     longDescription:
       "Founder training on communication workflows — not investment recommendations or guaranteed outcomes.",
-    instructor: "CapitalOS Faculty",
+    instructor: "iCapOS Faculty",
     category: "Communication",
     level: "Intermediate",
     thumbnailAccent: "from-rose-600 to-slate-900",
@@ -371,7 +371,7 @@ export const FOUNDER_COURSES: Course[] = [
     description: "Inside the institutional evaluation mindset — from screen to deep diligence.",
     longDescription:
       "Educational overview of evaluation frameworks used in institutional investing contexts. Not investment advice.",
-    instructor: "CapitalOS Faculty",
+    instructor: "iCapOS Faculty",
     category: "Investor Readiness",
     level: "Advanced",
     thumbnailAccent: "from-fuchsia-600 to-slate-900",
@@ -409,7 +409,7 @@ export const FOUNDER_COURSES: Course[] = [
     description: "Multi-year capital planning and vehicle awareness for founders.",
     longDescription:
       "Educational course on capital strategy framing — not securities, tax, or legal advice.",
-    instructor: "CapitalOS Faculty",
+    instructor: "iCapOS Faculty",
     category: "Capital Strategy",
     level: "Advanced",
     thumbnailAccent: "from-cyan-600 to-slate-900",

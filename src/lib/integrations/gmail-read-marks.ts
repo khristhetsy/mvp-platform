@@ -6,7 +6,7 @@ function raw(supabase: SupabaseClient<Database>): SupabaseClient {
   return supabase as unknown as SupabaseClient;
 }
 
-/** Gmail thread ids the user has opened (and thus "read") inside CapitalOS. */
+/** Gmail thread ids the user has opened (and thus "read") inside iCapOS. */
 export async function getReadThreadIds(
   supabase: SupabaseClient<Database>,
   ownerId: string,
@@ -18,7 +18,7 @@ export async function getReadThreadIds(
   return new Set(((data as Array<{ gmail_thread_id: string }> | null) ?? []).map((r) => r.gmail_thread_id));
 }
 
-/** Record a Gmail thread as read in CapitalOS (idempotent). */
+/** Record a Gmail thread as read in iCapOS (idempotent). */
 export async function markThreadRead(
   supabase: SupabaseClient<Database>,
   ownerId: string,

@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 const schema = z.object({ threadId: z.string().min(1).max(200) });
 
-/** POST — record a Gmail thread as read inside CapitalOS (read-only workaround). */
+/** POST — record a Gmail thread as read inside iCapOS (read-only workaround). */
 export async function POST(req: NextRequest): Promise<Response> {
   const auth = await requireApiProfile();
   if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });

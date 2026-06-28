@@ -119,7 +119,7 @@ export default async function AdminDashboardPage() {
       <div className="mb-6 rounded-xl px-5 py-4" style={{ background: "#0c2340" }}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium" style={{ color: "#AFA9EC" }}>CapitalOS admin</p>
+            <p className="text-xs font-medium" style={{ color: "#AFA9EC" }}>iCapOS admin</p>
             <h1 className="text-lg font-medium text-white">Dashboard</h1>
           </div>
           <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: "#534AB7", color: "#EEEDFE" }}>

@@ -96,7 +96,7 @@ export default async function FounderSpvsPage() {
         <PageHeader
           eyebrow="Founder workspace"
           title="SPVs"
-          description="Special Purpose Vehicles created by CapitalOS admin to pool investor capital."
+          description="Special Purpose Vehicles created by iCapOS admin to pool investor capital."
         />
 
         {companyError ? (
@@ -140,7 +140,7 @@ export default async function FounderSpvsPage() {
             <section className="mb-6 rounded-2xl border border-indigo-100 bg-indigo-50 p-5">
               <h2 className="text-sm font-semibold text-indigo-900">What is an SPV?</h2>
               <p className="mt-1.5 text-xs leading-5 text-indigo-700">
-                A Special Purpose Vehicle (SPV) is a legal entity created by CapitalOS admin to pool multiple investors
+                A Special Purpose Vehicle (SPV) is a legal entity created by iCapOS admin to pool multiple investors
                 into a single line on your cap table. When an SPV is formed for your company, you&apos;ll see it here
                 with the total capital, investor count, and closing status.
               </p>

@@ -5,7 +5,7 @@ export default function InvestorsNotFound() {
     <RouteSegmentNotFound
       eyebrow="For investors"
       title="Page not found"
-      description="This page may have moved. Explore how investors discover capital-ready companies on CapitalOS."
+      description="This page may have moved. Explore how investors discover capital-ready companies on iCapOS."
       homeHref="/investors"
       homeLabel="Back to investors"
     />

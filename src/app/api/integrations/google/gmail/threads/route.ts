@@ -25,7 +25,7 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   try {
     const threads = await listGmailThreads(auth.profile.id, { folder, q });
-    // Apply CapitalOS-side read marks (read-only Gmail can't clear UNREAD itself).
+    // Apply iCapOS-side read marks (read-only Gmail can't clear UNREAD itself).
     const readIds = await getReadThreadIds(auth.supabase, auth.profile.id);
     const marked = readIds.size > 0 ? threads.map((t) => (readIds.has(t.threadId) ? { ...t, unread: false } : t)) : threads;
     return NextResponse.json({ connected: true, needsReadScope: false, email: status.email, threads: marked });

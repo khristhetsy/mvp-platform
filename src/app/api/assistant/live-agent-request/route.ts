@@ -37,11 +37,11 @@ export async function POST(req: NextRequest): Promise<Response> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.TRANSACTIONAL_EMAIL_FROM?.trim() ?? "CapitalOS <info@myicfos.com>",
+        from: process.env.TRANSACTIONAL_EMAIL_FROM?.trim() ?? "iCapOS <info@myicfos.com>",
         to: [adminEmail],
         subject: `Live agent requested — ${founderName}`,
         text: [
-          `A founder has requested a live agent via the CapitalOS AI assistant.`,
+          `A founder has requested a live agent via the iCapOS AI assistant.`,
           ``,
           `Founder: ${founderName} (${founderEmail})`,
           `Page: ${currentPath}`,

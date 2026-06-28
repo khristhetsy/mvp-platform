@@ -1,7 +1,7 @@
 export function CapitalReadyBadge() {
   return (
     <span
-      title="Completed the full CapitalOS Capital Readiness program"
+      title="Completed the full iCapOS Capital Readiness program"
       className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700 ring-1 ring-indigo-200"
     >
       <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>

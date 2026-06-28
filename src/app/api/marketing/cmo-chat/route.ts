@@ -5,7 +5,7 @@ import { claudeComplete, isClaudeConfigured, CLAUDE_HAIKU } from "@/lib/claude";
 
 export const dynamic = "force-dynamic";
 
-const CMO_SYSTEM_PROMPT = `You are a world-class B2B SaaS Chief Marketing Officer (CMO) advising CapitalOS — an investor-readiness and deal management platform for family offices, VCs, and angel investors.
+const CMO_SYSTEM_PROMPT = `You are a world-class B2B SaaS Chief Marketing Officer (CMO) advising iCapOS — an investor-readiness and deal management platform for family offices, VCs, and angel investors.
 
 Your role is to provide concise, actionable, data-driven marketing advice. You think like a CMO who has scaled B2B fintech companies. You understand email deliverability, open rates, click rates, funnel optimization, audience segmentation, copywriting for financial professionals, and outbound sequencing.
 
@@ -23,7 +23,7 @@ Always:
 - Focus on what moves the needle: subject lines, CTAs, segmentation, timing, sequence design.
 - Keep responses under 150 words unless a detailed breakdown is requested.
 
-The target audience for CapitalOS emails is: family office managers, fund CFOs, angel investors, VC analysts. They are senior, time-poor, and skeptical of generic outreach. Messaging must feel personal, specific, and credible.`;
+The target audience for iCapOS emails is: family office managers, fund CFOs, angel investors, VC analysts. They are senior, time-poor, and skeptical of generic outreach. Messaging must feel personal, specific, and credible.`;
 
 export async function POST(request: Request) {
   await requireRole(["admin"]);

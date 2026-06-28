@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     recipientUserId: profile.id,
     actorUserId: auth.profile.id,
     type: "beta.onboarding_reminder",
-    title: "Complete your CapitalOS onboarding",
+    title: "Complete your iCapOS onboarding",
     message:
       parsed.data.role === "founder"
         ? "Your founder workspace is waiting — finish onboarding and upload key documents."

@@ -12,7 +12,7 @@ export interface RegCfCompanyContext {
 }
 
 const DISCLAIMER =
-  "DRAFT — for the founder's own use, not legal or investment advice. The founder owns and is responsible for this document. CapitalOS does not post, offer, solicit, host, or transact any securities.";
+  "DRAFT — for the founder's own use, not legal or investment advice. The founder owns and is responsible for this document. iCapOS does not post, offer, solicit, host, or transact any securities.";
 
 function contextBlock(c: RegCfCompanyContext): string {
   const lines: string[] = [];

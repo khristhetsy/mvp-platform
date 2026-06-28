@@ -12,7 +12,7 @@ export const metadata = {
     "Score your readiness, close diligence gaps with AI, and get in front of vetted investors actively deploying capital.",
   alternates: { canonical: "/founders" },
   openGraph: {
-    title: "For founders — become capital-ready · CapitalOS",
+    title: "For founders — become capital-ready · iCapOS",
     description: "Score your readiness, close diligence gaps with AI, and reach vetted investors.",
     url: "/founders",
   },
@@ -98,7 +98,7 @@ export default function FoundersPage() {
               Become <span className="text-[var(--teal)]">capital-ready</span> — then get seen by quality investors.
             </h1>
             <p className="mt-5 max-w-[46ch] text-base leading-7 text-slate-600">
-              CapitalOS scores your readiness, closes your diligence gaps with AI, and puts you in front of vetted
+              iCapOS scores your readiness, closes your diligence gaps with AI, and puts you in front of vetted
               investors actively deploying capital.
             </p>
             <div className="mt-7 flex flex-col gap-2.5 sm:flex-row">

@@ -64,7 +64,7 @@ export default async function InvestorVerificationPage() {
         <PageHeader
           eyebrow="Stage 2 · Verification"
           title="Identity & accreditation"
-          description="Verify who you are and that you qualify to invest. This is reviewed by the CapitalOS team and unlocks full deal-flow access."
+          description="Verify who you are and that you qualify to invest. This is reviewed by the iCapOS team and unlocks full deal-flow access."
         />
         <div className="max-w-2xl">
           <InvestorKycClient

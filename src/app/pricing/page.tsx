@@ -10,7 +10,7 @@ export const metadata = {
     "Start with a 3-day founder trial, then upgrade to Basic or Professional anytime. Investor accounts are always free.",
   alternates: { canonical: "/pricing" },
   openGraph: {
-    title: "Pricing · CapitalOS",
+    title: "Pricing · iCapOS",
     description: "3-day founder trial, then Basic or Professional. Investor accounts free.",
     url: "/pricing",
   },
