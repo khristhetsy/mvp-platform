@@ -12,6 +12,7 @@ import { useAdminQueryFilters } from "@/hooks/use-admin-query-filters";
 import type { PlanType, SubscriptionRecord } from "@/lib/subscriptions/plans";
 import type { InvestorApprovalStatus, InvestorProfileRecord } from "@/lib/investor/types";
 import type { KycReviewItem } from "@/lib/investor/kyc";
+import type { InvestorPriorDealRecord } from "@/lib/investor/types";
 import { filterInvestorProfiles, type InvestorQueryFilters } from "@/lib/ui/query-filters";
 
 type InvestorsPageView = "cards" | "table" | "approval" | "segments" | "activity";
@@ -38,6 +39,7 @@ type InvestorProfileWithMatching = InvestorProfileRecord & {
   profiles: { id: string; full_name: string | null; email: string | null; role: string | null; created_at: string } | null;
   matchingSummary?: { highMatchCompanyCount: number; topMatchScore: number };
   kycReview?: { items: KycReviewItem[]; canSubmit: boolean };
+  priorDeals?: InvestorPriorDealRecord[];
 };
 
 type AuthProfile = {

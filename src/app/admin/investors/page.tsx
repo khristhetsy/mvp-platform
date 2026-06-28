@@ -5,6 +5,7 @@ import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
 import { getInvestorMatchingSummaries } from "@/lib/matching/admin-matching-summaries";
 import { listInvestorProfilesForAdmin } from "@/lib/investor/profile";
 import { loadKycReviewView } from "@/lib/investor/kyc";
+import { listPriorDeals } from "@/lib/investor/prior-deals";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 import { getRequestedPlansByProfileIds } from "@/lib/billing/requested-plan";
@@ -65,6 +66,7 @@ export default async function AdminInvestorsPage() {
         row.approval_status === "approved"
           ? await loadKycReviewView(row.id, row.investor_type)
           : undefined,
+      priorDeals: row.approval_status === "approved" ? await listPriorDeals(row.id) : [],
     })),
   );
 

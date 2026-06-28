@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireStaffApi } from "@/lib/api/admin";
 import { writeAuditLog } from "@/lib/data/audit";
 import { track } from "@/lib/analytics/posthog";
+import { createNotification } from "@/lib/notifications/notifications";
 import { applyInvestorKycReview } from "@/lib/investor/kyc";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +48,20 @@ export async function POST(request: Request, { params }: RouteContext): Promise<
         investorProfileId: profileId,
       });
     }
+
+    void createNotification({
+      recipientUserId: investorProfile.profile_id,
+      actorUserId: auth.profile.id,
+      type: action === "verify" ? "investor_kyc_verified" : "investor_kyc_rejected",
+      title: action === "verify" ? "You're verified" : "Verification needs attention",
+      message:
+        action === "verify"
+          ? "Your identity is verified — you now have full access to deal flow."
+          : `Your verification needs a change${body?.feedback?.trim() ? `: ${body.feedback.trim()}` : "."}`,
+      entityType: "investor_profile",
+      entityId: profileId,
+      deepLink: "/investor/verification",
+    });
 
     return NextResponse.json({ investorProfile });
   } catch (error) {

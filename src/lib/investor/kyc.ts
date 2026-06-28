@@ -255,6 +255,29 @@ export async function applyInvestorKycReview(input: {
   return data as InvestorProfileRecord;
 }
 
+/** Admin marks the investor's optional accreditation evidence verified / not. */
+export async function applyAccreditationReview(
+  investorProfileId: string,
+  adminId: string,
+  verified: boolean,
+): Promise<InvestorProfileRecord> {
+  const admin = createServiceRoleClient();
+  const now = new Date().toISOString();
+  const { data, error } = await admin
+    .from("investor_profiles")
+    .update({
+      accreditation_verified: verified,
+      accreditation_reviewed_at: verified ? now : null,
+      accreditation_reviewed_by: verified ? adminId : null,
+      updated_at: now,
+    })
+    .eq("id", investorProfileId)
+    .select("*")
+    .single();
+  if (error || !data) throw new Error(error?.message ?? "Failed to record accreditation review.");
+  return data as InvestorProfileRecord;
+}
+
 /**
  * Where an investor sits in the three-stage journey:
  * Onboard (profile approval) → Verify (KYC) → Access.

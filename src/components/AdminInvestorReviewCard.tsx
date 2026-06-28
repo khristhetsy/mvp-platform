@@ -4,12 +4,13 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { investorApprovalStatusLabel } from "@/lib/investor/access";
 import { KYC_STATUS_LABELS, type KycReviewItem } from "@/lib/investor/kyc";
-import type { InvestorKycStatus, InvestorProfileRecord } from "@/lib/investor/types";
+import type { InvestorKycStatus, InvestorPriorDealRecord, InvestorProfileRecord } from "@/lib/investor/types";
 
 type Row = InvestorProfileRecord & {
   profiles: { id: string; full_name: string | null; email: string | null; created_at: string } | null;
   matchingSummary?: { highMatchCompanyCount: number; topMatchScore: number };
   kycReview?: { items: KycReviewItem[]; canSubmit: boolean };
+  priorDeals?: InvestorPriorDealRecord[];
 };
 
 function formatDate(value: string | null) {
@@ -30,6 +31,40 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
   const [success, setSuccess] = useState<string | null>(null);
   const [status, setStatus] = useState(row.approval_status);
   const [kycStatus, setKycStatus] = useState<InvestorKycStatus>(row.kyc_status);
+  const [accredited, setAccredited] = useState(row.accreditation_verified);
+
+  async function setAccreditation(verified: boolean) {
+    setLoading("accreditation");
+    setError(null);
+    const res = await fetch(`/api/admin/investor-kyc/${row.id}/accreditation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ verified }),
+    });
+    setLoading(null);
+    if (!res.ok) {
+      setError("Could not update accreditation.");
+      return;
+    }
+    setAccredited(verified);
+    router.refresh();
+  }
+
+  async function setDealVerified(dealId: string, verified: boolean) {
+    setLoading(`deal-${dealId}`);
+    setError(null);
+    const res = await fetch(`/api/admin/prior-deals/${dealId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ verified }),
+    });
+    setLoading(null);
+    if (!res.ok) {
+      setError("Could not update deal verification.");
+      return;
+    }
+    router.refresh();
+  }
 
   async function reviewKyc(action: "verify" | "reject") {
     setLoading(`kyc_${action}`);
@@ -166,6 +201,55 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
               <li className="text-sm text-slate-400">No documents uploaded yet.</li>
             ) : null}
           </ul>
+
+          {/* Accreditation (optional, boosts the investor's score when verified) */}
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-200 pt-3">
+            <span className="text-sm text-slate-600">
+              Accreditation evidence ·{" "}
+              <span className={accredited ? "font-medium text-emerald-700" : "text-slate-400"}>
+                {accredited ? "Verified" : "Not verified"}
+              </span>
+            </span>
+            <button
+              type="button"
+              className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-50"
+              disabled={Boolean(loading)}
+              onClick={() => setAccreditation(!accredited)}
+            >
+              {accredited ? "Unverify" : "Verify accreditation"}
+            </button>
+          </div>
+
+          {/* Prior deals — verify each individually */}
+          {(row.priorDeals ?? []).length > 0 ? (
+            <div className="mt-3 border-t border-slate-200 pt-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Prior deals</p>
+              <ul className="space-y-1.5">
+                {(row.priorDeals ?? []).map((deal) => (
+                  <li key={deal.id} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="min-w-0 truncate text-slate-700">
+                      {deal.company_name}
+                      <span className="text-slate-400">
+                        {" "}
+                        · {[deal.stage, deal.year].filter(Boolean).join(" ") || "—"}
+                        {deal.proof_document_id ? "" : " · no proof"}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold disabled:opacity-50 ${
+                        deal.verified ? "border-emerald-300 text-emerald-700" : "border-slate-300 text-slate-700"
+                      }`}
+                      disabled={Boolean(loading)}
+                      onClick={() => setDealVerified(deal.id, !deal.verified)}
+                    >
+                      {deal.verified ? "Verified ✓" : "Verify"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {kycStatus !== "verified" ? (
             <div className="mt-3 flex flex-wrap gap-2">
               <button

@@ -3,6 +3,7 @@ import { requireInvestorApi } from "@/lib/api/investor";
 import { writeAuditLog } from "@/lib/data/audit";
 import { track } from "@/lib/analytics/posthog";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { notifyStaff } from "@/lib/notifications/notifications";
 import { computeKycChecklistState, listKycDocuments, submitInvestorKyc } from "@/lib/investor/kyc";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +58,15 @@ export async function POST(request: Request): Promise<Response> {
       metadata: { documentCount: documents.filter((d) => d.status === "uploaded").length },
     });
     track("investor_kyc_submitted", { userId: auth.profile.id, investorProfileId: profile.id });
+    void notifyStaff({
+      actorUserId: auth.profile.id,
+      type: "investor_kyc_submitted",
+      title: "Investor verification submitted",
+      message: "An investor submitted identity verification and is awaiting review.",
+      entityType: "investor_profile",
+      entityId: profile.id,
+      deepLink: "/admin/investors",
+    });
     return NextResponse.json({ investorProfile: updated });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to submit for verification.";
