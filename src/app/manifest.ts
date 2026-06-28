@@ -11,8 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#4f46e5",
     orientation: "portrait",
     icons: [
-      { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
-      { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "maskable" },
+      { src: "/favicon.ico", sizes: "16x16 32x32", type: "image/x-icon" },
     ],
   };
 }
