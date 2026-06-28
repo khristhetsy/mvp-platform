@@ -11,9 +11,8 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#4f46e5",
     orientation: "portrait",
     icons: [
-      { src: "/capitalos-icon.png", sizes: "192x192", type: "image/png" },
-      { src: "/capitalos-icon.png", sizes: "512x512", type: "image/png" },
-      { src: "/capitalos-icon.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
+      { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "maskable" },
     ],
   };
 }

@@ -1,45 +1,49 @@
-"use client";
+import { CapitalOSEmblem } from "@/components/CapitalOSEmblem";
 
-import Image from "next/image";
-import { useState } from "react";
-import { CAPITALOS_LOGO_SRC, CAPITALOS_LOGO_WIDTH_RATIO } from "@/lib/ui/brand-logos";
-
+/**
+ * iCapOS brand lockup, rendered as native SVG + text (no image asset).
+ * variant="full" = horizontal (default); variant="stacked" = vertical with tagline.
+ */
 export function CapitalOSLogo({
   className = "",
   height = 32,
-  priority = false,
   variant = "full",
 }: Readonly<{
   className?: string;
   height?: number;
-  priority?: boolean;
-  /** "full" = horizontal lockup (default), "stacked" = vertical lockup. */
   variant?: "full" | "stacked";
+  /** Accepted for call-site compatibility; SVG needs no image preloading. */
+  priority?: boolean;
 }>) {
-  const [failed, setFailed] = useState(false);
+  const wordmark = (
+    <span
+      style={{ fontSize: height * 0.66, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1 }}
+      className="select-none"
+    >
+      <span style={{ color: "#0A2540" }}>iCap</span>
+      <span style={{ color: "#2E7CF6" }}>OS</span>
+    </span>
+  );
 
-  if (failed) {
+  if (variant === "stacked") {
     return (
-      <span
-        className={`inline-flex items-center gap-2 text-[length:inherit] font-semibold tracking-tight text-[var(--navy)] ${className}`}
-        style={{ fontSize: height * 0.55 }}
-      >
-        <span className="rounded-sm bg-[var(--gold)]" style={{ width: height * 0.35, height: height * 0.35 }} aria-hidden />
-        iCapOS
+      <span className={`inline-flex flex-col items-center gap-2 ${className}`} aria-label="iCapOS">
+        <CapitalOSEmblem size={height} />
+        {wordmark}
+        <span
+          style={{ fontSize: Math.max(8, height * 0.13), letterSpacing: "0.18em", color: "#0A2540" }}
+          className="font-medium uppercase opacity-80"
+        >
+          The operating system for capital
+        </span>
       </span>
     );
   }
 
   return (
-    <Image
-      src={CAPITALOS_LOGO_SRC[variant]}
-      alt="iCapOS"
-      width={Math.round(height * CAPITALOS_LOGO_WIDTH_RATIO[variant])}
-      height={height}
-      className={`h-auto w-auto object-contain ${variant === "stacked" ? "object-center" : "object-left"} ${className}`}
-      style={{ height, width: "auto", maxWidth: "100%" }}
-      priority={priority}
-      onError={() => setFailed(true)}
-    />
+    <span className={`inline-flex items-center gap-2.5 ${className}`} aria-label="iCapOS">
+      <CapitalOSEmblem size={height} />
+      {wordmark}
+    </span>
   );
 }
