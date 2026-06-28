@@ -5,6 +5,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ensureUserOnboarding } from "@/lib/onboarding/ensure-founder-setup";
 import { parseRequestedPlan } from "@/lib/subscriptions/plans";
 import { sanitizePublicSignupRole } from "@/lib/auth/signup-role";
+import { track } from "@/lib/analytics/posthog";
 
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient();
@@ -34,6 +35,15 @@ export async function POST(request: Request) {
       parseRequestedPlan(body.requestedPlan) ??
       parseRequestedPlan(user.user_metadata?.requested_plan);
 
+    // Top-of-funnel: only on genuine first profile creation (this endpoint is
+    // idempotent, so guard against re-fires on repeat calls).
+    const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
+    const isNewSignup = !existingProfile;
+
     const { profile, company } = await ensureUserOnboarding({
       userId: user.id,
       email: user.email ?? null,
@@ -41,6 +51,10 @@ export async function POST(request: Request) {
       role,
       requestedPlan,
     });
+
+    if (isNewSignup) {
+      track("signup", { userId: user.id, role });
+    }
 
     return NextResponse.json({ profile, company }, { status: 201 });
   } catch (error) {
