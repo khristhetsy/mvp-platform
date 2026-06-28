@@ -89,7 +89,7 @@ export default function FoundersPage() {
       >
         <div className="mx-auto grid max-w-5xl gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
           <div>
-            <CapitalOSLogo height={44} priority className="mb-6" />
+            <CapitalOSLogo height={44} tagline priority className="mb-6" />
             <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-[var(--teal-muted)] px-3.5 py-1.5 font-mono text-[11.5px] text-[var(--teal)]">
               <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--teal)] text-[var(--teal)]" />
               For founders preparing institutional raises
