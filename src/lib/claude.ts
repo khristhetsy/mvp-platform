@@ -6,6 +6,8 @@
  * deal-room summary, video scripts) route through here.
  */
 
+import { getServerLocale, aiLanguageInstruction } from "@/lib/i18n/locale";
+
 export type ClaudeMessage = { role: "user" | "assistant"; content: string };
 
 export interface ClaudeOptions {
@@ -14,6 +16,11 @@ export interface ClaudeOptions {
   maxTokens?: number;
   temperature?: number;
   system?: string;
+  /**
+   * Output language. When omitted, the current request locale is detected
+   * automatically; pass "en" explicitly to force English regardless of locale.
+   */
+  locale?: "en" | "es";
 }
 
 export const CLAUDE_HAIKU  = "claude-haiku-4-5-20251001";
@@ -41,11 +48,19 @@ export async function claudeComplete(
     maxTokens  = 1024,
     temperature,
     system,
+    locale,
   } = options;
+
+  // Localize output: explicit option wins; otherwise detect the request locale.
+  const resolvedLocale = locale ?? (await getServerLocale());
+  const languageDirective = aiLanguageInstruction(resolvedLocale);
+  const finalSystem = languageDirective
+    ? `${system ?? ""}${languageDirective}`.trim()
+    : system;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const body: Record<string, any> = { model, max_tokens: maxTokens, messages };
-  if (system)                    body.system      = system;
+  if (finalSystem)               body.system      = finalSystem;
   if (temperature !== undefined) body.temperature = temperature;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
