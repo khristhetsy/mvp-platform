@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getTranslations } from "next-intl/server";
 import {
   computeFounderActions,
   loadFounderNbaContext,
@@ -73,9 +74,10 @@ export async function loadAndComputeNextBestActions(input: {
     });
   } else {
     const adminClient = createServiceRoleClient();
+    const adminT = await getTranslations("actions.nba.admin").catch(() => undefined);
     const ctx = await loadAdminNbaContext(adminClient);
     const [adminActions, executionActions] = await Promise.all([
-      Promise.resolve(computeAdminActions(ctx, role, entityFilter)),
+      Promise.resolve(computeAdminActions(ctx, role, entityFilter, adminT)),
       loadDocumentExecutionNbaActions(role, entityFilter, 4),
     ]);
     actions = [...adminActions, ...executionActions];

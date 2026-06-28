@@ -12,6 +12,11 @@ import {
 } from "@/lib/queues/admin-queues";
 import type { Database } from "@/lib/supabase/types";
 
+/** Minimal translator shape (compatible with next-intl's `getTranslations` result),
+ *  scoped to the `actions.nba.admin` namespace. Kept structural so this pure module
+ *  doesn't depend on next-intl types. */
+export type AdminNbaTranslator = (key: string, values?: Record<string, string | number>) => string;
+
 export type AdminNbaContext = {
   pendingCompanyReviews: number;
   pendingInvestorApprovals: number;
@@ -132,7 +137,9 @@ export function computeAdminActions(
   ctx: AdminNbaContext,
   role: "admin" | "analyst",
   entityFilter?: { entityType?: string; entityId?: string },
+  t?: AdminNbaTranslator,
 ): NextBestAction[] {
+  const tr: AdminNbaTranslator = t ?? ((key) => key);
   const actions: NextBestAction[] = [];
 
   if (!ctx.serviceRoleConfigured) {
@@ -140,14 +147,14 @@ export function computeAdminActions(
       createNextBestAction({
         id: buildActionId(["admin", "service_role"]),
         role,
-        title: "Configure service role",
-        description: "Admin operational queues require SUPABASE_SERVICE_ROLE_KEY for full data access.",
+        title: tr("serviceRole.title"),
+        description: tr("serviceRole.description"),
         priority: "critical",
         category: "system",
         entityType: "system",
         href: "/admin/system-health",
         sourceModule: "system",
-        reason: "Service role key is not configured.",
+        reason: tr("serviceRole.reason"),
         createdFrom: "admin_nba",
       }),
     );
@@ -158,14 +165,14 @@ export function computeAdminActions(
       createNextBestAction({
         id: buildActionId(["admin", "compliance_critical"]),
         role,
-        title: "Resolve critical compliance events",
-        description: `${ctx.criticalCompliance} critical compliance ${ctx.criticalCompliance === 1 ? "event" : "events"} require immediate review.`,
+        title: tr("complianceCritical.title"),
+        description: tr("complianceCritical.description", { count: ctx.criticalCompliance }),
         priority: "critical",
         category: "compliance",
         entityType: "compliance",
         href: "/admin/compliance?severity=critical",
         sourceModule: "compliance",
-        reason: "Critical severity compliance events are open.",
+        reason: tr("complianceCritical.reason"),
         createdFrom: "admin_nba",
       }),
     );
@@ -174,14 +181,14 @@ export function computeAdminActions(
       createNextBestAction({
         id: buildActionId(["admin", "compliance_escalations"]),
         role,
-        title: "Review compliance escalations",
-        description: `${ctx.complianceEscalations} high-severity compliance ${ctx.complianceEscalations === 1 ? "event" : "events"} are open.`,
+        title: tr("complianceEscalations.title"),
+        description: tr("complianceEscalations.description", { count: ctx.complianceEscalations }),
         priority: "high",
         category: "compliance",
         entityType: "compliance",
         href: "/admin/compliance",
         sourceModule: "compliance",
-        reason: "Compliance queue has open escalations.",
+        reason: tr("complianceEscalations.reason"),
         createdFrom: "admin_nba",
       }),
     );
@@ -193,8 +200,8 @@ export function computeAdminActions(
       createNextBestAction({
         id: buildActionId(["admin", "company_reviews"]),
         role,
-        title: top ? `Review company: ${top.title}` : "Review pending companies",
-        description: `${ctx.pendingCompanyReviews} ${ctx.pendingCompanyReviews === 1 ? "company awaits" : "companies await"} institutional review.`,
+        title: top ? tr("companyReviews.titleNamed", { name: top.title }) : tr("companyReviews.title"),
+        description: tr("companyReviews.description", { count: ctx.pendingCompanyReviews }),
         priority: "high",
         category: "admin_review",
         entityType: top?.entity_type ?? "company",
@@ -202,7 +209,7 @@ export function computeAdminActions(
         companyId: top?.company_id ?? undefined,
         href: top?.href ?? "/admin/queues?queue=company_reviews",
         sourceModule: "admin_queues",
-        reason: "Company review queue has pending items.",
+        reason: tr("companyReviews.reason"),
         createdFrom: "admin_nba",
         urgencyAt: top?.created_at,
       }),
@@ -215,8 +222,8 @@ export function computeAdminActions(
       createNextBestAction({
         id: buildActionId(["admin", "investor_approvals"]),
         role,
-        title: top ? `Approve investor: ${top.title}` : "Review investor approvals",
-        description: `${ctx.pendingInvestorApprovals} investor ${ctx.pendingInvestorApprovals === 1 ? "profile" : "profiles"} submitted for approval.`,
+        title: top ? tr("investorApprovals.titleNamed", { name: top.title }) : tr("investorApprovals.title"),
+        description: tr("investorApprovals.description", { count: ctx.pendingInvestorApprovals }),
         priority: "high",
         category: "admin_review",
         entityType: top?.entity_type ?? "investor",
@@ -224,7 +231,7 @@ export function computeAdminActions(
         investorId: top?.investor_id ?? undefined,
         href: top?.href ?? "/admin/queues?queue=investor_approvals",
         sourceModule: "admin_queues",
-        reason: "Investor approval queue is active.",
+        reason: tr("investorApprovals.reason"),
         createdFrom: "admin_nba",
         urgencyAt: top?.created_at,
       }),
@@ -237,8 +244,8 @@ export function computeAdminActions(
       createNextBestAction({
         id: buildActionId(["admin", "spv_blockers"]),
         role,
-        title: top ? `SPV blocker: ${top.title}` : "Review SPV blockers",
-        description: `${ctx.spvBlockers} SPV ${ctx.spvBlockers === 1 ? "item needs" : "items need"} operational attention.`,
+        title: top ? tr("spvBlockers.titleNamed", { name: top.title }) : tr("spvBlockers.title"),
+        description: tr("spvBlockers.description", { count: ctx.spvBlockers }),
         priority: "high",
         category: "spv",
         entityType: top?.entity_type ?? "spv",
@@ -247,7 +254,7 @@ export function computeAdminActions(
         companyId: top?.company_id ?? undefined,
         href: top?.href ?? "/admin/queues?queue=spv_blockers",
         sourceModule: "spv",
-        reason: "SPV operational readiness is blocked.",
+        reason: tr("spvBlockers.reason"),
         createdFrom: "admin_nba",
         urgencyAt: top?.created_at,
       }),
@@ -260,8 +267,8 @@ export function computeAdminActions(
       createNextBestAction({
         id: buildActionId(["admin", "investor_documents"]),
         role,
-        title: "Review investor SPV documents",
-        description: `${ctx.investorDocuments} investor document requirement${ctx.investorDocuments === 1 ? "" : "s"} pending review.`,
+        title: tr("investorDocuments.title"),
+        description: tr("investorDocuments.description", { count: ctx.investorDocuments }),
         priority: "medium",
         category: "spv",
         entityType: top?.entity_type ?? "spv_requirement",
@@ -269,7 +276,7 @@ export function computeAdminActions(
         spvId: top?.spv_id ?? undefined,
         href: top?.href ?? "/admin/queues?queue=investor_documents",
         sourceModule: "spv_requirements",
-        reason: "Uploaded requirements await staff review.",
+        reason: tr("investorDocuments.reason"),
         createdFrom: "admin_nba",
         urgencyAt: top?.created_at,
       }),
@@ -281,14 +288,14 @@ export function computeAdminActions(
       createNextBestAction({
         id: buildActionId(["admin", "failed_imports"]),
         role,
-        title: "Review failed imports",
-        description: `${ctx.failedImports} import batch${ctx.failedImports === 1 ? "" : "es"} failed and need review.`,
+        title: tr("failedImports.title"),
+        description: tr("failedImports.description", { count: ctx.failedImports }),
         priority: "high",
         category: "reporting",
         entityType: "import_batch",
         href: "/admin/imports",
         sourceModule: "imports",
-        reason: "Import failures may block CRM or company data updates.",
+        reason: tr("failedImports.reason"),
         createdFrom: "admin_nba",
       }),
     );
@@ -297,14 +304,14 @@ export function computeAdminActions(
       createNextBestAction({
         id: buildActionId(["admin", "pending_imports"]),
         role,
-        title: "Confirm pending imports",
-        description: `${ctx.pendingImports} import batch${ctx.pendingImports === 1 ? "" : "es"} validated and awaiting confirmation.`,
+        title: tr("pendingImports.title"),
+        description: tr("pendingImports.description", { count: ctx.pendingImports }),
         priority: "medium",
         category: "reporting",
         entityType: "import_batch",
         href: "/admin/imports",
         sourceModule: "imports",
-        reason: "Validated imports should be confirmed or rejected.",
+        reason: tr("pendingImports.reason"),
         createdFrom: "admin_nba",
       }),
     );
@@ -315,14 +322,14 @@ export function computeAdminActions(
       createNextBestAction({
         id: buildActionId(["admin", "activity_spike"]),
         role,
-        title: "Review operational activity spike",
-        description: `${ctx.recentHighSeverityActivity} recent high-severity operational events detected.`,
+        title: tr("activitySpike.title"),
+        description: tr("activitySpike.description", { count: ctx.recentHighSeverityActivity }),
         priority: "medium",
         category: "system",
         entityType: "system",
         href: "/admin",
         sourceModule: "operational_activity",
-        reason: "Elevated high/critical activity in the recent feed.",
+        reason: tr("activitySpike.reason"),
         createdFrom: "admin_nba",
       }),
     );
@@ -352,14 +359,14 @@ export function computeAdminActions(
       createNextBestAction({
         id: buildActionId(["admin", "queues_clear"]),
         role,
-        title: "Queues are clear",
-        description: "Core review queues have no pending items. Monitor operational activity for new work.",
+        title: tr("queuesClear.title"),
+        description: tr("queuesClear.description"),
         priority: "low",
         category: "system",
         entityType: "system",
         href: "/admin/queues",
         sourceModule: "admin_queues",
-        reason: "No high-priority queue items at this time.",
+        reason: tr("queuesClear.reason"),
         createdFrom: "admin_nba",
       }),
     );

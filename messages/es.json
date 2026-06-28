@@ -131,6 +131,68 @@
       "overdue": "Vencida",
       "escalated": "Escalada",
       "blocked": "Bloqueada"
+    },
+    "nba": {
+      "admin": {
+        "serviceRole": {
+          "title": "Configurar rol de servicio",
+          "description": "Las colas operativas de administración requieren SUPABASE_SERVICE_ROLE_KEY para el acceso completo a los datos.",
+          "reason": "La clave del rol de servicio no está configurada."
+        },
+        "complianceCritical": {
+          "title": "Resolver eventos de cumplimiento críticos",
+          "description": "{count, plural, one {# evento de cumplimiento crítico requiere revisión inmediata.} other {# eventos de cumplimiento críticos requieren revisión inmediata.}}",
+          "reason": "Hay eventos de cumplimiento de severidad crítica abiertos."
+        },
+        "complianceEscalations": {
+          "title": "Revisar escalaciones de cumplimiento",
+          "description": "{count, plural, one {# evento de cumplimiento de severidad alta está abierto.} other {# eventos de cumplimiento de severidad alta están abiertos.}}",
+          "reason": "La cola de cumplimiento tiene escalaciones abiertas."
+        },
+        "companyReviews": {
+          "titleNamed": "Revisar empresa: {name}",
+          "title": "Revisar empresas pendientes",
+          "description": "{count, plural, one {# empresa espera revisión institucional.} other {# empresas esperan revisión institucional.}}",
+          "reason": "La cola de revisión de empresas tiene elementos pendientes."
+        },
+        "investorApprovals": {
+          "titleNamed": "Aprobar inversor: {name}",
+          "title": "Revisar aprobaciones de inversores",
+          "description": "{count, plural, one {# perfil de inversor enviado para aprobación.} other {# perfiles de inversor enviados para aprobación.}}",
+          "reason": "La cola de aprobación de inversores está activa."
+        },
+        "spvBlockers": {
+          "titleNamed": "Bloqueo de SPV: {name}",
+          "title": "Revisar bloqueos de SPV",
+          "description": "{count, plural, one {# elemento de SPV necesita atención operativa.} other {# elementos de SPV necesitan atención operativa.}}",
+          "reason": "La preparación operativa del SPV está bloqueada."
+        },
+        "investorDocuments": {
+          "title": "Revisar documentos de SPV de inversores",
+          "description": "{count, plural, one {# requisito de documento de inversor pendiente de revisión.} other {# requisitos de documentos de inversores pendientes de revisión.}}",
+          "reason": "Los requisitos cargados esperan revisión del personal."
+        },
+        "failedImports": {
+          "title": "Revisar importaciones fallidas",
+          "description": "{count, plural, one {# lote de importación falló y necesita revisión.} other {# lotes de importación fallaron y necesitan revisión.}}",
+          "reason": "Los fallos de importación pueden bloquear las actualizaciones de CRM o de datos de empresas."
+        },
+        "pendingImports": {
+          "title": "Confirmar importaciones pendientes",
+          "description": "{count, plural, one {# lote de importación validado y a la espera de confirmación.} other {# lotes de importación validados y a la espera de confirmación.}}",
+          "reason": "Las importaciones validadas deben confirmarse o rechazarse."
+        },
+        "activitySpike": {
+          "title": "Revisar pico de actividad operativa",
+          "description": "{count, plural, one {# evento operativo de severidad alta reciente detectado.} other {# eventos operativos de severidad alta recientes detectados.}}",
+          "reason": "Actividad alta/crítica elevada en el feed reciente."
+        },
+        "queuesClear": {
+          "title": "Las colas están despejadas",
+          "description": "Las colas de revisión principales no tienen elementos pendientes. Supervisa la actividad operativa para detectar nuevo trabajo.",
+          "reason": "No hay elementos de cola de alta prioridad en este momento."
+        }
+      }
     }
   },
   "lang": {

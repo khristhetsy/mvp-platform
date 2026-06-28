@@ -38,7 +38,10 @@ export function buildDedupeKey(action: NextBestAction): string {
 }
 
 export function buildSourceSignature(action: NextBestAction): string {
-  return [action.title, action.priority, action.reason, action.href].join("::");
+  // Language-independent: identity is derived from stable fields (id, priority,
+  // category, href, entity), NOT the localized title/reason. This keeps dedupe and
+  // the dismissed/completed "unchanged" check stable when the user switches language.
+  return [action.id, action.priority, action.category, action.href, action.entityId ?? ""].join("::");
 }
 
 function parseBlockers(value: unknown): string[] {

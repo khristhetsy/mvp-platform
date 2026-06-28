@@ -131,6 +131,68 @@
       "overdue": "Overdue",
       "escalated": "Escalated",
       "blocked": "Blocked"
+    },
+    "nba": {
+      "admin": {
+        "serviceRole": {
+          "title": "Configure service role",
+          "description": "Admin operational queues require SUPABASE_SERVICE_ROLE_KEY for full data access.",
+          "reason": "Service role key is not configured."
+        },
+        "complianceCritical": {
+          "title": "Resolve critical compliance events",
+          "description": "{count, plural, one {# critical compliance event requires immediate review.} other {# critical compliance events require immediate review.}}",
+          "reason": "Critical severity compliance events are open."
+        },
+        "complianceEscalations": {
+          "title": "Review compliance escalations",
+          "description": "{count, plural, one {# high-severity compliance event is open.} other {# high-severity compliance events are open.}}",
+          "reason": "Compliance queue has open escalations."
+        },
+        "companyReviews": {
+          "titleNamed": "Review company: {name}",
+          "title": "Review pending companies",
+          "description": "{count, plural, one {# company awaits institutional review.} other {# companies await institutional review.}}",
+          "reason": "Company review queue has pending items."
+        },
+        "investorApprovals": {
+          "titleNamed": "Approve investor: {name}",
+          "title": "Review investor approvals",
+          "description": "{count, plural, one {# investor profile submitted for approval.} other {# investor profiles submitted for approval.}}",
+          "reason": "Investor approval queue is active."
+        },
+        "spvBlockers": {
+          "titleNamed": "SPV blocker: {name}",
+          "title": "Review SPV blockers",
+          "description": "{count, plural, one {# SPV item needs operational attention.} other {# SPV items need operational attention.}}",
+          "reason": "SPV operational readiness is blocked."
+        },
+        "investorDocuments": {
+          "title": "Review investor SPV documents",
+          "description": "{count, plural, one {# investor document requirement pending review.} other {# investor document requirements pending review.}}",
+          "reason": "Uploaded requirements await staff review."
+        },
+        "failedImports": {
+          "title": "Review failed imports",
+          "description": "{count, plural, one {# import batch failed and needs review.} other {# import batches failed and need review.}}",
+          "reason": "Import failures may block CRM or company data updates."
+        },
+        "pendingImports": {
+          "title": "Confirm pending imports",
+          "description": "{count, plural, one {# import batch validated and awaiting confirmation.} other {# import batches validated and awaiting confirmation.}}",
+          "reason": "Validated imports should be confirmed or rejected."
+        },
+        "activitySpike": {
+          "title": "Review operational activity spike",
+          "description": "{count, plural, one {# recent high-severity operational event detected.} other {# recent high-severity operational events detected.}}",
+          "reason": "Elevated high/critical activity in the recent feed."
+        },
+        "queuesClear": {
+          "title": "Queues are clear",
+          "description": "Core review queues have no pending items. Monitor operational activity for new work.",
+          "reason": "No high-priority queue items at this time."
+        }
+      }
     }
   },
   "lang": {
