@@ -4,6 +4,7 @@ import { requirePermissionPage } from "@/lib/api/permissions";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getEventById } from "@/lib/icfo-events/queries";
 import { listSponsors, listEventSponsors } from "@/lib/icfo-events/sponsors";
+import { isLiveVideoConfigured } from "@/lib/icfo-events/video/whereby";
 import { EventDetailManager } from "@/components/admin-events/EventDetailManager";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,7 @@ export default async function AdminEventDetailPage({ params }: { params: Promise
         event={event}
         sponsorCatalog={sponsorCatalog}
         initialEventSponsors={eventSponsors}
+        liveVideoConfigured={isLiveVideoConfigured()}
       />
     </AppShell>
   );

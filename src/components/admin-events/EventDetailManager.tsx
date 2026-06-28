@@ -60,9 +60,11 @@ function toLocalInput(iso: string | null): string {
 function SessionLiveControls({
   session,
   onUpdated,
+  liveConfigured,
 }: {
   session: EventSession;
   onUpdated: (s: EventSession) => void;
+  liveConfigured: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -113,9 +115,15 @@ function SessionLiveControls({
           </button>
         </>
       ) : session.status !== "ended" ? (
-        <button onClick={goLive} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
-          {busy ? "Starting…" : "Go live"}
-        </button>
+        liveConfigured ? (
+          <button onClick={goLive} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
+            {busy ? "Starting…" : "Go live"}
+          </button>
+        ) : (
+          <span className="text-xs text-[var(--text-muted)]">
+            Live video isn’t set up — upload a recording below, or add a Whereby key to enable “Go live.”
+          </span>
+        )
       ) : (
         <span className="text-xs text-[var(--text-muted)]">Ended</span>
       )}
@@ -173,10 +181,12 @@ export function EventDetailManager({
   event,
   sponsorCatalog,
   initialEventSponsors,
+  liveVideoConfigured,
 }: {
   event: EventWithDetail;
   sponsorCatalog: Sponsor[];
   initialEventSponsors: EventSponsor[];
+  liveVideoConfigured: boolean;
 }) {
   const [sessions, setSessions] = useState<EventSession[]>(event.sessions);
   const [eventSponsors, setEventSponsors] = useState<EventSponsor[]>(initialEventSponsors);
@@ -517,7 +527,7 @@ export function EventDetailManager({
                     Remove
                   </button>
                 </div>
-                <SessionLiveControls session={s} onUpdated={onSessionUpdated} />
+                <SessionLiveControls session={s} onUpdated={onSessionUpdated} liveConfigured={liveVideoConfigured} />
                 <SessionVideoUpload eventId={event.id} session={s} onUpdated={onSessionUpdated} />
                 {s.type === "talk_show" && <GuestRoster sessionId={s.id} eventId={event.id} />}
               </div>
