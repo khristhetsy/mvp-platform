@@ -3,6 +3,11 @@ import type { Database } from '@/lib/supabase/types';
 import { JOURNEY_STAGES } from './types';
 import type { JourneyStage, FounderJourneyState } from './types';
 import { createNotification, notifyStaffIfNotRecent } from '@/lib/notifications/notifications';
+import {
+  shouldAdvanceInitializeToQualify,
+  shouldAutoRequestReview,
+  shouldAdvanceDeployToOptimize,
+} from './decisions';
 
 // Cast helper — the new journey columns exist in the DB after the migration but are not
 // yet reflected in the generated Database types. We use a raw untyped client reference
@@ -36,7 +41,7 @@ export async function autoAdvanceStage(
   let currentStage = state.stage;
 
   // Initialize → Qualify: when onboarding is complete
-  if (currentStage === 'initialize' && state.conditions.onboardingComplete) {
+  if (shouldAdvanceInitializeToQualify(currentStage, state.conditions)) {
     await rawClient(supabase)
       .from('profiles')
       .update({
@@ -56,12 +61,7 @@ export async function autoAdvanceStage(
   // Only auto-submit a founder who has NEVER been reviewed (approvalStatus null).
   // After a rejection the founder resubmits manually once they've addressed
   // feedback — otherwise we'd instantly re-submit and nullify the admin's decision.
-  if (
-    currentStage === 'qualify' &&
-    state.conditions.readinessQualified &&
-    state.conditions.requiredDocsUploaded &&
-    state.approvalStatus === null
-  ) {
+  if (shouldAutoRequestReview(currentStage, state.conditions, state.approvalStatus)) {
     await rawClient(supabase)
       .from('profiles')
       .update({
@@ -85,10 +85,7 @@ export async function autoAdvanceStage(
   }
 
   // Deploy → Optimize: when deal room exists OR investor has expressed interest
-  if (
-    currentStage === 'deploy' &&
-    (state.conditions.hasDealRoom || state.conditions.hasInvestorInterest)
-  ) {
+  if (shouldAdvanceDeployToOptimize(currentStage, state.conditions)) {
     await rawClient(supabase)
       .from('profiles')
       .update({
