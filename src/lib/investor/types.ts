@@ -5,6 +5,8 @@ export type InvestorApprovalStatus =
   | "rejected"
   | "changes_requested";
 
+export type InvestorKycStatus = "not_started" | "pending" | "verified" | "rejected";
+
 export type InvestorProfileRecord = {
   id: string;
   profile_id: string;
@@ -23,8 +25,25 @@ export type InvestorProfileRecord = {
   submitted_at: string | null;
   approved_at: string | null;
   approved_by: string | null;
+  kyc_status: InvestorKycStatus;
+  kyc_submitted_at: string | null;
+  kyc_reviewed_at: string | null;
+  kyc_reviewed_by: string | null;
+  kyc_feedback: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type InvestorKycDocumentRecord = {
+  id: string;
+  investor_profile_id: string;
+  doc_type: string;
+  file_name: string;
+  file_path: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  status: "uploaded" | "archived";
+  uploaded_at: string;
 };
 
 export const INVESTOR_TYPES = [

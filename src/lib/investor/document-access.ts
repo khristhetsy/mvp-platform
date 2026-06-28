@@ -9,11 +9,12 @@ export async function investorHasCompanyDocumentAccess(
 ): Promise<boolean> {
   const { data: investorProfile } = await supabase
     .from("investor_profiles")
-    .select("id, approval_status")
+    .select("id, approval_status, kyc_status")
     .eq("profile_id", userId)
     .maybeSingle();
 
-  if (investorProfile?.approval_status !== "approved") {
+  // Full data-room access requires both an approved profile and verified KYC.
+  if (investorProfile?.approval_status !== "approved" || investorProfile?.kyc_status !== "verified") {
     return false;
   }
 

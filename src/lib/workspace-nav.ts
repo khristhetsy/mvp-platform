@@ -407,6 +407,7 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
     title: "Account",
     items: [
       { href: "/investor/onboarding", label: "Onboarding" },
+      { href: "/investor/verification", label: "Verification" },
       { href: "/investor/settings", label: "Settings" },
     ],
   },

@@ -8,7 +8,7 @@ export async function InvestorFeatureGate({ children }: Readonly<{ children: Rea
   const profile = await requireRole(["investor"]);
   const { investorProfile } = await loadInvestorWorkspaceContext(profile);
 
-  if (canInvestorPerformSensitiveActions(investorProfile?.approval_status)) {
+  if (canInvestorPerformSensitiveActions(investorProfile)) {
     return children;
   }
 
@@ -16,6 +16,7 @@ export async function InvestorFeatureGate({ children }: Readonly<{ children: Rea
     <InvestorPendingApprovalPanel
       approvalStatus={investorProfile?.approval_status ?? "draft"}
       adminFeedback={investorProfile?.admin_feedback}
+      kycStatus={investorProfile?.kyc_status ?? "not_started"}
     />
   );
 }

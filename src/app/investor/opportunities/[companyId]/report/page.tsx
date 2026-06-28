@@ -20,7 +20,7 @@ export default async function InvestorCompanyReportPage({
   const { profile, investorId } = await requireInvestorWorkspaceSession();
   const { investorProfile } = await loadInvestorWorkspaceContext(profile);
 
-  if (!canInvestorPerformSensitiveActions(investorProfile?.approval_status)) {
+  if (!canInvestorPerformSensitiveActions(investorProfile)) {
     redirect("/investor/opportunities");
   }
 

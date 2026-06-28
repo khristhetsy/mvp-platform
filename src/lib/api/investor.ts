@@ -41,14 +41,18 @@ export async function requireInvestorApi(options?: { requireApproved?: boolean }
 
   const investorProfile = await getInvestorProfileByProfileId(profile.id);
 
-  if (options?.requireApproved && !canInvestorPerformSensitiveActions(investorProfile?.approval_status)) {
+  if (options?.requireApproved && !canInvestorPerformSensitiveActions(investorProfile)) {
+    const needsKyc =
+      investorProfile?.approval_status === "approved" && investorProfile?.kyc_status !== "verified";
     return {
       error: NextResponse.json(
         {
-          error:
-            "Your investor account is pending admin approval. Complete onboarding and wait for approval before performing this action.",
-          code: "investor_pending_approval",
+          error: needsKyc
+            ? "Complete identity & accreditation verification before performing this action."
+            : "Your investor account is pending admin approval. Complete onboarding and wait for approval before performing this action.",
+          code: needsKyc ? "investor_kyc_required" : "investor_pending_approval",
           approvalStatus: investorProfile?.approval_status ?? "draft",
+          kycStatus: investorProfile?.kyc_status ?? "not_started",
         },
         { status: 403 },
       ),

@@ -16,7 +16,7 @@ export default async function InvestorPortfolioPage() {
   const { profile, investorId } = await requireInvestorWorkspaceSession();
   const { investorProfile } = await loadInvestorWorkspaceContext(profile);
 
-  if (!canInvestorPerformSensitiveActions(investorProfile?.approval_status)) {
+  if (!canInvestorPerformSensitiveActions(investorProfile)) {
     redirect("/investor/dashboard");
   }
 

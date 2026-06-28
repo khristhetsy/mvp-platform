@@ -21,7 +21,7 @@ export default async function InvestorSpvsPage() {
   const { investorProfile } = await loadInvestorWorkspaceContext(profile);
   const investorProfileId = investorProfile?.id;
 
-  if (!canInvestorPerformSensitiveActions(investorProfile?.approval_status)) {
+  if (!canInvestorPerformSensitiveActions(investorProfile)) {
     redirect("/investor/dashboard");
   }
 

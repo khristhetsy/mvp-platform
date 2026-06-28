@@ -3,11 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { investorApprovalStatusLabel } from "@/lib/investor/access";
-import type { InvestorProfileRecord } from "@/lib/investor/types";
+import { KYC_STATUS_LABELS, type KycReviewItem } from "@/lib/investor/kyc";
+import type { InvestorKycStatus, InvestorProfileRecord } from "@/lib/investor/types";
 
 type Row = InvestorProfileRecord & {
   profiles: { id: string; full_name: string | null; email: string | null; created_at: string } | null;
   matchingSummary?: { highMatchCompanyCount: number; topMatchScore: number };
+  kycReview?: { items: KycReviewItem[]; canSubmit: boolean };
 };
 
 function formatDate(value: string | null) {
@@ -27,6 +29,29 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [status, setStatus] = useState(row.approval_status);
+  const [kycStatus, setKycStatus] = useState<InvestorKycStatus>(row.kyc_status);
+
+  async function reviewKyc(action: "verify" | "reject") {
+    setLoading(`kyc_${action}`);
+    setError(null);
+    setSuccess(null);
+
+    const response = await fetch(`/api/admin/investor-kyc/${row.id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, feedback: feedback.trim() || undefined }),
+    });
+    const body = (await response.json().catch(() => null)) as { error?: string; investorProfile?: Row } | null;
+    setLoading(null);
+
+    if (!response.ok) {
+      setError(body?.error ?? "KYC review failed.");
+      return;
+    }
+    if (body?.investorProfile) setKycStatus(body.investorProfile.kyc_status);
+    setSuccess(`Verification ${action === "verify" ? "approved" : "rejected"}.`);
+    router.refresh();
+  }
 
   async function review(action: "approve" | "reject" | "changes_requested") {
     setLoading(action);
@@ -111,9 +136,62 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
         </div>
       </dl>
 
+      {status === "approved" ? (
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Stage 2 · KYC verification</p>
+            <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+              {KYC_STATUS_LABELS[kycStatus]}
+            </span>
+          </div>
+          <ul className="mt-3 space-y-1.5">
+            {(row.kycReview?.items ?? []).map((item) => (
+              <li key={item.code} className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-slate-600">
+                  {item.label}
+                  {item.required ? "" : " (optional)"}
+                </span>
+                {item.uploaded && item.signedUrl ? (
+                  <a href={item.signedUrl} target="_blank" rel="noreferrer" className="font-medium text-indigo-600 hover:text-indigo-500">
+                    View ↗
+                  </a>
+                ) : item.uploaded ? (
+                  <span className="text-slate-500">Uploaded</span>
+                ) : (
+                  <span className="text-slate-400">Not uploaded</span>
+                )}
+              </li>
+            ))}
+            {(row.kycReview?.items ?? []).length === 0 ? (
+              <li className="text-sm text-slate-400">No documents uploaded yet.</li>
+            ) : null}
+          </ul>
+          {kycStatus !== "verified" ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                disabled={Boolean(loading) || kycStatus === "not_started"}
+                onClick={() => reviewKyc("verify")}
+              >
+                Verify
+              </button>
+              <button
+                type="button"
+                className="rounded-full border border-red-300 px-4 py-2 text-xs font-semibold text-red-800 disabled:opacity-50"
+                disabled={Boolean(loading) || kycStatus === "not_started"}
+                onClick={() => reviewKyc("reject")}
+              >
+                Reject verification
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       <textarea
         className="mt-4 min-h-20 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-        placeholder="Admin feedback (required for reject / changes requested)"
+        placeholder="Admin feedback (required for reject / changes requested / KYC reject)"
         value={feedback}
         onChange={(event) => setFeedback(event.target.value)}
       />

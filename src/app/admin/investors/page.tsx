@@ -4,6 +4,7 @@ import { DraftEmailPanel } from "@/components/email/DraftEmailPanel";
 import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
 import { getInvestorMatchingSummaries } from "@/lib/matching/admin-matching-summaries";
 import { listInvestorProfilesForAdmin } from "@/lib/investor/profile";
+import { loadKycReviewView } from "@/lib/investor/kyc";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
 import { getRequestedPlansByProfileIds } from "@/lib/billing/requested-plan";
@@ -55,10 +56,17 @@ export default async function AdminInvestorsPage() {
   const profileIds = investorProfiles.map((row) => row.profile_id);
   const matchingSummaries = await getInvestorMatchingSummaries(profileIds);
 
-  const investorProfilesWithMatching = investorProfiles.map((row) => ({
-    ...row,
-    matchingSummary: matchingSummaries.get(row.profile_id),
-  }));
+  const investorProfilesWithMatching = await Promise.all(
+    investorProfiles.map(async (row) => ({
+      ...row,
+      matchingSummary: matchingSummaries.get(row.profile_id),
+      // KYC docs only exist post-approval; load them so staff can verify Stage 2.
+      kycReview:
+        row.approval_status === "approved"
+          ? await loadKycReviewView(row.id, row.investor_type)
+          : undefined,
+    })),
+  );
 
   const profileLookup = new Map(
     investorProfilesWithMatching.map((row) => [

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { InvestorApprovalStatus } from "@/lib/investor/types";
+import type { InvestorApprovalStatus, InvestorKycStatus } from "@/lib/investor/types";
 
 type CTA = { href: string; label: string };
 type StatusContent = {
@@ -47,16 +47,52 @@ function contentFor(status: InvestorApprovalStatus | string): StatusContent {
   }
 }
 
+/** Once the profile is approved, the blocker becomes Stage 2 — KYC verification. */
+function contentForKyc(status: InvestorKycStatus | string): StatusContent {
+  switch (status) {
+    case "pending":
+      return {
+        tone: "blue",
+        eyebrow: "Verification under review",
+        title: "We're verifying your documents",
+        body: "Your identity and accreditation documents are with the CapitalOS team. Full deal-flow access unlocks the moment they're verified — usually within a day or two.",
+        primary: { href: "/investor/verification", label: "View verification" },
+      };
+    case "rejected":
+      return {
+        tone: "red",
+        eyebrow: "Verification needs attention",
+        title: "We need a document re-uploaded",
+        body: "One or more of your verification documents couldn't be accepted. Review the note, re-upload, and resubmit to unlock full access.",
+        primary: { href: "/investor/verification", label: "Fix verification" },
+      };
+    default: // not_started
+      return {
+        tone: "amber",
+        eyebrow: "One step left",
+        title: "Verify your identity & accreditation",
+        body: "Your profile is approved. Complete identity and accreditation verification to unlock expressing interest, intros, SPVs, and full data rooms.",
+        primary: { href: "/investor/verification", label: "Start verification" },
+      };
+  }
+}
+
 export function InvestorPendingApprovalPanel({
   approvalStatus,
   adminFeedback,
+  kycStatus,
 }: Readonly<{
   approvalStatus: InvestorApprovalStatus | string;
   adminFeedback?: string | null;
+  kycStatus?: InvestorKycStatus | string;
 }>) {
-  const c = contentFor(approvalStatus);
+  // If the profile is approved, the remaining blocker is KYC (Stage 2).
+  const inKycStage = approvalStatus === "approved" && kycStatus !== "verified";
+  const c = inKycStage ? contentForKyc(kycStatus ?? "not_started") : contentFor(approvalStatus);
   const t = TONES[c.tone];
-  const showFeedback = Boolean(adminFeedback) && (approvalStatus === "rejected" || approvalStatus === "changes_requested");
+  const showFeedback =
+    Boolean(adminFeedback) &&
+    (inKycStage ? kycStatus === "rejected" : approvalStatus === "rejected" || approvalStatus === "changes_requested");
 
   return (
     <section className={`rounded-2xl border ${t.border} ${t.bg} p-8 shadow-sm`}>

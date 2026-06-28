@@ -1316,6 +1316,11 @@ export type Database = {
           submitted_at: string | null;
           approved_at: string | null;
           approved_by: string | null;
+          kyc_status: string;
+          kyc_submitted_at: string | null;
+          kyc_reviewed_at: string | null;
+          kyc_reviewed_by: string | null;
+          kyc_feedback: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -1336,6 +1341,11 @@ export type Database = {
           submitted_at?: string | null;
           approved_at?: string | null;
           approved_by?: string | null;
+          kyc_status?: string;
+          kyc_submitted_at?: string | null;
+          kyc_reviewed_at?: string | null;
+          kyc_reviewed_by?: string | null;
+          kyc_feedback?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -1354,7 +1364,46 @@ export type Database = {
           submitted_at?: string | null;
           approved_at?: string | null;
           approved_by?: string | null;
+          kyc_status?: string;
+          kyc_submitted_at?: string | null;
+          kyc_reviewed_at?: string | null;
+          kyc_reviewed_by?: string | null;
+          kyc_feedback?: string | null;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      investor_kyc_documents: {
+        Row: {
+          id: string;
+          investor_profile_id: string;
+          doc_type: string;
+          file_name: string;
+          file_path: string;
+          mime_type: string | null;
+          size_bytes: number | null;
+          status: string;
+          uploaded_at: string;
+        };
+        Insert: {
+          id?: string;
+          investor_profile_id: string;
+          doc_type: string;
+          file_name: string;
+          file_path: string;
+          mime_type?: string | null;
+          size_bytes?: number | null;
+          status?: string;
+          uploaded_at?: string;
+        };
+        Update: {
+          doc_type?: string;
+          file_name?: string;
+          file_path?: string;
+          mime_type?: string | null;
+          size_bytes?: number | null;
+          status?: string;
+          uploaded_at?: string;
         };
         Relationships: [];
       };
