@@ -3,11 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { sectorLabel } from "@/lib/icfo-events/sectors";
+import { EVENT_SECTORS, sectorLabel } from "@/lib/icfo-events/sectors";
 import { GuestRoster } from "@/components/events/GuestRoster";
 import type {
   EventWithDetail,
   EventSession,
+  EventFormat,
+  EventVisibility,
   Sponsor,
   EventSponsor,
   SessionType,
@@ -20,6 +22,40 @@ const SESSION_TYPES: { value: SessionType; label: string }[] = [
   { value: "founder_showcase", label: "Founder Showcase" },
   { value: "workshop", label: "Workshop" },
 ];
+
+const FORMATS: { value: EventFormat; label: string }[] = [
+  { value: "showcase", label: "Showcase" },
+  { value: "demo_day", label: "Demo Day" },
+  { value: "webinar", label: "Webinar" },
+  { value: "hybrid", label: "Hybrid" },
+];
+
+const VISIBILITIES: { value: EventVisibility; label: string }[] = [
+  { value: "public", label: "Public" },
+  { value: "members", label: "Members" },
+];
+
+/** Flatten an API error (string or Zod fieldErrors object) into a readable message. */
+function formatApiError(error: unknown, fallback: string): string {
+  if (typeof error === "string" && error.trim()) return error;
+  if (error && typeof error === "object") {
+    const parts = Object.entries(error as Record<string, unknown>).map(([field, msgs]) => {
+      const text = Array.isArray(msgs) ? msgs.join(", ") : String(msgs);
+      return `${field}: ${text}`;
+    });
+    if (parts.length) return `${fallback} (${parts.join("; ")})`;
+  }
+  return fallback;
+}
+
+/** ISO → value for <input type="datetime-local"> in the viewer's local time. */
+function toLocalInput(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 function SessionLiveControls({
   session,
@@ -146,6 +182,58 @@ export function EventDetailManager({
   const [eventSponsors, setEventSponsors] = useState<EventSponsor[]>(initialEventSponsors);
   const [error, setError] = useState<string | null>(null);
 
+  // event details (editable)
+  const [title, setTitle] = useState(event.title);
+  const [summary, setSummary] = useState(event.summary ?? "");
+  const [format, setFormat] = useState<EventFormat>(event.format);
+  const [visibility, setVisibility] = useState<EventVisibility>(event.visibility);
+  const [startsAt, setStartsAt] = useState(toLocalInput(event.startsAt));
+  const [endsAt, setEndsAt] = useState(toLocalInput(event.endsAt));
+  const [sectorSlugs, setSectorSlugs] = useState<string[]>(event.sectors.map((s) => s.sectorSlug));
+  const [headerTitle, setHeaderTitle] = useState(event.title);
+  const [headerSectors, setHeaderSectors] = useState<string[]>(event.sectors.map((s) => s.label));
+  const [savingDetails, setSavingDetails] = useState(false);
+  const [detailsMsg, setDetailsMsg] = useState<string | null>(null);
+
+  function toggleDetailSector(slug: string) {
+    setSectorSlugs((prev) => (prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]));
+    setDetailsMsg(null);
+  }
+
+  async function saveDetails(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingDetails(true);
+    setDetailsMsg(null);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/${event.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          summary: summary || null,
+          format,
+          visibility,
+          startsAt: startsAt ? new Date(startsAt).toISOString() : null,
+          endsAt: endsAt ? new Date(endsAt).toISOString() : null,
+          sectors: sectorSlugs.map((slug) => ({
+            sectorSlug: slug,
+            label: EVENT_SECTORS.find((s) => s.slug === slug)?.label ?? slug,
+          })),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(formatApiError(json.error, "Could not save event."));
+      setHeaderTitle(title);
+      setHeaderSectors(sectorSlugs.map((slug) => EVENT_SECTORS.find((s) => s.slug === slug)?.label ?? slug));
+      setDetailsMsg("Saved.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save event.");
+    } finally {
+      setSavingDetails(false);
+    }
+  }
+
   // session form
   const [sTitle, setSTitle] = useState("");
   const [sType, setSType] = useState<SessionType>("keynote");
@@ -256,10 +344,10 @@ export function EventDetailManager({
 
       <div className="mt-3 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--text-primary)]">{event.title}</h1>
+          <h1 className="text-xl font-semibold text-[var(--text-primary)]">{headerTitle}</h1>
           <p className="mt-1 text-sm text-[var(--text-muted)]">
             /{event.slug} · <span className="capitalize">{event.status}</span> ·{" "}
-            {event.sectors.map((s) => s.label).join(", ") || "no sector tracks"}
+            {headerSectors.join(", ") || "no sector tracks"}
           </p>
         </div>
         <Link
@@ -274,6 +362,136 @@ export function EventDetailManager({
       {error && (
         <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>
       )}
+
+      {/* Event details */}
+      <section className="mt-6 rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
+        <h2 className="font-semibold text-[var(--navy)]">Event details</h2>
+        <form onSubmit={saveDetails} className="mt-4 grid gap-4">
+          <label className="block">
+            <span className="text-xs font-medium text-[var(--text-muted)]">Title</span>
+            <input
+              required
+              value={title}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setDetailsMsg(null);
+              }}
+              maxLength={200}
+              className="mt-1 block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-xs font-medium text-[var(--text-muted)]">Summary</span>
+            <textarea
+              value={summary}
+              onChange={(e) => {
+                setSummary(e.target.value);
+                setDetailsMsg(null);
+              }}
+              rows={4}
+              maxLength={2000}
+              className="mt-1 block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+            />
+          </label>
+
+          <div className="grid grid-cols-2 gap-4">
+            <label className="block">
+              <span className="text-xs font-medium text-[var(--text-muted)]">Format</span>
+              <select
+                value={format}
+                onChange={(e) => {
+                  setFormat(e.target.value as EventFormat);
+                  setDetailsMsg(null);
+                }}
+                className="mt-1 block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+              >
+                {FORMATS.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs font-medium text-[var(--text-muted)]">Visibility</span>
+              <select
+                value={visibility}
+                onChange={(e) => {
+                  setVisibility(e.target.value as EventVisibility);
+                  setDetailsMsg(null);
+                }}
+                className="mt-1 block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+              >
+                {VISIBILITIES.map((v) => (
+                  <option key={v.value} value={v.value}>{v.label}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <label className="block">
+              <span className="text-xs font-medium text-[var(--text-muted)]">Starts at (optional)</span>
+              <input
+                type="datetime-local"
+                value={startsAt}
+                onChange={(e) => {
+                  setStartsAt(e.target.value);
+                  setDetailsMsg(null);
+                }}
+                className="mt-1 block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-medium text-[var(--text-muted)]">Ends at (optional)</span>
+              <input
+                type="datetime-local"
+                value={endsAt}
+                onChange={(e) => {
+                  setEndsAt(e.target.value);
+                  setDetailsMsg(null);
+                }}
+                className="mt-1 block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+
+          <div>
+            <span className="text-xs font-medium text-[var(--text-muted)]">Sector tracks</span>
+            <p className="text-xs text-[var(--text-muted)]">An event must have at least one track before it can be published.</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {EVENT_SECTORS.map((s) => {
+                const active = sectorSlugs.includes(s.slug);
+                return (
+                  <button
+                    key={s.slug}
+                    type="button"
+                    onClick={() => toggleDetailSector(s.slug)}
+                    aria-pressed={active}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                      active
+                        ? "border-[var(--indigo)] bg-[var(--indigo-soft)] text-[var(--indigo)]"
+                        : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-slate-50"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 border-t border-[var(--border-subtle)] pt-4">
+            {detailsMsg && <span className="text-sm font-medium text-emerald-700">{detailsMsg}</span>}
+            <button
+              type="submit"
+              disabled={savingDetails || !title.trim()}
+              className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
+            >
+              {savingDetails ? "Saving…" : "Save changes"}
+            </button>
+          </div>
+        </form>
+      </section>
 
       {/* Sessions */}
       <section className="mt-6 rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
