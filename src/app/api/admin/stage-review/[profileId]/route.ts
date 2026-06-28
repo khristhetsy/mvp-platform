@@ -5,10 +5,12 @@ import { adminDebug } from "@/lib/debug/admin-debug";
 import { apiErrorMessage } from "@/lib/api/errors";
 import { writeAuditLog } from "@/lib/data/audit";
 import { createNotification } from "@/lib/notifications/notifications";
+import { advanceFounderJourney } from "@/lib/founder-journey/stage-gate";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/types";
 
 const stageReviewSchema = z.object({
-  action: z.enum(["approve", "reject", "set"]),
+  action: z.enum(["approve", "reject", "set", "recompute"]),
   feedback: z.string().optional(),
   stage: z.enum(["initialize", "qualify", "deploy", "optimize"]).optional(),
   reason: z.string().max(500).optional(),
@@ -103,6 +105,29 @@ export async function POST(
   const { action, feedback } = parsed.data;
 
   const { stage, reason } = parsed.data;
+
+  // Recompute: re-run the advancement rules against the founder's actual data
+  // (no manual override). Promotes them if they now qualify — useful for accounts
+  // whose data predates a rule change.
+  if (action === "recompute") {
+    const state = await advanceFounderJourney(auth.supabase as unknown as SupabaseClient<Database>, profileId);
+    await writeAuditLog(auth.supabase, {
+      userId: auth.profile.id,
+      action: "founder_stage_recomputed",
+      entityType: "profile",
+      entityId: profileId,
+      metadata: { resultingStage: state.stage, approvalStatus: state.approvalStatus },
+    });
+    return NextResponse.json({
+      success: true,
+      recomputed: true,
+      profile: {
+        id: profileId,
+        journey_stage: state.stage,
+        stage_approval_status: state.approvalStatus,
+      },
+    });
+  }
 
   if (action === "reject" && !feedback?.trim()) {
     return NextResponse.json(

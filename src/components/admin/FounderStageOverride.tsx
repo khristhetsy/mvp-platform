@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Route, Loader2, Check } from "lucide-react";
+import { Route, Loader2, Check, RefreshCw } from "lucide-react";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 
 const STAGES: { value: string; label: string }[] = [
@@ -24,7 +24,35 @@ export function FounderStageOverride({
   const [stage, setStage] = useState<string>("");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
+  const [recomputing, setRecomputing] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
+  const recompute = useCallback(async () => {
+    setRecomputing(true);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/admin/stage-review/${founderId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "recompute" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Could not recompute.");
+      const newStage = data.profile?.journey_stage ?? current;
+      setCurrent(newStage);
+      setStage(newStage);
+      setMsg({
+        text: newStage && newStage !== current
+          ? `Advanced to ${STAGES.find((s) => s.value === newStage)?.label ?? newStage}.`
+          : "Recomputed — the founder doesn't meet the next stage's requirements yet.",
+        ok: true,
+      });
+    } catch (e) {
+      setMsg({ text: e instanceof Error ? e.message : "Could not recompute.", ok: false });
+    } finally {
+      setRecomputing(false);
+    }
+  }, [founderId, current]);
 
   useEffect(() => {
     let active = true;
@@ -95,7 +123,11 @@ export function FounderStageOverride({
         <button type="button" disabled={saving || !stage || stage === current} onClick={() => void apply()} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} {saving ? "Saving…" : "Set stage"}
         </button>
+        <button type="button" disabled={recomputing} onClick={() => void recompute()} title="Re-run the advancement rules using the founder's actual data" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+          {recomputing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} {recomputing ? "Recomputing…" : "Recompute"}
+        </button>
       </div>
+      <p className="mt-2 text-[11px] text-slate-400">Recompute applies the normal rules to the founder&rsquo;s current data — it promotes them only if they actually qualify (no override).</p>
 
       {msg ? <p className={`mt-3 text-xs ${msg.ok ? "text-emerald-700" : "text-red-700"}`}>{msg.text}</p> : null}
     </section>
