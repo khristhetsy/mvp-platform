@@ -28,6 +28,8 @@ import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestAct
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { CapitalReadinessSection } from "@/components/founder/CapitalReadinessSection";
 import { DataRoomReadinessCard } from "@/components/founder/DataRoomReadinessCard";
+import { StageProgressCard } from "@/components/founder/StageProgressCard";
+import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { DashboardPipelinePanel } from "@/components/founder/DashboardPipelinePanel";
 import { UpcomingMeetingsCard } from "@/components/calendar/UpcomingMeetingsCard";
 import { FounderProactiveInsights } from "@/components/founder/FounderProactiveInsights";
@@ -48,6 +50,7 @@ export default async function FounderDashboardPage() {
   const serviceSupabase = createServiceRoleClient();
   const { data: documents } = company ? await listCompanyDocuments(supabase, company.id) : { data: [] };
   const { data: diligenceReport } = company ? await getLatestDiligenceReport(supabase, company.id) : { data: null };
+  const journeyState = await evaluateFounderJourney(supabase, profile.id);
   const onboardingProgress = company
     ? computeFounderOnboardingProgress({
         company,
@@ -150,6 +153,11 @@ export default async function FounderDashboardPage() {
         {/* 0. Data room completion — the #1 priority: finish diligence docs */}
         <div className="mb-8">
           <DataRoomReadinessCard documents={documents ?? []} />
+        </div>
+
+        {/* 0b. Stage progress — what unlocks the next stage */}
+        <div className="mb-8">
+          <StageProgressCard state={journeyState} />
         </div>
 
         {/* 1. Capital readiness */}
