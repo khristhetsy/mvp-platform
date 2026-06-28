@@ -53,12 +53,14 @@ export async function autoAdvanceStage(
   // requirement (readiness ≥ 75 + the 3 core docs). The admin still approves —
   // this just removes the manual "request review" step so qualified founders are
   // never left waiting on a button. Idempotent: skips if already pending/approved.
+  // Only auto-submit a founder who has NEVER been reviewed (approvalStatus null).
+  // After a rejection the founder resubmits manually once they've addressed
+  // feedback — otherwise we'd instantly re-submit and nullify the admin's decision.
   if (
     currentStage === 'qualify' &&
     state.conditions.readinessQualified &&
     state.conditions.requiredDocsUploaded &&
-    state.approvalStatus !== 'pending' &&
-    state.approvalStatus !== 'approved'
+    state.approvalStatus === null
   ) {
     await rawClient(supabase)
       .from('profiles')
