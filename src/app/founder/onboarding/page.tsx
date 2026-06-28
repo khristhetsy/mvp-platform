@@ -4,6 +4,8 @@ import { FounderConversationalOnboarding } from "@/components/founder/FounderCon
 import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingProgressCard";
 import { loadFounderOnboardingPageData } from "@/lib/onboarding/load-founder-onboarding";
 import { requireRole } from "@/lib/supabase/auth";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { advanceFounderJourney } from "@/lib/founder-journey/stage-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,11 @@ export default async function FounderOnboardingPage() {
   if (!data) {
     redirect("/auth/sign-in");
   }
+
+  // If onboarding is now complete, promote the founder so they don't linger at
+  // Stage 1 with the workspace locked.
+  const supabase = await createServerSupabaseClient();
+  await advanceFounderJourney(supabase, profile.id).catch(() => { /* non-blocking */ });
 
   return (
     <FounderAppShell

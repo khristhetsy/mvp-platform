@@ -29,7 +29,7 @@ import { listCompanyDocuments } from "@/lib/data/documents";
 import { CapitalReadinessSection } from "@/components/founder/CapitalReadinessSection";
 import { DataRoomReadinessCard } from "@/components/founder/DataRoomReadinessCard";
 import { StageProgressCard } from "@/components/founder/StageProgressCard";
-import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
+import { advanceFounderJourney } from "@/lib/founder-journey/stage-gate";
 import { DashboardPipelinePanel } from "@/components/founder/DashboardPipelinePanel";
 import { UpcomingMeetingsCard } from "@/components/calendar/UpcomingMeetingsCard";
 import { FounderProactiveInsights } from "@/components/founder/FounderProactiveInsights";
@@ -50,7 +50,7 @@ export default async function FounderDashboardPage() {
   const serviceSupabase = createServiceRoleClient();
   const { data: documents } = company ? await listCompanyDocuments(supabase, company.id) : { data: [] };
   const { data: diligenceReport } = company ? await getLatestDiligenceReport(supabase, company.id) : { data: null };
-  const journeyState = await evaluateFounderJourney(supabase, profile.id);
+  const journeyState = await advanceFounderJourney(supabase, profile.id);
   const onboardingProgress = company
     ? computeFounderOnboardingProgress({
         company,
