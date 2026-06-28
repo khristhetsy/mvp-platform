@@ -104,6 +104,8 @@ export async function GET(
     country: string | null;
     business_description: string | null;
     funding_amount: number | string | null;
+    is_published: boolean | null;
+    review_status: string | null;
   };
 
   const [investorRes, companyRes] = await Promise.all([
@@ -117,7 +119,7 @@ export async function GET(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (admin as any)
       .from("companies")
-      .select("company_name, industry, revenue_stage, state, country, business_description, funding_amount")
+      .select("company_name, industry, revenue_stage, state, country, business_description, funding_amount, is_published, review_status")
       .eq("id", companyId)
       .maybeSingle() as Promise<{ data: CompanyRow | null }>,
   ]);
@@ -125,7 +127,10 @@ export async function GET(
   const investor = investorRes.data;
   const company = companyRes.data;
 
-  if (!company) {
+  // Only generate a brief for a marketplace-visible company. 404 (not 403) so an
+  // investor can't enumerate which company IDs exist / are private.
+  const isVisible = Boolean(company?.is_published) || company?.review_status === "approved";
+  if (!company || !isVisible) {
     return NextResponse.json({ error: "Company not found" }, { status: 404 });
   }
 
