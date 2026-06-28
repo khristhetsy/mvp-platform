@@ -155,6 +155,11 @@ export const investorOnboardingSchema = z
     accredited_status: z.boolean(),
     investment_thesis: z.string().min(20).max(5000),
     contact_preference: z.enum(["platform", "email", "phone"]),
+    address_line1: z.string().max(300).optional(),
+    address_city: z.string().max(120).optional(),
+    address_state: z.string().max(120).optional(),
+    address_postal_code: z.string().max(40).optional(),
+    address_country: z.string().max(120).optional(),
     submit: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {

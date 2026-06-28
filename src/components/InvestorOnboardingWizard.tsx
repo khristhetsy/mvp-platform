@@ -46,6 +46,11 @@ export function InvestorOnboardingWizard({
   const [accreditedStatus, setAccreditedStatus] = useState(investorProfile.accredited_status);
   const [investmentThesis, setInvestmentThesis] = useState(investorProfile.investment_thesis ?? "");
   const [contactPreference, setContactPreference] = useState(investorProfile.contact_preference ?? "platform");
+  const [addressLine1, setAddressLine1] = useState(investorProfile.address_line1 ?? "");
+  const [addressCity, setAddressCity] = useState(investorProfile.address_city ?? "");
+  const [addressState, setAddressState] = useState(investorProfile.address_state ?? "");
+  const [addressPostal, setAddressPostal] = useState(investorProfile.address_postal_code ?? "");
+  const [addressCountry, setAddressCountry] = useState(investorProfile.address_country ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -87,6 +92,11 @@ export function InvestorOnboardingWizard({
         accredited_status: accreditedStatus,
         investment_thesis: investmentThesis,
         contact_preference: contactPreference,
+        address_line1: addressLine1 || undefined,
+        address_city: addressCity || undefined,
+        address_state: addressState || undefined,
+        address_postal_code: addressPostal || undefined,
+        address_country: addressCountry || undefined,
         submit,
       }),
     });
@@ -170,6 +180,54 @@ export function InvestorOnboardingWizard({
             placeholder="Fund name or individual investing entity"
           />
         </FormField>
+
+        <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Address</p>
+            <p className="text-xs text-slate-500">Helps founders assess geographic fit and supports verification. Country is used for matching.</p>
+          </div>
+          <FormField label="Street address" error={getError("address_line1")}>
+            <input
+              className={`${BASE_INPUT} ${inputCls("address_line1")}`}
+              value={addressLine1}
+              onChange={(e) => { setAddressLine1(e.target.value); clearError("address_line1"); }}
+              placeholder="123 Market St, Suite 400"
+            />
+          </FormField>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label="City" error={getError("address_city")}>
+              <input
+                className={`${BASE_INPUT} ${inputCls("address_city")}`}
+                value={addressCity}
+                onChange={(e) => { setAddressCity(e.target.value); clearError("address_city"); }}
+              />
+            </FormField>
+            <FormField label="State / Province" error={getError("address_state")}>
+              <input
+                className={`${BASE_INPUT} ${inputCls("address_state")}`}
+                value={addressState}
+                onChange={(e) => { setAddressState(e.target.value); clearError("address_state"); }}
+              />
+            </FormField>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label="Postal code" error={getError("address_postal_code")}>
+              <input
+                className={`${BASE_INPUT} ${inputCls("address_postal_code")}`}
+                value={addressPostal}
+                onChange={(e) => { setAddressPostal(e.target.value); clearError("address_postal_code"); }}
+              />
+            </FormField>
+            <FormField label="Country" error={getError("address_country")} hint="Used for founder matching">
+              <input
+                className={`${BASE_INPUT} ${inputCls("address_country")}`}
+                value={addressCountry}
+                onChange={(e) => { setAddressCountry(e.target.value); clearError("address_country"); }}
+                placeholder="United States"
+              />
+            </FormField>
+          </div>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="Check size min (USD)" error={getError("check_size_min")}>

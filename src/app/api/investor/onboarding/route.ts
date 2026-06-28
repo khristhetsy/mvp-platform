@@ -55,6 +55,11 @@ export async function PATCH(request: Request) {
     accredited_status: parsed.data.accredited_status,
     investment_thesis: parsed.data.investment_thesis.trim(),
     contact_preference: parsed.data.contact_preference,
+    address_line1: parsed.data.address_line1?.trim() || null,
+    address_city: parsed.data.address_city?.trim() || null,
+    address_state: parsed.data.address_state?.trim() || null,
+    address_postal_code: parsed.data.address_postal_code?.trim() || null,
+    address_country: parsed.data.address_country?.trim() || null,
     updated_at: now,
   };
 

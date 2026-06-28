@@ -1321,6 +1321,11 @@ export type Database = {
           kyc_reviewed_at: string | null;
           kyc_reviewed_by: string | null;
           kyc_feedback: string | null;
+          address_line1: string | null;
+          address_city: string | null;
+          address_state: string | null;
+          address_postal_code: string | null;
+          address_country: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -1346,6 +1351,11 @@ export type Database = {
           kyc_reviewed_at?: string | null;
           kyc_reviewed_by?: string | null;
           kyc_feedback?: string | null;
+          address_line1?: string | null;
+          address_city?: string | null;
+          address_state?: string | null;
+          address_postal_code?: string | null;
+          address_country?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -1369,6 +1379,11 @@ export type Database = {
           kyc_reviewed_at?: string | null;
           kyc_reviewed_by?: string | null;
           kyc_feedback?: string | null;
+          address_line1?: string | null;
+          address_city?: string | null;
+          address_state?: string | null;
+          address_postal_code?: string | null;
+          address_country?: string | null;
           updated_at?: string;
         };
         Relationships: [];
