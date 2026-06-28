@@ -52,13 +52,14 @@ export async function POST(req: Request): Promise<Response> {
     const up = await admin.storage.from(bucket).upload(filePath, buffer, { contentType: XLSX_MIME, upsert: false });
     if (up.error) throw new Error(up.error.message);
 
-    // Archive any prior active financial model so only the latest counts.
+    // Archive any prior active financial model so only the latest counts —
+    // including ones already moved to needs_review/approved (not just "uploaded").
     await admin
       .from("documents")
       .update({ status: "archived" })
       .eq("company_id", g.company.id)
       .eq("document_type", DOC_TYPE)
-      .eq("status", "uploaded");
+      .neq("status", "archived");
 
     const { data: docRow, error: docErr } = await createDocumentRecord(admin, {
       company_id: g.company.id,

@@ -36,7 +36,7 @@ export async function POST(): Promise<Response> {
     if (up.error) throw new Error(up.error.message);
 
     // Archive any prior active business plan so only the latest counts.
-    await admin.from("documents").update({ status: "archived" }).eq("company_id", g.company.id).eq("document_type", DOC_TYPE).eq("status", "uploaded");
+    await admin.from("documents").update({ status: "archived" }).eq("company_id", g.company.id).eq("document_type", DOC_TYPE).neq("status", "archived");
 
     const { data: docRow, error: docErr } = await createDocumentRecord(admin, {
       company_id: g.company.id,

@@ -3,7 +3,7 @@
 // digest, the admin cockpit, and the assistant — so the number is consistent
 // everywhere. Builds on the existing checklist + Qualify-doc definitions.
 
-import { buildDocumentChecklist, documentTypeCode } from "@/lib/data/founder-readiness";
+import { buildDocumentChecklist } from "@/lib/data/founder-readiness";
 import { requiredDocumentTypes } from "@/lib/documents/required-types";
 import { QUALIFY_REQUIRED_DOCUMENTS } from "@/lib/founder-journey/documents";
 import type { DocumentRecord } from "@/lib/supabase/types";
@@ -118,8 +118,3 @@ export const DATA_ROOM_UNLOCKS = [
   "The ability to request investor introductions",
   "Advancing to the Deploy stage to start your raise",
 ] as const;
-
-/** Convenience: derive the document_type codes already satisfied. */
-export function satisfiedCodes(state: DataRoomState): string[] {
-  return state.items.filter((i) => i.status !== "missing").map((i) => documentTypeCode(i.label));
-}
