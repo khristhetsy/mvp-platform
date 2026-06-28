@@ -69,10 +69,10 @@ export function computePillars(input: PartnerScoreInputs): PartnerPillars {
   const portfolioReadiness =
     input.backedReadinessAvg === null ? 60 : clamp(input.backedReadinessAvg);
 
-  // Track record (10%) — base + closings + tenure. Grows with real outcomes.
-  const trackRecord = clamp(
-    55 + 12 * Math.min(input.closedDeals, 3) + 9 * Math.min(input.tenureMonths / 6, 1),
-  );
+  // Track record (10%) — base + experience + tenure. Experience combines closed
+  // on-platform deals with admin-verified prior (off-platform) investments.
+  const experience = Math.min(input.closedDeals + input.verifiedPriorDeals, 3);
+  const trackRecord = clamp(55 + 12 * experience + 9 * Math.min(input.tenureMonths / 6, 1));
 
   return { followThrough, responsiveness, credibility, portfolioReadiness, trackRecord };
 }

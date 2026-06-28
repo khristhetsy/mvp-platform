@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
+import { countVerifiedPriorDeals } from "@/lib/investor/prior-deals";
 import { computePartnerScore } from "./scoring";
 import type { PartnerScore, PartnerScoreInputs } from "./types";
 
@@ -119,6 +120,7 @@ export async function loadPartnerScore(
 
   // 4. Investor profile — credibility inputs.
   type ProfileRow = {
+    id: string | null;
     accredited_status: boolean | null;
     accreditation_verified: boolean | null;
     check_size_min: number | null;
@@ -131,7 +133,7 @@ export async function loadPartnerScore(
   const profileRes = await supabase
     .from("investor_profiles")
     .select(
-      "accredited_status, accreditation_verified, check_size_min, check_size_max, investment_thesis, preferred_sectors, preferred_stages, created_at",
+      "id, accredited_status, accreditation_verified, check_size_min, check_size_max, investment_thesis, preferred_sectors, preferred_stages, created_at",
     )
     .eq("profile_id", investorId)
     .maybeSingle();
@@ -145,6 +147,9 @@ export async function loadPartnerScore(
   ];
   const profileCompleteness =
     completenessParts.filter(Boolean).length / completenessParts.length;
+
+  // Admin-verified prior (off-platform) deals strengthen the track record.
+  const verifiedPriorDeals = profile?.id ? await countVerifiedPriorDeals(profile.id) : 0;
 
   const min = profile?.check_size_min ?? 0;
   const max = profile?.check_size_max ?? Number.POSITIVE_INFINITY;
@@ -213,6 +218,7 @@ export async function loadPartnerScore(
     pledgesWithinRange,
     backedReadinessAvg,
     closedDeals: completedParticipations,
+    verifiedPriorDeals,
     tenureMonths: monthsBetween(profile?.created_at ?? null, now),
   };
 

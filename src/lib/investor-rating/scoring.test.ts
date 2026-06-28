@@ -21,6 +21,7 @@ function inputs(over: Partial<PartnerScoreInputs> = {}): PartnerScoreInputs {
     pledgesWithinRange: 4,
     backedReadinessAvg: 75,
     closedDeals: 2,
+    verifiedPriorDeals: 0,
     tenureMonths: 8,
     ...over,
   };
@@ -127,6 +128,7 @@ describe("computePartnerScore", () => {
       pledgesWithinRange: 0,
       backedReadinessAvg: null,
       closedDeals: 0,
+      verifiedPriorDeals: 0,
       tenureMonths: 0,
     });
     expect(result.status).toBe("new");

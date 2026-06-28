@@ -40,8 +40,23 @@ export type InvestorProfileRecord = {
   accreditation_verified: boolean;
   accreditation_reviewed_at: string | null;
   accreditation_reviewed_by: string | null;
+  show_track_record: boolean;
   created_at: string;
   updated_at: string;
+};
+
+export type InvestorPriorDealRecord = {
+  id: string;
+  investor_profile_id: string;
+  company_name: string;
+  stage: string | null;
+  year: number | null;
+  amount: number | null;
+  proof_document_id: string | null;
+  verified: boolean;
+  verified_at: string | null;
+  verified_by: string | null;
+  created_at: string;
 };
 
 export type InvestorKycDocumentRecord = {

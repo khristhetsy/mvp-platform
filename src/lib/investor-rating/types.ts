@@ -62,6 +62,7 @@ export type PartnerScoreInputs = {
 
   // Track record / tenure
   closedDeals: number;
+  verifiedPriorDeals: number; // admin-verified off-platform prior investments
   tenureMonths: number;
 };
 
