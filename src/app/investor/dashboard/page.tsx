@@ -7,6 +7,7 @@ import { loadInvestorRecommendedMatches } from "@/lib/matching/load-investor-rec
 import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
 import { computeInvestorOnboardingProgress, isInvestorProfileComplete } from "@/lib/investor/profile";
 import { InvestorStatusCard } from "@/components/investor/InvestorStatusCard";
+import { InvestorFirstRunModal } from "@/components/investor/InvestorFirstRunModal";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
@@ -78,6 +79,8 @@ export default async function InvestorDashboardPage() {
       </div>
 
       <TaskReminderToast />
+
+      <InvestorFirstRunModal isNew={savedDeals.length === 0 && interests.length === 0} />
 
       <section className="mt-2">
         <InvestorDashboardCondensedGrid
