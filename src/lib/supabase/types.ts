@@ -8,6 +8,7 @@ export type Profile = {
   is_super_admin?: boolean;
   is_active: boolean;
   last_seen_at: string | null;
+  locale?: string | null;
   created_at: string;
 };
 

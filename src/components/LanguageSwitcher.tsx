@@ -30,6 +30,13 @@ export function LanguageSwitcher() {
     // eslint-disable-next-line react-hooks/immutability
     document.cookie = `${COOKIE_NAME}=${next}; path=/; max-age=31536000; SameSite=Lax`;
     setLocale(next);
+    // Persist to the profile (fire-and-forget) so emails reach the user in this
+    // language. No-op for signed-out visitors.
+    void fetch("/api/user/locale", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ locale: next }),
+    }).catch(() => {});
     startTransition(() => {
       router.refresh();
     });
