@@ -103,11 +103,13 @@ function isCompanyProfileComplete(company: Company) {
 }
 
 function isFundingInformationComplete(company: Company) {
+  // Counts as done on the core funding facts a founder actually enters: a raise
+  // amount and a revenue stage. "Use of funds" is encouraged but NOT required to
+  // complete onboarding — it was a hidden blocker that stranded founders at 50%.
   return (
     company.funding_amount != null &&
     company.funding_amount > 0 &&
-    Boolean(company.revenue_stage?.trim()) &&
-    Boolean(company.use_of_funds?.trim() && company.use_of_funds.trim().length >= 10)
+    Boolean(company.revenue_stage?.trim())
   );
 }
 
