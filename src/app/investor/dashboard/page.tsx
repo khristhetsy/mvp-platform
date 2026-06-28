@@ -5,8 +5,9 @@ import { InvestorOnboardingProgressCard } from "@/components/InvestorOnboardingP
 import { investorCompanyLabel, loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
 import { loadInvestorRecommendedMatches } from "@/lib/matching/load-investor-recommendations";
 import { loadInvestorWorkspaceContext } from "@/lib/investor/load-investor-workspace";
-import { computeInvestorOnboardingProgress, isInvestorProfileComplete } from "@/lib/investor/profile";
-import { InvestorStatusCard } from "@/components/investor/InvestorStatusCard";
+import { computeInvestorOnboardingProgress } from "@/lib/investor/profile";
+import { InvestorJourneyTracker } from "@/components/investor/InvestorJourneyTracker";
+import { loadInvestorJourney } from "@/lib/investor-journey/load";
 import { InvestorFirstRunModal } from "@/components/investor/InvestorFirstRunModal";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
@@ -22,8 +23,6 @@ export default async function InvestorDashboardPage() {
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
   const { investorProfile } = await loadInvestorWorkspaceContext(profile);
   const investorProgress = investorProfile ? computeInvestorOnboardingProgress(investorProfile) : null;
-  const approvalStatus = investorProfile?.approval_status ?? "draft";
-  const profileComplete = investorProfile ? isInvestorProfileComplete(investorProfile) : false;
 
   const [{ workspace, crmActivity }, { matches }, nextBestActions] = await Promise.all([
     loadInvestorWorkspacePageData(investorId),
@@ -34,6 +33,14 @@ export default async function InvestorDashboardPage() {
   const interests = workspace.interests;
   const introRequests = workspace.introRequests;
   const topMatches = matches.slice(0, 4);
+
+  // 4-stage journey tracker + the one contextual next step.
+  const journey = investorProfile
+    ? await loadInvestorJourney(investorProfile, {
+        hasEngaged: interests.length > 0 || introRequests.length > 0,
+      })
+    : null;
+  const inOnboardStage = journey?.stageView.current.key === "onboard";
 
   return (
     <AppShell
@@ -50,9 +57,11 @@ export default async function InvestorDashboardPage() {
 
       <TipOfTheDay profileId={profile.id} audience="investor" />
 
-      {investorProgress ? <InvestorOnboardingProgressCard progress={investorProgress} /> : null}
+      {journey ? <InvestorJourneyTracker stageView={journey.stageView} coach={journey.coach} /> : null}
 
-      <InvestorStatusCard approvalStatus={approvalStatus} profileComplete={profileComplete} />
+      {inOnboardStage && investorProgress ? (
+        <InvestorOnboardingProgressCard progress={investorProgress} />
+      ) : null}
 
       <InvestorMetricCards
         data={{
