@@ -340,6 +340,8 @@ export function getFounderWorkspaceNavSections(): WorkspaceNavSection[] {
   return founderWorkspaceNavSections;
 }
 
+// Investor menu mirrors the four-stage journey: Onboard → Verify → Access → Manage.
+// Dashboard is pinned on top; cross-cutting tools sit in a Workspace group below.
 export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     items: [
@@ -347,7 +349,19 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
     ],
   },
   {
-    title: "Deal flow",
+    title: "Stage 1 · Onboarding",
+    items: [
+      { href: "/investor/onboarding", label: "Profile" },
+    ],
+  },
+  {
+    title: "Stage 2 · Verification",
+    items: [
+      { href: "/investor/verification", label: "Identity & accreditation" },
+    ],
+  },
+  {
+    title: "Stage 3 · Deals access",
     items: [
       {
         href: "/investor/opportunities",
@@ -358,25 +372,8 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/investor/interest-pipeline", label: "Interest Pipeline" },
           { href: "/investor/deal-room", label: "Deal Room" },
           { href: "/investor/deals", label: "Diligence" },
-          { href: "/investor/spvs", label: "SPVs" },
-          { href: "/investor/portfolio", label: "Portfolio" },
-          { href: "/investor/activity", label: "Recent Activity" },
         ],
       },
-      { href: "/events", label: "Events" },
-    ],
-  },
-  {
-    title: "Workflow",
-    items: [
-      { href: "/investor/actions", label: "Action Center" },
-      { href: "/investor/tasks", label: "Tasks" },
-      { href: "/notifications", label: "Notifications" },
-    ],
-  },
-  {
-    title: "Inbox & calendar",
-    items: [
       {
         href: "/investor/inbox",
         label: "Communications",
@@ -393,21 +390,26 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/investor/schedule", label: "Scheduling" },
         ],
       },
-    ],
-  },
-  {
-    title: "Grow",
-    items: [
-      { href: "/investor/learning", label: "Learning" },
+      { href: "/events", label: "Events" },
       { href: "/investor/partner-score", label: "Partner Score" },
+      { href: "/investor/learning", label: "Learning" },
       { href: "/investor/analytics", label: "Analytics" },
     ],
   },
   {
-    title: "Account",
+    title: "Stage 4 · Manage deals",
     items: [
-      { href: "/investor/onboarding", label: "Onboarding" },
-      { href: "/investor/verification", label: "Verification" },
+      { href: "/investor/portfolio", label: "Portfolio" },
+      { href: "/investor/spvs", label: "SPVs & closings" },
+      { href: "/investor/activity", label: "Recent Activity" },
+    ],
+  },
+  {
+    title: "Workspace",
+    items: [
+      { href: "/investor/actions", label: "Action Center" },
+      { href: "/investor/tasks", label: "Tasks" },
+      { href: "/notifications", label: "Notifications" },
       { href: "/investor/settings", label: "Settings" },
     ],
   },
