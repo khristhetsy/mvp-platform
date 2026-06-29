@@ -6,13 +6,15 @@
 
 import { sendEmail } from "@/lib/email/send-email";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { getUserLocale, getUserLocaleByEmail } from "@/lib/i18n/user-locale";
+import { emailTranslator, type EmailT } from "@/lib/i18n/email-i18n";
 
 const ACCENT = "#534AB7";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
 
 // ── Shared HTML wrapper ───────────────────────────────────────────────────────
 
-function emailShell(content: string): string {
+function emailShell(content: string, t: EmailT): string {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -41,8 +43,8 @@ function emailShell(content: string): string {
           <tr>
             <td style="padding:20px 32px;border-top:1px solid #f3f4f6;background:#fafafa;">
               <p style="margin:0;font-size:11px;color:#9ca3af;line-height:1.6;">
-                You are receiving this because you have an active company on iCapOS.
-                <a href="${APP_URL}/founder/settings" style="color:${ACCENT};">Manage email preferences</a>
+                ${t("shell.footerFounder")}
+                <a href="${APP_URL}/founder/settings" style="color:${ACCENT};">${t("shell.manage")}</a>
               </p>
             </td>
           </tr>
@@ -89,31 +91,32 @@ export async function emailFounderDealRoomQuestion(input: {
   roomTitle: string;
   questionCategory: string;
 }) {
-  const [founderEmail, investorName] = await Promise.all([
+  const [founderEmail, investorName, locale] = await Promise.all([
     getFounderEmail(input.founderId),
     getInvestorName(input.investorId),
+    getUserLocale(input.founderId),
   ]);
   if (!founderEmail) return;
+  const t = emailTranslator(locale);
 
   const deepLink = `${APP_URL}/founder/deal-room/${input.roomId}`;
   const html = emailShell(`
-    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${ACCENT};text-transform:uppercase;letter-spacing:.08em;">Deal room activity</p>
-    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#111827;">New investor question</h2>
+    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${ACCENT};text-transform:uppercase;letter-spacing:.08em;">${t("dealRoom.eyebrowActivity")}</p>
+    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#111827;">${t("dealRoom.question.heading")}</h2>
     <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">
-      <strong>${investorName}</strong> has asked a new <strong>${input.questionCategory}</strong> question in your deal room
-      <strong>&ldquo;${input.roomTitle}&rdquo;</strong>.
+      ${t("dealRoom.question.body", { investor: investorName, category: input.questionCategory, room: input.roomTitle })}
     </p>
     <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.6;">
-      Investors who get fast, thorough responses are significantly more likely to move to the next stage. Respond within 24 hours for best results.
+      ${t("dealRoom.question.tip")}
     </p>
-    ${ctaButton("View & respond", deepLink)}
-  `);
+    ${ctaButton(t("dealRoom.question.cta"), deepLink)}
+  `, t);
 
   await sendEmail({
     to: founderEmail,
-    subject: `New investor question in "${input.roomTitle}"`,
+    subject: t("dealRoom.question.subject", { room: input.roomTitle }),
     html,
-    text: `${investorName} asked a new ${input.questionCategory} question in your deal room "${input.roomTitle}". View it here: ${deepLink}`,
+    text: t("dealRoom.question.text", { investor: investorName, category: input.questionCategory, room: input.roomTitle, link: deepLink }),
   });
 }
 
@@ -124,31 +127,32 @@ export async function emailFounderDocumentRequested(input: {
   roomTitle: string;
   documentLabel: string;
 }) {
-  const [founderEmail, investorName] = await Promise.all([
+  const [founderEmail, investorName, locale] = await Promise.all([
     getFounderEmail(input.founderId),
     getInvestorName(input.investorId),
+    getUserLocale(input.founderId),
   ]);
   if (!founderEmail) return;
+  const t = emailTranslator(locale);
 
   const deepLink = `${APP_URL}/founder/deal-room/${input.roomId}`;
   const html = emailShell(`
-    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${ACCENT};text-transform:uppercase;letter-spacing:.08em;">Deal room activity</p>
-    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#111827;">Document requested</h2>
+    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${ACCENT};text-transform:uppercase;letter-spacing:.08em;">${t("dealRoom.eyebrowActivity")}</p>
+    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#111827;">${t("dealRoom.document.heading")}</h2>
     <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">
-      <strong>${investorName}</strong> has requested a document (<strong>${input.documentLabel}</strong>) in your deal room
-      <strong>&ldquo;${input.roomTitle}&rdquo;</strong>.
+      ${t("dealRoom.document.body", { investor: investorName, document: input.documentLabel, room: input.roomTitle })}
     </p>
     <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.6;">
-      Uploading requested documents quickly signals preparedness and builds investor confidence.
+      ${t("dealRoom.document.tip")}
     </p>
-    ${ctaButton("Upload document", deepLink)}
-  `);
+    ${ctaButton(t("dealRoom.document.cta"), deepLink)}
+  `, t);
 
   await sendEmail({
     to: founderEmail,
-    subject: `Document requested in "${input.roomTitle}"`,
+    subject: t("dealRoom.document.subject", { room: input.roomTitle }),
     html,
-    text: `${investorName} requested "${input.documentLabel}" in deal room "${input.roomTitle}". View it here: ${deepLink}`,
+    text: t("dealRoom.document.text", { investor: investorName, document: input.documentLabel, room: input.roomTitle, link: deepLink }),
   });
 }
 
@@ -158,30 +162,32 @@ export async function emailFounderRoomViewed(input: {
   roomId: string;
   roomTitle: string;
 }) {
-  const [founderEmail, investorName] = await Promise.all([
+  const [founderEmail, investorName, locale] = await Promise.all([
     getFounderEmail(input.founderId),
     getInvestorName(input.investorId),
+    getUserLocale(input.founderId),
   ]);
   if (!founderEmail) return;
+  const t = emailTranslator(locale);
 
   const deepLink = `${APP_URL}/founder/deal-room/${input.roomId}`;
   const html = emailShell(`
-    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${ACCENT};text-transform:uppercase;letter-spacing:.08em;">Deal room activity</p>
-    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#111827;">Investor viewed your deal room</h2>
+    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${ACCENT};text-transform:uppercase;letter-spacing:.08em;">${t("dealRoom.eyebrowActivity")}</p>
+    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#111827;">${t("dealRoom.viewed.heading")}</h2>
     <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">
-      <strong>${investorName}</strong> opened your deal room <strong>&ldquo;${input.roomTitle}&rdquo;</strong> for the first time.
+      ${t("dealRoom.viewed.body", { investor: investorName, room: input.roomTitle })}
     </p>
     <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.6;">
-      Make sure all your documents are uploaded and any outstanding questions are answered — this is an active signal of investor interest.
+      ${t("dealRoom.viewed.tip")}
     </p>
-    ${ctaButton("Review deal room", deepLink)}
-  `);
+    ${ctaButton(t("dealRoom.viewed.cta"), deepLink)}
+  `, t);
 
   await sendEmail({
     to: founderEmail,
-    subject: `Investor viewed your deal room: "${input.roomTitle}"`,
+    subject: t("dealRoom.viewed.subject", { room: input.roomTitle }),
     html,
-    text: `${investorName} viewed your deal room "${input.roomTitle}". Review it here: ${deepLink}`,
+    text: t("dealRoom.viewed.text", { investor: investorName, room: input.roomTitle, link: deepLink }),
   });
 }
 
@@ -190,30 +196,32 @@ export async function emailFounderInvestorInterest(input: {
   investorId: string;
   companyName: string;
 }) {
-  const [founderEmail, investorName] = await Promise.all([
+  const [founderEmail, investorName, locale] = await Promise.all([
     getFounderEmail(input.founderId),
     getInvestorName(input.investorId),
+    getUserLocale(input.founderId),
   ]);
   if (!founderEmail) return;
+  const t = emailTranslator(locale);
 
   const deepLink = `${APP_URL}/founder/capital-raise`;
   const html = emailShell(`
-    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${ACCENT};text-transform:uppercase;letter-spacing:.08em;">Investor activity</p>
-    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#111827;">New investor interest</h2>
+    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${ACCENT};text-transform:uppercase;letter-spacing:.08em;">${t("dealRoom.eyebrowInvestorActivity")}</p>
+    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#111827;">${t("dealRoom.interest.heading")}</h2>
     <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">
-      <strong>${investorName}</strong> has expressed interest in <strong>${input.companyName}</strong> on iCapOS.
+      ${t("dealRoom.interest.body", { investor: investorName, company: input.companyName })}
     </p>
     <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.6;">
-      This is an early signal. Log into your dashboard to review their profile and decide on next steps.
+      ${t("dealRoom.interest.tip")}
     </p>
-    ${ctaButton("View capital raise", deepLink)}
-  `);
+    ${ctaButton(t("dealRoom.interest.cta"), deepLink)}
+  `, t);
 
   await sendEmail({
     to: founderEmail,
-    subject: `New investor interest in ${input.companyName}`,
+    subject: t("dealRoom.interest.subject", { company: input.companyName }),
     html,
-    text: `${investorName} expressed interest in ${input.companyName}. View it here: ${deepLink}`,
+    text: t("dealRoom.interest.text", { investor: investorName, company: input.companyName, link: deepLink }),
   });
 }
 
@@ -223,24 +231,28 @@ export async function emailTeamInvite(input: {
   companyName: string;
   inviteToken: string;
 }) {
+  // Invitees may not have an account yet — fall back to their saved locale if
+  // one exists, otherwise English.
+  const locale = await getUserLocaleByEmail(input.inviteeEmail);
+  const t = emailTranslator(locale);
   const acceptUrl = `${APP_URL}/invite/accept?token=${input.inviteToken}`;
   const html = emailShell(`
-    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${ACCENT};text-transform:uppercase;letter-spacing:.08em;">Team invitation</p>
-    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#111827;">You&rsquo;ve been invited to join ${input.companyName}</h2>
+    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${ACCENT};text-transform:uppercase;letter-spacing:.08em;">${t("dealRoom.teamInvite.eyebrow")}</p>
+    <h2 style="margin:0 0 16px;font-size:20px;font-weight:800;color:#111827;">${t("dealRoom.teamInvite.heading", { company: input.companyName })}</h2>
     <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">
-      <strong>${input.inviterName}</strong> has invited you to join the <strong>${input.companyName}</strong> workspace on iCapOS as a team member.
+      ${t("dealRoom.teamInvite.body", { inviter: input.inviterName, company: input.companyName })}
     </p>
     <p style="margin:0 0 16px;font-size:14px;color:#6b7280;line-height:1.6;">
-      As a team member you can collaborate on investor outreach, review deal rooms, and track fundraising progress alongside your co-founder.
+      ${t("dealRoom.teamInvite.body2")}
     </p>
-    ${ctaButton("Accept invitation", acceptUrl)}
-    <p style="margin:16px 0 0;font-size:12px;color:#9ca3af;">This invitation expires in 7 days. If you didn&rsquo;t expect this email, you can safely ignore it.</p>
-  `);
+    ${ctaButton(t("dealRoom.teamInvite.cta"), acceptUrl)}
+    <p style="margin:16px 0 0;font-size:12px;color:#9ca3af;">${t("dealRoom.teamInvite.expiry")}</p>
+  `, t);
 
   await sendEmail({
     to: input.inviteeEmail,
-    subject: `You're invited to join ${input.companyName} on iCapOS`,
+    subject: t("dealRoom.teamInvite.subject", { company: input.companyName }),
     html,
-    text: `${input.inviterName} invited you to join ${input.companyName} on iCapOS. Accept here: ${acceptUrl}`,
+    text: t("dealRoom.teamInvite.text", { inviter: input.inviterName, company: input.companyName, link: acceptUrl }),
   });
 }

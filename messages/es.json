@@ -199,5 +199,82 @@
     "en": "EN",
     "es": "ES",
     "switchLanguage": "Cambiar idioma"
+  },
+  "emails": {
+    "shell": {
+      "footerFounder": "Recibes este correo porque tienes una empresa activa en iCapOS.",
+      "manage": "Gestionar preferencias de correo"
+    },
+    "dealRoom": {
+      "eyebrowActivity": "Actividad en la sala de operaciones",
+      "eyebrowInvestorActivity": "Actividad de inversores",
+      "question": {
+        "heading": "Nueva pregunta de un inversor",
+        "body": "<strong>{investor}</strong> ha hecho una nueva pregunta de <strong>{category}</strong> en tu sala de operaciones <strong>«{room}»</strong>.",
+        "tip": "Los inversores que reciben respuestas rápidas y completas tienen muchas más probabilidades de avanzar a la siguiente etapa. Responde en un plazo de 24 horas para obtener mejores resultados.",
+        "cta": "Ver y responder",
+        "subject": "Nueva pregunta de un inversor en «{room}»",
+        "text": "{investor} hizo una nueva pregunta de {category} en tu sala de operaciones «{room}». Verla aquí: {link}"
+      },
+      "document": {
+        "heading": "Documento solicitado",
+        "body": "<strong>{investor}</strong> ha solicitado un documento (<strong>{document}</strong>) en tu sala de operaciones <strong>«{room}»</strong>.",
+        "tip": "Subir los documentos solicitados con rapidez demuestra preparación y genera confianza en los inversores.",
+        "cta": "Subir documento",
+        "subject": "Documento solicitado en «{room}»",
+        "text": "{investor} solicitó «{document}» en la sala de operaciones «{room}». Verlo aquí: {link}"
+      },
+      "viewed": {
+        "heading": "Un inversor vio tu sala de operaciones",
+        "body": "<strong>{investor}</strong> abrió tu sala de operaciones <strong>«{room}»</strong> por primera vez.",
+        "tip": "Asegúrate de que todos tus documentos estén subidos y de que las preguntas pendientes estén respondidas: es una señal activa de interés de los inversores.",
+        "cta": "Revisar sala de operaciones",
+        "subject": "Un inversor vio tu sala de operaciones: «{room}»",
+        "text": "{investor} vio tu sala de operaciones «{room}». Revísala aquí: {link}"
+      },
+      "interest": {
+        "heading": "Nuevo interés de un inversor",
+        "body": "<strong>{investor}</strong> ha expresado interés en <strong>{company}</strong> en iCapOS.",
+        "tip": "Es una señal temprana. Inicia sesión en tu panel para revisar su perfil y decidir los próximos pasos.",
+        "cta": "Ver ronda de financiación",
+        "subject": "Nuevo interés de un inversor en {company}",
+        "text": "{investor} expresó interés en {company}. Verlo aquí: {link}"
+      },
+      "teamInvite": {
+        "eyebrow": "Invitación al equipo",
+        "heading": "Te han invitado a unirte a {company}",
+        "body": "<strong>{inviter}</strong> te ha invitado a unirte al espacio de trabajo de <strong>{company}</strong> en iCapOS como miembro del equipo.",
+        "body2": "Como miembro del equipo puedes colaborar en la búsqueda de inversores, revisar salas de operaciones y seguir el progreso de la ronda junto a tu cofundador.",
+        "cta": "Aceptar invitación",
+        "expiry": "Esta invitación caduca en 7 días. Si no esperabas este correo, puedes ignorarlo sin problema.",
+        "subject": "Te invitaron a unirte a {company} en iCapOS",
+        "text": "{inviter} te invitó a unirte a {company} en iCapOS. Acéptala aquí: {link}"
+      }
+    },
+    "dataRoom": {
+      "eyebrow": "Diligencia debida",
+      "headlineComplete": "Tu sala de datos está {percent}% completa",
+      "headlineIncomplete": "Los inversores aún no pueden ver a {company}",
+      "leadComplete": "Ya casi: te faltan {count} {docs} para un paquete de diligencia completo.",
+      "leadIncomplete": "Aún faltan los elementos esenciales para el acceso de inversores. Hasta que estén, tu empresa no puede listarse ante inversores ni solicitar presentaciones.",
+      "greeting": "Hola {name},",
+      "stillNeeded": "Aún se necesita:",
+      "cta": "Completa tu sala de datos →",
+      "note": "Varios de estos se pueden generar en la app en minutos, incluidos tu plan de negocio, modelo financiero y tabla de capitalización. {percent}% completo ({completed}/{total}).",
+      "subjectComplete": "{company}: a {count} {docs} de una sala de datos completa",
+      "subjectIncomplete": "Acción necesaria: completa la sala de datos de {company}",
+      "docSingular": "documento",
+      "docPlural": "documentos"
+    },
+    "diligence": {
+      "hello": "Hola,",
+      "openHere": "Ábrelo aquí:",
+      "founderReadySubject": "La diligencia está lista para tu revisión — {company}",
+      "founderReadyLine": "El informe de diligencia de {company} está listo para tu revisión y respuesta.",
+      "documentsRequestedSubject": "Documentos solicitados — {company}",
+      "documentsRequestedLine": "Se han solicitado nuevos documentos para la diligencia de {company}.",
+      "releasedSubject": "Operación disponible — {company}",
+      "releasedLine": "El paquete de diligencia de {company} ya está disponible."
+    }
   }
 }

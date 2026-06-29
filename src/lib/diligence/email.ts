@@ -1,6 +1,8 @@
 // DD notifications via Resend (§16). Degrades gracefully without RESEND_API_KEY.
 
 import { getResendApiKey, getAppUrl } from "@/lib/env";
+import { getUserLocaleByEmail } from "@/lib/i18n/user-locale";
+import { emailTranslator } from "@/lib/i18n/email-i18n";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
 const SENDER = "iCFO Venture Group";
@@ -29,16 +31,18 @@ async function send(to: string, subject: string, text: string): Promise<{ delive
   return { delivered: true };
 }
 
-export function sendFounderReady(to: string, companyName: string, eid: string) {
+export async function sendFounderReady(to: string, companyName: string, eid: string) {
   const url = diligenceLink("founder", eid);
-  return send(to, `Diligence ready for your input — ${companyName}`,
-    [`Hello,`, ``, `The diligence report for ${companyName} is ready for your review and response.`, ``, `Open it here:`, url, ``, SENDER].join("\n"));
+  const t = emailTranslator(await getUserLocaleByEmail(to));
+  return send(to, t("diligence.founderReadySubject", { company: companyName }),
+    [t("diligence.hello"), ``, t("diligence.founderReadyLine", { company: companyName }), ``, t("diligence.openHere"), url, ``, SENDER].join("\n"));
 }
 
-export function sendDocumentsRequested(to: string, companyName: string, eid: string) {
+export async function sendDocumentsRequested(to: string, companyName: string, eid: string) {
   const url = diligenceLink("founder", eid);
-  return send(to, `Documents requested — ${companyName}`,
-    [`Hello,`, ``, `New documents have been requested for the ${companyName} diligence.`, ``, url, ``, SENDER].join("\n"));
+  const t = emailTranslator(await getUserLocaleByEmail(to));
+  return send(to, t("diligence.documentsRequestedSubject", { company: companyName }),
+    [t("diligence.hello"), ``, t("diligence.documentsRequestedLine", { company: companyName }), ``, url, ``, SENDER].join("\n"));
 }
 
 function adminLink(eid: string): string {
@@ -62,8 +66,9 @@ export function sendFounderSigned(to: string, companyName: string, eid: string) 
     [`Hello,`, ``, `The founder has signed the consent for ${companyName}. The version is sealed and the engagement is locked.`, ``, url, ``, SENDER].join("\n"));
 }
 
-export function sendReleasedToInvestor(to: string, companyName: string, eid: string) {
+export async function sendReleasedToInvestor(to: string, companyName: string, eid: string) {
   const url = diligenceLink("investor", eid);
-  return send(to, `Deal available — ${companyName}`,
-    [`Hello,`, ``, `The diligence package for ${companyName} is now available.`, ``, url, ``, SENDER].join("\n"));
+  const t = emailTranslator(await getUserLocaleByEmail(to));
+  return send(to, t("diligence.releasedSubject", { company: companyName }),
+    [t("diligence.hello"), ``, t("diligence.releasedLine", { company: companyName }), ``, url, ``, SENDER].join("\n"));
 }

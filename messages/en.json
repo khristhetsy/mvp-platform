@@ -199,5 +199,82 @@
     "en": "EN",
     "es": "ES",
     "switchLanguage": "Switch language"
+  },
+  "emails": {
+    "shell": {
+      "footerFounder": "You are receiving this because you have an active company on iCapOS.",
+      "manage": "Manage email preferences"
+    },
+    "dealRoom": {
+      "eyebrowActivity": "Deal room activity",
+      "eyebrowInvestorActivity": "Investor activity",
+      "question": {
+        "heading": "New investor question",
+        "body": "<strong>{investor}</strong> has asked a new <strong>{category}</strong> question in your deal room <strong>&ldquo;{room}&rdquo;</strong>.",
+        "tip": "Investors who get fast, thorough responses are significantly more likely to move to the next stage. Respond within 24 hours for best results.",
+        "cta": "View & respond",
+        "subject": "New investor question in \"{room}\"",
+        "text": "{investor} asked a new {category} question in your deal room \"{room}\". View it here: {link}"
+      },
+      "document": {
+        "heading": "Document requested",
+        "body": "<strong>{investor}</strong> has requested a document (<strong>{document}</strong>) in your deal room <strong>&ldquo;{room}&rdquo;</strong>.",
+        "tip": "Uploading requested documents quickly signals preparedness and builds investor confidence.",
+        "cta": "Upload document",
+        "subject": "Document requested in \"{room}\"",
+        "text": "{investor} requested \"{document}\" in deal room \"{room}\". View it here: {link}"
+      },
+      "viewed": {
+        "heading": "Investor viewed your deal room",
+        "body": "<strong>{investor}</strong> opened your deal room <strong>&ldquo;{room}&rdquo;</strong> for the first time.",
+        "tip": "Make sure all your documents are uploaded and any outstanding questions are answered — this is an active signal of investor interest.",
+        "cta": "Review deal room",
+        "subject": "Investor viewed your deal room: \"{room}\"",
+        "text": "{investor} viewed your deal room \"{room}\". Review it here: {link}"
+      },
+      "interest": {
+        "heading": "New investor interest",
+        "body": "<strong>{investor}</strong> has expressed interest in <strong>{company}</strong> on iCapOS.",
+        "tip": "This is an early signal. Log into your dashboard to review their profile and decide on next steps.",
+        "cta": "View capital raise",
+        "subject": "New investor interest in {company}",
+        "text": "{investor} expressed interest in {company}. View it here: {link}"
+      },
+      "teamInvite": {
+        "eyebrow": "Team invitation",
+        "heading": "You’ve been invited to join {company}",
+        "body": "<strong>{inviter}</strong> has invited you to join the <strong>{company}</strong> workspace on iCapOS as a team member.",
+        "body2": "As a team member you can collaborate on investor outreach, review deal rooms, and track fundraising progress alongside your co-founder.",
+        "cta": "Accept invitation",
+        "expiry": "This invitation expires in 7 days. If you didn’t expect this email, you can safely ignore it.",
+        "subject": "You're invited to join {company} on iCapOS",
+        "text": "{inviter} invited you to join {company} on iCapOS. Accept here: {link}"
+      }
+    },
+    "dataRoom": {
+      "eyebrow": "Due diligence",
+      "headlineComplete": "Your data room is {percent}% complete",
+      "headlineIncomplete": "Investors can't see {company} yet",
+      "leadComplete": "You're close — {count} {docs} left for a full diligence package.",
+      "leadIncomplete": "Your investor-access essentials aren't in yet. Until they are, your company can't be listed to investors or request introductions.",
+      "greeting": "Hi {name},",
+      "stillNeeded": "Still needed:",
+      "cta": "Complete your data room →",
+      "note": "Several of these can be generated in-app in minutes — including your business plan, financial model, and cap table. {percent}% complete ({completed}/{total}).",
+      "subjectComplete": "{company}: {count} {docs} from a complete data room",
+      "subjectIncomplete": "Action needed: complete your data room for {company}",
+      "docSingular": "document",
+      "docPlural": "documents"
+    },
+    "diligence": {
+      "hello": "Hello,",
+      "openHere": "Open it here:",
+      "founderReadySubject": "Diligence ready for your input — {company}",
+      "founderReadyLine": "The diligence report for {company} is ready for your review and response.",
+      "documentsRequestedSubject": "Documents requested — {company}",
+      "documentsRequestedLine": "New documents have been requested for the {company} diligence.",
+      "releasedSubject": "Deal available — {company}",
+      "releasedLine": "The diligence package for {company} is now available."
+    }
   }
 }
