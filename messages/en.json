@@ -521,6 +521,66 @@
       "deleting": "Deleting…",
       "confirmDelete": "Confirm delete",
       "cancel": "Cancel"
+    },
+    "manage": {
+      "eyebrow": "Admin",
+      "title": "User management",
+      "desc": "View, search, and manage all platform users. Change roles or deactivate accounts instantly.",
+      "permissionsLink": "User Permissions →",
+      "searchPh": "Search by name or email…",
+      "allRoles": "All roles",
+      "allStatuses": "All statuses",
+      "role": {
+        "founder": "Founder",
+        "investor": "Investor",
+        "admin": "Admin",
+        "analyst": "Analyst"
+      },
+      "status": {
+        "active": "Active",
+        "invited": "Invited",
+        "inactive": "Inactive"
+      },
+      "all": "All",
+      "selected": "{n} selected",
+      "colUser": "User",
+      "colRole": "Role",
+      "colStatus": "Status",
+      "colLastSeen": "Last seen",
+      "noUsers": "No users match your filters.",
+      "reactivate": "Reactivate",
+      "resend": "Resend",
+      "save": "Save",
+      "deactivate": "Deactivate",
+      "deactivateTitle": "Deactivate (reversible)",
+      "deleteTitle": "Delete permanently",
+      "auditTrail": "Audit trail",
+      "last20": "Last 20 actions",
+      "footnote": "Role changes take effect immediately on the user's next page load. Deactivating an admin revokes their access instantly.",
+      "loading": "Loading users…",
+      "errorPrefix": "Error: ",
+      "roleUpdated": "Role updated successfully.",
+      "userReactivated": "User reactivated.",
+      "userDeactivated": "User deactivated.",
+      "userDeleted": "User permanently deleted.",
+      "deletePermanently": "Delete permanently",
+      "cannotUndo": "This cannot be undone.",
+      "deleteBodyPre": "Deleting ",
+      "deleteBodyMid": " removes their account and everything they own. Consider ",
+      "deactivateWord": "Deactivate",
+      "deleteBodyPost": " instead — it revokes access immediately and is fully reversible.",
+      "whatDeleted": "What will be deleted",
+      "counting": "Counting dependent records…",
+      "noOwned": "No owned records — only the account itself will be removed.",
+      "typeConfirmPre": "Type ",
+      "typeConfirmPost": " to confirm",
+      "cancel": "Cancel",
+      "audit": {
+        "roleChanged": "{actor} changed {target} from {prev} → {next}",
+        "deactivated": "{actor} deactivated {target}",
+        "reactivated": "{actor} reactivated {target}",
+        "invited": "{actor} invited {email} as {role}"
+      }
     }
   }
 }

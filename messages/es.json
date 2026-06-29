@@ -521,6 +521,66 @@
       "deleting": "Eliminando…",
       "confirmDelete": "Confirmar eliminación",
       "cancel": "Cancelar"
+    },
+    "manage": {
+      "eyebrow": "Admin",
+      "title": "Gestión de usuarios",
+      "desc": "Visualiza, busca y gestiona todos los usuarios de la plataforma. Cambia roles o desactiva cuentas al instante.",
+      "permissionsLink": "Permisos de usuario →",
+      "searchPh": "Buscar por nombre o correo…",
+      "allRoles": "Todos los roles",
+      "allStatuses": "Todos los estados",
+      "role": {
+        "founder": "Fundador",
+        "investor": "Inversor",
+        "admin": "Administrador",
+        "analyst": "Analista"
+      },
+      "status": {
+        "active": "Activo",
+        "invited": "Invitado",
+        "inactive": "Inactivo"
+      },
+      "all": "Todos",
+      "selected": "{n} seleccionados",
+      "colUser": "Usuario",
+      "colRole": "Rol",
+      "colStatus": "Estado",
+      "colLastSeen": "Última conexión",
+      "noUsers": "Ningún usuario coincide con tus filtros.",
+      "reactivate": "Reactivar",
+      "resend": "Reenviar",
+      "save": "Guardar",
+      "deactivate": "Desactivar",
+      "deactivateTitle": "Desactivar (reversible)",
+      "deleteTitle": "Eliminar permanentemente",
+      "auditTrail": "Registro de auditoría",
+      "last20": "Últimas 20 acciones",
+      "footnote": "Los cambios de rol surten efecto de inmediato en la próxima carga de página del usuario. Desactivar a un administrador revoca su acceso al instante.",
+      "loading": "Cargando usuarios…",
+      "errorPrefix": "Error: ",
+      "roleUpdated": "Rol actualizado correctamente.",
+      "userReactivated": "Usuario reactivado.",
+      "userDeactivated": "Usuario desactivado.",
+      "userDeleted": "Usuario eliminado permanentemente.",
+      "deletePermanently": "Eliminar permanentemente",
+      "cannotUndo": "Esto no se puede deshacer.",
+      "deleteBodyPre": "Eliminar a ",
+      "deleteBodyMid": " quita su cuenta y todo lo que le pertenece. Considera ",
+      "deactivateWord": "Desactivar",
+      "deleteBodyPost": " en su lugar: revoca el acceso de inmediato y es totalmente reversible.",
+      "whatDeleted": "Qué se eliminará",
+      "counting": "Contando registros dependientes…",
+      "noOwned": "No hay registros propios: solo se eliminará la cuenta.",
+      "typeConfirmPre": "Escribe ",
+      "typeConfirmPost": " para confirmar",
+      "cancel": "Cancelar",
+      "audit": {
+        "roleChanged": "{actor} cambió a {target} de {prev} → {next}",
+        "deactivated": "{actor} desactivó a {target}",
+        "reactivated": "{actor} reactivó a {target}",
+        "invited": "{actor} invitó a {email} como {role}"
+      }
     }
   }
 }

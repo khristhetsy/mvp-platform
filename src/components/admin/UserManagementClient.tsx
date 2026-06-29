@@ -2,8 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Users, Trash2, UserMinus, AlertTriangle, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { EmailContactButton } from "@/components/email/EmailContactButton";
 import type { UserRole } from "@/lib/supabase/types";
+
+type T = (key: string, values?: Record<string, string | number>) => string;
+const ROLE_SLUGS = ["founder", "investor", "admin", "analyst"];
 
 type DependentItem = { key: string; label: string; count: number };
 type Dependents = { items: DependentItem[]; total: number };
@@ -32,13 +36,6 @@ type AuditEntry = {
 
 const ROLES: UserRole[] = ["founder", "investor", "admin", "analyst"];
 
-const ROLE_LABELS: Record<string, string> = {
-  founder: "Founder",
-  investor: "Investor",
-  admin: "Admin",
-  analyst: "Analyst",
-};
-
 const ROLE_COLORS: Record<string, string> = {
   admin: "bg-[#EEEDFE] text-[#3C3489]",
   founder: "bg-[#E1F5EE] text-[#085041]",
@@ -52,11 +49,9 @@ const STATUS_COLORS: Record<UserStatus, string> = {
   inactive: "bg-[#F1EFE8] text-[#444441]",
 };
 
-const STATUS_LABELS: Record<UserStatus, string> = {
-  active: "Active",
-  invited: "Invited",
-  inactive: "Inactive",
-};
+function roleLabel(t: T, slug: string | null | undefined): string {
+  return slug && ROLE_SLUGS.includes(slug) ? t(`role.${slug}`) : (slug ?? "");
+}
 
 function initials(user: ManagedUser) {
   const name = user.full_name ?? user.email ?? "?";
@@ -74,17 +69,17 @@ function avatarColor(role: string) {
   return map[role] ?? "bg-slate-100 text-slate-600";
 }
 
-function auditLabel(entry: AuditEntry): string {
+function auditLabel(entry: AuditEntry, t: T): string {
   const meta = entry.metadata ?? {};
   switch (entry.action) {
     case "admin.user_role_changed":
-      return `${entry.actor_name} changed ${meta.targetEmail ?? "user"} from ${ROLE_LABELS[meta.previousRole ?? ""] ?? meta.previousRole} → ${ROLE_LABELS[meta.newRole ?? ""] ?? meta.newRole}`;
+      return t("audit.roleChanged", { actor: entry.actor_name, target: meta.targetEmail ?? "user", prev: roleLabel(t, meta.previousRole), next: roleLabel(t, meta.newRole) });
     case "admin.user_deactivated":
-      return `${entry.actor_name} deactivated ${meta.targetName ?? meta.targetEmail ?? "user"}`;
+      return t("audit.deactivated", { actor: entry.actor_name, target: meta.targetName ?? meta.targetEmail ?? "user" });
     case "admin.user_reactivated":
-      return `${entry.actor_name} reactivated ${meta.targetName ?? meta.targetEmail ?? "user"}`;
+      return t("audit.reactivated", { actor: entry.actor_name, target: meta.targetName ?? meta.targetEmail ?? "user" });
     case "admin.staff_invited":
-      return `${entry.actor_name} invited ${meta.email ?? "user"} as ${ROLE_LABELS[meta.role ?? ""] ?? meta.role}`;
+      return t("audit.invited", { actor: entry.actor_name, email: meta.email ?? "user", role: roleLabel(t, meta.role) });
     default:
       return entry.action;
   }
@@ -103,6 +98,7 @@ function formatDate(ts: string) {
 }
 
 export function UserManagementClient() {
+  const t = useTranslations("usersAdmin.manage");
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -186,15 +182,15 @@ export function UserManagementClient() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Update failed.");
-      setStatusMsg(payload.role ? `Role updated successfully.` : payload.is_active ? "User reactivated." : "User deactivated.");
+      setStatusMsg(payload.role ? t("roleUpdated") : payload.is_active ? t("userReactivated") : t("userDeactivated"));
       await load();
       setTimeout(() => setStatusMsg(null), 3000);
     } catch (err) {
-      setStatusMsg(`Error: ${err instanceof Error ? err.message : "Update failed."}`);
+      setStatusMsg(`${t("errorPrefix")}${err instanceof Error ? err.message : "Update failed."}`);
     } finally {
       setSaving((prev) => { const next = new Set(prev); next.delete(userId); return next; });
     }
-  }, [load]);
+  }, [load, t]);
 
   const openDeleteModal = useCallback(async (user: ManagedUser) => {
     setDeleteTarget(user);
@@ -229,17 +225,17 @@ export function UserManagementClient() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Delete failed.");
-      setStatusMsg("User permanently deleted.");
+      setStatusMsg(t("userDeleted"));
       await load();
       setTimeout(() => setStatusMsg(null), 3000);
     } catch (err) {
-      setStatusMsg(`Error: ${err instanceof Error ? err.message : "Delete failed."}`);
+      setStatusMsg(`${t("errorPrefix")}${err instanceof Error ? err.message : "Delete failed."}`);
     } finally {
       setSaving((prev) => { const next = new Set(prev); next.delete(userId); return next; });
     }
-  }, [load, closeDeleteModal]);
+  }, [load, closeDeleteModal, t]);
 
-  if (loading) return <p className="text-sm text-slate-600">Loading users…</p>;
+  if (loading) return <p className="text-sm text-slate-600">{t("loading")}</p>;
   if (error) return <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>;
 
   return (
@@ -247,20 +243,18 @@ export function UserManagementClient() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Admin</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">{t("eyebrow")}</p>
           <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold text-slate-950">
             <Users className="h-6 w-6 text-[var(--gold)]" strokeWidth={1.75} aria-hidden />
-            User management
+            {t("title")}
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-slate-600">
-            View, search, and manage all platform users. Change roles or deactivate accounts instantly.
-          </p>
+          <p className="mt-1 max-w-2xl text-sm text-slate-600">{t("desc")}</p>
         </div>
         <a
           href="/admin/users/permissions"
           className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
         >
-          User Permissions →
+          {t("permissionsLink")}
         </a>
       </div>
 
@@ -274,7 +268,7 @@ export function UserManagementClient() {
       <div className="flex flex-wrap gap-2">
         <input
           type="text"
-          placeholder="Search by name or email…"
+          placeholder={t("searchPh")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="min-w-[200px] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none"
@@ -284,18 +278,18 @@ export function UserManagementClient() {
           onChange={(e) => setFilterRole(e.target.value)}
           className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
         >
-          <option value="all">All roles</option>
-          {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+          <option value="all">{t("allRoles")}</option>
+          {ROLES.map((r) => <option key={r} value={r}>{t(`role.${r}`)}</option>)}
         </select>
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
           className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
         >
-          <option value="all">All statuses</option>
-          <option value="active">Active</option>
-          <option value="invited">Invited</option>
-          <option value="inactive">Inactive</option>
+          <option value="all">{t("allStatuses")}</option>
+          <option value="active">{t("status.active")}</option>
+          <option value="invited">{t("status.invited")}</option>
+          <option value="inactive">{t("status.inactive")}</option>
         </select>
       </div>
 
@@ -311,28 +305,28 @@ export function UserManagementClient() {
                 onClick={() => setActiveTab(tab)}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition ${activeTab === tab ? "bg-slate-100 text-slate-950" : "text-slate-500 hover:text-slate-700"}`}
               >
-                {tab === "all" ? "All" : STATUS_LABELS[tab]} ({counts[tab]})
+                {tab === "all" ? t("all") : t(`status.${tab}`)} ({counts[tab]})
               </button>
             ))}
           </div>
           {selectedIds.size > 0 ? (
-            <span className="text-xs text-slate-500">{selectedIds.size} selected</span>
+            <span className="text-xs text-slate-500">{t("selected", { n: selectedIds.size })}</span>
           ) : null}
         </div>
 
         {/* Column headers */}
         <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-2">
           <input type="checkbox" className="h-4 w-4 rounded" checked={selectedIds.size === filtered.length && filtered.length > 0} onChange={toggleAll} />
-          <span className="flex-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">User</span>
-          <span className="w-20 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Role</span>
-          <span className="w-20 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Status</span>
-          <span className="w-24 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Last seen</span>
+          <span className="flex-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("colUser")}</span>
+          <span className="w-20 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("colRole")}</span>
+          <span className="w-20 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("colStatus")}</span>
+          <span className="w-24 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("colLastSeen")}</span>
           <span className="w-52"></span>
         </div>
 
         {/* Rows */}
         {filtered.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-slate-500">No users match your filters.</div>
+          <div className="px-4 py-8 text-center text-sm text-slate-500">{t("noUsers")}</div>
         ) : (
           filtered.map((user) => {
             const isSaving = saving.has(user.id);
@@ -364,14 +358,14 @@ export function UserManagementClient() {
                 {/* Role badge */}
                 <div className="w-20">
                   <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${ROLE_COLORS[user.role] ?? "bg-slate-100 text-slate-700"}`}>
-                    {ROLE_LABELS[user.role] ?? user.role}
+                    {t(`role.${user.role}`)}
                   </span>
                 </div>
 
                 {/* Status badge */}
                 <div className="w-20">
                   <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_COLORS[user.status]}`}>
-                    {STATUS_LABELS[user.status]}
+                    {t(`status.${user.status}`)}
                   </span>
                 </div>
 
@@ -383,7 +377,7 @@ export function UserManagementClient() {
                   {isInactive ? (
                     <>
                       <select disabled className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-xs opacity-40">
-                        <option>{ROLE_LABELS[user.role]}</option>
+                        <option>{t(`role.${user.role}`)}</option>
                       </select>
                       <button
                         type="button"
@@ -391,7 +385,7 @@ export function UserManagementClient() {
                         onClick={() => void patchUser(user.id, { is_active: true })}
                         className="rounded-lg border border-[#B5D4F4] bg-white px-2.5 py-1.5 text-xs font-medium text-[#185FA5] hover:bg-[#E6F1FB] disabled:opacity-50"
                       >
-                        {isSaving ? "…" : "Reactivate"}
+                        {isSaving ? "…" : t("reactivate")}
                       </button>
                     </>
                   ) : user.status === "invited" ? (
@@ -401,7 +395,7 @@ export function UserManagementClient() {
                         onChange={(e) => setPendingRoles((p) => ({ ...p, [user.id]: e.target.value as UserRole }))}
                         className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-xs"
                       >
-                        {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                        {ROLES.map((r) => <option key={r} value={r}>{t(`role.${r}`)}</option>)}
                       </select>
                       <button
                         type="button"
@@ -409,7 +403,7 @@ export function UserManagementClient() {
                         onClick={() => void patchUser(user.id, { role: pendingRole })}
                         className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                       >
-                        {isSaving ? "…" : "Resend"}
+                        {isSaving ? "…" : t("resend")}
                       </button>
                     </>
                   ) : (
@@ -420,7 +414,7 @@ export function UserManagementClient() {
                         onChange={(e) => setPendingRoles((p) => ({ ...p, [user.id]: e.target.value as UserRole }))}
                         className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-xs disabled:opacity-40"
                       >
-                        {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                        {ROLES.map((r) => <option key={r} value={r}>{t(`role.${r}`)}</option>)}
                       </select>
                       <button
                         type="button"
@@ -428,7 +422,7 @@ export function UserManagementClient() {
                         onClick={() => void patchUser(user.id, { role: pendingRole })}
                         className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
                       >
-                        {isSaving ? "…" : "Save"}
+                        {isSaving ? "…" : t("save")}
                       </button>
                       {/* Primary safe action: reversible deactivation */}
                       {!user.is_super_admin && (
@@ -436,11 +430,11 @@ export function UserManagementClient() {
                           type="button"
                           disabled={isSaving}
                           onClick={() => void patchUser(user.id, { is_active: false })}
-                          title="Deactivate (reversible)"
+                          title={t("deactivateTitle")}
                           className="inline-flex items-center gap-1 rounded-lg border border-[#E4C77A] bg-[#FBF4E2] px-2.5 py-1.5 text-xs font-semibold text-[#7A5409] hover:bg-[#F6E9C7] disabled:opacity-50"
                         >
                           <UserMinus className="h-3.5 w-3.5" />
-                          {isSaving ? "…" : "Deactivate"}
+                          {isSaving ? "…" : t("deactivate")}
                         </button>
                       )}
                     </>
@@ -462,7 +456,7 @@ export function UserManagementClient() {
                       type="button"
                       disabled={isSaving}
                       onClick={() => void openDeleteModal(user)}
-                      title="Delete permanently"
+                      title={t("deleteTitle")}
                       className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-400 hover:border-[#F7C1C1] hover:bg-[#FCEBEB] hover:text-[#A32D2D] disabled:opacity-40"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -479,14 +473,14 @@ export function UserManagementClient() {
       {audit.length > 0 ? (
         <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-            <h2 className="text-sm font-semibold text-slate-950">Audit trail</h2>
-            <span className="text-xs text-slate-500">Last 20 actions</span>
+            <h2 className="text-sm font-semibold text-slate-950">{t("auditTrail")}</h2>
+            <span className="text-xs text-slate-500">{t("last20")}</span>
           </div>
           <div className="divide-y divide-slate-100">
             {audit.map((entry) => (
               <div key={entry.id} className="flex items-start gap-3 px-4 py-2.5">
                 <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${auditDot(entry.action)}`} />
-                <div className="flex-1 text-sm text-slate-700">{auditLabel(entry)}</div>
+                <div className="flex-1 text-sm text-slate-700">{auditLabel(entry, t)}</div>
                 <span className="shrink-0 text-xs text-slate-400">{formatDate(entry.created_at)}</span>
               </div>
             ))}
@@ -494,9 +488,7 @@ export function UserManagementClient() {
         </div>
       ) : null}
 
-      <p className="text-xs text-slate-500">
-        Role changes take effect immediately on the user&apos;s next page load. Deactivating an admin revokes their access instantly.
-      </p>
+      <p className="text-xs text-slate-500">{t("footnote")}</p>
 
       {/* Guarded permanent-delete modal */}
       {deleteTarget ? (
@@ -511,8 +503,8 @@ export function UserManagementClient() {
                   <AlertTriangle className="h-5 w-5" strokeWidth={1.75} />
                 </span>
                 <div>
-                  <h2 className="text-sm font-semibold text-slate-950">Delete permanently</h2>
-                  <p className="text-xs text-slate-500">This cannot be undone.</p>
+                  <h2 className="text-sm font-semibold text-slate-950">{t("deletePermanently")}</h2>
+                  <p className="text-xs text-slate-500">{t("cannotUndo")}</p>
                 </div>
               </div>
               <button type="button" onClick={closeDeleteModal} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
@@ -522,16 +514,14 @@ export function UserManagementClient() {
 
             <div className="space-y-4 px-5 py-4">
               <p className="text-sm text-slate-700">
-                Deleting <span className="font-semibold text-slate-950">{deleteTarget.full_name ?? deleteTarget.email}</span> removes
-                their account and everything they own. Consider <span className="font-semibold">Deactivate</span> instead — it revokes
-                access immediately and is fully reversible.
+                {t("deleteBodyPre")}<span className="font-semibold text-slate-950">{deleteTarget.full_name ?? deleteTarget.email}</span>{t("deleteBodyMid")}<span className="font-semibold">{t("deactivateWord")}</span>{t("deleteBodyPost")}
               </p>
 
               {/* Blast radius */}
               <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">What will be deleted</p>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t("whatDeleted")}</p>
                 {depsLoading ? (
-                  <p className="text-sm text-slate-500">Counting dependent records…</p>
+                  <p className="text-sm text-slate-500">{t("counting")}</p>
                 ) : deps && deps.total > 0 ? (
                   <ul className="space-y-1">
                     {deps.items.filter((i) => i.count > 0).map((i) => (
@@ -542,14 +532,14 @@ export function UserManagementClient() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-slate-500">No owned records — only the account itself will be removed.</p>
+                  <p className="text-sm text-slate-500">{t("noOwned")}</p>
                 )}
               </div>
 
               {/* Type-to-confirm */}
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-600">
-                  Type <span className="font-mono font-semibold text-slate-900">{deleteTarget.email}</span> to confirm
+                  {t("typeConfirmPre")}<span className="font-mono font-semibold text-slate-900">{deleteTarget.email}</span>{t("typeConfirmPost")}
                 </label>
                 <input
                   type="text"
@@ -568,7 +558,7 @@ export function UserManagementClient() {
                 onClick={closeDeleteModal}
                 className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
-                Cancel
+                {t("cancel")}
               </button>
               <button
                 type="button"
@@ -576,7 +566,7 @@ export function UserManagementClient() {
                 onClick={() => void deleteUser(deleteTarget.id)}
                 className="rounded-lg bg-[#A32D2D] px-3 py-2 text-sm font-semibold text-white hover:bg-[#8A2525] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Delete permanently
+                {t("deletePermanently")}
               </button>
             </div>
           </div>
