@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Send, Loader2, Copy, Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ui/ToastProvider";
 
 type Props = { requestId: string; documentName: string };
 
 export function SignatureSendClient({ requestId, documentName }: Props) {
+  const t = useTranslations("signaturesAdmin.send");
   const router = useRouter();
   const { toast } = useToast();
   const [signerName, setSignerName] = useState("");
@@ -36,13 +38,13 @@ export function SignatureSendClient({ requestId, documentName }: Props) {
         setStatus(r.status);
         if (r.access_token) setSentUrl(`${window.location.origin}/sign/${r.access_token}`);
       } catch (err) {
-        if (active) toast({ title: "Could not load", description: err instanceof Error ? err.message : "", variant: "error" });
+        if (active) toast({ title: t("couldNotLoad"), description: err instanceof Error ? err.message : "", variant: "error" });
       } finally {
         if (active) setLoading(false);
       }
     })();
     return () => { active = false; };
-  }, [requestId, toast]);
+  }, [requestId, toast, t]);
 
   const saveDetails = useCallback(async () => {
     const res = await fetch(`/api/admin/signatures/${requestId}`, {
@@ -71,16 +73,16 @@ export function SignatureSendClient({ requestId, documentName }: Props) {
       setStatus("sent");
       setSentUrl(data.signUrl);
       toast({
-        title: data.delivered ? "Invite sent" : "Envelope sent",
-        description: data.delivered ? `Emailed to ${signerEmail}.` : "Email isn't configured — copy the link below to share it.",
+        title: data.delivered ? t("inviteSent") : t("envelopeSent"),
+        description: data.delivered ? t("emailedTo", { email: signerEmail }) : t("emailNotConfigured"),
         variant: "success",
       });
     } catch (err) {
-      toast({ title: "Could not send", description: err instanceof Error ? err.message : "", variant: "error" });
+      toast({ title: t("couldNotSend"), description: err instanceof Error ? err.message : "", variant: "error" });
     } finally {
       setSending(false);
     }
-  }, [requestId, saveDetails, signerEmail, toast]);
+  }, [requestId, saveDetails, signerEmail, toast, t]);
 
   const copyLink = useCallback(() => {
     if (!sentUrl) return;
@@ -91,44 +93,44 @@ export function SignatureSendClient({ requestId, documentName }: Props) {
 
   const isSent = status !== "draft";
 
-  if (loading) return <p className="text-sm text-slate-500">Loading…</p>;
+  if (loading) return <p className="text-sm text-slate-500">{t("loading")}</p>;
 
   return (
     <div className="mx-auto max-w-xl space-y-5">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Send for signature</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">{t("eyebrow")}</p>
         <h1 className="mt-1 text-2xl font-semibold text-slate-950">{documentName}</h1>
       </div>
 
       {isSent && sentUrl ? (
         <div className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-          <p className="text-sm font-medium text-emerald-900">This envelope has been sent.</p>
+          <p className="text-sm font-medium text-emerald-900">{t("sent")}</p>
           <div className="flex items-center gap-2">
             <input readOnly value={sentUrl} className="flex-1 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm text-slate-700" />
             <button type="button" onClick={copyLink} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-100">
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? "Copied" : "Copy link"}
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? t("copied") : t("copyLink")}
             </button>
           </div>
           <button type="button" onClick={() => router.push("/admin/signatures")} className="text-sm font-medium text-emerald-800 underline">
-            Back to all documents
+            {t("backAll")}
           </button>
         </div>
       ) : (
         <div className="space-y-4 rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)]">
-          <Field label="Signer name" value={signerName} onChange={setSignerName} placeholder="Jane Counterparty" />
-          <Field label="Signer email" value={signerEmail} onChange={setSignerEmail} placeholder="jane@company.com" type="email" />
+          <Field label={t("signerName")} value={signerName} onChange={setSignerName} placeholder="Jane Counterparty" />
+          <Field label={t("signerEmail")} value={signerEmail} onChange={setSignerEmail} placeholder="jane@company.com" type="email" />
           <Field
-            label="Signer company"
+            label={t("signerCompany")}
             value={signerCompany}
             onChange={setSignerCompany}
             placeholder="Northwind AI, Inc."
-            hint="Auto-fills every Company field on the document, read-only to the signer."
+            hint={t("signerCompanyHint")}
           />
-          <Field label="Deal label (optional)" value={dealLabel} onChange={setDealLabel} placeholder="Northwind AI" />
+          <Field label={t("dealLabel")} value={dealLabel} onChange={setDealLabel} placeholder="Northwind AI" />
 
           <div className="flex items-center justify-between pt-1">
             <button type="button" onClick={() => router.push(`/admin/signatures/${requestId}`)} className="text-sm font-medium text-slate-600 hover:text-slate-900">
-              ← Back to fields
+              {t("backFields")}
             </button>
             <button
               type="button"
@@ -136,7 +138,7 @@ export function SignatureSendClient({ requestId, documentName }: Props) {
               disabled={sending || !signerName.trim() || !signerEmail.trim()}
               className="cap-btn-primary inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Send for signature
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} {t("sendForSignature")}
             </button>
           </div>
         </div>

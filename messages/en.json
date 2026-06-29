@@ -774,5 +774,77 @@
       "statusLabel": "Status:",
       "unknownUser": "Unknown user"
     }
+  },
+  "diligenceAdmin": {
+    "pipeline": {
+      "eyebrow": "iCFO iCapOS",
+      "title": "Diligence",
+      "desc": "Run a full diligence engagement: findings, verification, founder loop, consent, release.",
+      "newEngagement": "New engagement",
+      "selectCompany": "Select a company (or enter manually below)",
+      "enterManually": "— Enter manually —",
+      "noFounder": " (no founder linked)",
+      "companyNamePh": "Company name *",
+      "roundPh": "Round (e.g. Series A)",
+      "sectorPh": "Sector",
+      "cancel": "Cancel",
+      "create": "Create",
+      "loading": "Loading…",
+      "none": "No engagements yet. Create one to begin.",
+      "colCompany": "Company",
+      "colStage": "Stage",
+      "colConfidence": "Confidence",
+      "colReportCode": "Report code",
+      "couldNotLoad": "Could not load",
+      "couldNotCreate": "Could not create"
+    }
+  },
+  "signaturesAdmin": {
+    "index": {
+      "eyebrow": "iCFO Capital Global, Inc.",
+      "title": "E-signatures",
+      "desc": "Upload a PDF, place fields, and send it for signature. (Word? Save it as PDF first.)",
+      "uploadDocument": "Upload document",
+      "uploading": "Uploading…",
+      "loading": "Loading…",
+      "none": "No documents yet. Upload a PDF or Word file to get started.",
+      "colDocument": "Document",
+      "colSigner": "Signer",
+      "colStatus": "Status",
+      "colPages": "Pages",
+      "couldNotLoad": "Could not load",
+      "uploaded": "Uploaded",
+      "uploadedDesc": "Now place your fields.",
+      "uploadFailed": "Upload failed",
+      "status": {
+        "draft": "Draft",
+        "sent": "Sent",
+        "viewed": "Viewed",
+        "signed": "Signed",
+        "completed": "Completed",
+        "voided": "Voided"
+      }
+    },
+    "send": {
+      "eyebrow": "Send for signature",
+      "sent": "This envelope has been sent.",
+      "copyLink": "Copy link",
+      "copied": "Copied",
+      "backAll": "Back to all documents",
+      "signerName": "Signer name",
+      "signerEmail": "Signer email",
+      "signerCompany": "Signer company",
+      "signerCompanyHint": "Auto-fills every Company field on the document, read-only to the signer.",
+      "dealLabel": "Deal label (optional)",
+      "backFields": "← Back to fields",
+      "sendForSignature": "Send for signature",
+      "inviteSent": "Invite sent",
+      "envelopeSent": "Envelope sent",
+      "emailedTo": "Emailed to {email}.",
+      "emailNotConfigured": "Email isn't configured — copy the link below to share it.",
+      "couldNotSend": "Could not send",
+      "couldNotLoad": "Could not load",
+      "loading": "Loading…"
+    }
   }
 }

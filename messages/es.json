@@ -774,5 +774,77 @@
       "statusLabel": "Estado:",
       "unknownUser": "Usuario desconocido"
     }
+  },
+  "diligenceAdmin": {
+    "pipeline": {
+      "eyebrow": "iCFO iCapOS",
+      "title": "Diligencia",
+      "desc": "Ejecuta una diligencia completa: hallazgos, verificación, ciclo con el fundador, consentimiento y publicación.",
+      "newEngagement": "Nuevo proceso",
+      "selectCompany": "Selecciona una empresa (o introdúcela manualmente abajo)",
+      "enterManually": "— Introducir manualmente —",
+      "noFounder": " (sin fundador vinculado)",
+      "companyNamePh": "Nombre de la empresa *",
+      "roundPh": "Ronda (p. ej. Serie A)",
+      "sectorPh": "Sector",
+      "cancel": "Cancelar",
+      "create": "Crear",
+      "loading": "Cargando…",
+      "none": "Aún no hay procesos. Crea uno para empezar.",
+      "colCompany": "Empresa",
+      "colStage": "Etapa",
+      "colConfidence": "Confianza",
+      "colReportCode": "Código de informe",
+      "couldNotLoad": "No se pudo cargar",
+      "couldNotCreate": "No se pudo crear"
+    }
+  },
+  "signaturesAdmin": {
+    "index": {
+      "eyebrow": "iCFO Capital Global, Inc.",
+      "title": "Firmas electrónicas",
+      "desc": "Sube un PDF, coloca los campos y envíalo para firmar. (¿Word? Guárdalo primero como PDF.)",
+      "uploadDocument": "Subir documento",
+      "uploading": "Subiendo…",
+      "loading": "Cargando…",
+      "none": "Aún no hay documentos. Sube un PDF o un archivo de Word para empezar.",
+      "colDocument": "Documento",
+      "colSigner": "Firmante",
+      "colStatus": "Estado",
+      "colPages": "Páginas",
+      "couldNotLoad": "No se pudo cargar",
+      "uploaded": "Subido",
+      "uploadedDesc": "Ahora coloca tus campos.",
+      "uploadFailed": "Error al subir",
+      "status": {
+        "draft": "Borrador",
+        "sent": "Enviado",
+        "viewed": "Visto",
+        "signed": "Firmado",
+        "completed": "Completado",
+        "voided": "Anulado"
+      }
+    },
+    "send": {
+      "eyebrow": "Enviar para firmar",
+      "sent": "Este sobre ya se ha enviado.",
+      "copyLink": "Copiar enlace",
+      "copied": "Copiado",
+      "backAll": "Volver a todos los documentos",
+      "signerName": "Nombre del firmante",
+      "signerEmail": "Correo del firmante",
+      "signerCompany": "Empresa del firmante",
+      "signerCompanyHint": "Rellena automáticamente todos los campos de Empresa del documento, de solo lectura para el firmante.",
+      "dealLabel": "Etiqueta de la operación (opcional)",
+      "backFields": "← Volver a los campos",
+      "sendForSignature": "Enviar para firmar",
+      "inviteSent": "Invitación enviada",
+      "envelopeSent": "Sobre enviado",
+      "emailedTo": "Enviado por correo a {email}.",
+      "emailNotConfigured": "El correo no está configurado: copia el enlace de abajo para compartirlo.",
+      "couldNotSend": "No se pudo enviar",
+      "couldNotLoad": "No se pudo cargar",
+      "loading": "Cargando…"
+    }
   }
 }

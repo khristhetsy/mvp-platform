@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileSignature, Upload, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ui/ToastProvider";
 
 type RequestRow = {
@@ -26,6 +27,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export function SignaturesIndexClient() {
+  const t = useTranslations("signaturesAdmin.index");
   const router = useRouter();
   const { toast } = useToast();
   const [rows, setRows] = useState<RequestRow[]>([]);
@@ -42,13 +44,13 @@ export function SignaturesIndexClient() {
         if (!res.ok) throw new Error(data.error ?? "Failed to load.");
         if (active) setRows(data.requests ?? []);
       } catch (err) {
-        if (active) toast({ title: "Could not load", description: err instanceof Error ? err.message : "", variant: "error" });
+        if (active) toast({ title: t("couldNotLoad"), description: err instanceof Error ? err.message : "", variant: "error" });
       } finally {
         if (active) setLoading(false);
       }
     })();
     return () => { active = false; };
-  }, [toast]);
+  }, [toast, t]);
 
   const onUpload = useCallback(
     async (file: File) => {
@@ -59,26 +61,26 @@ export function SignaturesIndexClient() {
         const res = await fetch("/api/admin/signatures/upload", { method: "POST", body });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Upload failed.");
-        toast({ title: "Uploaded", description: "Now place your fields.", variant: "success" });
+        toast({ title: t("uploaded"), description: t("uploadedDesc"), variant: "success" });
         router.push(`/admin/signatures/${data.request.id}`);
       } catch (err) {
-        toast({ title: "Upload failed", description: err instanceof Error ? err.message : "", variant: "error" });
+        toast({ title: t("uploadFailed"), description: err instanceof Error ? err.message : "", variant: "error" });
       } finally {
         setUploading(false);
       }
     },
-    [router, toast],
+    [router, toast, t],
   );
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">iCFO Capital Global, Inc.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">{t("eyebrow")}</p>
           <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold text-slate-950">
-            <FileSignature className="h-6 w-6 text-[var(--gold)]" strokeWidth={1.75} aria-hidden /> E-signatures
+            <FileSignature className="h-6 w-6 text-[var(--gold)]" strokeWidth={1.75} aria-hidden /> {t("title")}
           </h1>
-          <p className="mt-1 text-sm text-slate-600">Upload a PDF, place fields, and send it for signature. (Word? Save it as PDF first.)</p>
+          <p className="mt-1 text-sm text-slate-600">{t("desc")}</p>
         </div>
         <button
           type="button"
@@ -87,7 +89,7 @@ export function SignaturesIndexClient() {
           className="cap-btn-primary inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
           {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-          {uploading ? "Uploading…" : "Upload document"}
+          {uploading ? t("uploading") : t("uploadDocument")}
         </button>
         <input
           ref={fileRef}
@@ -104,17 +106,17 @@ export function SignaturesIndexClient() {
 
       <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
         {loading ? (
-          <p className="p-6 text-sm text-slate-500">Loading…</p>
+          <p className="p-6 text-sm text-slate-500">{t("loading")}</p>
         ) : rows.length === 0 ? (
-          <p className="p-6 text-sm text-slate-500">No documents yet. Upload a PDF or Word file to get started.</p>
+          <p className="p-6 text-sm text-slate-500">{t("none")}</p>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 text-left text-[11px] uppercase tracking-wide text-slate-400">
-                <th className="px-4 py-2.5 font-semibold">Document</th>
-                <th className="px-4 py-2.5 font-semibold">Signer</th>
-                <th className="px-4 py-2.5 font-semibold">Status</th>
-                <th className="px-4 py-2.5 font-semibold">Pages</th>
+                <th className="px-4 py-2.5 font-semibold">{t("colDocument")}</th>
+                <th className="px-4 py-2.5 font-semibold">{t("colSigner")}</th>
+                <th className="px-4 py-2.5 font-semibold">{t("colStatus")}</th>
+                <th className="px-4 py-2.5 font-semibold">{t("colPages")}</th>
               </tr>
             </thead>
             <tbody>
@@ -130,8 +132,8 @@ export function SignaturesIndexClient() {
                   </td>
                   <td className="px-4 py-3 text-slate-600">{r.signer_name ?? r.signer_email ?? "—"}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[r.status] ?? "bg-slate-100 text-slate-700"}`}>
-                      {r.status}
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[r.status] ?? "bg-slate-100 text-slate-700"}`}>
+                      {["draft","sent","viewed","signed","completed","voided"].includes(r.status) ? t(`status.${r.status}`) : r.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-slate-600">{r.page_count}</td>
