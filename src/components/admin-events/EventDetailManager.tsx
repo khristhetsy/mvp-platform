@@ -71,14 +71,16 @@ function SessionLiveControls({
   const [showLink, setShowLink] = useState(false);
   const [liveUrl, setLiveUrl] = useState("");
 
-  async function goLive(url?: string) {
+  async function goLive(opts?: { liveUrl?: string; useGoogleMeet?: boolean }) {
     setBusy(true);
     setError(null);
     try {
       const res = await fetch(`/api/admin/events/sessions/${session.id}/go-live`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(url ? { liveUrl: url } : {}),
+        body: JSON.stringify(
+          opts?.useGoogleMeet ? { useGoogleMeet: true } : opts?.liveUrl ? { liveUrl: opts.liveUrl } : {},
+        ),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Couldn't go live.");
@@ -125,14 +127,17 @@ function SessionLiveControls({
           </>
         ) : session.status !== "ended" ? (
           <>
+            <button onClick={() => goLive({ useGoogleMeet: true })} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
+              {busy ? "Starting…" : "Create Google Meet"}
+            </button>
+            <button onClick={() => setShowLink((v) => !v)} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
+              Go live with a link
+            </button>
             {liveConfigured && (
               <button onClick={() => goLive()} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
-                {busy ? "Starting…" : "Go live (Whereby)"}
+                Whereby room
               </button>
             )}
-            <button onClick={() => setShowLink((v) => !v)} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
-              {liveConfigured ? "Go live with a link" : "Go live"}
-            </button>
           </>
         ) : (
           <span className="text-xs text-[var(--text-muted)]">Ended</span>
@@ -149,7 +154,7 @@ function SessionLiveControls({
             className="min-w-[240px] flex-1 rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs"
           />
           <button
-            onClick={() => goLive(liveUrl.trim())}
+            onClick={() => goLive({ liveUrl: liveUrl.trim() })}
             disabled={busy || !liveUrl.trim()}
             className="rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
           >
