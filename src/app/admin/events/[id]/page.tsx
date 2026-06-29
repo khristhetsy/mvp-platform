@@ -5,23 +5,29 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getEventById } from "@/lib/icfo-events/queries";
 import { listSponsors, listEventSponsors } from "@/lib/icfo-events/sponsors";
 import { isLiveVideoConfigured } from "@/lib/icfo-events/video/whereby";
+import { listEventModerators } from "@/lib/icfo-events/moderators";
+import { listInternalUsers } from "@/lib/rbac/internal-users";
 import { EventDetailManager } from "@/components/admin-events/EventDetailManager";
+import { EventModeratorsManager } from "@/components/admin-events/EventModeratorsManager";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Manage event" };
 
 export default async function AdminEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { profile } = await requirePermissionPage("manage_events");
+  const { profile, effective } = await requirePermissionPage("manage_events");
   const { id } = await params;
   const admin = createServiceRoleClient();
 
   const event = await getEventById(admin, id).catch(() => null);
   if (!event) notFound();
 
-  const [sponsorCatalog, eventSponsors] = await Promise.all([
+  const [sponsorCatalog, eventSponsors, moderators, staff] = await Promise.all([
     listSponsors(admin).catch(() => []),
     listEventSponsors(admin, id).catch(() => []),
+    listEventModerators(admin, id).catch(() => []),
+    listInternalUsers(admin).catch(() => []),
   ]);
+  const canManageModerators = effective.permissions.includes("assign_roles");
 
   return (
     <AppShell
@@ -36,6 +42,14 @@ export default async function AdminEventDetailPage({ params }: { params: Promise
         initialEventSponsors={eventSponsors}
         liveVideoConfigured={isLiveVideoConfigured()}
       />
+      <div className="mx-auto max-w-4xl px-4 pb-8">
+        <EventModeratorsManager
+          eventId={id}
+          initialModerators={moderators}
+          staff={staff}
+          canManage={canManageModerators}
+        />
+      </div>
     </AppShell>
   );
 }
