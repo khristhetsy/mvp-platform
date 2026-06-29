@@ -4,12 +4,14 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { DraftEmailPanel } from "@/components/email/DraftEmailPanel";
 import { loadAdminComplianceCenter } from "@/lib/compliance/load-admin-compliance";
 import { requireRole } from "@/lib/supabase/auth";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminCompliancePage() {
   const profile = await requireRole(["admin", "analyst"]);
   const data = await loadAdminComplianceCenter();
+  const t = await getTranslations("complianceAdmin.page");
 
   return (
     <AppShell
@@ -20,20 +22,20 @@ export default async function AdminCompliancePage() {
           profileEmail={profile.email ?? undefined}
     >
       <PageHeader
-        eyebrow="Risk & compliance"
-        title="Compliance & risk review"
-        description="Internal institutional controls for readiness risk, outreach compliance, messaging flags, and platform activity. Not legal advice."
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        description={t("desc")}
         metadata={
           data.scanCreated > 0
-            ? `${data.scanCreated} event(s) recorded this session · staff-only internal notes`
-            : "Staff-only internal notes · audit trail in compliance_events"
+            ? t("recorded", { count: data.scanCreated })
+            : t("auditNote")
         }
         actions={
           <a
             href="/admin/audit"
             className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-900 hover:bg-indigo-100"
           >
-            Audit center
+            {t("auditCenter")}
           </a>
         }
       />

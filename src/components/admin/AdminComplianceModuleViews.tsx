@@ -2,6 +2,7 @@
 
 import { Suspense, useMemo } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { AdminComplianceQueue } from "@/components/AdminComplianceQueue";
 import { AnalyticsBreakdownPanel } from "@/components/AnalyticsBreakdownPanel";
 import { MetricCard } from "@/components/MetricCard";
@@ -76,6 +77,7 @@ function hasSectionDrilldown(filters: ComplianceQueryFilters) {
 }
 
 function AdminComplianceModuleViewsInner(props: Props) {
+  const t = useTranslations("complianceAdmin");
   const { filters } = useAdminQueryFilters("compliance");
   const complianceFilters = filters as ComplianceQueryFilters;
 
@@ -110,34 +112,34 @@ function AdminComplianceModuleViewsInner(props: Props) {
     <>
       <AdminQueryFilterBar page="compliance" className="mb-4" />
 
-      <MetricRow title="Review queue indicators" subtitle="Open and under-review counts">
-        <MetricCard label="Open events" value={String(props.metrics.openEvents)} detail="Requires staff review" accent="indigo" href="/admin/compliance" />
-        <MetricCard label="Critical" value={String(props.metrics.criticalEvents)} detail="Open or under review" accent="violet" href="/admin/compliance" />
-        <MetricCard label="High severity" value={String(props.metrics.highEvents)} detail="Open or under review" accent="blue" href="/admin/compliance" />
-        <MetricCard label="Under review" value={String(props.metrics.underReview)} detail="Actively being reviewed" accent="slate" href="/admin/compliance" />
+      <MetricRow title={t("queueIndicators")} subtitle={t("openUnderReview")}>
+        <MetricCard label={t("openEvents")} value={String(props.metrics.openEvents)} detail={t("requiresReview")} accent="indigo" href="/admin/compliance" />
+        <MetricCard label={t("critical")} value={String(props.metrics.criticalEvents)} detail={t("openOrReview")} accent="violet" href="/admin/compliance" />
+        <MetricCard label={t("highSeverity")} value={String(props.metrics.highEvents)} detail={t("openOrReview")} accent="blue" href="/admin/compliance" />
+        <MetricCard label={t("underReview")} value={String(props.metrics.underReview)} detail={t("activelyReviewed")} accent="slate" href="/admin/compliance" />
       </MetricRow>
 
       <section className="mt-8">
-        <WorkspacePanel title="Compliance review queue" subtitle="Open events — internal notes are staff-only">
+        <WorkspacePanel title={t("reviewQueue")} subtitle={t("reviewQueueSub")}>
           {filteredOpenQueue.length === 0 ? (
             hasDrilldown ? (
               <ModuleEmptyState
-                title="No matching compliance events"
-                description="Try clearing filters or adjusting severity/status."
+                title={t("noMatching")}
+                description={t("noMatchingDesc")}
               />
             ) : (
-              <AdminComplianceQueue events={[]} title="Open queue" />
+              <AdminComplianceQueue events={[]} title={t("openQueue")} />
             )
           ) : (
-            <AdminComplianceQueue events={filteredOpenQueue} title="Open queue" />
+            <AdminComplianceQueue events={filteredOpenQueue} title={t("openQueue")} />
           )}
         </WorkspacePanel>
       </section>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-2">
-        <WorkspacePanel title="Founder readiness risk" subtitle="Low readiness scores (snapshot)">
+        <WorkspacePanel title={t("founderRisk")} subtitle={t("founderRiskSub")}>
           {props.sections.founderReadinessRisk.length === 0 ? (
-            <p className="text-sm text-slate-500">No low-readiness companies flagged.</p>
+            <p className="text-sm text-slate-500">{t("noLowReadiness")}</p>
           ) : (
             <ul className="space-y-2 text-sm">
               {props.sections.founderReadinessRisk.map((row) => (
@@ -147,7 +149,7 @@ function AdminComplianceModuleViewsInner(props: Props) {
                   </Link>
                   <span className="text-slate-500">
                     {" "}
-                    · readiness {row.readinessScore ?? "—"} · onboarding {row.onboardingPercent}%
+                    {t("readinessRow", { score: row.readinessScore ?? "—", percent: row.onboardingPercent })}
                   </span>
                 </li>
               ))}
@@ -155,15 +157,15 @@ function AdminComplianceModuleViewsInner(props: Props) {
           )}
         </WorkspacePanel>
 
-        <WorkspacePanel title="Investor approval review" subtitle="Pending or changes requested">
+        <WorkspacePanel title={t("investorReview")} subtitle={t("investorReviewSub")}>
           {props.sections.investorApprovalReview.length === 0 ? (
-            <p className="text-sm text-slate-500">No investors awaiting review.</p>
+            <p className="text-sm text-slate-500">{t("noInvestorsAwaiting")}</p>
           ) : (
             <ul className="space-y-2 text-sm">
               {props.sections.investorApprovalReview.map((row) => (
                 <li key={row.profile_id}>
                   <Link href="/admin/investors" className="font-medium text-indigo-700">
-                    Investor {row.profile_id.slice(0, 8)}
+                    {t("investorPrefix")} {row.profile_id.slice(0, 8)}
                   </Link>
                   <span className="text-slate-500"> · {row.approval_status}</span>
                 </li>
@@ -173,51 +175,51 @@ function AdminComplianceModuleViewsInner(props: Props) {
         </WorkspacePanel>
 
         <AnalyticsBreakdownPanel
-          title="Outreach compliance"
-          subtitle="Aggregate outreach activity"
+          title={t("outreachCompliance")}
+          subtitle={t("outreachComplianceSub")}
           rows={[
-            { label: "Private contacts", value: String(props.outreach.privateContactCount) },
-            { label: "Queued messages", value: String(props.outreach.queuedMessageCount) },
-            { label: "Draft campaigns", value: String(props.outreach.draftCampaignCount) },
-            { label: "Flagged social (DB)", value: String(props.outreach.socialDraftFlaggedCount) },
-            { label: "Daily limit", value: "25 (platform cap)" },
+            { label: t("privateContacts"), value: String(props.outreach.privateContactCount) },
+            { label: t("queuedMessages"), value: String(props.outreach.queuedMessageCount) },
+            { label: t("draftCampaigns"), value: String(props.outreach.draftCampaignCount) },
+            { label: t("flaggedSocial"), value: String(props.outreach.socialDraftFlaggedCount) },
+            { label: t("dailyLimit"), value: t("platformCap") },
           ]}
         />
 
-        <WorkspacePanel title="Social draft compliance" subtitle="Flagged drafts in centralized queue">
-          <AdminComplianceQueue events={filteredSocial} title="Social flags" />
+        <WorkspacePanel title={t("socialDraft")} subtitle={t("socialDraftSub")}>
+          <AdminComplianceQueue events={filteredSocial} title={t("socialFlags")} />
         </WorkspacePanel>
 
-        <WorkspacePanel title="Messaging risk flags" subtitle="Deterministic keyword rules">
-          <AdminComplianceQueue events={filteredMessaging} title="Messaging" />
+        <WorkspacePanel title={t("messagingRisk")} subtitle={t("messagingRiskSub")}>
+          <AdminComplianceQueue events={filteredMessaging} title={t("messaging")} />
         </WorkspacePanel>
 
-        <WorkspacePanel title="Platform activity alerts" subtitle="Onboarding, trial, high-risk companies">
-          <AdminComplianceQueue events={filteredPlatform} title="Platform alerts" />
+        <WorkspacePanel title={t("platformAlerts")} subtitle={t("platformAlertsSub")}>
+          <AdminComplianceQueue events={filteredPlatform} title={t("platformAlertsTitle")} />
         </WorkspacePanel>
 
         <AnalyticsBreakdownPanel
-          title="Subscription / payment risk"
-          subtitle="Operational signals only — no payment processing"
+          title={t("subscriptionRisk")}
+          subtitle={t("subscriptionRiskSub")}
           rows={[
-            { label: "Pending upgrade requests", value: String(props.sections.subscriptionRisk.pendingUpgrades) },
-            { label: "Expired founder trials", value: String(props.sections.subscriptionRisk.expiredTrials) },
+            { label: t("pendingUpgrades"), value: String(props.sections.subscriptionRisk.pendingUpgrades) },
+            { label: t("expiredTrials"), value: String(props.sections.subscriptionRisk.expiredTrials) },
           ]}
         />
       </section>
 
       <section className="mt-8">
-        <WorkspacePanel title="High-risk companies" subtitle="Combined readiness, remediation, and outreach signals">
+        <WorkspacePanel title={t("highRisk")} subtitle={t("highRiskSub")}>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b text-xs uppercase text-slate-500">
-                  <th className="py-2 pr-4">Company</th>
-                  <th className="py-2 pr-4">Review</th>
-                  <th className="py-2 pr-4">Readiness</th>
-                  <th className="py-2 pr-4">Remediation</th>
-                  <th className="py-2 pr-4">Outreach</th>
-                  <th className="py-2">Open events</th>
+                  <th className="py-2 pr-4">{t("colCompany")}</th>
+                  <th className="py-2 pr-4">{t("colReview")}</th>
+                  <th className="py-2 pr-4">{t("colReadiness")}</th>
+                  <th className="py-2 pr-4">{t("colRemediation")}</th>
+                  <th className="py-2 pr-4">{t("colOutreach")}</th>
+                  <th className="py-2">{t("colOpenEvents")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -238,19 +240,18 @@ function AdminComplianceModuleViewsInner(props: Props) {
       </section>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-2">
-        <WorkspacePanel title="Outreach compliance events" subtitle="Recent flagged outreach">
-          <AdminComplianceQueue events={filteredOutreachEvents} title="Outreach events" />
+        <WorkspacePanel title={t("outreachEvents")} subtitle={t("outreachEventsSub")}>
+          <AdminComplianceQueue events={filteredOutreachEvents} title={t("outreachEventsTitle")} />
         </WorkspacePanel>
 
-        <WorkspacePanel title="Company compliance profiles" subtitle="Per-company snapshot (no founder PII beyond name)">
+        <WorkspacePanel title={t("companyProfiles")} subtitle={t("companyProfilesSub")}>
           <div className="max-h-80 space-y-2 overflow-y-auto text-sm">
             {props.sections.companyProfiles.map((row) => (
               <p key={row.companyId}>
                 <span className="font-medium">{row.companyName}</span>
                 <span className="text-slate-500">
                   {" "}
-                  · readiness {row.readinessScore ?? "—"} · remediation {row.remediationOpen} · social flagged{" "}
-                  {row.socialFlagged}
+                  {t("profileRow", { score: row.readinessScore ?? "—", remediation: row.remediationOpen, social: row.socialFlagged })}
                 </span>
               </p>
             ))}
@@ -261,9 +262,14 @@ function AdminComplianceModuleViewsInner(props: Props) {
   );
 }
 
+function ComplianceLoadingFallback() {
+  const t = useTranslations("complianceAdmin");
+  return <p className="text-sm text-slate-500">{t("loadingFilters")}</p>;
+}
+
 export function AdminComplianceModuleViews(props: Props) {
   return (
-    <Suspense fallback={<p className="text-sm text-slate-500">Loading filters…</p>}>
+    <Suspense fallback={<ComplianceLoadingFallback />}>
       <AdminComplianceModuleViewsInner {...props} />
     </Suspense>
   );
