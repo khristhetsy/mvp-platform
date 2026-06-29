@@ -1,0 +1,103 @@
+"use client";
+
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/client";
+import type { PresenceRoom } from "@/lib/icfo-events/venue";
+
+export type PresenceMember = { id: string; name: string; room: string };
+
+type PresenceValue = {
+  members: PresenceMember[];
+  /** Total distinct attendees in the venue right now. */
+  total: number;
+  /** Count per room name. */
+  byRoom: Record<string, number>;
+  /** This session's identity. */
+  me: { id: string; name: string };
+};
+
+const Ctx = createContext<PresenceValue | null>(null);
+
+/** Stable per-session identity for anonymous attendees (public events allow
+ *  signed-out visitors). Signed-in users pass their real profile id. */
+function anonId(): string {
+  return "guest-" + Math.random().toString(36).slice(2, 10);
+}
+
+export function EventPresenceProvider({
+  eventId,
+  room,
+  me: meProp,
+  children,
+}: {
+  eventId: string;
+  /** The room this page represents — tracked as the attendee's location. */
+  room: PresenceRoom;
+  me?: { id: string; name: string } | null;
+  children: React.ReactNode;
+}) {
+  const [me] = useState<{ id: string; name: string }>(
+    () => meProp ?? { id: anonId(), name: "Guest" },
+  );
+  const [members, setMembers] = useState<PresenceMember[]>([]);
+  const chRef = useRef<RealtimeChannel | null>(null);
+  const subscribedRef = useRef(false);
+  const roomRef = useRef(room);
+
+  // Keep the latest room available to the subscribe callback without re-joining.
+  useEffect(() => {
+    roomRef.current = room;
+  }, [room]);
+
+  // Join the venue-wide presence channel once per event/identity.
+  useEffect(() => {
+    const supabase = createClient();
+    const ch = supabase.channel(`event_presence:${eventId}`, {
+      config: { presence: { key: me.id } },
+    });
+
+    ch.on("presence", { event: "sync" }, () => {
+      const state = ch.presenceState() as Record<string, Array<{ id?: string; name?: string; room?: string }>>;
+      const flat = Object.values(state)
+        .flat()
+        .map((p) => ({ id: String(p.id ?? ""), name: String(p.name ?? "Attendee"), room: String(p.room ?? "Lobby") }))
+        .filter((p) => p.id);
+      const map = new Map<string, PresenceMember>();
+      flat.forEach((p) => map.set(p.id, p));
+      setMembers([...map.values()]);
+    }).subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        subscribedRef.current = true;
+        await ch.track({ id: me.id, name: me.name, room: roomRef.current });
+      }
+    });
+
+    chRef.current = ch;
+    return () => {
+      subscribedRef.current = false;
+      void supabase.removeChannel(ch as Parameters<typeof supabase.removeChannel>[0]);
+    };
+  }, [eventId, me.id, me.name]);
+
+  // Re-broadcast location when the page's room changes (no rejoin).
+  useEffect(() => {
+    const ch = chRef.current;
+    if (ch && subscribedRef.current) void ch.track({ id: me.id, name: me.name, room });
+  }, [room, me.id, me.name]);
+
+  const value = useMemo<PresenceValue>(() => {
+    const byRoom: Record<string, number> = {};
+    for (const m of members) byRoom[m.room] = (byRoom[m.room] ?? 0) + 1;
+    return { members, total: members.length, byRoom, me };
+  }, [members, me]);
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+/** Read live presence. Safe to call outside a provider (returns zeros). */
+export function useEventPresence(): PresenceValue {
+  return (
+    useContext(Ctx) ?? { members: [], total: 0, byRoom: {}, me: { id: "", name: "" } }
+  );
+}
