@@ -24,7 +24,7 @@ export function venueZones(slug: string, tracksHref?: string): VenueZone[] {
     { key: "sessions", room: "Main Stage", label: "Sessions", icon: "stage", href: `${base}#agenda` },
     { key: "networking", room: "Networking", label: "Networking", icon: "users", href: `${base}/lounge` },
     { key: "ondemand", room: "On-Demand", label: "On-Demand", icon: "tv", href: tracksHref ?? `${base}#agenda` },
-    { key: "sponsors", room: "Sponsor Hall", label: "Sponsor Hall", icon: "store", href: `${base}#partners` },
+    { key: "sponsors", room: "Sponsor Hall", label: "Sponsor Hall", icon: "store", href: `${base}/expo` },
     { key: "agenda", label: "Agenda", icon: "calendar", href: `${base}#agenda` },
     { key: "leaderboard", label: "Leaderboard", icon: "trophy", href: `${base}#leaderboard` },
   ];
