@@ -26,6 +26,7 @@ export function SignatureSettings() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const defaultRef = useRef<string>("");
 
   useEffect(() => {
     let active = true;
@@ -35,14 +36,24 @@ export function SignatureSettings() {
         if (!res.ok) return;
         const data = await res.json();
         const sig: string = data.signature ?? "";
+        defaultRef.current = typeof data.default === "string" ? data.default : "";
         // The editor div is always mounted now, so ref.current is available here.
-        if (active && ref.current) ref.current.innerHTML = sig ? (looksHtml(sig) ? sig : textToHtml(sig)) : "";
+        // When nothing is saved yet, pre-fill with the iCFO template so it's visible.
+        const initial = sig ? (looksHtml(sig) ? sig : textToHtml(sig)) : defaultRef.current;
+        if (active && ref.current) ref.current.innerHTML = initial;
       } finally {
         if (active) setLoading(false);
       }
     })();
     return () => { active = false; };
   }, []);
+
+  const loadTemplate = () => {
+    if (ref.current && defaultRef.current) {
+      ref.current.innerHTML = defaultRef.current;
+      setMsg({ text: "Loaded the iCFO template — edit, then save.", ok: true });
+    }
+  };
 
   // execCommand is deprecated but remains the simplest cross-browser rich-text path here.
   const cmd = (c: string, val?: string) => {
@@ -166,6 +177,9 @@ export function SignatureSettings() {
           <div className="mt-3 flex items-center gap-3">
             <button type="button" onClick={() => void save()} disabled={saving || loading} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50">
               <Check className="h-4 w-4" /> {saving ? "Saving…" : "Save signature"}
+            </button>
+            <button type="button" onClick={loadTemplate} disabled={loading} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+              Load iCFO template
             </button>
             {loading ? <span className="text-xs text-slate-400">Loading…</span> : null}
             {msg ? <span className={`text-xs ${msg.ok ? "text-emerald-700" : "text-red-700"}`}>{msg.text}</span> : null}

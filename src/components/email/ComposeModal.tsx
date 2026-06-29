@@ -3,10 +3,18 @@
 // F3 — wide centered compose modal. Reusable shell driven by a ComposePrefill;
 // all triggers (Compose button, contact card Email, Reply/Reply all/Forward)
 // open it through the parent's openCompose() seam. Reuses existing field markup
-// and the existing send/draft pipelines via callbacks — no new send logic.
+// and the existing send/draft pipelines via callbacks.
+//
+// The body is a rich-text editor (contentEditable + formatting toolbar) and the
+// sender's saved signature is inserted automatically (toggleable). draft() emits
+// both a plain-text `body` (backward compatible) and a rich `html` rendering.
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Send, X, Paperclip, FileText, Minus, Maximize2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Send, X, Paperclip, FileText, Minus, Maximize2, PenLine,
+  Bold, Italic, Underline, Link2, List, ListOrdered,
+  AlignLeft, AlignCenter, AlignRight, Eraser, Undo2, Redo2,
+} from "lucide-react";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { EmailAttachment } from "@/lib/email/inbox";
 import type { ComposeDraft, ComposePrefill } from "./types";
@@ -17,6 +25,16 @@ function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+function escapeText(t: string): string {
+  return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function textToHtml(t: string): string {
+  return escapeText(t).replace(/\n/g, "<br/>");
+}
+
+const SIG_ATTR = "data-icapos-signature";
+const SWATCHES = ["#0F2147", "#185FA5", "#0D9488", "#475569", "#A32D2D", "#000000"];
 
 export interface ComposeModalProps {
   open: boolean;
@@ -48,16 +66,52 @@ export function ComposeModal({
   initialAttachments,
 }: ComposeModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const [to, setTo] = useState("");
   const [cc, setCc] = useState("");
   const [bcc, setBcc] = useState("");
   const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
   const [showCc, setShowCc] = useState(false);
   const [attachments, setAttachments] = useState<EmailAttachment[]>([]);
   const [minimized, setMinimized] = useState(false);
   const [dirty, setDirty] = useState(false);
+
+  const [signatureHtml, setSignatureHtml] = useState<string | null>(null);
+  const [signatureOn, setSignatureOn] = useState(true);
+
+  // Fetch the sender's saved signature (falls back to the iCFO default) once.
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const res = await fetch("/api/preferences/signature");
+        if (!res.ok) return;
+        const data = await res.json();
+        const sig: string = data.effective ?? data.signature ?? "";
+        if (active) setSignatureHtml(sig || null);
+      } catch {
+        /* signature is best-effort */
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  // Keep/remove the signature block at the end of the editor to match `signatureOn`.
+  const ensureSignature = useCallback(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    const existing = el.querySelector(`[${SIG_ATTR}]`);
+    // A reopened draft may already carry the signature text in its body — don't
+    // append a second copy in that case.
+    const snippet = signatureHtml ? signatureHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 40) : "";
+    const alreadyPresent = snippet.length > 8 && (el.innerText ?? "").includes(snippet);
+    if (signatureOn && signatureHtml && !existing && !alreadyPresent) {
+      el.insertAdjacentHTML("beforeend", `<div ${SIG_ATTR}="1"><br/><br/>${signatureHtml}</div>`);
+    } else if ((!signatureOn || !signatureHtml) && existing) {
+      existing.remove();
+    }
+  }, [signatureOn, signatureHtml]);
 
   // Seed fields when the modal opens or the prefill changes.
   const prefillKey = useMemo(
@@ -71,15 +125,28 @@ export function ComposeModal({
     setCc((prefill?.cc ?? []).join(", "));
     setBcc("");
     setSubject(prefill?.subject ?? "");
-    setBody(prefill?.body ?? "");
     setShowCc(Boolean(prefill?.cc && prefill.cc.length > 0));
     setAttachments(initialAttachments ?? []);
     setMinimized(false);
     setDirty(false);
+    if (editorRef.current) {
+      editorRef.current.innerHTML = prefill?.body ? textToHtml(prefill.body) : "";
+      ensureSignature();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, prefillKey]);
 
-  const draft = (): ComposeDraft => ({ to, cc, bcc, subject, body, attachments });
+  // Late-arriving signature, or a toggle, reconciles the editor.
+  useEffect(() => {
+    if (open && !minimized) ensureSignature();
+  }, [open, minimized, ensureSignature]);
+
+  const draft = (): ComposeDraft => {
+    const el = editorRef.current;
+    const html = el ? el.innerHTML.trim() : "";
+    const text = el ? (el.innerText ?? "").trim() : "";
+    return { to, cc, bcc, subject, body: text, html: html || undefined, attachments };
+  };
 
   const requestClose = async () => {
     if (dirty) {
@@ -96,6 +163,21 @@ export function ComposeModal({
   // Esc closes (with dirty guard). Focus trap + restore while open and not minimized.
   useOnEscape(open && !minimized, requestClose);
   useFocusTrap(open && !minimized, dialogRef);
+
+  // execCommand is deprecated but remains the simplest cross-browser rich-text path.
+  const cmd = (c: string, val?: string) => {
+    editorRef.current?.focus();
+    document.execCommand(c, false, val);
+    setDirty(true);
+  };
+  const addLink = () => {
+    const url = window.prompt("Link URL (https://…)");
+    if (url) cmd("createLink", url);
+  };
+  const toggleSignature = () => {
+    setSignatureOn((v) => !v);
+    setDirty(true);
+  };
 
   if (!open) return null;
 
@@ -129,11 +211,12 @@ export function ComposeModal({
     );
   }
 
+  const TB = "rounded p-1.5 text-slate-600 hover:bg-slate-100";
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 sm:items-center"
       onMouseDown={(e) => {
-        // Backdrop click → minimize (never silently discard a dirty draft).
         if (e.target === e.currentTarget) setMinimized(true);
       }}
     >
@@ -143,9 +226,9 @@ export function ComposeModal({
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className="flex max-h-[80vh] w-full max-w-[900px] flex-col overflow-hidden rounded-2xl bg-white shadow-xl outline-none"
+        className="flex max-h-[85vh] w-full max-w-[900px] flex-col overflow-hidden rounded-2xl bg-white shadow-xl outline-none"
       >
-        {/* Header (fixed) */}
+        {/* Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-3">
           <h2 className="text-sm font-semibold text-slate-950">{title}</h2>
           <div className="flex items-center gap-1">
@@ -154,7 +237,7 @@ export function ComposeModal({
           </div>
         </div>
 
-        {/* Body (scrolls internally) */}
+        {/* Body */}
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
           {error ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{error}</p> : null}
 
@@ -180,12 +263,17 @@ export function ComposeModal({
 
           <input value={subject} onChange={(e) => onField(setSubject)(e.target.value)} placeholder="Subject" aria-label="Subject" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
 
-          <textarea
-            value={body}
-            onChange={(e) => onField(setBody)(e.target.value)}
-            placeholder="Write your message…"
+          {/* Rich-text body */}
+          <div
+            ref={editorRef}
+            contentEditable
+            suppressContentEditableWarning
+            role="textbox"
             aria-label="Message body"
-            className="min-h-[260px] w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm leading-relaxed focus:border-[var(--blue)] focus:outline-none"
+            aria-multiline="true"
+            onInput={() => setDirty(true)}
+            data-placeholder="Write your message…"
+            className="min-h-[280px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm leading-relaxed text-slate-800 focus:border-[var(--blue)] focus:outline-none [&_a]:text-[#185FA5] [&_a]:underline [&_img]:my-1 [&_img]:inline-block empty:before:text-slate-400 empty:before:content-[attr(data-placeholder)]"
           />
 
           {uploadFiles ? (
@@ -204,7 +292,57 @@ export function ComposeModal({
           ) : null}
         </div>
 
-        {/* Footer (fixed) */}
+        {/* Formatting toolbar */}
+        <div className="flex shrink-0 flex-wrap items-center gap-0.5 border-t border-slate-100 bg-slate-50/70 px-3 py-1.5">
+          <button type="button" aria-label="Undo" title="Undo" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("undo")} className={TB}><Undo2 className="h-4 w-4" /></button>
+          <button type="button" aria-label="Redo" title="Redo" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("redo")} className={TB}><Redo2 className="h-4 w-4" /></button>
+          <span className="mx-1 h-4 w-px bg-slate-200" />
+          <select
+            aria-label="Text size"
+            defaultValue=""
+            onMouseDown={(e) => e.stopPropagation()}
+            onChange={(e) => { if (e.target.value) { cmd("fontSize", e.target.value); e.target.value = ""; } }}
+            className="rounded border border-slate-200 bg-white px-1.5 py-1 text-xs text-slate-600 focus:outline-none"
+          >
+            <option value="">Size</option>
+            <option value="2">Small</option>
+            <option value="3">Normal</option>
+            <option value="5">Large</option>
+          </select>
+          <span className="mx-1 h-4 w-px bg-slate-200" />
+          <button type="button" aria-label="Bold" title="Bold" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("bold")} className={TB}><Bold className="h-4 w-4" /></button>
+          <button type="button" aria-label="Italic" title="Italic" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("italic")} className={TB}><Italic className="h-4 w-4" /></button>
+          <button type="button" aria-label="Underline" title="Underline" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("underline")} className={TB}><Underline className="h-4 w-4" /></button>
+          <span className="flex items-center gap-1 px-1">
+            {SWATCHES.map((c) => (
+              <button key={c} type="button" aria-label={`Text color ${c}`} title="Text color"
+                onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("foreColor", c)}
+                className="h-4 w-4 rounded-full border border-slate-300" style={{ backgroundColor: c }} />
+            ))}
+          </span>
+          <span className="mx-1 h-4 w-px bg-slate-200" />
+          <button type="button" aria-label="Align left" title="Align left" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("justifyLeft")} className={TB}><AlignLeft className="h-4 w-4" /></button>
+          <button type="button" aria-label="Align center" title="Align center" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("justifyCenter")} className={TB}><AlignCenter className="h-4 w-4" /></button>
+          <button type="button" aria-label="Align right" title="Align right" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("justifyRight")} className={TB}><AlignRight className="h-4 w-4" /></button>
+          <span className="mx-1 h-4 w-px bg-slate-200" />
+          <button type="button" aria-label="Bullet list" title="Bullet list" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("insertUnorderedList")} className={TB}><List className="h-4 w-4" /></button>
+          <button type="button" aria-label="Numbered list" title="Numbered list" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("insertOrderedList")} className={TB}><ListOrdered className="h-4 w-4" /></button>
+          <button type="button" aria-label="Insert link" title="Insert link" onMouseDown={(e) => e.preventDefault()} onClick={addLink} className={TB}><Link2 className="h-4 w-4" /></button>
+          <button type="button" aria-label="Clear formatting" title="Clear formatting" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("removeFormat")} className={TB}><Eraser className="h-4 w-4" /></button>
+          <span className="mx-1 h-4 w-px bg-slate-200" />
+          <button
+            type="button"
+            aria-pressed={signatureOn}
+            title={signatureOn ? "Remove signature" : "Insert signature"}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={toggleSignature}
+            className={`inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs font-medium ${signatureOn ? "bg-blue-50 text-[var(--blue)]" : "text-slate-600 hover:bg-slate-100"}`}
+          >
+            <PenLine className="h-4 w-4" /> Signature
+          </button>
+        </div>
+
+        {/* Footer */}
         <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/50 px-5 py-3">
           <button type="button" onClick={requestClose} className="mr-auto rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Discard</button>
           {onSaveDraft ? (

@@ -27,6 +27,9 @@ export interface ComposeDraft {
   cc?: string;
   bcc?: string;
   subject: string;
+  /** Plain-text rendering of the body (incl. signature) — backward compatible. */
   body: string;
+  /** Rich HTML rendering of the body (incl. signature). Present when formatted. */
+  html?: string;
   attachments: EmailAttachment[];
 }

@@ -14,21 +14,51 @@ function b64lines(buf: Buffer): string {
   return buf.toString("base64").replace(/(.{76})/g, "$1\r\n");
 }
 
-/** Encode an email (optionally with attachments) as base64url RFC 2822 for the Gmail API. */
-function encodeRawEmail(to: string, subject: string, body: string, attachments: GmailAttachment[] = []): string {
+function rand(prefix: string): string {
+  return `${prefix}_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`;
+}
+
+/** A text/plain (and optionally text/html) body, as a multipart/alternative block or a single part. */
+function bodyMime(body: string, html?: string | null): string {
+  if (!html) {
+    return [
+      "Content-Type: text/plain; charset=utf-8",
+      "Content-Transfer-Encoding: base64",
+      "",
+      b64lines(Buffer.from(body, "utf-8")),
+    ].join("\r\n");
+  }
+  const alt = rand("alt");
+  return [
+    `Content-Type: multipart/alternative; boundary="${alt}"`,
+    "",
+    `--${alt}`,
+    "Content-Type: text/plain; charset=utf-8",
+    "Content-Transfer-Encoding: base64",
+    "",
+    b64lines(Buffer.from(body, "utf-8")),
+    `--${alt}`,
+    "Content-Type: text/html; charset=utf-8",
+    "Content-Transfer-Encoding: base64",
+    "",
+    b64lines(Buffer.from(html, "utf-8")),
+    `--${alt}--`,
+  ].join("\r\n");
+}
+
+/** Encode an email (optionally with html + attachments) as base64url RFC 2822 for the Gmail API. */
+function encodeRawEmail(to: string, subject: string, body: string, html?: string | null, attachments: GmailAttachment[] = []): string {
   if (attachments.length === 0) {
     const message = [
       `To: ${to}`,
       `Subject: ${subject}`,
-      "Content-Type: text/plain; charset=utf-8",
       "MIME-Version: 1.0",
-      "",
-      body,
+      bodyMime(body, html),
     ].join("\r\n");
     return Buffer.from(message).toString("base64url");
   }
 
-  const boundary = `b_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`;
+  const boundary = rand("b");
   const parts: string[] = [
     `To: ${to}`,
     `Subject: ${subject}`,
@@ -36,10 +66,7 @@ function encodeRawEmail(to: string, subject: string, body: string, attachments: 
     `Content-Type: multipart/mixed; boundary="${boundary}"`,
     "",
     `--${boundary}`,
-    "Content-Type: text/plain; charset=utf-8",
-    "Content-Transfer-Encoding: base64",
-    "",
-    b64lines(Buffer.from(body, "utf-8")),
+    bodyMime(body, html),
   ];
   for (const a of attachments) {
     const safe = a.name.replace(/"/g, "");
@@ -70,6 +97,7 @@ export async function sendViaGmail(input: {
   to: string;
   subject: string;
   body: string;
+  html?: string | null;
   attachments?: GmailAttachment[];
 }): Promise<GmailSendResult> {
   const tokenResult = await getValidGoogleAccessToken(input.userId);
@@ -77,7 +105,7 @@ export async function sendViaGmail(input: {
     return { error: tokenResult.error ?? new Error("No Gmail access token available.") };
   }
 
-  const raw = encodeRawEmail(input.to, input.subject, input.body, input.attachments ?? []);
+  const raw = encodeRawEmail(input.to, input.subject, input.body, input.html, input.attachments ?? []);
 
   const response = await fetch(GMAIL_SEND_URL, {
     method: "POST",

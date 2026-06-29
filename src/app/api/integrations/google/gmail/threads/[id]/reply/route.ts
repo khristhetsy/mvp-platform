@@ -5,7 +5,7 @@ import { replyGmailThread } from "@/lib/integrations/gmail-write";
 
 export const dynamic = "force-dynamic";
 
-const schema = z.object({ body: z.string().min(1).max(20000) });
+const schema = z.object({ body: z.string().min(1).max(50000), html: z.string().max(60000).optional() });
 
 /** POST — reply within a Gmail thread (uses gmail.send). */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
@@ -17,7 +17,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!parsed.success) return NextResponse.json({ error: "Message body is required." }, { status: 400 });
 
   try {
-    await replyGmailThread(auth.profile.id, id, parsed.data.body);
+    await replyGmailThread(auth.profile.id, id, parsed.data.body, parsed.data.html ?? null);
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Reply failed." }, { status: 500 });

@@ -360,7 +360,7 @@ export function EmailInbox() {
       try {
         const res = await fetch(`/api/email/threads/${composeContext.threadId}`, {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ body: draft.body, attachments: draft.attachments }),
+          body: JSON.stringify({ body: draft.body, html: draft.html, attachments: draft.attachments }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Reply failed.");
@@ -384,7 +384,7 @@ export function EmailInbox() {
     try {
       const res = await fetch("/api/email/threads", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: draft.to, cc: draft.cc, bcc: draft.bcc, subject: draft.subject, body: draft.body, attachments: draft.attachments }),
+        body: JSON.stringify({ to: draft.to, cc: draft.cc, bcc: draft.bcc, subject: draft.subject, body: draft.body, html: draft.html, attachments: draft.attachments }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Send failed.");

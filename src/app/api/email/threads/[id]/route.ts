@@ -19,6 +19,7 @@ export async function GET(_req: NextRequest, ctx: RouteContext): Promise<Respons
 
 const replySchema = z.object({
   body: z.string().min(1).max(50000),
+  html: z.string().max(60000).optional(),
   attachments: z
     .array(z.object({ name: z.string().max(200), path: z.string().max(400), size: z.number().int().nonnegative(), content_type: z.string().nullish() }))
     .max(10)
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest, ctx: RouteContext): Promise<Respons
       id,
       parsed.data.body,
       parsed.data.attachments?.map((a) => ({ ...a, content_type: a.content_type ?? null })),
+      parsed.data.html ?? null,
     );
     return NextResponse.json({ messages });
   } catch (err) {

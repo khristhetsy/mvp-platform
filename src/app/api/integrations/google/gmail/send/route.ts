@@ -15,7 +15,8 @@ const attachmentSchema = z.object({
 const sendSchema = z.object({
   to: z.string().email(),
   subject: z.string().min(1).max(200),
-  body: z.string().min(1).max(5000),
+  body: z.string().min(1).max(50000),
+  html: z.string().max(60000).optional(),
   attachments: z.array(attachmentSchema).max(10).optional(),
 });
 
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
     to: parsed.data.to,
     subject: parsed.data.subject,
     body: parsed.data.body,
+    html: parsed.data.html ?? null,
     attachments,
   });
 

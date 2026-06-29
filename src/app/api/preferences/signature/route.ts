@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { loadSignature, saveSignature, sanitizeSignatureHtml } from "@/lib/email/signature";
+import { loadSignature, saveSignature, sanitizeSignatureHtml, effectiveSignature, DEFAULT_ICFO_SIGNATURE } from "@/lib/email/signature";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,14 @@ export async function GET(): Promise<Response> {
   // Service-role read keyed by the authenticated profile id (avoids RLS edge cases).
   const db = createServiceRoleClient();
   const signature = await loadSignature(db, auth.profile.id);
-  return NextResponse.json({ signature });
+  // `signature` = what the user saved (may be empty). `effective` = what compose
+  // should actually show, falling back to the iCFO default. `default` lets the
+  // settings editor offer a one-click reset to the template.
+  return NextResponse.json({
+    signature,
+    effective: effectiveSignature(signature),
+    default: DEFAULT_ICFO_SIGNATURE,
+  });
 }
 
 const schema = z.object({ signature: z.string().max(20000) });

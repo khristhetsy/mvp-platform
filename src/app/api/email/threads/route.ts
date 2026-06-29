@@ -24,6 +24,7 @@ const composeSchema = z.object({
   toName: z.string().max(200).optional(),
   subject: z.string().min(1).max(300),
   body: z.string().min(1).max(50000),
+  html: z.string().max(60000).optional(),
   attachments: z.array(attachmentSchema).max(10).optional(),
 });
 
@@ -45,6 +46,7 @@ export async function POST(req: NextRequest): Promise<Response> {
         toName: parsed.data.toName,
         subject: parsed.data.subject,
         body: parsed.data.body,
+        html: parsed.data.html ?? null,
         attachments: parsed.data.attachments?.map((a) => ({ ...a, content_type: a.content_type ?? null })),
       },
     );

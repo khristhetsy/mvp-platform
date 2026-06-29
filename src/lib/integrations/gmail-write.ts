@@ -48,8 +48,12 @@ function bareEmail(addr: string): string {
   return (addr.match(/<([^>]+)>/)?.[1] ?? addr).trim();
 }
 
+function b64linesUtf8(s: string): string {
+  return Buffer.from(s, "utf8").toString("base64").replace(/(.{76})/g, "$1\r\n");
+}
+
 /** Reply within a Gmail thread (keeps threading via In-Reply-To/References). */
-export async function replyGmailThread(userId: string, threadId: string, bodyText: string): Promise<void> {
+export async function replyGmailThread(userId: string, threadId: string, bodyText: string, html?: string | null): Promise<void> {
   const accessToken = await token(userId);
   const res = await fetch(
     `${GMAIL_BASE}/threads/${threadId}?format=metadata&metadataHeaders=From&metadataHeaders=Reply-To&metadataHeaders=Subject&metadataHeaders=Message-ID`,
@@ -66,15 +70,37 @@ export async function replyGmailThread(userId: string, threadId: string, bodyTex
   const subject = /^re:/i.test(subjectRaw) ? subjectRaw : `Re: ${subjectRaw}`;
   const messageId = head(headers, "Message-ID");
 
-  const raw = [
+  const header = [
     `To: ${to}`,
     `Subject: ${subject}`,
     messageId ? `In-Reply-To: ${messageId}` : "",
     messageId ? `References: ${messageId}` : "",
-    "Content-Type: text/plain; charset=UTF-8",
-    "",
-    bodyText,
-  ].filter(Boolean).join("\r\n");
+    "MIME-Version: 1.0",
+  ].filter(Boolean);
+
+  let raw: string;
+  if (html) {
+    const alt = `alt_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`;
+    raw = [
+      ...header,
+      `Content-Type: multipart/alternative; boundary="${alt}"`,
+      "",
+      `--${alt}`,
+      "Content-Type: text/plain; charset=UTF-8",
+      "Content-Transfer-Encoding: base64",
+      "",
+      b64linesUtf8(bodyText),
+      `--${alt}`,
+      "Content-Type: text/html; charset=UTF-8",
+      "Content-Transfer-Encoding: base64",
+      "",
+      b64linesUtf8(html),
+      `--${alt}--`,
+      "",
+    ].join("\r\n");
+  } else {
+    raw = [...header, "Content-Type: text/plain; charset=UTF-8", "", bodyText].join("\r\n");
+  }
 
   await post(accessToken, `/messages/send`, { raw: b64url(raw), threadId });
 }

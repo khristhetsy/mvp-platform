@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { sendEmail } from "@/lib/email/send-email";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { loadSignature, sanitizeSignatureHtml, signatureToPlainText, isHtmlSignature } from "@/lib/email/signature";
+import { loadSignature, sanitizeSignatureHtml, sanitizeEmailHtml, signatureToPlainText, isHtmlSignature } from "@/lib/email/signature";
 
 // email_threads / email_messages aren't in the generated types yet — raw client.
 function raw(supabase: SupabaseClient<Database>): SupabaseClient {
@@ -166,23 +166,33 @@ async function sendOnThread(
   subject: string | null,
   body: string,
   attachments: EmailAttachment[] = [],
+  htmlOverride?: string | null,
 ): Promise<void> {
-  // Append the sender's saved signature (if any) to outgoing mail. Supports both
-  // rich HTML signatures and legacy plain-text ones.
-  const sigRaw = await loadSignature(supabase, owner.id);
-  let sigHtml = "";
-  let sigText = "";
-  if (sigRaw) {
-    if (isHtmlSignature(sigRaw)) {
-      sigHtml = sanitizeSignatureHtml(sigRaw);
-      sigText = signatureToPlainText(sigHtml);
-    } else {
-      sigHtml = htmlFromText(sigRaw);
-      sigText = sigRaw;
+  let fullBody: string;
+  let html: string;
+  if (htmlOverride) {
+    // The compose UI already rendered the body and appended the signature
+    // (WYSIWYG). Use it as-is and do NOT append the signature again.
+    fullBody = body;
+    html = sanitizeEmailHtml(htmlOverride);
+  } else {
+    // Legacy / plain-text callers: append the sender's saved signature here.
+    // Supports both rich HTML signatures and legacy plain-text ones.
+    const sigRaw = await loadSignature(supabase, owner.id);
+    let sigHtml = "";
+    let sigText = "";
+    if (sigRaw) {
+      if (isHtmlSignature(sigRaw)) {
+        sigHtml = sanitizeSignatureHtml(sigRaw);
+        sigText = signatureToPlainText(sigHtml);
+      } else {
+        sigHtml = htmlFromText(sigRaw);
+        sigText = sigRaw;
+      }
     }
+    fullBody = sigText ? `${body}\n\n${sigText}` : body;
+    html = sigHtml ? `${htmlFromText(body)}<br/><br/>${sigHtml}` : htmlFromText(body);
   }
-  const fullBody = sigText ? `${body}\n\n${sigText}` : body;
-  const html = sigHtml ? `${htmlFromText(body)}<br/><br/>${sigHtml}` : htmlFromText(body);
 
   // Pull attachment bytes from storage → base64 for Resend.
   const resendAttachments: Array<{ filename: string; content: string }> = [];
@@ -234,7 +244,7 @@ async function sendOnThread(
 export async function composeThread(
   supabase: SupabaseClient<Database>,
   owner: Owner,
-  input: { to: string; toName?: string | null; subject: string; body: string; attachments?: EmailAttachment[] },
+  input: { to: string; toName?: string | null; subject: string; body: string; html?: string | null; attachments?: EmailAttachment[] },
 ): Promise<EmailThread> {
   const token = randomBytes(12).toString("hex");
   const now = new Date().toISOString();
@@ -255,7 +265,7 @@ export async function composeThread(
   if (error) throw new Error(error.message ?? "Unable to start thread.");
 
   const thread = data as EmailThread;
-  await sendOnThread(supabase, owner, thread, input.subject, input.body, input.attachments ?? []);
+  await sendOnThread(supabase, owner, thread, input.subject, input.body, input.attachments ?? [], input.html ?? null);
   return thread;
 }
 
@@ -265,11 +275,12 @@ export async function replyToThread(
   threadId: string,
   body: string,
   attachments: EmailAttachment[] = [],
+  html?: string | null,
 ): Promise<EmailMessage[]> {
   const existing = await getThread(supabase, owner.id, threadId);
   if (!existing) throw new Error("Thread not found.");
   const subject = existing.thread.subject ? `Re: ${existing.thread.subject.replace(/^Re:\s*/i, "")}` : null;
-  await sendOnThread(supabase, owner, existing.thread, subject, body, attachments);
+  await sendOnThread(supabase, owner, existing.thread, subject, body, attachments, html ?? null);
   const refreshed = await getThread(supabase, owner.id, threadId);
   return refreshed?.messages ?? [];
 }
