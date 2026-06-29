@@ -952,6 +952,49 @@
       "couldNotSend": "No se pudo enviar",
       "couldNotLoad": "No se pudo cargar",
       "loading": "Cargando…"
+    },
+    "prepare": {
+      "prepareDocument": "Preparar documento",
+      "status": {
+        "draft": "Borrador",
+        "sent": "Enviado",
+        "viewed": "Visto",
+        "signed": "Firmado",
+        "completed": "Completado",
+        "voided": "Anulado"
+      },
+      "signedPdf": "PDF firmado",
+      "voidBtn": "Anular",
+      "continueSend": "Continuar al envío →",
+      "saveFields": "Guardar campos",
+      "readonlyNotice": "Este sobre está {status}. Los campos son de solo lectura.",
+      "place": "Colocar:",
+      "dropHint": "Haz clic en una página para colocar un campo de {tool}",
+      "field": {
+        "signature": "Firma",
+        "date": "Fecha",
+        "company": "Empresa",
+        "text": "Texto",
+        "initial": "Inicial"
+      },
+      "fieldOf": "Campo de {type}",
+      "required": "Obligatorio",
+      "placeholder": "Marcador",
+      "autofillCompany": "Se rellena con la empresa del destinatario (de solo lectura para el firmante)",
+      "autofillDate": "Se rellena con la fecha de firma",
+      "remove": "Quitar",
+      "textPlaceholderDefault": "Cargo / capacidad",
+      "loadingDoc": "Cargando documento…",
+      "auditTrail": "Registro de auditoría",
+      "couldNotLoadDoc": "No se pudo cargar el documento",
+      "fieldsSaved": "Campos guardados",
+      "couldNotSave": "No se pudo guardar",
+      "voidConfirm": "¿Anular este sobre? El firmante ya no podrá firmarlo.",
+      "voidConfirmLabel": "Anular",
+      "envelopeVoided": "Sobre anulado",
+      "couldNotVoid": "No se pudo anular",
+      "previewUnavailable": "La vista previa del documento no está disponible.",
+      "couldNotRender": "No se pudo renderizar el PDF."
     }
   }
 }

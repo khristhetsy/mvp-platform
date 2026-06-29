@@ -952,6 +952,49 @@
       "couldNotSend": "Could not send",
       "couldNotLoad": "Could not load",
       "loading": "Loading…"
+    },
+    "prepare": {
+      "prepareDocument": "Prepare document",
+      "status": {
+        "draft": "Draft",
+        "sent": "Sent",
+        "viewed": "Viewed",
+        "signed": "Signed",
+        "completed": "Completed",
+        "voided": "Voided"
+      },
+      "signedPdf": "Signed PDF",
+      "voidBtn": "Void",
+      "continueSend": "Continue to send →",
+      "saveFields": "Save fields",
+      "readonlyNotice": "This envelope is {status}. Fields are read-only.",
+      "place": "Place:",
+      "dropHint": "Click a page to drop a {tool} field",
+      "field": {
+        "signature": "Signature",
+        "date": "Date",
+        "company": "Company",
+        "text": "Text",
+        "initial": "Initial"
+      },
+      "fieldOf": "{type} field",
+      "required": "Required",
+      "placeholder": "Placeholder",
+      "autofillCompany": "Auto-fills from the recipient's company (read-only to signer)",
+      "autofillDate": "Auto-fills with the signing date",
+      "remove": "Remove",
+      "textPlaceholderDefault": "Title / capacity",
+      "loadingDoc": "Loading document…",
+      "auditTrail": "Audit trail",
+      "couldNotLoadDoc": "Could not load document",
+      "fieldsSaved": "Fields saved",
+      "couldNotSave": "Could not save",
+      "voidConfirm": "Void this envelope? The signer will no longer be able to sign it.",
+      "voidConfirmLabel": "Void",
+      "envelopeVoided": "Envelope voided",
+      "couldNotVoid": "Could not void",
+      "previewUnavailable": "Document preview is unavailable.",
+      "couldNotRender": "Could not render the PDF."
     }
   }
 }

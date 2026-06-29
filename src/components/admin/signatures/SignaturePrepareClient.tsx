@@ -3,9 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pen, Calendar, Building2, Type, Trash2, Save, Loader2, Download, Ban } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ui/ToastProvider";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { FieldType } from "@/lib/esignature/types";
+
+type PrepT = (key: string, values?: Record<string, string | number>) => string;
 
 type PlacedField = {
   uid: string;
@@ -26,11 +29,11 @@ type Props = {
   pageCount: number;
 };
 
-const TOOLS: { type: FieldType; label: string; icon: typeof Pen }[] = [
-  { type: "signature", label: "Signature", icon: Pen },
-  { type: "date", label: "Date", icon: Calendar },
-  { type: "company", label: "Company", icon: Building2 },
-  { type: "text", label: "Text", icon: Type },
+const TOOLS: { type: FieldType; labelKey: string; icon: typeof Pen }[] = [
+  { type: "signature", labelKey: "field.signature", icon: Pen },
+  { type: "date", labelKey: "field.date", icon: Calendar },
+  { type: "company", labelKey: "field.company", icon: Building2 },
+  { type: "text", labelKey: "field.text", icon: Type },
 ];
 
 // Default field box size as a fraction of page dimensions.
@@ -47,11 +50,13 @@ const FIELD_COLORS: Record<FieldType, string> = {
 
 type AuditEvent = { id: string; event_type: string; actor: string | null; ip_address: string | null; created_at: string };
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Draft", sent: "Sent", viewed: "Viewed", signed: "Signed", completed: "Completed", voided: "Voided",
-};
+const STATUS_KEYS = ["draft", "sent", "viewed", "signed", "completed", "voided"];
+function statusLabel(t: PrepT, s: string) {
+  return STATUS_KEYS.includes(s) ? t(`status.${s}`) : s;
+}
 
 export function SignaturePrepareClient({ requestId, documentName, status, pageCount }: Props) {
+  const t = useTranslations("signaturesAdmin.prepare");
   const router = useRouter();
   const { toast } = useToast();
   const [tool, setTool] = useState<FieldType>("signature");
@@ -91,13 +96,13 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
         setAudit(data.audit ?? []);
         if (data.request?.status) setLiveStatus(data.request.status);
       } catch (err) {
-        if (active) toast({ title: "Could not load document", description: err instanceof Error ? err.message : "", variant: "error" });
+        if (active) toast({ title: t("couldNotLoadDoc"), description: err instanceof Error ? err.message : "", variant: "error" });
       } finally {
         if (active) setLoading(false);
       }
     })();
     return () => { active = false; };
-  }, [requestId, toast]);
+  }, [requestId, toast, t]);
 
   const addField = useCallback(
     (page: number, x: number, y: number) => {
@@ -114,12 +119,12 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
           width: DEFAULT_W,
           height: DEFAULT_H,
           required: true,
-          placeholder: tool === "text" ? "Title / capacity" : null,
+          placeholder: tool === "text" ? t("textPlaceholderDefault") : null,
         },
       ]);
       setSelected(uid);
     },
-    [tool, editable],
+    [tool, editable, t],
   );
 
   const updateField = useCallback((uid: string, patch: Partial<PlacedField>) => {
@@ -152,29 +157,29 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Save failed.");
-      toast({ title: "Fields saved", variant: "success" });
+      toast({ title: t("fieldsSaved"), variant: "success" });
     } catch (err) {
-      toast({ title: "Could not save", description: err instanceof Error ? err.message : "", variant: "error" });
+      toast({ title: t("couldNotSave"), description: err instanceof Error ? err.message : "", variant: "error" });
     } finally {
       setSaving(false);
     }
-  }, [fields, requestId, toast]);
+  }, [fields, requestId, toast, t]);
 
   const voidEnvelope = useCallback(async () => {
-    if (!(await confirmDialog({ message: "Void this envelope? The signer will no longer be able to sign it.", danger: true, confirmLabel: "Void" }))) return;
+    if (!(await confirmDialog({ message: t("voidConfirm"), danger: true, confirmLabel: t("voidConfirmLabel") }))) return;
     setVoiding(true);
     try {
       const res = await fetch(`/api/admin/signatures/${requestId}/void`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Void failed.");
       setLiveStatus("voided");
-      toast({ title: "Envelope voided", variant: "success" });
+      toast({ title: t("envelopeVoided"), variant: "success" });
     } catch (err) {
-      toast({ title: "Could not void", description: err instanceof Error ? err.message : "", variant: "error" });
+      toast({ title: t("couldNotVoid"), description: err instanceof Error ? err.message : "", variant: "error" });
     } finally {
       setVoiding(false);
     }
-  }, [requestId, toast]);
+  }, [requestId, toast, t]);
 
   const canVoid = ["draft", "sent", "viewed"].includes(liveStatus);
 
@@ -184,16 +189,16 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Prepare document</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">{t("prepareDocument")}</p>
           <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold text-slate-950">
             {documentName}
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{STATUS_LABELS[liveStatus] ?? liveStatus}</span>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{statusLabel(t, liveStatus)}</span>
           </h1>
         </div>
         <div className="flex items-center gap-2">
           {signedUrl ? (
             <a href={signedUrl} target="_blank" rel="noreferrer" className="cap-btn-secondary inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold">
-              <Download className="h-4 w-4" /> Signed PDF
+              <Download className="h-4 w-4" /> {t("signedPdf")}
             </a>
           ) : null}
           {canVoid ? (
@@ -203,7 +208,7 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
               disabled={voiding}
               className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
             >
-              <Ban className="h-4 w-4" /> Void
+              <Ban className="h-4 w-4" /> {t("voidBtn")}
             </button>
           ) : null}
           {editable ? (
@@ -214,7 +219,7 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
                 disabled={fields.length === 0}
                 className="cap-btn-secondary rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
               >
-                Continue to send →
+                {t("continueSend")}
               </button>
               <button
                 type="button"
@@ -222,7 +227,7 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
                 disabled={saving}
                 className="cap-btn-primary inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save fields
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {t("saveFields")}
               </button>
             </>
           ) : null}
@@ -231,12 +236,12 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
 
       {!editable ? (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          This envelope is {STATUS_LABELS[liveStatus]?.toLowerCase() ?? liveStatus}. Fields are read-only.
+          {t("readonlyNotice", { status: statusLabel(t, liveStatus).toLowerCase() })}
         </p>
       ) : (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/80 bg-white p-2 shadow-[var(--shadow-panel)]">
-          <span className="px-2 text-xs font-medium text-slate-500">Place:</span>
-          {TOOLS.map(({ type, label, icon: Icon }) => (
+          <span className="px-2 text-xs font-medium text-slate-500">{t("place")}</span>
+          {TOOLS.map(({ type, labelKey, icon: Icon }) => (
             <button
               key={type}
               type="button"
@@ -246,27 +251,27 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
               }`}
               style={tool === type ? { background: FIELD_COLORS[type] } : undefined}
             >
-              <Icon className="h-4 w-4" /> {label}
+              <Icon className="h-4 w-4" /> {t(labelKey)}
             </button>
           ))}
-          <span className="ml-auto px-2 text-xs text-slate-500">Click a page to drop a {tool} field</span>
+          <span className="ml-auto px-2 text-xs text-slate-500">{t("dropHint", { tool: t(`field.${tool}`) })}</span>
         </div>
       )}
 
       {selectedField && editable ? (
         <div className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200/80 bg-white p-3 text-sm shadow-[var(--shadow-panel)]">
-          <span className="font-medium capitalize text-slate-800">{selectedField.field_type} field</span>
+          <span className="font-medium text-slate-800">{t("fieldOf", { type: t(`field.${selectedField.field_type}`) })}</span>
           <label className="flex items-center gap-1.5 text-slate-600">
             <input
               type="checkbox"
               checked={selectedField.required}
               onChange={(e) => updateField(selectedField.uid, { required: e.target.checked })}
             />
-            Required
+            {t("required")}
           </label>
           {selectedField.field_type === "text" ? (
             <label className="flex items-center gap-1.5 text-slate-600">
-              Placeholder
+              {t("placeholder")}
               <input
                 type="text"
                 value={selectedField.placeholder ?? ""}
@@ -276,23 +281,23 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
             </label>
           ) : null}
           {selectedField.field_type === "company" ? (
-            <span className="text-xs text-slate-500">Auto-fills from the recipient&apos;s company (read-only to signer)</span>
+            <span className="text-xs text-slate-500">{t("autofillCompany")}</span>
           ) : null}
           {selectedField.field_type === "date" ? (
-            <span className="text-xs text-slate-500">Auto-fills with the signing date</span>
+            <span className="text-xs text-slate-500">{t("autofillDate")}</span>
           ) : null}
           <button
             type="button"
             onClick={() => removeField(selectedField.uid)}
             className="ml-auto inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-sm font-medium text-red-700 hover:bg-red-50"
           >
-            <Trash2 className="h-4 w-4" /> Remove
+            <Trash2 className="h-4 w-4" /> {t("remove")}
           </button>
         </div>
       ) : null}
 
       {loading ? (
-        <p className="text-sm text-slate-500">Loading document…</p>
+        <p className="text-sm text-slate-500">{t("loadingDoc")}</p>
       ) : (
         <PdfPlacementSurface
           requestId={requestId}
@@ -309,7 +314,7 @@ export function SignaturePrepareClient({ requestId, documentName, status, pageCo
 
       {audit.length > 0 ? (
         <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
-          <h2 className="mb-2 text-sm font-semibold text-slate-800">Audit trail</h2>
+          <h2 className="mb-2 text-sm font-semibold text-slate-800">{t("auditTrail")}</h2>
           <ol className="space-y-1.5">
             {audit.map((e) => (
               <li key={e.id} className="flex flex-wrap items-center gap-x-2 text-xs text-slate-600">
@@ -348,6 +353,7 @@ function PdfPlacementSurface({
   onSelect: (uid: string | null) => void;
   onUpdate: (uid: string, patch: Partial<PlacedField>) => void;
 }) {
+  const t = useTranslations("signaturesAdmin.prepare");
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -364,7 +370,7 @@ function PdfPlacementSurface({
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Failed to load document.");
         const url: string | null = data.previewUrl;
-        if (!url) throw new Error("Document preview is unavailable.");
+        if (!url) throw new Error(t("previewUnavailable"));
 
         const pdf = await pdfjs.getDocument({ url }).promise;
         if (cancelled) return;
@@ -381,11 +387,11 @@ function PdfPlacementSurface({
           await page.render({ canvasContext: ctx, viewport }).promise;
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Could not render the PDF.");
+        if (!cancelled) setError(err instanceof Error ? err.message : t("couldNotRender"));
       }
     })();
     return () => { cancelled = true; };
-  }, [requestId]);
+  }, [requestId, t]);
 
   if (error) {
     return <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>;
@@ -429,6 +435,7 @@ function PdfPage({
   onSelect: (uid: string | null) => void;
   onUpdate: (uid: string, patch: Partial<PlacedField>) => void;
 }) {
+  const t = useTranslations("signaturesAdmin.prepare");
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const handlePageClick = (e: React.MouseEvent) => {
@@ -501,8 +508,8 @@ function PdfPage({
               cursor: editable ? "move" : "default",
             }}
           >
-            <span className="pointer-events-none select-none capitalize">
-              {f.field_type}
+            <span className="pointer-events-none select-none">
+              {t(`field.${f.field_type}`)}
               {f.required ? " *" : ""}
             </span>
             {editable ? (
