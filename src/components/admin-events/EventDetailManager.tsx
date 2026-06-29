@@ -360,13 +360,21 @@ export function EventDetailManager({
             {headerSectors.join(", ") || "no sector tracks"}
           </p>
         </div>
-        <Link
-          href={`/events/${event.slug}`}
-          target="_blank"
-          className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
-        >
-          View public page
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/admin/events/${event.id}/control`}
+            className="rounded-md bg-[var(--navy)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+          >
+            Live control center
+          </Link>
+          <Link
+            href={`/events/${event.slug}`}
+            target="_blank"
+            className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
+          >
+            View public page
+          </Link>
+        </div>
       </div>
 
       {error && (

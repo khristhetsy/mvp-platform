@@ -1,56 +1,79 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import type { PresenceRoom } from "@/lib/icfo-events/venue";
 
 export type PresenceMember = { id: string; name: string; room: string };
 
+export type VenueAnnouncement = {
+  id: string;
+  title: string;
+  body: string;
+  /** Room being announced (e.g. "Main Stage") + a deep link to enter it. */
+  room?: string;
+  href?: string;
+  ts: number;
+};
+
+export type ModerationSignal = {
+  targetId: string;
+  action: "move" | "remove";
+  room?: string;
+  href?: string;
+};
+
 type PresenceValue = {
   members: PresenceMember[];
-  /** Total distinct attendees in the venue right now. */
   total: number;
-  /** Count per room name. */
   byRoom: Record<string, number>;
-  /** This session's identity. */
   me: { id: string; name: string };
+  announcement: VenueAnnouncement | null;
+  dismissAnnouncement: () => void;
+  /** Broadcast a live announcement to everyone in the venue (admin use). */
+  sendAnnounce: (a: Omit<VenueAnnouncement, "id" | "ts">) => void;
+  /** Signal a specific attendee to move rooms or be removed (admin use). */
+  sendModeration: (s: ModerationSignal) => void;
 };
 
 const Ctx = createContext<PresenceValue | null>(null);
 
-/** Stable per-session identity for anonymous attendees (public events allow
- *  signed-out visitors). Signed-in users pass their real profile id. */
 function anonId(): string {
   return "guest-" + Math.random().toString(36).slice(2, 10);
 }
 
 export function EventPresenceProvider({
   eventId,
+  slug,
   room,
   me: meProp,
   children,
 }: {
   eventId: string;
-  /** The room this page represents — tracked as the attendee's location. */
+  slug?: string;
   room: PresenceRoom;
   me?: { id: string; name: string } | null;
   children: React.ReactNode;
 }) {
-  const [me] = useState<{ id: string; name: string }>(
-    () => meProp ?? { id: anonId(), name: "Guest" },
-  );
+  const router = useRouter();
+  const [me] = useState<{ id: string; name: string }>(() => meProp ?? { id: anonId(), name: "Guest" });
   const [members, setMembers] = useState<PresenceMember[]>([]);
+  const [announcement, setAnnouncement] = useState<VenueAnnouncement | null>(null);
   const chRef = useRef<RealtimeChannel | null>(null);
   const subscribedRef = useRef(false);
   const roomRef = useRef(room);
+  const meRef = useRef(me);
+  const slugRef = useRef(slug);
 
-  // Keep the latest room available to the subscribe callback without re-joining.
   useEffect(() => {
     roomRef.current = room;
   }, [room]);
+  useEffect(() => {
+    slugRef.current = slug;
+  }, [slug]);
 
-  // Join the venue-wide presence channel once per event/identity.
   useEffect(() => {
     const supabase = createClient();
     const ch = supabase.channel(`event_presence:${eventId}`, {
@@ -66,7 +89,20 @@ export function EventPresenceProvider({
       const map = new Map<string, PresenceMember>();
       flat.forEach((p) => map.set(p.id, p));
       setMembers([...map.values()]);
-    }).subscribe(async (status) => {
+    });
+
+    ch.on("broadcast", { event: "announce" }, ({ payload }) => {
+      setAnnouncement(payload as VenueAnnouncement);
+    });
+
+    ch.on("broadcast", { event: "moderation" }, ({ payload }) => {
+      const sig = payload as ModerationSignal;
+      if (sig.targetId !== meRef.current.id) return;
+      if (sig.action === "move" && sig.href) router.push(sig.href);
+      else if (sig.action === "remove") router.replace(slugRef.current ? `/events/${slugRef.current}` : "/events");
+    });
+
+    ch.subscribe(async (status) => {
       if (status === "SUBSCRIBED") {
         subscribedRef.current = true;
         await ch.track({ id: me.id, name: me.name, room: roomRef.current });
@@ -78,26 +114,47 @@ export function EventPresenceProvider({
       subscribedRef.current = false;
       void supabase.removeChannel(ch as Parameters<typeof supabase.removeChannel>[0]);
     };
-  }, [eventId, me.id, me.name]);
+  }, [eventId, me.id, me.name, router]);
 
-  // Re-broadcast location when the page's room changes (no rejoin).
   useEffect(() => {
     const ch = chRef.current;
     if (ch && subscribedRef.current) void ch.track({ id: me.id, name: me.name, room });
   }, [room, me.id, me.name]);
 
+  const sendAnnounce = useCallback((a: Omit<VenueAnnouncement, "id" | "ts">) => {
+    void chRef.current?.send({
+      type: "broadcast",
+      event: "announce",
+      payload: { ...a, id: Math.random().toString(36).slice(2), ts: Date.now() } satisfies VenueAnnouncement,
+    });
+  }, []);
+
+  const sendModeration = useCallback((s: ModerationSignal) => {
+    void chRef.current?.send({ type: "broadcast", event: "moderation", payload: s });
+  }, []);
+
+  const dismissAnnouncement = useCallback(() => setAnnouncement(null), []);
+
   const value = useMemo<PresenceValue>(() => {
     const byRoom: Record<string, number> = {};
     for (const m of members) byRoom[m.room] = (byRoom[m.room] ?? 0) + 1;
-    return { members, total: members.length, byRoom, me };
-  }, [members, me]);
+    return { members, total: members.length, byRoom, me, announcement, dismissAnnouncement, sendAnnounce, sendModeration };
+  }, [members, me, announcement, dismissAnnouncement, sendAnnounce, sendModeration]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
-/** Read live presence. Safe to call outside a provider (returns zeros). */
 export function useEventPresence(): PresenceValue {
   return (
-    useContext(Ctx) ?? { members: [], total: 0, byRoom: {}, me: { id: "", name: "" } }
+    useContext(Ctx) ?? {
+      members: [],
+      total: 0,
+      byRoom: {},
+      me: { id: "", name: "" },
+      announcement: null,
+      dismissAnnouncement: () => {},
+      sendAnnounce: () => {},
+      sendModeration: () => {},
+    }
   );
 }
