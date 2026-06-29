@@ -21,7 +21,38 @@ export function EventInfoDesk({ slug }: { slug: string }) {
   ]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [notified, setNotified] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+
+  async function notifyDesk() {
+    if (notified) return;
+    const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content;
+    const message = lastUser ?? "An attendee asked for help at the info desk.";
+    setNotified(true);
+    try {
+      const res = await fetch(`/api/events/${slug}/help`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+      const json = await res.json().catch(() => ({}));
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: res.ok
+            ? "I've notified the event team — someone will reach out shortly. Anything else in the meantime?"
+            : typeof json.error === "string" && res.status === 401
+              ? "Please sign in first so the team can reach you."
+              : "I couldn't reach the team just now — please try again.",
+        },
+      ]);
+      if (!res.ok) setNotified(false);
+    } catch {
+      setNotified(false);
+      setMessages((prev) => [...prev, { role: "assistant", content: "I couldn't reach the team just now — please try again." }]);
+    }
+  }
 
   async function send(text: string) {
     const message = text.trim();
@@ -107,6 +138,16 @@ export function EventInfoDesk({ slug }: { slug: string }) {
           ))}
         </div>
       )}
+
+      <div className="border-t border-[var(--border-subtle)] px-2.5 pt-2">
+        <button
+          onClick={notifyDesk}
+          disabled={notified}
+          className="text-xs font-medium text-[var(--blue)] hover:underline disabled:text-[var(--text-muted)] disabled:no-underline"
+        >
+          {notified ? "Team notified ✓" : "Need a human? Notify the info desk"}
+        </button>
+      </div>
 
       <div className="flex gap-2 border-t border-[var(--border-subtle)] p-2.5">
         <input

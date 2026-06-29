@@ -5,6 +5,7 @@ import { useEventPresence } from "@/components/events/EventPresenceProvider";
 import { venueZones, PRESENCE_ROOMS } from "@/lib/icfo-events/venue";
 import type { EventSession } from "@/lib/icfo-events/types";
 import type { ControlSummary, ControlAuditEntry } from "@/lib/icfo-events/control-center";
+import type { HelpRequest } from "@/lib/icfo-events/help-desk";
 
 function Stat({ label, value, accent }: { label: string; value: number | string; accent?: string }) {
   return (
@@ -20,23 +21,38 @@ export function EventControlCenter({
   slug,
   initialSessions,
   summary,
+  allowedRooms,
+  initialHelp,
 }: {
   eventId: string;
   slug: string;
   initialSessions: EventSession[];
   summary: ControlSummary;
+  /** null = all rooms (super-admin); array = scoped room moderator. */
+  allowedRooms?: string[] | null;
+  initialHelp: HelpRequest[];
 }) {
   const { total, byRoom, members, me, sendAnnounce, sendModeration } = useEventPresence();
   const [sessions, setSessions] = useState<EventSession[]>(initialSessions);
   const [audit, setAudit] = useState<ControlAuditEntry[]>(summary.audit);
+  const [help, setHelp] = useState<HelpRequest[]>(initialHelp);
   const [bTitle, setBTitle] = useState("");
   const [bBody, setBBody] = useState("");
   const [bRoom, setBRoom] = useState<string>("");
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const scoped = Array.isArray(allowedRooms);
+  const rooms: string[] = scoped ? (allowedRooms as string[]) : [...PRESENCE_ROOMS];
+
   const zones = useMemo(() => venueZones(slug), [slug]);
   const hrefForRoom = (room: string) => zones.find((z) => z.room === room)?.href ?? `/events/${slug}/lobby`;
+
+  async function resolveHelp(id: string) {
+    setHelp((prev) => prev.filter((h) => h.id !== id));
+    void fetch(`/api/admin/events/${eventId}/help/${id}`, { method: "POST" }).catch(() => {});
+    flash("Marked resolved");
+  }
 
   function flash(msg: string) {
     setToast(msg);
@@ -67,7 +83,7 @@ export function EventControlCenter({
 
   async function broadcast() {
     if (!bTitle.trim() || !bBody.trim()) return;
-    const room = bRoom || undefined;
+    const room = bRoom || (scoped ? rooms[0] : undefined);
     sendAnnounce({ title: bTitle.trim(), body: bBody.trim(), room, href: room ? hrefForRoom(room) : undefined });
     void fetch(`/api/admin/events/${eventId}/broadcast`, {
       method: "POST",
@@ -148,14 +164,33 @@ export function EventControlCenter({
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <input value={bTitle} onChange={(e) => setBTitle(e.target.value)} placeholder="Title" maxLength={160} className="flex-1 rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
           <select value={bRoom} onChange={(e) => setBRoom(e.target.value)} className="rounded-md border border-[var(--border-subtle)] px-2 py-2 text-sm">
-            <option value="">Everyone</option>
-            {PRESENCE_ROOMS.map((r) => <option key={r} value={r}>{r}</option>)}
+            {!scoped && <option value="">Everyone</option>}
+            {rooms.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
         </div>
         <textarea value={bBody} onChange={(e) => setBBody(e.target.value)} rows={2} maxLength={400} placeholder="Message…" className="mt-2 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
         <div className="mt-2 flex items-center justify-between">
           <span className="text-[11px] text-[var(--text-muted)]">Educational only — no solicitation.</span>
           <button onClick={broadcast} disabled={!bTitle.trim() || !bBody.trim()} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50">Send</button>
+        </div>
+      </section>
+
+      <section className="mt-4 rounded-xl border border-[var(--border-subtle)] bg-white p-4">
+        <h2 className="text-sm font-semibold text-[var(--navy)]">Help desk · {help.length} open</h2>
+        <div className="mt-3 space-y-2">
+          {help.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)]">No open help requests.</p>
+          ) : (
+            help.map((h) => (
+              <div key={h.id} className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] px-3 py-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm text-[var(--navy)]">“{h.message}”</p>
+                  <p className="text-xs text-[var(--text-muted)]">{h.requesterName} · {new Date(h.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
+                </div>
+                <button onClick={() => resolveHelp(h.id)} className="shrink-0 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100">Resolve</button>
+              </div>
+            ))
+          )}
         </div>
       </section>
 
@@ -173,8 +208,8 @@ export function EventControlCenter({
                     <p className="text-xs text-[var(--text-muted)]">{m.room}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <select defaultValue={m.room} onChange={(e) => moveAttendee(m, e.target.value)} aria-label="Move attendee" className="rounded-md border border-[var(--border-subtle)] px-1.5 py-1 text-xs">
-                      {PRESENCE_ROOMS.map((r) => <option key={r} value={r}>{r}</option>)}
+                    <select defaultValue={rooms.includes(m.room) ? m.room : rooms[0]} onChange={(e) => moveAttendee(m, e.target.value)} aria-label="Move attendee" className="rounded-md border border-[var(--border-subtle)] px-1.5 py-1 text-xs">
+                      {rooms.map((r) => <option key={r} value={r}>{r}</option>)}
                     </select>
                     <button onClick={() => removeAttendee(m)} aria-label={`Remove ${m.name}`} className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-rose-600 hover:bg-rose-50">Remove</button>
                   </div>

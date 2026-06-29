@@ -6,6 +6,8 @@ import { requirePermissionPage } from "@/lib/api/permissions";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getEventById } from "@/lib/icfo-events/queries";
 import { loadControlSummary } from "@/lib/icfo-events/control-center";
+import { listEventModerators } from "@/lib/icfo-events/moderators";
+import { listOpenHelpRequests } from "@/lib/icfo-events/help-desk";
 import { EventPresenceProvider } from "@/components/events/EventPresenceProvider";
 import { EventControlCenter } from "@/components/admin-events/EventControlCenter";
 
@@ -13,15 +15,26 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Live control center" };
 
 export default async function EventControlPage({ params }: { params: Promise<{ id: string }> }) {
-  const { profile } = await requirePermissionPage("manage_events");
+  const { profile, effective } = await requirePermissionPage("manage_events");
   const { id } = await params;
   const admin = createServiceRoleClient();
 
   const event = await getEventById(admin, id).catch(() => null);
   if (!event) notFound();
 
-  const summary = await loadControlSummary(admin, id);
+  const [summary, helpRequests, moderators] = await Promise.all([
+    loadControlSummary(admin, id),
+    listOpenHelpRequests(admin, id),
+    listEventModerators(admin, id).catch(() => []),
+  ]);
   const me = { id: profile.id, name: profile.full_name ?? profile.email ?? "Staff" };
+
+  // Super admins (and unscoped staff) control all rooms; an assigned room
+  // moderator is limited to their rooms.
+  const isSuperAdmin = effective.permissions.includes("assign_roles");
+  const myMod = moderators.find((m) => m.userId === profile.id);
+  const allowedRooms =
+    isSuperAdmin || !myMod || myMod.rooms.includes("*") ? null : myMod.rooms;
 
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={me.name} profileSubtitle="Live control center">
@@ -36,7 +49,14 @@ export default async function EventControlPage({ params }: { params: Promise<{ i
       </div>
 
       <EventPresenceProvider eventId={event.id} slug={event.slug} room="Lobby" me={me}>
-        <EventControlCenter eventId={event.id} slug={event.slug} initialSessions={event.sessions} summary={summary} />
+        <EventControlCenter
+          eventId={event.id}
+          slug={event.slug}
+          initialSessions={event.sessions}
+          summary={summary}
+          allowedRooms={allowedRooms}
+          initialHelp={helpRequests}
+        />
       </EventPresenceProvider>
     </AppShell>
   );
