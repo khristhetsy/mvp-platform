@@ -260,73 +260,81 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
       <JsonLd data={jsonLd} />
 
       <section className="mx-auto max-w-4xl px-4 py-14">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-[var(--indigo-soft)] px-2.5 py-0.5 text-xs font-medium capitalize text-[var(--indigo)]">
-            {event.format.replace("_", " ")}
-          </span>
-          {event.status === "live" && (
-            <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">Live now</span>
-          )}
-          {event.status === "ended" && (
-            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">Concluded</span>
-          )}
-        </div>
-
-        <h1 className="mt-4 text-3xl font-bold tracking-tight text-[var(--navy)] sm:text-4xl">{event.title}</h1>
-
-        <div className="mt-3 flex items-center gap-2 text-sm text-[var(--text-muted)]">
-          <CalendarDays className="h-4 w-4" />
-          {fmtRange(event.startsAt, event.endsAt)}
-        </div>
-
-        {event.summary && <p className="mt-5 max-w-2xl text-[var(--text-secondary)]">{event.summary}</p>}
-
-        <div className="mt-6 flex flex-wrap items-center gap-3">
-          {event.status !== "ended" && (
-            <RegisterButton
-              eventId={event.id}
-              slug={event.slug}
-              isAuthenticated={Boolean(profile)}
-              alreadyRegistered={Boolean(registration)}
-            />
-          )}
-          {canApply && (
-            <Link
-              href={`/events/${event.slug}/apply`}
-              className="inline-flex items-center rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
-            >
-              Apply to present
-            </Link>
-          )}
-          <Link
-            href={`/events/${event.slug}/lobby`}
-            className="inline-flex items-center rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
-          >
-            Enter lobby
-          </Link>
-          {profile && (event.status === "published" || event.status === "live") && (
-            <Link
-              href={`/events/${event.slug}/lounge`}
-              className="inline-flex items-center rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
-            >
-              Networking lounge
-            </Link>
-          )}
+        <div className="overflow-hidden rounded-2xl" style={{ background: "#0c2340" }}>
+          <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-end sm:justify-between sm:p-8">
+            <div className="min-w-0">
+              <p className="text-xs font-medium tracking-wide" style={{ color: "#5DCAA5" }}>
+                iCFO CAPITAL · ECOSYSTEM SHOWCASE
+              </p>
+              <h1 className="mt-1.5 text-3xl font-bold tracking-tight text-white sm:text-4xl">{event.title}</h1>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm" style={{ color: "#aeb8c7" }}>
+                <span className="inline-flex items-center gap-1.5">
+                  <CalendarDays className="h-4 w-4" />
+                  {fmtRange(event.startsAt, event.endsAt)}
+                </span>
+                <span className="capitalize">· {event.format.replace("_", " ")}</span>
+                {event.status === "live" && (
+                  <span className="rounded-full px-2 py-0.5 text-xs font-medium text-white" style={{ background: "#3a1d1d" }}>Live now</span>
+                )}
+                {event.status === "ended" && (
+                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs">Concluded</span>
+                )}
+              </div>
+              {event.summary && <p className="mt-4 max-w-2xl text-sm" style={{ color: "#cdd6e4" }}>{event.summary}</p>}
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                {event.status !== "ended" && (
+                  <RegisterButton
+                    eventId={event.id}
+                    slug={event.slug}
+                    isAuthenticated={Boolean(profile)}
+                    alreadyRegistered={Boolean(registration)}
+                  />
+                )}
+                {canApply && (
+                  <Link
+                    href={`/events/${event.slug}/apply`}
+                    className="inline-flex items-center rounded-md border border-white/25 px-4 py-2 text-sm font-medium text-white hover:bg-white/10"
+                  >
+                    Apply to present
+                  </Link>
+                )}
+                <Link
+                  href={`/events/${event.slug}/lobby`}
+                  className="inline-flex items-center rounded-md px-4 py-2 text-sm font-medium text-white"
+                  style={{ background: "#1D9E75" }}
+                >
+                  Enter lobby ↗
+                </Link>
+              </div>
+            </div>
+            {sponsors.some((s) => s.placement === "presenting") && (
+              <p className="shrink-0 text-xs sm:text-right" style={{ color: "#8e9bb0" }}>
+                Presented with{" "}
+                <span className="text-white">{sponsors.find((s) => s.placement === "presenting")?.name}</span>
+              </p>
+            )}
+          </div>
         </div>
 
         {event.sectors.length > 0 && (
           <div className="mt-8">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Sector tracks</h2>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {event.sectors.map((s) => (
-                <Link
-                  key={s.id}
-                  href={`/events/sectors/${s.sectorSlug}`}
-                  className="rounded-full border border-[var(--border-subtle)] bg-white px-3 py-1 text-sm font-medium text-[var(--text-secondary)] transition hover:border-[var(--indigo)] hover:text-[var(--indigo)]"
-                >
-                  {s.label || sectorLabel(s.sectorSlug)}
-                </Link>
-              ))}
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {event.sectors.map((s) => {
+                const count = event.sessions.filter((x) => x.sectorSlug === s.sectorSlug).length;
+                return (
+                  <Link
+                    key={s.id}
+                    href={`/events/sectors/${s.sectorSlug}`}
+                    className="rounded-xl border border-[var(--border-subtle)] bg-white p-4 transition hover:border-[var(--indigo)]"
+                  >
+                    <p className="font-medium text-[var(--navy)]">{s.label || sectorLabel(s.sectorSlug)}</p>
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      {count > 0 ? `${count} session${count === 1 ? "" : "s"}` : "Sector track"}
+                    </p>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         )}
