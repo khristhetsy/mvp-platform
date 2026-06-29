@@ -30,6 +30,7 @@ import { getOptin, listSuggestions, listConnections } from "@/lib/icfo-events/ne
 import type { NetworkingSuggestion, NetworkingConnection } from "@/lib/icfo-events/networking";
 import { sessionVideoSignedUrl } from "@/lib/icfo-events/video/storage";
 import { getVideoProvider } from "@/lib/icfo-events/video/provider";
+import { embeddableLiveUrl } from "@/lib/icfo-events/video/external";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import type { EventWithDetail, EventSession, EventPresenter, EventSponsor } from "@/lib/icfo-events/types";
 
@@ -374,6 +375,24 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                       allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
                       className="mt-3 aspect-video w-full rounded-lg border border-[var(--border-subtle)]"
                     />
+                  ) : s.status === "live" && s.videoProvider === "external" && s.videoRef ? (
+                    embeddableLiveUrl(s.videoRef) ? (
+                      <iframe
+                        title={s.title}
+                        src={embeddableLiveUrl(s.videoRef) ?? s.videoRef}
+                        allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+                        className="mt-3 aspect-video w-full rounded-lg border border-[var(--border-subtle)]"
+                      />
+                    ) : (
+                      <a
+                        href={s.videoRef}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex items-center rounded-lg bg-[var(--blue)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--blue-hover)]"
+                      >
+                        Join the live session ↗
+                      </a>
+                    )
                   ) : playback.get(s.id) ? (
                     s.startsAt && new Date(s.startsAt).getTime() > nowMs ? (
                       <div className="mt-3 rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--surface-sunken)] px-4 py-6 text-center">

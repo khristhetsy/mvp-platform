@@ -145,9 +145,18 @@ export function EventControlCenter({
   }
 
   async function sessionLifecycle(s: EventSession, go: boolean) {
+    let liveUrl: string | null = null;
+    if (go) {
+      liveUrl = window.prompt("Paste a live link (YouTube, Zoom, Meet, Whereby…), or leave blank if Whereby is set up:", "");
+      if (liveUrl === null) return; // cancelled
+    }
     setBusy(true);
     try {
-      const res = await fetch(`/api/admin/events/sessions/${s.id}/go-live`, { method: go ? "POST" : "DELETE" });
+      const res = await fetch(`/api/admin/events/sessions/${s.id}/go-live`, {
+        method: go ? "POST" : "DELETE",
+        headers: go ? { "Content-Type": "application/json" } : undefined,
+        body: go ? JSON.stringify(liveUrl && liveUrl.trim() ? { liveUrl: liveUrl.trim() } : {}) : undefined,
+      });
       if (res.ok) {
         setSessions((prev) => prev.map((x) => (x.id === s.id ? { ...x, status: go ? "live" : "ended" } : x)));
         flash(go ? `Started “${s.title}”` : `Ended “${s.title}”`);

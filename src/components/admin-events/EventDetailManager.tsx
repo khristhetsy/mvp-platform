@@ -68,15 +68,23 @@ function SessionLiveControls({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showLink, setShowLink] = useState(false);
+  const [liveUrl, setLiveUrl] = useState("");
 
-  async function goLive() {
+  async function goLive(url?: string) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/events/sessions/${session.id}/go-live`, { method: "POST" });
+      const res = await fetch(`/api/admin/events/sessions/${session.id}/go-live`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(url ? { liveUrl: url } : {}),
+      });
       const json = await res.json();
       if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Couldn't go live.");
       onUpdated(json.session as EventSession);
+      setShowLink(false);
+      setLiveUrl("");
       if (json.hostUrl) window.open(json.hostUrl as string, "_blank", "noopener");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't go live.");
@@ -101,33 +109,54 @@ function SessionLiveControls({
   }
 
   return (
-    <div className="mt-2 flex items-center gap-2">
-      {session.status === "live" ? (
-        <>
-          <span className="rounded bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">● Live</span>
-          {session.videoRef && (
-            <a href={session.videoRef} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[var(--blue)] hover:underline">
-              Open host room
-            </a>
-          )}
-          <button onClick={endLive} disabled={busy} className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-50">
-            {busy ? "…" : "End session"}
-          </button>
-        </>
-      ) : session.status !== "ended" ? (
-        liveConfigured ? (
-          <button onClick={goLive} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
-            {busy ? "Starting…" : "Go live"}
-          </button>
+    <div className="mt-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {session.status === "live" ? (
+          <>
+            <span className="rounded bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">● Live</span>
+            {session.videoRef && (
+              <a href={session.videoRef} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[var(--blue)] hover:underline">
+                Open live link
+              </a>
+            )}
+            <button onClick={endLive} disabled={busy} className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-50">
+              {busy ? "…" : "End session"}
+            </button>
+          </>
+        ) : session.status !== "ended" ? (
+          <>
+            {liveConfigured && (
+              <button onClick={() => goLive()} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
+                {busy ? "Starting…" : "Go live (Whereby)"}
+              </button>
+            )}
+            <button onClick={() => setShowLink((v) => !v)} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
+              {liveConfigured ? "Go live with a link" : "Go live"}
+            </button>
+          </>
         ) : (
-          <span className="text-xs text-[var(--text-muted)]">
-            Live video isn’t set up — upload a recording below, or add a Whereby key to enable “Go live.”
-          </span>
-        )
-      ) : (
-        <span className="text-xs text-[var(--text-muted)]">Ended</span>
+          <span className="text-xs text-[var(--text-muted)]">Ended</span>
+        )}
+        {error && <span className="text-xs text-rose-600">{error}</span>}
+      </div>
+
+      {showLink && session.status !== "live" && session.status !== "ended" && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <input
+            value={liveUrl}
+            onChange={(e) => setLiveUrl(e.target.value)}
+            placeholder="Paste a live link — YouTube, Zoom, Meet, Whereby…"
+            className="min-w-[240px] flex-1 rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs"
+          />
+          <button
+            onClick={() => goLive(liveUrl.trim())}
+            disabled={busy || !liveUrl.trim()}
+            className="rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+          >
+            {busy ? "Starting…" : "Start"}
+          </button>
+        </div>
       )}
-      {error && <span className="text-xs text-rose-600">{error}</span>}
     </div>
   );
 }
