@@ -623,6 +623,18 @@
       "deactivateAccess": "Desactivar acceso interno",
       "cannotEdit": "No puedes editar los permisos de este usuario: está en tu nivel interno o por encima.",
       "selectUser": "Selecciona un usuario interno para gestionar sus permisos."
+    },
+    "pages": {
+      "userManagement": "Gestión de usuarios",
+      "userPermissions": "Permisos de usuario"
+    },
+    "partnerScores": {
+      "eyebrow": "Inversores · validación",
+      "title": "Puntuaciones de socio",
+      "desc": "Vista de fase 1 solo para administradores para validar la Puntuación de socio con datos reales antes de cualquier superficie visible para inversores o fundadores. Las puntuaciones se calculan en vivo a partir de la actividad en la plataforma.",
+      "empty": "No se encontraron perfiles de inversor.",
+      "engaged": "{n} con interacción",
+      "investorFallback": "inversor"
     }
   }
 }

@@ -6,6 +6,7 @@ import { loadPartnerScore } from "@/lib/investor-rating/load";
 import type { PartnerScore } from "@/lib/investor-rating/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ const MAX_INVESTORS = 12;
 
 export default async function AdminPartnerScoresPage() {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("usersAdmin.partnerScores");
   const supabase = createServiceRoleClient();
 
   type InvestorRow = { profile_id: string; firm_name: string | null; investor_type: string | null };
@@ -43,7 +45,7 @@ export default async function AdminPartnerScoresPage() {
       const rating = await loadPartnerScore(supabase, inv.profile_id);
       return {
         name: inv.firm_name ?? p?.full_name ?? p?.email ?? "Investor",
-        subtitle: [inv.investor_type ?? "investor", `${rating.sampleSize} engaged`].join(" · "),
+        subtitle: [inv.investor_type ?? t("investorFallback"), t("engaged", { n: rating.sampleSize })].join(" · "),
         rating,
       };
     }),
@@ -59,14 +61,14 @@ export default async function AdminPartnerScoresPage() {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Investors · validation"
-          title="Partner Scores"
-          description="Admin-only Phase 1 view to validate the Partner Score against real data before any investor- or founder-facing surface. Scores are computed live from on-platform activity."
+          eyebrow={t("eyebrow")}
+          title={t("title")}
+          description={t("desc")}
         />
 
         {rated.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-8 text-center text-sm text-slate-500">
-            No investor profiles found.
+            {t("empty")}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">

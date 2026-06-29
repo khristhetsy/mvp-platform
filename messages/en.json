@@ -623,6 +623,18 @@
       "deactivateAccess": "Deactivate internal access",
       "cannotEdit": "You cannot edit this user's permissions — they are at or above your internal level.",
       "selectUser": "Select an internal user to manage permissions."
+    },
+    "pages": {
+      "userManagement": "User Management",
+      "userPermissions": "User Permissions"
+    },
+    "partnerScores": {
+      "eyebrow": "Investors · validation",
+      "title": "Partner Scores",
+      "desc": "Admin-only Phase 1 view to validate the Partner Score against real data before any investor- or founder-facing surface. Scores are computed live from on-platform activity.",
+      "empty": "No investor profiles found.",
+      "engaged": "{n} engaged",
+      "investorFallback": "investor"
     }
   }
 }
