@@ -509,5 +509,18 @@
       "focal": "Punto focal",
       "removeBanner": "Quitar banner"
     }
+  },
+  "usersAdmin": {
+    "danger": {
+      "title": "Zona de peligro",
+      "descPre": "Elimina permanentemente la cuenta de ",
+      "descPost": " y todos los datos asociados. Esta acción no se puede deshacer.",
+      "deleteAccount": "Eliminar cuenta",
+      "typePre": "Escribe ",
+      "typePost": " para confirmar:",
+      "deleting": "Eliminando…",
+      "confirmDelete": "Confirmar eliminación",
+      "cancel": "Cancelar"
+    }
   }
 }

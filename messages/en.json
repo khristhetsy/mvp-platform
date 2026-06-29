@@ -509,5 +509,18 @@
       "focal": "Focal point",
       "removeBanner": "Remove banner"
     }
+  },
+  "usersAdmin": {
+    "danger": {
+      "title": "Danger zone",
+      "descPre": "Permanently delete the account for ",
+      "descPost": " and all associated data. This action cannot be undone.",
+      "deleteAccount": "Delete account",
+      "typePre": "Type ",
+      "typePost": " to confirm:",
+      "deleting": "Deleting…",
+      "confirmDelete": "Confirm delete",
+      "cancel": "Cancel"
+    }
   }
 }

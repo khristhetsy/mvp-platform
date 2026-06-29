@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 type Props = {
   userId: string;
@@ -11,6 +12,7 @@ type Props = {
 };
 
 export function DeleteUserDangerZone({ userId, userName, userEmail }: Readonly<Props>) {
+  const t = useTranslations("usersAdmin.danger");
   const router = useRouter();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -53,10 +55,9 @@ export function DeleteUserDangerZone({ userId, userName, userEmail }: Readonly<P
       <div className="flex items-start gap-2">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" aria-hidden />
         <div className="flex-1">
-          <h3 className="text-sm font-semibold text-red-900">Danger zone</h3>
+          <h3 className="text-sm font-semibold text-red-900">{t("title")}</h3>
           <p className="mt-1 text-xs text-red-700">
-            Permanently delete <span className="font-semibold">{displayName}</span>&apos;s account and all
-            associated data. This action cannot be undone.
+            {t("descPre")}<span className="font-semibold">{displayName}</span>{t("descPost")}
           </p>
 
           {!showConfirm ? (
@@ -65,12 +66,12 @@ export function DeleteUserDangerZone({ userId, userName, userEmail }: Readonly<P
               className="mt-3 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
               onClick={() => setShowConfirm(true)}
             >
-              Delete account
+              {t("deleteAccount")}
             </button>
           ) : (
             <div className="mt-3 space-y-2">
               <p className="text-xs text-red-700">
-                Type <span className="font-mono font-bold">DELETE</span> to confirm:
+                {t("typePre")}<span className="font-mono font-bold">DELETE</span>{t("typePost")}
               </p>
               <input
                 type="text"
@@ -86,14 +87,14 @@ export function DeleteUserDangerZone({ userId, userName, userEmail }: Readonly<P
                   onClick={() => void handleDelete()}
                   className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
                 >
-                  {deleting ? "Deleting…" : "Confirm delete"}
+                  {deleting ? t("deleting") : t("confirmDelete")}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setShowConfirm(false); setConfirmText(""); }}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
                 >
-                  Cancel
+                  {t("cancel")}
                 </button>
               </div>
               {error ? <p className="text-xs text-red-700">{error}</p> : null}
