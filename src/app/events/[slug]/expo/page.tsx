@@ -11,6 +11,7 @@ import { listEventSponsors } from "@/lib/icfo-events/sponsors";
 import { EventPresenceProvider } from "@/components/events/EventPresenceProvider";
 import { EventVenueHeader } from "@/components/events/EventVenueHeader";
 import { LiveAnnouncementPopup } from "@/components/events/LiveAnnouncementPopup";
+import { EventInfoDesk } from "@/components/events/EventInfoDesk";
 import { SponsorHall } from "@/components/events/SponsorHall";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +47,8 @@ export default async function ExpoPage({ params }: { params: Promise<{ slug: str
             <SponsorHall sponsors={sponsors} />
           </div>
           <LiveAnnouncementPopup />
+          <EventInfoDesk slug={slug} />
+
         </EventPresenceProvider>
       </section>
       <MarketingFooter />

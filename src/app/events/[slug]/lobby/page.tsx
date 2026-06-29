@@ -11,6 +11,7 @@ import { EventPresenceProvider } from "@/components/events/EventPresenceProvider
 import { EventVenueHeader } from "@/components/events/EventVenueHeader";
 import { LobbyHall } from "@/components/events/LobbyHall";
 import { LiveAnnouncementPopup } from "@/components/events/LiveAnnouncementPopup";
+import { EventInfoDesk } from "@/components/events/EventInfoDesk";
 import type { EventWithDetail } from "@/lib/icfo-events/types";
 
 export const dynamic = "force-dynamic";
@@ -62,6 +63,8 @@ export default async function EventLobbyPage({ params }: { params: Promise<{ slu
             <LobbyHall slug={slug} eventTitle={event.title} tracksHref={tracksHref} />
           </div>
           <LiveAnnouncementPopup />
+          <EventInfoDesk slug={slug} />
+
         </EventPresenceProvider>
 
         <p className="mt-4 text-center text-xs text-[var(--text-muted)]">

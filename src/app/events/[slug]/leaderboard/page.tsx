@@ -11,6 +11,7 @@ import { getMissionProgress } from "@/lib/icfo-events/missions";
 import { EventPresenceProvider } from "@/components/events/EventPresenceProvider";
 import { EventVenueHeader } from "@/components/events/EventVenueHeader";
 import { LiveAnnouncementPopup } from "@/components/events/LiveAnnouncementPopup";
+import { EventInfoDesk } from "@/components/events/EventInfoDesk";
 import { GamificationDashboard } from "@/components/events/GamificationDashboard";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +50,8 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ sl
             <GamificationDashboard stats={stats} rank={rank} missions={missions} leaderboard={leaderboard.slice(0, 10)} meId={profile.id} />
           </div>
           <LiveAnnouncementPopup />
+          <EventInfoDesk slug={slug} />
+
         </EventPresenceProvider>
       </section>
       <MarketingFooter />
