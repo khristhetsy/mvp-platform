@@ -276,5 +276,66 @@
       "releasedSubject": "Deal available — {company}",
       "releasedLine": "The diligence package for {company} is now available."
     }
+  },
+  "eventsAdmin": {
+    "marketing": {
+      "title": "Marketing Hub",
+      "descPre": "Draft, edit, and store the marketing kit for ",
+      "descPost": ". SEO is applied to the public event page automatically.",
+      "unsaved": "Unsaved changes",
+      "saved": "Saved {when}",
+      "saveKit": "Save kit",
+      "saving": "Saving…",
+      "aiKit": "AI campaign kit",
+      "tonePlaceholder": "Optional tone (e.g. bold, formal)",
+      "generateAll": "Generate all sections",
+      "drafting": "Drafting…",
+      "aiNoteConfigured": "Drafts SEO, brochure, email, and social from this event's real details. Review and Save to keep them.",
+      "aiNoteFallback": "AI is not configured — Generate fills a template built from this event's details. Review and Save to keep them.",
+      "tabSeo": "SEO",
+      "tabBrochure": "Brochure",
+      "tabEmail": "Email invite",
+      "tabSocial": "Social",
+      "seoTitle": "SEO title",
+      "metaDescription": "Meta description",
+      "keywords": "Keywords",
+      "keywordsPlaceholder": "comma, separated, keywords",
+      "headline": "Headline",
+      "subhead": "Subhead",
+      "body": "Body",
+      "highlights": "Highlights",
+      "highlightsHint": "(one per line)",
+      "cta": "Call to action",
+      "subject": "Subject",
+      "preheader": "Preheader",
+      "copy": "Copy",
+      "copied": "Copied",
+      "compliance": "Educational community event — copy must not solicit securities or imply investment outcomes."
+    },
+    "leads": {
+      "title": "Leads",
+      "desc": "Sponsor and service-provider prospects from registration. Move them along the pipeline — this never grants event access.",
+      "all": "All",
+      "open": "Open",
+      "contacted": "Contacted",
+      "won": "Won",
+      "lost": "Lost",
+      "noLeads": "No leads in this view yet.",
+      "unnamed": "Unnamed lead",
+      "registered": "Registered {date}",
+      "leadStatus": "Lead status"
+    },
+    "segments": {
+      "runOfShow": "Run of show",
+      "empty": "No segments yet. Add a few to drive the on-air strip.",
+      "segmentOf": "Segment {i} of {total}",
+      "onAir": "On air",
+      "done": "Done",
+      "goLive": "Go live",
+      "endSegment": "End segment",
+      "remove": "Remove",
+      "add": "Add",
+      "placeholder": "Segment title (e.g. The raise)"
+    }
   }
 }

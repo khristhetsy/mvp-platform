@@ -276,5 +276,66 @@
       "releasedSubject": "Operación disponible — {company}",
       "releasedLine": "El paquete de diligencia de {company} ya está disponible."
     }
+  },
+  "eventsAdmin": {
+    "marketing": {
+      "title": "Centro de marketing",
+      "descPre": "Redacta, edita y guarda el kit de marketing de ",
+      "descPost": ". El SEO se aplica automáticamente a la página pública del evento.",
+      "unsaved": "Cambios sin guardar",
+      "saved": "Guardado {when}",
+      "saveKit": "Guardar kit",
+      "saving": "Guardando…",
+      "aiKit": "Kit de campaña con IA",
+      "tonePlaceholder": "Tono opcional (p. ej. audaz, formal)",
+      "generateAll": "Generar todas las secciones",
+      "drafting": "Redactando…",
+      "aiNoteConfigured": "Redacta el SEO, el folleto, el correo y las redes a partir de los datos reales de este evento. Revisa y guarda para conservarlos.",
+      "aiNoteFallback": "La IA no está configurada: Generar rellena una plantilla a partir de los datos de este evento. Revisa y guarda para conservarlos.",
+      "tabSeo": "SEO",
+      "tabBrochure": "Folleto",
+      "tabEmail": "Invitación por correo",
+      "tabSocial": "Redes sociales",
+      "seoTitle": "Título SEO",
+      "metaDescription": "Meta descripción",
+      "keywords": "Palabras clave",
+      "keywordsPlaceholder": "palabras, clave, separadas, por, comas",
+      "headline": "Titular",
+      "subhead": "Subtítulo",
+      "body": "Cuerpo",
+      "highlights": "Puntos destacados",
+      "highlightsHint": "(uno por línea)",
+      "cta": "Llamada a la acción",
+      "subject": "Asunto",
+      "preheader": "Preencabezado",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "compliance": "Evento educativo y comunitario: el texto no debe solicitar valores ni dar a entender resultados de inversión."
+    },
+    "leads": {
+      "title": "Prospectos",
+      "desc": "Prospectos de patrocinadores y proveedores de servicios desde el registro. Avánzalos por el embudo: esto nunca otorga acceso al evento.",
+      "all": "Todos",
+      "open": "Abierto",
+      "contacted": "Contactado",
+      "won": "Ganado",
+      "lost": "Perdido",
+      "noLeads": "Aún no hay prospectos en esta vista.",
+      "unnamed": "Prospecto sin nombre",
+      "registered": "Registrado {date}",
+      "leadStatus": "Estado del prospecto"
+    },
+    "segments": {
+      "runOfShow": "Guion del programa",
+      "empty": "Aún no hay segmentos. Añade algunos para alimentar la franja en vivo.",
+      "segmentOf": "Segmento {i} de {total}",
+      "onAir": "En el aire",
+      "done": "Terminado",
+      "goLive": "Poner en vivo",
+      "endSegment": "Terminar segmento",
+      "remove": "Quitar",
+      "add": "Añadir",
+      "placeholder": "Título del segmento (p. ej. La ronda)"
+    }
   }
 }

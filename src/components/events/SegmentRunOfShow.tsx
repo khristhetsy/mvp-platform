@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Radio } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { mapSegment } from "@/lib/icfo-events/segments";
 import type { SessionSegment } from "@/lib/icfo-events/segments";
@@ -15,6 +16,7 @@ function raw(c: ReturnType<typeof createClient>): SupabaseClient {
 /** Staff run-of-show editor for a talk show: define ordered segments and mark
  *  the one currently on air. The public couch reflects it live. */
 export function SegmentRunOfShow({ sessionId, eventId }: { sessionId: string; eventId: string }) {
+  const t = useTranslations("eventsAdmin.segments");
   const [segments, setSegments] = useState<SessionSegment[]>([]);
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
@@ -72,38 +74,38 @@ export function SegmentRunOfShow({ sessionId, eventId }: { sessionId: string; ev
 
   return (
     <div className="mt-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-sunken)] p-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Run of show</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("runOfShow")}</p>
       <div className="mt-2 space-y-1.5">
         {ordered.length === 0 ? (
-          <p className="text-xs text-[var(--text-muted)]">No segments yet. Add a few to drive the on-air strip.</p>
+          <p className="text-xs text-[var(--text-muted)]">{t("empty")}</p>
         ) : (
           ordered.map((s, i) => {
             const live = s.status === "live";
             return (
               <div key={s.id} className="flex items-center justify-between rounded-md bg-white px-2.5 py-1.5">
                 <span className="min-w-0 truncate text-sm text-[var(--navy)]">
-                  <span className="mr-2 text-xs text-[var(--text-muted)]">Segment {i + 1} of {total}</span>
+                  <span className="mr-2 text-xs text-[var(--text-muted)]">{t("segmentOf", { i: i + 1, total })}</span>
                   {s.title}
                   {live && (
                     <span className="ml-2 inline-flex items-center gap-1 rounded bg-rose-50 px-1.5 py-0.5 text-xs font-medium text-rose-700">
-                      <Radio className="h-3 w-3" /> On air
+                      <Radio className="h-3 w-3" /> {t("onAir")}
                     </span>
                   )}
-                  {s.status === "done" && <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-[var(--text-muted)]">Done</span>}
+                  {s.status === "done" && <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-[var(--text-muted)]">{t("done")}</span>}
                 </span>
                 <div className="flex shrink-0 gap-2">
                   {!live && (
                     <button onClick={() => setStatus(s.id, "live")} className="text-xs font-medium text-[var(--blue)] hover:underline">
-                      Go live
+                      {t("goLive")}
                     </button>
                   )}
                   {live && (
                     <button onClick={() => setStatus(s.id, "done")} className="text-xs font-medium text-emerald-700 hover:underline">
-                      End segment
+                      {t("endSegment")}
                     </button>
                   )}
                   <button onClick={() => remove(s.id)} className="text-xs text-rose-600 hover:underline">
-                    Remove
+                    {t("remove")}
                   </button>
                 </div>
               </div>
@@ -116,12 +118,12 @@ export function SegmentRunOfShow({ sessionId, eventId }: { sessionId: string; ev
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
-          placeholder="Segment title (e.g. The raise)"
+          placeholder={t("placeholder")}
           maxLength={120}
           className="flex-1 rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-sm"
         />
         <button onClick={add} disabled={busy || !title.trim()} className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50">
-          Add
+          {t("add")}
         </button>
       </div>
     </div>
