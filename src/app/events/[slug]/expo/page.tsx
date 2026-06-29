@@ -33,8 +33,7 @@ export default async function ExpoPage({ params }: { params: Promise<{ slug: str
   const me = profile ? { id: profile.id, name: profile.full_name ?? profile.email ?? "Attendee" } : null;
   const sponsors = await listEventSponsors(supabase, event.id).catch(() => []);
 
-  const firstSector = event.sectors[0]?.sectorSlug;
-  const tracksHref = firstSector ? `/events/sectors/${firstSector}` : `/events/${slug}#agenda`;
+  const tracksHref = `/events/${slug}/tracks`;
 
   return (
     <MarketingShell>

@@ -329,6 +329,23 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
           </div>
         </div>
 
+        <div className="mt-6 flex flex-wrap gap-2">
+          {[
+            { href: `/events/${event.slug}/stage`, label: "Main Stage" },
+            { href: `/events/${event.slug}/tracks`, label: "Sector Tracks" },
+            { href: `/events/${event.slug}/talk-show`, label: "Talk Show" },
+          ].map((r) => (
+            <Link
+              key={r.href}
+              href={r.href}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-white px-4 py-2 text-sm font-medium text-[var(--navy)] transition hover:border-[var(--indigo)]"
+            >
+              {event.status === "live" && <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#E24B4A" }} aria-hidden />}
+              {r.label}
+            </Link>
+          ))}
+        </div>
+
         {event.sectors.length > 0 && (
           <div className="mt-8">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Sector tracks</h2>

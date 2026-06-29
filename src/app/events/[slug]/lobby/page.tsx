@@ -47,8 +47,7 @@ export default async function EventLobbyPage({ params }: { params: Promise<{ slu
   const supabase = await createServerSupabaseClient();
   if (profile && (await isBanned(supabase, event.id, profile.id))) notFound();
 
-  const firstSector = event.sectors[0]?.sectorSlug;
-  const tracksHref = firstSector ? `/events/sectors/${firstSector}` : `/events/${slug}#agenda`;
+  const tracksHref = `/events/${slug}/tracks`;
 
   return (
     <MarketingShell>

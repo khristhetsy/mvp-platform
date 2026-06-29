@@ -36,8 +36,7 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ sl
   ]);
   const rank = leaderboard.find((e) => e.profileId === profile.id)?.rank ?? null;
 
-  const firstSector = event.sectors[0]?.sectorSlug;
-  const tracksHref = firstSector ? `/events/sectors/${firstSector}` : `/events/${slug}#agenda`;
+  const tracksHref = `/events/${slug}/tracks`;
 
   return (
     <MarketingShell>

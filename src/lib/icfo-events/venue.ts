@@ -16,16 +16,18 @@ export type VenueZone = {
 };
 
 /** Build the destination nav for an event. `tracksHref` handles the
- *  sector-tracks deep link the lobby already computes. */
+ *  sector-tracks deep link the lobby already computes. The `sessions` and
+ *  `ondemand` keys are kept (the Lobby doorways resolve hrefs by these keys)
+ *  but now point at the live Main Stage and Sector Tracks rooms. */
 export function venueZones(slug: string, tracksHref?: string): VenueZone[] {
   const base = `/events/${slug}`;
   return [
     { key: "lobby", room: "Lobby", label: "Lobby", icon: "home", href: `${base}/lobby` },
-    { key: "sessions", room: "Main Stage", label: "Sessions", icon: "stage", href: `${base}#agenda` },
+    { key: "sessions", room: "Main Stage", label: "Main Stage", icon: "stage", href: `${base}/stage` },
+    { key: "talkshow", room: "Main Stage", label: "Talk Show", icon: "tv", href: `${base}/talk-show` },
+    { key: "ondemand", room: "On-Demand", label: "Tracks", icon: "calendar", href: tracksHref ?? `${base}/tracks` },
     { key: "networking", room: "Networking", label: "Networking", icon: "users", href: `${base}/lounge` },
-    { key: "ondemand", room: "On-Demand", label: "On-Demand", icon: "tv", href: tracksHref ?? `${base}#agenda` },
     { key: "sponsors", room: "Sponsor Hall", label: "Sponsor Hall", icon: "store", href: `${base}/expo` },
-    { key: "agenda", label: "Agenda", icon: "calendar", href: `${base}#agenda` },
     { key: "leaderboard", label: "Leaderboard", icon: "trophy", href: `${base}/leaderboard` },
   ];
 }

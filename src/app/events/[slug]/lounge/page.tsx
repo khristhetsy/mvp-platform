@@ -36,8 +36,7 @@ export default async function LoungePage({ params }: { params: Promise<{ slug: s
     listConnections(supabase, event.id, profile.id).catch(() => []),
   ]);
 
-  const firstSector = event.sectors[0]?.sectorSlug;
-  const tracksHref = firstSector ? `/events/sectors/${firstSector}` : `/events/${slug}#agenda`;
+  const tracksHref = `/events/${slug}/tracks`;
 
   return (
     <MarketingShell>
