@@ -5,6 +5,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { mapSessionGuest } from "@/lib/icfo-events/live-session";
 import type { SessionGuest } from "@/lib/icfo-events/live-session";
+import { mapSegment, liveSegmentLabel } from "@/lib/icfo-events/segments";
+import type { SessionSegment } from "@/lib/icfo-events/segments";
 import { LiveViewerCount } from "@/components/events/LiveViewerCount";
 
 type Row = Record<string, unknown>;
@@ -31,16 +33,19 @@ export function TalkShowCouch({
   sessionId,
   presenceRoom,
   segmentTitle,
+  initialSegments = [],
   runOfShow,
   isLive,
 }: {
   sessionId: string;
   presenceRoom: string;
   segmentTitle: string;
+  initialSegments?: SessionSegment[];
   runOfShow: string[];
   isLive: boolean;
 }) {
   const [guests, setGuests] = useState<SessionGuest[]>([]);
+  const [segments, setSegments] = useState<SessionSegment[]>(initialSegments);
 
   useEffect(() => {
     const supabase = createClient();
@@ -59,12 +64,22 @@ export function TalkShowCouch({
         const g = mapSessionGuest(payload.new as Row);
         setGuests((prev) => (prev.some((x) => x.id === g.id) ? prev.map((x) => (x.id === g.id ? g : x)) : [...prev, g]));
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "session_segments", filter: `session_id=eq.${sessionId}` }, (payload) => {
+        if (payload.eventType === "DELETE") {
+          setSegments((prev) => prev.filter((s) => s.id !== String((payload.old as Row).id)));
+          return;
+        }
+        const seg = mapSegment(payload.new as Row);
+        setSegments((prev) => (prev.some((x) => x.id === seg.id) ? prev.map((x) => (x.id === seg.id ? seg : x)) : [...prev, seg]));
+      })
       .subscribe();
     return () => {
       active = false;
       void supabase.removeChannel(ch as Parameters<typeof supabase.removeChannel>[0]);
     };
   }, [sessionId]);
+
+  const liveLabel = liveSegmentLabel(segments) ?? segmentTitle;
 
   const onstage = guests.filter((g) => g.status === "onstage");
   // Host first (role label mentions "host"), then the rest.
@@ -81,7 +96,7 @@ export function TalkShowCouch({
     <div className="rounded-2xl p-5" style={{ background: "#0a1422" }}>
       <div className="flex items-center justify-between gap-3">
         <span className="inline-block rounded-full px-3 py-1.5 text-xs" style={{ background: "#16294a", color: "#cdd6e4" }}>
-          {segmentTitle}
+          {liveLabel}
         </span>
         {isLive && (
           <span className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold text-white" style={{ background: "#E24B4A" }}>

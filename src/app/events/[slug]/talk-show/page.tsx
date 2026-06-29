@@ -11,9 +11,11 @@ import { isBanned } from "@/lib/icfo-events/engagement";
 import { pickTalkShowSession } from "@/lib/icfo-events/rooms";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import { loadSessionQuestions, loadSessionChat, loadCallInQueue } from "@/lib/icfo-events/live-session";
+import { loadSegments } from "@/lib/icfo-events/segments";
 import { EventPresenceProvider } from "@/components/events/EventPresenceProvider";
 import { EventVenueHeader } from "@/components/events/EventVenueHeader";
 import { TalkShowCouch } from "@/components/events/TalkShowCouch";
+import { SegmentRunOfShow } from "@/components/events/SegmentRunOfShow";
 import { CallInBar } from "@/components/events/CallInBar";
 import { GuestRoster } from "@/components/events/GuestRoster";
 import { LiveSessionPanel } from "@/components/events/LiveSessionPanel";
@@ -58,6 +60,8 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
         ])
       : [[], [], []];
 
+  const segments = stage ? await loadSegments(supabase, stage.id).catch(() => []) : [];
+
   // Run-of-show: the talk show's sibling sessions (same track if it has one).
   const siblings = event.sessions
     .filter((s) => s.status !== "draft" && (stage?.sectorSlug ? s.sectorSlug === stage.sectorSlug : true))
@@ -98,6 +102,7 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
                       sessionId={stage.id}
                       presenceRoom={PRESENCE_ROOM}
                       segmentTitle={stage.abstract ? stage.abstract.slice(0, 70) : isLive ? "On air now" : "Up next"}
+                      initialSegments={segments}
                       runOfShow={runOfShow}
                       isLive={Boolean(isLive)}
                     />
@@ -106,7 +111,12 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
                       No talk show has been scheduled for this event yet.
                     </div>
                   )}
-                  {isStaffViewer && stage && <GuestRoster sessionId={stage.id} eventId={event.id} />}
+                  {isStaffViewer && stage && (
+                    <>
+                      <SegmentRunOfShow sessionId={stage.id} eventId={event.id} />
+                      <GuestRoster sessionId={stage.id} eventId={event.id} />
+                    </>
+                  )}
                 </div>
 
                 <div>
