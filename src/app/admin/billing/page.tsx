@@ -5,6 +5,7 @@ import { listUpgradeRequestsForAdmin } from "@/lib/billing/upgrade-requests";
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ function formatDate(value: string) {
 
 export default async function AdminBillingPage() {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("billingCompaniesAdmin.billing");
   const supabase = createServiceRoleClient();
 
   let upgradeRequests: Awaited<ReturnType<typeof listUpgradeRequestsForAdmin>> = [];
@@ -46,49 +48,46 @@ export default async function AdminBillingPage() {
           profileEmail={profile.email ?? undefined}
     >
       <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Admin Workspace</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Billing & upgrades</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Read-only visibility for upgrade requests and subscription lifecycle. No billing controls or payment processing
-          yet.
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">{t("eyebrow")}</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{t("title")}</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{t("desc")}</p>
       </div>
 
       <WorkspacePanel
-        title="Upgrade requests"
-        subtitle={`${upgradeRequests.length} recent requests · ${pendingCount ?? 0} pending`}
+        title={t("upgradeRequests")}
+        subtitle={t("countSub", { count: upgradeRequests.length, pending: pendingCount ?? 0 })}
       >
         {loadError ? (
           <PageErrorAlert message={loadError} />
         ) : upgradeRequests.length === 0 ? (
-          <p className="text-sm text-slate-600">No upgrade requests yet.</p>
+          <p className="text-sm text-slate-600">{t("none")}</p>
         ) : (
           <div className="divide-y divide-slate-100">
             {upgradeRequests.map((request) => (
               <div key={request.id} className="grid gap-2 py-4 text-sm md:grid-cols-[1.2fr_1fr_1fr]">
                 <div>
                   <p className="font-medium text-slate-900">
-                    {request.profiles?.full_name ?? request.profiles?.email ?? "Unknown user"}
+                    {request.profiles?.full_name ?? request.profiles?.email ?? t("unknownUser")}
                   </p>
                   <p className="text-xs text-slate-500">{request.profiles?.email ?? "—"}</p>
                 </div>
                 <div className="text-slate-600">
                   <p>
-                    <span className="font-medium text-slate-800">Type:</span> {request.request_type.replaceAll("_", " ")}
+                    <span className="font-medium text-slate-800">{t("typeLabel")}</span> {request.request_type.replaceAll("_", " ")}
                   </p>
                   <p>
-                    <span className="font-medium text-slate-800">Plan:</span>{" "}
+                    <span className="font-medium text-slate-800">{t("planLabel")}</span>{" "}
                     {request.requested_plan
                       ? PLAN_LABELS[request.requested_plan as keyof typeof PLAN_LABELS] ?? request.requested_plan
                       : "—"}
                   </p>
                   <p>
-                    <span className="font-medium text-slate-800">Feature:</span> {request.feature_key ?? "—"}
+                    <span className="font-medium text-slate-800">{t("featureLabel")}</span> {request.feature_key ?? "—"}
                   </p>
                 </div>
                 <div className="text-slate-600">
                   <p>
-                    <span className="font-medium text-slate-800">Status:</span> {request.status}
+                    <span className="font-medium text-slate-800">{t("statusLabel")}</span> {request.status}
                   </p>
                   <p className="text-xs text-slate-500">{formatDate(request.created_at)}</p>
                 </div>

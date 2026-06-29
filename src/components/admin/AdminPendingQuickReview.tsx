@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useState } from "react";
+import { useTranslations } from "next-intl";
 
 type PendingCompany = {
   id: string;
@@ -20,6 +21,7 @@ function formatDate(iso: string | null | undefined) {
 }
 
 export function AdminPendingQuickReview({ companies }: { companies: PendingCompany[] }) {
+  const t = useTranslations("billingCompaniesAdmin.quickReview");
   const [statuses, setStatuses] = useState<Record<string, ActionStatus>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -62,14 +64,14 @@ export function AdminPendingQuickReview({ companies }: { companies: PendingCompa
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-amber-400" />
           <h2 className="text-sm font-semibold text-amber-900">
-            {pending.length} pending review{pending.length !== 1 ? "s" : ""}
+            {t("pending", { count: pending.length })}
           </h2>
         </div>
         <Link
           href="/admin/companies"
           className="text-xs font-semibold text-amber-700 hover:text-amber-900"
         >
-          View all companies →
+          {t("viewAll")}
         </Link>
       </div>
 
@@ -102,16 +104,16 @@ export function AdminPendingQuickReview({ companies }: { companies: PendingCompa
                           : "bg-red-50 text-red-700"
                       }`}
                     >
-                      {status === "approved" ? "Approved ✓" : "Rejected"}
+                      {status === "approved" ? t("approved") : t("rejected")}
                     </span>
                   )}
                 </div>
                 <p className="mt-0.5 text-xs text-slate-400">
-                  {[company.industry, formatDate(company.created_at) ? `Submitted ${formatDate(company.created_at)}` : null]
+                  {[company.industry, formatDate(company.created_at) ? t("submitted", { date: formatDate(company.created_at) ?? "" }) : null]
                     .filter(Boolean)
                     .join(" · ")}
                   {company.readinessScore != null && (
-                    <span className="ml-2 text-indigo-500">{company.readinessScore}% ready</span>
+                    <span className="ml-2 text-indigo-500">{t("ready", { score: company.readinessScore })}</span>
                   )}
                 </p>
                 {errors[company.id] && (
@@ -128,7 +130,7 @@ export function AdminPendingQuickReview({ companies }: { companies: PendingCompa
                     onClick={() => void applyAction(company.id, "approve")}
                     className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition-colors hover:bg-emerald-100 disabled:opacity-50"
                   >
-                    {isBusy ? "…" : "Approve"}
+                    {isBusy ? "…" : t("approve")}
                   </button>
                   <button
                     type="button"
@@ -136,13 +138,13 @@ export function AdminPendingQuickReview({ companies }: { companies: PendingCompa
                     onClick={() => void applyAction(company.id, "reject")}
                     className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
                   >
-                    Reject
+                    {t("reject")}
                   </button>
                   <Link
                     href={`/admin/companies/${company.id}`}
                     className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50"
                   >
-                    Review
+                    {t("review")}
                   </Link>
                 </div>
               )}

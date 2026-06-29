@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useTranslations } from "next-intl";
 
 export type PendingFounder = {
   profileId: string;
@@ -29,6 +30,7 @@ type StageReviewResponse = {
 };
 
 export function AdminStageApprovalQueue({ founders }: { founders: PendingFounder[] }) {
+  const t = useTranslations("billingCompaniesAdmin.stageQueue");
   const [statuses, setStatuses] = useState<Record<string, ActionStatus>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -84,7 +86,7 @@ export function AdminStageApprovalQueue({ founders }: { founders: PendingFounder
   if (founders.length === 0) {
     return (
       <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="px-5 py-4 text-sm text-slate-500">No pending stage approvals</div>
+        <div className="px-5 py-4 text-sm text-slate-500">{t("none")}</div>
       </div>
     );
   }
@@ -96,10 +98,10 @@ export function AdminStageApprovalQueue({ founders }: { founders: PendingFounder
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-indigo-400" />
           <h2 className="text-sm font-semibold text-indigo-900">
-            {founders.length} pending stage approval{founders.length !== 1 ? "s" : ""}
+            {t("pending", { count: founders.length })}
           </h2>
         </div>
-        <span className="text-xs text-indigo-600">Qualify → Deploy</span>
+        <span className="text-xs text-indigo-600">{t("qualifyDeploy")}</span>
       </div>
 
       {/* Founder rows */}
@@ -120,7 +122,7 @@ export function AdminStageApprovalQueue({ founders }: { founders: PendingFounder
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate text-sm font-semibold text-slate-900">
-                      {founder.fullName ?? founder.email ?? "Unknown founder"}
+                      {founder.fullName ?? founder.email ?? t("unknownFounder")}
                     </span>
                     {isDone && (
                       <span
@@ -130,9 +132,7 @@ export function AdminStageApprovalQueue({ founders }: { founders: PendingFounder
                             : "bg-red-50 text-red-700"
                         }`}
                       >
-                        {status === "approved"
-                          ? "Approved — founder moved to Deploy stage"
-                          : "Rejected — feedback sent"}
+                        {status === "approved" ? t("approvedMoved") : t("rejectedSent")}
                       </span>
                     )}
                   </div>
@@ -140,14 +140,14 @@ export function AdminStageApprovalQueue({ founders }: { founders: PendingFounder
                     {[
                       founder.companyName,
                       founder.requestedAt
-                        ? `Requested ${formatDate(founder.requestedAt) ?? ""}`
+                        ? t("requested", { date: formatDate(founder.requestedAt) ?? "" })
                         : null,
                     ]
                       .filter(Boolean)
                       .join(" · ")}
                     {founder.readinessScore != null && (
                       <span className="ml-2 text-indigo-500">
-                        {founder.readinessScore}% ready
+                        {t("ready", { score: founder.readinessScore })}
                       </span>
                     )}
                   </p>
@@ -167,7 +167,7 @@ export function AdminStageApprovalQueue({ founders }: { founders: PendingFounder
                       onClick={() => void applyAction(founder.profileId, "approve")}
                       className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition-colors hover:bg-emerald-100 disabled:opacity-50"
                     >
-                      {isBusy && !isRejecting ? "…" : "Approve"}
+                      {isBusy && !isRejecting ? "…" : t("approve")}
                     </button>
                     <button
                       type="button"
@@ -175,7 +175,7 @@ export function AdminStageApprovalQueue({ founders }: { founders: PendingFounder
                       onClick={() => handleRejectClick(founder.profileId)}
                       className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
                     >
-                      Reject
+                      {t("reject")}
                     </button>
                   </div>
                 )}
@@ -186,7 +186,7 @@ export function AdminStageApprovalQueue({ founders }: { founders: PendingFounder
                 <div className="mt-3 flex flex-col gap-2">
                   <input
                     type="text"
-                    placeholder="Feedback for founder (required)"
+                    placeholder={t("feedbackPh")}
                     value={feedbackValues[founder.profileId] ?? ""}
                     onChange={(e) => handleFeedbackChange(founder.profileId, e.target.value)}
                     className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-800 placeholder-slate-400 focus:border-indigo-400 focus:outline-none"
@@ -198,14 +198,14 @@ export function AdminStageApprovalQueue({ founders }: { founders: PendingFounder
                       onClick={() => handleRejectConfirm(founder.profileId)}
                       className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
                     >
-                      {isBusy ? "…" : "Confirm rejection"}
+                      {isBusy ? "…" : t("confirmRejection")}
                     </button>
                     <button
                       type="button"
                       onClick={() => setRejectingId(null)}
                       className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-50"
                     >
-                      Cancel
+                      {t("cancel")}
                     </button>
                   </div>
                 </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { AdminCompanyCard } from "@/components/AdminCompanyCard";
 import type { AdminCompanyCardData } from "@/components/AdminCompanyCard";
 import { AdminQueryFilterBar } from "@/components/ui/AdminQueryFilterBar";
@@ -10,10 +11,11 @@ import { useAdminQueryFilters } from "@/hooks/use-admin-query-filters";
 import { filterCompanies as applyCompanyQueryFilters, type CompanyQueryFilters } from "@/lib/ui/query-filters";
 
 type ViewMode = "kanban" | "grid" | "list";
+type T = (key: string, values?: Record<string, string | number>) => string;
 
-function formatReviewStatus(status: string | null) {
-  if (!status) return "Unknown";
-  return status.charAt(0).toUpperCase() + status.slice(1);
+function reviewStatusLabel(t: T, status: string | null) {
+  if (status === "pending" || status === "approved" || status === "rejected") return t(`companies.reviewStatus.${status}`);
+  return t("companies.reviewStatus.unknown");
 }
 
 function filterCompaniesBySearch(companies: AdminCompanyCardData[], query: string) {
@@ -37,6 +39,7 @@ function AdminCompaniesModuleViewsInner({
   loadError: string | null;
   pendingCount: number;
 }>) {
+  const t = useTranslations("billingCompaniesAdmin");
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewMode>("list");
   const { filters } = useAdminQueryFilters("companies");
@@ -61,12 +64,12 @@ function AdminCompaniesModuleViewsInner({
     const keys = [...new Set([...order, ...byStatus.keys()])].filter((k) => byStatus.has(k));
     return keys.map((status) => ({
       id: status,
-      title: formatReviewStatus(status === "unknown" ? null : status),
+      title: reviewStatusLabel(t, status === "unknown" ? null : status),
       items: (byStatus.get(status) ?? []).map((company) => (
         <AdminCompanyCard key={company.id} company={company} />
       )),
     }));
-  }, [filtered]);
+  }, [filtered, t]);
 
   return (
     <>
@@ -76,7 +79,7 @@ function AdminCompaniesModuleViewsInner({
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search companies, founders, or status…"
+          placeholder={t("companies.searchPh")}
           className="flex-1 min-w-[200px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
         <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
@@ -91,26 +94,26 @@ function AdminCompaniesModuleViewsInner({
                   : "text-slate-500 hover:text-slate-700"
               }`}
             >
-              {v === "kanban" ? "⊞ Kanban" : v === "grid" ? "⊟ Grid" : "≡ List"}
+              {v === "kanban" ? t("companies.kanban") : v === "grid" ? t("companies.grid") : t("companies.list")}
             </button>
           ))}
         </div>
       </div>
 
       <PageSection
-        title="Company submissions"
-        subtitle={`${companies.length} companies · ${pendingCount} pending review`}
+        title={t("companies.submissions")}
+        subtitle={t("companies.countSub", { count: companies.length, pending: pendingCount })}
       >
         {loadError ? (
           <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
-            Failed to load companies: {loadError}
+            {t("companies.loadFailed", { error: loadError })}
           </div>
         ) : companies.length === 0 ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
-            listAdminCompanies() returned 0 records. No companies in database or query returned empty.
+            {t("companies.zeroRecords")}
           </div>
         ) : filtered.length === 0 ? (
-          <ModuleEmptyState title="No matching companies" description="Try a different search term or clear filters." />
+          <ModuleEmptyState title={t("companies.noMatching")} description={t("companies.noMatchingDesc")} />
         ) : view === "kanban" ? (
           <PipelineBoard columns={pipelineColumns} density="comfortable" />
         ) : view === "grid" ? (
@@ -124,12 +127,12 @@ function AdminCompaniesModuleViewsInner({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-xs font-semibold text-slate-500">
-                  <th className="px-4 py-3">Company</th>
-                  <th className="px-4 py-3">Founder</th>
-                  <th className="px-4 py-3">Industry</th>
-                  <th className="px-4 py-3">Review</th>
-                  <th className="px-4 py-3">Published</th>
-                  <th className="px-4 py-3">Action</th>
+                  <th className="px-4 py-3">{t("companies.colCompany")}</th>
+                  <th className="px-4 py-3">{t("companies.colFounder")}</th>
+                  <th className="px-4 py-3">{t("companies.colIndustry")}</th>
+                  <th className="px-4 py-3">{t("companies.colReview")}</th>
+                  <th className="px-4 py-3">{t("companies.colPublished")}</th>
+                  <th className="px-4 py-3">{t("companies.colAction")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -150,11 +153,11 @@ function AdminCompaniesModuleViewsInner({
                           ? "bg-red-50 text-red-700"
                           : "bg-amber-50 text-amber-800"
                       }`}>
-                        {formatReviewStatus(company.review_status)}
+                        {reviewStatusLabel(t, company.review_status)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-slate-500">
-                      {company.is_published ? "Published" : "Draft"}
+                      {company.is_published ? t("companies.published") : t("companies.draft")}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -164,7 +167,7 @@ function AdminCompaniesModuleViewsInner({
                             onClick={(e) => { e.stopPropagation(); window.location.href = `/admin/companies/${company.id}`; }}
                             className="rounded-md bg-indigo-600 px-2 py-1 text-[10px] font-semibold text-white hover:bg-indigo-700"
                           >
-                            Approve
+                            {t("companies.approve")}
                           </button>
                         ) : (
                           <button
@@ -172,7 +175,7 @@ function AdminCompaniesModuleViewsInner({
                             onClick={(e) => { e.stopPropagation(); window.location.href = `/admin/companies/${company.id}`; }}
                             className="rounded-md border border-slate-200 px-2 py-1 text-[10px] font-semibold text-slate-700 hover:bg-slate-50"
                           >
-                            Review
+                            {t("companies.review")}
                           </button>
                         )}
                         <span className="text-xs text-indigo-600">→</span>
@@ -197,8 +200,13 @@ export function AdminCompaniesModuleViews(
   }>,
 ) {
   return (
-    <Suspense fallback={<p className="text-sm text-slate-500">Loading view options…</p>}>
+    <Suspense fallback={<CompaniesLoadingFallback />}>
       <AdminCompaniesModuleViewsInner {...props} />
     </Suspense>
   );
+}
+
+function CompaniesLoadingFallback() {
+  const t = useTranslations("billingCompaniesAdmin");
+  return <p className="text-sm text-slate-500">{t("companies.loadingView")}</p>;
 }

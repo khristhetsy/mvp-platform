@@ -704,5 +704,75 @@
     "companyProfilesSub": "Instantánea por empresa (sin datos personales del fundador más allá del nombre)",
     "profileRow": "· preparación {score} · remediación {remediation} · redes señaladas {social}",
     "loadingFilters": "Cargando filtros…"
+  },
+  "billingCompaniesAdmin": {
+    "companies": {
+      "searchPh": "Buscar empresas, fundadores o estado…",
+      "kanban": "⊞ Kanban",
+      "grid": "⊟ Cuadrícula",
+      "list": "≡ Lista",
+      "submissions": "Solicitudes de empresas",
+      "countSub": "{count} empresas · {pending} pendientes de revisión",
+      "loadFailed": "No se pudieron cargar las empresas: {error}",
+      "zeroRecords": "No hay empresas en la base de datos, o la consulta devolvió vacío.",
+      "noMatching": "No hay empresas coincidentes",
+      "noMatchingDesc": "Prueba otro término de búsqueda o limpia los filtros.",
+      "colCompany": "Empresa",
+      "colFounder": "Fundador",
+      "colIndustry": "Industria",
+      "colReview": "Revisión",
+      "colPublished": "Publicada",
+      "colAction": "Acción",
+      "published": "Publicada",
+      "draft": "Borrador",
+      "approve": "Aprobar",
+      "review": "Revisar",
+      "reviewStatus": {
+        "pending": "Pendiente",
+        "approved": "Aprobada",
+        "rejected": "Rechazada",
+        "unknown": "Desconocido"
+      },
+      "loadingView": "Cargando opciones de vista…"
+    },
+    "stageQueue": {
+      "none": "No hay aprobaciones de etapa pendientes",
+      "pending": "{count, plural, one {# aprobación de etapa pendiente} other {# aprobaciones de etapa pendientes}}",
+      "qualifyDeploy": "Calificar → Desplegar",
+      "unknownFounder": "Fundador desconocido",
+      "approvedMoved": "Aprobado — el fundador pasó a la etapa Desplegar",
+      "rejectedSent": "Rechazado — comentarios enviados",
+      "requested": "Solicitado el {date}",
+      "ready": "{score}% listo",
+      "approve": "Aprobar",
+      "reject": "Rechazar",
+      "feedbackPh": "Comentarios para el fundador (obligatorio)",
+      "confirmRejection": "Confirmar rechazo",
+      "cancel": "Cancelar"
+    },
+    "quickReview": {
+      "pending": "{count, plural, one {# revisión pendiente} other {# revisiones pendientes}}",
+      "viewAll": "Ver todas las empresas →",
+      "approved": "Aprobada ✓",
+      "rejected": "Rechazada",
+      "submitted": "Enviada el {date}",
+      "ready": "{score}% listo",
+      "approve": "Aprobar",
+      "reject": "Rechazar",
+      "review": "Revisar"
+    },
+    "billing": {
+      "eyebrow": "Espacio de administración",
+      "title": "Facturación y mejoras",
+      "desc": "Visibilidad de solo lectura para solicitudes de mejora y el ciclo de vida de la suscripción. Aún no hay controles de facturación ni procesamiento de pagos.",
+      "upgradeRequests": "Solicitudes de mejora",
+      "countSub": "{count} solicitudes recientes · {pending} pendientes",
+      "none": "Aún no hay solicitudes de mejora.",
+      "typeLabel": "Tipo:",
+      "planLabel": "Plan:",
+      "featureLabel": "Función:",
+      "statusLabel": "Estado:",
+      "unknownUser": "Usuario desconocido"
+    }
   }
 }

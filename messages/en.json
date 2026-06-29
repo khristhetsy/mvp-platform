@@ -704,5 +704,75 @@
     "companyProfilesSub": "Per-company snapshot (no founder PII beyond name)",
     "profileRow": "· readiness {score} · remediation {remediation} · social flagged {social}",
     "loadingFilters": "Loading filters…"
+  },
+  "billingCompaniesAdmin": {
+    "companies": {
+      "searchPh": "Search companies, founders, or status…",
+      "kanban": "⊞ Kanban",
+      "grid": "⊟ Grid",
+      "list": "≡ List",
+      "submissions": "Company submissions",
+      "countSub": "{count} companies · {pending} pending review",
+      "loadFailed": "Failed to load companies: {error}",
+      "zeroRecords": "No companies in the database, or the query returned empty.",
+      "noMatching": "No matching companies",
+      "noMatchingDesc": "Try a different search term or clear filters.",
+      "colCompany": "Company",
+      "colFounder": "Founder",
+      "colIndustry": "Industry",
+      "colReview": "Review",
+      "colPublished": "Published",
+      "colAction": "Action",
+      "published": "Published",
+      "draft": "Draft",
+      "approve": "Approve",
+      "review": "Review",
+      "reviewStatus": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "unknown": "Unknown"
+      },
+      "loadingView": "Loading view options…"
+    },
+    "stageQueue": {
+      "none": "No pending stage approvals",
+      "pending": "{count, plural, one {# pending stage approval} other {# pending stage approvals}}",
+      "qualifyDeploy": "Qualify → Deploy",
+      "unknownFounder": "Unknown founder",
+      "approvedMoved": "Approved — founder moved to Deploy stage",
+      "rejectedSent": "Rejected — feedback sent",
+      "requested": "Requested {date}",
+      "ready": "{score}% ready",
+      "approve": "Approve",
+      "reject": "Reject",
+      "feedbackPh": "Feedback for founder (required)",
+      "confirmRejection": "Confirm rejection",
+      "cancel": "Cancel"
+    },
+    "quickReview": {
+      "pending": "{count, plural, one {# pending review} other {# pending reviews}}",
+      "viewAll": "View all companies →",
+      "approved": "Approved ✓",
+      "rejected": "Rejected",
+      "submitted": "Submitted {date}",
+      "ready": "{score}% ready",
+      "approve": "Approve",
+      "reject": "Reject",
+      "review": "Review"
+    },
+    "billing": {
+      "eyebrow": "Admin Workspace",
+      "title": "Billing & upgrades",
+      "desc": "Read-only visibility for upgrade requests and subscription lifecycle. No billing controls or payment processing yet.",
+      "upgradeRequests": "Upgrade requests",
+      "countSub": "{count} recent requests · {pending} pending",
+      "none": "No upgrade requests yet.",
+      "typeLabel": "Type:",
+      "planLabel": "Plan:",
+      "featureLabel": "Feature:",
+      "statusLabel": "Status:",
+      "unknownUser": "Unknown user"
+    }
   }
 }
