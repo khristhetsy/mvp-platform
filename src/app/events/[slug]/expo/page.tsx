@@ -8,6 +8,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { getEventBySlug } from "@/lib/icfo-events/queries";
 import { listEventSponsors } from "@/lib/icfo-events/sponsors";
+import { isBanned } from "@/lib/icfo-events/engagement";
 import { EventPresenceProvider } from "@/components/events/EventPresenceProvider";
 import { EventVenueHeader } from "@/components/events/EventVenueHeader";
 import { LiveAnnouncementPopup } from "@/components/events/LiveAnnouncementPopup";
@@ -28,6 +29,7 @@ export default async function ExpoPage({ params }: { params: Promise<{ slug: str
   if (!event || event.status === "draft" || event.status === "archived") notFound();
 
   const profile = await getCurrentUserProfile().catch(() => null);
+  if (profile && (await isBanned(supabase, event.id, profile.id))) notFound();
   const me = profile ? { id: profile.id, name: profile.full_name ?? profile.email ?? "Attendee" } : null;
   const sponsors = await listEventSponsors(supabase, event.id).catch(() => []);
 

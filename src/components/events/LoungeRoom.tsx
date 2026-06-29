@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { useEventPresence } from "@/components/events/EventPresenceProvider";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import { mapLoungeTable, mapLoungeMessage } from "@/lib/icfo-events/lounge";
 import type { LoungeTable, LoungeMessage } from "@/lib/icfo-events/lounge";
@@ -23,6 +24,7 @@ export function LoungeRoom({
   me: Me;
   initialTables: LoungeTable[];
 }) {
+  const { muted } = useEventPresence();
   const [tables, setTables] = useState<LoungeTable[]>(initialTables);
   const [selectedId, setSelectedId] = useState<string | null>(initialTables[0]?.id ?? null);
   const [messages, setMessages] = useState<LoungeMessage[]>([]);
@@ -228,19 +230,25 @@ export function LoungeRoom({
               <div ref={endRef} />
             </div>
 
-            <div className="flex gap-2 border-t border-[var(--border-subtle)] p-3">
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && send()}
-                placeholder="Message the table…"
-                maxLength={1000}
-                className="flex-1 rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
-              />
-              <button onClick={send} disabled={!input.trim()} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
-                Send
-              </button>
-            </div>
+            {muted ? (
+              <div className="border-t border-[var(--border-subtle)] p-3 text-center text-sm text-[var(--text-muted)]">
+                You’ve been muted by a moderator and can’t post in chat.
+              </div>
+            ) : (
+              <div className="flex gap-2 border-t border-[var(--border-subtle)] p-3">
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && send()}
+                  placeholder="Message the table…"
+                  maxLength={1000}
+                  className="flex-1 rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+                />
+                <button onClick={send} disabled={!input.trim()} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
+                  Send
+                </button>
+              </div>
+            )}
           </>
         ) : (
           <div className="flex flex-1 items-center justify-center text-sm text-[var(--text-muted)]">

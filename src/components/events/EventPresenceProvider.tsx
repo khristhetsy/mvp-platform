@@ -20,7 +20,7 @@ export type VenueAnnouncement = {
 
 export type ModerationSignal = {
   targetId: string;
-  action: "move" | "remove";
+  action: "move" | "remove" | "mute" | "unmute";
   room?: string;
   href?: string;
 };
@@ -30,6 +30,8 @@ type PresenceValue = {
   total: number;
   byRoom: Record<string, number>;
   me: { id: string; name: string };
+  /** Set when a moderator mutes this attendee (live). */
+  muted: boolean;
   announcement: VenueAnnouncement | null;
   dismissAnnouncement: () => void;
   /** Broadcast a live announcement to everyone in the venue (admin use). */
@@ -61,6 +63,7 @@ export function EventPresenceProvider({
   const [me] = useState<{ id: string; name: string }>(() => meProp ?? { id: anonId(), name: "Guest" });
   const [members, setMembers] = useState<PresenceMember[]>([]);
   const [announcement, setAnnouncement] = useState<VenueAnnouncement | null>(null);
+  const [muted, setMuted] = useState(false);
   const chRef = useRef<RealtimeChannel | null>(null);
   const subscribedRef = useRef(false);
   const roomRef = useRef(room);
@@ -100,6 +103,8 @@ export function EventPresenceProvider({
       if (sig.targetId !== meRef.current.id) return;
       if (sig.action === "move" && sig.href) router.push(sig.href);
       else if (sig.action === "remove") router.replace(slugRef.current ? `/events/${slugRef.current}` : "/events");
+      else if (sig.action === "mute") setMuted(true);
+      else if (sig.action === "unmute") setMuted(false);
     });
 
     ch.subscribe(async (status) => {
@@ -138,8 +143,8 @@ export function EventPresenceProvider({
   const value = useMemo<PresenceValue>(() => {
     const byRoom: Record<string, number> = {};
     for (const m of members) byRoom[m.room] = (byRoom[m.room] ?? 0) + 1;
-    return { members, total: members.length, byRoom, me, announcement, dismissAnnouncement, sendAnnounce, sendModeration };
-  }, [members, me, announcement, dismissAnnouncement, sendAnnounce, sendModeration]);
+    return { members, total: members.length, byRoom, me, muted, announcement, dismissAnnouncement, sendAnnounce, sendModeration };
+  }, [members, me, muted, announcement, dismissAnnouncement, sendAnnounce, sendModeration]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -151,6 +156,7 @@ export function useEventPresence(): PresenceValue {
       total: 0,
       byRoom: {},
       me: { id: "", name: "" },
+      muted: false,
       announcement: null,
       dismissAnnouncement: () => {},
       sendAnnounce: () => {},

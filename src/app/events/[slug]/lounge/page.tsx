@@ -14,6 +14,7 @@ import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { getEventBySlug } from "@/lib/icfo-events/queries";
 import { loadLoungeTables } from "@/lib/icfo-events/lounge";
 import { listSuggestions, listConnections } from "@/lib/icfo-events/networking";
+import { isBanned } from "@/lib/icfo-events/engagement";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Networking Lounge — iCFO Events", robots: { index: false } };
@@ -26,6 +27,7 @@ export default async function LoungePage({ params }: { params: Promise<{ slug: s
 
   const profile = await getCurrentUserProfile();
   if (!profile) redirect(`/auth/sign-in?next=/events/${slug}/lounge`);
+  if (await isBanned(supabase, event.id, profile.id)) notFound();
 
   const me = { id: profile.id, name: profile.full_name ?? profile.email ?? "You" };
   const [tables, suggestions, connections] = await Promise.all([

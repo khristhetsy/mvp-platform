@@ -8,6 +8,7 @@ import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { getEventBySlug } from "@/lib/icfo-events/queries";
 import { getLeaderboard, getMemberStats } from "@/lib/icfo-events/gamification";
 import { getMissionProgress } from "@/lib/icfo-events/missions";
+import { isBanned } from "@/lib/icfo-events/engagement";
 import { EventPresenceProvider } from "@/components/events/EventPresenceProvider";
 import { EventVenueHeader } from "@/components/events/EventVenueHeader";
 import { LiveAnnouncementPopup } from "@/components/events/LiveAnnouncementPopup";
@@ -25,6 +26,7 @@ export default async function LeaderboardPage({ params }: { params: Promise<{ sl
 
   const profile = await getCurrentUserProfile();
   if (!profile) redirect(`/auth/sign-in?next=/events/${slug}/leaderboard`);
+  if (await isBanned(supabase, event.id, profile.id)) notFound();
 
   const me = { id: profile.id, name: profile.full_name ?? profile.email ?? "You" };
   const [stats, missions, leaderboard] = await Promise.all([

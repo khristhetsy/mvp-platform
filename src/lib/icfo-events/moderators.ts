@@ -24,6 +24,12 @@ export type ModerationAction =
   | "move_attendee"
   | "remove_attendee"
   | "mute_attendee"
+  | "unmute_attendee"
+  | "ban_attendee"
+  | "unban_attendee"
+  | "drop_points"
+  | "open_poll"
+  | "close_poll"
   | "start_session"
   | "end_session";
 

@@ -1,11 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useEventPresence } from "@/components/events/EventPresenceProvider";
 import { venueZones, PRESENCE_ROOMS } from "@/lib/icfo-events/venue";
 import type { EventSession } from "@/lib/icfo-events/types";
 import type { ControlSummary, ControlAuditEntry } from "@/lib/icfo-events/control-center";
 import type { HelpRequest } from "@/lib/icfo-events/help-desk";
+import type { PollResults } from "@/lib/icfo-events/polls";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function Stat({ label, value, accent }: { label: string; value: number | string; accent?: string }) {
   return (
@@ -41,6 +44,11 @@ export function EventControlCenter({
   const [bRoom, setBRoom] = useState<string>("");
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [dropRoom, setDropRoom] = useState<string>("");
+  const [dropAmount, setDropAmount] = useState("50");
+  const [poll, setPoll] = useState<PollResults | null>(null);
+  const [pQ, setPQ] = useState("");
+  const [pOpts, setPOpts] = useState("");
 
   const scoped = Array.isArray(allowedRooms);
   const rooms: string[] = scoped ? (allowedRooms as string[]) : [...PRESENCE_ROOMS];
@@ -48,10 +56,83 @@ export function EventControlCenter({
   const zones = useMemo(() => venueZones(slug), [slug]);
   const hrefForRoom = (room: string) => zones.find((z) => z.room === room)?.href ?? `/events/${slug}/lobby`;
 
+  useEffect(() => {
+    let active = true;
+    fetch(`/api/events/${slug}/polls`)
+      .then((r) => r.json())
+      .then((j) => { if (active) setPoll(j.poll ? (j as PollResults) : null); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [slug]);
+
   async function resolveHelp(id: string) {
     setHelp((prev) => prev.filter((h) => h.id !== id));
     void fetch(`/api/admin/events/${eventId}/help/${id}`, { method: "POST" }).catch(() => {});
     flash("Marked resolved");
+  }
+
+  function dropPoints() {
+    const amount = Math.max(1, Math.min(500, Number(dropAmount) || 0));
+    const room = dropRoom || rooms[0];
+    const profileIds = members.filter((m) => m.room === room && UUID_RE.test(m.id)).map((m) => m.id);
+    if (profileIds.length === 0) { flash(`No eligible attendees in ${room}`); return; }
+    void fetch(`/api/admin/events/${eventId}/engagement`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "award", profileIds, points: amount }),
+    }).catch(() => {});
+    addAudit("drop_points", `+${amount} to ${profileIds.length} in ${room}`);
+    flash(`Dropped +${amount} to ${profileIds.length} in ${room}`);
+  }
+
+  function toggleMute(m: { id: string; name: string }, mute: boolean) {
+    sendModeration({ targetId: m.id, action: mute ? "mute" : "unmute" });
+    void fetch(`/api/admin/events/${eventId}/engagement`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "mute", profileId: m.id, mute }),
+    }).catch(() => {});
+    addAudit(mute ? "mute_attendee" : "unmute_attendee", m.name);
+    flash(`${mute ? "Muted" : "Unmuted"} ${m.name}`);
+  }
+
+  function banAttendee(m: { id: string; name: string }) {
+    if (!window.confirm(`Ban ${m.name} from re-entering this event?`)) return;
+    sendModeration({ targetId: m.id, action: "remove" });
+    void fetch(`/api/admin/events/${eventId}/engagement`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "ban", profileId: m.id, ban: true, permanent: false }),
+    }).catch(() => {});
+    addAudit("ban_attendee", m.name);
+    flash(`Banned ${m.name}`);
+  }
+
+  async function launchPoll() {
+    const options = pOpts.split("\n").map((o) => o.trim()).filter(Boolean).slice(0, 5);
+    if (!pQ.trim() || options.length < 2) { flash("Add a question and at least 2 options"); return; }
+    const res = await fetch(`/api/admin/events/${eventId}/polls`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: pQ.trim(), options }),
+    });
+    if (res.ok) {
+      const j = await res.json();
+      setPoll({ poll: j.poll, counts: options.map(() => 0), total: 0, myVote: null });
+      addAudit("open_poll", pQ.trim());
+      setPQ(""); setPOpts(""); flash("Poll launched");
+    } else flash("Couldn't launch poll");
+  }
+
+  async function endPoll() {
+    if (!poll?.poll) return;
+    await fetch(`/api/admin/events/${eventId}/polls`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pollId: poll.poll.id }),
+    }).catch(() => {});
+    addAudit("close_poll", poll.poll.question);
+    setPoll(null); flash("Poll closed");
   }
 
   function flash(msg: string) {
@@ -175,6 +256,48 @@ export function EventControlCenter({
         </div>
       </section>
 
+      <section className="mt-4 grid gap-4 md:grid-cols-2">
+        <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
+          <h2 className="text-sm font-semibold text-[var(--navy)]">Drop bonus points</h2>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <select value={dropRoom} onChange={(e) => setDropRoom(e.target.value)} className="rounded-md border border-[var(--border-subtle)] px-2 py-2 text-sm">
+              {rooms.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+            <input type="number" min={1} max={500} value={dropAmount} onChange={(e) => setDropAmount(e.target.value)} className="w-20 rounded-md border border-[var(--border-subtle)] px-2 py-2 text-sm" />
+            <button onClick={dropPoints} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium">Drop</button>
+          </div>
+          <p className="mt-2 text-[11px] text-[var(--text-muted)]">Awards everyone currently present in the chosen room.</p>
+        </div>
+
+        <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
+          <h2 className="text-sm font-semibold text-[var(--navy)]">Live poll</h2>
+          {poll?.poll ? (
+            <div className="mt-3">
+              <p className="text-sm font-medium text-[var(--navy)]">{poll.poll.question}</p>
+              <div className="mt-2 space-y-1.5">
+                {poll.poll.options.map((o, i) => {
+                  const c = poll.counts[i] ?? 0;
+                  const pct = poll.total ? Math.round((c / poll.total) * 100) : 0;
+                  return (
+                    <div key={i}>
+                      <div className="flex justify-between text-xs"><span>{o}</span><span className="text-[var(--text-muted)]">{c} · {pct}%</span></div>
+                      <div className="mt-0.5 h-1.5 rounded-full bg-[var(--surface-sunken)]"><div className="h-1.5 rounded-full" style={{ width: `${pct}%`, background: "#1D9E75" }} /></div>
+                    </div>
+                  );
+                })}
+              </div>
+              <button onClick={endPoll} className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700">Close poll</button>
+            </div>
+          ) : (
+            <div className="mt-3 space-y-2">
+              <input value={pQ} onChange={(e) => setPQ(e.target.value)} placeholder="Poll question" maxLength={200} className="w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
+              <textarea value={pOpts} onChange={(e) => setPOpts(e.target.value)} rows={3} placeholder="One option per line (2–5)" className="w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
+              <button onClick={launchPoll} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium">Launch poll</button>
+            </div>
+          )}
+        </div>
+      </section>
+
       <section className="mt-4 rounded-xl border border-[var(--border-subtle)] bg-white p-4">
         <h2 className="text-sm font-semibold text-[var(--navy)]">Help desk · {help.length} open</h2>
         <div className="mt-3 space-y-2">
@@ -211,7 +334,9 @@ export function EventControlCenter({
                     <select defaultValue={rooms.includes(m.room) ? m.room : rooms[0]} onChange={(e) => moveAttendee(m, e.target.value)} aria-label="Move attendee" className="rounded-md border border-[var(--border-subtle)] px-1.5 py-1 text-xs">
                       {rooms.map((r) => <option key={r} value={r}>{r}</option>)}
                     </select>
+                    <button onClick={() => toggleMute(m, true)} aria-label={`Mute ${m.name}`} className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-slate-50">Mute</button>
                     <button onClick={() => removeAttendee(m)} aria-label={`Remove ${m.name}`} className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-rose-600 hover:bg-rose-50">Remove</button>
+                    <button onClick={() => banAttendee(m)} aria-label={`Ban ${m.name}`} className="rounded-md border border-rose-300 bg-rose-50 px-2 py-1 text-xs text-rose-700 hover:bg-rose-100">Ban</button>
                   </div>
                 </div>
               ))

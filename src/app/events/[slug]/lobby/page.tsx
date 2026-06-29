@@ -12,6 +12,8 @@ import { EventVenueHeader } from "@/components/events/EventVenueHeader";
 import { LobbyHall } from "@/components/events/LobbyHall";
 import { LiveAnnouncementPopup } from "@/components/events/LiveAnnouncementPopup";
 import { EventInfoDesk } from "@/components/events/EventInfoDesk";
+import { EventPollWidget } from "@/components/events/EventPollWidget";
+import { isBanned } from "@/lib/icfo-events/engagement";
 import type { EventWithDetail } from "@/lib/icfo-events/types";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +44,9 @@ export default async function EventLobbyPage({ params }: { params: Promise<{ slu
   const profile = await getCurrentUserProfile().catch(() => null);
   const me = profile ? { id: profile.id, name: profile.full_name ?? profile.email ?? "Attendee" } : null;
 
+  const supabase = await createServerSupabaseClient();
+  if (profile && (await isBanned(supabase, event.id, profile.id))) notFound();
+
   const firstSector = event.sectors[0]?.sectorSlug;
   const tracksHref = firstSector ? `/events/sectors/${firstSector}` : `/events/${slug}#agenda`;
 
@@ -62,6 +67,7 @@ export default async function EventLobbyPage({ params }: { params: Promise<{ slu
             <EventVenueHeader slug={slug} current="lobby" tracksHref={tracksHref} />
             <LobbyHall slug={slug} eventTitle={event.title} tracksHref={tracksHref} />
           </div>
+          <EventPollWidget slug={slug} />
           <LiveAnnouncementPopup />
           <EventInfoDesk slug={slug} />
 
