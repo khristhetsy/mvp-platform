@@ -37,6 +37,8 @@ function mapEvent(r: EventRow): EventRecord {
     startsAt: (r.starts_at as string | null) ?? null,
     endsAt: (r.ends_at as string | null) ?? null,
     coverPath: (r.cover_path as string | null) ?? null,
+    coverOverlay: Number(r.cover_overlay ?? 55),
+    coverFocal: (r.cover_focal as string | null) ?? "center",
     createdBy: String(r.created_by),
     createdAt: String(r.created_at),
     updatedAt: String(r.updated_at),

@@ -43,6 +43,8 @@ export interface EventRecord {
   startsAt: string | null;
   endsAt: string | null;
   coverPath: string | null;
+  coverOverlay: number;
+  coverFocal: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;

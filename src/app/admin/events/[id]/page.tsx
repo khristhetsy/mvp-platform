@@ -6,9 +6,11 @@ import { getEventById } from "@/lib/icfo-events/queries";
 import { listSponsors, listEventSponsors } from "@/lib/icfo-events/sponsors";
 import { isLiveVideoConfigured } from "@/lib/icfo-events/video/whereby";
 import { listEventModerators } from "@/lib/icfo-events/moderators";
+import { bannerPublicUrl } from "@/lib/icfo-events/banner";
 import { listInternalUsers } from "@/lib/rbac/internal-users";
 import { EventDetailManager } from "@/components/admin-events/EventDetailManager";
 import { EventModeratorsManager } from "@/components/admin-events/EventModeratorsManager";
+import { EventBannerEditor } from "@/components/admin-events/EventBannerEditor";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Manage event" };
@@ -42,6 +44,15 @@ export default async function AdminEventDetailPage({ params }: { params: Promise
         initialEventSponsors={eventSponsors}
         liveVideoConfigured={isLiveVideoConfigured()}
       />
+      <div className="mx-auto max-w-4xl px-4">
+        <EventBannerEditor
+          eventId={id}
+          eventTitle={event.title}
+          initialUrl={bannerPublicUrl(admin, event.coverPath)}
+          initialOverlay={event.coverOverlay}
+          initialFocal={event.coverFocal}
+        />
+      </div>
       <div className="mx-auto max-w-4xl px-4 pb-8">
         <EventModeratorsManager
           eventId={id}

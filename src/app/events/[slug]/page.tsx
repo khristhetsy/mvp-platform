@@ -31,6 +31,7 @@ import type { NetworkingSuggestion, NetworkingConnection } from "@/lib/icfo-even
 import { sessionVideoSignedUrl } from "@/lib/icfo-events/video/storage";
 import { getVideoProvider } from "@/lib/icfo-events/video/provider";
 import { embeddableLiveUrl } from "@/lib/icfo-events/video/external";
+import { bannerPublicUrl } from "@/lib/icfo-events/banner";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import type { EventWithDetail, EventSession, EventPresenter, EventSponsor } from "@/lib/icfo-events/types";
 
@@ -182,6 +183,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
   const profile = await getCurrentUserProfile();
   const role = String(profile?.role ?? "").toLowerCase();
   const canApply = role === "founder" || role === "investor";
+  const coverUrl = bannerPublicUrl(supabase, event.coverPath);
 
   const [presenters, sponsors, registration, optin] = await Promise.all([
     listEventPresenters(supabase, event.id).catch(() => [] as EventPresenter[]),
@@ -261,8 +263,18 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
       <JsonLd data={jsonLd} />
 
       <section className="mx-auto max-w-4xl px-4 py-14">
-        <div className="overflow-hidden rounded-2xl" style={{ background: "#0c2340" }}>
-          <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-end sm:justify-between sm:p-8">
+        <div className="relative overflow-hidden rounded-2xl" style={{ background: "#0c2340" }}>
+          {coverUrl && (
+            <>
+              <div
+                aria-hidden
+                className="absolute inset-0"
+                style={{ backgroundImage: `url(${coverUrl})`, backgroundSize: "cover", backgroundPosition: event.coverFocal }}
+              />
+              <div aria-hidden className="absolute inset-0" style={{ background: "#0c2340", opacity: event.coverOverlay / 100 }} />
+            </>
+          )}
+          <div className="relative flex flex-col gap-5 p-6 sm:flex-row sm:items-end sm:justify-between sm:p-8">
             <div className="min-w-0">
               <p className="text-xs font-medium tracking-wide" style={{ color: "#5DCAA5" }}>
                 iCFO CAPITAL · ECOSYSTEM SHOWCASE
