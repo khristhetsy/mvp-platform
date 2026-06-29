@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { EVENT_SECTORS, sectorLabel } from "@/lib/icfo-events/sectors";
 import { GuestRoster } from "@/components/events/GuestRoster";
 import type {
@@ -15,25 +16,9 @@ import type {
   SessionType,
 } from "@/lib/icfo-events/types";
 
-const SESSION_TYPES: { value: SessionType; label: string }[] = [
-  { value: "keynote", label: "Keynote" },
-  { value: "panel", label: "Panel" },
-  { value: "talk_show", label: "Talk Show" },
-  { value: "founder_showcase", label: "Founder Showcase" },
-  { value: "workshop", label: "Workshop" },
-];
-
-const FORMATS: { value: EventFormat; label: string }[] = [
-  { value: "showcase", label: "Showcase" },
-  { value: "demo_day", label: "Demo Day" },
-  { value: "webinar", label: "Webinar" },
-  { value: "hybrid", label: "Hybrid" },
-];
-
-const VISIBILITIES: { value: EventVisibility; label: string }[] = [
-  { value: "public", label: "Public" },
-  { value: "members", label: "Members" },
-];
+const SESSION_TYPE_VALUES: SessionType[] = ["keynote", "panel", "talk_show", "founder_showcase", "workshop"];
+const FORMAT_VALUES: EventFormat[] = ["showcase", "demo_day", "webinar", "hybrid"];
+const VISIBILITY_VALUES: EventVisibility[] = ["public", "members"];
 
 /** Flatten an API error (string or Zod fieldErrors object) into a readable message. */
 function formatApiError(error: unknown, fallback: string): string {
@@ -66,6 +51,7 @@ function SessionLiveControls({
   onUpdated: (s: EventSession) => void;
   liveConfigured: boolean;
 }) {
+  const t = useTranslations("eventsAdmin.manage");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showLink, setShowLink] = useState(false);
@@ -115,32 +101,32 @@ function SessionLiveControls({
       <div className="flex flex-wrap items-center gap-2">
         {session.status === "live" ? (
           <>
-            <span className="rounded bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">● Live</span>
+            <span className="rounded bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">● {t("live")}</span>
             {session.videoRef && (
               <a href={session.videoRef} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[var(--blue)] hover:underline">
-                Open live link
+                {t("openLiveLink")}
               </a>
             )}
             <button onClick={endLive} disabled={busy} className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-50">
-              {busy ? "…" : "End session"}
+              {busy ? "…" : t("endSession")}
             </button>
           </>
         ) : session.status !== "ended" ? (
           <>
             <button onClick={() => goLive({ useGoogleMeet: true })} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
-              {busy ? "Starting…" : "Create Google Meet"}
+              {busy ? t("starting") : t("createMeet")}
             </button>
             <button onClick={() => setShowLink((v) => !v)} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
-              Go live with a link
+              {t("goLiveLink")}
             </button>
             {liveConfigured && (
               <button onClick={() => goLive()} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50">
-                Whereby room
+                {t("wherebyRoom")}
               </button>
             )}
           </>
         ) : (
-          <span className="text-xs text-[var(--text-muted)]">Ended</span>
+          <span className="text-xs text-[var(--text-muted)]">{t("ended")}</span>
         )}
         {error && <span className="text-xs text-rose-600">{error}</span>}
       </div>
@@ -150,7 +136,7 @@ function SessionLiveControls({
           <input
             value={liveUrl}
             onChange={(e) => setLiveUrl(e.target.value)}
-            placeholder="Paste a live link — YouTube, Zoom, Meet, Whereby…"
+            placeholder={t("pasteLinkPh")}
             className="min-w-[240px] flex-1 rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs"
           />
           <button
@@ -158,7 +144,7 @@ function SessionLiveControls({
             disabled={busy || !liveUrl.trim()}
             className="rounded-md bg-[var(--blue)] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
           >
-            {busy ? "Starting…" : "Start"}
+            {busy ? t("starting") : t("start")}
           </button>
         </div>
       )}
@@ -175,6 +161,7 @@ function SessionVideoUpload({
   session: EventSession;
   onUpdated: (s: EventSession) => void;
 }) {
+  const t = useTranslations("eventsAdmin.manage");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -202,10 +189,10 @@ function SessionVideoUpload({
   return (
     <div className="mt-2 flex items-center gap-2">
       <label className="cursor-pointer text-xs font-medium text-[var(--blue)] hover:underline">
-        {busy ? "Uploading…" : session.recordingPath ? "Replace recording" : "Upload recording"}
+        {busy ? t("uploading") : session.recordingPath ? t("replaceRecording") : t("uploadRecording")}
         <input type="file" accept="video/mp4,video/webm,video/quicktime" onChange={upload} disabled={busy} className="hidden" />
       </label>
-      <span className="text-xs text-[var(--text-muted)]">MP4 / WebM / MOV, up to 500 MB</span>
+      <span className="text-xs text-[var(--text-muted)]">{t("videoHint")}</span>
       {error && <span className="text-xs text-rose-600">{error}</span>}
     </div>
   );
@@ -222,6 +209,7 @@ export function EventDetailManager({
   initialEventSponsors: EventSponsor[];
   liveVideoConfigured: boolean;
 }) {
+  const t = useTranslations("eventsAdmin.manage");
   const [sessions, setSessions] = useState<EventSession[]>(event.sessions);
   const [eventSponsors, setEventSponsors] = useState<EventSponsor[]>(initialEventSponsors);
   const [error, setError] = useState<string | null>(null);
@@ -270,7 +258,7 @@ export function EventDetailManager({
       if (!res.ok) throw new Error(formatApiError(json.error, "Could not save event."));
       setHeaderTitle(title);
       setHeaderSectors(sectorSlugs.map((slug) => EVENT_SECTORS.find((s) => s.slug === slug)?.label ?? slug));
-      setDetailsMsg("Saved.");
+      setDetailsMsg(t("saved"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save event.");
     } finally {
@@ -383,15 +371,15 @@ export function EventDetailManager({
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
       <Link href="/admin/events" className="inline-flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]">
-        <ArrowLeft className="h-4 w-4" /> All events
+        <ArrowLeft className="h-4 w-4" /> {t("allEvents")}
       </Link>
 
       <div className="mt-3 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-[var(--text-primary)]">{headerTitle}</h1>
           <p className="mt-1 text-sm text-[var(--text-muted)]">
-            /{event.slug} · <span className="capitalize">{event.status}</span> ·{" "}
-            {headerSectors.join(", ") || "no sector tracks"}
+            /{event.slug} · <span>{t(`status.${event.status}`)}</span> ·{" "}
+            {headerSectors.join(", ") || t("noSectorTracks")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -399,26 +387,26 @@ export function EventDetailManager({
             href={`/admin/events/${event.id}/control`}
             className="rounded-md bg-[var(--navy)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
           >
-            Live control center
+            {t("liveControlCenter")}
           </Link>
           <Link
             href={`/admin/events/${event.id}/marketing`}
             className="rounded-md bg-[var(--indigo)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
           >
-            Marketing Hub
+            {t("marketingHub")}
           </Link>
           <Link
             href={`/admin/events/${event.id}/leads`}
             className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
           >
-            Leads
+            {t("leads")}
           </Link>
           <Link
             href={`/events/${event.slug}`}
             target="_blank"
             className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
           >
-            View public page
+            {t("viewPublic")}
           </Link>
         </div>
       </div>
@@ -429,10 +417,10 @@ export function EventDetailManager({
 
       {/* Event details */}
       <section className="mt-6 rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
-        <h2 className="font-semibold text-[var(--navy)]">Event details</h2>
+        <h2 className="font-semibold text-[var(--navy)]">{t("eventDetails")}</h2>
         <form onSubmit={saveDetails} className="mt-4 grid gap-4">
           <label className="block">
-            <span className="text-xs font-medium text-[var(--text-muted)]">Title</span>
+            <span className="text-xs font-medium text-[var(--text-muted)]">{t("title")}</span>
             <input
               required
               value={title}
@@ -446,7 +434,7 @@ export function EventDetailManager({
           </label>
 
           <label className="block">
-            <span className="text-xs font-medium text-[var(--text-muted)]">Summary</span>
+            <span className="text-xs font-medium text-[var(--text-muted)]">{t("summary")}</span>
             <textarea
               value={summary}
               onChange={(e) => {
@@ -461,7 +449,7 @@ export function EventDetailManager({
 
           <div className="grid grid-cols-2 gap-4">
             <label className="block">
-              <span className="text-xs font-medium text-[var(--text-muted)]">Format</span>
+              <span className="text-xs font-medium text-[var(--text-muted)]">{t("format")}</span>
               <select
                 value={format}
                 onChange={(e) => {
@@ -470,13 +458,13 @@ export function EventDetailManager({
                 }}
                 className="mt-1 block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
               >
-                {FORMATS.map((f) => (
-                  <option key={f.value} value={f.value}>{f.label}</option>
+                {FORMAT_VALUES.map((f) => (
+                  <option key={f} value={f}>{t(`fmt.${f}`)}</option>
                 ))}
               </select>
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-[var(--text-muted)]">Visibility</span>
+              <span className="text-xs font-medium text-[var(--text-muted)]">{t("visibility")}</span>
               <select
                 value={visibility}
                 onChange={(e) => {
@@ -485,8 +473,8 @@ export function EventDetailManager({
                 }}
                 className="mt-1 block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
               >
-                {VISIBILITIES.map((v) => (
-                  <option key={v.value} value={v.value}>{v.label}</option>
+                {VISIBILITY_VALUES.map((v) => (
+                  <option key={v} value={v}>{t(`vis.${v}`)}</option>
                 ))}
               </select>
             </label>
@@ -494,7 +482,7 @@ export function EventDetailManager({
 
           <div className="grid grid-cols-2 gap-4">
             <label className="block">
-              <span className="text-xs font-medium text-[var(--text-muted)]">Starts at (optional)</span>
+              <span className="text-xs font-medium text-[var(--text-muted)]">{t("startsAtOpt")}</span>
               <input
                 type="datetime-local"
                 value={startsAt}
@@ -506,7 +494,7 @@ export function EventDetailManager({
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-[var(--text-muted)]">Ends at (optional)</span>
+              <span className="text-xs font-medium text-[var(--text-muted)]">{t("endsAtOpt")}</span>
               <input
                 type="datetime-local"
                 value={endsAt}
@@ -520,8 +508,8 @@ export function EventDetailManager({
           </div>
 
           <div>
-            <span className="text-xs font-medium text-[var(--text-muted)]">Sector tracks</span>
-            <p className="text-xs text-[var(--text-muted)]">An event must have at least one track before it can be published.</p>
+            <span className="text-xs font-medium text-[var(--text-muted)]">{t("sectorTracks")}</span>
+            <p className="text-xs text-[var(--text-muted)]">{t("sectorHint")}</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {EVENT_SECTORS.map((s) => {
                 const active = sectorSlugs.includes(s.slug);
@@ -551,7 +539,7 @@ export function EventDetailManager({
               disabled={savingDetails || !title.trim()}
               className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
-              {savingDetails ? "Saving…" : "Save changes"}
+              {savingDetails ? t("saving") : t("saveChanges")}
             </button>
           </div>
         </form>
@@ -559,26 +547,26 @@ export function EventDetailManager({
 
       {/* Sessions */}
       <section className="mt-6 rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
-        <h2 className="font-semibold text-[var(--navy)]">Sessions</h2>
+        <h2 className="font-semibold text-[var(--navy)]">{t("sessions")}</h2>
         <div className="mt-3 space-y-2">
           {sessions.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">No sessions yet.</p>
+            <p className="text-sm text-[var(--text-muted)]">{t("noSessions")}</p>
           ) : (
             sessions.map((s) => (
               <div key={s.id} className="rounded-lg border border-[var(--border-subtle)] px-3 py-2">
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="rounded bg-[var(--indigo-soft)] px-2 py-0.5 text-xs font-medium text-[var(--indigo)]">
-                      {SESSION_TYPES.find((t) => t.value === s.type)?.label ?? s.type}
+                      {t(`type.${s.type}`)}
                     </span>
                     <span className="ml-2 text-sm font-medium text-[var(--navy)]">{s.title}</span>
                     {s.sectorSlug && <span className="ml-2 text-xs text-[var(--text-muted)]">{sectorLabel(s.sectorSlug)}</span>}
                     {s.recordingPath && (
-                      <span className="ml-2 rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Recorded</span>
+                      <span className="ml-2 rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">{t("recorded")}</span>
                     )}
                   </div>
                   <button onClick={() => removeSession(s.id)} className="text-xs text-rose-600 hover:underline">
-                    Remove
+                    {t("remove")}
                   </button>
                 </div>
                 <SessionLiveControls session={s} onUpdated={onSessionUpdated} liveConfigured={liveVideoConfigured} />
@@ -595,18 +583,18 @@ export function EventDetailManager({
               required
               value={sTitle}
               onChange={(e) => setSTitle(e.target.value)}
-              placeholder="Session title"
+              placeholder={t("sessionTitlePh")}
               className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
             />
             <select value={sType} onChange={(e) => setSType(e.target.value as SessionType)} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm">
-              {SESSION_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
+              {SESSION_TYPE_VALUES.map((v) => (
+                <option key={v} value={v}>{t(`type.${v}`)}</option>
               ))}
             </select>
           </div>
           {event.sectors.length > 0 && (
             <select value={sSector} onChange={(e) => setSSector(e.target.value)} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm">
-              <option value="">No specific track</option>
+              <option value="">{t("noSpecificTrack")}</option>
               {event.sectors.map((s) => (
                 <option key={s.id} value={s.sectorSlug}>{s.label}</option>
               ))}
@@ -614,9 +602,9 @@ export function EventDetailManager({
           )}
           {eventSponsors.length > 0 && (
             <select value={sHost} onChange={(e) => setSHost(e.target.value)} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm">
-              <option value="">No host sponsor</option>
+              <option value="">{t("noHostSponsor")}</option>
               {eventSponsors.map((s) => (
-                <option key={s.id} value={s.id}>Hosted by {s.name}</option>
+                <option key={s.id} value={s.id}>{t("hostedBy", { name: s.name })}</option>
               ))}
             </select>
           )}
@@ -624,11 +612,11 @@ export function EventDetailManager({
             value={sAbstract}
             onChange={(e) => setSAbstract(e.target.value)}
             rows={2}
-            placeholder="Abstract (optional)"
+            placeholder={t("abstractPh")}
             className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
           />
           <label className="text-xs text-[var(--text-muted)]">
-            Premiere / start time (optional — recorded sessions unlock at this time)
+            {t("premiereHint")}
             <input
               type="datetime-local"
               value={sStartsAt}
@@ -638,7 +626,7 @@ export function EventDetailManager({
           </label>
           <div className="flex justify-end">
             <button type="submit" disabled={addingSession || !sTitle.trim()} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50">
-              {addingSession ? "Adding…" : "Add session"}
+              {addingSession ? t("adding") : t("addSession")}
             </button>
           </div>
         </form>
@@ -646,10 +634,10 @@ export function EventDetailManager({
 
       {/* Sponsors */}
       <section className="mt-6 rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
-        <h2 className="font-semibold text-[var(--navy)]">Sponsors</h2>
+        <h2 className="font-semibold text-[var(--navy)]">{t("sponsors")}</h2>
         <div className="mt-3 space-y-2">
           {eventSponsors.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">No sponsors attached.</p>
+            <p className="text-sm text-[var(--text-muted)]">{t("noSponsorsAttached")}</p>
           ) : (
             eventSponsors.map((s) => (
               <div key={s.id} className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] px-3 py-2">
@@ -659,7 +647,7 @@ export function EventDetailManager({
                   <span className="ml-2 text-xs capitalize text-[var(--text-muted)]">{s.tier}</span>
                 </div>
                 <button onClick={() => detachSponsor(s.id)} className="text-xs text-rose-600 hover:underline">
-                  Remove
+                  {t("remove")}
                 </button>
               </div>
             ))
@@ -668,13 +656,13 @@ export function EventDetailManager({
 
         {sponsorCatalog.length === 0 ? (
           <p className="mt-4 border-t border-[var(--border-subtle)] pt-4 text-sm text-[var(--text-muted)]">
-            No sponsors in the catalog yet. Create sponsors in{" "}
-            <Link href="/admin/events/sponsors" className="text-[var(--blue)] underline">Sponsor catalog</Link>.
+            {t("noCatalogPre")}
+            <Link href="/admin/events/sponsors" className="text-[var(--blue)] underline">{t("catalogLink")}</Link>.
           </p>
         ) : (
           <form onSubmit={attachSponsor} className="mt-4 flex flex-wrap items-end gap-3 border-t border-[var(--border-subtle)] pt-4">
             <label className="block">
-              <span className="text-xs text-[var(--text-muted)]">Sponsor</span>
+              <span className="text-xs text-[var(--text-muted)]">{t("sponsor")}</span>
               <select value={sponsorId} onChange={(e) => setSponsorId(e.target.value)} className="mt-1 block rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm">
                 {sponsorCatalog.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
@@ -682,15 +670,15 @@ export function EventDetailManager({
               </select>
             </label>
             <label className="block">
-              <span className="text-xs text-[var(--text-muted)]">Placement</span>
+              <span className="text-xs text-[var(--text-muted)]">{t("placement")}</span>
               <select value={placement} onChange={(e) => setPlacement(e.target.value as typeof placement)} className="mt-1 block rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm">
-                <option value="presenting">Presenting</option>
-                <option value="track">Track</option>
-                <option value="logo">Logo</option>
+                <option value="presenting">{t("presenting")}</option>
+                <option value="track">{t("track")}</option>
+                <option value="logo">{t("logo")}</option>
               </select>
             </label>
             <button type="submit" disabled={attaching} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50">
-              {attaching ? "Attaching…" : "Attach"}
+              {attaching ? t("attaching") : t("attach")}
             </button>
           </form>
         )}
