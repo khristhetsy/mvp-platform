@@ -32,6 +32,7 @@ import { sessionVideoSignedUrl } from "@/lib/icfo-events/video/storage";
 import { getVideoProvider } from "@/lib/icfo-events/video/provider";
 import { embeddableLiveUrl } from "@/lib/icfo-events/video/external";
 import { bannerPublicUrl } from "@/lib/icfo-events/banner";
+import { loadMarketing } from "@/lib/icfo-events/marketing";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import type { EventWithDetail, EventSession, EventPresenter, EventSponsor } from "@/lib/icfo-events/types";
 
@@ -66,12 +67,18 @@ export async function generateMetadata({
   if (!event || event.status === "draft" || event.status === "archived") {
     return { title: "Event not found" };
   }
-  const description = event.summary ?? "An iCFO Events sector showcase convening founders and investors.";
+  // Saved Marketing Hub SEO overrides the defaults (read via service role —
+  // the table is staff-only). Falls back to the event summary.
+  const mk = await loadMarketing(createServiceRoleClient(), event.id).catch(() => null);
+  const title = mk?.seoTitle?.trim() || `${event.title} — iCFO Events`;
+  const description = mk?.seoDescription?.trim() || event.summary || "An iCFO Events sector showcase convening founders and investors.";
+  const keywords = mk?.seoKeywords?.trim() || undefined;
   return {
-    title: `${event.title} — iCFO Events`,
+    title,
     description,
+    ...(keywords ? { keywords } : {}),
     alternates: { canonical: `/events/${event.slug}` },
-    openGraph: { title: event.title, description, url: `/events/${event.slug}`, type: "website" },
+    openGraph: { title: mk?.seoTitle?.trim() || event.title, description, url: `/events/${event.slug}`, type: "website" },
   };
 }
 

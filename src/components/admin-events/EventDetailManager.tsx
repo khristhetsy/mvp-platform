@@ -402,6 +402,12 @@ export function EventDetailManager({
             Live control center
           </Link>
           <Link
+            href={`/admin/events/${event.id}/marketing`}
+            className="rounded-md bg-[var(--indigo)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+          >
+            Marketing Hub
+          </Link>
+          <Link
             href={`/events/${event.slug}`}
             target="_blank"
             className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
