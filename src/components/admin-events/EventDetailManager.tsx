@@ -408,6 +408,12 @@ export function EventDetailManager({
             Marketing Hub
           </Link>
           <Link
+            href={`/admin/events/${event.id}/leads`}
+            className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
+          >
+            Leads
+          </Link>
+          <Link
             href={`/events/${event.slug}`}
             target="_blank"
             className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
