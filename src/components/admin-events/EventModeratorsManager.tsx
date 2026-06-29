@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { PRESENCE_ROOMS } from "@/lib/icfo-events/venue";
 import type { EventModerator } from "@/lib/icfo-events/moderators";
 
@@ -31,6 +32,7 @@ export function EventModeratorsManager({
   staff: Staff[];
   canManage: boolean;
 }) {
+  const t = useTranslations("eventsAdmin.moderators");
   const [moderators, setModerators] = useState<EventModerator[]>(initialModerators);
   const [addId, setAddId] = useState("");
   const [busy, setBusy] = useState(false);
@@ -80,20 +82,15 @@ export function EventModeratorsManager({
 
   return (
     <section className="mt-6 rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
-      <h2 className="font-semibold text-[var(--navy)]">Event moderators</h2>
-      <p className="mt-1 text-sm text-[var(--text-muted)]">
-        Scope a staff member to specific rooms for this event. They can only control their assigned rooms in the live
-        Control Center.
-      </p>
+      <h2 className="font-semibold text-[var(--navy)]">{t("title")}</h2>
+      <p className="mt-1 text-sm text-[var(--text-muted)]">{t("desc")}</p>
       {!canManage && (
-        <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          Only super admins can assign moderators. You can view current assignments.
-        </p>
+        <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">{t("viewOnly")}</p>
       )}
 
       <div className="mt-4 space-y-3">
         {moderators.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)]">No moderators assigned yet.</p>
+          <p className="text-sm text-[var(--text-muted)]">{t("none")}</p>
         ) : (
           moderators.map((m) => (
             <div key={m.userId} className="rounded-lg border border-[var(--border-subtle)] p-3">
@@ -108,7 +105,7 @@ export function EventModeratorsManager({
                     disabled={busy}
                     className="text-xs text-rose-600 hover:underline disabled:opacity-50"
                   >
-                    Remove
+                    {t("remove")}
                   </button>
                 )}
               </div>
@@ -128,7 +125,7 @@ export function EventModeratorsManager({
                           : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-slate-50"
                       }`}
                     >
-                      {chip}
+                      {chip === "All rooms" ? t("allRooms") : chip}
                     </button>
                   );
                 })}
@@ -141,16 +138,16 @@ export function EventModeratorsManager({
       {canManage && (
         <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-[var(--border-subtle)] pt-4">
           <label className="block">
-            <span className="text-xs text-[var(--text-muted)]">Add a staff moderator</span>
+            <span className="text-xs text-[var(--text-muted)]">{t("addLabel")}</span>
             <select
               value={addId}
               onChange={(e) => setAddId(e.target.value)}
               className="mt-1 block rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
             >
-              <option value="">Select staff…</option>
+              <option value="">{t("selectStaff")}</option>
               {available.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.full_name ?? s.email ?? "Staff"}
+                  {s.full_name ?? s.email ?? t("staffFallback")}
                   {s.roleLabel ? ` · ${s.roleLabel}` : ""}
                 </option>
               ))}
@@ -166,7 +163,7 @@ export function EventModeratorsManager({
             disabled={busy || !addId}
             className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50"
           >
-            Add moderator
+            {t("addModerator")}
           </button>
         </div>
       )}

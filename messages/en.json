@@ -486,6 +486,28 @@
       "removeConfirm": "Remove {name} from the event?",
       "movedToast": "Moved {name} to {room}",
       "removedToast": "Removed {name}"
+    },
+    "moderators": {
+      "title": "Event moderators",
+      "desc": "Scope a staff member to specific rooms for this event. They can only control their assigned rooms in the live Control Center.",
+      "viewOnly": "Only super admins can assign moderators. You can view current assignments.",
+      "none": "No moderators assigned yet.",
+      "remove": "Remove",
+      "allRooms": "All rooms",
+      "addLabel": "Add a staff moderator",
+      "selectStaff": "Select staff…",
+      "staffFallback": "Staff",
+      "addModerator": "Add moderator"
+    },
+    "banner": {
+      "title": "Event banner",
+      "desc": "Upload a cover image for the event hero. The overlay keeps the title readable; the focal point controls cropping.",
+      "uploading": "Uploading…",
+      "dropPrompt": "Drag & drop an image, or click to upload",
+      "fileHint": "JPG, PNG, or WebP · 1600×600 recommended · up to 5 MB",
+      "overlay": "Overlay darkness · {overlay}%",
+      "focal": "Focal point",
+      "removeBanner": "Remove banner"
     }
   }
 }

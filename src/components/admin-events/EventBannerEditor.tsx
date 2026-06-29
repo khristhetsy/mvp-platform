@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 const FOCALS: { key: string; label: string }[] = [
   { key: "top left", label: "↖" }, { key: "top", label: "↑" }, { key: "top right", label: "↗" },
@@ -21,6 +22,7 @@ export function EventBannerEditor({
   initialOverlay: number;
   initialFocal: string;
 }) {
+  const t = useTranslations("eventsAdmin.banner");
   const [url, setUrl] = useState<string | null>(initialUrl);
   const [overlay, setOverlay] = useState(initialOverlay);
   const [focal, setFocal] = useState(initialFocal || "center");
@@ -66,10 +68,8 @@ export function EventBannerEditor({
 
   return (
     <section className="mt-6 rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
-      <h2 className="font-semibold text-[var(--navy)]">Event banner</h2>
-      <p className="mt-1 text-sm text-[var(--text-muted)]">
-        Upload a cover image for the event hero. The overlay keeps the title readable; the focal point controls cropping.
-      </p>
+      <h2 className="font-semibold text-[var(--navy)]">{t("title")}</h2>
+      <p className="mt-1 text-sm text-[var(--text-muted)]">{t("desc")}</p>
 
       <div
         className="relative mt-4 h-44 overflow-hidden rounded-xl"
@@ -94,15 +94,15 @@ export function EventBannerEditor({
         onClick={() => inputRef.current?.click()}
         className={`mt-3 cursor-pointer rounded-xl border-2 border-dashed p-5 text-center transition-colors ${over ? "border-[var(--indigo)] bg-[var(--indigo-soft)]" : "border-[var(--border-subtle)]"}`}
       >
-        <p className="text-sm text-[var(--navy)]">{busy ? "Uploading…" : "Drag & drop an image, or click to upload"}</p>
-        <p className="mt-0.5 text-xs text-[var(--text-muted)]">JPG, PNG, or WebP · 1600×600 recommended · up to 5 MB</p>
+        <p className="text-sm text-[var(--navy)]">{busy ? t("uploading") : t("dropPrompt")}</p>
+        <p className="mt-0.5 text-xs text-[var(--text-muted)]">{t("fileHint")}</p>
         <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = ""; }} />
       </div>
 
       {url && (
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
-            <p className="mb-1 text-xs font-medium text-[var(--text-secondary)]">Overlay darkness · {overlay}%</p>
+            <p className="mb-1 text-xs font-medium text-[var(--text-secondary)]">{t("overlay", { overlay })}</p>
             <input
               type="range" min={0} max={90} value={overlay}
               onChange={(e) => setOverlay(Number(e.target.value))}
@@ -112,7 +112,7 @@ export function EventBannerEditor({
             />
           </div>
           <div>
-            <p className="mb-1 text-xs font-medium text-[var(--text-secondary)]">Focal point</p>
+            <p className="mb-1 text-xs font-medium text-[var(--text-secondary)]">{t("focal")}</p>
             <div className="grid w-24 grid-cols-3 gap-1">
               {FOCALS.map((f) => (
                 <button
@@ -132,7 +132,7 @@ export function EventBannerEditor({
       <div className="mt-4 flex items-center gap-3">
         {url && (
           <button onClick={remove} disabled={busy} className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-50">
-            Remove banner
+            {t("removeBanner")}
           </button>
         )}
         {error && <span className="text-xs text-rose-700">{error}</span>}

@@ -486,6 +486,28 @@
       "removeConfirm": "¿Quitar a {name} del evento?",
       "movedToast": "{name} movido a {room}",
       "removedToast": "{name} eliminado"
+    },
+    "moderators": {
+      "title": "Moderadores del evento",
+      "desc": "Asigna a un miembro del personal a salas específicas de este evento. Solo podrán controlar sus salas asignadas en el Centro de control en vivo.",
+      "viewOnly": "Solo los superadministradores pueden asignar moderadores. Puedes ver las asignaciones actuales.",
+      "none": "Aún no hay moderadores asignados.",
+      "remove": "Quitar",
+      "allRooms": "Todas las salas",
+      "addLabel": "Añadir un moderador del personal",
+      "selectStaff": "Selecciona personal…",
+      "staffFallback": "Personal",
+      "addModerator": "Añadir moderador"
+    },
+    "banner": {
+      "title": "Banner del evento",
+      "desc": "Sube una imagen de portada para el encabezado del evento. La superposición mantiene el título legible; el punto focal controla el recorte.",
+      "uploading": "Subiendo…",
+      "dropPrompt": "Arrastra y suelta una imagen, o haz clic para subir",
+      "fileHint": "JPG, PNG o WebP · 1600×600 recomendado · hasta 5 MB",
+      "overlay": "Oscuridad de la superposición · {overlay}%",
+      "focal": "Punto focal",
+      "removeBanner": "Quitar banner"
     }
   }
 }
