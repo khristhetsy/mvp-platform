@@ -7,12 +7,14 @@ import { createNotification } from "@/lib/notifications/notifications";
 import { getEventById } from "@/lib/icfo-events/queries";
 import { registerForEvent } from "@/lib/icfo-events/registrations";
 import { awardPoints } from "@/lib/icfo-events/gamification";
+import { applyRegistrationIntake, ATTENDEE_TYPES, type AttendeeType } from "@/lib/icfo-events/registration-intake";
 
 export const dynamic = "force-dynamic";
 
-/** Register the current user for an event. Idempotent. */
+/** Register the current user for an event. Idempotent. Optional typed intake
+ *  body: { attendeeType, answers }. */
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const profile = await requireUserProfile();
@@ -25,7 +27,24 @@ export async function POST(
       return NextResponse.json({ error: "Event not available for registration." }, { status: 404 });
     }
 
+    const body = (await req.json().catch(() => null)) as { attendeeType?: string; answers?: Record<string, unknown> } | null;
+    const attendeeType =
+      body?.attendeeType && (ATTENDEE_TYPES as readonly string[]).includes(body.attendeeType)
+        ? (body.attendeeType as AttendeeType)
+        : null;
+
     const { registration, created } = await registerForEvent(supabase, id, profile.id);
+
+    if (attendeeType) {
+      await applyRegistrationIntake({
+        supabase,
+        eventId: event.id,
+        eventTitle: event.title,
+        profileId: profile.id,
+        attendeeType,
+        answers: body?.answers ?? {},
+      });
+    }
 
     if (created) {
       await createNotification({
