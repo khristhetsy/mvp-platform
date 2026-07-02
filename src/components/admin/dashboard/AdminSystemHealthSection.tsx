@@ -1,17 +1,19 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { AdminButtonHealthPanel } from "@/components/AdminButtonHealthPanel";
 import { PageSection } from "@/components/ui/workspace-layout";
 
 export function AdminSystemHealthSection() {
+  const t = useTranslations("adminCmp");
   const [expanded, setExpanded] = useState(false);
   const panelId = "admin-system-health-diagnostics";
 
   return (
     <PageSection
-      title="System Health & Diagnostics"
-      subtitle="Admin API testing and configuration — secondary operational tooling"
+      title={t("system_health_diagnostics")}
+      subtitle={t("admin_api_testing_and_configuration_secondar")}
       action={
         <button
           type="button"

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { CheckCircle2, Pencil, MessageSquare, Paperclip, Archive, Plus, Flag } from "lucide-react";
 import type { AdminTaskActivity, TaskActivityEvent } from "@/lib/admin-tasks/types";
 
@@ -36,7 +37,8 @@ function when(ts: string): string {
 }
 
 export function ActivityFeed({ activity }: { activity: AdminTaskActivity[] }) {
-  if (activity.length === 0) return <p className="text-xs text-slate-400">No activity yet.</p>;
+  const t = useTranslations("adminCmp");
+  if (activity.length === 0) return <p className="text-xs text-slate-400">{t("no_activity_yet")}</p>;
   return (
     <ul className="space-y-3">
       {activity.map((a) => {

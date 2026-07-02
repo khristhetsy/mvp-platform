@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { BUSINESS_PLAN_SECTIONS } from "@/lib/business-plan/sections";
 import { ASSUMPTION_DEFS } from "@/lib/business-plan/assumptions";
@@ -12,6 +13,7 @@ function money(n: number): string {
 }
 
 export function CompanyBusinessPlanPanel({ companyId }: { companyId: string }) {
+  const t = useTranslations("adminCmp");
   const [plan, setPlan] = useState<BusinessPlan | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -25,8 +27,8 @@ export function CompanyBusinessPlanPanel({ companyId }: { companyId: string }) {
     return () => { on = false; };
   }, [companyId]);
 
-  if (loading) return <p className="text-sm text-slate-500">Loading…</p>;
-  if (!plan) return <p className="text-sm text-slate-500">No business plan started yet.</p>;
+  if (loading) return <p className="text-sm text-slate-500">{t("loading")}</p>;
+  if (!plan) return <p className="text-sm text-slate-500">{t("no_business_plan_started_yet")}</p>;
 
   const filled = BUSINESS_PLAN_SECTIONS.filter((s) => s.id !== "projections" && (plan.sections[s.id]?.content ?? "").trim().length > 0);
   const proj = plan.projections;
@@ -37,7 +39,7 @@ export function CompanyBusinessPlanPanel({ companyId }: { companyId: string }) {
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${plan.status === "finalized" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
           {plan.status === "finalized" ? "Finalized" : "Draft"}
         </span>
-        {plan.aiAssisted && <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">AI-assisted</span>}
+        {plan.aiAssisted && <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">{t("ai_assisted")}</span>}
         <span className="text-xs text-slate-500">
           {filled.length}/{BUSINESS_PLAN_SECTIONS.length - 1} sections · updated {plan.updatedAt ? new Date(plan.updatedAt).toLocaleDateString() : "—"}
         </span>
@@ -46,7 +48,7 @@ export function CompanyBusinessPlanPanel({ companyId }: { companyId: string }) {
       {/* Projections + assumptions (full transparency) */}
       {proj && (
         <div className="rounded-lg border border-slate-200 bg-white p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Projections &amp; assumptions</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("projections_assumptions")}</p>
           <table className="mt-2 w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-slate-400"><th></th><th className="text-right">Yr 1</th><th className="text-right">Yr 2</th><th className="text-right">Yr 3</th></tr>
@@ -74,7 +76,7 @@ export function CompanyBusinessPlanPanel({ companyId }: { companyId: string }) {
             <p className="mt-1.5 whitespace-pre-wrap text-sm text-slate-600">{plan.sections[s.id]?.content}</p>
           </details>
         ))}
-        {filled.length === 0 && <p className="text-sm text-slate-500">No section content yet.</p>}
+        {filled.length === 0 && <p className="text-sm text-slate-500">{t("no_section_content_yet")}</p>}
       </div>
 
       <p className="text-xs text-slate-400">

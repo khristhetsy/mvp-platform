@@ -1,4 +1,5 @@
 import type { OperationalSystemSnapshot } from "@/lib/operations/system-snapshot";
+import { useTranslations } from "next-intl";
 import {
   REQUIRED_MIGRATION_FLOOR,
   migrationNumericPrefix,
@@ -22,6 +23,7 @@ function StatusRow({
 export function AdminRecoveryChecklist({
   snapshot,
 }: Readonly<{ snapshot: OperationalSystemSnapshot }>) {
+  const t = useTranslations("sharedCmp");
   const allRequiredBuckets = Object.values(snapshot.storage.requiredBucketsPresent).every(Boolean);
   const latestMigration = snapshot.migrations.latest ?? "unknown";
   const repoFloorOk = snapshot.migrations.files.some(
@@ -31,7 +33,7 @@ export function AdminRecoveryChecklist({
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-[var(--shadow-panel)]">
-      <h2 className="text-lg font-semibold text-slate-950">Backup &amp; recovery checklist</h2>
+      <h2 className="text-lg font-semibold text-slate-950">{t("backup_recovery_checklist")}</h2>
       <p className="mt-2 text-sm text-slate-600">
         Internal operational view. No secrets are shown. See{" "}
         <code className="rounded bg-slate-100 px-1 text-xs">docs/backup-and-recovery.md</code> for runbooks.
@@ -39,41 +41,41 @@ export function AdminRecoveryChecklist({
 
       <ul className="mt-4 space-y-2">
         <StatusRow
-          label="Latest repo migration file"
+          label={t("latest_repo_migration_file")}
           ok={snapshot.migrations.total > 0}
           detail={`${latestMigration} (${snapshot.migrations.total} files in repo)`}
         />
         <StatusRow
-          label="Repo includes launch floor migration"
+          label={t("repo_includes_launch_floor_migration")}
           ok={repoFloorOk}
           detail={`Required: ${REQUIRED_MIGRATION_FLOOR}`}
         />
         <StatusRow
-          label="Supabase public env"
+          label={t("supabase_public_env")}
           ok={snapshot.environment.supabasePublicConfigured}
           detail={snapshot.environment.supabaseProjectHost ?? "not configured"}
         />
         <StatusRow
-          label="Service role configured"
+          label={t("service_role_configured")}
           ok={snapshot.environment.serviceRoleConfigured}
         />
         <StatusRow
-          label="DATABASE_URL (backup scripts)"
+          label={t("database_url_backup_scripts")}
           ok={snapshot.environment.databaseUrlConfigured}
           detail="Required for scripts/backup-db.sh"
         />
         <StatusRow
-          label="Required storage buckets"
+          label={t("required_storage_buckets")}
           ok={allRequiredBuckets}
           detail={JSON.stringify(snapshot.storage.requiredBucketsPresent)}
         />
         <StatusRow
-          label="Google OAuth env"
+          label={t("google_oauth_env")}
           ok={snapshot.integrations.googleOAuthConfigured}
           detail={`${snapshot.integrations.googleConnectedAccounts} connected account(s)`}
         />
         <StatusRow
-          label="Recent backup audit event"
+          label={t("recent_backup_audit_event")}
           ok={!snapshot.backup.verificationRecommended}
           detail={
             lastBackup
@@ -85,7 +87,7 @@ export function AdminRecoveryChecklist({
 
       {snapshot.backup.lastEvents.length > 0 ? (
         <div className="mt-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Recent backup events</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("recent_backup_events")}</p>
           <ul className="mt-2 space-y-1 text-xs text-slate-600">
             {snapshot.backup.lastEvents.slice(0, 5).map((event) => (
               <li key={`${event.action}-${event.createdAt}`}>

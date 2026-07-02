@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
@@ -64,6 +65,7 @@ function layoutFingerprint(doc: PageLayoutDocument) {
 }
 
 export function PageBuilderLab() {
+  const t = useTranslations("sharedCmp");
   const [pageSlug, setPageSlug] = useState<PageBuilderSlug>("home");
   const [layout, setLayout] = useState<PageLayoutDocument>({ version: 1, pageSlug: "home", blocks: [] });
   const [draftMeta, setDraftMeta] = useState<PageBuilderDraftRow | null>(null);
@@ -370,8 +372,8 @@ export function PageBuilderLab() {
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Page Builder Lab</p>
-          <h1 className="mt-1 text-2xl font-semibold text-slate-950">Sandbox layout editor</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">{t("page_builder_lab")}</p>
+          <h1 className="mt-1 text-2xl font-semibold text-slate-950">{t("sandbox_layout_editor")}</h1>
           <p className="mt-1 max-w-3xl text-sm text-slate-600">
             Phase 1 drafts only. Preview at{" "}
             <Link href={`/preview/${pageSlug}`} className="font-medium text-slate-950 underline">
@@ -470,7 +472,7 @@ export function PageBuilderLab() {
 
       <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_320px_300px]">
         <section className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
-          <h2 className="text-sm font-semibold text-slate-950">Approved blocks</h2>
+          <h2 className="text-sm font-semibold text-slate-950">{t("approved_blocks")}</h2>
           <div className="mt-3 space-y-2">
             {BLOCK_DEFINITIONS.map((def) => (
               <button
@@ -485,8 +487,8 @@ export function PageBuilderLab() {
             ))}
           </div>
 
-          <h3 className="mt-5 text-sm font-semibold text-slate-950">Block order</h3>
-          <p className="mt-0.5 text-[10px] text-slate-500">Drag the handle or use move up/down.</p>
+          <h3 className="mt-5 text-sm font-semibold text-slate-950">{t("block_order")}</h3>
+          <p className="mt-0.5 text-[10px] text-slate-500">{t("drag_the_handle_or_use_move_up_down")}</p>
           <SortableList
             items={layout.blocks}
             disabled={loading}
@@ -538,12 +540,12 @@ export function PageBuilderLab() {
         </section>
 
         <section className="min-w-0 space-y-3">
-          {loading ? <p className="text-sm text-slate-500">Loading draft…</p> : null}
+          {loading ? <p className="text-sm text-slate-500">{t("loading_draft")}</p> : null}
 
           {viewMode === "compare" && compareSnapshot ? (
             <div className="grid gap-3 lg:grid-cols-2">
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-950">Current draft</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-950">{t("current_draft")}</p>
                 <PageBuilderPreview blocks={layout.blocks} previewMode={previewMode} />
               </div>
               <div>
@@ -593,13 +595,13 @@ export function PageBuilderLab() {
 
         <section className="space-y-4">
           <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
-            <h2 className="text-sm font-semibold text-slate-950">Validation</h2>
+            <h2 className="text-sm font-semibold text-slate-950">{t("validation")}</h2>
             <p className="mt-1 text-xs text-slate-500">
               {errorCount > 0 ? `${errorCount} error(s)` : "No blocking errors"} · {warnings.length} total
             </p>
             <ul className="mt-3 max-h-40 space-y-2 overflow-y-auto text-xs">
               {warnings.length === 0 ? (
-                <li className="text-slate-500">No warnings.</li>
+                <li className="text-slate-500">{t("no_warnings")}</li>
               ) : (
                 warnings.map((warning) => (
                   <li
@@ -661,6 +663,7 @@ function BlockEditor({
   selectedBlockId?: string | null;
   disabled?: boolean;
 }>) {
+  const t = useTranslations("sharedCmp");
   const def = getBlockDefinition(block.type);
 
   const field = (label: string, key: string, multiline = false) => {

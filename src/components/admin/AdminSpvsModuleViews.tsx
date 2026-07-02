@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Suspense, useMemo, useState } from "react";
 import { AdminSpvManagement } from "@/components/AdminSpvManagement";
 import { AdminQueryFilterBar } from "@/components/ui/AdminQueryFilterBar";
@@ -85,8 +86,9 @@ function AdminSpvsModuleViewsInner(props: AdminSpvsModuleViewsProps) {
 }
 
 export function AdminSpvsModuleViews(props: AdminSpvsModuleViewsProps) {
+  const t = useTranslations("adminCmp");
   return (
-    <Suspense fallback={<p className="text-sm text-slate-500">Loading view options…</p>}>
+    <Suspense fallback={<p className="text-sm text-slate-500">{t("loading_view_options")}</p>}>
       <AdminSpvsModuleViewsInner {...props} />
     </Suspense>
   );

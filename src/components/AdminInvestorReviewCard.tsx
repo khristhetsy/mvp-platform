@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { investorApprovalStatusLabel } from "@/lib/investor/access";
 import { KYC_STATUS_LABELS, type KycReviewItem } from "@/lib/investor/kyc";
@@ -24,6 +25,7 @@ function formatMoney(value: number | null) {
 }
 
 export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [feedback, setFeedback] = useState(row.admin_feedback ?? "");
@@ -174,7 +176,7 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
       {status === "approved" ? (
         <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Stage 2 · KYC verification</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("stage_2_kyc_verification")}</p>
             <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-slate-700">
               {KYC_STATUS_LABELS[kycStatus]}
             </span>
@@ -191,14 +193,14 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
                     View ↗
                   </a>
                 ) : item.uploaded ? (
-                  <span className="text-slate-500">Uploaded</span>
+                  <span className="text-slate-500">{t("uploaded")}</span>
                 ) : (
-                  <span className="text-slate-400">Not uploaded</span>
+                  <span className="text-slate-400">{t("not_uploaded")}</span>
                 )}
               </li>
             ))}
             {(row.kycReview?.items ?? []).length === 0 ? (
-              <li className="text-sm text-slate-400">No documents uploaded yet.</li>
+              <li className="text-sm text-slate-400">{t("no_documents_uploaded_yet")}</li>
             ) : null}
           </ul>
 
@@ -223,7 +225,7 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
           {/* Prior deals — verify each individually */}
           {(row.priorDeals ?? []).length > 0 ? (
             <div className="mt-3 border-t border-slate-200 pt-3">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Prior deals</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{t("prior_deals")}</p>
               <ul className="space-y-1.5">
                 {(row.priorDeals ?? []).map((deal) => (
                   <li key={deal.id} className="flex items-center justify-between gap-2 text-sm">
@@ -275,7 +277,7 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
 
       <textarea
         className="mt-4 min-h-20 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-        placeholder="Admin feedback (required for reject / changes requested / KYC reject)"
+        placeholder={t("admin_feedback_required_for_reject_changes_r")}
         value={feedback}
         onChange={(event) => setFeedback(event.target.value)}
       />

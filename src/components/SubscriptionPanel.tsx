@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { FeatureKey, SubscriptionRecord } from "@/lib/subscriptions/plans";
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import { subscriptionStatusLabel, isTrialExpired } from "@/lib/subscriptions/access";
@@ -40,13 +41,14 @@ export function SubscriptionLockedPanel({
   reason: string | null;
   featureKey: FeatureKey;
 }>) {
+  const t = useTranslations("sharedCmp");
   const daysLeft = subscription.plan_type === "founder_trial" ? trialDaysRemaining(subscription.trial_ends_at) : null;
   const trialExpired = subscription.plan_type === "founder_trial" && isTrialExpired(subscription);
   const upgradeHref = getUpgradeUrl(featureKey);
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Plan upgrade required</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{t("plan_upgrade_required")}</p>
       <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">
         {trialExpired ? "Your free trial has expired" : "This feature is locked on your current plan"}
       </h2>
@@ -58,18 +60,18 @@ export function SubscriptionLockedPanel({
       </p>
       <div className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 md:grid-cols-2">
         <p>
-          <span className="font-medium text-slate-900">Current plan:</span> {PLAN_LABELS[subscription.plan_type]}
+          <span className="font-medium text-slate-900">{t("current_plan")}</span> {PLAN_LABELS[subscription.plan_type]}
         </p>
         <p>
-          <span className="font-medium text-slate-900">Status:</span> {subscriptionStatusLabel(subscription.subscription_status)}
+          <span className="font-medium text-slate-900">{t("status")}</span> {subscriptionStatusLabel(subscription.subscription_status)}
         </p>
         {daysLeft != null ? (
           <p>
-            <span className="font-medium text-slate-900">Trial remaining:</span> {daysLeft} day{daysLeft === 1 ? "" : "s"}
+            <span className="font-medium text-slate-900">{t("trial_remaining")}</span> {daysLeft} day{daysLeft === 1 ? "" : "s"}
           </p>
         ) : null}
         <p>
-          <span className="font-medium text-slate-900">Requested feature:</span> {featureKey.replaceAll("_", " ")}
+          <span className="font-medium text-slate-900">{t("requested_feature")}</span> {featureKey.replaceAll("_", " ")}
         </p>
       </div>
       <div className="mt-6 flex flex-wrap gap-3">
@@ -126,6 +128,7 @@ export function FounderSubscriptionSettingsCard({
   subscription: SubscriptionRecord;
   requestedPlan?: PlanType | null;
 }>) {
+  const t = useTranslations("sharedCmp");
   const daysLeft =
     subscription.plan_type === "founder_trial" ? trialDaysRemaining(subscription.trial_ends_at) : null;
   const lifecycle = getBillingLifecycleStatus(subscription, requestedPlan ?? null);
@@ -134,8 +137,8 @@ export function FounderSubscriptionSettingsCard({
     <section className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
-          <h2 className="text-base font-semibold text-slate-950">Subscription & billing</h2>
-          <p className="mt-1 text-sm text-slate-600">Current plan, trial status, and upgrade options.</p>
+          <h2 className="text-base font-semibold text-slate-950">{t("subscription_billing")}</h2>
+          <p className="mt-1 text-sm text-slate-600">{t("current_plan_trial_status_and_upgrade_option")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link

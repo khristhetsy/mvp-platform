@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type { SponsorLead, SponsorDownload } from "@/lib/icfo-events/types";
 
 export function SponsorPortalClient({
@@ -16,6 +17,7 @@ export function SponsorPortalClient({
   initialDownloads: SponsorDownload[];
   leads: SponsorLead[];
 }) {
+  const t = useTranslations("eventsCmp");
   const [blurb, setBlurb] = useState(initialBlurb ?? "");
   const [website, setWebsite] = useState(initialWebsite ?? "");
   const [downloads, setDownloads] = useState<SponsorDownload[]>(initialDownloads);
@@ -60,20 +62,20 @@ export function SponsorPortalClient({
   return (
     <div className="mt-8 space-y-8">
       <form onSubmit={save} className="rounded-xl border border-[var(--border-subtle)] bg-white p-5">
-        <h2 className="font-semibold text-[var(--navy)]">Your booth</h2>
+        <h2 className="font-semibold text-[var(--navy)]">{t("your_booth")}</h2>
         <label className="mt-3 block">
-          <span className="text-sm font-medium text-[var(--text-secondary)]">Blurb</span>
+          <span className="text-sm font-medium text-[var(--text-secondary)]">{t("blurb")}</span>
           <textarea
             value={blurb}
             onChange={(e) => setBlurb(e.target.value)}
             rows={3}
             maxLength={1000}
             className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
-            placeholder="Tell attendees who you are."
+            placeholder={t("tell_attendees_who_you_are")}
           />
         </label>
         <label className="mt-3 block">
-          <span className="text-sm font-medium text-[var(--text-secondary)]">Website</span>
+          <span className="text-sm font-medium text-[var(--text-secondary)]">{t("website")}</span>
           <input
             value={website}
             onChange={(e) => setWebsite(e.target.value)}
@@ -82,14 +84,14 @@ export function SponsorPortalClient({
           />
         </label>
         <div className="mt-4">
-          <span className="text-sm font-medium text-[var(--text-secondary)]">Resources / downloads</span>
+          <span className="text-sm font-medium text-[var(--text-secondary)]">{t("resources_downloads")}</span>
           <div className="mt-2 space-y-2">
             {downloads.map((d, i) => (
               <div key={i} className="flex items-center gap-2">
                 <input
                   value={d.label}
                   onChange={(e) => updateDownload(i, "label", e.target.value)}
-                  placeholder="Label"
+                  placeholder={t("label")}
                   className="w-1/3 rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-sm"
                 />
                 <input
@@ -116,7 +118,7 @@ export function SponsorPortalClient({
           <button type="submit" disabled={busy} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
             {busy ? "Saving…" : "Save booth"}
           </button>
-          {saved && <span className="text-xs text-emerald-700">Saved</span>}
+          {saved && <span className="text-xs text-emerald-700">{t("saved")}</span>}
         </div>
         <p className="mt-2 text-xs text-[var(--text-muted)]">
           Logo, tier, and event placements are managed by the iCFO team.
@@ -124,12 +126,12 @@ export function SponsorPortalClient({
       </form>
 
       <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-5">
-        <h2 className="font-semibold text-[var(--navy)]">Opt-in intros</h2>
+        <h2 className="font-semibold text-[var(--navy)]">{t("opt_in_intros")}</h2>
         <p className="text-sm text-[var(--text-muted)]">
           Attendees who chose to connect with you. These are opt-in — never a raw attendee list.
         </p>
         {leads.length === 0 ? (
-          <p className="mt-3 text-sm text-[var(--text-muted)]">No intro requests yet.</p>
+          <p className="mt-3 text-sm text-[var(--text-muted)]">{t("no_intro_requests_yet")}</p>
         ) : (
           <ul className="mt-3 space-y-2">
             {leads.map((l) => (

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
@@ -40,6 +41,7 @@ function stepIndex(stepId: OnboardingStepId) {
 }
 
 export function FounderOnboardingWizard({ company, documents, initialProgress }: Props) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const { getError, inputCls, validate, setApiErrors, clearError } = useFormValidation();
 
@@ -165,11 +167,11 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
   return (
     <div className="space-y-8">
       <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-5">
-        <p className="text-sm font-semibold text-indigo-900">Investor readiness journey</p>
+        <p className="text-sm font-semibold text-indigo-900">{t("investor_readiness_journey")}</p>
         <p className="mt-2 text-sm leading-6 text-indigo-800">{encouragement}</p>
         <div className="mt-4">
           <div className="mb-2 flex items-center justify-between text-xs font-medium text-indigo-900">
-            <span>Onboarding progress</span>
+            <span>{t("onboarding_progress")}</span>
             <span>{progress.percent}%</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-indigo-100">
@@ -213,7 +215,7 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
 
         {activeStep === "company_profile" ? (
           <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <FormField label="Company name" error={getError("company_name")} required className="md:col-span-2">
+            <FormField label={t("company_name")} error={getError("company_name")} required className="md:col-span-2">
               <input
                 className={`${BASE_INPUT} ${inputCls("company_name")}`}
                 value={companyName}
@@ -221,7 +223,7 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
               />
             </FormField>
 
-            <FormField label="Website" error={getError("website")} hint="Include https:// — e.g. https://example.com">
+            <FormField label={t("website")} error={getError("website")} hint="Include https:// — e.g. https://example.com">
               <input
                 className={`${BASE_INPUT} ${inputCls("website")}`}
                 value={website}
@@ -230,7 +232,7 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
               />
             </FormField>
 
-            <FormField label="Industry / sector" error={getError("industry")} required>
+            <FormField label={t("industry_sector")} error={getError("industry")} required>
               <input
                 className={`${BASE_INPUT} ${inputCls("industry")}`}
                 value={industry}
@@ -238,7 +240,7 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
               />
             </FormField>
 
-            <FormField label="Headquarters country" error={getError("country")} required>
+            <FormField label={t("headquarters_country")} error={getError("country")} required>
               <input
                 className={`${BASE_INPUT} ${inputCls("country")}`}
                 value={country}
@@ -246,7 +248,7 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
               />
             </FormField>
 
-            <FormField label="State / region" error={getError("state")}>
+            <FormField label={t("state_region")} error={getError("state")}>
               <input
                 className={`${BASE_INPUT} ${inputCls("state")}`}
                 value={state}
@@ -254,7 +256,7 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
               />
             </FormField>
 
-            <FormField label="Company description" error={getError("business_description")} required hint="Min 20 characters" className="md:col-span-2">
+            <FormField label={t("company_description")} error={getError("business_description")} required hint="Min 20 characters" className="md:col-span-2">
               <textarea
                 className={`${BASE_INPUT} ${inputCls("business_description")}`}
                 rows={4}
@@ -263,7 +265,7 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
               />
             </FormField>
 
-            <FormField label="Founder goals & objectives" error={getError("founder_goals")} required hint="What are you raising capital for? What milestones will this funding unlock?" className="md:col-span-2">
+            <FormField label={t("founder_goals_objectives")} error={getError("founder_goals")} required hint="What are you raising capital for? What milestones will this funding unlock?" className="md:col-span-2">
               <textarea
                 className={`${BASE_INPUT} ${inputCls("founder_goals")}`}
                 rows={4}
@@ -276,16 +278,16 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
 
         {activeStep === "funding_information" ? (
           <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <FormField label="Funding stage" error={getError("revenue_stage")} required>
+            <FormField label={t("funding_stage")} error={getError("revenue_stage")} required>
               <input
                 className={`${BASE_INPUT} ${inputCls("revenue_stage")}`}
                 value={revenueStage}
                 onChange={(e) => { setRevenueStage(e.target.value); clearError("revenue_stage"); }}
-                placeholder="Seed, Series A..."
+                placeholder={t("seed_series_a")}
               />
             </FormField>
 
-            <FormField label="Target raise amount (USD)" error={getError("funding_amount")} required>
+            <FormField label={t("target_raise_amount_usd")} error={getError("funding_amount")} required>
               <input
                 className={`${BASE_INPUT} ${inputCls("funding_amount")}`}
                 type="number"
@@ -295,7 +297,7 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
               />
             </FormField>
 
-            <FormField label="Use of funds" error={getError("use_of_funds")} required hint="Min 10 characters" className="md:col-span-2">
+            <FormField label={t("use_of_funds")} error={getError("use_of_funds")} required hint="Min 10 characters" className="md:col-span-2">
               <textarea
                 className={`${BASE_INPUT} ${inputCls("use_of_funds")}`}
                 rows={4}
@@ -435,8 +437,8 @@ export function FounderOnboardingWizard({ company, documents, initialProgress }:
 
       {progress.isComplete ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900">
-          <p className="font-semibold">Onboarding complete</p>
-          <p className="mt-2">Head to your dashboard to track readiness, documents, and investor engagement.</p>
+          <p className="font-semibold">{t("onboarding_complete")}</p>
+          <p className="mt-2">{t("head_to_your_dashboard_to_track_readiness_do")}</p>
           <Link
             href="/founder/dashboard"
             className="mt-4 inline-flex rounded-full bg-emerald-800 px-5 py-3 text-sm font-semibold text-white"

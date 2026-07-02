@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { SpvComplianceNotice } from "@/components/SpvComplianceNotice";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
@@ -77,6 +78,7 @@ export function AdminSpvManagement({
   listDensity?: ViewDensity;
   listQuery?: string;
 }>) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -376,10 +378,10 @@ export function AdminSpvManagement({
         showClosingNotice
       />
 
-      <WorkspacePanel title="Create SPV opportunity" subtitle="Admin-reviewed workflow — not legal formation">
+      <WorkspacePanel title={t("create_spv_opportunity")} subtitle={t("admin_reviewed_workflow_not_legal_formation")}>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-sm">
-            <span className="text-slate-600">Company</span>
+            <span className="text-slate-600">{t("company")}</span>
             <select
               value={companyId}
               onChange={(e) => setCompanyId(e.target.value)}
@@ -393,16 +395,16 @@ export function AdminSpvManagement({
             </select>
           </label>
           <label className="block text-sm">
-            <span className="text-slate-600">SPV name</span>
+            <span className="text-slate-600">{t("spv_name")}</span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="mt-1 w-full rounded-lg border px-3 py-2"
-              placeholder="e.g. Series Seed SPV"
+              placeholder={t("e_g_series_seed_spv")}
             />
           </label>
           <label className="block text-sm">
-            <span className="text-slate-600">Target amount (USD)</span>
+            <span className="text-slate-600">{t("target_amount_usd")}</span>
             <input
               type="number"
               value={targetAmount}
@@ -411,7 +413,7 @@ export function AdminSpvManagement({
             />
           </label>
           <label className="block text-sm">
-            <span className="text-slate-600">Minimum commitment (USD)</span>
+            <span className="text-slate-600">{t("minimum_commitment_usd")}</span>
             <input
               type="number"
               value={minimumCommitment}
@@ -424,7 +426,7 @@ export function AdminSpvManagement({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
-          placeholder="Internal description / terms summary for investors"
+          placeholder={t("internal_description_terms_summary_for_inves")}
           className="mt-3 w-full rounded-lg border px-3 py-2 text-sm"
         />
         {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
@@ -438,9 +440,9 @@ export function AdminSpvManagement({
         </button>
       </WorkspacePanel>
 
-      <WorkspacePanel title="SPV opportunities" subtitle={`${opportunities.length} total`}>
+      <WorkspacePanel title={t("spv_opportunities")} subtitle={`${opportunities.length} total`}>
         {opportunities.length === 0 ? (
-          <p className="text-sm text-slate-500">No SPV opportunities yet.</p>
+          <p className="text-sm text-slate-500">{t("no_spv_opportunities_yet")}</p>
         ) : listViewMode === "table" ? (
           <AdminSpvTableView rows={spvListSummaries} density={listDensity} query={listQuery} />
         ) : listViewMode === "pipeline" ? (
@@ -631,7 +633,7 @@ export function AdminSpvManagement({
                                     defaultValue={pkg.notes ?? ""}
                                     rows={2}
                                     className="mt-1 w-full rounded border border-slate-200 px-2 py-1 text-xs"
-                                    placeholder="Counsel review notes, package blockers…"
+                                    placeholder={t("counsel_review_notes_package_blockers")}
                                   />
                                 </label>
                               </div>

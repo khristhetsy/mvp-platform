@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import Link from "next/link";
 import { SpvComplianceNotice } from "@/components/SpvComplianceNotice";
@@ -30,6 +31,7 @@ export function InvestorSpvWorkspace({
   participations: ParticipationRow[];
   requirements: SpvParticipationRequirementRecord[];
 }>) {
+  const t = useTranslations("sharedCmp");
   const requirementsByParticipation = new Map<string, SpvParticipationRequirementRecord[]>();
   for (const row of requirements) {
     const list = requirementsByParticipation.get(row.spv_participation_id) ?? [];
@@ -80,11 +82,11 @@ export function InvestorSpvWorkspace({
       </p>
 
       <WorkspacePanel
-        title="Your document requirements"
-        subtitle="Upload supporting documents for your SPV participation requirements"
+        title={t("your_document_requirements")}
+        subtitle={t("upload_supporting_documents_for_your_spv_par")}
       >
         {requirements.length === 0 ? (
-          <p className="text-sm text-slate-600">No document requirements assigned yet.</p>
+          <p className="text-sm text-slate-600">{t("no_document_requirements_assigned_yet")}</p>
         ) : (
           <div className="space-y-4">
             {participations.map((row) => {
@@ -113,9 +115,9 @@ export function InvestorSpvWorkspace({
         )}
       </WorkspacePanel>
 
-      <WorkspacePanel title="Your SPV participations" subtitle={`${participations.length} record(s)`}>
+      <WorkspacePanel title={t("your_spv_participations")} subtitle={`${participations.length} record(s)`}>
         {participations.length === 0 ? (
-          <p className="text-sm text-slate-600">You have not joined an SPV opportunity yet.</p>
+          <p className="text-sm text-slate-600">{t("you_have_not_joined_an_spv_opportunity_yet")}</p>
         ) : (
           <div className="divide-y divide-slate-100">
             {participations.map((row) => {
@@ -156,9 +158,9 @@ export function InvestorSpvWorkspace({
         )}
       </WorkspacePanel>
 
-      <WorkspacePanel title="Open SPV opportunities" subtitle="Express non-binding indicative interest">
+      <WorkspacePanel title={t("open_spv_opportunities")} subtitle={t("express_non_binding_indicative_interest")}>
         {openOpportunities.length === 0 ? (
-          <p className="text-sm text-slate-600">No open SPV opportunities right now.</p>
+          <p className="text-sm text-slate-600">{t("no_open_spv_opportunities_right_now")}</p>
         ) : (
           <div className="space-y-4">
             {openOpportunities.map((spv) => {

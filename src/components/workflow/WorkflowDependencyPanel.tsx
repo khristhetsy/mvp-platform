@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { WorkflowDependency } from "@/lib/automation/types";
 
 export function WorkflowDependencyPanel({
@@ -8,13 +9,14 @@ export function WorkflowDependencyPanel({
   dependencies: WorkflowDependency[];
   title?: string;
 }>) {
+  const t = useTranslations("sharedCmp");
   const unresolved = dependencies.filter((d) => !d.resolved);
   if (unresolved.length === 0) return null;
 
   return (
     <div className="rounded-xl border border-amber-200/80 bg-amber-50/30 px-4 py-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-amber-900">{title}</p>
-      <p className="mt-1 text-xs text-amber-800/90">Blocked by unresolved dependencies — operational view only.</p>
+      <p className="mt-1 text-xs text-amber-800/90">{t("blocked_by_unresolved_dependencies_operation")}</p>
       <ul className="mt-3 space-y-2">
         {unresolved.map((dep) => (
           <li key={dep.id} className="rounded-lg border border-amber-100 bg-white/60 px-3 py-2 text-sm">

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { drilldownFocusClass, drilldownHoverClass } from "@/components/ui/drilldown";
@@ -74,23 +75,24 @@ export function AdminPlatformActivityGraph({
   investorActivity: AdminInvestorActivityData;
   companyUpdateCount: number;
 }>) {
+  const t = useTranslations("adminCmp");
   const categories = buildActivityCategories(crmActivity, investorActivity, companyUpdateCount);
   const max = Math.max(...categories.map((c) => c.count), 1);
   const total = categories.reduce((sum, c) => sum + c.count, 0);
 
   return (
     <WorkspacePanel
-      title="Platform activity"
-      subtitle="Current snapshot from recent CRM events and loaded records"
+      title={t("platform_activity")}
+      subtitle={t("current_snapshot_from_recent_crm_events_and")}
       provenance="Not a time-series · counts reflect latest loaded activity"
     >
       <div className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
             <p className="font-mono text-2xl font-semibold tabular-nums text-slate-950">{total}</p>
-            <p className="text-xs text-slate-500">Combined activity signals in current view</p>
+            <p className="text-xs text-slate-500">{t("combined_activity_signals_in_current_view")}</p>
           </div>
-          <p className="text-[10px] text-slate-600">Click any category to view source data</p>
+          <p className="text-[10px] text-slate-600">{t("click_any_category_to_view_source_data")}</p>
         </div>
 
         <div className="space-y-2.5" aria-label="Platform activity by category">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { FloatingFounderAICoach } from "@/components/FloatingFounderAICoach";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -19,6 +20,7 @@ export function FounderCourseLanding({
   course: Course;
   progressRows: FounderLessonProgressRecord[];
 }>) {
+  const t = useTranslations("sharedCmp");
   const percent = computeCoursePercentComplete(course, progressRows);
   const continueLesson = findContinueCourseLesson(course, progressRows);
   const curriculum = buildCourseCurriculumProgress(course, progressRows);
@@ -55,8 +57,8 @@ export function FounderCourseLanding({
       </div>
 
       <PageHeader
-        title="What you will learn"
-        description="Educational outcomes for founder training — not certification or investor approval."
+        title={t("what_you_will_learn")}
+        description={t("educational_outcomes_for_founder_training_no")}
       />
       <ul className="grid gap-2 sm:grid-cols-2">
         {course.whatYouWillLearn.map((item) => (
@@ -67,8 +69,8 @@ export function FounderCourseLanding({
       </ul>
 
       <section>
-        <h2 className="text-lg font-semibold text-slate-950">Curriculum</h2>
-        <p className="mt-1 text-sm text-slate-600">Modules, lessons, and quizzes in this course.</p>
+        <h2 className="text-lg font-semibold text-slate-950">{t("curriculum")}</h2>
+        <p className="mt-1 text-sm text-slate-600">{t("modules_lessons_and_quizzes_in_this_course")}</p>
         <div className="mt-4 space-y-6">
           {curriculum.map(({ section, lessons }) => (
             <div key={section.slug} className="rounded-xl border border-slate-200 bg-white p-5">
@@ -87,12 +89,12 @@ export function FounderCourseLanding({
                     </div>
                     <div className="flex items-center gap-2">
                       {lesson.type === "quiz" ? (
-                        <StatusBadge label="Quiz" status="info" />
+                        <StatusBadge label={t("quiz")} status="info" />
                       ) : null}
                       {completed ? (
-                        <StatusBadge label="Complete" status="success" />
+                        <StatusBadge label={t("complete")} status="success" />
                       ) : inProgress ? (
-                        <StatusBadge label="In progress" status="warning" />
+                        <StatusBadge label={t("in_progress")} status="warning" />
                       ) : null}
                     </div>
                   </li>

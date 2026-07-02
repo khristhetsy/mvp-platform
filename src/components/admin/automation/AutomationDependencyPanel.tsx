@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type { AutomationDependencyInsight } from "@/lib/automation/admin-console-types";
 
@@ -5,9 +6,10 @@ export function AutomationDependencyPanel({
   topBlockers,
   blockedWorkflows,
 }: Readonly<{ topBlockers: AutomationDependencyInsight[]; blockedWorkflows: number }>) {
+  const t = useTranslations("adminCmp");
   return (
     <div className="rounded-xl border border-amber-200/70 bg-amber-50/30 px-4 py-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-amber-900">Dependencies</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-amber-900">{t("dependencies")}</p>
       <p className="mt-1 text-xs text-amber-950">{blockedWorkflows} blocked workflow action(s) platform-wide.</p>
       {topBlockers.length > 0 ? (
         <ul className="mt-3 space-y-2">
@@ -26,7 +28,7 @@ export function AutomationDependencyPanel({
           ))}
         </ul>
       ) : (
-        <p className="mt-2 text-xs text-slate-600">No recent dependency detection events.</p>
+        <p className="mt-2 text-xs text-slate-600">{t("no_recent_dependency_detection_events")}</p>
       )}
     </div>
   );

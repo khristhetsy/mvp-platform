@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { EnrichedActivityEvent } from "@/app/api/deal-room/[roomId]/activity/route";
 
 // ── Time helpers ──────────────────────────────────────────────────────────────
@@ -171,6 +172,7 @@ function metaDetail(event: EnrichedActivityEvent): string | null {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function DealRoomActivityPanel({ roomId }: { roomId: string }) {
+  const t = useTranslations("sharedCmp");
   const [events, setEvents] = useState<EnrichedActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -204,7 +206,7 @@ export function DealRoomActivityPanel({ roomId }: { roomId: string }) {
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
             </svg>
           </div>
-          <h2 className="text-sm font-semibold text-slate-900">Activity feed</h2>
+          <h2 className="text-sm font-semibold text-slate-900">{t("activity_feed")}</h2>
         </div>
         <div className="flex items-center gap-3">
           {lastUpdated ? (
@@ -235,8 +237,8 @@ export function DealRoomActivityPanel({ roomId }: { roomId: string }) {
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
               </svg>
             </div>
-            <p className="text-sm font-medium text-slate-600">No activity yet</p>
-            <p className="mt-1 text-xs text-slate-400">Activity will appear here when investors engage with the room.</p>
+            <p className="text-sm font-medium text-slate-600">{t("no_activity_yet")}</p>
+            <p className="mt-1 text-xs text-slate-400">{t("activity_will_appear_here_when_investors_eng")}</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -283,10 +285,10 @@ export function DealRoomActivityPanel({ roomId }: { roomId: string }) {
                               <span className="text-xs text-slate-500">
                                 <span className="font-medium text-slate-700">{actor}</span>
                                 {event.actor_role === "investor" && (
-                                  <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">Investor</span>
+                                  <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">{t("investor")}</span>
                                 )}
                                 {event.actor_role === "founder" && (
-                                  <span className="ml-1.5 rounded-full bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600">You</span>
+                                  <span className="ml-1.5 rounded-full bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600">{t("you")}</span>
                                 )}
                               </span>
                             ) : null}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Mail, Send, Plus, X, RefreshCw, Trash2, MailOpen, ArrowLeft, Search, Inbox as InboxIcon, FileText, Layers, AlertTriangle, RotateCcw, Paperclip, Reply, ReplyAll, Forward, ChevronDown } from "lucide-react";
 import type { ThreadListItem, EmailMessage, MailFolder, EmailAttachment } from "@/lib/email/inbox";
 import type { EmailDraft } from "@/lib/email/drafts";
@@ -48,6 +49,7 @@ type ActiveThread = { id: string; subject: string | null; contact_email: string;
 type ComposeContext = { mode: ComposeMode; threadId: string | null };
 
 export function EmailInbox() {
+  const tI18n = useTranslations("sharedCmp");
   const [threads, setThreads] = useState<ThreadListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -523,7 +525,7 @@ export function EmailInbox() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
                       {outbound ? (
-                        <p className="truncate text-sm"><span className="font-semibold text-slate-900">You</span> <span className="text-xs text-slate-400">&lt;{m.from_email}&gt;</span></p>
+                        <p className="truncate text-sm"><span className="font-semibold text-slate-900">{tI18n("you")}</span> <span className="text-xs text-slate-400">&lt;{m.from_email}&gt;</span></p>
                       ) : (
                         <SenderHeader
                           sender={sender}
@@ -560,7 +562,7 @@ export function EmailInbox() {
               <button type="button" onClick={startReplyAll} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"><ReplyAll className="h-3.5 w-3.5" /> Reply all</button>
               <button type="button" onClick={startForward} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"><Forward className="h-3.5 w-3.5" /> Forward</button>
             </div>
-            <textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={3} placeholder="Quick reply…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
+            <textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={3} placeholder={tI18n("quick_reply")} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
             {replyFiles.length > 0 ? (
               <div className="mt-2 flex flex-wrap gap-2">
                 {replyFiles.map((a) => (
@@ -585,7 +587,7 @@ export function EmailInbox() {
         <>
           <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2">
             <Search className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search mail" className="w-full bg-transparent text-sm focus:outline-none" />
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tI18n("search_mail")} className="w-full bg-transparent text-sm focus:outline-none" />
           </div>
 
           {folder !== "drafts" ? (
@@ -600,7 +602,7 @@ export function EmailInbox() {
                   </>
                 ) : null}
                 <button type="button" onClick={() => void runBulk("delete")} className="inline-flex items-center gap-1 text-xs hover:underline"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
-                <button type="button" onClick={() => setSelected(new Set())} className="ml-auto text-xs text-slate-500 hover:underline">Clear</button>
+                <button type="button" onClick={() => setSelected(new Set())} className="ml-auto text-xs text-slate-500 hover:underline">{tI18n("clear")}</button>
               </div>
             ) : (
               <div className="flex flex-wrap items-center gap-2">
@@ -633,7 +635,7 @@ export function EmailInbox() {
               loading ? (
                 <ListRowsSkeleton />
               ) : drafts.length === 0 ? (
-                <p className="px-4 py-10 text-center text-sm text-slate-400">No drafts. Start one from Compose, then Save draft.</p>
+                <p className="px-4 py-10 text-center text-sm text-slate-400">{tI18n("no_drafts_start_one_from_compose_then_save_d")}</p>
               ) : (
                 <ul>
                   {drafts.map((d) => (
@@ -677,19 +679,19 @@ export function EmailInbox() {
                     <span className="hidden shrink-0 items-center gap-2 group-hover:flex">
                       {folder === "trash" ? (
                         <>
-                          <button type="button" title="Restore" onClick={(e) => { e.stopPropagation(); void restoreThread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#185FA5]"><RotateCcw className="h-4 w-4" /></button>
-                          <button type="button" title="Delete forever" onClick={(e) => { e.stopPropagation(); void purgeThread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#A32D2D]"><Trash2 className="h-4 w-4" /></button>
+                          <button type="button" title={tI18n("restore")} onClick={(e) => { e.stopPropagation(); void restoreThread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#185FA5]"><RotateCcw className="h-4 w-4" /></button>
+                          <button type="button" title={tI18n("delete_forever")} onClick={(e) => { e.stopPropagation(); void purgeThread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#A32D2D]"><Trash2 className="h-4 w-4" /></button>
                         </>
                       ) : folder === "spam" ? (
                         <>
-                          <button type="button" title="Not spam" onClick={(e) => { e.stopPropagation(); void setSpam(t.id, false); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#185FA5]"><RotateCcw className="h-4 w-4" /></button>
-                          <button type="button" title="Move to Trash" onClick={(e) => { e.stopPropagation(); void deleteThread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#A32D2D]"><Trash2 className="h-4 w-4" /></button>
+                          <button type="button" title={tI18n("not_spam")} onClick={(e) => { e.stopPropagation(); void setSpam(t.id, false); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#185FA5]"><RotateCcw className="h-4 w-4" /></button>
+                          <button type="button" title={tI18n("move_to_trash")} onClick={(e) => { e.stopPropagation(); void deleteThread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#A32D2D]"><Trash2 className="h-4 w-4" /></button>
                         </>
                       ) : (
                         <>
-                          <button type="button" title="Mark unread" onClick={(e) => { e.stopPropagation(); void markUnread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700"><MailOpen className="h-4 w-4" /></button>
-                          <button type="button" title="Report spam" onClick={(e) => { e.stopPropagation(); void setSpam(t.id, true); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#B06A00]"><AlertTriangle className="h-4 w-4" /></button>
-                          <button type="button" title="Move to Trash" onClick={(e) => { e.stopPropagation(); void deleteThread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#A32D2D]"><Trash2 className="h-4 w-4" /></button>
+                          <button type="button" title={tI18n("mark_unread")} onClick={(e) => { e.stopPropagation(); void markUnread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700"><MailOpen className="h-4 w-4" /></button>
+                          <button type="button" title={tI18n("report_spam")} onClick={(e) => { e.stopPropagation(); void setSpam(t.id, true); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#B06A00]"><AlertTriangle className="h-4 w-4" /></button>
+                          <button type="button" title={tI18n("move_to_trash")} onClick={(e) => { e.stopPropagation(); void deleteThread(t.id); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#A32D2D]"><Trash2 className="h-4 w-4" /></button>
                         </>
                       )}
                     </span>

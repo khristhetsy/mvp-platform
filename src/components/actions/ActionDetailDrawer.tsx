@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { ActionPriorityBadge } from "@/components/actions/ActionPriorityBadge";
 import { ActionStatusBadge } from "@/components/actions/ActionStatusBadge";
@@ -25,6 +26,7 @@ export function ActionDetailDrawer({
   onClose: () => void;
   onUpdated: () => void;
 }>) {
+  const t = useTranslations("sharedCmp");
   const [detail, setDetail] = useState<ActionCenterDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,7 +107,7 @@ export function ActionDetailDrawer({
         style={{ maxWidth: 448, maxHeight: 536 }}
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <h2 id="action-detail-title" className="text-sm font-semibold text-slate-950">Action detail</h2>
+          <h2 id="action-detail-title" className="text-sm font-semibold text-slate-950">{t("action_detail")}</h2>
           <button type="button" onClick={onClose} aria-label="Close action detail" className="text-sm text-slate-500 hover:text-slate-800">
             Close
           </button>
@@ -113,7 +115,7 @@ export function ActionDetailDrawer({
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {loading ? (
-            <p className="text-sm text-slate-500">Loading…</p>
+            <p className="text-sm text-slate-500">{t("loading_2")}</p>
           ) : error ? (
             <p className="text-sm text-red-700">{error}</p>
           ) : action ? (
@@ -128,7 +130,7 @@ export function ActionDetailDrawer({
 
               {action.blockers.length > 0 ? (
                 <div>
-                  <p className="text-xs font-semibold uppercase text-slate-500">Blockers</p>
+                  <p className="text-xs font-semibold uppercase text-slate-500">{t("blockers")}</p>
                   <ul className="mt-1 list-disc pl-4 text-xs text-amber-900">
                     {action.blockers.map((b) => (
                       <li key={b}>{b}</li>
@@ -183,7 +185,7 @@ export function ActionDetailDrawer({
               </div>
 
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase text-slate-500">Operational timeline</p>
+                <p className="mb-2 text-xs font-semibold uppercase text-slate-500">{t("operational_timeline")}</p>
                 <ActionTimeline items={detail?.timeline ?? []} />
               </div>
 
@@ -191,7 +193,7 @@ export function ActionDetailDrawer({
                 <CollaborationDiscussionPanel
                   entityType="action"
                   entityId={action.persistedId}
-                  title="Action discussion"
+                  title={t("action_discussion")}
                 />
               ) : null}
 

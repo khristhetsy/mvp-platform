@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 type WatchlistRow = {
@@ -37,6 +38,7 @@ const FIELD_ROWS: Array<{
 ];
 
 export function InvestorDealComparisonPanel({ rows }: { rows: WatchlistRow[] }) {
+  const t = useTranslations("investorCmp");
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<[string, string, string]>(["", "", ""]);
 
@@ -62,7 +64,7 @@ export function InvestorDealComparisonPanel({ rows }: { rows: WatchlistRow[] }) 
         className="flex w-full items-center justify-between px-5 py-4 text-left"
       >
         <div>
-          <p className="text-sm font-semibold text-slate-900">Compare deals</p>
+          <p className="text-sm font-semibold text-slate-900">{t("compare_deals")}</p>
           <p className="mt-0.5 text-xs text-slate-500">
             Side-by-side comparison of up to 3 watchlisted companies
           </p>

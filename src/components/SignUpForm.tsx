@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
@@ -94,6 +95,7 @@ const BASE_INPUT =
   "rounded-xl border px-4 py-3 font-normal text-slate-900 outline-none transition";
 
 export function SignUpForm({ privateBetaMode = false }: Readonly<{ privateBetaMode?: boolean }>) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { getError, inputCls, validate, clearError } = useFormValidation();
@@ -169,13 +171,13 @@ export function SignUpForm({ privateBetaMode = false }: Readonly<{ privateBetaMo
       </div>
 
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Create account</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">{t("create_account")}</p>
         {privateBetaMode ? (
           <span className="mt-3 inline-flex rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800">
             Private Beta
           </span>
         ) : null}
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Join iCapOS</h1>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{t("join_icapos")}</h1>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           {privateBetaMode
             ? role === "investor"
@@ -186,7 +188,7 @@ export function SignUpForm({ privateBetaMode = false }: Readonly<{ privateBetaMo
       </div>
 
       <div className="mt-8">
-        <p className="text-sm font-medium text-slate-700">I am a</p>
+        <p className="text-sm font-medium text-slate-700">{t("i_am_a")}</p>
         <div className="mt-3 grid grid-cols-2 gap-3">
           {(["founder", "investor"] as const).map((option) => {
             const active = role === option;
@@ -236,26 +238,26 @@ export function SignUpForm({ privateBetaMode = false }: Readonly<{ privateBetaMo
         <input type="hidden" name="role" value={role} />
         <input type="hidden" name="requested_plan" value={selectedPlan} />
 
-        <FormField label="Full name" error={getError("fullName")} required>
+        <FormField label={t("full_name")} error={getError("fullName")} required>
           <input
             className={`${BASE_INPUT} ${inputCls("fullName")}`}
-            placeholder="Jane Founder"
+            placeholder={t("jane_founder")}
             value={fullName}
             onChange={(e) => { setFullName(e.target.value); clearError("fullName"); }}
           />
         </FormField>
 
-        <FormField label="Work email" error={getError("email")} required>
+        <FormField label={t("work_email")} error={getError("email")} required>
           <input
             className={`${BASE_INPUT} ${inputCls("email")}`}
-            placeholder="you@company.com"
+            placeholder={t("you_company_com")}
             type="email"
             value={email}
             onChange={(e) => { setEmail(e.target.value); clearError("email"); }}
           />
         </FormField>
 
-        <FormField label="Password" error={getError("password")} required hint="Minimum 8 characters">
+        <FormField label={t("password")} error={getError("password")} required hint="Minimum 8 characters">
           <input
             className={`${BASE_INPUT} ${inputCls("password")}`}
             placeholder="••••••••"

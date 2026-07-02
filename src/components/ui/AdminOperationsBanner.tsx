@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export function AdminOperationsBanner({
@@ -10,6 +11,7 @@ export function AdminOperationsBanner({
   openCompliance?: number;
   serviceRoleOk: boolean;
 }>) {
+  const t = useTranslations("sharedCmp");
   return (
     <div className="mb-6 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-900 px-4 py-3 text-white">
       <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">
@@ -18,7 +20,7 @@ export function AdminOperationsBanner({
       {pendingReviews > 0 ? (
         <StatusBadge label={`${pendingReviews} review queue`} status="warning" dot />
       ) : (
-        <StatusBadge label="Review queue clear" status="success" dot />
+        <StatusBadge label={t("review_queue_clear")} status="success" dot />
       )}
       {openCompliance != null && openCompliance > 0 ? (
         <StatusBadge label={`${openCompliance} compliance`} status="danger" dot />

@@ -1,4 +1,5 @@
 import type { SpvExecutionReadinessSummary } from "@/lib/document-execution/types";
+import { useTranslations } from "next-intl";
 import { formatDocuSignStatusLabel } from "@/lib/document-execution/display";
 
 export function SpvExecutionReadinessPanel({
@@ -8,6 +9,7 @@ export function SpvExecutionReadinessPanel({
   summary: SpvExecutionReadinessSummary;
   compact?: boolean;
 }>) {
+  const t = useTranslations("sharedCmp");
   if (compact) {
     return (
       <p className="text-xs text-violet-800">
@@ -27,7 +29,7 @@ export function SpvExecutionReadinessPanel({
         {formatDocuSignStatusLabel(summary)}
       </p>
       <p className="mt-1 text-xs text-slate-700">
-        <span className="font-medium">Next:</span> {summary.nextRequiredStep}
+        <span className="font-medium">{t("next")}</span> {summary.nextRequiredStep}
       </p>
       {summary.blockedPackages.length > 0 ? (
         <ul className="mt-2 space-y-1 text-xs text-amber-900">

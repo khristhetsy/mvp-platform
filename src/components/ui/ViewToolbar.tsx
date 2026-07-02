@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { FilterSearchBar } from "@/components/ui/FilterSearchBar";
 import { SavedViewPlaceholder } from "@/components/ui/SavedViewPlaceholder";
 import { ViewDensityToggle } from "@/components/ui/ViewDensityToggle";
@@ -38,6 +39,7 @@ export function ViewToolbar({
   showSavedViews?: boolean;
   sticky?: boolean;
 }>) {
+  const t = useTranslations("sharedCmp");
   return (
     <div
       className={`space-y-3 rounded-xl border border-slate-200 bg-white p-3 shadow-[var(--shadow-panel)] ${
@@ -50,7 +52,7 @@ export function ViewToolbar({
       <div className="flex flex-wrap items-center gap-2">
         {showViewMode ? (
           <>
-            <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">View</span>
+            <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">{t("view")}</span>
             <ViewModeToggle value={viewMode} allowedModes={allowedModes} onChange={onViewModeChange} />
           </>
         ) : null}

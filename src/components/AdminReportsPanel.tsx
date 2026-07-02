@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import type { AdminReportPayload, AdminReportType } from "@/lib/reports/admin-reports";
 
@@ -58,6 +59,7 @@ function SpvReadinessPreview({
   sections: Record<string, Record<string, unknown>[]>;
   isPreview: boolean;
 }>) {
+  const t = useTranslations("sharedCmp");
   const rows = sections.spv_readiness_rows ?? [];
   const notifications = sections.notification_type_totals ?? [];
 
@@ -86,7 +88,7 @@ function SpvReadinessPreview({
           SPV readiness ({rows.length} rows{isPreview ? ", preview capped" : ""})
         </p>
         {rows.length === 0 ? (
-          <p className="mt-2 text-xs text-slate-500">No SPVs match current filters.</p>
+          <p className="mt-2 text-xs text-slate-500">{t("no_spvs_match_current_filters")}</p>
         ) : (
           <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200 bg-white">
             <table className="min-w-full text-left text-xs">
@@ -138,6 +140,7 @@ function DueDiligencePreview({
   sections: Record<string, Record<string, unknown>[]>;
   isPreview: boolean;
 }>) {
+  const t = useTranslations("sharedCmp");
   const companies = sections.company_diligence ?? [];
   const topRisk = sections.top_risk_companies ?? [];
   const distribution = sections.readiness_distribution ?? [];
@@ -146,7 +149,7 @@ function DueDiligencePreview({
     <div className="mt-6 space-y-6">
       {distribution.length > 0 ? (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Readiness distribution</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("readiness_distribution")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {distribution.map((row) => (
               <span
@@ -162,7 +165,7 @@ function DueDiligencePreview({
 
       {topRisk.length > 0 ? (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Top risk companies</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("top_risk_companies")}</p>
           <ul className="mt-2 space-y-1 text-sm text-slate-700">
             {topRisk.map((row) => (
               <li key={String(row.company_id)}>
@@ -183,7 +186,7 @@ function DueDiligencePreview({
           Company diligence table ({companies.length} rows{isPreview ? ", preview capped" : ""})
         </p>
         {companies.length === 0 ? (
-          <p className="mt-2 text-xs text-slate-500">No companies match current filters.</p>
+          <p className="mt-2 text-xs text-slate-500">{t("no_companies_match_current_filters")}</p>
         ) : (
           <div className="mt-2 overflow-x-auto rounded-lg border border-slate-200 bg-white">
             <table className="min-w-full text-left text-xs">
@@ -234,6 +237,7 @@ export function AdminReportsPanel({
   founders: FilterOption[];
   investors: FilterOption[];
 }>) {
+  const t = useTranslations("sharedCmp");
   const searchParams = useSearchParams();
   const paramCompanyId = searchParams.get("companyId");
   const paramReportType = searchParams.get("reportType");
@@ -325,14 +329,14 @@ export function AdminReportsPanel({
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-slate-200 bg-white p-6">
-        <h2 className="text-sm font-semibold text-slate-900">Generate report</h2>
+        <h2 className="text-sm font-semibold text-slate-900">{t("generate_report")}</h2>
         <p className="mt-1 text-xs text-slate-500">
           Internal audit exports only. OAuth tokens and private contact details are excluded.
         </p>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label className="block text-sm">
-            <span className="text-slate-600">Report type</span>
+            <span className="text-slate-600">{t("report_type")}</span>
             <select
               value={reportType}
               onChange={(e) => setReportTypeState(e.target.value as AdminReportType)}
@@ -348,7 +352,7 @@ export function AdminReportsPanel({
 
           {reportType === "compliance" || reportType === "due_diligence" ? (
             <label className="block text-sm">
-              <span className="text-slate-600">Severity (optional)</span>
+              <span className="text-slate-600">{t("severity_optional")}</span>
               <select
                 value={severity}
                 onChange={(e) => setSeverity(e.target.value)}
@@ -366,7 +370,7 @@ export function AdminReportsPanel({
           {reportType === "spv_readiness" ? (
             <>
               <label className="block text-sm">
-                <span className="text-slate-600">SPV status (optional)</span>
+                <span className="text-slate-600">{t("spv_status_optional")}</span>
                 <select
                   value={spvStatus}
                   onChange={(e) => setSpvStatus(e.target.value)}
@@ -381,7 +385,7 @@ export function AdminReportsPanel({
                 </select>
               </label>
               <label className="block text-sm">
-                <span className="text-slate-600">Operational readiness (optional)</span>
+                <span className="text-slate-600">{t("operational_readiness_optional")}</span>
                 <select
                   value={operationalReadinessStatus}
                   onChange={(e) => setOperationalReadinessStatus(e.target.value)}
@@ -397,7 +401,7 @@ export function AdminReportsPanel({
                 </select>
               </label>
               <label className="block text-sm">
-                <span className="text-slate-600">Closing review status (optional)</span>
+                <span className="text-slate-600">{t("closing_review_status_optional")}</span>
                 <select
                   value={closingReviewStatus}
                   onChange={(e) => setClosingReviewStatus(e.target.value)}
@@ -417,7 +421,7 @@ export function AdminReportsPanel({
 
           {reportType === "due_diligence" ? (
             <label className="block text-sm">
-              <span className="text-slate-600">Review status (optional)</span>
+              <span className="text-slate-600">{t("review_status_optional")}</span>
               <select
                 value={reviewStatus}
                 onChange={(e) => setReviewStatus(e.target.value)}
@@ -433,7 +437,7 @@ export function AdminReportsPanel({
           ) : null}
 
           <label className="block text-sm">
-            <span className="text-slate-600">Date from</span>
+            <span className="text-slate-600">{t("date_from")}</span>
             <input
               type="date"
               value={dateFrom}
@@ -442,7 +446,7 @@ export function AdminReportsPanel({
             />
           </label>
           <label className="block text-sm">
-            <span className="text-slate-600">Date to</span>
+            <span className="text-slate-600">{t("date_to")}</span>
             <input
               type="date"
               value={dateTo}
@@ -451,7 +455,7 @@ export function AdminReportsPanel({
             />
           </label>
           <label className="block text-sm">
-            <span className="text-slate-600">Company (optional)</span>
+            <span className="text-slate-600">{t("company_optional")}</span>
             <select
               value={companyId}
               onChange={(e) => setCompanyIdState(e.target.value)}
@@ -466,7 +470,7 @@ export function AdminReportsPanel({
             </select>
           </label>
           <label className="block text-sm">
-            <span className="text-slate-600">Founder (optional)</span>
+            <span className="text-slate-600">{t("founder_optional")}</span>
             <select
               value={founderId}
               onChange={(e) => setFounderId(e.target.value)}
@@ -481,7 +485,7 @@ export function AdminReportsPanel({
             </select>
           </label>
           <label className="block text-sm">
-            <span className="text-slate-600">Investor (optional)</span>
+            <span className="text-slate-600">{t("investor_optional")}</span>
             <select
               value={investorId}
               onChange={(e) => setInvestorId(e.target.value)}
@@ -571,7 +575,7 @@ export function AdminReportsPanel({
                       {rows.length > 3 ? "\n…" : ""}
                     </pre>
                   ) : (
-                    <p className="text-xs text-slate-500">No rows for current filters.</p>
+                    <p className="text-xs text-slate-500">{t("no_rows_for_current_filters")}</p>
                   )}
                 </div>
               ))}

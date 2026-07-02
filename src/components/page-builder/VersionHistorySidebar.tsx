@@ -1,6 +1,7 @@
 "use client";
 
 import { Copy, Eye, GitCompare, History, RotateCcw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { AutosaveStatus, PageBuilderDraftRow, PageBuilderSnapshotMeta, VersionViewMode } from "@/lib/page-builder/types";
 
 function formatSnapshotTime(iso: string) {
@@ -67,6 +68,7 @@ export function RestoreSnapshotModal({
   onCancel: () => void;
   busy?: boolean;
 }>) {
+  const t = useTranslations("sharedCmp");
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
       <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="restore-title">
@@ -78,7 +80,7 @@ export function RestoreSnapshotModal({
           <strong>{snapshot.label ?? formatSnapshotTime(snapshot.created_at)}</strong> ({snapshot.blockCount} blocks).
           An automatic backup snapshot of the current draft will be created first.
         </p>
-        <p className="mt-2 text-xs text-slate-500">Production pages remain unchanged — lab draft only.</p>
+        <p className="mt-2 text-xs text-slate-500">{t("production_pages_remain_unchanged_lab_draft")}</p>
         <div className="mt-5 flex justify-end gap-2">
           <button type="button" className="cap-btn-secondary rounded-lg px-4 py-2 text-sm font-semibold" disabled={busy} onClick={onCancel}>
             Cancel
@@ -117,6 +119,7 @@ export function VersionHistorySidebar({
   onDuplicateSnapshot: (snapshot: PageBuilderSnapshotMeta) => void;
   loading?: boolean;
 }>) {
+  const t = useTranslations("sharedCmp");
   const draftActive = viewMode === "draft";
 
   return (
@@ -124,9 +127,9 @@ export function VersionHistorySidebar({
       <div className="border-b border-slate-100 px-4 py-3">
         <div className="flex items-center gap-2">
           <History className="h-4 w-4 text-slate-950" strokeWidth={1.75} aria-hidden />
-          <h2 className="text-sm font-semibold text-slate-950">Version history</h2>
+          <h2 className="text-sm font-semibold text-slate-950">{t("version_history")}</h2>
         </div>
-        <p className="mt-1 text-xs text-slate-500">Lab snapshots for this page only.</p>
+        <p className="mt-1 text-xs text-slate-500">{t("lab_snapshots_for_this_page_only")}</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
@@ -140,9 +143,9 @@ export function VersionHistorySidebar({
           }`}
         >
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-950">Active draft</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-950">{t("active_draft")}</span>
             {draftActive ? (
-              <span className="rounded-full bg-[var(--blue)] px-2 py-0.5 text-[10px] font-semibold text-white">Current</span>
+              <span className="rounded-full bg-[var(--blue)] px-2 py-0.5 text-[10px] font-semibold text-white">{t("current")}</span>
             ) : null}
           </div>
           <p className="mt-1 text-xs text-slate-600">
@@ -151,7 +154,7 @@ export function VersionHistorySidebar({
           </p>
         </button>
 
-        {loading ? <p className="px-1 text-xs text-slate-500">Loading snapshots…</p> : null}
+        {loading ? <p className="px-1 text-xs text-slate-500">{t("loading_snapshots")}</p> : null}
 
         {!loading && snapshots.length === 0 ? (
           <p className="rounded-lg border border-dashed border-slate-200 px-3 py-6 text-center text-xs text-slate-500">

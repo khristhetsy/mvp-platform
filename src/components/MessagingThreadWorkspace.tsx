@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { GoogleCalendarMeetingReadiness } from "@/components/GoogleCalendarMeetingReadiness";
@@ -60,6 +61,7 @@ export function MessagingThreadWorkspace({
   currentUserId: string;
   googleCalendarReady: boolean;
 }>) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const [messageBody, setMessageBody] = useState("");
   const [meetingStart, setMeetingStart] = useState("");
@@ -192,7 +194,7 @@ export function MessagingThreadWorkspace({
     <div className="grid gap-6 xl:grid-cols-[minmax(260px,320px)_1fr]">
       <aside aria-label="Message threads" className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-100 px-4 py-3">
-          <p className="text-sm font-semibold text-slate-950">Inbox</p>
+          <p className="text-sm font-semibold text-slate-950">{t("inbox")}</p>
           <p className="text-xs text-slate-500">{threads.length} threads</p>
         </div>
         {threads.length === 0 ? (
@@ -300,14 +302,14 @@ export function MessagingThreadWorkspace({
             </div>
 
             <div className="border-t border-slate-100 px-6 py-4">
-              <label htmlFor="message-body" className="text-sm font-medium text-slate-800">Send message</label>
+              <label htmlFor="message-body" className="text-sm font-medium text-slate-800">{t("send_message")}</label>
               <textarea
                 id="message-body"
                 value={messageBody}
                 onChange={(event) => setMessageBody(event.target.value)}
                 rows={3}
                 className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                placeholder="Write a professional message…"
+                placeholder={t("write_a_professional_message")}
               />
               <button
                 type="button"
@@ -320,7 +322,7 @@ export function MessagingThreadWorkspace({
             </div>
 
             <div className="border-t border-slate-100 px-6 py-4">
-              <p className="text-sm font-semibold text-slate-950">Meeting</p>
+              <p className="text-sm font-semibold text-slate-950">{t("meeting")}</p>
               <GoogleCalendarMeetingReadiness googleCalendarReady={googleCalendarReady} />
 
               {latestMeeting?.status === "scheduled" && latestMeeting.external_meet_url ? (
@@ -344,7 +346,7 @@ export function MessagingThreadWorkspace({
 
               {latestMeeting && latestMeeting.proposed_start_time ? (
                 <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                  <p className="font-medium text-slate-800">Proposed time</p>
+                  <p className="font-medium text-slate-800">{t("proposed_time")}</p>
                   <p className="mt-0.5">
                     {formatDate(latestMeeting.proposed_start_time)}
                     {latestMeeting.proposed_end_time
@@ -379,7 +381,7 @@ export function MessagingThreadWorkspace({
                 onChange={(event) => setMeetingNotes(event.target.value)}
                 rows={2}
                 className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                placeholder="Meeting notes (optional)"
+                placeholder={t("meeting_notes_optional")}
               />
 
               <div className="mt-3 flex flex-wrap gap-2">

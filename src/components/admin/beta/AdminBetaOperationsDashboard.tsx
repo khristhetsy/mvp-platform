@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { AdminBetaFeedbackActions } from "@/components/admin/beta/AdminBetaFeedbackActions";
 import { AdminBetaSupportActions } from "@/components/admin/beta/AdminBetaSupportActions";
@@ -25,6 +26,7 @@ function ReliabilityRow({ label, ok, detail }: { label: string; ok: boolean; det
 }
 
 export function AdminBetaOperationsDashboard({ snapshot }: { snapshot: BetaOperationsSnapshot }) {
+  const t = useTranslations("adminCmp");
   const appBase = getAppUrl() ?? "http://localhost:3000";
   const loginLink = `${appBase}/auth/sign-in`;
   const { summary, reliability, operations, founders, investors, inactivityFlags, usage, recentEvents, feedbackQueue } =
@@ -33,17 +35,17 @@ export function AdminBetaOperationsDashboard({ snapshot }: { snapshot: BetaOpera
   return (
     <div className="space-y-6">
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Active founders (7d)" value={String(summary.activeFounders)} detail="Recent activity" accent="indigo" href="/admin/companies" />
-        <MetricCard label="Active investors (7d)" value={String(summary.activeInvestors)} detail="Recent activity" accent="violet" href="/admin/investors" />
+        <MetricCard label={t("active_founders_7d")} value={String(summary.activeFounders)} detail="Recent activity" accent="indigo" href="/admin/companies" />
+        <MetricCard label={t("active_investors_7d")} value={String(summary.activeInvestors)} detail="Recent activity" accent="violet" href="/admin/investors" />
         <MetricCard
-          label="Founder onboarding avg"
+          label={t("founder_onboarding_avg")}
           value={`${summary.founderOnboardingCompletionPercent}%`}
           detail={`${summary.pendingFounderOnboarding} pending companies`}
           accent="blue"
           href="/admin/companies"
         />
         <MetricCard
-          label="Investor approvals queue"
+          label={t("investor_approvals_queue")}
           value={String(summary.pendingInvestorApprovals)}
           detail={`${summary.openBetaFeedback} open feedback`}
           accent="slate"
@@ -52,16 +54,16 @@ export function AdminBetaOperationsDashboard({ snapshot }: { snapshot: BetaOpera
       </section>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <WorkspacePanel title="Reliability indicators" subtitle="Launch + integration status">
+        <WorkspacePanel title={t("reliability_indicators")} subtitle={t("launch_integration_status")}>
           <ul className="space-y-2">
-            <ReliabilityRow label="Migrations verified" ok={reliability.migrationsVerified} />
-            <ReliabilityRow label="Private beta mode" ok={reliability.privateBetaMode} detail={reliability.privateBetaMode ? "ON" : "OFF"} />
-            <ReliabilityRow label="Claude AI" ok={reliability.claudeConfigured} detail={reliability.claudeConfigured ? "Configured" : "Unconfigured"} />
-            <ReliabilityRow label="Stripe" ok={reliability.stripeConfigured} detail={reliability.stripeConfigured ? "Enabled" : "Disabled"} />
-            <ReliabilityRow label="Google OAuth" ok={reliability.googleOAuthConfigured} />
-            <ReliabilityRow label="Cron / orchestration" ok={reliability.cronOperational} />
+            <ReliabilityRow label={t("migrations_verified")} ok={reliability.migrationsVerified} />
+            <ReliabilityRow label={t("private_beta_mode")} ok={reliability.privateBetaMode} detail={reliability.privateBetaMode ? "ON" : "OFF"} />
+            <ReliabilityRow label={t("claude_ai")} ok={reliability.claudeConfigured} detail={reliability.claudeConfigured ? "Configured" : "Unconfigured"} />
+            <ReliabilityRow label={t("stripe")} ok={reliability.stripeConfigured} detail={reliability.stripeConfigured ? "Enabled" : "Disabled"} />
+            <ReliabilityRow label={t("google_oauth")} ok={reliability.googleOAuthConfigured} />
+            <ReliabilityRow label={t("cron_orchestration")} ok={reliability.cronOperational} />
             <ReliabilityRow
-              label="Launch readiness"
+              label={t("launch_readiness")}
               ok={snapshot.launchReadiness.readyForPrivateBeta}
               detail={snapshot.launchReadiness.readyForPrivateBeta ? "Green" : snapshot.launchReadiness.blockers.join("; ")}
             />
@@ -71,7 +73,7 @@ export function AdminBetaOperationsDashboard({ snapshot }: { snapshot: BetaOpera
           </Link>
         </WorkspacePanel>
 
-        <WorkspacePanel title="Operations queue" subtitle="Failures and unresolved items">
+        <WorkspacePanel title={t("operations_queue")} subtitle={t("failures_and_unresolved_items")}>
           <ul className="space-y-2 text-sm text-slate-700">
             <li className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 hover:bg-slate-50">
               <span>Unresolved deal room questions: {operations.unresolvedDealRoomQuestions}</span>
@@ -115,13 +117,13 @@ export function AdminBetaOperationsDashboard({ snapshot }: { snapshot: BetaOpera
         </WorkspacePanel>
       </div>
 
-      <WorkspacePanel title="Usage analytics (30d / 7d)" subtitle="Deterministic module engagement">
+      <WorkspacePanel title={t("usage_analytics_30d_7d")} subtitle={t("deterministic_module_engagement")}>
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <p className="text-xs font-semibold uppercase text-slate-500">Founder modules</p>
+            <p className="text-xs font-semibold uppercase text-slate-500">{t("founder_modules")}</p>
             <ul className="mt-2 space-y-1 text-sm text-slate-700">
               {usage.founderModules.length === 0 ? (
-                <li>No operational events yet</li>
+                <li>{t("no_operational_events_yet")}</li>
               ) : (
                 usage.founderModules.map((row) => (
                   <li key={row.module}>
@@ -132,10 +134,10 @@ export function AdminBetaOperationsDashboard({ snapshot }: { snapshot: BetaOpera
             </ul>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase text-slate-500">Investor modules</p>
+            <p className="text-xs font-semibold uppercase text-slate-500">{t("investor_modules")}</p>
             <ul className="mt-2 space-y-1 text-sm text-slate-700">
               {usage.investorModules.length === 0 ? (
-                <li>No operational events yet</li>
+                <li>{t("no_operational_events_yet")}</li>
               ) : (
                 usage.investorModules.map((row) => (
                   <li key={row.module}>
@@ -153,9 +155,9 @@ export function AdminBetaOperationsDashboard({ snapshot }: { snapshot: BetaOpera
         </p>
       </WorkspacePanel>
 
-      <WorkspacePanel title="Inactivity & stall flags" subtitle={`${inactivityFlags.length} flagged`}>
+      <WorkspacePanel title={t("inactivity_stall_flags")} subtitle={`${inactivityFlags.length} flagged`}>
         {inactivityFlags.length === 0 ? (
-          <p className="text-sm text-slate-600">No inactivity flags.</p>
+          <p className="text-sm text-slate-600">{t("no_inactivity_flags")}</p>
         ) : (
           <div className="divide-y divide-slate-100">
             {inactivityFlags.slice(0, 20).map((flag) => (
@@ -177,9 +179,9 @@ export function AdminBetaOperationsDashboard({ snapshot }: { snapshot: BetaOpera
         )}
       </WorkspacePanel>
 
-      <WorkspacePanel title="Operational event stream" subtitle="Recent critical + admin events">
+      <WorkspacePanel title={t("operational_event_stream")} subtitle={t("recent_critical_admin_events")}>
         {recentEvents.length === 0 ? (
-          <p className="text-sm text-slate-600">No recent events.</p>
+          <p className="text-sm text-slate-600">{t("no_recent_events")}</p>
         ) : (
           <ul className="divide-y divide-slate-100 text-sm">
             {recentEvents.map((event) => (
@@ -197,9 +199,9 @@ export function AdminBetaOperationsDashboard({ snapshot }: { snapshot: BetaOpera
         )}
       </WorkspacePanel>
 
-      <WorkspacePanel title="Beta feedback queue" subtitle={`${feedbackQueue.length} open`}>
+      <WorkspacePanel title={t("beta_feedback_queue")} subtitle={`${feedbackQueue.length} open`}>
         {feedbackQueue.length === 0 ? (
-          <p className="text-sm text-slate-600">No open feedback.</p>
+          <p className="text-sm text-slate-600">{t("no_open_feedback")}</p>
         ) : (
           <div className="divide-y divide-slate-100">
             {feedbackQueue.map((item) => (
@@ -216,7 +218,7 @@ export function AdminBetaOperationsDashboard({ snapshot }: { snapshot: BetaOpera
         )}
       </WorkspacePanel>
 
-      <WorkspacePanel title="Founder activation" subtitle="Recent founders">
+      <WorkspacePanel title={t("founder_activation")} subtitle={t("recent_founders")}>
         <div className="divide-y divide-slate-100">
           {founders.map((founder) => (
             <div key={founder.profileId} className="py-3">
@@ -250,7 +252,7 @@ export function AdminBetaOperationsDashboard({ snapshot }: { snapshot: BetaOpera
         </div>
       </WorkspacePanel>
 
-      <WorkspacePanel title="Investor activation" subtitle="Recent investors">
+      <WorkspacePanel title={t("investor_activation")} subtitle={t("recent_investors")}>
         <div className="divide-y divide-slate-100">
           {investors.map((investor) => (
             <div key={investor.profileId} className="py-3">

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { Route, Loader2, Check, RefreshCw } from "lucide-react";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
@@ -20,6 +21,7 @@ export function FounderStageOverride({
   founderId,
   founderName,
 }: Readonly<{ founderId: string; founderName?: string | null }>) {
+  const t = useTranslations("adminCmp");
   const [current, setCurrent] = useState<string | null>(null);
   const [stage, setStage] = useState<string>("");
   const [reason, setReason] = useState("");
@@ -103,8 +105,8 @@ export function FounderStageOverride({
       <div className="mb-3 flex items-center gap-2">
         <Route className="h-5 w-5 text-[var(--gold)]" strokeWidth={1.75} aria-hidden />
         <div>
-          <p className="text-sm font-semibold text-slate-950">Journey stage override</p>
-          <p className="text-xs text-slate-500">Force-advance or roll back this founder&rsquo;s stage. Bypasses readiness; audit-logged.</p>
+          <p className="text-sm font-semibold text-slate-950">{t("journey_stage_override")}</p>
+          <p className="text-xs text-slate-500">{t("force_advance_or_roll_back_this_founder_s_st")}</p>
         </div>
         {current ? <span className="ml-auto rounded-full bg-[#EEEDFE] px-2.5 py-0.5 text-[11px] font-medium text-[#3C3489]">Current: {STAGES.find((s) => s.value === current)?.label ?? current}</span> : null}
       </div>
@@ -118,12 +120,12 @@ export function FounderStageOverride({
         </label>
         <label className="flex-1 text-xs text-slate-500" style={{ minWidth: 200 }}>
           Reason (recorded)
-          <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why are you overriding?" className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#534AB7] focus:outline-none" />
+          <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("why_are_you_overriding")} className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#534AB7] focus:outline-none" />
         </label>
         <button type="button" disabled={saving || !stage || stage === current} onClick={() => void apply()} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} {saving ? "Saving…" : "Set stage"}
         </button>
-        <button type="button" disabled={recomputing} onClick={() => void recompute()} title="Re-run the advancement rules using the founder's actual data" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+        <button type="button" disabled={recomputing} onClick={() => void recompute()} title={t("re_run_the_advancement_rules_using_the_found")} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
           {recomputing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} {recomputing ? "Recomputing…" : "Recompute"}
         </button>
       </div>

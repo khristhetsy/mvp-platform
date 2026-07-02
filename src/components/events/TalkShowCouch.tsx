@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { mapSessionGuest } from "@/lib/icfo-events/live-session";
@@ -44,6 +45,7 @@ export function TalkShowCouch({
   runOfShow: string[];
   isLive: boolean;
 }) {
+  const t = useTranslations("eventsCmp");
   const [guests, setGuests] = useState<SessionGuest[]>([]);
   const [segments, setSegments] = useState<SessionSegment[]>(initialSegments);
 
@@ -117,7 +119,7 @@ export function TalkShowCouch({
                 >
                   +
                 </div>
-                <p className="mt-1.5 text-[10px] uppercase tracking-wide" style={{ color: "#5b6e86" }}>Empty</p>
+                <p className="mt-1.5 text-[10px] uppercase tracking-wide" style={{ color: "#5b6e86" }}>{t("empty")}</p>
               </div>
             );
           }
@@ -143,7 +145,7 @@ export function TalkShowCouch({
         </p>
       )}
       {onstage.length === 0 && (
-        <p className="text-xs" style={{ color: "#8e9bb0" }}>The host brings guests to the couch — seats fill as they come on stage.</p>
+        <p className="text-xs" style={{ color: "#8e9bb0" }}>{t("the_host_brings_guests_to_the_couch_seats_fi")}</p>
       )}
     </div>
   );

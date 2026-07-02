@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActionablePanelRow } from "@/components/ui/drilldown";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
@@ -16,17 +17,18 @@ import type { OperationalActivityFeedItem } from "@/lib/operational-activity/typ
 export function AdminRecentActivityTimeline({
   activities,
 }: Readonly<{ activities: OperationalActivityFeedItem[] }>) {
+  const t = useTranslations("adminCmp");
   const grouped = groupOperationalFeedByCategory(activities);
 
   return (
     <WorkspacePanel
-      title="Recent activity timeline"
-      subtitle="Unified operational events across CRM, SPV, compliance, imports, and onboarding"
+      title={t("recent_activity_timeline")}
+      subtitle={t("unified_operational_events_across_crm_spv_co")}
     >
       {activities.length === 0 ? (
         <EmptyState
-          title="No operational activity yet"
-          description="Platform events will appear here as investors, founders, and admins take action."
+          title={t("no_operational_activity_yet")}
+          description={t("platform_events_will_appear_here_as_investor")}
         />
       ) : (
         <div className="space-y-5">

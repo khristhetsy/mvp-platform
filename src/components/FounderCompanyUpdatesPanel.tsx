@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import type { CompanyUpdateRecord } from "@/lib/company-updates/types";
@@ -27,6 +28,7 @@ export function FounderCompanyUpdatesPanel({
 }: Readonly<{
   initialUpdates: CompanyUpdateRecord[];
 }>) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -63,28 +65,28 @@ export function FounderCompanyUpdatesPanel({
 
   return (
     <WorkspacePanel
-      title="Company updates"
-      subtitle="Share milestones with interested investors or marketplace viewers"
+      title={t("company_updates")}
+      subtitle={t("share_milestones_with_interested_investors_o")}
     >
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3 text-sm">
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Update title"
+          placeholder={t("update_title")}
           className="w-full rounded-lg border border-slate-200 px-3 py-2"
           required
         />
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Update summary for investors (not a legal offering document)"
+          placeholder={t("update_summary_for_investors_not_a_legal_off")}
           rows={4}
           className="w-full rounded-lg border border-slate-200 px-3 py-2"
           required
         />
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="text-xs text-slate-500">Type</span>
+            <span className="text-xs text-slate-500">{t("type")}</span>
             <select
               value={updateType}
               onChange={(e) => setUpdateType(e.target.value)}
@@ -98,7 +100,7 @@ export function FounderCompanyUpdatesPanel({
             </select>
           </label>
           <label className="block">
-            <span className="text-xs text-slate-500">Visibility</span>
+            <span className="text-xs text-slate-500">{t("visibility")}</span>
             <select
               value={visibility}
               onChange={(e) => setVisibility(e.target.value)}
@@ -132,7 +134,7 @@ export function FounderCompanyUpdatesPanel({
 
       <div className="mt-6 divide-y divide-slate-100">
         {initialUpdates.length === 0 ? (
-          <p className="py-2 text-sm text-slate-500">No updates yet.</p>
+          <p className="py-2 text-sm text-slate-500">{t("no_updates_yet")}</p>
         ) : (
           initialUpdates.map((update) => (
             <div key={update.id} className="py-3 text-sm">

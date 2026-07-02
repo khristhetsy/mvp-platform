@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { mapSessionGuest } from "@/lib/icfo-events/live-session";
@@ -13,6 +14,7 @@ function raw(c: ReturnType<typeof createClient>): SupabaseClient {
 
 /** Admin roster for a talk-show session: add guests, swap on/off stage. */
 export function GuestRoster({ sessionId, eventId }: { sessionId: string; eventId: string }) {
+  const t = useTranslations("eventsCmp");
   const [guests, setGuests] = useState<SessionGuest[]>([]);
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
@@ -67,17 +69,17 @@ export function GuestRoster({ sessionId, eventId }: { sessionId: string; eventId
 
   return (
     <div className="mt-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-sunken)] p-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Guest roster</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("guest_roster")}</p>
       <div className="mt-2 space-y-1.5">
         {guests.length === 0 ? (
-          <p className="text-xs text-[var(--text-muted)]">No guests yet.</p>
+          <p className="text-xs text-[var(--text-muted)]">{t("no_guests_yet")}</p>
         ) : (
           guests.map((g) => (
             <div key={g.id} className="flex items-center justify-between rounded-md bg-white px-2.5 py-1.5">
               <span className="text-sm text-[var(--navy)]">
                 {g.displayName}
                 {g.roleLabel && <span className="ml-1 text-xs text-[var(--text-muted)]">· {g.roleLabel}</span>}
-                {g.status === "onstage" && <span className="ml-2 rounded bg-emerald-50 px-1.5 py-0.5 text-xs text-emerald-700">On stage</span>}
+                {g.status === "onstage" && <span className="ml-2 rounded bg-emerald-50 px-1.5 py-0.5 text-xs text-emerald-700">{t("on_stage")}</span>}
               </span>
               <div className="flex gap-2">
                 <button
@@ -95,8 +97,8 @@ export function GuestRoster({ sessionId, eventId }: { sessionId: string; eventId
         )}
       </div>
       <div className="mt-2 flex gap-2">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Guest name" className="flex-1 rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-sm" />
-        <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Role (optional)" className="w-32 rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-sm" />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("guest_name")} className="flex-1 rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-sm" />
+        <input value={role} onChange={(e) => setRole(e.target.value)} placeholder={t("role_optional")} className="w-32 rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-sm" />
         <button onClick={add} disabled={busy || !name.trim()} className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] disabled:opacity-50">
           Add
         </button>

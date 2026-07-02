@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -21,6 +22,7 @@ export function FounderLearningProgramView({
   lessonProgress: FounderLessonProgressRecord[];
   stageAccess: StageAccessMap;
 }>) {
+  const t = useTranslations("sharedCmp");
   const programLocked = !stageAccess[program.stage];
   const modulesInProgram = modules.filter((m) => program.moduleSlugs.includes(m.slug));
   const avg =
@@ -34,7 +36,7 @@ export function FounderLearningProgramView({
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Learning program"
+        eyebrow={t("learning_program")}
         title={program.title}
         description={program.description}
         metadata={`${program.readinessFocus} · ${avg}% module progress`}
@@ -75,7 +77,7 @@ export function FounderLearningProgramView({
         compact
       />
 
-      <WorkspacePanel title="Modules & lessons" subtitle="Structured institutional curriculum">
+      <WorkspacePanel title={t("modules_lessons")} subtitle={t("structured_institutional_curriculum")}>
         <div className="space-y-6">
           {modulesInProgram.map((module) => {
             const content = getModuleContent(module.slug);
@@ -113,7 +115,7 @@ export function FounderLearningProgramView({
                               <span aria-hidden>🔒</span>
                               {lesson.title}
                             </span>
-                            <span className="text-xs">Locked</span>
+                            <span className="text-xs">{t("locked")}</span>
                           </div>
                         ) : (
                           <Link

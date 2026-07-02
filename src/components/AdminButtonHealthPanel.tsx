@@ -1,6 +1,7 @@
 "use client";
 
 import { useAdminActionHealthSafe } from "@/components/AdminActionHealthProvider";
+import { useTranslations } from "next-intl";
 
 function HealthRow({ label, value }: { label: string; value: string | number | null | undefined }) {
   return (
@@ -12,13 +13,14 @@ function HealthRow({ label, value }: { label: string; value: string | number | n
 }
 
 export function AdminButtonHealthPanel() {
+  const t = useTranslations("sharedCmp");
   const health = useAdminActionHealthSafe();
 
   return (
     <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
       <div className="mb-5 flex flex-col justify-between gap-4 border-b border-slate-100 pb-4 md:flex-row md:items-start">
         <div>
-          <h2 className="text-base font-semibold text-slate-950">System Health</h2>
+          <h2 className="text-base font-semibold text-slate-950">{t("system_health")}</h2>
           <p className="mt-1 text-sm text-slate-500">
             Admin API diagnostics and configuration status.
           </p>
@@ -35,33 +37,33 @@ export function AdminButtonHealthPanel() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-4">
-          <HealthRow label="Current user id" value={health.userId} />
-          <HealthRow label="Current role" value={health.userRole} />
+          <HealthRow label={t("current_user_id")} value={health.userId} />
+          <HealthRow label={t("current_role")} value={health.userRole} />
           <HealthRow
-            label="Service role configured"
+            label={t("service_role_configured")}
             value={health.serviceRoleConfigured ? "yes" : "no"}
           />
-          <HealthRow label="Last button clicked" value={health.lastButtonClicked} />
-          <HealthRow label="Last API URL" value={health.lastApiUrl} />
-          <HealthRow label="Last HTTP status" value={health.lastHttpStatus} />
+          <HealthRow label={t("last_button_clicked")} value={health.lastButtonClicked} />
+          <HealthRow label={t("last_api_url")} value={health.lastApiUrl} />
+          <HealthRow label={t("last_http_status")} value={health.lastHttpStatus} />
         </div>
 
         <div className="rounded-xl border border-slate-200/80 bg-slate-50 p-4">
           {health.lastErrorMessage ? (
             <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              <p className="font-semibold">Last error</p>
+              <p className="font-semibold">{t("last_error")}</p>
               <p className="mt-1 whitespace-pre-wrap">{health.lastErrorMessage}</p>
             </div>
           ) : null}
 
           {health.healthCheckError ? (
             <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-              <p className="font-semibold">Health check error</p>
+              <p className="font-semibold">{t("health_check_error")}</p>
               <p className="mt-1 whitespace-pre-wrap">{health.healthCheckError}</p>
             </div>
           ) : null}
 
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Last response body</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{t("last_response_body")}</p>
           <pre className="mt-2 max-h-56 overflow-auto rounded-xl bg-slate-950 p-3 text-xs text-slate-100">
             {health.lastResponseBody || health.healthCheckResult || "—"}
           </pre>

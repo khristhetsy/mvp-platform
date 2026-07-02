@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Suspense, useMemo, useState, type ReactNode } from "react";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { ModuleEmptyState } from "@/components/ui/ViewToolbar";
@@ -31,6 +32,7 @@ function AdminReportsModuleViewsInner({
   sections: AdminReportSection[];
   children: ReactNode;
 }>) {
+  const t = useTranslations("adminCmp");
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewMode>("kanban");
   const filtered = useMemo(() => filterSections(sections, query), [sections, query]);
@@ -42,7 +44,7 @@ function AdminReportsModuleViewsInner({
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search report types…"
+          placeholder={t("search_report_types")}
           className="flex-1 min-w-[200px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
         <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
@@ -63,9 +65,9 @@ function AdminReportsModuleViewsInner({
         </div>
       </div>
 
-      <PageSection title="Report catalog" subtitle="Internal audit exports — not legal filings">
+      <PageSection title={t("report_catalog")} subtitle={t("internal_audit_exports_not_legal_filings")}>
         {filtered.length === 0 ? (
-          <ModuleEmptyState title="No matching reports" description="Try a different search term." />
+          <ModuleEmptyState title={t("no_matching_reports")} description={t("try_a_different_search_term")} />
         ) : view === "kanban" ? (
           <ContentGrid columns={3}>
             {filtered.map((section) => (
@@ -118,8 +120,9 @@ function AdminReportsModuleViewsInner({
 export function AdminReportsModuleViews(
   props: Readonly<{ sections: AdminReportSection[]; children: ReactNode }>,
 ) {
+  const t = useTranslations("adminCmp");
   return (
-    <Suspense fallback={<p className="text-sm text-slate-500">Loading view options…</p>}>
+    <Suspense fallback={<p className="text-sm text-slate-500">{t("loading_view_options")}</p>}>
       <AdminReportsModuleViewsInner {...props} />
     </Suspense>
   );

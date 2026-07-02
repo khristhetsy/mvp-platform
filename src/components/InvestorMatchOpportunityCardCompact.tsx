@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 const CIRC = 2 * Math.PI * 17; // r=17 → ≈106.8
 
@@ -25,6 +26,7 @@ export function InvestorMatchOpportunityCardCompact({
   fundingTarget: string | null;
   matchScore: number;
 }>) {
+  const t = useTranslations("sharedCmp");
   const color = donutColor(matchScore);
   const offset = CIRC * (1 - matchScore / 100);
   const meta = [industry, stage].filter(Boolean).join(" · ");
@@ -97,7 +99,7 @@ export function InvestorMatchOpportunityCardCompact({
         ) : (
           <span />
         )}
-        <span style={{ fontSize: 10, fontWeight: 600, color: "#534AB7" }}>View →</span>
+        <span style={{ fontSize: 10, fontWeight: 600, color: "#534AB7" }}>{t("view_2")}</span>
       </div>
     </Link>
   );

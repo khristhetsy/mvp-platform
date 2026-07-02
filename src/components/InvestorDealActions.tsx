@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { formatApiError } from "@/lib/api/errors";
@@ -26,6 +27,7 @@ export function InvestorDealActions({
   pitchDeckDocumentId,
   signInNextPath,
 }: Props) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -134,7 +136,7 @@ export function InvestorDealActions({
   if (!viewerRole) {
     return (
       <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Investor actions</h2>
+        <h2 className="text-lg font-semibold text-slate-950">{t("investor_actions")}</h2>
         <p className="mt-3 text-sm leading-6 text-slate-600">
           Sign in as an investor to express interest, request an intro, or save this deal.
         </p>
@@ -151,7 +153,7 @@ export function InvestorDealActions({
   if (viewerRole === "founder" || isOwnCompany) {
     return (
       <aside className="h-fit rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Marketplace view</h2>
+        <h2 className="text-lg font-semibold text-slate-950">{t("marketplace_view")}</h2>
         <p className="mt-3 text-sm leading-6 text-slate-600">
           {isOwnCompany
             ? "This is your company listing. Founder accounts cannot perform investor actions on their own deal."
@@ -164,7 +166,7 @@ export function InvestorDealActions({
   if (viewerRole !== "investor") {
     return (
       <aside className="h-fit rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Investor actions</h2>
+        <h2 className="text-lg font-semibold text-slate-950">{t("investor_actions")}</h2>
         <p className="mt-3 text-sm leading-6 text-slate-600">
           Only investor accounts can express interest or request intros on marketplace deals.
         </p>
@@ -174,7 +176,7 @@ export function InvestorDealActions({
 
   return (
     <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-950">Investor actions</h2>
+      <h2 className="text-lg font-semibold text-slate-950">{t("investor_actions")}</h2>
       <p className="mt-3 text-sm leading-6 text-slate-600">
         Expressing interest or requesting an intro does not create an investment commitment, allocation, or guarantee
         of returns.
@@ -185,12 +187,12 @@ export function InvestorDealActions({
 
       <div className="mt-5 grid gap-4">
         <label className="grid gap-2 text-sm">
-          <span className="font-medium text-slate-800">Indicative interest amount</span>
+          <span className="font-medium text-slate-800">{t("indicative_interest_amount")}</span>
           <input
             value={indicativeInterestAmount}
             onChange={(event) => setIndicativeInterestAmount(event.target.value)}
             className="rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-            placeholder="Enter indicative interest amount (USD)"
+            placeholder={t("enter_indicative_interest_amount_usd")}
             inputMode="decimal"
           />
         </label>
@@ -199,7 +201,7 @@ export function InvestorDealActions({
           onChange={(event) => setMessage(event.target.value)}
           rows={4}
           className="rounded-2xl border border-slate-300 p-4 text-sm"
-          placeholder="Optional note for the platform team"
+          placeholder={t("optional_note_for_the_platform_team")}
         />
 
         <button

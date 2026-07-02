@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { CapitalReadyBadge } from "@/components/CapitalReadyBadge";
 import { CompanyPledgeSummaryBlock } from "@/components/CompanyPledgeSummary";
 import type { MarketplaceListing } from "@/lib/data/marketplace";
@@ -8,6 +9,7 @@ export function DealCard({
   deal,
   pledgeSummary,
 }: Readonly<{ deal: MarketplaceListing; pledgeSummary: CompanyPledgeSummary }>) {
+  const t = useTranslations("sharedCmp");
   return (
     <article className="flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-300 hover:shadow-md">
       <div className="flex items-start justify-between gap-4">
@@ -27,11 +29,11 @@ export function DealCard({
       </p>
       <div className="mt-6 grid grid-cols-2 gap-3 text-sm">
         <div className="rounded-2xl bg-slate-50 p-4">
-          <p className="text-slate-500">Funding target</p>
+          <p className="text-slate-500">{t("funding_target")}</p>
           <p className="mt-1 font-semibold text-slate-950">{deal.fundingTarget ?? "—"}</p>
         </div>
         <div className="rounded-2xl bg-slate-50 p-4">
-          <p className="text-slate-500">Minimum</p>
+          <p className="text-slate-500">{t("minimum")}</p>
           <p className="mt-1 font-semibold text-slate-950">{deal.minimumInvestment ?? "—"}</p>
         </div>
       </div>

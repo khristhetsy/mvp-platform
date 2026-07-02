@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { z } from "zod";
 import { adminWorkspaceNavSections } from "@/lib/workspace-nav";
@@ -64,6 +65,7 @@ type Props = {
 };
 
 export function AdminProfileClient({ initialName, email, role, isSuperAdmin, createdAt }: Readonly<Props>) {
+  const t = useTranslations("adminCmp");
   const { getError, inputCls, validate, clearError } = useFormValidation();
 
   const [name, setName] = useState(initialName ?? "");
@@ -199,8 +201,8 @@ export function AdminProfileClient({ initialName, email, role, isSuperAdmin, cre
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[var(--shadow-panel)]">
           <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-5 py-3">
             <div>
-              <h2 className="text-sm font-medium text-slate-950">Personal information</h2>
-              <p className="text-[11px] text-slate-500">Your name and account details</p>
+              <h2 className="text-sm font-medium text-slate-950">{t("personal_information")}</h2>
+              <p className="text-[11px] text-slate-500">{t("your_name_and_account_details")}</p>
             </div>
             {!editingName && (
               <button
@@ -269,23 +271,23 @@ export function AdminProfileClient({ initialName, email, role, isSuperAdmin, cre
               </div>
             )}
             {nameError && <p className="mt-3 text-xs text-red-600">{nameError}</p>}
-            {nameSuccess && <p className="mt-3 text-xs text-emerald-600">Name updated.</p>}
+            {nameSuccess && <p className="mt-3 text-xs text-emerald-600">{t("name_updated")}</p>}
           </div>
         </section>
 
         {/* Security */}
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[var(--shadow-panel)]">
           <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
-            <h2 className="text-sm font-medium text-slate-950">Security</h2>
-            <p className="text-[11px] text-slate-500">Password management and account security</p>
+            <h2 className="text-sm font-medium text-slate-950">{t("security")}</h2>
+            <p className="text-[11px] text-slate-500">{t("password_management_and_account_security")}</p>
           </div>
           <div className="p-5">
             <div className="grid gap-6 md:grid-cols-2">
               {/* Change password */}
               <div>
-                <h3 className="mb-3 text-xs font-medium text-slate-700">Change password</h3>
+                <h3 className="mb-3 text-xs font-medium text-slate-700">{t("change_password")}</h3>
                 <div className="space-y-3">
-                  <FormField label="Current password" hint="Required by Supabase to verify identity">
+                  <FormField label={t("current_password")} hint="Required by Supabase to verify identity">
                     <input
                       type="password"
                       value={currentPwd}
@@ -294,21 +296,21 @@ export function AdminProfileClient({ initialName, email, role, isSuperAdmin, cre
                       className={`${PWD_INPUT} ${inputCls("currentPwd")}`}
                     />
                   </FormField>
-                  <FormField label="New password" error={getError("newPwd")} hint="Min 8 characters">
+                  <FormField label={t("new_password")} error={getError("newPwd")} hint="Min 8 characters">
                     <input
                       type="password"
                       value={newPwd}
                       onChange={(e) => { setNewPwd(e.target.value); clearError("newPwd"); }}
-                      placeholder="Min. 8 characters"
+                      placeholder={t("min_8_characters")}
                       className={`${PWD_INPUT} ${inputCls("newPwd")}`}
                     />
                   </FormField>
-                  <FormField label="Confirm new password" error={getError("confirmPwd")}>
+                  <FormField label={t("confirm_new_password")} error={getError("confirmPwd")}>
                     <input
                       type="password"
                       value={confirmPwd}
                       onChange={(e) => { setConfirmPwd(e.target.value); clearError("confirmPwd"); }}
-                      placeholder="Repeat new password"
+                      placeholder={t("repeat_new_password")}
                       className={`${PWD_INPUT} ${inputCls("confirmPwd")}`}
                     />
                   </FormField>
@@ -321,14 +323,14 @@ export function AdminProfileClient({ initialName, email, role, isSuperAdmin, cre
                     {pwdSaving ? "Updating…" : "Update password"}
                   </button>
                   {pwdError ? <p className="text-xs text-red-600">{pwdError}</p> : null}
-                  {pwdSuccess ? <p className="text-xs text-emerald-600">Password updated successfully.</p> : null}
+                  {pwdSuccess ? <p className="text-xs text-emerald-600">{t("password_updated_successfully")}</p> : null}
                 </div>
               </div>
 
               {/* Reset & 2FA */}
               <div className="space-y-5">
                 <div>
-                  <h3 className="mb-1 text-xs font-medium text-slate-700">Reset via email</h3>
+                  <h3 className="mb-1 text-xs font-medium text-slate-700">{t("reset_via_email")}</h3>
                   <p className="mb-3 text-[11px] text-slate-500">
                     Send a password reset link to {email}.
                   </p>
@@ -346,7 +348,7 @@ export function AdminProfileClient({ initialName, email, role, isSuperAdmin, cre
                 <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="text-xs font-medium text-slate-700">Two-factor authentication</h3>
+                      <h3 className="text-xs font-medium text-slate-700">{t("two_factor_authentication")}</h3>
                       <p className="mt-1 text-[11px] text-slate-500">
                         Add an extra layer of security to your account.
                       </p>
@@ -359,7 +361,7 @@ export function AdminProfileClient({ initialName, email, role, isSuperAdmin, cre
                     type="button"
                     disabled
                     className="mt-3 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-400"
-                    title="Coming soon"
+                    title={t("coming_soon")}
                   >
                     Set up 2FA — coming soon
                   </button>
@@ -373,8 +375,8 @@ export function AdminProfileClient({ initialName, email, role, isSuperAdmin, cre
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[var(--shadow-panel)]">
           <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-5 py-3">
             <div>
-              <h2 className="text-sm font-medium text-slate-950">Authorized modules</h2>
-              <p className="text-[11px] text-slate-500">Platform sections you can access</p>
+              <h2 className="text-sm font-medium text-slate-950">{t("authorized_modules")}</h2>
+              <p className="text-[11px] text-slate-500">{t("platform_sections_you_can_access")}</p>
             </div>
             <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-medium text-amber-700">
               Super Admin only

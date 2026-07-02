@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 /**
  * AdminReadinessDashboard
  *
@@ -270,6 +271,7 @@ function OverridePanel({
   onSaved: () => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("adminCmp");
   const [overrideScore, setOverrideScore] = useState<string>(
     String(row.score?.overrideScore ?? row.score?.effectiveScore ?? ""),
   );
@@ -322,7 +324,7 @@ function OverridePanel({
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-slate-900">{row.companyName}</p>
-          <p className="mt-0.5 text-xs text-slate-400">Override panel</p>
+          <p className="mt-0.5 text-xs text-slate-400">{t("override_panel")}</p>
         </div>
         <button
           onClick={onCancel}
@@ -334,16 +336,16 @@ function OverridePanel({
 
       <div className="mb-4 divide-y divide-slate-100 rounded-xl border border-slate-100 text-sm">
         <div className="flex items-center justify-between px-4 py-3">
-          <span className="text-slate-500">AI score (raw)</span>
+          <span className="text-slate-500">{t("ai_score_raw")}</span>
           <span className="font-medium">{row.score.totalScore}</span>
         </div>
         <div className="flex items-center justify-between px-4 py-3">
-          <span className="text-slate-500">Current effective score</span>
+          <span className="text-slate-500">{t("current_effective_score")}</span>
           <span className="font-semibold text-slate-900">{row.score.effectiveScore}</span>
         </div>
         {row.score.overriddenBy && (
           <div className="flex items-center justify-between px-4 py-3">
-            <span className="text-slate-500">Last override by</span>
+            <span className="text-slate-500">{t("last_override_by")}</span>
             <span className="text-slate-700">{row.score.overriddenBy}</span>
           </div>
         )}
@@ -361,7 +363,7 @@ function OverridePanel({
             value={overrideScore}
             onChange={(e) => setOverrideScore(e.target.value)}
             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-            placeholder="Enter score…"
+            placeholder={t("enter_score")}
           />
         </div>
         <div>
@@ -373,7 +375,7 @@ function OverridePanel({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-            placeholder="e.g. Strong in-person pitch; AI missed verbal traction evidence."
+            placeholder={t("e_g_strong_in_person_pitch_ai_missed_verbal")}
           />
         </div>
       </div>
@@ -407,6 +409,7 @@ function OverridePanel({
 // ─── Distribution chart ───────────────────────────────────────────────────────
 
 function DistributionChart({ rows }: { rows: Row[] }) {
+  const t = useTranslations("adminCmp");
   const buckets = distributionBuckets(rows);
   const labels = ["0–29", "30–49", "50–69", "70–84", "85–100"];
   const colors = ["#F09595", "#FAC775", "#85B7EB", "#5DCAA5", "#1D9E75"];
@@ -414,7 +417,7 @@ function DistributionChart({ rows }: { rows: Row[] }) {
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5">
-      <p className="mb-1 text-sm font-semibold text-slate-900">Score distribution</p>
+      <p className="mb-1 text-sm font-semibold text-slate-900">{t("score_distribution")}</p>
       <p className="mb-4 text-xs text-slate-400">{rows.filter((r) => r.score).length} scored companies</p>
       <div className="flex h-28 items-end gap-2">
         {buckets.map((val, i) => (
@@ -439,6 +442,7 @@ function DistributionChart({ rows }: { rows: Row[] }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function AdminReadinessDashboard({ rows, metrics }: Props) {
+  const t = useTranslations("adminCmp");
   const [filter, setFilter] = useState<"all" | "unlocked" | "locked" | "overridden">("all");
   const [search, setSearch] = useState("");
   const [selectedRow, setSelectedRow] = useState<Row | null>(null);
@@ -558,7 +562,7 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
           <div className="flex flex-wrap items-center gap-3">
             <input
               type="text"
-              placeholder="Search company…"
+              placeholder={t("search_company")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
@@ -661,7 +665,7 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
                             )}
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-400">Not scored</span>
+                          <span className="text-xs text-slate-400">{t("not_scored")}</span>
                         )}
                       </td>
 
@@ -772,7 +776,7 @@ export function AdminReadinessDashboard({ rows, metrics }: Props) {
           <DistributionChart rows={rows} />
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
-            <p className="mb-3 text-sm font-semibold text-slate-900">Legend</p>
+            <p className="mb-3 text-sm font-semibold text-slate-900">{t("legend")}</p>
             <div className="space-y-2 text-xs text-slate-500">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />

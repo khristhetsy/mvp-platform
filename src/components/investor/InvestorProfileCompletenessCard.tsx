@@ -1,6 +1,7 @@
 "use client";
 
 import type { InvestorProfileRecord } from "@/lib/investor/types";
+import { useTranslations } from "next-intl";
 
 type FieldStatus = {
   label: string;
@@ -81,6 +82,7 @@ export function InvestorProfileCompletenessCard({
 }: {
   profile: InvestorProfileRecord;
 }) {
+  const t = useTranslations("investorCmp");
   const fields = computeFields(profile);
   const doneCount = fields.filter((f) => f.done).length;
   const pct = Math.round((doneCount / fields.length) * 100);
@@ -91,7 +93,7 @@ export function InvestorProfileCompletenessCard({
       <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
         <span className="text-xl">✓</span>
         <div>
-          <p className="text-sm font-semibold text-emerald-900">Profile complete</p>
+          <p className="text-sm font-semibold text-emerald-900">{t("profile_complete")}</p>
           <p className="text-xs text-emerald-700">
             Your profile is fully filled out — you&apos;ll get the best match scores and AI deal briefs.
           </p>

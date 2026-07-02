@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { InvestorDealActions } from "@/components/InvestorDealActions";
 import { InvestableReadinessPanel } from "@/components/investor/InvestableReadinessPanel";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
@@ -15,6 +16,7 @@ export function InvestorCompanyReportView({
   viewerRole: "investor" | null;
   isOwnCompany: boolean;
 }>) {
+  const t = useTranslations("sharedCmp");
   const { listing } = report;
   const pledgeLabel = formatPledgeTotal(
     report.investorSignals.indicativePledgeTotal,
@@ -57,7 +59,7 @@ export function InvestorCompanyReportView({
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <WorkspacePanel title="Company overview" subtitle="Public marketplace profile">
+        <WorkspacePanel title={t("company_overview")} subtitle={t("public_marketplace_profile")}>
           <dl className="grid gap-2 text-sm">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Industry</dt>
@@ -82,7 +84,7 @@ export function InvestorCompanyReportView({
           </dl>
         </WorkspacePanel>
 
-        <WorkspacePanel title="Capital raise overview" subtitle="From published campaign fields">
+        <WorkspacePanel title={t("capital_raise_overview")} subtitle={t("from_published_campaign_fields")}>
           <dl className="grid gap-2 text-sm">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Funding target</dt>
@@ -100,7 +102,7 @@ export function InvestorCompanyReportView({
           ) : null}
         </WorkspacePanel>
 
-        <WorkspacePanel title="Readiness summary" subtitle="Scores and onboarding progress">
+        <WorkspacePanel title={t("readiness_summary")} subtitle={t("scores_and_onboarding_progress")}>
           <dl className="grid gap-2 text-sm">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Latest readiness score</dt>
@@ -140,7 +142,7 @@ export function InvestorCompanyReportView({
           ) : null}
         </WorkspacePanel>
 
-        <WorkspacePanel title="Document / data room summary" subtitle="Availability only — no private file paths">
+        <WorkspacePanel title={t("document_data_room_summary")} subtitle={t("availability_only_no_private_file_paths")}>
           <dl className="grid gap-2 text-sm">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Documents uploaded</dt>
@@ -170,8 +172,8 @@ export function InvestorCompanyReportView({
         </WorkspacePanel>
 
         <WorkspacePanel
-          title="Investor activity signals"
-          subtitle="Platform-wide aggregates — no private investor identities"
+          title={t("investor_activity_signals")}
+          subtitle={t("platform_wide_aggregates_no_private_investor")}
         >
           <dl className="grid gap-2 text-sm">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -205,7 +207,7 @@ export function InvestorCompanyReportView({
           </dl>
         </WorkspacePanel>
 
-        <WorkspacePanel title="Learning progression" subtitle="Founder learning modules on platform">
+        <WorkspacePanel title={t("learning_progression")} subtitle={t("founder_learning_modules_on_platform")}>
           <dl className="grid gap-2 text-sm">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <dt className="text-slate-500">Modules completed</dt>
@@ -219,7 +221,7 @@ export function InvestorCompanyReportView({
         </WorkspacePanel>
       </div>
 
-      <WorkspacePanel title="Diligence summary" subtitle="Published readiness narrative — not legal advice">
+      <WorkspacePanel title={t("diligence_summary")} subtitle={t("published_readiness_narrative_not_legal_advi")}>
         <p className="text-sm leading-6 text-slate-700">
           {report.diligenceSummary.executiveSummary ?? "No diligence summary published yet."}
         </p>
@@ -230,7 +232,7 @@ export function InvestorCompanyReportView({
         ) : null}
       </WorkspacePanel>
 
-      <WorkspacePanel title="Risk factors & missing items" subtitle="High-level gaps from readiness checklist">
+      <WorkspacePanel title={t("risk_factors_missing_items")} subtitle={t("high_level_gaps_from_readiness_checklist")}>
         {report.riskFactors.missingItems.length > 0 ? (
           <ul className="list-inside list-disc text-sm text-slate-700">
             {report.riskFactors.missingItems.map((item) => (
@@ -238,7 +240,7 @@ export function InvestorCompanyReportView({
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-slate-600">No missing required items flagged in the latest diligence snapshot.</p>
+          <p className="text-sm text-slate-600">{t("no_missing_required_items_flagged_in_the_lat")}</p>
         )}
         {report.riskFactors.riskFlagCount > 0 ? (
           <p className="mt-3 text-sm text-slate-600">
@@ -251,7 +253,7 @@ export function InvestorCompanyReportView({
       </WorkspacePanel>
 
       <section className="grid gap-6 lg:grid-cols-[1fr_0.42fr]">
-        <WorkspacePanel title="Next steps" subtitle="Engage with the founder on iCapOS">
+        <WorkspacePanel title={t("next_steps")} subtitle={t("engage_with_the_founder_on_icapos")}>
           <p className="text-sm text-slate-600">
             Use the actions panel to express indicative interest, request an introduction, or open a message thread
             when messaging is enabled for this listing.

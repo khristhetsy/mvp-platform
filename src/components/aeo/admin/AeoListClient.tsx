@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -25,6 +26,7 @@ const COMP_STYLE: Record<string, { bg: string; c: string; label: string }> = {
 };
 
 export function AeoListClient() {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const [pages, setPages] = useState<PageRow[]>([]);
   const [blockers, setBlockers] = useState<Blocker[]>([]);
@@ -106,11 +108,11 @@ export function AeoListClient() {
 
       {/* Create */}
       <div style={{ ...card, padding: 16 }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: "#0f2147", margin: "0 0 10px" }}>New pillar page</p>
+        <p style={{ fontSize: 13, fontWeight: 600, color: "#0f2147", margin: "0 0 10px" }}>{t("new_pillar_page")}</p>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <input value={newSlug} onChange={(e) => setNewSlug(e.target.value)} placeholder="slug (e.g. capital-readiness-rating)"
+          <input value={newSlug} onChange={(e) => setNewSlug(e.target.value)} placeholder={t("slug_e_g_capital_readiness_rating")}
             style={{ flex: "1 1 240px", fontSize: 13, padding: "8px 10px", borderRadius: 8, border: "1px solid #d7dce4" }} />
-          <input value={newH1} onChange={(e) => setNewH1(e.target.value)} placeholder="H1 / title"
+          <input value={newH1} onChange={(e) => setNewH1(e.target.value)} placeholder={t("h1_title")}
             style={{ flex: "1 1 240px", fontSize: 13, padding: "8px 10px", borderRadius: 8, border: "1px solid #d7dce4" }} />
           <button type="button" onClick={() => void create()} disabled={creating || !newSlug.trim()}
             style={{ background: PURPLE, color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 600, cursor: creating ? "default" : "pointer", opacity: !newSlug.trim() ? 0.5 : 1 }}>
@@ -123,9 +125,9 @@ export function AeoListClient() {
       {/* List */}
       <div style={{ ...card, overflow: "hidden" }}>
         {loading ? (
-          <p style={{ fontSize: 13, color: "#5f5e5a", padding: 20 }}>Loading…</p>
+          <p style={{ fontSize: 13, color: "#5f5e5a", padding: 20 }}>{t("loading_2")}</p>
         ) : pages.length === 0 ? (
-          <p style={{ fontSize: 13, color: "#5f5e5a", padding: 20 }}>No pages yet. Create your first pillar page above.</p>
+          <p style={{ fontSize: 13, color: "#5f5e5a", padding: 20 }}>{t("no_pages_yet_create_your_first_pillar_page_a")}</p>
         ) : (
           <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
             <thead>

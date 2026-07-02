@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -10,12 +11,13 @@ export function CompanyQueuesPanel({
   items,
   companyId,
 }: Readonly<{ items: AdminQueueItem[]; companyId: string }>) {
+  const t = useTranslations("adminCmp");
   return (
-    <WorkspacePanel title="Queue items" subtitle="Active operational queue entries for this company">
+    <WorkspacePanel title={t("queue_items")} subtitle={t("active_operational_queue_entries_for_this_co")}>
       {items.length === 0 ? (
         <EmptyState
-          title="No active queue items"
-          description="This company is not currently represented in operational queues."
+          title={t("no_active_queue_items")}
+          description={t("this_company_is_not_currently_represented_in")}
           actionLabel="View all queues"
           actionHref="/admin/queues"
         />

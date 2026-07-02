@@ -1,4 +1,5 @@
 import type { ActionCenterAnalytics } from "@/lib/actions/types";
+import { useTranslations } from "next-intl";
 import type { NextBestActionRole } from "@/lib/next-best-actions/types";
 
 // ─── Icon SVGs ────────────────────────────────────────────────────────────────
@@ -133,32 +134,33 @@ export function ActionAnalyticsStrip({
   analytics,
   role,
 }: Readonly<{ analytics: ActionCenterAnalytics; role: NextBestActionRole }>) {
+  const t = useTranslations("sharedCmp");
   if (role === "founder") {
     return (
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Active"
+          label={t("active")}
           value={analytics.open}
           icon={<IconActivity color="#534AB7" />}
           iconBg="#EEEDFB"
           valueFg="#3C3489"
         />
         <StatCard
-          label="Overdue"
+          label={t("overdue")}
           value={analytics.overdue}
           icon={<IconAlertCircle color="#A32D2D" />}
           iconBg="#FCEBEB"
           valueFg={analytics.overdue > 0 ? "#A32D2D" : "#0c2340"}
         />
         <StatCard
-          label="Escalated"
+          label={t("escalated")}
           value={analytics.escalated}
           icon={<IconArrowUp color="#854F0B" />}
           iconBg="#FEF3CD"
           valueFg={analytics.escalated > 0 ? "#854F0B" : "#0c2340"}
         />
         <StatCard
-          label="Completed this week"
+          label={t("completed_this_week")}
           value={analytics.completedThisWeek}
           icon={<IconCheckCircle color="#3B6D11" />}
           iconBg="#E1F5EE"
@@ -172,28 +174,28 @@ export function ActionAnalyticsStrip({
     return (
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Pending requirements"
+          label={t("pending_requirements")}
           value={analytics.pendingRequirements ?? 0}
           icon={<IconClock color="#534AB7" />}
           iconBg="#EEEDFB"
           valueFg="#3C3489"
         />
         <StatCard
-          label="Overdue"
+          label={t("overdue")}
           value={analytics.overdue}
           icon={<IconAlertCircle color="#A32D2D" />}
           iconBg="#FCEBEB"
           valueFg={analytics.overdue > 0 ? "#A32D2D" : "#0c2340"}
         />
         <StatCard
-          label="Completed this week"
+          label={t("completed_this_week")}
           value={analytics.completedThisWeek}
           icon={<IconCheckCircle color="#3B6D11" />}
           iconBg="#E1F5EE"
           valueFg="#3B6D11"
         />
         <StatCard
-          label="Active opportunities"
+          label={t("active_opportunities")}
           value={analytics.activeOpportunities ?? 0}
           icon={<IconBriefcase color="#0369a1" />}
           iconBg="#E0F2FE"
@@ -207,35 +209,35 @@ export function ActionAnalyticsStrip({
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
       <StatCard
-        label="Critical"
+        label={t("critical")}
         value={analytics.critical}
         icon={<IconZap color="#A32D2D" />}
         iconBg="#FCEBEB"
         valueFg={analytics.critical > 0 ? "#A32D2D" : "#0c2340"}
       />
       <StatCard
-        label="Escalated"
+        label={t("escalated")}
         value={analytics.escalated}
         icon={<IconArrowUp color="#854F0B" />}
         iconBg="#FEF3CD"
         valueFg={analytics.escalated > 0 ? "#854F0B" : "#0c2340"}
       />
       <StatCard
-        label="Overdue"
+        label={t("overdue")}
         value={analytics.overdue}
         icon={<IconAlertCircle color="#A32D2D" />}
         iconBg="#FCEBEB"
         valueFg={analytics.overdue > 0 ? "#A32D2D" : "#0c2340"}
       />
       <StatCard
-        label="Blocked"
+        label={t("blocked")}
         value={analytics.blocked}
         icon={<IconClock color="#854F0B" />}
         iconBg="#FEF3CD"
         valueFg={analytics.blocked > 0 ? "#854F0B" : "#0c2340"}
       />
       <StatCard
-        label="Completed today"
+        label={t("completed_today")}
         value={analytics.completedToday}
         icon={<IconCheckCircle color="#3B6D11" />}
         iconBg="#E1F5EE"

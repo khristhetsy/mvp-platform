@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Upload, Loader2, CheckCircle2, Clock } from "lucide-react";
 
@@ -20,6 +21,7 @@ export function InvestorDealsManager({
   deals,
   showTrackRecord,
 }: Readonly<{ deals: DealView[]; showTrackRecord: boolean }>) {
+  const t = useTranslations("investorCmp");
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -125,7 +127,7 @@ export function InvestorDealsManager({
               />
               <button
                 type="button"
-                title="Upload proof"
+                title={t("upload_proof")}
                 aria-label={`Upload proof for ${d.companyName}`}
                 disabled={proofBusy}
                 onDragOver={(e) => {
@@ -162,7 +164,7 @@ export function InvestorDealsManager({
             </div>
           );
         })}
-        {deals.length === 0 ? <p className="text-[13px] text-slate-400">No deals added yet.</p> : null}
+        {deals.length === 0 ? <p className="text-[13px] text-slate-400">{t("no_deals_added_yet")}</p> : null}
       </div>
 
       {/* Add deal */}
@@ -171,7 +173,7 @@ export function InvestorDealsManager({
           <input
             value={company}
             onChange={(e) => setCompany(e.target.value)}
-            placeholder="Company name"
+            placeholder={t("company_name")}
             className="rounded-lg border border-slate-300 px-3 py-2 text-[13px]"
           />
           <select value={stage} onChange={(e) => setStage(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-[13px]">
@@ -185,14 +187,14 @@ export function InvestorDealsManager({
           <input
             value={year}
             onChange={(e) => setYear(e.target.value.replace(/[^0-9]/g, ""))}
-            placeholder="Year"
+            placeholder={t("year")}
             inputMode="numeric"
             className="rounded-lg border border-slate-300 px-3 py-2 text-[13px]"
           />
           <input
             value={amount}
             onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ""))}
-            placeholder="Amount $"
+            placeholder={t("amount")}
             inputMode="numeric"
             className="rounded-lg border border-slate-300 px-3 py-2 text-[13px]"
           />

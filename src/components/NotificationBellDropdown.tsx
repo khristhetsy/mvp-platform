@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -120,6 +121,7 @@ function iconForType(type: string): IconConfig {
 }
 
 export function NotificationBellDropdown() {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
@@ -294,8 +296,8 @@ export function NotificationBellDropdown() {
                     <path d="M15 17H9c0 1.657 1.343 3 3 3s3-1.343 3-3ZM18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z" strokeLinejoin="round" />
                   </svg>
                 </div>
-                <p className="text-sm font-medium text-slate-700">All caught up</p>
-                <p className="mt-1 text-xs text-slate-400">Activity alerts will appear here.</p>
+                <p className="text-sm font-medium text-slate-700">{t("all_caught_up")}</p>
+                <p className="mt-1 text-xs text-slate-400">{t("activity_alerts_will_appear_here")}</p>
               </div>
             ) : (
               notifications.map((notification) => {
@@ -329,7 +331,7 @@ export function NotificationBellDropdown() {
                       <div className="mt-1 flex items-center gap-2">
                         <p className="text-[10px] text-slate-400">{formatRelativeTime(notification.created_at)}</p>
                         {notification.deep_link ? (
-                          <span className="text-[10px] font-medium text-indigo-500">View →</span>
+                          <span className="text-[10px] font-medium text-indigo-500">{t("view_2")}</span>
                         ) : null}
                       </div>
                     </div>

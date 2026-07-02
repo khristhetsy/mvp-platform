@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useEffect, useState, useMemo } from "react";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
@@ -53,6 +54,7 @@ interface Stats {
 }
 
 export function AdminPortfolioPageClient() {
+  const t = useTranslations("adminCmp");
   const [investments, setInvestments] = useState<AdminPortfolioRow[]>([]);
   const [stats, setStats]             = useState<Stats | null>(null);
   const [loading, setLoading]         = useState(true);
@@ -237,7 +239,7 @@ export function AdminPortfolioPageClient() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search company / investor…"
+            placeholder={t("search_company_investor")}
             style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--color-border-tertiary)", background: "var(--color-background-secondary)", color: "var(--color-text-primary)", width: 180 }}
           />
           <select
@@ -259,7 +261,7 @@ export function AdminPortfolioPageClient() {
         </div>
 
         {loading ? (
-          <div style={{ padding: "40px 16px", textAlign: "center", color: "var(--color-text-secondary)", fontSize: 13 }}>Loading…</div>
+          <div style={{ padding: "40px 16px", textAlign: "center", color: "var(--color-text-secondary)", fontSize: 13 }}>{t("loading")}</div>
         ) : filtered.length === 0 ? (
           <div style={{ padding: "40px 16px", textAlign: "center", color: "var(--color-text-secondary)", fontSize: 13 }}>
             No investments match this filter.
@@ -345,7 +347,7 @@ export function AdminPortfolioPageClient() {
                       </td>
                       {/* Current val */}
                       <td style={{ textAlign: "center", padding: "10px 10px", fontWeight: 500, color: stale ? "#854F0B" : "var(--color-text-primary)" }}>
-                        {inv.current_valuation ? fmt(Number(inv.current_valuation)) : <span style={{ color: "var(--color-text-secondary)" }}>No update</span>}
+                        {inv.current_valuation ? fmt(Number(inv.current_valuation)) : <span style={{ color: "var(--color-text-secondary)" }}>{t("no_update")}</span>}
                         {stale && inv.current_valuation ? " ?" : ""}
                       </td>
                       {/* Source */}
@@ -395,7 +397,7 @@ export function AdminPortfolioPageClient() {
                             View →
                           </Link>
                         ) : (
-                          <span style={{ color: "var(--color-text-secondary)", fontSize: 11 }} title="No linked company record">—</span>
+                          <span style={{ color: "var(--color-text-secondary)", fontSize: 11 }} title={t("no_linked_company_record")}>—</span>
                         )}
                       </td>
                     </tr>

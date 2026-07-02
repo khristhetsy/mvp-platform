@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { AIAssessmentResult, AIAssessmentRecommendation } from "@/app/api/admin/companies/[id]/ai-assessment/route";
 
@@ -30,6 +31,7 @@ const RECOMMENDATION_STYLES: Record<AIAssessmentRecommendation, {
 };
 
 export function AdminCompanyAIAssessment({ companyId }: { companyId: string }) {
+  const t = useTranslations("adminCmp");
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [result, setResult] = useState<AIAssessmentResult | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -58,7 +60,7 @@ export function AdminCompanyAIAssessment({ companyId }: { companyId: string }) {
     return (
       <div className="flex items-center justify-between gap-4 rounded-xl border border-dashed border-indigo-200 bg-indigo-50/40 px-5 py-4">
         <div>
-          <p className="text-sm font-semibold text-indigo-900">AI Company Assessment</p>
+          <p className="text-sm font-semibold text-indigo-900">{t("ai_company_assessment")}</p>
           <p className="mt-0.5 text-xs text-indigo-600">
             Generate a structured review summary — recommendation, strengths, concerns, and data gaps.
           </p>
@@ -78,7 +80,7 @@ export function AdminCompanyAIAssessment({ companyId }: { companyId: string }) {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4">
         <div className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-        <p className="text-sm text-slate-600">Analyzing company data…</p>
+        <p className="text-sm text-slate-600">{t("analyzing_company_data")}</p>
       </div>
     );
   }
@@ -170,7 +172,7 @@ export function AdminCompanyAIAssessment({ companyId }: { companyId: string }) {
                   </li>
                 ))
               ) : (
-                <li className="text-xs text-slate-400 italic">No critical gaps identified</li>
+                <li className="text-xs text-slate-400 italic">{t("no_critical_gaps_identified")}</li>
               )}
             </ul>
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type { ActionCenterAnalytics } from "@/lib/actions/types";
 import type { NextBestAction } from "@/lib/next-best-actions/types";
 
@@ -114,6 +115,7 @@ function Drawer({
   actions: NextBestAction[];
   onClose: () => void;
 }) {
+  const t = useTranslations("sharedCmp");
   const totalOpen = analytics.open;
   const pending = analytics.pendingRequirements ?? 0;
   const overdue = analytics.overdue;
@@ -153,7 +155,7 @@ function Drawer({
       breakdown: (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {pendingActions.length === 0 ? (
-            <p style={{ fontSize: 12, color: "#94a3b8" }}>No pending actions right now.</p>
+            <p style={{ fontSize: 12, color: "#94a3b8" }}>{t("no_pending_actions_right_now")}</p>
           ) : (
             pendingActions.map((a) => (
               <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 8 }}>
@@ -187,7 +189,7 @@ function Drawer({
       breakdown: (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {overdueActions.length === 0 ? (
-            <p style={{ fontSize: 12, color: "#94a3b8" }}>No overdue actions — great work.</p>
+            <p style={{ fontSize: 12, color: "#94a3b8" }}>{t("no_overdue_actions_great_work")}</p>
           ) : (
             overdueActions.slice(0, 5).map((a) => {
               const daysOver = a.dueAt
@@ -229,7 +231,7 @@ function Drawer({
       breakdown: (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {completedActions.length === 0 ? (
-            <p style={{ fontSize: 12, color: "#94a3b8" }}>No completed actions fetched yet — check back after resolving items.</p>
+            <p style={{ fontSize: 12, color: "#94a3b8" }}>{t("no_completed_actions_fetched_yet_check_back")}</p>
           ) : (
             completedActions.map((a) => (
               <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: "#fff", border: "0.5px solid #86efac", borderRadius: 8 }}>
@@ -273,7 +275,7 @@ function Drawer({
       breakdown: (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {Object.keys(byCategory).length === 0 ? (
-            <p style={{ fontSize: 12, color: "#94a3b8" }}>No category breakdown available yet.</p>
+            <p style={{ fontSize: 12, color: "#94a3b8" }}>{t("no_category_breakdown_available_yet")}</p>
           ) : (
             Object.entries(byCategory).slice(0, 6).map(([cat, count]) => (
               <div key={cat} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 8 }}>
@@ -331,13 +333,13 @@ function Drawer({
 
         {/* Breakdown */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Breakdown</div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{t("breakdown")}</div>
           {cfg.breakdown}
         </div>
 
         {/* What this means */}
         <div style={{ background: "#f8fafc", borderLeft: `3px solid ${cfg.accentColor}`, borderRadius: "0 8px 8px 0", padding: "10px 12px", marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: cfg.accentColor, marginBottom: 4 }}>What this means</div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: cfg.accentColor, marginBottom: 4 }}>{t("what_this_means")}</div>
           <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.6 }}>{cfg.explanation}</div>
         </div>
 
@@ -347,7 +349,7 @@ function Drawer({
             <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(255,255,255,.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
               AI
             </div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>Investor Intelligence</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{t("investor_intelligence")}</div>
           </div>
           <div style={{ fontSize: 12, color: "rgba(255,255,255,.75)", lineHeight: 1.6, marginBottom: 12 }}
             dangerouslySetInnerHTML={{ __html: cfg.advice.intro }}

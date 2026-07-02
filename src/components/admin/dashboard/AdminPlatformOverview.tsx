@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import type { AdminCompanyCardData } from "@/components/AdminCompanyCard";
 import { ClickableCard } from "@/components/ui/drilldown";
 import { PageSection } from "@/components/ui/workspace-layout";
@@ -53,6 +54,7 @@ export function AdminPlatformOverview({
   companyCards: AdminCompanyCardData[];
   snapshot: AdminCommandCenterSnapshot;
 }>) {
+  const t = useTranslations("adminCmp");
   const reviewStatusCounts = countByReviewStatus(companyCards);
   const planDistribution = buildPlanDistribution(companyCards);
   const publishedCount = companyCards.filter((c) => c.is_published).length;
@@ -60,11 +62,11 @@ export function AdminPlatformOverview({
   const totalUpdates = companyCards.reduce((sum, c) => sum + c.company_updates_published_count, 0);
 
   return (
-    <PageSection title="Platform overview" subtitle="Operational summaries across companies and subscriptions">
+    <PageSection title={t("platform_overview")} subtitle={t("operational_summaries_across_companies_and_s")}>
       <div className="grid gap-4 xl:grid-cols-2">
-        <WorkspacePanel title="Companies by status" subtitle={`${companyCards.length} companies loaded`}>
+        <WorkspacePanel title={t("companies_by_status")} subtitle={`${companyCards.length} companies loaded`}>
           {reviewStatusCounts.length === 0 ? (
-            <p className="text-sm text-slate-500">No companies loaded.</p>
+            <p className="text-sm text-slate-500">{t("no_companies_loaded")}</p>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
               {reviewStatusCounts.map(([status, count]) => (
@@ -80,28 +82,28 @@ export function AdminPlatformOverview({
           )}
         </WorkspacePanel>
 
-        <WorkspacePanel title="Investor & compliance mix" subtitle="Approval and event posture">
+        <WorkspacePanel title={t("investor_compliance_mix")} subtitle={t("approval_and_event_posture")}>
           <div className="grid gap-2 sm:grid-cols-2">
             <SummaryCard
-              label="Pending investor approvals"
+              label={t("pending_investor_approvals")}
               value={String(snapshot.pendingInvestorApprovals)}
               detail={`${snapshot.totalInvestors} total investor profiles`}
               href={getInvestorStatusHref("submitted")}
             />
             <SummaryCard
-              label="Open compliance events"
+              label={t("open_compliance_events_2")}
               value={String(snapshot.openComplianceEvents)}
               detail="Requires compliance review"
               href={getDrilldownHref("compliance_open")}
             />
             <SummaryCard
-              label="Notifications"
+              label={t("notifications")}
               value={String(snapshot.notificationCount)}
               detail="Platform notification records"
               href={getDrilldownHref("notifications")}
             />
             <SummaryCard
-              label="Reports generated"
+              label={t("reports_generated")}
               value={String(snapshot.reportsGenerated)}
               detail="Diligence reports on file"
               href={getDrilldownHref("reports")}
@@ -109,9 +111,9 @@ export function AdminPlatformOverview({
           </div>
         </WorkspacePanel>
 
-        <WorkspacePanel title="Subscription distribution" subtitle="Founder plan mix across loaded companies">
+        <WorkspacePanel title={t("subscription_distribution")} subtitle={t("founder_plan_mix_across_loaded_companies")}>
           {planDistribution.length === 0 ? (
-            <p className="text-sm text-slate-500">No subscription data available.</p>
+            <p className="text-sm text-slate-500">{t("no_subscription_data_available")}</p>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
               {planDistribution.map(([plan, count]) => (
@@ -126,28 +128,28 @@ export function AdminPlatformOverview({
           )}
         </WorkspacePanel>
 
-        <WorkspacePanel title="Engagement signals" subtitle="Updates and upgrade pipeline">
+        <WorkspacePanel title={t("engagement_signals")} subtitle={t("updates_and_upgrade_pipeline")}>
           <div className="grid gap-2 sm:grid-cols-2">
             <SummaryCard
-              label="Company updates published"
+              label={t("company_updates_published")}
               value={String(totalUpdates)}
               detail="Across loaded founder companies"
               href={getDrilldownHref("company_updates")}
             />
             <SummaryCard
-              label="Pending upgrade requests"
+              label={t("pending_upgrade_requests")}
               value={String(snapshot.pendingUpgradeRequests)}
               detail="Billing upgrade queue"
               href={getDrilldownHref("upgrade_requests")}
             />
             <SummaryCard
-              label="SPV pipeline"
+              label={t("spv_pipeline")}
               value={String(snapshot.spvPipelineCount)}
               detail="Active SPV opportunities"
               href={getDrilldownHref("spv_activity")}
             />
             <SummaryCard
-              label="Open compliance"
+              label={t("open_compliance")}
               value={String(snapshot.openComplianceEvents)}
               detail="Open vs resolved tracked in compliance module"
               href={getDrilldownHref("compliance_open")}

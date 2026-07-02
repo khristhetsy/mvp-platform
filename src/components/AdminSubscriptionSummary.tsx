@@ -1,4 +1,5 @@
 import type { SubscriptionRecord } from "@/lib/subscriptions/plans";
+import { useTranslations } from "next-intl";
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
 import type { PlanType } from "@/lib/subscriptions/plans";
 import { subscriptionStatusLabel } from "@/lib/subscriptions/access";
@@ -27,8 +28,9 @@ export function AdminSubscriptionSummary({
   subscription: SubscriptionRecord | null | undefined;
   requestedPlan?: PlanType | null;
 }>) {
+  const t = useTranslations("sharedCmp");
   if (!subscription) {
-    return <p className="text-xs text-slate-500">No subscription record</p>;
+    return <p className="text-xs text-slate-500">{t("no_subscription_record")}</p>;
   }
 
   const lifecycle = getBillingLifecycleStatus(subscription, requestedPlan ?? null);

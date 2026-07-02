@@ -1,8 +1,10 @@
+import { useTranslations } from "next-intl";
 import type { AutomationTimelineItem } from "@/lib/automation/admin-console-types";
 
 export function AutomationExecutionTimeline({ items }: Readonly<{ items: AutomationTimelineItem[] }>) {
+  const t = useTranslations("adminCmp");
   if (!items.length) {
-    return <p className="text-xs text-slate-600">No recent automation operational events.</p>;
+    return <p className="text-xs text-slate-600">{t("no_recent_automation_operational_events")}</p>;
   }
 
   return (

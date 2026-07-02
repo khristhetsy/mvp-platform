@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import type { ActionCenterAnalytics } from "@/lib/actions/types";
 import type { NextBestAction } from "@/lib/next-best-actions/types";
 
@@ -174,6 +175,7 @@ function DrawerContent({
   needsAttention: NextBestAction[];
   onClose: () => void;
 }) {
+  const t = useTranslations("sharedCmp");
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
 
@@ -212,22 +214,22 @@ function DrawerContent({
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <p className="text-base font-semibold text-slate-900">Active actions</p>
-            <p className="mt-0.5 text-xs text-slate-500">Open items that need your attention</p>
+            <p className="text-base font-semibold text-slate-900">{t("active_actions")}</p>
+            <p className="mt-0.5 text-xs text-slate-500">{t("open_items_that_need_your_attention")}</p>
           </div>
           {closeBtn}
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Total active" value={String(analytics.open)} />
-          <DStatBox label="Critical" value={String(criticalCount)} />
-          <DStatBox label="High priority" value={String(highCount)} />
+          <DStatBox label={t("total_active")} value={String(analytics.open)} />
+          <DStatBox label={t("critical")} value={String(criticalCount)} />
+          <DStatBox label={t("high_priority")} value={String(highCount)} />
         </div>
 
-        <p className="mt-5 text-xs font-semibold text-slate-900">Action breakdown</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("action_breakdown")}</p>
         <div className="mt-2">
           {displayActions.length === 0 ? (
-            <p className="py-2 text-xs text-slate-500">No active actions right now.</p>
+            <p className="py-2 text-xs text-slate-500">{t("no_active_actions_right_now")}</p>
           ) : (
             displayActions.map((a) => (
               <BRow
@@ -246,7 +248,7 @@ function DrawerContent({
         </div>
 
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {analytics.open === 0
               ? "You have no active actions. This is either very good or your inbox hasn't synced yet — check again in a moment."
@@ -285,19 +287,19 @@ function DrawerContent({
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <p className="text-base font-semibold text-slate-900">Overdue actions</p>
-            <p className="mt-0.5 text-xs text-slate-500">Past their due date and still open</p>
+            <p className="text-base font-semibold text-slate-900">{t("overdue_actions")}</p>
+            <p className="mt-0.5 text-xs text-slate-500">{t("past_their_due_date_and_still_open")}</p>
           </div>
           {closeBtn}
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Overdue" value={String(analytics.overdue)} />
-          <DStatBox label="Critical overdue" value={String(critOverdue)} />
-          <DStatBox label="High priority" value={String(highOverdue)} />
+          <DStatBox label={t("overdue")} value={String(analytics.overdue)} />
+          <DStatBox label={t("critical_overdue")} value={String(critOverdue)} />
+          <DStatBox label={t("high_priority")} value={String(highOverdue)} />
         </div>
 
-        <p className="mt-5 text-xs font-semibold text-slate-900">Overdue breakdown</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("overdue_breakdown")}</p>
         <div className="mt-2">
           {displayActions.length === 0 ? (
             <p className="py-2 text-xs text-slate-500">
@@ -318,7 +320,7 @@ function DrawerContent({
         </div>
 
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {analytics.overdue === 0
               ? "You have no overdue actions — all open items are within their timeframes."
@@ -356,19 +358,19 @@ function DrawerContent({
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <p className="text-base font-semibold text-slate-900">Escalated actions</p>
-            <p className="mt-0.5 text-xs text-slate-500">Flagged as requiring urgent review</p>
+            <p className="text-base font-semibold text-slate-900">{t("escalated_actions")}</p>
+            <p className="mt-0.5 text-xs text-slate-500">{t("flagged_as_requiring_urgent_review")}</p>
           </div>
           {closeBtn}
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Escalated" value={String(analytics.escalated)} />
-          <DStatBox label="In needs-attention" value={String(alsoInNeeds.length)} />
-          <DStatBox label="Total open" value={String(analytics.open)} />
+          <DStatBox label={t("escalated")} value={String(analytics.escalated)} />
+          <DStatBox label={t("in_needs_attention")} value={String(alsoInNeeds.length)} />
+          <DStatBox label={t("total_open")} value={String(analytics.open)} />
         </div>
 
-        <p className="mt-5 text-xs font-semibold text-slate-900">Escalated breakdown</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("escalated_breakdown")}</p>
         <div className="mt-2">
           {displayActions.length === 0 ? (
             <p className="py-2 text-xs text-slate-500">
@@ -389,7 +391,7 @@ function DrawerContent({
         </div>
 
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {analytics.escalated === 0
               ? "No escalated actions — nothing has been flagged as requiring urgent follow-up."
@@ -426,19 +428,19 @@ function DrawerContent({
     <div className="px-5 pb-6 pt-5">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <p className="text-base font-semibold text-slate-900">Completed this week</p>
-          <p className="mt-0.5 text-xs text-slate-500">Actions resolved in the last 7 days</p>
+          <p className="text-base font-semibold text-slate-900">{t("completed_this_week")}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{t("actions_resolved_in_the_last_7_days")}</p>
         </div>
         {closeBtn}
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <DStatBox label="This week" value={String(analytics.completedThisWeek)} />
-        <DStatBox label="Today" value={String(completedToday)} />
-        <DStatBox label="Daily avg" value={weeklyRate > 0 ? `${weeklyRate}/day` : "0/day"} />
+        <DStatBox label={t("this_week")} value={String(analytics.completedThisWeek)} />
+        <DStatBox label={t("today")} value={String(completedToday)} />
+        <DStatBox label={t("daily_avg")} value={weeklyRate > 0 ? `${weeklyRate}/day` : "0/day"} />
       </div>
 
-      <p className="mt-5 text-xs font-semibold text-slate-900">Completion summary</p>
+      <p className="mt-5 text-xs font-semibold text-slate-900">{t("completion_summary")}</p>
       <div className="mt-2">
         <BRow
           name="Completed this week"
@@ -465,7 +467,7 @@ function DrawerContent({
       </div>
 
       <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-        <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+        <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
         <p className="text-xs leading-relaxed text-slate-600">
           {analytics.completedThisWeek === 0
             ? "No actions completed this week yet. Completing actions updates your readiness score and signals operational momentum to the platform."
@@ -506,6 +508,7 @@ export function FounderActionAnalyticsCards({
   actions: NextBestAction[];
   needsAttention: NextBestAction[];
 }) {
+  const t = useTranslations("sharedCmp");
   const [open, setOpen] = useState<DrawerKey | null>(null);
 
   useEffect(() => {
@@ -517,7 +520,7 @@ export function FounderActionAnalyticsCards({
     <>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <AnalyticsCard
-          label="Active"
+          label={t("active")}
           value={analytics.open}
           icon={<IconActivity />}
           iconBg="#EEEDFB"
@@ -526,7 +529,7 @@ export function FounderActionAnalyticsCards({
           onClick={() => setOpen("active")}
         />
         <AnalyticsCard
-          label="Overdue"
+          label={t("overdue")}
           value={analytics.overdue}
           icon={<IconAlert />}
           iconBg="#FCEBEB"
@@ -535,7 +538,7 @@ export function FounderActionAnalyticsCards({
           onClick={() => setOpen("overdue")}
         />
         <AnalyticsCard
-          label="Escalated"
+          label={t("escalated")}
           value={analytics.escalated}
           icon={<IconArrow />}
           iconBg="#FEF3CD"
@@ -544,7 +547,7 @@ export function FounderActionAnalyticsCards({
           onClick={() => setOpen("escalated")}
         />
         <AnalyticsCard
-          label="Completed this week"
+          label={t("completed_this_week")}
           value={analytics.completedThisWeek}
           icon={<IconCheck />}
           iconBg="#E1F5EE"

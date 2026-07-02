@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { AdminCrmActivityRow } from "@/lib/data/investor-crm";
 import { getCompanyWorkspaceHref } from "@/lib/ui/drilldown-links";
 
@@ -27,16 +28,17 @@ type Props = {
 };
 
 export function AdminInvestorCrmTimeline({ activities }: Props) {
+  const t = useTranslations("sharedCmp");
   return (
     <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
       <div className="mb-5 border-b border-slate-100 pb-4">
-        <h2 className="text-base font-semibold text-slate-950">Recent Activity</h2>
-        <p className="mt-1 text-sm text-slate-500">Latest investor actions tracked for pipeline follow-up.</p>
+        <h2 className="text-base font-semibold text-slate-950">{t("recent_activity")}</h2>
+        <p className="mt-1 text-sm text-slate-500">{t("latest_investor_actions_tracked_for_pipeline")}</p>
       </div>
 
       <div className="divide-y divide-slate-100">
         {activities.length === 0 ? (
-          <p className="py-3 text-sm text-slate-500">No CRM activity logged yet.</p>
+          <p className="py-3 text-sm text-slate-500">{t("no_crm_activity_logged_yet")}</p>
         ) : (
           activities.map((row) => {
             const investor = row.investor_name ?? row.investor_email ?? "Unknown investor";

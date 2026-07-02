@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Presentation, Users, Tv, Store } from "lucide-react";
 import { venueZones } from "@/lib/icfo-events/venue";
@@ -42,6 +43,7 @@ export function LobbyHall({
   eventTitle: string;
   tracksHref?: string;
 }) {
+  const t = useTranslations("eventsCmp");
   const { byRoom, total } = useEventPresence();
   const [openKey, setOpenKey] = useState<string | null>(null);
   const hrefFor = (key: string) => venueZones(slug, tracksHref).find((z) => z.key === key)?.href ?? `/events/${slug}`;
@@ -62,17 +64,17 @@ export function LobbyHall({
           <div className={`${styles.face} ${styles.ceil}`} aria-hidden />
           <div className={`${styles.face} ${styles.floor}`} aria-hidden />
           <div className={`${styles.face} ${styles.lwall}`} aria-hidden>
-            <span className={styles.tier}>PLATINUM</span>
-            <span className={styles.tierName}>Presenting partners</span>
+            <span className={styles.tier}>{t("platinum")}</span>
+            <span className={styles.tierName}>{t("presenting_partners")}</span>
           </div>
           <div className={`${styles.face} ${styles.rwall}`} aria-hidden>
-            <span className={styles.tier}>GOLD</span>
-            <span className={styles.tierName}>Sponsors</span>
+            <span className={styles.tier}>{t("gold")}</span>
+            <span className={styles.tierName}>{t("sponsors")}</span>
           </div>
 
           <div className={`${styles.face} ${styles.back}`}>
             <div className={styles.banner}>
-              <p className={styles.bannerEy}>WELCOME TO</p>
+              <p className={styles.bannerEy}>{t("welcome_to")}</p>
               <p className={styles.bannerTitle}>{eventTitle}</p>
             </div>
             <div className={styles.doors}>
@@ -123,7 +125,7 @@ export function LobbyHall({
               <span className={styles.figB} style={{ background: FIGS[i % FIGS.length] }} />
             </div>
           ))}
-          <div className={styles.desk}>HELP &amp; INFO DESK</div>
+          <div className={styles.desk}>{t("help_info_desk")}</div>
         </div>
       </div>
       <p className={styles.caption} style={{ color: "var(--text-muted)" }}>

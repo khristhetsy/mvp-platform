@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { InvestorApprovalStatus, InvestorKycStatus } from "@/lib/investor/types";
 
 type CTA = { href: string; label: string };
@@ -86,6 +87,7 @@ export function InvestorPendingApprovalPanel({
   adminFeedback?: string | null;
   kycStatus?: InvestorKycStatus | string;
 }>) {
+  const tI18n = useTranslations("sharedCmp");
   // If the profile is approved, the remaining blocker is KYC (Stage 2).
   const inKycStage = approvalStatus === "approved" && kycStatus !== "verified";
   const c = inKycStage ? contentForKyc(kycStatus ?? "not_started") : contentFor(approvalStatus);
@@ -101,7 +103,7 @@ export function InvestorPendingApprovalPanel({
       <p className={`mt-3 max-w-2xl text-sm leading-6 ${t.body}`}>{c.body}</p>
       {showFeedback ? (
         <p className="mt-4 rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-700">
-          <span className="font-semibold text-slate-900">What to change:</span> {adminFeedback}
+          <span className="font-semibold text-slate-900">{tI18n("what_to_change")}</span> {adminFeedback}
         </p>
       ) : null}
       <div className="mt-6 flex flex-wrap gap-3">

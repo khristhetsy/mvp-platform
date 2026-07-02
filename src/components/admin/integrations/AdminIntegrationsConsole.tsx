@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import type { loadIntegrationsAdminConsole } from "@/lib/integrations/admin-console";
 import {
@@ -28,6 +29,7 @@ export function AdminIntegrationsConsole({
   payload,
   isAdmin,
 }: Readonly<{ payload: Payload; isAdmin: boolean }>) {
+  const t = useTranslations("adminCmp");
   const [connections, setConnections] = useState(payload.connections);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -141,7 +143,7 @@ export function AdminIntegrationsConsole({
 
       <AdminCrmExportConnector />
 
-      <PageSection title="Active integrations">
+      <PageSection title={t("active_integrations")}>
         <ul className="space-y-2 text-sm">
           {payload.registry.map((def) => {
             const conn = connections.find((c) => c.provider === def.provider);
@@ -158,7 +160,7 @@ export function AdminIntegrationsConsole({
                   {def.phase1Active ? (
                     <StatusBadge label={conn?.enabled ? "Enabled" : "Disabled"} status={conn?.enabled ? "success" : "neutral"} />
                   ) : (
-                    <StatusBadge label="Placeholder" status="neutral" />
+                    <StatusBadge label={t("placeholder")} status="neutral" />
                   )}
                   {conn?.webhookConfigured ? (
                     <span className="text-[10px] text-slate-500">{conn.webhookHint}</span>
@@ -190,11 +192,11 @@ export function AdminIntegrationsConsole({
             onMessage={setMessage}
           />
 
-          <PageSection title="Slack configuration">
+          <PageSection title={t("slack_configuration")}>
             {slack ? (
               <div className="space-y-3 text-sm">
                 <label className="block">
-                  <span className="text-xs font-medium text-slate-600">Incoming webhook URL</span>
+                  <span className="text-xs font-medium text-slate-600">{t("incoming_webhook_url")}</span>
                   <input
                     type="password"
                     autoComplete="off"
@@ -238,11 +240,11 @@ export function AdminIntegrationsConsole({
             ) : null}
           </PageSection>
 
-          <PageSection title="Webhook endpoints">
+          <PageSection title={t("webhook_endpoints")}>
             {webhook ? (
               <div className="space-y-3 text-sm">
                 <label className="block">
-                  <span className="text-xs font-medium text-slate-600">HTTPS endpoint URL</span>
+                  <span className="text-xs font-medium text-slate-600">{t("https_endpoint_url")}</span>
                   <input
                     type="password"
                     autoComplete="off"
@@ -253,7 +255,7 @@ export function AdminIntegrationsConsole({
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs font-medium text-slate-600">Signing secret (optional)</span>
+                  <span className="text-xs font-medium text-slate-600">{t("signing_secret_optional")}</span>
                   <input
                     type="password"
                     autoComplete="off"
@@ -290,7 +292,7 @@ export function AdminIntegrationsConsole({
             ) : null}
           </PageSection>
 
-          <PageSection title="Event subscriptions">
+          <PageSection title={t("event_subscriptions")}>
             <p className="mb-3 text-xs text-slate-500">
               Toggle which sanitized outbound events each active connection receives. Payloads never include message bodies, documents, or secrets.
             </p>
@@ -321,10 +323,10 @@ export function AdminIntegrationsConsole({
           </PageSection>
         </>
       ) : (
-        <p className="text-sm text-slate-600">Analysts have read-only visibility. Admins can configure integrations.</p>
+        <p className="text-sm text-slate-600">{t("analysts_have_read_only_visibility_admins_ca")}</p>
       )}
 
-      <PageSection title="Delivery history">
+      <PageSection title={t("delivery_history")}>
         <DeliveryTable deliveries={payload.deliveries} onRetry={isAdmin ? retryDelivery : undefined} busy={busy} />
       </PageSection>
 
@@ -341,8 +343,9 @@ function DeliveryTable({
   onRetry?: (id: string) => void;
   busy: string | null;
 }>) {
+  const t = useTranslations("adminCmp");
   if (!deliveries.length) {
-    return <p className="text-sm text-slate-600">No delivery logs yet.</p>;
+    return <p className="text-sm text-slate-600">{t("no_delivery_logs_yet")}</p>;
   }
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200/80">

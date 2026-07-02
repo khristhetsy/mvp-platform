@@ -5,6 +5,7 @@
 // overflow scrolls horizontally. Pure index math lives in ./tablist.ts.
 
 import { useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Inbox as InboxIcon, Mail } from "lucide-react";
 import type { Mailbox } from "./types";
 import { isTabNavKey, nextTabIndex } from "./tablist";
@@ -18,6 +19,7 @@ export interface MailboxTabsProps {
 }
 
 export function MailboxTabs({ mailboxes, activeId, onSelect }: MailboxTabsProps) {
+  const t = useTranslations("sharedCmp");
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   if (mailboxes.length === 0) return null;
@@ -33,7 +35,7 @@ export function MailboxTabs({ mailboxes, activeId, onSelect }: MailboxTabsProps)
 
   return (
     <div className="flex items-center gap-2">
-      <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Mailboxes</span>
+      <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("mailboxes")}</span>
       <div role="tablist" aria-label="Mailboxes" className="flex gap-2 overflow-x-auto">
         {mailboxes.map((m, i) => {
           const Icon = ICONS[m.id] ?? Mail;

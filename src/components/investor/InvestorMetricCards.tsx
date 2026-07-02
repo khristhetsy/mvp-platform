@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 export interface InvestorMetricData {
   matchCount: number;
@@ -109,13 +110,14 @@ function Row({ left, right, rightColor }: { left: string; right: React.ReactNode
 
 /* ── AI advice box ── */
 function AiBox({ insight, actions }: { insight: string; actions: string[] }) {
+  const t = useTranslations("investorCmp");
   return (
     <div style={{ background: "linear-gradient(135deg,#1e1b4b 0%,#312e81 100%)", borderRadius: 14, padding: 16, marginTop: 4 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
         <div style={{ width: 28, height: 28, background: "#6366f1", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 }}>AI</div>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>Investor Intelligence</div>
-          <div style={{ fontSize: 10, color: "#a5b4fc" }}>Powered by Claude · iCapOS</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>{t("investor_intelligence")}</div>
+          <div style={{ fontSize: 10, color: "#a5b4fc" }}>{t("powered_by_claude_icapos")}</div>
         </div>
       </div>
       <div style={{ height: "0.5px", background: "rgba(255,255,255,.12)", marginBottom: 12 }} />
@@ -137,6 +139,7 @@ function AiBox({ insight, actions }: { insight: string; actions: string[] }) {
 
 /* ── Main component ── */
 export function InvestorMetricCards({ data }: { data: InvestorMetricData }) {
+  const t = useTranslations("investorCmp");
   const [open, setOpen] = useState<MetricKey | null>(null);
   const { matchCount, watchlistCount, interestCount, introRequestCount, watchlistNames, interestNames } = data;
   const portfolioTotal = watchlistCount + interestCount;
@@ -186,8 +189,8 @@ export function InvestorMetricCards({ data }: { data: InvestorMetricData }) {
     <>
       {/* Section header */}
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 12, fontWeight: 500, color: "#0f172a", marginBottom: 2 }}>Workspace metrics</div>
-        <div style={{ fontSize: 11, color: "#94a3b8" }}>Non-binding indicators only · click any card for AI analysis</div>
+        <div style={{ fontSize: 12, fontWeight: 500, color: "#0f172a", marginBottom: 2 }}>{t("workspace_metrics")}</div>
+        <div style={{ fontSize: 11, color: "#94a3b8" }}>{t("non_binding_indicators_only_click_any_card_f")}</div>
       </div>
 
       {/* Cards grid */}
@@ -268,7 +271,7 @@ export function InvestorMetricCards({ data }: { data: InvestorMetricData }) {
                 <div style={{ padding: "0 18px 12px", borderBottom: "0.5px solid #e2e6ed", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>Active Opportunities — {matchCount}</div>
-                    <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>Published listings matched to your investor profile</div>
+                    <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{t("published_listings_matched_to_your_investor")}</div>
                   </div>
                   <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#64748b", fontSize: 14, flexShrink: 0 }}>✕</button>
                 </div>
@@ -279,7 +282,7 @@ export function InvestorMetricCards({ data }: { data: InvestorMetricData }) {
                     <SBox val={matchCount > 0 ? "87%" : "—"} lbl="Avg match score" />
                   </div>
                   <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 8 }}>What affects your matches</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 8 }}>{t("what_affects_your_matches")}</div>
                     <Row left="Industry alignment" right="High" rightColor="#1D9E75" />
                     <Row left="Stage preference" right="Seed / Pre-Seed" />
                     <Row left="Geography" right="North America" />
@@ -306,7 +309,7 @@ export function InvestorMetricCards({ data }: { data: InvestorMetricData }) {
                 <div style={{ padding: "0 18px 12px", borderBottom: "0.5px solid #e2e6ed", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>Watchlist — {watchlistCount} {watchlistCount === 1 ? "company" : "companies"}</div>
-                    <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>Companies saved for further review</div>
+                    <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{t("companies_saved_for_further_review")}</div>
                   </div>
                   <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#64748b", fontSize: 14, flexShrink: 0 }}>✕</button>
                 </div>
@@ -318,9 +321,9 @@ export function InvestorMetricCards({ data }: { data: InvestorMetricData }) {
                   </div>
                   {watchlistNames.length > 0 ? (
                     <div style={{ marginBottom: 14 }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 8 }}>Your watchlist</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 8 }}>{t("your_watchlist")}</div>
                       {watchlistNames.map((name) => (
-                        <Row key={name} left={name} right={<span style={{ fontSize: 11, color: "#64748b" }}>Saved</span>} />
+                        <Row key={name} left={name} right={<span style={{ fontSize: 11, color: "#64748b" }}>{t("saved")}</span>} />
                       ))}
                     </div>
                   ) : null}
@@ -345,7 +348,7 @@ export function InvestorMetricCards({ data }: { data: InvestorMetricData }) {
                 <div style={{ padding: "0 18px 12px", borderBottom: "0.5px solid #e2e6ed", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>Expressed Interest — {interestCount}</div>
-                    <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>Non-binding indications of interest submitted</div>
+                    <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{t("non_binding_indications_of_interest_submitte")}</div>
                   </div>
                   <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#64748b", fontSize: 14, flexShrink: 0 }}>✕</button>
                 </div>
@@ -357,7 +360,7 @@ export function InvestorMetricCards({ data }: { data: InvestorMetricData }) {
                   </div>
                   {interestNames.length > 0 ? (
                     <div style={{ marginBottom: 14 }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 8 }}>Active expressions</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 8 }}>{t("active_expressions")}</div>
                       {interestNames.map((name, i) => (
                         <Row
                           key={name}
@@ -392,7 +395,7 @@ export function InvestorMetricCards({ data }: { data: InvestorMetricData }) {
                 <div style={{ padding: "0 18px 12px", borderBottom: "0.5px solid #e2e6ed", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#0f172a" }}>Portfolio — {portfolioTotal} total</div>
-                    <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>Your full investor activity across the platform</div>
+                    <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{t("your_full_investor_activity_across_the_platf")}</div>
                   </div>
                   <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#64748b", fontSize: 14, flexShrink: 0 }}>✕</button>
                 </div>
@@ -403,7 +406,7 @@ export function InvestorMetricCards({ data }: { data: InvestorMetricData }) {
                     <SBox val={String(interestCount)} lbl="Active interest" />
                   </div>
                   <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 8 }}>Breakdown</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 8 }}>{t("breakdown")}</div>
                     <Row left="Watchlisted companies" right={watchlistCount} />
                     <Row left="Expressed interest" right={interestCount} />
                     <Row left="Intro requests" right={introRequestCount} />

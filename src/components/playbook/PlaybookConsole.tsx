@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { AssembledPlaybook, PlaybookCard, PlaybookBlock } from "@/lib/playbook/types";
 import { BLOCK_LABEL } from "@/lib/playbook/types";
 import { ModuleCard } from "./ModuleCard";
@@ -23,6 +24,7 @@ const ADMIN_ENDPOINTS: ConsoleEndpoints = {
 };
 
 export function PlaybookConsole({ initial, isAdmin, endpoints = ADMIN_ENDPOINTS }: { initial: AssembledPlaybook; isAdmin: boolean; endpoints?: ConsoleEndpoints }) {
+  const t = useTranslations("sharedCmp");
   const [data, setData] = useState<AssembledPlaybook>(initial);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [editing, setEditing] = useState<PlaybookCard | null>(null);
@@ -78,7 +80,7 @@ export function PlaybookConsole({ initial, isAdmin, endpoints = ADMIN_ENDPOINTS 
         ) : null)}
         {undocCount ? (
           <div>
-            <p style={{ fontSize: 10.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#854F0B", margin: "0 0 6px" }}>New surfaces</p>
+            <p style={{ fontSize: 10.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#854F0B", margin: "0 0 6px" }}>{t("new_surfaces")}</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 3, borderLeft: "2px solid #EDD8AE", paddingLeft: 10 }}>
               {undocumented.map((card) => <a key={card.navId} href={`#pb-${card.navId}`} style={{ color: "#7a5b12", textDecoration: "none" }}>{card.label}</a>)}
             </div>
@@ -101,7 +103,7 @@ export function PlaybookConsole({ initial, isAdmin, endpoints = ADMIN_ENDPOINTS 
 
         {undocCount ? (
           <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <h2 style={{ fontSize: 13, fontWeight: 600, color: "#854F0B", textTransform: "uppercase", letterSpacing: ".06em", margin: 0 }}>New surfaces — undocumented</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 600, color: "#854F0B", textTransform: "uppercase", letterSpacing: ".06em", margin: 0 }}>{t("new_surfaces_undocumented")}</h2>
             {undocumented.map((card) => (
               <ModuleCard key={card.navId} card={card} isAdmin={isAdmin} onEdit={() => setEditing(card)} />
             ))}
@@ -110,7 +112,7 @@ export function PlaybookConsole({ initial, isAdmin, endpoints = ADMIN_ENDPOINTS 
 
         {data.orphaned.length ? (
           <section style={{ background: "#FDF2F2", border: "0.5px solid #F3C0C0", borderRadius: 12, padding: 16 }}>
-            <h2 style={{ fontSize: 13, fontWeight: 600, color: "#A32D2D", margin: "0 0 8px" }}>Needs cleanup — orphaned entries</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 600, color: "#A32D2D", margin: "0 0 8px" }}>{t("needs_cleanup_orphaned_entries")}</h2>
             <p style={{ fontSize: 12, color: "#7a2323", margin: "0 0 10px" }}>These editorial entries reference a surface that is no longer in the menu. Remove or re-point them.</p>
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: "#7a2323" }}>
               {data.orphaned.map((o) => <li key={o.navId}><code>{o.navId}</code> — {o.steps} step(s), block “{o.block}”.</li>)}

@@ -1,13 +1,15 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 export function MarketingFooter() {
+  const t = useTranslations("sharedCmp");
   return (
     <footer className="border-t border-slate-200 bg-white">
       <div className="mx-auto flex max-w-7xl flex-col justify-between gap-6 px-6 py-8 text-sm text-slate-500 md:flex-row md:items-center">
         <div>
           <p className="font-semibold text-[var(--navy)]">iCapOS</p>
-          <p className="mt-1">The operating system for capital-ready companies.</p>
-          <p className="mt-0.5 text-xs text-slate-400">Capital readiness and private market infrastructure.</p>
+          <p className="mt-1">{t("the_operating_system_for_capital_ready_compa")}</p>
+          <p className="mt-0.5 text-xs text-slate-400">{t("capital_readiness_and_private_market_infrast")}</p>
         </div>
         <div className="flex flex-wrap gap-5">
           <Link href="/deals" className="hover:text-slate-950">

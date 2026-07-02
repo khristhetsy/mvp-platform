@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type { WatchlistAISummaryResult, CompanyInsight } from "@/app/api/investor/watchlist/ai-summary/route";
 
 type RowRef = {
@@ -32,6 +33,7 @@ function ScoreBar({ score, label }: { score: number; label: string }) {
 }
 
 export function InvestorWatchlistAISummary({ rows }: { rows: RowRef[] }) {
+  const t = useTranslations("investorCmp");
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [result, setResult] = useState<WatchlistAISummaryResult | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -71,7 +73,7 @@ export function InvestorWatchlistAISummary({ rows }: { rows: RowRef[] }) {
     return (
       <div className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-dashed border-indigo-200 bg-indigo-50/40 px-5 py-4">
         <div>
-          <p className="text-sm font-semibold text-indigo-900">Thesis alignment analysis</p>
+          <p className="text-sm font-semibold text-indigo-900">{t("thesis_alignment_analysis")}</p>
           <p className="mt-0.5 text-xs text-indigo-600">
             AI scores each saved company against your investment thesis.
           </p>
@@ -91,7 +93,7 @@ export function InvestorWatchlistAISummary({ rows }: { rows: RowRef[] }) {
     return (
       <div className="mb-6 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4">
         <div className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-        <p className="text-sm text-slate-600">Scoring companies against your thesis…</p>
+        <p className="text-sm text-slate-600">{t("scoring_companies_against_your_thesis")}</p>
       </div>
     );
   }
@@ -127,7 +129,7 @@ export function InvestorWatchlistAISummary({ rows }: { rows: RowRef[] }) {
       {/* Header */}
       <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
         <div>
-          <p className="text-sm font-semibold text-slate-900">Thesis alignment analysis</p>
+          <p className="text-sm font-semibold text-slate-900">{t("thesis_alignment_analysis")}</p>
           <p className="mt-0.5 text-xs text-slate-500">{result.thesisCoverage}</p>
         </div>
         <button

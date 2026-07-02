@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 const categories = ["bug", "feature", "onboarding", "documents", "deal_room", "learning", "other"] as const;
 const severities = ["low", "normal", "high", "critical"] as const;
 
 export function BetaFeedbackForm() {
+  const t = useTranslations("sharedCmp");
   const [category, setCategory] = useState<(typeof categories)[number]>("other");
   const [severity, setSeverity] = useState<(typeof severities)[number]>("normal");
   const [message, setMessage] = useState("");
@@ -45,7 +47,7 @@ export function BetaFeedbackForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <p className="text-sm font-semibold text-slate-900">Submit beta feedback</p>
+      <p className="text-sm font-semibold text-slate-900">{t("submit_beta_feedback")}</p>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="grid gap-1 text-xs font-medium text-slate-700">
           Category
@@ -77,7 +79,7 @@ export function BetaFeedbackForm() {
           minLength={3}
           rows={4}
           className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-          placeholder="Describe the issue or suggestion…"
+          placeholder={t("describe_the_issue_or_suggestion")}
         />
       </label>
       <label className="grid gap-1 text-xs font-medium text-slate-700">

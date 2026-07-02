@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FounderAIVideoLesson } from "@/components/FounderAIVideoLesson";
@@ -48,6 +49,7 @@ export function FounderClassLessonExperience({
   companyId: string;
   initialVideoPlaybackUrl: string | null;
 }>) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const [completed, setCompleted] = useState(initialProgress?.status === "completed");
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
@@ -150,7 +152,7 @@ export function FounderClassLessonExperience({
         {error ? <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
 
         <article className="prose prose-slate max-w-none">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Lesson transcript</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">{t("lesson_transcript")}</h2>
           <p className="mt-2 text-sm leading-7 text-slate-700">{lesson.content}</p>
           {lesson.keyPoints && lesson.keyPoints.length > 0 ? (
             <ul className="mt-4 space-y-2 text-sm text-slate-700">
@@ -165,7 +167,7 @@ export function FounderClassLessonExperience({
 
         {lesson.quiz && lesson.quiz.questions.length > 0 ? (
           <section className="rounded-xl border border-slate-200 bg-white p-5">
-            <h2 className="text-sm font-semibold text-slate-900">Lesson quiz</h2>
+            <h2 className="text-sm font-semibold text-slate-900">{t("lesson_quiz")}</h2>
             <p className="mt-1 text-xs text-slate-500">Passing score: {lesson.quiz.passingScore}%</p>
             <div className="mt-4 space-y-4">
               {lesson.quiz.questions.map((question) => (
@@ -208,7 +210,7 @@ export function FounderClassLessonExperience({
         <LessonNotes moduleSlug={course.slug} lessonId={lesson.slug} />
 
         <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <h2 className="text-sm font-semibold text-slate-800">Resources & downloads</h2>
+          <h2 className="text-sm font-semibold text-slate-800">{t("resources_downloads")}</h2>
           <p className="mt-2 text-sm text-slate-600">
             Worksheet and template downloads — available in a future release. Use your document room for investor
             materials in the meantime.
@@ -244,7 +246,7 @@ export function FounderClassLessonExperience({
 
       <aside className="mt-6 lg:mt-0">
         <div className="sticky top-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Course content</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("course_content")}</p>
           <p className="mt-1 text-sm font-semibold text-slate-900">{course.title}</p>
           <div className="mt-4 max-h-[70vh] space-y-4 overflow-y-auto text-sm">
             {curriculum.map(({ section, lessons }) => (

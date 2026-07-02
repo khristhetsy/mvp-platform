@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { runAeoComplianceCheck, AEO_CHECK_LABELS, type AeoViolation } from "@/lib/aeo/compliance";
 import { CopilotPanel } from "@/components/marketing/copilot/CopilotPanel";
@@ -14,6 +15,7 @@ const label: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: "#0f2
 const input: React.CSSProperties = { width: "100%", fontSize: 13, padding: "8px 10px", borderRadius: 8, border: "1px solid #d7dce4", fontFamily: "inherit" };
 
 export function AeoEditorClient({ id }: { id: string }) {
+  const t = useTranslations("sharedCmp");
   const [loaded, setLoaded] = useState(false);
   const [slug, setSlug] = useState("");
   const [eyebrow, setEyebrow] = useState("");
@@ -86,7 +88,7 @@ export function AeoEditorClient({ id }: { id: string }) {
     if (res.ok) { setStatus("draft"); setMsg({ text: "Unpublished.", ok: true }); }
   };
 
-  if (!loaded) return <p style={{ fontSize: 13, color: "#5f5e5a", padding: 24 }}>Loading…</p>;
+  if (!loaded) return <p style={{ fontSize: 13, color: "#5f5e5a", padding: 24 }}>{t("loading_2")}</p>;
 
   const addSection = () => setSections((s) => [...s, { id: `section-${s.length + 1}`, heading: "", body: "" }]);
   const addFaq = () => setFaq((f) => [...f, { q: "", a: "" }]);
@@ -98,57 +100,57 @@ export function AeoEditorClient({ id }: { id: string }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div style={card}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div><span style={label}>Slug</span><input style={input} value={slug} onChange={(e) => setSlug(e.target.value)} /></div>
-            <div><span style={label}>Eyebrow</span><input style={input} value={eyebrow} onChange={(e) => setEyebrow(e.target.value)} /></div>
+            <div><span style={label}>{t("slug")}</span><input style={input} value={slug} onChange={(e) => setSlug(e.target.value)} /></div>
+            <div><span style={label}>{t("eyebrow")}</span><input style={input} value={eyebrow} onChange={(e) => setEyebrow(e.target.value)} /></div>
           </div>
-          <div style={{ marginTop: 12 }}><span style={label}>H1 / title</span><input style={input} value={h1} onChange={(e) => setH1(e.target.value)} /></div>
-          <div style={{ marginTop: 12 }}><span style={label}>Lede</span><input style={input} value={lede} onChange={(e) => setLede(e.target.value)} /></div>
+          <div style={{ marginTop: 12 }}><span style={label}>{t("h1_title")}</span><input style={input} value={h1} onChange={(e) => setH1(e.target.value)} /></div>
+          <div style={{ marginTop: 12 }}><span style={label}>{t("lede")}</span><input style={input} value={lede} onChange={(e) => setLede(e.target.value)} /></div>
           <div style={{ marginTop: 12 }}>
-            <span style={label}>Defined term (DefinedTerm schema) — optional</span>
-            <input style={input} value={definedTerm} onChange={(e) => setDefinedTerm(e.target.value)} placeholder="Capital Readiness Rating" />
+            <span style={label}>{t("defined_term_definedterm_schema_optional")}</span>
+            <input style={input} value={definedTerm} onChange={(e) => setDefinedTerm(e.target.value)} placeholder={t("capital_readiness_rating")} />
           </div>
         </div>
 
         <div style={card}>
-          <span style={label}>Definition answer — the citable block</span>
+          <span style={label}>{t("definition_answer_the_citable_block")}</span>
           <textarea style={{ ...input, minHeight: 120, resize: "vertical" }} value={definitionAnswer} onChange={(e) => setDefinitionAnswer(e.target.value)} />
-          <p style={{ fontSize: 11, color: "#7a8494", margin: "6px 0 0" }}>Self-contained and liftable. Engagement register, causal-not-predictive.</p>
+          <p style={{ fontSize: 11, color: "#7a8494", margin: "6px 0 0" }}>{t("self_contained_and_liftable_engagement_regis")}</p>
         </div>
 
         <div style={card}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#0f2147" }}>Sections</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#0f2147" }}>{t("sections")}</span>
             <button type="button" onClick={addSection} style={{ fontSize: 12, color: PURPLE, background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>+ Add section</button>
           </div>
           {sections.map((s, i) => (
             <div key={i} style={{ borderTop: i ? "0.5px solid #f2f4f7" : "none", paddingTop: i ? 12 : 0, marginTop: i ? 12 : 0 }}>
-              <input style={{ ...input, marginBottom: 8 }} value={s.heading} placeholder="Heading (renders as <h2>)"
+              <input style={{ ...input, marginBottom: 8 }} value={s.heading} placeholder={t("heading_renders_as_h2")}
                 onChange={(e) => setSections((arr) => arr.map((x, j) => (j === i ? { ...x, heading: e.target.value } : x)))} />
-              <textarea style={{ ...input, minHeight: 70, resize: "vertical" }} value={s.body} placeholder="Passage"
+              <textarea style={{ ...input, minHeight: 70, resize: "vertical" }} value={s.body} placeholder={t("passage")}
                 onChange={(e) => setSections((arr) => arr.map((x, j) => (j === i ? { ...x, body: e.target.value } : x)))} />
-              <button type="button" onClick={() => setSections((arr) => arr.filter((_, j) => j !== i))} style={{ fontSize: 11, color: "#A32D2D", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}>Remove</button>
+              <button type="button" onClick={() => setSections((arr) => arr.filter((_, j) => j !== i))} style={{ fontSize: 11, color: "#A32D2D", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}>{t("remove")}</button>
             </div>
           ))}
         </div>
 
         <div style={card}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#0f2147" }}>FAQ</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#0f2147" }}>{t("faq")}</span>
             <button type="button" onClick={addFaq} style={{ fontSize: 12, color: PURPLE, background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>+ Add question</button>
           </div>
           {faq.map((f, i) => (
             <div key={i} style={{ borderTop: i ? "0.5px solid #f2f4f7" : "none", paddingTop: i ? 12 : 0, marginTop: i ? 12 : 0 }}>
-              <input style={{ ...input, marginBottom: 8 }} value={f.q} placeholder="Question"
+              <input style={{ ...input, marginBottom: 8 }} value={f.q} placeholder={t("question")}
                 onChange={(e) => setFaq((arr) => arr.map((x, j) => (j === i ? { ...x, q: e.target.value } : x)))} />
-              <textarea style={{ ...input, minHeight: 60, resize: "vertical" }} value={f.a} placeholder="Answer (engagement register only)"
+              <textarea style={{ ...input, minHeight: 60, resize: "vertical" }} value={f.a} placeholder={t("answer_engagement_register_only")}
                 onChange={(e) => setFaq((arr) => arr.map((x, j) => (j === i ? { ...x, a: e.target.value } : x)))} />
-              <button type="button" onClick={() => setFaq((arr) => arr.filter((_, j) => j !== i))} style={{ fontSize: 11, color: "#A32D2D", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}>Remove</button>
+              <button type="button" onClick={() => setFaq((arr) => arr.filter((_, j) => j !== i))} style={{ fontSize: 11, color: "#A32D2D", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}>{t("remove")}</button>
             </div>
           ))}
         </div>
 
         <div style={card}>
-          <span style={label}>Meta description</span>
+          <span style={label}>{t("meta_description")}</span>
           <textarea style={{ ...input, minHeight: 56, resize: "vertical" }} value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} />
         </div>
       </div>
@@ -160,7 +162,7 @@ export function AeoEditorClient({ id }: { id: string }) {
             {liveCheck.status === "cleared" ? "Language check: clear" : `Language check: ${liveCheck.violations.length} issue(s)`}
           </p>
           {liveCheck.violations.length === 0 ? (
-            <p style={{ fontSize: 11.5, color: "#5f5e5a", margin: 0 }}>No outcome-register, guarantee, offer, or regulated-status language detected.</p>
+            <p style={{ fontSize: 11.5, color: "#5f5e5a", margin: 0 }}>{t("no_outcome_register_guarantee_offer_or_regul")}</p>
           ) : (
             <ul style={{ margin: 0, paddingLeft: 16, fontSize: 11.5, color: "#7a2323" }}>
               {liveCheck.violations.slice(0, 8).map((v, i) => (
@@ -172,7 +174,7 @@ export function AeoEditorClient({ id }: { id: string }) {
 
         {gate?.blockers?.length ? (
           <div style={{ ...card, borderColor: "#EDD3A6", background: "#FBF4E6" }}>
-            <p style={{ fontSize: 12.5, fontWeight: 600, color: "#854F0B", margin: "0 0 6px" }}>Exposure gate blocking</p>
+            <p style={{ fontSize: 12.5, fontWeight: 600, color: "#854F0B", margin: "0 0 6px" }}>{t("exposure_gate_blocking")}</p>
             <ul style={{ margin: 0, paddingLeft: 16, fontSize: 11.5, color: "#7a5b12" }}>
               {gate.blockers.map((b, i) => <li key={i}>{b.label}</li>)}
             </ul>
@@ -186,7 +188,7 @@ export function AeoEditorClient({ id }: { id: string }) {
             {saving ? "Saving…" : "Save"}
           </button>
           {status === "published" ? (
-            <button type="button" onClick={() => void unpublish()} style={{ background: "#fff", color: "#A32D2D", border: "1px solid #F3C0C0", borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Unpublish</button>
+            <button type="button" onClick={() => void unpublish()} style={{ background: "#fff", color: "#A32D2D", border: "1px solid #F3C0C0", borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{t("unpublish")}</button>
           ) : (
             <button type="button" onClick={() => void publish()} disabled={liveCheck.status !== "cleared"}
               title={liveCheck.status !== "cleared" ? "Resolve language issues first" : "Runs both gates then publishes"}

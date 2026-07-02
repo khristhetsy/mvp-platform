@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import { RUBRIC_DIMENSIONS } from "@/lib/icfo-events/types";
@@ -33,6 +34,7 @@ function ReviewPanel({
   application: SpeakerApplication;
   onDecided: (a: SpeakerApplication) => void;
 }) {
+  const t = useTranslations("adminCmp");
   const [scores, setScores] = useState<Record<string, number>>(() => {
     const init: Record<string, number> = {};
     RUBRIC_DIMENSIONS.forEach((d) => (init[d] = application.rubricScores[d] ?? 3));
@@ -156,12 +158,12 @@ function ReviewPanel({
         value={note}
         onChange={(e) => setNote(e.target.value)}
         rows={2}
-        placeholder="Reviewer note (required to decline)"
+        placeholder={t("reviewer_note_required_to_decline")}
         className="mt-3 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
       />
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <span className="text-xs font-medium text-[var(--text-secondary)]">My recommendation:</span>
+        <span className="text-xs font-medium text-[var(--text-secondary)]">{t("my_recommendation")}</span>
         {(["approve", "decline", "abstain"] as const).map((r) => (
           <label key={r} className="flex items-center gap-1 text-xs text-[var(--text-secondary)]">
             <input
@@ -180,13 +182,13 @@ function ReviewPanel({
         >
           {savingReview ? "Saving…" : "Save my review"}
         </button>
-        {reviewSaved && <span className="text-xs text-emerald-700">Saved</span>}
+        {reviewSaved && <span className="text-xs text-emerald-700">{t("saved")}</span>}
       </div>
 
       {error && <p className="mt-2 text-sm text-rose-700">{error}</p>}
 
       <div className="mt-4 border-t border-[var(--border-subtle)] pt-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Final decision</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("final_decision")}</p>
         <div className="mt-2 flex gap-2">
           <button
             disabled={busy}
@@ -209,6 +211,7 @@ function ReviewPanel({
 }
 
 export function ApplicationsQueue({ initialApplications }: { initialApplications: SpeakerApplication[] }) {
+  const t = useTranslations("adminCmp");
   const [applications, setApplications] = useState(initialApplications);
   const [openId, setOpenId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "open" | "approved" | "declined">("open");
@@ -227,7 +230,7 @@ export function ApplicationsQueue({ initialApplications }: { initialApplications
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
-      <h1 className="text-xl font-semibold text-[var(--text-primary)]">Speaker applications</h1>
+      <h1 className="text-xl font-semibold text-[var(--text-primary)]">{t("speaker_applications")}</h1>
       <p className="mt-1 text-sm text-[var(--text-muted)]">
         Score each applicant against the rubric, then approve or decline. Approving adds them to the
         event roster and notifies them.

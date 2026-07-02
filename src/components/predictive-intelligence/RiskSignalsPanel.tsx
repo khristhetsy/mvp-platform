@@ -1,4 +1,5 @@
 import type { RiskSignal } from "@/lib/predictive-intelligence/types";
+import { useTranslations } from "next-intl";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatRiskScore, riskSeverityBadgeStatus } from "@/lib/predictive-intelligence/display";
 
@@ -13,13 +14,14 @@ export function RiskSignalsPanel({
   signals: RiskSignal[];
   maxItems?: number;
 }>) {
+  const t = useTranslations("sharedCmp");
   const rows = (signals ?? []).slice(0, maxItems);
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700">{title}</p>
       <p className="mt-1 text-xs text-slate-600">{subtitle}</p>
       {rows.length === 0 ? (
-        <p className="mt-3 text-sm text-slate-600">No risk signals available.</p>
+        <p className="mt-3 text-sm text-slate-600">{t("no_risk_signals_available")}</p>
       ) : (
         <div className="mt-3 space-y-2">
           {rows.map((s) => (

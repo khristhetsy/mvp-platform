@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Clock, Video, Check, Globe, ChevronLeft, ChevronRight } from "lucide-react";
 import { CapitalOSLogo } from "@/components/CapitalOSLogo";
 import type { TimeInterval, ScheduleQuestion } from "@/lib/scheduling/types";
@@ -40,6 +41,7 @@ export function BookingClient({
   viewerName?: string | null;
   viewerEmail?: string | null;
 }) {
+  const t = useTranslations("sharedCmp");
   const title = meetingTitle?.trim() || `Meeting with ${hostName}`;
   const [firstSeed, lastSeed] = (() => {
     const parts = (viewerName ?? "").trim().split(/\s+/);
@@ -174,7 +176,7 @@ export function BookingClient({
         {confirmed.meetUrl ? (
           <a href={confirmed.meetUrl} className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"><Video className="h-4 w-4" /> Join Google Meet</a>
         ) : null}
-        <p className="mt-3 text-xs text-emerald-700">A confirmation and calendar invite are on their way.</p>
+        <p className="mt-3 text-xs text-emerald-700">{t("a_confirmation_and_calendar_invite_are_on_th")}</p>
       </div>
     );
   }
@@ -201,7 +203,7 @@ export function BookingClient({
           <div className={`grid grid-cols-1 gap-5 ${pending ? "lg:grid-cols-[minmax(0,1fr)_280px]" : "sm:grid-cols-[minmax(0,1fr)_136px]"}`}>
             {/* Month picker */}
             <div>
-              <p className="mb-3 text-sm font-semibold text-slate-900">Select a date &amp; time</p>
+              <p className="mb-3 text-sm font-semibold text-slate-900">{t("select_a_date_time")}</p>
               <div className="mb-2 flex items-center justify-between">
                 <button type="button" onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1))} className="rounded p-1 text-slate-500 hover:bg-slate-100" aria-label="Previous month"><ChevronLeft className="h-4 w-4" /></button>
                 <span className="text-sm font-medium text-slate-900">{monthLabel}</span>
@@ -231,7 +233,7 @@ export function BookingClient({
                 <>
                   <p className="mb-2 text-xs font-semibold text-slate-700">{selectedDate ? new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : ""}</p>
                   {loading ? (
-                    <p className="text-xs text-slate-400">Loading…</p>
+                    <p className="text-xs text-slate-400">{t("loading_2")}</p>
                   ) : daySlots.length === 0 ? (
                     <p className="text-xs text-slate-400">{slotsByDay.size === 0 ? "No open times this month." : "Pick a highlighted date."}</p>
                   ) : (
@@ -246,13 +248,13 @@ export function BookingClient({
                 </>
               ) : (
                 <div>
-                  <p className="mb-2 text-xs font-semibold text-slate-700">Enter details</p>
+                  <p className="mb-2 text-xs font-semibold text-slate-700">{t("enter_details")}</p>
                   <div className="grid grid-cols-2 gap-2">
-                    <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First name *" className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
-                    <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last name" className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
+                    <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder={t("first_name")} className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
+                    <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder={t("last_name")} className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
                   </div>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email *" className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
-                  <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone (optional)" className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("email_2")} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
+                  <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("phone_optional")} className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
 
                   {questions.map((q) => (
                     <div key={q.id} className="mt-3 border-t border-slate-100 pt-3">
@@ -281,10 +283,10 @@ export function BookingClient({
                     </div>
                   ))}
 
-                  <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Anything else? (optional)" className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
+                  <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder={t("anything_else_optional")} className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
                   <div className="mt-3 flex gap-2">
                     <button type="button" onClick={() => void book()} disabled={booking} className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50">{booking ? "Scheduling…" : "Schedule"}</button>
-                    <button type="button" onClick={() => { setPending(null); setError(null); }} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50">Back</button>
+                    <button type="button" onClick={() => { setPending(null); setError(null); }} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50">{t("back")}</button>
                   </div>
                 </div>
               )}

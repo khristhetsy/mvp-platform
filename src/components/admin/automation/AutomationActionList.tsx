@@ -1,8 +1,10 @@
+import { useTranslations } from "next-intl";
 import type { AutomationActionListItem } from "@/lib/automation/admin-console-types";
 
 export function AutomationActionList({ actions }: Readonly<{ actions: AutomationActionListItem[] }>) {
+  const t = useTranslations("adminCmp");
   if (!actions.length) {
-    return <p className="text-xs text-slate-600">No actions recorded for this run.</p>;
+    return <p className="text-xs text-slate-600">{t("no_actions_recorded_for_this_run")}</p>;
   }
 
   return (

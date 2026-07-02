@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
@@ -36,6 +37,7 @@ const signUpSchema = z.object({
 const BASE_INPUT = "rounded-xl border px-4 py-3 w-full";
 
 export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { getError, inputCls, validate, clearError } = useFormValidation();
@@ -125,16 +127,16 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
     <form onSubmit={handleSubmit} className="mt-8 grid gap-4">
       {mode === "sign-up" ? (
         <>
-          <FormField label="Full name" error={getError("fullName")} required>
+          <FormField label={t("full_name")} error={getError("fullName")} required>
             <input
               className={`${BASE_INPUT} ${inputCls("fullName")}`}
-              placeholder="Jane Founder"
+              placeholder={t("jane_founder")}
               value={fullName}
               onChange={(e) => { setFullName(e.target.value); clearError("fullName"); }}
             />
           </FormField>
           <div className="grid gap-1.5">
-            <span className="text-sm font-medium text-slate-700">I am a</span>
+            <span className="text-sm font-medium text-slate-700">{t("i_am_a")}</span>
             <select
               className={`${BASE_INPUT} border-slate-300 text-slate-950`}
               value={role}
@@ -147,17 +149,17 @@ export function AuthForm({ mode }: Readonly<{ mode: "sign-in" | "sign-up" }>) {
         </>
       ) : null}
 
-      <FormField label="Work email" error={getError("email")} required>
+      <FormField label={t("work_email")} error={getError("email")} required>
         <input
           className={`${BASE_INPUT} ${inputCls("email")}`}
-          placeholder="you@company.com"
+          placeholder={t("you_company_com")}
           type="email"
           value={email}
           onChange={(e) => { setEmail(e.target.value); clearError("email"); }}
         />
       </FormField>
 
-      <FormField label="Password" error={getError("password")} required hint={mode === "sign-up" ? "Minimum 8 characters" : undefined}>
+      <FormField label={t("password")} error={getError("password")} required hint={mode === "sign-up" ? "Minimum 8 characters" : undefined}>
         <input
           className={`${BASE_INPUT} ${inputCls("password")}`}
           placeholder="••••••••"

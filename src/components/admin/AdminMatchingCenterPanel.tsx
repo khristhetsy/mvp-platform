@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { MetricCard } from "@/components/MetricCard";
@@ -45,6 +46,7 @@ function hasActiveFilters(filters: MatchingCenterFilters) {
 }
 
 export function AdminMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: AdminMatchingCenterSnapshot }>) {
+  const t = useTranslations("adminCmp");
   const [filters, setFilters] = useState(defaultFilters);
 
   const filteredPairs = useMemo(() => {
@@ -59,7 +61,7 @@ export function AdminMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: Admi
     <>
       <MetricGrid className="mb-6">
         <MetricCard
-          label="High match pairs"
+          label={t("high_match_pairs")}
           value={String(snapshot.stats.highMatchCount)}
           detail="Investor–company pairs scoring 70% or higher"
           accent="indigo"
@@ -67,21 +69,21 @@ export function AdminMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: Admi
           href="/admin/matching"
         />
         <MetricCard
-          label="Average match score"
+          label={t("average_match_score")}
           value={`${snapshot.stats.averageMatchScore}%`}
           detail={`Across ${snapshot.stats.totalPairs.toLocaleString()} marketplace pairs`}
           accent="violet"
           href="/admin/matching"
         />
         <MetricCard
-          label="Marketplace companies"
+          label={t("marketplace_companies")}
           value={String(snapshot.stats.marketplaceCompanyCount)}
           detail="Published listings in matching pool"
           accent="blue"
           href="/admin/companies"
         />
         <MetricCard
-          label="Approved investors"
+          label={t("approved_investors")}
           value={String(snapshot.stats.approvedInvestorCount)}
           detail="Eligible for iCapOS matching"
           accent="slate"
@@ -90,7 +92,7 @@ export function AdminMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: Admi
       </MetricGrid>
 
       <ContentGrid columns={2} className="mb-6">
-        <WorkspacePanel title="Match score distribution" subtitle="Marketplace investor–company pairs">
+        <WorkspacePanel title={t("match_score_distribution")} subtitle={t("marketplace_investor_company_pairs")}>
           <ul className="space-y-3">
             {snapshot.scoreDistribution.map((bucket) => (
               <li key={bucket.id}>
@@ -109,7 +111,7 @@ export function AdminMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: Admi
           </ul>
         </WorkspacePanel>
 
-        <WorkspacePanel title="Filters" subtitle="Industry, investor type, geography, and score range">
+        <WorkspacePanel title={t("filters")} subtitle={t("industry_investor_type_geography_and_score_r")}>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-medium text-slate-600">
               Industry
@@ -198,7 +200,7 @@ export function AdminMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: Admi
       </ContentGrid>
 
       <ContentGrid columns={2} className="mb-6">
-        <PageSection title="Top matched companies" subtitle="Highest investor fit on marketplace">
+        <PageSection title={t("top_matched_companies")} subtitle={t("highest_investor_fit_on_marketplace")}>
           <DataTable>
             <DataTableHead>
               <DataTableRow>
@@ -228,7 +230,7 @@ export function AdminMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: Admi
           </DataTable>
         </PageSection>
 
-        <PageSection title="Top matched investors" subtitle="Strongest company alignment">
+        <PageSection title={t("top_matched_investors")} subtitle={t("strongest_company_alignment")}>
           <DataTable>
             <DataTableHead>
               <DataTableRow>
@@ -266,7 +268,7 @@ export function AdminMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: Admi
         }
       >
         {displayRows.length === 0 ? (
-          <p className="text-sm text-slate-600">No matches match the current filters.</p>
+          <p className="text-sm text-slate-600">{t("no_matches_match_the_current_filters")}</p>
         ) : (
           <DataTable>
             <DataTableHead>

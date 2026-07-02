@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { EnrichedOutreachTarget } from "@/lib/founder-crm/outreach";
@@ -35,6 +36,7 @@ export function FounderOutreachPipelinePanel({
   onTargetsChange,
   onMessage,
 }: Readonly<Props>) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const [targets, setTargets] = useState(initialTargets);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -238,7 +240,7 @@ export function FounderOutreachPipelinePanel({
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Campaign from pipeline</h2>
+        <h2 className="text-lg font-semibold text-slate-950">{t("campaign_from_pipeline")}</h2>
         <p className="mt-1 text-xs text-slate-600">
           Drafts email messages for private CRM contacts in selected pipeline status ({contactTargets.length} eligible).
           Platform-only targets are tracked here but use messaging for intros.
@@ -256,7 +258,7 @@ export function FounderOutreachPipelinePanel({
             {campaigns.length} campaign(s) on file — manage drafts in CRM &amp; outreach tab.
           </p>
         ) : null}
-        <p className="mt-2 text-xs text-amber-800">Internal queue only — no external email sending.</p>
+        <p className="mt-2 text-xs text-amber-800">{t("internal_queue_only_no_external_email_sendin")}</p>
       </section>
 
       <p className="text-xs text-slate-500">

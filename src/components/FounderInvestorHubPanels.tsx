@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import { FounderOutreachPipelinePanel } from "@/components/FounderOutreachPipelinePanel";
@@ -59,6 +60,7 @@ export function FounderInvestorHubPanels({
   socialReadiness,
   companySnapshot,
 }: Readonly<Props>) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const [hubTab, setHubTab] = useState<"crm" | "pipeline" | "social" | "coach">("crm");
   const [contacts, setContacts] = useState(initialContacts);
@@ -341,7 +343,7 @@ export function FounderInvestorHubPanels({
       {hubTab === "crm" ? (
         <>
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Outreach readiness</h2>
+        <h2 className="text-lg font-semibold text-slate-950">{t("outreach_readiness")}</h2>
         <p className="mt-1 text-sm text-slate-600">
           Controlled outreach only — max 25 messages per day, one active campaign, no external email sending yet.
         </p>
@@ -371,7 +373,7 @@ export function FounderInvestorHubPanels({
 
       <section className="grid gap-6 xl:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-950">Add investor contact</h2>
+          <h2 className="text-lg font-semibold text-slate-950">{t("add_investor_contact")}</h2>
           <form
             className="mt-4 grid gap-3"
             onSubmit={(event) => {
@@ -379,18 +381,18 @@ export function FounderInvestorHubPanels({
               void addContact(new FormData(event.currentTarget));
             }}
           >
-            <input name="investor_name" required placeholder="Investor name" className="rounded-lg border px-3 py-2 text-sm" />
-            <input name="firm_name" placeholder="Firm" className="rounded-lg border px-3 py-2 text-sm" />
-            <input name="email" type="email" placeholder="Email" className="rounded-lg border px-3 py-2 text-sm" />
-            <input name="investor_type" placeholder="Investor type" className="rounded-lg border px-3 py-2 text-sm" />
-            <input name="preferred_sectors" placeholder="Sectors" className="rounded-lg border px-3 py-2 text-sm" />
-            <input name="preferred_stages" placeholder="Stages" className="rounded-lg border px-3 py-2 text-sm" />
-            <input name="geography" placeholder="Geography" className="rounded-lg border px-3 py-2 text-sm" />
-            <input name="linkedin_url" type="url" placeholder="LinkedIn URL" className="rounded-lg border px-3 py-2 text-sm" />
-            <input name="twitter_url" type="url" placeholder="X / Twitter URL" className="rounded-lg border px-3 py-2 text-sm" />
-            <input name="crunchbase_url" type="url" placeholder="Crunchbase URL" className="rounded-lg border px-3 py-2 text-sm" />
-            <input name="personal_website_url" type="url" placeholder="Personal website" className="rounded-lg border px-3 py-2 text-sm" />
-            <textarea name="notes" placeholder="Notes" rows={2} className="rounded-lg border px-3 py-2 text-sm" />
+            <input name="investor_name" required placeholder={t("investor_name")} className="rounded-lg border px-3 py-2 text-sm" />
+            <input name="firm_name" placeholder={t("firm")} className="rounded-lg border px-3 py-2 text-sm" />
+            <input name="email" type="email" placeholder={t("email")} className="rounded-lg border px-3 py-2 text-sm" />
+            <input name="investor_type" placeholder={t("investor_type")} className="rounded-lg border px-3 py-2 text-sm" />
+            <input name="preferred_sectors" placeholder={t("sectors")} className="rounded-lg border px-3 py-2 text-sm" />
+            <input name="preferred_stages" placeholder={t("stages")} className="rounded-lg border px-3 py-2 text-sm" />
+            <input name="geography" placeholder={t("geography")} className="rounded-lg border px-3 py-2 text-sm" />
+            <input name="linkedin_url" type="url" placeholder={t("linkedin_url")} className="rounded-lg border px-3 py-2 text-sm" />
+            <input name="twitter_url" type="url" placeholder={t("x_twitter_url")} className="rounded-lg border px-3 py-2 text-sm" />
+            <input name="crunchbase_url" type="url" placeholder={t("crunchbase_url")} className="rounded-lg border px-3 py-2 text-sm" />
+            <input name="personal_website_url" type="url" placeholder={t("personal_website")} className="rounded-lg border px-3 py-2 text-sm" />
+            <textarea name="notes" placeholder={t("notes")} rows={2} className="rounded-lg border px-3 py-2 text-sm" />
             <button type="submit" disabled={loading} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
               Add contact
             </button>
@@ -398,7 +400,7 @@ export function FounderInvestorHubPanels({
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-950">Import CSV</h2>
+          <h2 className="text-lg font-semibold text-slate-950">{t("import_csv")}</h2>
           <p className="mt-1 text-xs text-slate-500">
             Columns: investor_name, firm_name, email, investor_type, sector, stage, check_size, geography, website, linkedin_url, twitter_url, crunchbase_url, personal_website_url, notes
           </p>
@@ -407,7 +409,7 @@ export function FounderInvestorHubPanels({
             onChange={(event) => setCsvText(event.target.value)}
             rows={6}
             className="mt-3 w-full rounded-lg border px-3 py-2 font-mono text-xs"
-            placeholder="investor_name,firm_name,email,..."
+            placeholder={t("investor_name_firm_name_email")}
           />
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" disabled={loading} onClick={() => void previewImport()} className="rounded-lg border px-3 py-1.5 text-sm">
@@ -432,7 +434,7 @@ export function FounderInvestorHubPanels({
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search"
+              placeholder={t("search")}
               className="rounded-lg border px-3 py-1.5 text-sm"
             />
             <select
@@ -451,7 +453,7 @@ export function FounderInvestorHubPanels({
         </div>
         <div className="mt-4 divide-y divide-slate-100">
           {filteredContacts.length === 0 ? (
-            <p className="py-4 text-sm text-slate-500">No private contacts yet.</p>
+            <p className="py-4 text-sm text-slate-500">{t("no_private_contacts_yet")}</p>
           ) : (
             filteredContacts.map((row) => (
               <ContactRow
@@ -489,11 +491,11 @@ export function FounderInvestorHubPanels({
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Platform matched investors</h2>
+        <h2 className="text-lg font-semibold text-slate-950">{t("platform_matched_investors")}</h2>
         <p className="mt-1 text-sm text-slate-600">iCapOS registered investors — separate from your private CRM.</p>
         <div className="mt-4 divide-y divide-slate-100">
           {platformMatches.length === 0 ? (
-            <p className="py-3 text-sm text-slate-500">No platform matches available yet.</p>
+            <p className="py-3 text-sm text-slate-500">{t("no_platform_matches_available_yet")}</p>
           ) : (
             platformMatches.map((row) => {
               const pipelineTarget = platformInPipeline.get(row.platformInvestorId);
@@ -553,7 +555,7 @@ export function FounderInvestorHubPanels({
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Outreach campaigns (draft / queue only)</h2>
+        <h2 className="text-lg font-semibold text-slate-950">{t("outreach_campaigns_draft_queue_only")}</h2>
         <p className="mt-1 text-xs text-amber-800">
           Compliance: review every draft. Queueing stores messages internally — emails are NOT sent in this phase.
         </p>
@@ -567,7 +569,7 @@ export function FounderInvestorHubPanels({
         </button>
         <div className="mt-4 divide-y divide-slate-100">
           {campaigns.length === 0 ? (
-            <p className="py-3 text-sm text-slate-500">No campaigns yet.</p>
+            <p className="py-3 text-sm text-slate-500">{t("no_campaigns_yet")}</p>
           ) : (
             campaigns.map((row) => (
               <CampaignRow
@@ -612,6 +614,7 @@ function ContactRow({
   onMessage: (message: string | null) => void;
   onLoading: (loading: boolean) => void;
 }>) {
+  const t = useTranslations("sharedCmp");
   const [editing, setEditing] = useState(false);
 
   async function updateStatus(status: string) {
@@ -700,8 +703,8 @@ function ContactRow({
           ))}
           <option value="archived">archived</option>
         </select>
-        <input name="linkedin_url" type="url" defaultValue={row.linkedin_url ?? ""} placeholder="LinkedIn" className="mb-2 w-full rounded border px-2 py-1" />
-        <input name="twitter_url" type="url" defaultValue={row.twitter_url ?? ""} placeholder="X / Twitter" className="mb-2 w-full rounded border px-2 py-1" />
+        <input name="linkedin_url" type="url" defaultValue={row.linkedin_url ?? ""} placeholder={t("linkedin")} className="mb-2 w-full rounded border px-2 py-1" />
+        <input name="twitter_url" type="url" defaultValue={row.twitter_url ?? ""} placeholder={t("x_twitter")} className="mb-2 w-full rounded border px-2 py-1" />
         <textarea name="notes" defaultValue={row.notes ?? ""} rows={2} className="mb-2 w-full rounded border px-2 py-1" />
         <div className="flex gap-2">
           <button type="submit" disabled={disabled} className="rounded border px-2 py-1 text-xs">

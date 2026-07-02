@@ -1,15 +1,17 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Building2, LineChart, Shield } from "lucide-react";
 import { MarketingDashboardPreview } from "@/components/marketing/MarketingDashboardPreview";
 
 export function MarketingMarketplacePlaceholder() {
+  const t = useTranslations("sharedCmp");
   return (
     <div className="col-span-full grid gap-6 lg:grid-cols-[1fr_0.9fr]">
       <div className="rounded-xl border border-slate-200/80 bg-white p-8 shadow-[var(--shadow-panel)]">
         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--navy-muted)] text-[var(--navy)]">
           <Building2 className="h-5 w-5" strokeWidth={1.75} aria-hidden />
         </div>
-        <h3 className="mt-4 text-lg font-semibold text-[var(--navy)]">Curated opportunities launching soon</h3>
+        <h3 className="mt-4 text-lg font-semibold text-[var(--navy)]">{t("curated_opportunities_launching_soon")}</h3>
         <p className="mt-2 max-w-lg text-sm leading-6 text-slate-600">
           Admin-reviewed companies will appear here once diligence, disclosures, and marketplace publication are complete.
         </p>

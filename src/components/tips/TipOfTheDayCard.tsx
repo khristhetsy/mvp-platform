@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Lightbulb, X } from "lucide-react";
 import type { Tip } from "@/lib/tips/library";
 
 export function TipOfTheDayCard({ tip }: Readonly<{ tip: Tip }>) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const [hidden, setHidden] = useState(false);
 
@@ -33,7 +35,7 @@ export function TipOfTheDayCard({ tip }: Readonly<{ tip: Tip }>) {
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-indigo-700">Tip of the day</span>
+          <span className="text-xs font-medium text-indigo-700">{t("tip_of_the_day")}</span>
           <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-indigo-600">
             {tip.context}
           </span>

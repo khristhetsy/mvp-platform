@@ -10,6 +10,7 @@
 // both a plain-text `body` (backward compatible) and a rich `html` rendering.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Send, X, Paperclip, FileText, Minus, Maximize2, PenLine,
   Bold, Italic, Underline, Link2, List, ListOrdered,
@@ -65,6 +66,7 @@ export function ComposeModal({
   uploading = false,
   initialAttachments,
 }: ComposeModalProps) {
+  const t = useTranslations("sharedCmp");
   const dialogRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -245,23 +247,23 @@ export function ComposeModal({
             <input
               value={to}
               onChange={(e) => onField(setTo)(e.target.value)}
-              placeholder="To"
+              placeholder={t("to")}
               aria-label="To"
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none"
             />
             {!showCc ? (
-              <button type="button" onClick={() => setShowCc(true)} className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100">Cc/Bcc</button>
+              <button type="button" onClick={() => setShowCc(true)} className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100">{t("cc_bcc")}</button>
             ) : null}
           </div>
 
           {showCc ? (
             <>
-              <input value={cc} onChange={(e) => onField(setCc)(e.target.value)} placeholder="Cc" aria-label="Cc" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
-              <input value={bcc} onChange={(e) => onField(setBcc)(e.target.value)} placeholder="Bcc" aria-label="Bcc" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
+              <input value={cc} onChange={(e) => onField(setCc)(e.target.value)} placeholder={t("cc")} aria-label="Cc" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
+              <input value={bcc} onChange={(e) => onField(setBcc)(e.target.value)} placeholder={t("bcc")} aria-label="Bcc" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
             </>
           ) : null}
 
-          <input value={subject} onChange={(e) => onField(setSubject)(e.target.value)} placeholder="Subject" aria-label="Subject" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
+          <input value={subject} onChange={(e) => onField(setSubject)(e.target.value)} placeholder={t("subject")} aria-label="Subject" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
 
           {/* Rich-text body */}
           <div
@@ -294,8 +296,8 @@ export function ComposeModal({
 
         {/* Formatting toolbar */}
         <div className="flex shrink-0 flex-wrap items-center gap-0.5 border-t border-slate-100 bg-slate-50/70 px-3 py-1.5">
-          <button type="button" aria-label="Undo" title="Undo" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("undo")} className={TB}><Undo2 className="h-4 w-4" /></button>
-          <button type="button" aria-label="Redo" title="Redo" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("redo")} className={TB}><Redo2 className="h-4 w-4" /></button>
+          <button type="button" aria-label="Undo" title={t("undo")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("undo")} className={TB}><Undo2 className="h-4 w-4" /></button>
+          <button type="button" aria-label="Redo" title={t("redo")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("redo")} className={TB}><Redo2 className="h-4 w-4" /></button>
           <span className="mx-1 h-4 w-px bg-slate-200" />
           <select
             aria-label="Text size"
@@ -310,25 +312,25 @@ export function ComposeModal({
             <option value="5">Large</option>
           </select>
           <span className="mx-1 h-4 w-px bg-slate-200" />
-          <button type="button" aria-label="Bold" title="Bold" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("bold")} className={TB}><Bold className="h-4 w-4" /></button>
-          <button type="button" aria-label="Italic" title="Italic" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("italic")} className={TB}><Italic className="h-4 w-4" /></button>
-          <button type="button" aria-label="Underline" title="Underline" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("underline")} className={TB}><Underline className="h-4 w-4" /></button>
+          <button type="button" aria-label="Bold" title={t("bold")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("bold")} className={TB}><Bold className="h-4 w-4" /></button>
+          <button type="button" aria-label="Italic" title={t("italic")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("italic")} className={TB}><Italic className="h-4 w-4" /></button>
+          <button type="button" aria-label="Underline" title={t("underline")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("underline")} className={TB}><Underline className="h-4 w-4" /></button>
           <span className="flex items-center gap-1 px-1">
             {SWATCHES.map((c) => (
-              <button key={c} type="button" aria-label={`Text color ${c}`} title="Text color"
+              <button key={c} type="button" aria-label={`Text color ${c}`} title={t("text_color")}
                 onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("foreColor", c)}
                 className="h-4 w-4 rounded-full border border-slate-300" style={{ backgroundColor: c }} />
             ))}
           </span>
           <span className="mx-1 h-4 w-px bg-slate-200" />
-          <button type="button" aria-label="Align left" title="Align left" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("justifyLeft")} className={TB}><AlignLeft className="h-4 w-4" /></button>
-          <button type="button" aria-label="Align center" title="Align center" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("justifyCenter")} className={TB}><AlignCenter className="h-4 w-4" /></button>
-          <button type="button" aria-label="Align right" title="Align right" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("justifyRight")} className={TB}><AlignRight className="h-4 w-4" /></button>
+          <button type="button" aria-label="Align left" title={t("align_left")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("justifyLeft")} className={TB}><AlignLeft className="h-4 w-4" /></button>
+          <button type="button" aria-label="Align center" title={t("align_center")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("justifyCenter")} className={TB}><AlignCenter className="h-4 w-4" /></button>
+          <button type="button" aria-label="Align right" title={t("align_right")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("justifyRight")} className={TB}><AlignRight className="h-4 w-4" /></button>
           <span className="mx-1 h-4 w-px bg-slate-200" />
-          <button type="button" aria-label="Bullet list" title="Bullet list" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("insertUnorderedList")} className={TB}><List className="h-4 w-4" /></button>
-          <button type="button" aria-label="Numbered list" title="Numbered list" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("insertOrderedList")} className={TB}><ListOrdered className="h-4 w-4" /></button>
-          <button type="button" aria-label="Insert link" title="Insert link" onMouseDown={(e) => e.preventDefault()} onClick={addLink} className={TB}><Link2 className="h-4 w-4" /></button>
-          <button type="button" aria-label="Clear formatting" title="Clear formatting" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("removeFormat")} className={TB}><Eraser className="h-4 w-4" /></button>
+          <button type="button" aria-label="Bullet list" title={t("bullet_list")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("insertUnorderedList")} className={TB}><List className="h-4 w-4" /></button>
+          <button type="button" aria-label="Numbered list" title={t("numbered_list")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("insertOrderedList")} className={TB}><ListOrdered className="h-4 w-4" /></button>
+          <button type="button" aria-label="Insert link" title={t("insert_link")} onMouseDown={(e) => e.preventDefault()} onClick={addLink} className={TB}><Link2 className="h-4 w-4" /></button>
+          <button type="button" aria-label="Clear formatting" title={t("clear_formatting")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("removeFormat")} className={TB}><Eraser className="h-4 w-4" /></button>
           <span className="mx-1 h-4 w-px bg-slate-200" />
           <button
             type="button"
@@ -344,7 +346,7 @@ export function ComposeModal({
 
         {/* Footer */}
         <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/50 px-5 py-3">
-          <button type="button" onClick={requestClose} className="mr-auto rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Discard</button>
+          <button type="button" onClick={requestClose} className="mr-auto rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">{t("discard")}</button>
           {onSaveDraft ? (
             <button type="button" onClick={() => onSaveDraft(draft())} disabled={sending} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"><FileText className="h-4 w-4" /> Save draft</button>
           ) : null}

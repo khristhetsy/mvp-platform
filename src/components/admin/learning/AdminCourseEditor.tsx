@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CourseBannerUpload } from "@/components/admin/learning/CourseBannerUpload";
@@ -43,6 +44,7 @@ const READINESS_FOCUS_OPTIONS = [
 const LESSON_COUNT_OPTIONS = [3, 5, 7, 10];
 
 export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
+  const t = useTranslations("adminCmp");
   const router = useRouter();
   const [form, setForm] = useState<ProgramRow>(initial);
   const [loading, setLoading] = useState(false);
@@ -161,7 +163,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
       {/* Build mode selector — create mode only */}
       {mode === "create" && (
         <div className="space-y-2">
-          <p className="text-sm text-slate-600">How to build</p>
+          <p className="text-sm text-slate-600">{t("how_to_build")}</p>
           <div className="grid gap-2 sm:grid-cols-2">
             <button
               type="button"
@@ -182,8 +184,8 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
                 )}
               </span>
               <div>
-                <p className="text-sm font-semibold text-slate-900">Build manually</p>
-                <p className="mt-0.5 text-xs text-slate-500">Add lessons and content yourself</p>
+                <p className="text-sm font-semibold text-slate-900">{t("build_manually")}</p>
+                <p className="mt-0.5 text-xs text-slate-500">{t("add_lessons_and_content_yourself")}</p>
               </div>
             </button>
 
@@ -207,7 +209,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
               </span>
               <div>
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-900">Generate with AI</p>
+                  <p className="text-sm font-semibold text-slate-900">{t("generate_with_ai")}</p>
                   <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">
                     NEW
                   </span>
@@ -225,10 +227,10 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
       {mode === "create" && buildMode === "ai" ? (
         <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
           <label className="block text-sm">
-            <span className="text-slate-600">Course title</span>
+            <span className="text-slate-600">{t("course_title")}</span>
             <input
               className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-              placeholder="e.g. Fundraise Story & Pitch Framing"
+              placeholder={t("e_g_fundraise_story_pitch_framing")}
               value={form.title}
               onChange={(e) => setForm((v) => ({ ...v, title: e.target.value }))}
             />
@@ -236,7 +238,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-sm">
-              <span className="text-slate-600">Capital stage</span>
+              <span className="text-slate-600">{t("capital_stage")}</span>
               <select
                 className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                 value={form.readiness_focus}
@@ -251,7 +253,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
             </label>
 
             <label className="block text-sm">
-              <span className="text-slate-600">Difficulty</span>
+              <span className="text-slate-600">{t("difficulty")}</span>
               <select
                 className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                 value={(form.difficulty ?? "intermediate") as LearningDifficulty}
@@ -268,7 +270,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-sm">
-              <span className="text-slate-600">Lessons to generate</span>
+              <span className="text-slate-600">{t("lessons_to_generate")}</span>
               <select
                 className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                 value={aiForm.lessonCount}
@@ -293,19 +295,19 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
                 }
                 className="h-4 w-4 rounded border-slate-300 text-indigo-600"
               />
-              <span className="text-slate-700">Include quiz per lesson</span>
+              <span className="text-slate-700">{t("include_quiz_per_lesson")}</span>
             </label>
           </div>
 
           <label className="block text-sm">
-            <span className="text-slate-600">Topic focus</span>
+            <span className="text-slate-600">{t("topic_focus")}</span>
             <p className="text-xs text-slate-400">
               Optional — describe what the course should specifically cover
             </p>
             <textarea
               rows={2}
               className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-              placeholder="e.g. How to frame a compelling raise narrative for seed-stage founders without revenue yet"
+              placeholder={t("e_g_how_to_frame_a_compelling_raise_narrativ")}
               value={aiForm.topicFocus}
               onChange={(e) => setAiForm((v) => ({ ...v, topicFocus: e.target.value }))}
             />
@@ -357,7 +359,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
         <>
           <div className="grid gap-4 lg:grid-cols-2">
             <div>
-              <p className="mb-2 text-sm text-slate-600">Course banner</p>
+              <p className="mb-2 text-sm text-slate-600">{t("course_banner")}</p>
               <CourseBannerUpload
                 value={form.banner_image_url ?? null}
                 onUpload={(url) => setForm((current) => ({ ...current, banner_image_url: url }))}
@@ -365,7 +367,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
               />
             </div>
             <div>
-              <p className="mb-2 text-sm text-slate-600">Live preview</p>
+              <p className="mb-2 text-sm text-slate-600">{t("live_preview")}</p>
               <article className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                 <div className="h-36 bg-slate-100">
                   {form.banner_image_url ? (
@@ -387,7 +389,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
 
           <div className="grid gap-3 md:grid-cols-2">
             <label className="block text-sm">
-              <span className="text-slate-600">Title</span>
+              <span className="text-slate-600">{t("title")}</span>
               <input
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                 value={form.title}
@@ -395,7 +397,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
               />
             </label>
             <label className="block text-sm">
-              <span className="text-slate-600">Slug</span>
+              <span className="text-slate-600">{t("slug")}</span>
               <input
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs"
                 value={form.slug}
@@ -405,7 +407,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
           </div>
 
           <label className="block text-sm">
-            <span className="text-slate-600">Description</span>
+            <span className="text-slate-600">{t("description")}</span>
             <textarea
               rows={4}
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
@@ -415,8 +417,8 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
           </label>
 
           <label className="block text-sm">
-            <span className="text-slate-600">Course video URL</span>
-            <p className="mb-1 text-xs text-slate-400">YouTube, Vimeo, or direct .mp4 URL. Shown on lesson pages for this course.</p>
+            <span className="text-slate-600">{t("course_video_url")}</span>
+            <p className="mb-1 text-xs text-slate-400">{t("youtube_vimeo_or_direct_mp4_url_shown_on_les")}</p>
             <input
               className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
               placeholder="https://www.youtube.com/watch?v=..."
@@ -427,7 +429,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
 
           <div className="grid gap-3 md:grid-cols-3">
             <label className="block text-sm">
-              <span className="text-slate-600">Capital stage</span>
+              <span className="text-slate-600">{t("capital_stage")}</span>
               <select
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                 value={form.readiness_focus}
@@ -441,7 +443,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
               </select>
             </label>
             <label className="block text-sm">
-              <span className="text-slate-600">Category</span>
+              <span className="text-slate-600">{t("category")}</span>
               <input
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                 value={form.category ?? ""}
@@ -449,7 +451,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
               />
             </label>
             <label className="block text-sm">
-              <span className="text-slate-600">Difficulty</span>
+              <span className="text-slate-600">{t("difficulty")}</span>
               <select
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                 value={(form.difficulty ?? "intermediate") as LearningDifficulty}
@@ -466,7 +468,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
 
           <div className="grid gap-3 md:grid-cols-3">
             <label className="block text-sm">
-              <span className="text-slate-600">Content status</span>
+              <span className="text-slate-600">{t("content_status")}</span>
               <select
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                 value={effectiveStatus}
@@ -481,7 +483,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
             </label>
 
             <label className="block text-sm">
-              <span className="text-slate-600">Published</span>
+              <span className="text-slate-600">{t("published")}</span>
               <select
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                 value={isPublishedDerived ? "yes" : "no"}
@@ -493,7 +495,7 @@ export function AdminCourseEditor({ mode, initial, onSaved }: Props) {
             </label>
 
             <label className="block text-sm">
-              <span className="text-slate-600">Order</span>
+              <span className="text-slate-600">{t("order")}</span>
               <input
                 type="number"
                 className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"

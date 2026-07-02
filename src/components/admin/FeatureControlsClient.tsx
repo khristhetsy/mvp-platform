@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SlidersHorizontal, Check } from "lucide-react";
 import {
@@ -13,6 +14,7 @@ import {
 const AUDIENCE_LABELS: Record<string, string> = { founder: "Founders", investor: "Investors", admin: "Admin" };
 
 export function FeatureControlsClient() {
+  const t = useTranslations("adminCmp");
   const [matrix, setMatrix] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -72,7 +74,7 @@ export function FeatureControlsClient() {
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Admin · Internal</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">{t("admin_internal")}</p>
         <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold text-slate-950">
           <SlidersHorizontal className="h-6 w-6 text-[var(--gold)]" strokeWidth={1.75} aria-hidden /> Feature controls
         </h1>
@@ -86,13 +88,13 @@ export function FeatureControlsClient() {
       {msg ? <p className={`rounded-lg border px-3 py-2 text-sm ${msg.startsWith("Saved") ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-red-200 bg-red-50 text-red-800"}`}>{msg}</p> : null}
 
       {loading ? (
-        <p className="text-sm text-slate-500">Loading…</p>
+        <p className="text-sm text-slate-500">{t("loading")}</p>
       ) : (
         <>
           <p className="text-xs text-slate-500">{enabledCount} of {totalCount} feature toggles enabled across all roles.</p>
           <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
             <div className="flex items-center border-b border-slate-100 bg-slate-50/60 px-4 py-2.5">
-              <span className="flex-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Feature</span>
+              <span className="flex-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("feature")}</span>
               {FEATURE_AUDIENCES.map((a) => (
                 <span key={a} className="w-24 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-400">{AUDIENCE_LABELS[a]}</span>
               ))}

@@ -1,4 +1,5 @@
 import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { useTranslations } from "next-intl";
 import { WorkflowProgressRail } from "@/components/ui/WorkflowProgressRail";
 import { SpvComplianceNotice } from "@/components/SpvComplianceNotice";
 import {
@@ -36,6 +37,7 @@ export function FounderSpvStatusPanel({
   closingSummaryBySpv?: Record<string, { stageLabel: string; readinessPct: number }>;
   executionSummaryBySpv?: Record<string, { executionPct: number; signerPct: number; nextStep: string }>;
 }>) {
+  const t = useTranslations("sharedCmp");
   const bySpv = new Map<string, SpvParticipationRecord[]>();
   for (const row of participations) {
     const list = bySpv.get(row.spv_opportunity_id) ?? [];
@@ -52,11 +54,11 @@ export function FounderSpvStatusPanel({
         showClosingNotice
       />
       <WorkspacePanel
-        title="SPV opportunity status"
-        subtitle="Admin-managed SPV workflow — founders cannot create legal SPVs in Phase 1"
+        title={t("spv_opportunity_status")}
+        subtitle={t("admin_managed_spv_workflow_founders_cannot_c")}
       >
         {opportunities.length === 0 ? (
-          <p className="text-sm text-slate-600">No SPV opportunities have been created for your company yet.</p>
+          <p className="text-sm text-slate-600">{t("no_spv_opportunities_have_been_created_for_y")}</p>
         ) : (
           <div className="space-y-4">
             {opportunities.map((spv) => {

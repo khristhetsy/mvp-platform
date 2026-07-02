@@ -1,6 +1,8 @@
+import { useTranslations } from "next-intl";
 import type { SanitizedAutomationRunMetadata } from "@/lib/automation/admin-console-types";
 
 export function AutomationFailurePanel({ metadata }: Readonly<{ metadata: SanitizedAutomationRunMetadata }>) {
+  const t = useTranslations("adminCmp");
   const failedRules = (metadata.results ?? []).filter((r) => r.status === "failed");
   const errors = metadata.errors ?? [];
 
@@ -8,7 +10,7 @@ export function AutomationFailurePanel({ metadata }: Readonly<{ metadata: Saniti
 
   return (
     <div className="rounded-xl border border-red-200/80 bg-red-50/40 px-4 py-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-red-900">Failures</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-red-900">{t("failures")}</p>
       <ul className="mt-2 space-y-1 text-xs text-red-950">
         {errors.map((err) => (
           <li key={`${err.step}-${err.message}`}>

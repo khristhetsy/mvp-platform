@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ChevronRight, LayoutGrid, Flame } from "lucide-react";
 import type { ReadinessTrend } from "@/lib/investor/metric-trends";
@@ -10,10 +11,11 @@ import {
 } from "@/lib/investor/private-market";
 
 function Sparkline({ trend }: { trend?: ReadinessTrend | null }) {
+  const t = useTranslations("investorCmp");
   const pts = trend?.sparkline ?? [];
   if (pts.length < 2 || trend?.delta == null) {
     return (
-      <span className="font-mono text-xs text-slate-300" title="Trend builds as daily snapshots accrue">
+      <span className="font-mono text-xs text-slate-300" title={t("trend_builds_as_daily_snapshots_accrue")}>
         —
       </span>
     );
@@ -74,6 +76,7 @@ function dealHref(deal: PrivateMarketDeal) {
 export function InvestorPrivateMarketBoard({
   deals,
 }: Readonly<{ deals: PrivateMarketDeal[] }>) {
+  const t = useTranslations("investorCmp");
   const [sortBy, setSortBy] = useState<SortBy>("match");
 
   const sorted = useMemo(() => {
@@ -119,7 +122,7 @@ export function InvestorPrivateMarketBoard({
             <LayoutGrid className="h-4 w-4" />
           </span>
           <div>
-            <h2 className="text-[15px] font-semibold text-[var(--navy)]">Deals</h2>
+            <h2 className="text-[15px] font-semibold text-[var(--navy)]">{t("deals")}</h2>
             <p className="font-mono text-[11px] text-slate-400">
               {deals.length} diligence-ready · ranked to your thesis
             </p>
@@ -145,12 +148,12 @@ export function InvestorPrivateMarketBoard({
 
       {/* legend */}
       <div className="hidden grid-cols-[1.7fr_0.9fr_0.6fr_0.8fr_1.2fr_0.8fr_24px] gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 font-mono text-[9.5px] uppercase tracking-wide text-slate-400 md:grid">
-        <div>Symbol</div>
-        <div className="text-right">Readiness</div>
-        <div className="text-right">Trend</div>
-        <div className="text-right">Your match</div>
-        <div>Indicated interest</div>
-        <div>Sector</div>
+        <div>{t("symbol")}</div>
+        <div className="text-right">{t("readiness")}</div>
+        <div className="text-right">{t("trend")}</div>
+        <div className="text-right">{t("your_match")}</div>
+        <div>{t("indicated_interest")}</div>
+        <div>{t("sector")}</div>
         <div />
       </div>
 
@@ -178,7 +181,7 @@ export function InvestorPrivateMarketBoard({
                       {deal.symbol}
                     </span>
                     {deal.fillingFast ? (
-                      <span className="inline-flex items-center gap-0.5 rounded-md bg-[var(--teal-muted)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--teal)]" title="Indicated interest growing fast">
+                      <span className="inline-flex items-center gap-0.5 rounded-md bg-[var(--teal-muted)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--teal)]" title={t("indicated_interest_growing_fast")}>
                         <Flame className="h-2.5 w-2.5" /> Fast
                       </span>
                     ) : null}

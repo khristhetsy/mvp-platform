@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import { Mail, RefreshCw, ArrowLeft, ExternalLink, Inbox as InboxIcon, Send, FileText, Layers, AlertTriangle, Trash2, Plus, Loader2, Archive, RotateCcw, CornerUpLeft, Search, Reply, ReplyAll, Forward, Paperclip, MailOpen } from "lucide-react";
 import { EmailBody } from "./EmailBody";
@@ -53,6 +54,7 @@ function formatSize(bytes: number): string {
 }
 
 export function GmailInbox() {
+  const tI18n = useTranslations("sharedCmp");
   const pathname = usePathname();
   const [folder, setFolder] = useState<GmailFolder>("inbox");
   const [items, setItems] = useState<GmailItem[]>([]);
@@ -403,7 +405,7 @@ export function GmailInbox() {
                   <button type="button" onClick={startReplyAll} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"><ReplyAll className="h-3.5 w-3.5" /> Reply all</button>
                   <button type="button" onClick={startForward} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"><Forward className="h-3.5 w-3.5" /> Forward</button>
                 </div>
-                <textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} rows={3} placeholder="Quick reply…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
+                <textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} rows={3} placeholder={tI18n("quick_reply")} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
                 <div className="mt-2 flex justify-end">
                   <button type="button" onClick={() => void sendReply()} disabled={replying || !replyText.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50">{replying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CornerUpLeft className="h-4 w-4" />} {replying ? "Sending…" : "Reply"}</button>
                 </div>
@@ -413,7 +415,7 @@ export function GmailInbox() {
             <>
               <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2">
                 <Search className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search mail" className="w-full bg-transparent text-sm focus:outline-none" />
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tI18n("search_mail")} className="w-full bg-transparent text-sm focus:outline-none" />
               </div>
 
               <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -444,14 +446,14 @@ export function GmailInbox() {
                         </span>
                         <span className="hidden shrink-0 items-center gap-1 group-hover:flex">
                           {folder === "trash" ? (
-                            <button type="button" title="Restore to inbox" onClick={(e) => { e.stopPropagation(); void act(t.threadId, "untrash"); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#185FA5]"><RotateCcw className="h-4 w-4" /></button>
+                            <button type="button" title={tI18n("restore_to_inbox")} onClick={(e) => { e.stopPropagation(); void act(t.threadId, "untrash"); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#185FA5]"><RotateCcw className="h-4 w-4" /></button>
                           ) : folder === "spam" ? (
-                            <button type="button" title="Not spam" onClick={(e) => { e.stopPropagation(); void act(t.threadId, "notspam"); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#185FA5]"><RotateCcw className="h-4 w-4" /></button>
+                            <button type="button" title={tI18n("not_spam")} onClick={(e) => { e.stopPropagation(); void act(t.threadId, "notspam"); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#185FA5]"><RotateCcw className="h-4 w-4" /></button>
                           ) : (
                             <>
-                              <button type="button" title="Archive" onClick={(e) => { e.stopPropagation(); void act(t.threadId, "archive"); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700"><Archive className="h-4 w-4" /></button>
-                              <button type="button" title="Report spam" onClick={(e) => { e.stopPropagation(); void act(t.threadId, "spam"); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#B06A00]"><AlertTriangle className="h-4 w-4" /></button>
-                              <button type="button" title="Move to Trash" onClick={(e) => { e.stopPropagation(); void act(t.threadId, "trash"); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#A32D2D]"><Trash2 className="h-4 w-4" /></button>
+                              <button type="button" title={tI18n("archive")} onClick={(e) => { e.stopPropagation(); void act(t.threadId, "archive"); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700"><Archive className="h-4 w-4" /></button>
+                              <button type="button" title={tI18n("report_spam")} onClick={(e) => { e.stopPropagation(); void act(t.threadId, "spam"); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#B06A00]"><AlertTriangle className="h-4 w-4" /></button>
+                              <button type="button" title={tI18n("move_to_trash")} onClick={(e) => { e.stopPropagation(); void act(t.threadId, "trash"); }} className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-[#A32D2D]"><Trash2 className="h-4 w-4" /></button>
                             </>
                           )}
                         </span>

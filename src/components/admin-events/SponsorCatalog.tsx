@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -20,6 +21,7 @@ const CATEGORIES: { value: SponsorCategory; label: string }[] = [
 ];
 
 function AssignOwner({ sponsorId, hasOwner }: { sponsorId: string; hasOwner: boolean }) {
+  const t = useTranslations("adminCmp");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [assigned, setAssigned] = useState(hasOwner);
@@ -48,7 +50,7 @@ function AssignOwner({ sponsorId, hasOwner }: { sponsorId: string; hasOwner: boo
   if (assigned) {
     return (
       <div className="flex items-center gap-2">
-        <span className="text-xs text-emerald-700">Linked ✓</span>
+        <span className="text-xs text-emerald-700">{t("linked")}</span>
         <button onClick={() => assign(true)} disabled={busy} className="text-xs text-rose-600 hover:underline">
           Unlink
         </button>
@@ -61,7 +63,7 @@ function AssignOwner({ sponsorId, hasOwner }: { sponsorId: string; hasOwner: boo
       <input
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder="owner email"
+        placeholder={t("owner_email")}
         className="w-32 rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs"
       />
       <button
@@ -121,6 +123,7 @@ function LogoUpload({
 }
 
 export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[] }) {
+  const t = useTranslations("adminCmp");
   const [sponsors, setSponsors] = useState<Sponsor[]>(initialSponsors);
   const [name, setName] = useState("");
   const [website, setWebsite] = useState("");
@@ -173,7 +176,7 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
       <Link href="/admin/events" className="inline-flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]">
         <ArrowLeft className="h-4 w-4" /> All events
       </Link>
-      <h1 className="mt-3 text-xl font-semibold text-[var(--text-primary)]">Sponsor catalog</h1>
+      <h1 className="mt-3 text-xl font-semibold text-[var(--text-primary)]">{t("sponsor_catalog")}</h1>
       <p className="mt-1 text-sm text-[var(--text-muted)]">
         Create sponsors once, then attach them to any event with a placement.
       </p>
@@ -182,10 +185,10 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
 
       <form onSubmit={create} className="mt-5 grid gap-3 rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
         <div className="grid grid-cols-2 gap-3">
-          <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Sponsor name" className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
+          <input required value={name} onChange={(e) => setName(e.target.value)} placeholder={t("sponsor_name")} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
           <input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://website (optional)" className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
         </div>
-        <input value={blurb} onChange={(e) => setBlurb(e.target.value)} placeholder="One-line blurb (optional)" className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
+        <input value={blurb} onChange={(e) => setBlurb(e.target.value)} placeholder={t("one_line_blurb_optional")} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
         <div className="grid grid-cols-3 gap-3">
           <select value={tier} onChange={(e) => setTier(e.target.value as SponsorTier)} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm">
             {TIERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -211,7 +214,7 @@ export function SponsorCatalog({ initialSponsors }: { initialSponsors: Sponsor[]
 
       <div className="mt-6 overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white">
         {sponsors.length === 0 ? (
-          <div className="px-5 py-12 text-center text-sm text-[var(--text-muted)]">No sponsors yet.</div>
+          <div className="px-5 py-12 text-center text-sm text-[var(--text-muted)]">{t("no_sponsors_yet")}</div>
         ) : (
           <table className="w-full text-sm">
             <thead>

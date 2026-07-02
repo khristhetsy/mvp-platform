@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AdminSubscriptionSummary } from "@/components/AdminSubscriptionSummary";
@@ -64,6 +65,7 @@ function formatDate(value: string | null) {
 }
 
 export function AdminCompanyCard({ company }: Props) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const { recordAction, recordApiResult } = useAdminActionHealthSafe();
   const [loading, setLoading] = useState<string | null>(null);
@@ -395,7 +397,7 @@ export function AdminCompanyCard({ company }: Props) {
             {company.founder_name} · {company.founder_email}
           </p>
           <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Founder onboarding</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{t("founder_onboarding")}</p>
             <p className="mt-2 text-xs text-slate-600">
               Progress: <strong>{company.founder_onboarding_percent}%</strong>
               {company.founder_onboarding_completed_at
@@ -404,7 +406,7 @@ export function AdminCompanyCard({ company }: Props) {
             </p>
           </div>
           <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Investor matching</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{t("investor_matching")}</p>
             <p className="mt-2 text-xs text-slate-600">
               {company.investor_match_high_count > 0 ? (
                 <>
@@ -417,7 +419,7 @@ export function AdminCompanyCard({ company }: Props) {
             </p>
           </div>
           <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Learning progression</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{t("learning_progression")}</p>
             <p className="mt-2 text-xs text-slate-600">
               Completion: <strong>{company.founder_learning_percent}%</strong> ·{" "}
               <strong>{company.founder_learning_modules_engaged}</strong> modules engaged
@@ -433,7 +435,7 @@ export function AdminCompanyCard({ company }: Props) {
             </p>
           </div>
           <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Remediation action plan</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{t("remediation_action_plan")}</p>
             <p className="mt-2 text-xs text-slate-600">
               {company.founder_remediation_active > 0 ? (
                 <>
@@ -446,7 +448,7 @@ export function AdminCompanyCard({ company }: Props) {
             </p>
           </div>
           <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Founder subscription</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{t("founder_subscription")}</p>
             <div className="mt-2">
               <AdminSubscriptionSummary
                 subscription={company.founder_subscription}
@@ -463,7 +465,7 @@ export function AdminCompanyCard({ company }: Props) {
         <div className="flex flex-col gap-3">
           {error ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              <p className="font-semibold">Action failed</p>
+              <p className="font-semibold">{t("action_failed")}</p>
               <p className="mt-1 whitespace-pre-wrap">{error}</p>
               {errorStatus ? <p className="mt-1 text-xs text-red-600">HTTP status: {errorStatus}</p> : null}
               {lastResponseBody ? (
@@ -561,7 +563,7 @@ export function AdminCompanyCard({ company }: Props) {
                   ? "bg-amber-100 text-amber-800 border border-amber-300"
                   : "border border-slate-300 text-slate-700"
               }`}
-              title="Sample companies are hidden from all public surfaces and can't be published."
+              title={t("sample_companies_are_hidden_from_all_public")}
             >
               {loading === "toggle_sample"
                 ? "Saving..."
@@ -603,10 +605,10 @@ export function AdminCompanyCard({ company }: Props) {
       {showCompanyDetails ? (
         <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">
           <p>
-            <span className="font-semibold">Company ID:</span> {company.id}
+            <span className="font-semibold">{t("company_id")}</span> {company.id}
           </p>
           <p className="mt-2">
-            <span className="font-semibold">Review status:</span>{" "}
+            <span className="font-semibold">{t("review_status")}</span>{" "}
             <CompanyStatusBadge
               reviewStatus={reviewStatus}
               isPublished={isPublished}
@@ -616,11 +618,11 @@ export function AdminCompanyCard({ company }: Props) {
           </p>
           {company.slug ? (
             <p className="mt-2">
-              <span className="font-semibold">Marketplace slug:</span> {company.slug}
+              <span className="font-semibold">{t("marketplace_slug")}</span> {company.slug}
             </p>
           ) : null}
           <p className="mt-2">
-            <span className="font-semibold">Description:</span>{" "}
+            <span className="font-semibold">{t("description")}</span>{" "}
             {company.business_description ?? "No description provided."}
           </p>
         </div>
@@ -628,10 +630,10 @@ export function AdminCompanyCard({ company }: Props) {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Admin feedback</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">{t("admin_feedback")}</h3>
           <textarea
             className="mt-3 min-h-32 w-full rounded-2xl border border-slate-300 p-4 text-sm"
-            placeholder="Add analyst or admin review notes..."
+            placeholder={t("add_analyst_or_admin_review_notes")}
             value={feedback}
             onChange={(event) => setFeedback(event.target.value)}
           />
@@ -646,11 +648,11 @@ export function AdminCompanyCard({ company }: Props) {
         </div>
 
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Documents</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">{t("documents")}</h3>
           {showDocuments || company.documents.length <= 3 ? (
             <div className="mt-3 divide-y divide-slate-100">
               {company.documents.length === 0 ? (
-                <p className="py-3 text-sm text-slate-500">No documents uploaded.</p>
+                <p className="py-3 text-sm text-slate-500">{t("no_documents_uploaded")}</p>
               ) : (
                 company.documents.map((document) => (
                   <div key={document.id} className="flex items-center justify-between gap-3 py-3 text-sm">

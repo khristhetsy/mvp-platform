@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { FounderVideoCaptionsPanel } from "@/components/FounderVideoCaptionsPanel";
 import { FounderVideoScriptPanel } from "@/components/FounderVideoScriptPanel";
 import { FounderVideoSlidesPanel } from "@/components/FounderVideoSlidesPanel";
@@ -54,6 +55,7 @@ export function FounderAIVideoLesson({
   initialPlaybackUrl: string | null;
   viewOnly?: boolean;
 }>) {
+  const t = useTranslations("sharedCmp");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [asset, setAsset] = useState<FounderLessonVideoAssetRecord | null>(initialAsset);
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(initialPlaybackUrl);
@@ -236,13 +238,13 @@ export function FounderAIVideoLesson({
         <div className="border-b border-slate-100 px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-sm font-semibold text-slate-900">Video Lesson</p>
+              <p className="text-sm font-semibold text-slate-900">{t("video_lesson")}</p>
               <p className="mt-0.5 text-[11px] leading-5 text-slate-500">{VIDEO_LESSON_DISCLAIMER}</p>
             </div>
             {canPlayVideo ? (
-              <StatusBadge label="Video ready" status="success" dot />
+              <StatusBadge label={t("video_ready")} status="success" dot />
             ) : (
-              <StatusBadge label="Coming soon" status="neutral" dot />
+              <StatusBadge label={t("coming_soon")} status="neutral" dot />
             )}
           </div>
         </div>
@@ -290,7 +292,7 @@ export function FounderAIVideoLesson({
       <div className="border-b border-slate-100 px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-sm font-semibold text-slate-900">AI Video Lesson</p>
+            <p className="text-sm font-semibold text-slate-900">{t("ai_video_lesson")}</p>
             <p className="mt-1 text-[11px] leading-5 text-slate-500">{VIDEO_LESSON_DISCLAIMER}</p>
           </div>
           <StatusBadge label={statusLabel(renderStatus)} status={statusVariant(renderStatus)} dot />
@@ -326,7 +328,7 @@ export function FounderAIVideoLesson({
           <button
             type="button"
             disabled={busy || !hasScript}
-            title="Phase 2 AI render metadata only — does not produce an MP4"
+            title={t("phase_2_ai_render_metadata_only_does_not_pro")}
             onClick={() => void prepareVideoMetadata()}
             className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-60"
           >

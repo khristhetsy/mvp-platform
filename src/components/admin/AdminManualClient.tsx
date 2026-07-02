@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { BookOpen, Lock, Search, AlertTriangle } from "lucide-react";
 import { SOP_PARTS, sopAnchor } from "@/lib/admin-sop/types";
@@ -14,6 +15,7 @@ function permissionLabel(sop: SopEntry): string {
 }
 
 export function AdminManualClient({ entries }: { entries: Entry[] }) {
+  const t = useTranslations("adminCmp");
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
@@ -44,7 +46,7 @@ export function AdminManualClient({ entries }: { entries: Entry[] }) {
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Admin · Internal</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">{t("admin_internal")}</p>
         <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold text-slate-950">
           <BookOpen className="h-6 w-6 text-[var(--gold)]" strokeWidth={1.75} aria-hidden />
           Operations manual
@@ -61,7 +63,7 @@ export function AdminManualClient({ entries }: { entries: Entry[] }) {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search procedures…"
+          placeholder={t("search_procedures")}
           className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm focus:border-[var(--blue)] focus:outline-none"
         />
       </div>
@@ -84,7 +86,7 @@ export function AdminManualClient({ entries }: { entries: Entry[] }) {
         {/* Procedures */}
         <div className="space-y-6">
           {activeParts.length === 0 ? (
-            <p className="text-sm text-slate-500">No procedures match your search.</p>
+            <p className="text-sm text-slate-500">{t("no_procedures_match_your_search")}</p>
           ) : (
             activeParts.map((part) => (
               <section key={part.id} id={`part-${part.id}`} className="scroll-mt-4">
@@ -106,7 +108,7 @@ export function AdminManualClient({ entries }: { entries: Entry[] }) {
                         </div>
                         <div className="flex shrink-0 flex-wrap items-center gap-1.5">
                           {sop.planned ? (
-                            <span className="rounded-md bg-[#E6F1FB] px-2 py-0.5 text-[11px] font-medium text-[#0C447C]">Planned</span>
+                            <span className="rounded-md bg-[#E6F1FB] px-2 py-0.5 text-[11px] font-medium text-[#0C447C]">{t("planned")}</span>
                           ) : null}
                           <span
                             className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium ${
@@ -127,12 +129,12 @@ export function AdminManualClient({ entries }: { entries: Entry[] }) {
 
                       {sop.behindScenes ? (
                         <p className="mt-3 text-xs text-slate-500">
-                          <span className="font-semibold text-slate-600">Behind the scenes:</span> {sop.behindScenes}
+                          <span className="font-semibold text-slate-600">{t("behind_the_scenes")}</span> {sop.behindScenes}
                         </p>
                       ) : null}
                       {sop.reversibility ? (
                         <p className="mt-1 text-xs text-slate-500">
-                          <span className="font-semibold text-slate-600">Reversibility:</span> {sop.reversibility}
+                          <span className="font-semibold text-slate-600">{t("reversibility")}</span> {sop.reversibility}
                         </p>
                       ) : null}
 

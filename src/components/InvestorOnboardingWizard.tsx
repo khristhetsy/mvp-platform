@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { z } from "zod";
 import { CONTACT_PREFERENCES, INVESTOR_TYPES, type InvestorProfileRecord } from "@/lib/investor/types";
@@ -29,6 +30,7 @@ export function InvestorOnboardingWizard({
   investorProfile: InvestorProfileRecord;
   profileName: string;
 }>) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const { getError, inputCls, validate, setApiErrors, clearError } = useFormValidation();
 
@@ -142,7 +144,7 @@ export function InvestorOnboardingWizard({
 
       {investorProfile.admin_feedback ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <span className="font-semibold">Admin feedback:</span> {investorProfile.admin_feedback}
+          <span className="font-semibold">{t("admin_feedback_2")}</span> {investorProfile.admin_feedback}
         </p>
       ) : null}
 
@@ -157,7 +159,7 @@ export function InvestorOnboardingWizard({
       ) : null}
 
       <fieldset disabled={isPending || isApproved} className="grid gap-6 disabled:opacity-70">
-        <FormField label="Investor type" error={getError("investor_type")} required>
+        <FormField label={t("investor_type")} error={getError("investor_type")} required>
           <select
             className={`${BASE_INPUT} ${inputCls("investor_type")}`}
             value={investorType}
@@ -172,37 +174,37 @@ export function InvestorOnboardingWizard({
           </select>
         </FormField>
 
-        <FormField label="Individual / firm name" error={getError("firm_name")}>
+        <FormField label={t("individual_firm_name")} error={getError("firm_name")}>
           <input
             className={`${BASE_INPUT} ${inputCls("firm_name")}`}
             value={firmName}
             onChange={(e) => { setFirmName(e.target.value); clearError("firm_name"); }}
-            placeholder="Fund name or individual investing entity"
+            placeholder={t("fund_name_or_individual_investing_entity")}
           />
         </FormField>
 
         <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-4">
           <div>
-            <p className="text-sm font-semibold text-slate-900">Address</p>
+            <p className="text-sm font-semibold text-slate-900">{t("address")}</p>
             <p className="text-xs text-slate-500">Helps founders assess geographic fit and supports verification. Country is used for matching.</p>
           </div>
-          <FormField label="Street address" error={getError("address_line1")}>
+          <FormField label={t("street_address")} error={getError("address_line1")}>
             <input
               className={`${BASE_INPUT} ${inputCls("address_line1")}`}
               value={addressLine1}
               onChange={(e) => { setAddressLine1(e.target.value); clearError("address_line1"); }}
-              placeholder="123 Market St, Suite 400"
+              placeholder={t("123_market_st_suite_400")}
             />
           </FormField>
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="City" error={getError("address_city")}>
+            <FormField label={t("city")} error={getError("address_city")}>
               <input
                 className={`${BASE_INPUT} ${inputCls("address_city")}`}
                 value={addressCity}
                 onChange={(e) => { setAddressCity(e.target.value); clearError("address_city"); }}
               />
             </FormField>
-            <FormField label="State / Province" error={getError("address_state")}>
+            <FormField label={t("state_province")} error={getError("address_state")}>
               <input
                 className={`${BASE_INPUT} ${inputCls("address_state")}`}
                 value={addressState}
@@ -211,26 +213,26 @@ export function InvestorOnboardingWizard({
             </FormField>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Postal code" error={getError("address_postal_code")}>
+            <FormField label={t("postal_code")} error={getError("address_postal_code")}>
               <input
                 className={`${BASE_INPUT} ${inputCls("address_postal_code")}`}
                 value={addressPostal}
                 onChange={(e) => { setAddressPostal(e.target.value); clearError("address_postal_code"); }}
               />
             </FormField>
-            <FormField label="Country" error={getError("address_country")} hint="Used for founder matching">
+            <FormField label={t("country")} error={getError("address_country")} hint="Used for founder matching">
               <input
                 className={`${BASE_INPUT} ${inputCls("address_country")}`}
                 value={addressCountry}
                 onChange={(e) => { setAddressCountry(e.target.value); clearError("address_country"); }}
-                placeholder="United States"
+                placeholder={t("united_states")}
               />
             </FormField>
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="Check size min (USD)" error={getError("check_size_min")}>
+          <FormField label={t("check_size_min_usd")} error={getError("check_size_min")}>
             <input
               type="number"
               min={0}
@@ -239,7 +241,7 @@ export function InvestorOnboardingWizard({
               onChange={(e) => { setCheckSizeMin(e.target.value); clearError("check_size_min"); }}
             />
           </FormField>
-          <FormField label="Check size max (USD)" error={getError("check_size_max")}>
+          <FormField label={t("check_size_max_usd")} error={getError("check_size_max")}>
             <input
               type="number"
               min={0}
@@ -250,7 +252,7 @@ export function InvestorOnboardingWizard({
           </FormField>
         </div>
 
-        <FormField label="Preferred sectors" error={getError("preferred_sectors")} required hint="Comma-separated — e.g. FinTech, SaaS, HealthTech">
+        <FormField label={t("preferred_sectors")} error={getError("preferred_sectors")} required hint="Comma-separated — e.g. FinTech, SaaS, HealthTech">
           <input
             className={`${BASE_INPUT} ${inputCls("preferred_sectors")}`}
             value={preferredSectors}
@@ -258,7 +260,7 @@ export function InvestorOnboardingWizard({
           />
         </FormField>
 
-        <FormField label="Preferred geographies" error={getError("preferred_geographies")} required hint="Comma-separated — e.g. US, Europe, LATAM">
+        <FormField label={t("preferred_geographies")} error={getError("preferred_geographies")} required hint="Comma-separated — e.g. US, Europe, LATAM">
           <input
             className={`${BASE_INPUT} ${inputCls("preferred_geographies")}`}
             value={preferredGeographies}
@@ -266,16 +268,16 @@ export function InvestorOnboardingWizard({
           />
         </FormField>
 
-        <FormField label="Investment stage preference" error={getError("preferred_stages")} required hint="Comma-separated — e.g. Pre-seed, Seed, Series A">
+        <FormField label={t("investment_stage_preference")} error={getError("preferred_stages")} required hint="Comma-separated — e.g. Pre-seed, Seed, Series A">
           <input
             className={`${BASE_INPUT} ${inputCls("preferred_stages")}`}
             value={preferredStages}
             onChange={(e) => { setPreferredStages(e.target.value); clearError("preferred_stages"); }}
-            placeholder="Pre-seed, Seed, Series A"
+            placeholder={t("pre_seed_seed_series_a")}
           />
         </FormField>
 
-        <FormField label="Investment thesis" error={getError("investment_thesis")} required hint="Min 20 characters, max 5000">
+        <FormField label={t("investment_thesis")} error={getError("investment_thesis")} required hint="Min 20 characters, max 5000">
           <textarea
             className={`min-h-28 ${BASE_INPUT} ${inputCls("investment_thesis")}`}
             value={investmentThesis}
@@ -283,7 +285,7 @@ export function InvestorOnboardingWizard({
           />
         </FormField>
 
-        <FormField label="Contact preference" error={getError("contact_preference")} required>
+        <FormField label={t("contact_preference")} error={getError("contact_preference")} required>
           <select
             className={`${BASE_INPUT} ${inputCls("contact_preference")}`}
             value={contactPreference}

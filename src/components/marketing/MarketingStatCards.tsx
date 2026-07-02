@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 export interface MarketingStatCardData {
   totalContacts: number;
@@ -75,6 +76,7 @@ function BarRow({ name, value, displayVal, color, max }: { name: string; value: 
 }
 
 export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
+  const t = useTranslations("sharedCmp");
   const [open, setOpen] = useState<MetricKey | null>(null);
 
   const { totalContacts, newContacts7d, sent, opened, clicked, openRate, clickRate, activeCampaigns, campaigns } = data;
@@ -156,7 +158,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
             <div style={{ fontSize: 11, marginTop: 4, color: s.good ? "#0F6E56" : "#993C1D" }}>
               {s.good ? "↑" : "↓"} {s.delta}
             </div>
-            <div style={{ fontSize: 10, color: "#534AB7", marginTop: 6, opacity: 0.7 }}>Click for full report →</div>
+            <div style={{ fontSize: 10, color: "#534AB7", marginTop: 6, opacity: 0.7 }}>{t("click_for_full_report")}</div>
           </button>
         ))}
       </div>
@@ -180,19 +182,19 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#0c2340" }}>Total contacts — {totalContacts.toLocaleString()}</div>
-                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>All time · mail.myicfos.com</div>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{t("all_time_mail_myicfos_com")}</div>
                   </div>
                   <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#6b7280", fontSize: 14 }}>✕</button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
-                  <StatBox val={totalContacts.toLocaleString()} label="Total contacts" />
-                  <StatBox val={`+${newContacts7d}`} label="Added this week" />
-                  <StatBox val={`${deliverability}% (est.)`} label="Deliverability" />
+                  <StatBox val={totalContacts.toLocaleString()} label={t("total_contacts")} />
+                  <StatBox val={`+${newContacts7d}`} label={t("added_this_week")} />
+                  <StatBox val={`${deliverability}% (est.)`} label={t("deliverability")} />
                 </div>
 
                 {campaignRows.length > 0 && (
                   <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Sends per campaign</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{t("sends_per_campaign")}</div>
                     {campaignRows.map((c) => (
                       <BarRow key={c.name} name={c.name} value={c.sent} displayVal={c.sent.toLocaleString()} color="#378ADD" max={maxSent} />
                     ))}
@@ -206,7 +208,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
                 </div>
 
                 <CmoBox
-                  title="Grow and protect your contact list"
+                  title={t("grow_and_protect_your_contact_list")}
                   text="List quality directly determines deliverability. Here's how to scale without hurting domain reputation:"
                   actions={[
                     "<strong style='color:#fff'>Segment by investor type immediately.</strong> Tag contacts as family office, VC, angel, or fund of funds. Segmented lists see 26% higher open rates and drastically lower unsubscribes.",
@@ -223,19 +225,19 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#0c2340" }}>Emails sent — {sent.toLocaleString()}</div>
-                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>Last 30 days · all campaigns</div>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{t("last_30_days_all_campaigns")}</div>
                   </div>
                   <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#6b7280", fontSize: 14 }}>✕</button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
-                  <StatBox val={sent.toLocaleString()} label="Sent this month" />
-                  <StatBox val={`${deliverability}% (est.)`} label="Delivery rate" />
-                  <StatBox val={activeCampaigns.toString()} label="Active campaigns" />
+                  <StatBox val={sent.toLocaleString()} label={t("sent_this_month")} />
+                  <StatBox val={`${deliverability}% (est.)`} label={t("delivery_rate")} />
+                  <StatBox val={activeCampaigns.toString()} label={t("active_campaigns")} />
                 </div>
 
                 {campaignRows.length > 0 && (
                   <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Volume by campaign</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{t("volume_by_campaign")}</div>
                     {campaignRows.map((c) => (
                       <BarRow key={c.name} name={c.name} value={c.sent} displayVal={c.sent.toLocaleString()} color="#378ADD" max={maxSent} />
                     ))}
@@ -249,7 +251,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
                 </div>
 
                 <CmoBox
-                  title="Scale volume sustainably — protect list health"
+                  title={t("scale_volume_sustainably_protect_list_health")}
                   text="Fast-growing send volume can hurt your domain if list hygiene doesn't keep pace:"
                   actions={[
                     "<strong style='color:#fff'>Set up automatic hard-bounce suppression.</strong> Any email that hard-bounces should never receive another send. This protects your domain score and avoids spam flags.",
@@ -266,19 +268,19 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#0c2340" }}>Open rate — {openRate.toFixed(1)}%</div>
-                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>Last 30 days · all campaigns · mail.myicfos.com</div>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{t("last_30_days_all_campaigns_mail_myicfos_com")}</div>
                   </div>
                   <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#6b7280", fontSize: 14 }}>✕</button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
-                  <StatBox val={`${openRate.toFixed(1)}%`} label="Avg open rate" />
-                  <StatBox val={sent.toLocaleString()} label="Emails sent" />
-                  <StatBox val={opened.toLocaleString()} label="Unique opens" />
+                  <StatBox val={`${openRate.toFixed(1)}%`} label={t("avg_open_rate")} />
+                  <StatBox val={sent.toLocaleString()} label={t("emails_sent")} />
+                  <StatBox val={opened.toLocaleString()} label={t("unique_opens")} />
                 </div>
 
                 {campaignRows.length > 0 && (
                   <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Open rate by campaign</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{t("open_rate_by_campaign")}</div>
                     {campaignRows.map((c, i) => {
                       const colors = ["#534AB7", "#7C76D0", "#AFAAE3", "#CFCDF2", "#DDDCF8"];
                       return (
@@ -323,19 +325,19 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 600, color: "#0c2340" }}>Click rate — {clickRate.toFixed(1)}%</div>
-                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>Last 30 days · all campaigns</div>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{t("last_30_days_all_campaigns")}</div>
                   </div>
                   <button onClick={() => setOpen(null)} style={{ border: "none", background: "#f5f6f8", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", color: "#6b7280", fontSize: 14 }}>✕</button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
-                  <StatBox val={`${clickRate.toFixed(1)}%`} label="Click rate" />
-                  <StatBox val={opened.toLocaleString()} label="Unique opens" />
-                  <StatBox val={clicked.toLocaleString()} label="Total clicks" />
+                  <StatBox val={`${clickRate.toFixed(1)}%`} label={t("click_rate")} />
+                  <StatBox val={opened.toLocaleString()} label={t("unique_opens")} />
+                  <StatBox val={clicked.toLocaleString()} label={t("total_clicks")} />
                 </div>
 
                 {campaignRows.length > 0 && (
                   <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Click rate by campaign</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{t("click_rate_by_campaign")}</div>
                     {campaignRows.map((c, i) => {
                       const colors = ["#1D9E75", "#4FC898", "#8de0bf", "#bff0df", "#d5f6ec"];
                       return (

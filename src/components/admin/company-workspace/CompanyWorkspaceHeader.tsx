@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -26,6 +27,7 @@ function reviewStatusToBadge(status: string | null): "neutral" | "info" | "succe
 }
 
 export function CompanyWorkspaceHeader({ data }: Readonly<{ data: AdminCompanyWorkspaceData }>) {
+  const t = useTranslations("adminCmp");
   const { company, founder, readiness } = data;
   const companyId = company.id;
   const isLive = company.is_published && company.marketplace_visible;
@@ -33,7 +35,7 @@ export function CompanyWorkspaceHeader({ data }: Readonly<{ data: AdminCompanyWo
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Company workspace"
+        eyebrow={t("company_workspace")}
         title={company.company_name}
         description={company.industry ? `${company.industry} · Operational command surface` : "Operational command surface"}
         metadata={[
@@ -116,14 +118,14 @@ export function CompanyWorkspaceHeader({ data }: Readonly<{ data: AdminCompanyWo
 
       <MetricGrid>
         <MetricCard
-          label="Readiness score"
+          label={t("readiness_score")}
           value={readiness.latestScore != null ? String(readiness.latestScore) : "—"}
           detail={readiness.milestoneLabel}
           accent="indigo"
           href={`/admin/companies/${companyId}`}
         />
         <MetricCard
-          label="Open remediation"
+          label={t("open_remediation")}
           value={String(readiness.remediation.active)}
           detail={`${readiness.remediation.highPriorityOpen} high priority`}
           accent="violet"
@@ -131,14 +133,14 @@ export function CompanyWorkspaceHeader({ data }: Readonly<{ data: AdminCompanyWo
           href={buildCompanyFilteredHref("/admin/companies", companyId, { queue: "remediation" })}
         />
         <MetricCard
-          label="Investor interests"
+          label={t("investor_interests_2")}
           value={String(data.investorActivity.interests)}
           detail={`${data.investorActivity.introRequests} intro requests`}
           accent="blue"
           href={buildCompanyFilteredHref("/admin/crm", companyId)}
         />
         <MetricCard
-          label="Open compliance"
+          label={t("open_compliance")}
           value={String(data.compliance.openCount)}
           detail={`${data.compliance.criticalCount} critical`}
           accent="slate"

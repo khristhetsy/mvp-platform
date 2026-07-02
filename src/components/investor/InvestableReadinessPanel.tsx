@@ -9,6 +9,7 @@
  */
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { READINESS_FACTORS } from "@/lib/ai/readiness-scoring";
 import type { FactorKey, FactorScore } from "@/lib/ai/readiness-scoring";
 
@@ -98,6 +99,7 @@ function FactorModal({
   score: FactorScore;
   onClose: () => void;
 }) {
+  const t = useTranslations("investorCmp");
   const def = READINESS_FACTORS.find((f) => f.key === factorKey)!;
   const color = FACTOR_COLORS[factorKey] ?? "#378ADD";
   const tag = FACTOR_TAGS[def.tag] ?? { bg: "#F1F5F9", text: "#475569" };
@@ -147,7 +149,7 @@ function FactorModal({
 
           {/* AI Analysis */}
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">AI Analysis</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{t("ai_analysis")}</p>
             <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-600">
               {score.aiSummary || "No analysis available."}
             </div>
@@ -156,7 +158,7 @@ function FactorModal({
           {/* Sub-scores */}
           {score.subScores.length > 0 && (
             <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Sub-scores</p>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{t("sub_scores")}</p>
               <div className="space-y-2">
                 {score.subScores.map((s) => (
                   <div key={s.label} className="flex items-center gap-3">
@@ -823,6 +825,7 @@ function OverviewTab({
   displayScore: number;
   mainColor: string;
 }) {
+  const t = useTranslations("investorCmp");
   return (
     <>
       <div className="px-4 py-3">
@@ -854,7 +857,7 @@ function OverviewTab({
         })}
       </div>
       <div className="border-t border-slate-100 px-6 py-4 flex items-center justify-between">
-        <span className="text-sm font-medium text-slate-700">Total</span>
+        <span className="text-sm font-medium text-slate-700">{t("total")}</span>
         <span className="text-lg font-semibold" style={{ color: mainColor }}>
           {displayScore}
           <span className="ml-1 text-sm font-normal text-slate-400">/ 100</span>
@@ -865,6 +868,7 @@ function OverviewTab({
 }
 
 function RecommendationCard({ rec, index }: { rec: Recommendation; index: number }) {
+  const t = useTranslations("investorCmp");
   const [open, setOpen] = useState(index === 0);
 
   const priorityConfig = {
@@ -902,13 +906,13 @@ function RecommendationCard({ rec, index }: { rec: Recommendation; index: number
 
           {/* Analyst note */}
           <div className="rounded-lg bg-indigo-50 border border-indigo-100 px-4 py-3">
-            <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-1">Why investors care</p>
+            <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-1">{t("why_investors_care")}</p>
             <p className="text-xs leading-relaxed text-indigo-800">{rec.analystNote}</p>
           </div>
 
           {/* Action steps */}
           <div>
-            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Action steps</p>
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">{t("action_steps")}</p>
             <ol className="space-y-2">
               {rec.steps.map((step, i) => (
                 <li key={i} className="flex gap-2.5 text-xs text-slate-600 leading-relaxed">
@@ -924,7 +928,7 @@ function RecommendationCard({ rec, index }: { rec: Recommendation; index: number
           {/* Resources */}
           {rec.resources.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Helpful resources</p>
+              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">{t("helpful_resources")}</p>
               <div className="flex flex-wrap gap-2">
                 {rec.resources.map((r, i) =>
                   r.url ? (
@@ -978,6 +982,7 @@ function RecommendationCard({ rec, index }: { rec: Recommendation; index: number
 }
 
 function RecommendationsTab({ factorScores }: { factorScores: Record<FactorKey, FactorScore> }) {
+  const t = useTranslations("investorCmp");
   const recs = buildRecommendations(factorScores);
 
   const high = recs.filter((r) => r.priority === "high");
@@ -988,8 +993,8 @@ function RecommendationsTab({ factorScores }: { factorScores: Record<FactorKey, 
     return (
       <div className="px-6 py-10 text-center">
         <p className="text-3xl">🎉</p>
-        <p className="mt-2 text-sm font-medium text-slate-700">No critical gaps found</p>
-        <p className="mt-1 text-xs text-slate-400">This company scores well across all factors.</p>
+        <p className="mt-2 text-sm font-medium text-slate-700">{t("no_critical_gaps_found")}</p>
+        <p className="mt-1 text-xs text-slate-400">{t("this_company_scores_well_across_all_factors")}</p>
       </div>
     );
   }
@@ -1010,19 +1015,20 @@ function RecommendationsTab({ factorScores }: { factorScores: Record<FactorKey, 
         Analyst-level guidance on each gap — click any item to expand action steps, investor context, and resources.
       </p>
       {/* eslint-disable-next-line react-hooks/static-components */}
-      <Section title="Critical — address before investor meetings" items={high} startIndex={0} />
+      <Section title={t("critical_address_before_investor_meetings")} items={high} startIndex={0} />
       {/* eslint-disable-next-line react-hooks/static-components */}
-      <Section title="Suggested improvements" items={medium} startIndex={high.length} />
+      <Section title={t("suggested_improvements")} items={medium} startIndex={high.length} />
       {/* eslint-disable-next-line react-hooks/static-components */}
-      <Section title="Nice to have" items={low} startIndex={high.length + medium.length} />
+      <Section title={t("nice_to_have")} items={low} startIndex={high.length + medium.length} />
     </div>
   );
 }
 
 function HistoryTab({ history }: { history: Array<{ score: number; scoredAt: string }> }) {
+  const t = useTranslations("investorCmp");
   if (history.length === 0) {
     return (
-      <div className="px-6 py-10 text-center text-sm text-slate-400">No score history yet.</div>
+      <div className="px-6 py-10 text-center text-sm text-slate-400">{t("no_score_history_yet")}</div>
     );
   }
 
@@ -1048,7 +1054,7 @@ function HistoryTab({ history }: { history: Array<{ score: number; scoredAt: str
 
   return (
     <div className="px-6 py-4 space-y-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Score over time</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t("score_over_time")}</p>
       <div className="overflow-hidden rounded-xl border border-slate-100 bg-slate-50 p-3">
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 120 }}>
           {/* Grid lines */}
@@ -1104,7 +1110,7 @@ function HistoryTab({ history }: { history: Array<{ score: number; scoredAt: str
                     year: "numeric", month: "short", day: "numeric",
                   })}
                 </p>
-                {i === 0 && <span className="text-xs font-medium text-indigo-500">Latest</span>}
+                {i === 0 && <span className="text-xs font-medium text-indigo-500">{t("latest")}</span>}
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-20 h-1.5 overflow-hidden rounded-full bg-slate-100">
@@ -1133,11 +1139,12 @@ function ComparisonTab({
   percentile: number | null;
   mainColor: string;
 }) {
+  const t = useTranslations("investorCmp");
   const diff = platformAvg !== null ? displayScore - platformAvg : null;
 
   return (
     <div className="px-6 py-4 space-y-5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Platform comparison</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{t("platform_comparison")}</p>
 
       {/* Percentile banner */}
       {percentile !== null && (
@@ -1154,11 +1161,11 @@ function ComparisonTab({
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-3 text-center">
           <p className="text-2xl font-semibold" style={{ color: mainColor }}>{displayScore}</p>
-          <p className="mt-0.5 text-xs text-slate-400">This company</p>
+          <p className="mt-0.5 text-xs text-slate-400">{t("this_company")}</p>
         </div>
         <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-3 text-center">
           <p className="text-2xl font-semibold text-slate-700">{platformAvg ?? "—"}</p>
-          <p className="mt-0.5 text-xs text-slate-400">Platform avg</p>
+          <p className="mt-0.5 text-xs text-slate-400">{t("platform_avg")}</p>
         </div>
         <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-3 text-center">
           {diff !== null ? (
@@ -1218,6 +1225,7 @@ export function InvestableReadinessPanel({
   platformAvg = null,
   percentile = null,
 }: Props) {
+  const t = useTranslations("investorCmp");
   const [activeKey, setActiveKey] = useState<FactorKey | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
 
@@ -1260,7 +1268,7 @@ export function InvestableReadinessPanel({
               <button
                 onClick={() => window.print()}
                 className="print:hidden rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
-                title="Export as PDF"
+                title={t("export_as_pdf")}
               >
                 ↓ PDF
               </button>
@@ -1319,7 +1327,7 @@ export function InvestableReadinessPanel({
 
       {/* Print-only: full factor list (always visible in PDF) */}
       <div className="hidden print:block mt-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Factor Breakdown</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">{t("factor_breakdown")}</p>
         {READINESS_FACTORS.map((f) => {
           const score = factorScores[f.key as FactorKey];
           if (!score) return null;

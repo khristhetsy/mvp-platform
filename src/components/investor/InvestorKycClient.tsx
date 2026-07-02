@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Clock, Upload, AlertTriangle, FileText, Loader2, ShieldCheck } from "lucide-react";
 import type { InvestorKycStatus } from "@/lib/investor/types";
@@ -58,6 +59,7 @@ export function InvestorKycClient({
   legalName: string | null;
   kycConsent: boolean;
 }>) {
+  const t = useTranslations("investorCmp");
   const router = useRouter();
   const [busyCode, setBusyCode] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -118,7 +120,7 @@ export function InvestorKycClient({
           <p className="mt-1 text-[13px] leading-6 opacity-90">{banner.body}</p>
           {kycStatus === "rejected" && kycFeedback ? (
             <p className="mt-3 rounded-xl border border-rose-200 bg-white/80 px-3 py-2 text-[13px] text-rose-900">
-              <span className="font-semibold">What to fix:</span> {kycFeedback}
+              <span className="font-semibold">{t("what_to_fix")}</span> {kycFeedback}
             </p>
           ) : null}
         </div>
@@ -137,7 +139,7 @@ export function InvestorKycClient({
             id="kyc-legal-name"
             value={legalName}
             onChange={(e) => setLegalName(e.target.value)}
-            placeholder="e.g. Jordan A. Investor"
+            placeholder={t("e_g_jordan_a_investor")}
             className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
           />
         </div>
@@ -153,9 +155,9 @@ export function InvestorKycClient({
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold text-slate-900">{item.label}</p>
                     {item.required ? (
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">Required</span>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">{t("required")}</span>
                     ) : (
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-400">Optional</span>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-400">{t("optional")}</span>
                     )}
                   </div>
                   <p className="mt-1 text-[13px] leading-6 text-slate-500">{item.description}</p>

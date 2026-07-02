@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { NotificationRecord } from "@/lib/notifications/types";
 
 function formatDate(value: string) {
@@ -14,6 +15,7 @@ function formatDate(value: string) {
 }
 
 export function NotificationsPanel() {
+  const t = useTranslations("sharedCmp");
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -62,7 +64,7 @@ export function NotificationsPanel() {
   }
 
   if (loading) {
-    return <p className="text-sm text-slate-500">Loading notifications…</p>;
+    return <p className="text-sm text-slate-500">{t("loading_notifications")}</p>;
   }
 
   if (error) {

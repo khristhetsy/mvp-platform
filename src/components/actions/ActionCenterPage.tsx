@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ActionAnalyticsStrip } from "@/components/actions/ActionAnalyticsStrip";
 import { FounderActionAnalyticsCards } from "@/components/actions/FounderActionAnalyticsCards";
 import { InvestorActionAnalyticsCards } from "@/components/actions/InvestorActionAnalyticsCards";
@@ -224,6 +225,7 @@ type ActionCenterPageProps = {
 };
 
 function ActionCenterContent({ role, title, description }: Readonly<ActionCenterPageProps>) {
+  const t = useTranslations("sharedCmp");
   const { filters, setFilters, setTab, clearFilters } = useActionCenterFilters();
   const [actions, setActions] = useState<NextBestAction[]>([]);
   const [needsAttention, setNeedsAttention] = useState<NextBestAction[]>([]);
@@ -383,7 +385,7 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search actions…"
+                placeholder={t("search_actions")}
                 className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-800 placeholder-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
               />
             </div>
@@ -451,7 +453,7 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
 
           {/* Priority list */}
           {loading ? (
-            <p className="text-sm text-slate-500">Loading actions…</p>
+            <p className="text-sm text-slate-500">{t("loading_actions")}</p>
           ) : error ? (
             <p className="text-sm text-red-700">{error}</p>
           ) : actions.length === 0 ? (
@@ -485,7 +487,7 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
           {scheduled ? <ActionCenterScheduledStrip scheduled={scheduled} /> : null}
 
           {workflowDependencies.length > 0 ? (
-            <WorkflowDependencyPanel dependencies={workflowDependencies} title="Workflow blockers" />
+            <WorkflowDependencyPanel dependencies={workflowDependencies} title={t("workflow_blockers")} />
           ) : null}
 
           <ActionTabs
@@ -506,8 +508,8 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
 
           {needsAttention.length > 0 && filters.tab === "active" ? (
             <section className="rounded-xl border border-rose-200/80 bg-rose-50/30 p-4">
-              <h3 className="text-sm font-semibold text-rose-950">Needs attention</h3>
-              <p className="mt-1 text-xs text-rose-800/90">Overdue, escalated, blocked, or critical workflow items.</p>
+              <h3 className="text-sm font-semibold text-rose-950">{t("needs_attention")}</h3>
+              <p className="mt-1 text-xs text-rose-800/90">{t("overdue_escalated_blocked_or_critical_workfl")}</p>
               <ul className="mt-3 space-y-2">
                 {needsAttention.map((action) => (
                   <li key={action.persistedId ?? action.id}>
@@ -556,7 +558,7 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
           </div>
 
           {loading ? (
-            <p className="text-sm text-slate-500">Loading actions…</p>
+            <p className="text-sm text-slate-500">{t("loading_actions")}</p>
           ) : error ? (
             <p className="text-sm text-red-700">{error}</p>
           ) : actions.length === 0 ? (
@@ -589,8 +591,9 @@ function ActionCenterContent({ role, title, description }: Readonly<ActionCenter
 }
 
 export function ActionCenterPage(props: Readonly<ActionCenterPageProps>) {
+  const t = useTranslations("sharedCmp");
   return (
-    <Suspense fallback={<p className="text-sm text-slate-500">Loading action center…</p>}>
+    <Suspense fallback={<p className="text-sm text-slate-500">{t("loading_action_center")}</p>}>
       <ActionCenterContent {...props} />
     </Suspense>
   );

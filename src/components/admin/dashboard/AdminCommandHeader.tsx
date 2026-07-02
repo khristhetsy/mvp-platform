@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -17,13 +18,14 @@ export function AdminCommandHeader({
   pendingCount: number;
   loadedAt: string;
 }>) {
+  const t = useTranslations("adminCmp");
   const lastUpdated = formatLastUpdated(loadedAt);
 
   return (
     <PageHeader
-      eyebrow="iCapOS admin"
-      title="Operations Command Center"
-      description="Institutional oversight for company reviews, investor approvals, compliance, SPV operations, and platform health."
+      eyebrow={t("icapos_admin")}
+      title={t("operations_command_center")}
+      description={t("institutional_oversight_for_company_reviews")}
       metadata={
         lastUpdated
           ? `Last updated ${lastUpdated} UTC · Preview build: admin-command-center`
@@ -33,7 +35,7 @@ export function AdminCommandHeader({
         pendingCount > 0 ? (
           <StatusBadge label={`${pendingCount} pending reviews`} status="warning" dot />
         ) : (
-          <StatusBadge label="Review queue clear" status="success" dot />
+          <StatusBadge label={t("review_queue_clear")} status="success" dot />
         )
       }
       actions={

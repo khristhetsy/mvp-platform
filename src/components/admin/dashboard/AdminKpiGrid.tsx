@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { MetricCard } from "@/components/MetricCard";
 import { PageSection } from "@/components/ui/workspace-layout";
 import { getAdminKpiHref } from "@/lib/ui/drilldown-links";
@@ -12,18 +13,19 @@ export function AdminKpiGrid({
   snapshot: AdminCommandCenterSnapshot;
   serviceRoleConfigured: boolean;
 }>) {
+  const t = useTranslations("adminCmp");
   return (
-    <PageSection title="Operational metrics" subtitle="Platform-wide snapshot">
+    <PageSection title={t("operational_metrics")} subtitle={t("platform_wide_snapshot")}>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 [&>*]:h-full">
         <MetricCard
-          label="Total Companies"
+          label={t("total_companies")}
           value={String(metrics.companies)}
           detail={`${metrics.founders} founder profiles`}
           accent="indigo"
           href={getAdminKpiHref("total_companies")}
         />
         <MetricCard
-          label="Total Investors"
+          label={t("total_investors")}
           value={String(snapshot.totalInvestors)}
           detail={
             snapshot.pendingInvestorApprovals > 0
@@ -37,14 +39,14 @@ export function AdminKpiGrid({
           href={getAdminKpiHref("total_investors")}
         />
         <MetricCard
-          label="Active Raises"
+          label={t("active_raises")}
           value={String(metrics.publishedDeals)}
           detail="Published marketplace listings"
           accent="blue"
           href={getAdminKpiHref("active_raises")}
         />
         <MetricCard
-          label="Pending Reviews"
+          label={t("pending_reviews")}
           value={String(metrics.pendingReviews)}
           detail="Companies awaiting institutional review"
           accent="slate"
@@ -54,7 +56,7 @@ export function AdminKpiGrid({
           href={getAdminKpiHref("pending_reviews")}
         />
         <MetricCard
-          label="Platform Health"
+          label={t("platform_health")}
           value={serviceRoleConfigured ? "Online" : "Degraded"}
           detail={`${metrics.documents} documents · ${metrics.pitchDecks} pitch decks`}
           accent="slate"
@@ -63,7 +65,7 @@ export function AdminKpiGrid({
           href={getAdminKpiHref("platform_health")}
         />
         <MetricCard
-          label="Open Compliance Events"
+          label={t("open_compliance_events")}
           value={String(snapshot.openComplianceEvents)}
           detail="Open compliance queue items"
           accent="slate"
@@ -73,14 +75,14 @@ export function AdminKpiGrid({
           href={getAdminKpiHref("compliance_open")}
         />
         <MetricCard
-          label="SPV Readiness"
+          label={t("spv_readiness")}
           value={String(snapshot.spvPipelineCount)}
           detail="Active SPV opportunities in pipeline"
           accent="indigo"
           href={getAdminKpiHref("spv_readiness")}
         />
         <MetricCard
-          label="Upgrade Requests"
+          label={t("upgrade_requests")}
           value={String(snapshot.pendingUpgradeRequests)}
           detail="Pending billing upgrade requests"
           accent="violet"

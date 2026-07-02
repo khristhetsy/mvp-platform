@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -17,13 +18,14 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useViewMode } from "@/hooks/use-view-mode";
 
 function RiskCard({ label, value, status }: Readonly<{ label: string; value: number; status?: "danger" | "warning" | "neutral" }>) {
+  const t = useTranslations("adminCmp");
   return (
     <div className="rounded-xl border border-slate-200/80 bg-white p-3 shadow-[var(--shadow-panel)]">
       <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
       <p className="mt-1 font-mono text-2xl font-semibold text-slate-950">{value}</p>
       {status && value > 0 ? (
         <div className="mt-1">
-          <StatusBadge label="Attention" status={status} dot />
+          <StatusBadge label={t("attention")} status={status} dot />
         </div>
       ) : null}
     </div>
@@ -41,8 +43,9 @@ function getEntryHref(entry: AuditTimelineEntry): string {
 }
 
 function TimelineTable({ entries }: Readonly<{ entries: AuditTimelineEntry[] }>) {
+  const t = useTranslations("adminCmp");
   if (!entries.length) {
-    return <p className="text-sm text-slate-600">No timeline events match these filters.</p>;
+    return <p className="text-sm text-slate-600">{t("no_timeline_events_match_these_filters")}</p>;
   }
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200/80">
@@ -100,6 +103,7 @@ export function AdminAuditCenter({
   initialEntityType?: string;
   initialEntityId?: string;
 }>) {
+  const t = useTranslations("adminCmp");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { viewMode, density, setViewMode, setDensity, allowedModes } = useViewMode("admin-audit");
@@ -169,16 +173,16 @@ export function AdminAuditCenter({
       />
 
       {viewMode === "timeline" || viewMode === "table" ? null : (
-      <PageSection title="Audit overview" subtitle="Operational traceability — not legal advice">
+      <PageSection title={t("audit_overview")} subtitle={t("operational_traceability_not_legal_advice")}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <RiskCard label="Critical compliance" value={riskSummary.openCriticalCompliance} status="danger" />
-          <RiskCard label="Overdue actions" value={riskSummary.overdueActions} status="warning" />
-          <RiskCard label="Escalated workflows" value={riskSummary.escalatedWorkflows} status="warning" />
-          <RiskCard label="Failed automation today" value={riskSummary.failedAutomationRunsToday} status="warning" />
-          <RiskCard label="Failed orchestration today" value={riskSummary.failedOrchestrationRunsToday} />
-          <RiskCard label="Failed imports today" value={riskSummary.failedImportsToday} />
-          <RiskCard label="SPV blockers" value={riskSummary.unresolvedSpvBlockers} />
-          <RiskCard label="Repeat-flag companies" value={riskSummary.companiesWithRepeatedFlags} />
+          <RiskCard label={t("critical_compliance")} value={riskSummary.openCriticalCompliance} status="danger" />
+          <RiskCard label={t("overdue_actions")} value={riskSummary.overdueActions} status="warning" />
+          <RiskCard label={t("escalated_workflows")} value={riskSummary.escalatedWorkflows} status="warning" />
+          <RiskCard label={t("failed_automation_today")} value={riskSummary.failedAutomationRunsToday} status="warning" />
+          <RiskCard label={t("failed_orchestration_today")} value={riskSummary.failedOrchestrationRunsToday} />
+          <RiskCard label={t("failed_imports_today")} value={riskSummary.failedImportsToday} />
+          <RiskCard label={t("spv_blockers")} value={riskSummary.unresolvedSpvBlockers} />
+          <RiskCard label={t("repeat_flag_companies")} value={riskSummary.companiesWithRepeatedFlags} />
         </div>
         <p className="mt-3 text-xs text-slate-500">
           Trace model: Event → Review → Action → Resolution → Audit evidence. No document bodies or message content.
@@ -186,7 +190,7 @@ export function AdminAuditCenter({
       </PageSection>
       )}
 
-      <PageSection title="Compliance timeline" subtitle="Aggregated staff-visible audit trail">
+      <PageSection title={t("compliance_timeline")} subtitle={t("aggregated_staff_visible_audit_trail")}>
         <div className="mb-4 flex flex-wrap gap-2">
           <select
             className="rounded-md border border-slate-200 px-2 py-1 text-xs"
@@ -201,13 +205,13 @@ export function AdminAuditCenter({
           </select>
           <input
             className="rounded-md border border-slate-200 px-2 py-1 text-xs"
-            placeholder="Event type filter"
+            placeholder={t("event_type_filter")}
             defaultValue={searchParams.get("eventType") ?? ""}
             onBlur={(e) => updateFilter("eventType", e.target.value.trim() || null)}
           />
           <input
             className="rounded-md border border-slate-200 px-2 py-1 text-xs"
-            placeholder="Source module"
+            placeholder={t("source_module")}
             defaultValue={searchParams.get("module") ?? ""}
             onBlur={(e) => updateFilter("module", e.target.value.trim() || null)}
           />
@@ -216,7 +220,7 @@ export function AdminAuditCenter({
       </PageSection>
 
       {viewMode === "timeline" || viewMode === "table" ? null : (
-      <PageSection title="Evidence pack" subtitle="Entity-scoped audit evidence (sanitized)">
+      <PageSection title={t("evidence_pack")} subtitle={t("entity_scoped_audit_evidence_sanitized")}>
         <div className="flex flex-wrap items-end gap-2">
           <select
             value={entityType}
@@ -230,7 +234,7 @@ export function AdminAuditCenter({
           <input
             value={entityId}
             onChange={(e) => setEntityId(e.target.value)}
-            placeholder="Entity UUID"
+            placeholder={t("entity_uuid")}
             className="min-w-[240px] rounded-md border border-slate-200 px-2 py-1 text-xs font-mono"
           />
           <button
@@ -262,37 +266,37 @@ export function AdminAuditCenter({
             </Link>
           </div>
         ) : (
-          <p className="mt-3 text-xs text-slate-600">Select an entity to build an evidence summary.</p>
+          <p className="mt-3 text-xs text-slate-600">{t("select_an_entity_to_build_an_evidence_summar")}</p>
         )}
       </PageSection>
       )}
 
-      <PageSection title="Automation & orchestration" subtitle="From timeline sources">
+      <PageSection title={t("automation_orchestration")} subtitle={t("from_timeline_sources")}>
         <p className="text-xs text-slate-600">
           Filter timeline by module <span className="font-mono">workflow_automation</span> or{" "}
           <span className="font-mono">orchestration</span> for run history.
         </p>
       </PageSection>
 
-      <PageSection title="Import / export audit" subtitle="Import batches and report generation logs">
+      <PageSection title={t("import_export_audit")} subtitle={t("import_batches_and_report_generation_logs")}>
         <p className="text-xs text-slate-600">
           Import batches and <span className="font-mono">admin.report_generated</span> entries appear in the timeline.
           Use Export below for a downloadable package.
         </p>
       </PageSection>
 
-      <PageSection title="Collaboration audit" subtitle="Comment metadata only — no bodies">
+      <PageSection title={t("collaboration_audit")} subtitle={t("comment_metadata_only_no_bodies")}>
         {evidencePack ? (
           <p className="text-xs text-slate-700">
             Threads: {evidencePack.collaborationSummary.threadCount} · Comments:{" "}
             {evidencePack.collaborationSummary.commentCount}
           </p>
         ) : (
-          <p className="text-xs text-slate-600">Build an evidence pack to see collaboration counts by visibility.</p>
+          <p className="text-xs text-slate-600">{t("build_an_evidence_pack_to_see_collaboration")}</p>
         )}
       </PageSection>
 
-      <PageSection title="Export audit package" subtitle="JSON or CSV · writes audit_logs">
+      <PageSection title={t("export_audit_package")} subtitle={t("json_or_csv_writes_audit_logs")}>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"

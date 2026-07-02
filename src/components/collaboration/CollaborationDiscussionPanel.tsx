@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { CollaborationCommentView, CollaborationEntityType, CollaborationVisibility } from "@/lib/collaboration/types";
 import { CollaborationCommentForm } from "@/components/collaboration/CollaborationCommentForm";
 import { CollaborationCommentList } from "@/components/collaboration/CollaborationCommentList";
@@ -19,6 +20,7 @@ export function CollaborationDiscussionPanel({
   className?: string;
   threadContext?: { companyId?: string | null; investorProfileId?: string | null; spvId?: string | null };
 }>) {
+  const t = useTranslations("sharedCmp");
   const [comments, setComments] = useState<CollaborationCommentView[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -90,9 +92,9 @@ export function CollaborationDiscussionPanel({
   return (
     <div className={`rounded-xl border border-slate-200/80 bg-slate-50/30 px-4 py-3 ${className ?? ""}`}>
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">{title}</p>
-      <p className="mt-0.5 text-[10px] text-slate-500">Entity-scoped collaboration — not messaging.</p>
+      <p className="mt-0.5 text-[10px] text-slate-500">{t("entity_scoped_collaboration_not_messaging")}</p>
 
-      {loading ? <p className="mt-3 text-xs text-slate-500">Loading discussion…</p> : null}
+      {loading ? <p className="mt-3 text-xs text-slate-500">{t("loading_discussion")}</p> : null}
       {loadError ? (
         <p className="mt-3 text-xs text-red-800" role="alert">
           {loadError}

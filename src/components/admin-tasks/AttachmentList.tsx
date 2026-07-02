@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { FileText, Download, Eye, Trash2, X, Loader2 } from "lucide-react";
 import type { AdminTaskAttachment } from "@/lib/admin-tasks/types";
@@ -19,6 +20,7 @@ export function AttachmentList({
   attachments: AdminTaskAttachment[];
   onRemoved?: (id: string) => void;
 }) {
+  const t = useTranslations("adminCmp");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewName, setPreviewName] = useState<string>("");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -55,7 +57,7 @@ export function AttachmentList({
   };
 
   if (attachments.length === 0) {
-    return <p className="text-xs text-slate-400">No attachments yet.</p>;
+    return <p className="text-xs text-slate-400">{t("no_attachments_yet")}</p>;
   }
 
   return (

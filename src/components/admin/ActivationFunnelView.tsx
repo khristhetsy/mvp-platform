@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import type { FunnelStep } from "@/lib/analytics/activation-funnels";
 
 function pct(n: number): string {
@@ -48,6 +49,7 @@ export function ActivationFunnelView({
   investor: FunnelStep[];
   generatedAt: string;
 }) {
+  const t = useTranslations("adminCmp");
   // Biggest single drop in each funnel (worst fromPrev), for the callouts.
   const worst = (steps: FunnelStep[]) =>
     steps
@@ -59,27 +61,27 @@ export function ActivationFunnelView({
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Admin · Reports</p>
-        <h1 className="mt-1 text-2xl font-semibold text-slate-950">Activation funnels</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">{t("admin_reports")}</p>
+        <h1 className="mt-1 text-2xl font-semibold text-slate-950">{t("activation_funnels")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-slate-600">
           How founders and investors progress from signup to activation, computed live from your data. The red percentage marks the biggest drop between steps — that&apos;s where to focus.
         </p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <FunnelColumn title="Founder activation" steps={founder} accent="#534AB7" />
-        <FunnelColumn title="Investor activation" steps={investor} accent="#1D9E75" />
+        <FunnelColumn title={t("founder_activation")} steps={founder} accent="#534AB7" />
+        <FunnelColumn title={t("investor_activation")} steps={investor} accent="#1D9E75" />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         {fWorst ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <span className="font-semibold">Founder bottleneck:</span> only {pct(fWorst.fromPrev ?? 0)} reach &ldquo;{fWorst.label}&rdquo; from the prior step.
+            <span className="font-semibold">{t("founder_bottleneck")}</span> only {pct(fWorst.fromPrev ?? 0)} reach &ldquo;{fWorst.label}&rdquo; from the prior step.
           </div>
         ) : null}
         {iWorst ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <span className="font-semibold">Investor bottleneck:</span> only {pct(iWorst.fromPrev ?? 0)} reach &ldquo;{iWorst.label}&rdquo; from the prior step.
+            <span className="font-semibold">{t("investor_bottleneck")}</span> only {pct(iWorst.fromPrev ?? 0)} reach &ldquo;{iWorst.label}&rdquo; from the prior step.
           </div>
         ) : null}
       </div>

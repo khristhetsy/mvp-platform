@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Suspense, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AdminInvestorActivity } from "@/components/AdminInvestorActivity";
@@ -77,6 +78,7 @@ function InvestorsPageToolbar({
   onFilterChange: (patch: Partial<Pick<InvestorQueryFilters, "q" | "approvalStatus" | "type" | "sector" | "checkSize">>) => void;
   onClearFilters: () => void;
 }>) {
+  const t = useTranslations("adminCmp");
   const views: Array<{ id: InvestorsPageView; label: string }> = [
     { id: "cards", label: "Cards" },
     { id: "table", label: "Table" },
@@ -94,7 +96,7 @@ function InvestorsPageToolbar({
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">View</span>
+          <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">{t("view")}</span>
           <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm" role="group" aria-label="Investor view">
             {views.map((v) => {
               const active = view === v.id;
@@ -130,7 +132,7 @@ function InvestorsPageToolbar({
         <input
           value={filters.q}
           onChange={(e) => onFilterChange({ q: e.target.value })}
-          placeholder="Search investors…"
+          placeholder={t("search_investors")}
           className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
         />
 
@@ -168,14 +170,14 @@ function InvestorsPageToolbar({
         <input
           value={filters.sector ?? ""}
           onChange={(e) => onFilterChange({ sector: e.target.value || null })}
-          placeholder="Sector (exact)"
+          placeholder={t("sector_exact")}
           className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
         />
 
         <input
           value={filters.checkSize ?? ""}
           onChange={(e) => onFilterChange({ checkSize: e.target.value ? Number(e.target.value) : null })}
-          placeholder="Check size (number)"
+          placeholder={t("check_size_number")}
           inputMode="numeric"
           className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
         />
@@ -237,6 +239,7 @@ function AdminInvestorsModuleViewsInner({
   profileLookup,
   investors,
 }: Props) {
+  const t = useTranslations("adminCmp");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -309,9 +312,9 @@ function AdminInvestorsModuleViewsInner({
       <AdminQueryFilterBar page="investors" className="mb-4" />
 
       {view === "table" ? (
-        <WorkspacePanel title="All investors" subtitle={`${filteredProfiles.length} onboarding records`}>
+        <WorkspacePanel title={t("all_investors")} subtitle={`${filteredProfiles.length} onboarding records`}>
           {filteredProfiles.length === 0 ? (
-            <ModuleEmptyState title="No matching investors" description="Try clearing filters or adjusting the search term." />
+            <ModuleEmptyState title={t("no_matching_investors")} description={t("try_clearing_filters_or_adjusting_the_search")} />
           ) : (
             <InvestorProfilesTable rows={filteredProfiles} />
           )}
@@ -326,7 +329,7 @@ function AdminInvestorsModuleViewsInner({
               <div key={status} className="mt-6">
                 <WorkspacePanel title={status.replaceAll("_", " ")} subtitle={`${rows.length} profiles`}>
                   {rows.length === 0 ? (
-                    <p className="text-sm text-slate-600">No profiles.</p>
+                    <p className="text-sm text-slate-600">{t("no_profiles")}</p>
                   ) : (
                     <div className="grid gap-5">
                       {rows.map((row) => (
@@ -343,7 +346,7 @@ function AdminInvestorsModuleViewsInner({
 
       {view === "segments" ? (
         <>
-          <WorkspacePanel title="By investor type" subtitle={`${filteredProfiles.length} profiles`}>
+          <WorkspacePanel title={t("by_investor_type")} subtitle={`${filteredProfiles.length} profiles`}>
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               {Array.from(
                 filteredProfiles.reduce((acc, row) => {
@@ -363,7 +366,7 @@ function AdminInvestorsModuleViewsInner({
           </WorkspacePanel>
 
           <div className="mt-8">
-            <WorkspacePanel title="By sector (top)" subtitle="Based on preferred sectors">
+            <WorkspacePanel title={t("by_sector_top")} subtitle={t("based_on_preferred_sectors")}>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {Array.from(
                   filteredProfiles.reduce((acc, row) => {
@@ -388,7 +391,7 @@ function AdminInvestorsModuleViewsInner({
           </div>
 
           <div className="mt-8">
-            <WorkspacePanel title="By geography (top)" subtitle="Based on preferred geographies">
+            <WorkspacePanel title={t("by_geography_top")} subtitle={t("based_on_preferred_geographies")}>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {Array.from(
                   filteredProfiles.reduce((acc, row) => {
@@ -416,9 +419,9 @@ function AdminInvestorsModuleViewsInner({
 
       {view === "activity" ? (
         <>
-          <WorkspacePanel title="Investor directory (latest activity)" subtitle={`${investors.length} investors with recorded activity`}>
+          <WorkspacePanel title={t("investor_directory_latest_activity")} subtitle={`${investors.length} investors with recorded activity`}>
             {investors.length === 0 ? (
-              <p className="text-sm text-slate-600">No investor activity yet.</p>
+              <p className="text-sm text-slate-600">{t("no_investor_activity_yet")}</p>
             ) : (
               <div className="divide-y divide-slate-100">
                 {investors.map((investor) => (
@@ -452,17 +455,17 @@ function AdminInvestorsModuleViewsInner({
       {view === "cards" ? (
         <>
           <WorkspacePanel
-            title="Investor approval queue"
+            title={t("investor_approval_queue")}
             subtitle={`${pendingQueue.length} profiles awaiting review`}
           >
             {pendingQueue.length === 0 ? (
               hasDrilldown ? (
                 <ModuleEmptyState
-                  title="No matching investor approvals"
-                  description="Try clearing filters or adjusting the approval status."
+                  title={t("no_matching_investor_approvals")}
+                  description={t("try_clearing_filters_or_adjusting_the_approv")}
                 />
               ) : (
-                <p className="text-sm text-slate-600">No investor profiles pending approval.</p>
+                <p className="text-sm text-slate-600">{t("no_investor_profiles_pending_approval")}</p>
               )
             ) : (
               <div className="grid gap-5">
@@ -475,17 +478,17 @@ function AdminInvestorsModuleViewsInner({
 
           <div className="mt-8">
             <WorkspacePanel
-              title="All investor profiles"
+              title={t("all_investor_profiles")}
               subtitle={`${filteredProfiles.length} onboarding records`}
             >
               {remainingProfiles.length === 0 ? (
                 hasDrilldown ? (
                   <ModuleEmptyState
-                    title="No matching investor profiles"
-                    description="Try clearing filters or adjusting the search term."
+                    title={t("no_matching_investor_profiles")}
+                    description={t("try_clearing_filters_or_adjusting_the_search")}
                   />
                 ) : (
-                  <p className="text-sm text-slate-600">No additional investor profiles.</p>
+                  <p className="text-sm text-slate-600">{t("no_additional_investor_profiles")}</p>
                 )
               ) : (
                 <div className="grid gap-5">
@@ -499,11 +502,11 @@ function AdminInvestorsModuleViewsInner({
 
           <div className="mt-8">
             <WorkspacePanel
-              title="Investor subscriptions"
+              title={t("investor_subscriptions")}
               subtitle={`${investorAuthProfiles.length} investor auth profiles`}
             >
               {investorAuthProfiles.length === 0 ? (
-                <p className="text-sm text-slate-600">No investor profiles yet.</p>
+                <p className="text-sm text-slate-600">{t("no_investor_profiles_yet")}</p>
               ) : (
                 <div className="divide-y divide-slate-100">
                   {investorAuthProfiles.map((investor) => (
@@ -527,11 +530,11 @@ function AdminInvestorsModuleViewsInner({
 
           <div className="mt-8">
             <WorkspacePanel
-              title="Investor directory"
+              title={t("investor_directory")}
               subtitle={`${investors.length} investors with recorded activity`}
             >
               {investors.length === 0 ? (
-                <p className="text-sm text-slate-600">No investor activity yet.</p>
+                <p className="text-sm text-slate-600">{t("no_investor_activity_yet")}</p>
               ) : (
                 <div className="divide-y divide-slate-100">
                   {investors.map((investor) => (
@@ -570,8 +573,9 @@ function AdminInvestorsModuleViewsInner({
 }
 
 export function AdminInvestorsModuleViews(props: Props) {
+  const t = useTranslations("adminCmp");
   return (
-    <Suspense fallback={<p className="text-sm text-slate-500">Loading filters…</p>}>
+    <Suspense fallback={<p className="text-sm text-slate-500">{t("loading_filters")}</p>}>
       <AdminInvestorsModuleViewsInner {...props} />
     </Suspense>
   );

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { PageSection } from "@/components/ui/workspace-layout";
 import type { OrchestrationSummary } from "@/lib/notifications/orchestration/types";
@@ -19,6 +20,7 @@ export function AdminOrchestrationVisibility({
   automationSummary?: AutomationDailySummary;
   isStaff?: boolean;
 }>) {
+  const t = useTranslations("adminCmp");
   const items = [
     { label: "Escalated", value: counts.escalatedCount, href: "/admin/actions?tab=escalated&escalated=true" },
     { label: "Blocked", value: counts.blockedCount, href: "/admin/actions?tab=active&status=blocked" },
@@ -83,8 +85,8 @@ export function AdminOrchestrationVisibility({
 
   return (
     <PageSection
-      title="Workflow orchestration"
-      subtitle="Rules-based in-app digests, reminders, and deterministic workflow automation"
+      title={t("workflow_orchestration")}
+      subtitle={t("rules_based_in_app_digests_reminders_and_det")}
     >
       {cronItems.length > 0 ? (
         <div className="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

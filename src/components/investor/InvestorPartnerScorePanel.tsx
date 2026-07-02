@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Sparkles, Lock, ArrowUpRight, ChevronUp, X } from "lucide-react";
 import type { PartnerScore, PartnerTier } from "@/lib/investor-rating/types";
@@ -175,6 +176,7 @@ export function InvestorPartnerScorePanel({
   score: PartnerScore;
   coaching: PartnerCoaching;
 }>) {
+  const t = useTranslations("investorCmp");
   const isNew = score.status === "new";
   const [openId, setOpenId] = useState<string | null>(null);
   // Remember the last-opened drawer so its content stays visible during the
@@ -314,9 +316,9 @@ export function InvestorPartnerScorePanel({
             What founders see
           </p>
           <div className="grid grid-cols-3 gap-2">
-            <FactCard label="Tier" value={TIER_LABELS[score.tier]} valueClass="text-indigo-700" onClick={() => open("f_tier")} />
-            <FactCard label="Typical reply" value={replyText(score.facts.medianResponseHours)} onClick={() => open("f_reply")} />
-            <FactCard label="Accredited" value={score.facts.accredited ? "Yes" : "Not verified"} onClick={() => open("f_accredited")} />
+            <FactCard label={t("tier")} value={TIER_LABELS[score.tier]} valueClass="text-indigo-700" onClick={() => open("f_tier")} />
+            <FactCard label={t("typical_reply")} value={replyText(score.facts.medianResponseHours)} onClick={() => open("f_reply")} />
+            <FactCard label={t("accredited")} value={score.facts.accredited ? "Yes" : "Not verified"} onClick={() => open("f_accredited")} />
           </div>
         </div>
       ) : null}

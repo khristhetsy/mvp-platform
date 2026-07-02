@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 type ApprovalStatus = "draft" | "submitted" | "changes_requested" | "approved" | "rejected" | string;
 
@@ -23,6 +24,7 @@ export function InvestorStatusCard({
   approvalStatus: ApprovalStatus;
   profileComplete: boolean;
 }) {
+  const t = useTranslations("investorCmp");
   const stepIdx = activeStepIndex(approvalStatus, profileComplete);
   const approved = approvalStatus === "approved";
 
@@ -50,7 +52,7 @@ export function InvestorStatusCard({
     <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-panel)] sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Your access</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">{t("your_access")}</p>
           <h2 className="mt-1 text-lg font-semibold text-slate-950">
             {approved ? "You're approved — full marketplace access" : "Get approved to unlock the marketplace"}
           </h2>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Suspense, useMemo, useState } from "react";
 import { InvestorMatchOpportunityCard } from "@/components/InvestorMatchOpportunityCard";
 import { ModuleEmptyState } from "@/components/ui/ViewToolbar";
@@ -167,11 +168,12 @@ function ReadinessBar({ score }: { score: number | null }) {
 }
 
 function OpportunitiesTable({ rows }: { rows: InvestorOpportunityRow[] }) {
+  const t = useTranslations("investorCmp");
   if (rows.length === 0) {
     return (
       <ModuleEmptyState
-        title="No matching opportunities"
-        description="Adjust your search or browse the full marketplace."
+        title={t("no_matching_opportunities")}
+        description={t("adjust_your_search_or_browse_the_full_market")}
       />
     );
   }
@@ -331,6 +333,7 @@ const SORT_LABELS: Record<SortBy, string> = {
 };
 
 function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: InvestorOpportunityRow[] }>) {
+  const t = useTranslations("investorCmp");
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewMode>("list");
   const [industryFilter, setIndustryFilter] = useState("");
@@ -379,24 +382,24 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search companies, sector, or stage…"
+          placeholder={t("search_companies_sector_or_stage")}
           className="min-w-[200px] flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
         />
         <FilterSelect
-          label="All sectors"
+          label={t("all_sectors")}
           value={industryFilter}
           options={industries}
           onChange={setIndustryFilter}
         />
         <FilterSelect
-          label="All stages"
+          label={t("all_stages")}
           value={stageFilter}
           options={stages}
           onChange={setStageFilter}
         />
         {countries.length > 0 && (
           <FilterSelect
-            label="All countries"
+            label={t("all_countries")}
             value={countryFilter}
             options={countries}
             onChange={setCountryFilter}
@@ -441,15 +444,15 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
       </div>
 
       <PageSection
-        title="Recommended for you"
+        title={t("recommended_for_you")}
         subtitle={`${sorted.length} match${sorted.length !== 1 ? "es" : ""} · sorted by ${SORT_LABELS[sortBy].toLowerCase()}`}
       >
         {view === "list" ? (
           <OpportunitiesTable rows={sorted} />
         ) : sorted.length === 0 ? (
           <ModuleEmptyState
-            title="No matching opportunities"
-            description="Adjust your filters or browse the full marketplace."
+            title={t("no_matching_opportunities")}
+            description={t("adjust_your_filters_or_browse_the_full_marke")}
           />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -464,8 +467,9 @@ function InvestorOpportunitiesModuleViewsInner({ matches }: Readonly<{ matches: 
 }
 
 export function InvestorOpportunitiesModuleViews(props: Readonly<{ matches: InvestorOpportunityRow[] }>) {
+  const t = useTranslations("investorCmp");
   return (
-    <Suspense fallback={<p className="text-sm text-slate-500">Loading opportunities…</p>}>
+    <Suspense fallback={<p className="text-sm text-slate-500">{t("loading_opportunities")}</p>}>
       <InvestorOpportunitiesModuleViewsInner {...props} />
     </Suspense>
   );

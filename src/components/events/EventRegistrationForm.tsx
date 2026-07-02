@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Coins, Rocket, Briefcase, Store } from "lucide-react";
 import { EVENT_SECTORS } from "@/lib/icfo-events/sectors";
@@ -64,6 +65,7 @@ const BY_TYPE: Record<AttendeeType, Field[]> = {
 };
 
 export function EventRegistrationForm({ eventId, slug, defaultCompany }: { eventId: string; slug: string; defaultCompany?: string }) {
+  const t = useTranslations("eventsCmp");
   const [role, setRole] = useState<AttendeeType | null>(null);
   const [answers, setAnswers] = useState<Record<string, unknown>>(defaultCompany ? { company: defaultCompany } : {});
   const [consent, setConsent] = useState(false);
@@ -152,8 +154,8 @@ export function EventRegistrationForm({ eventId, slug, defaultCompany }: { event
   if (done) {
     return (
       <div className="rounded-2xl border border-[var(--border-subtle)] bg-white p-8 text-center shadow-[var(--shadow-card)]">
-        <p className="text-lg font-medium text-[var(--navy)]">You&apos;re registered ✓</p>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">A confirmation is in your notifications. See you at the event.</p>
+        <p className="text-lg font-medium text-[var(--navy)]">{t("you_re_registered")}</p>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">{t("a_confirmation_is_in_your_notifications_see")}</p>
         <Link href={`/events/${slug}/lobby`} className="mt-4 inline-block rounded-lg px-4 py-2 text-sm font-medium text-white" style={{ background: "#1D9E75" }}>
           Enter the lobby ↗
         </Link>
@@ -164,11 +166,11 @@ export function EventRegistrationForm({ eventId, slug, defaultCompany }: { event
   return (
     <div className="overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-white shadow-[var(--shadow-card)]">
       <div className="px-5 py-4" style={{ background: "#0c2340" }}>
-        <p className="text-[11px] tracking-wide" style={{ color: "#5DCAA5" }}>REGISTER · FREE</p>
-        <p className="mt-1 text-base font-medium text-white">Tell us who you are</p>
+        <p className="text-[11px] tracking-wide" style={{ color: "#5DCAA5" }}>{t("register_free")}</p>
+        <p className="mt-1 text-base font-medium text-white">{t("tell_us_who_you_are")}</p>
       </div>
       <div className="p-5">
-        <p className="mb-2 text-sm font-medium text-[var(--navy)]">I&apos;m registering as…</p>
+        <p className="mb-2 text-sm font-medium text-[var(--navy)]">{t("i_m_registering_as")}</p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {ROLES.map((r) => (
             <button
@@ -191,7 +193,7 @@ export function EventRegistrationForm({ eventId, slug, defaultCompany }: { event
         {role ? (
           <div className="mt-4 grid gap-3 border-t border-[var(--border-subtle)] pt-4">{BY_TYPE[role].map(renderField)}</div>
         ) : (
-          <p className="mt-4 border-t border-[var(--border-subtle)] pt-4 text-sm text-[var(--text-muted)]">Pick a role above to continue.</p>
+          <p className="mt-4 border-t border-[var(--border-subtle)] pt-4 text-sm text-[var(--text-muted)]">{t("pick_a_role_above_to_continue")}</p>
         )}
 
         <label className="mt-4 flex items-start gap-2 text-[11px] text-[var(--text-secondary)]">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 const ACCENT = "#534AB7";
 const W = 460;
@@ -14,6 +15,7 @@ type Props = {
 
 /** Capture a signature by drawing or typing. Returns a transparent PNG data URL. */
 export function SignaturePad({ signerName, onCancel, onApply }: Props) {
+  const t = useTranslations("sharedCmp");
   const [mode, setMode] = useState<"draw" | "type">("draw");
   const [typed, setTyped] = useState(signerName ?? "");
   const [hasDrawn, setHasDrawn] = useState(false);
@@ -114,7 +116,7 @@ export function SignaturePad({ signerName, onCancel, onApply }: Props) {
               type="text"
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
-              placeholder="Type your full name"
+              placeholder={t("type_your_full_name")}
               style={{ width: "100%", border: "none", outline: "none", background: "transparent", textAlign: "center", fontStyle: "italic", fontSize: 38, fontFamily: "'Brush Script MT', 'Segoe Script', cursive", color: "#0f172a" }}
             />
           </div>
@@ -122,11 +124,11 @@ export function SignaturePad({ signerName, onCancel, onApply }: Props) {
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14 }}>
           {mode === "draw" ? (
-            <button type="button" onClick={clearDraw} style={{ background: "none", border: "none", color: "#6b7280", fontSize: 14, cursor: "pointer" }}>Clear</button>
+            <button type="button" onClick={clearDraw} style={{ background: "none", border: "none", color: "#6b7280", fontSize: 14, cursor: "pointer" }}>{t("clear")}</button>
           ) : <span />}
           <div style={{ display: "flex", gap: 8 }}>
-            <button type="button" onClick={onCancel} style={{ padding: "9px 16px", borderRadius: 8, border: "1px solid #e5e7eb", background: "white", color: "#374151", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
-            <button type="button" onClick={apply} disabled={!canApply} style={{ padding: "9px 18px", borderRadius: 8, border: "none", background: canApply ? ACCENT : "#c7c5e6", color: "white", fontSize: 14, fontWeight: 600, cursor: canApply ? "pointer" : "not-allowed" }}>Apply</button>
+            <button type="button" onClick={onCancel} style={{ padding: "9px 16px", borderRadius: 8, border: "1px solid #e5e7eb", background: "white", color: "#374151", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>{t("cancel")}</button>
+            <button type="button" onClick={apply} disabled={!canApply} style={{ padding: "9px 18px", borderRadius: 8, border: "none", background: canApply ? ACCENT : "#c7c5e6", color: "white", fontSize: 14, fontWeight: 600, cursor: canApply ? "pointer" : "not-allowed" }}>{t("apply")}</button>
           </div>
         </div>
       </div>

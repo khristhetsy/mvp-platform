@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { summarize, modelRound } from "@/lib/cap-table/compute";
 import type { CapTable } from "@/lib/cap-table/types";
@@ -14,6 +15,7 @@ function money(n: number): string {
 }
 
 export function CompanyCapTablePanel({ companyId }: { companyId: string }) {
+  const t = useTranslations("adminCmp");
   const [capTable, setCapTable] = useState<CapTable | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -33,8 +35,8 @@ export function CompanyCapTablePanel({ companyId }: { companyId: string }) {
     [capTable],
   );
 
-  if (loading) return <p className="text-sm text-slate-500">Loading…</p>;
-  if (!capTable || !sum || capTable.holders.length === 0) return <p className="text-sm text-slate-500">No cap table started yet.</p>;
+  if (loading) return <p className="text-sm text-slate-500">{t("loading")}</p>;
+  if (!capTable || !sum || capTable.holders.length === 0) return <p className="text-sm text-slate-500">{t("no_cap_table_started_yet")}</p>;
 
   return (
     <div className="space-y-4">
@@ -46,7 +48,7 @@ export function CompanyCapTablePanel({ companyId }: { companyId: string }) {
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-white p-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Shareholders</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("shareholders")}</p>
         <table className="mt-2 w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-slate-400">
@@ -68,7 +70,7 @@ export function CompanyCapTablePanel({ companyId }: { companyId: string }) {
 
       {dilution && (
         <div className="rounded-lg border border-slate-200 bg-white p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Modeled round</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("modeled_round")}</p>
           <p className="mt-2 text-sm text-slate-600">
             Pre {money(dilution.preMoney)} + new {money(dilution.newInvestment)} = post {money(dilution.postMoney)} · new investor {pct(dilution.newInvestorPct)}
           </p>

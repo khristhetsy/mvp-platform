@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ArrowUpRight } from "lucide-react";
 import { CapitalReadyBadge } from "@/components/CapitalReadyBadge";
 import { CompanyPledgeSummaryBlock } from "@/components/CompanyPledgeSummary";
@@ -9,6 +10,7 @@ export function OpportunityCard({
   deal,
   pledgeSummary,
 }: Readonly<{ deal: MarketplaceListing; pledgeSummary: CompanyPledgeSummary }>) {
+  const t = useTranslations("sharedCmp");
   return (
     <article className="flex h-full flex-col rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)] transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
       <div className="min-w-0">
@@ -26,11 +28,11 @@ export function OpportunityCard({
       </p>
       <div className="mt-4 grid grid-cols-2 gap-2">
         <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Target</p>
+          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">{t("target")}</p>
           <p className="mt-0.5 text-sm font-semibold text-slate-950">{deal.fundingTarget}</p>
         </div>
         <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-3">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Minimum</p>
+          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">{t("minimum")}</p>
           <p className="mt-0.5 text-sm font-semibold text-slate-950">{deal.minimumInvestment}</p>
         </div>
       </div>

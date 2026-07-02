@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 "use client";
 
 export type GateRow = { founder_visible: boolean; investor_visible: boolean };
@@ -22,12 +23,13 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 }
 
 export function VisibilityGate({ gate, onToggle }: { gate: GateMap; onToggle: (section: string, who: "founder" | "investor", visible: boolean) => void }) {
+  const t = useTranslations("sharedCmp");
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200">
       <div className="flex items-center border-b border-slate-100 bg-slate-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-        <span className="flex-1">Section</span>
-        <span className="w-20 text-center">Founder</span>
-        <span className="w-20 text-center">Investor</span>
+        <span className="flex-1">{t("section")}</span>
+        <span className="w-20 text-center">{t("founder")}</span>
+        <span className="w-20 text-center">{t("investor")}</span>
       </div>
       {SECTIONS.map((s) => {
         const row = gate[s.key] ?? { founder_visible: false, investor_visible: false };

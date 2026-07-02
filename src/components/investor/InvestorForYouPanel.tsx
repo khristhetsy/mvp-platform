@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 type OpportunityRow = {
   companyId: string;
@@ -21,6 +22,7 @@ function scoreClass(score: number) {
 }
 
 export function InvestorForYouPanel({ rows }: { rows: OpportunityRow[] }) {
+  const t = useTranslations("investorCmp");
   const topMatches = rows
     .filter((r) => (r.matchScore ?? 0) >= 60)
     .sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0))
@@ -31,11 +33,11 @@ export function InvestorForYouPanel({ rows }: { rows: OpportunityRow[] }) {
   return (
     <div className="mb-8">
       <div className="mb-3 flex items-center gap-2">
-        <h2 className="text-sm font-semibold text-slate-900">For you</h2>
+        <h2 className="text-sm font-semibold text-slate-900">{t("for_you")}</h2>
         <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
           {topMatches.length} thesis match{topMatches.length !== 1 ? "es" : ""}
         </span>
-        <span className="text-[11px] text-slate-400">Based on your investment profile</span>
+        <span className="text-[11px] text-slate-400">{t("based_on_your_investment_profile")}</span>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

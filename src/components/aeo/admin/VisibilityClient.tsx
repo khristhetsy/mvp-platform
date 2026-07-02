@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 type Row = { prompt: string; cited: boolean; position: number | null; provider: string };
 type Vis = { connected: boolean; provider: string; fetchedAt: string | null; rows: Row[]; shareOfVoice: number | null; note?: string };
@@ -8,6 +9,7 @@ type Vis = { connected: boolean; provider: string; fetchedAt: string | null; row
 const card: React.CSSProperties = { background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)", padding: 20 };
 
 export function VisibilityClient() {
+  const t = useTranslations("sharedCmp");
   const [data, setData] = useState<Vis | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -23,7 +25,7 @@ export function VisibilityClient() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
 
-  if (loading) return <p style={{ fontSize: 13, color: "#5f5e5a" }}>Loading…</p>;
+  if (loading) return <p style={{ fontSize: 13, color: "#5f5e5a" }}>{t("loading_2")}</p>;
   if (!data) return null;
 
   if (!data.connected || data.rows.length === 0) {

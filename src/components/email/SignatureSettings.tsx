@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { PenLine, Check, Bold, Italic, Underline, Link2, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight, List, ListOrdered, Eraser, Loader2 } from "lucide-react";
 
 function escapeText(t: string): string {
@@ -20,6 +21,7 @@ const SWATCHES = ["#0F2147", "#185FA5", "#0D9488", "#475569", "#A32D2D", "#00000
  * server-side and appended to outgoing iCapOS mail.
  */
 export function SignatureSettings() {
+  const t = useTranslations("sharedCmp");
   const ref = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
@@ -119,8 +121,8 @@ export function SignatureSettings() {
       <div className="mb-3 flex items-center gap-2">
         <PenLine className="h-5 w-5 text-[var(--gold)]" strokeWidth={1.75} aria-hidden />
         <div>
-          <p className="text-sm font-semibold text-slate-950">Email signature</p>
-          <p className="text-xs text-slate-500">Appended to messages you send from the inbox. Formatting and images supported.</p>
+          <p className="text-sm font-semibold text-slate-950">{t("email_signature")}</p>
+          <p className="text-xs text-slate-500">{t("appended_to_messages_you_send_from_the_inbox")}</p>
         </div>
       </div>
 
@@ -139,28 +141,28 @@ export function SignatureSettings() {
                 <option value="5">Large</option>
               </select>
               <span className="mx-1 h-4 w-px bg-slate-200" />
-              <button type="button" aria-label="Bold" title="Bold" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("bold")} className={TB}><Bold className="h-4 w-4" /></button>
-              <button type="button" aria-label="Italic" title="Italic" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("italic")} className={TB}><Italic className="h-4 w-4" /></button>
-              <button type="button" aria-label="Underline" title="Underline" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("underline")} className={TB}><Underline className="h-4 w-4" /></button>
+              <button type="button" aria-label="Bold" title={t("bold")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("bold")} className={TB}><Bold className="h-4 w-4" /></button>
+              <button type="button" aria-label="Italic" title={t("italic")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("italic")} className={TB}><Italic className="h-4 w-4" /></button>
+              <button type="button" aria-label="Underline" title={t("underline")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("underline")} className={TB}><Underline className="h-4 w-4" /></button>
               <span className="mx-1 h-4 w-px bg-slate-200" />
               <span className="flex items-center gap-1 px-1">
                 {SWATCHES.map((c) => (
-                  <button key={c} type="button" aria-label={`Text color ${c}`} title="Text color"
+                  <button key={c} type="button" aria-label={`Text color ${c}`} title={t("text_color")}
                     onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("foreColor", c)}
                     className="h-4 w-4 rounded-full border border-slate-300" style={{ backgroundColor: c }} />
                 ))}
               </span>
               <span className="mx-1 h-4 w-px bg-slate-200" />
-              <button type="button" aria-label="Insert link" title="Insert link" onMouseDown={(e) => e.preventDefault()} onClick={addLink} className={TB}><Link2 className="h-4 w-4" /></button>
-              <button type="button" aria-label="Insert image" title="Insert image" onMouseDown={(e) => e.preventDefault()} onClick={() => fileRef.current?.click()} className={TB}>{uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}</button>
+              <button type="button" aria-label="Insert link" title={t("insert_link")} onMouseDown={(e) => e.preventDefault()} onClick={addLink} className={TB}><Link2 className="h-4 w-4" /></button>
+              <button type="button" aria-label="Insert image" title={t("insert_image")} onMouseDown={(e) => e.preventDefault()} onClick={() => fileRef.current?.click()} className={TB}>{uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}</button>
               <span className="mx-1 h-4 w-px bg-slate-200" />
-              <button type="button" aria-label="Align left" title="Align left" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("justifyLeft")} className={TB}><AlignLeft className="h-4 w-4" /></button>
-              <button type="button" aria-label="Align center" title="Align center" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("justifyCenter")} className={TB}><AlignCenter className="h-4 w-4" /></button>
-              <button type="button" aria-label="Align right" title="Align right" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("justifyRight")} className={TB}><AlignRight className="h-4 w-4" /></button>
+              <button type="button" aria-label="Align left" title={t("align_left")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("justifyLeft")} className={TB}><AlignLeft className="h-4 w-4" /></button>
+              <button type="button" aria-label="Align center" title={t("align_center")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("justifyCenter")} className={TB}><AlignCenter className="h-4 w-4" /></button>
+              <button type="button" aria-label="Align right" title={t("align_right")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("justifyRight")} className={TB}><AlignRight className="h-4 w-4" /></button>
               <span className="mx-1 h-4 w-px bg-slate-200" />
-              <button type="button" aria-label="Bullet list" title="Bullet list" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("insertUnorderedList")} className={TB}><List className="h-4 w-4" /></button>
-              <button type="button" aria-label="Numbered list" title="Numbered list" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("insertOrderedList")} className={TB}><ListOrdered className="h-4 w-4" /></button>
-              <button type="button" aria-label="Clear formatting" title="Clear formatting" onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("removeFormat")} className={TB}><Eraser className="h-4 w-4" /></button>
+              <button type="button" aria-label="Bullet list" title={t("bullet_list")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("insertUnorderedList")} className={TB}><List className="h-4 w-4" /></button>
+              <button type="button" aria-label="Numbered list" title={t("numbered_list")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("insertOrderedList")} className={TB}><ListOrdered className="h-4 w-4" /></button>
+              <button type="button" aria-label="Clear formatting" title={t("clear_formatting")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("removeFormat")} className={TB}><Eraser className="h-4 w-4" /></button>
             </div>
             <div
               ref={ref}
@@ -181,7 +183,7 @@ export function SignatureSettings() {
             <button type="button" onClick={loadTemplate} disabled={loading} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
               Load iCFO template
             </button>
-            {loading ? <span className="text-xs text-slate-400">Loading…</span> : null}
+            {loading ? <span className="text-xs text-slate-400">{t("loading_2")}</span> : null}
             {msg ? <span className={`text-xs ${msg.ok ? "text-emerald-700" : "text-red-700"}`}>{msg.text}</span> : null}
           </div>
     </div>

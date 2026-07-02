@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { ActionCenterScheduledContext } from "@/lib/notifications/scheduled/types";
 
 export function ActionCenterScheduledStrip({
   scheduled,
 }: Readonly<{ scheduled: ActionCenterScheduledContext }>) {
+  const t = useTranslations("sharedCmp");
   const { digestBanner, recentlyReminded, returningFromSnooze, needsFollowUp } = scheduled;
   const hasContent =
     digestBanner || recentlyReminded.length > 0 || returningFromSnooze.length > 0 || needsFollowUp.length > 0;
@@ -25,7 +27,7 @@ export function ActionCenterScheduledStrip({
             📋
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Weekly digest</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{t("weekly_digest")}</p>
             <p className="text-sm font-semibold text-slate-900">{digestBanner.title}</p>
             <p className="text-xs text-slate-500">{digestBanner.summary}</p>
           </div>

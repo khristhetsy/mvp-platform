@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -37,6 +38,7 @@ export function AdminQueuesPanel({
   snapshot: AdminQueuesSnapshot;
   initialQueue?: string;
 }>) {
+  const t = useTranslations("adminCmp");
   const [activeQueue, setActiveQueue] = useState<AdminQueueType>(
     isAdminQueueType(initialQueue) ? initialQueue : "company_reviews",
   );
@@ -74,7 +76,7 @@ export function AdminQueuesPanel({
 
   return (
     <div className="space-y-8">
-      <PageSection title="Queue summary" subtitle="Live operational counts across iCapOS">
+      <PageSection title={t("queue_summary")} subtitle={t("live_operational_counts_across_icapos")}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {snapshot.summary.map((card) => (
             <QueueSummaryCard
@@ -108,7 +110,7 @@ export function AdminQueuesPanel({
               </button>
             ))}
           </div>
-          <FilterSearchBar value={search} onChange={setSearch} placeholder="Search queue items…" />
+          <FilterSearchBar value={search} onChange={setSearch} placeholder={t("search_queue_items")} />
           <select
             value={severityFilter}
             onChange={(event) => setSeverityFilter(event.target.value)}
@@ -249,13 +251,14 @@ function QueueItemRow({
 }
 
 function QueueItemDiscussion({ item }: Readonly<{ item: AdminQueueItem }>) {
+  const t = useTranslations("adminCmp");
   return (
     <tr>
       <td colSpan={5} className="border-b border-slate-100 bg-slate-50/50 px-4 py-3">
         <CollaborationDiscussionPanel
           entityType="queue"
           entityId={item.id}
-          title="Queue item discussion"
+          title={t("queue_item_discussion")}
           threadContext={{
             companyId: item.company_id,
             investorProfileId: item.investor_id,

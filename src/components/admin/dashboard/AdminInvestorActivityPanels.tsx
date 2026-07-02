@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActionablePanelRow, DrilldownLink } from "@/components/ui/drilldown";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
@@ -111,6 +112,7 @@ function ActivityPanel({
 export function AdminInvestorActivityPanels({
   investorActivity,
 }: Readonly<{ investorActivity: AdminInvestorActivityData }>) {
+  const t = useTranslations("adminCmp");
   const interests = investorActivity.interests.map((raw) => formatActivityRow(raw, "interests"));
   const introRequests = investorActivity.introRequests.map((raw) => formatActivityRow(raw, "intros"));
   const savedDeals = investorActivity.savedDeals.map((raw) => formatActivityRow(raw, "saved"));
@@ -118,21 +120,21 @@ export function AdminInvestorActivityPanels({
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <ActivityPanel
-        title="Investor Interests"
+        title={t("investor_interests")}
         panel="interests"
         rows={interests}
         emptyTitle="No investor interests"
         emptyDescription="Expressed interest will appear here as investors engage with marketplace listings."
       />
       <ActivityPanel
-        title="Intro Requests"
+        title={t("intro_requests")}
         panel="intros"
         rows={introRequests}
         emptyTitle="No intro requests"
         emptyDescription="Introduction requests from investors will surface in this panel."
       />
       <ActivityPanel
-        title="Saved Deals"
+        title={t("saved_deals")}
         panel="saved"
         rows={savedDeals}
         emptyTitle="No saved deals"

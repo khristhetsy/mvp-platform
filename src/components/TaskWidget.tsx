@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import type { Task, TaskStatus, TaskPriority } from "@/lib/tasks/types";
 
 // ─── colour maps ──────────────────────────────────────────────────────────────
@@ -46,6 +47,7 @@ function CheckIcon({ done }: { done: boolean }) {
 
 // ─── TaskWidget ───────────────────────────────────────────────────────────────
 export function TaskWidget() {
+  const t = useTranslations("sharedCmp");
   const [tasks, setTasks]         = useState<Task[]>([]);
   const [loading, setLoading]     = useState(true);
   const [showForm, setShowForm]   = useState(false);
@@ -129,7 +131,7 @@ export function TaskWidget() {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#534AB7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
           </svg>
-          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)" }}>My Tasks</span>
+          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)" }}>{t("my_tasks")}</span>
           {activeCnt > 0 && (
             <span style={{ fontSize: 10, fontWeight: 500, padding: "1px 6px", borderRadius: 10, background: "#EEEDFE", color: "#534AB7" }}>
               {activeCnt}
@@ -170,7 +172,7 @@ export function TaskWidget() {
           <input
             autoFocus
             type="text"
-            placeholder="Task title…"
+            placeholder={t("task_title")}
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
             onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); if (e.key === "Escape") setShowForm(false); }}
@@ -280,7 +282,7 @@ export function TaskWidget() {
                 {/* Delete */}
                 <button
                   onClick={() => handleDelete(task.id)}
-                  title="Delete task"
+                  title={t("delete_task")}
                   style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: "0 2px", fontSize: 12, flexShrink: 0, opacity: 0.5 }}
                 >
                   ✕

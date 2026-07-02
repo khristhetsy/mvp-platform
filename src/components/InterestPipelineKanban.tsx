@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
 import type { InvestorInterestRecord, InvestorIntroRecord, InvestorSavedDealRecord } from "@/lib/data/investor-interests";
@@ -58,6 +59,7 @@ export function InterestPipelineKanban({
   introRequests: InvestorIntroRecord[];
   savedDeals: InvestorSavedDealRecord[];
 }>) {
+  const t = useTranslations("sharedCmp");
   const [view, setView] = useState<ViewMode>("kanban");
 
   const cards = useMemo<PipelineCard[]>(() => {
@@ -238,7 +240,7 @@ export function InterestPipelineKanban({
       {view === "grid" && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {cards.length === 0 ? (
-            <p className="text-sm text-slate-500">No pipeline activity yet.</p>
+            <p className="text-sm text-slate-500">{t("no_pipeline_activity_yet")}</p>
           ) : (
             cards.map((card) => {
               const col = COLUMNS.find((c) => c.key === card.column)!;
@@ -280,7 +282,7 @@ export function InterestPipelineKanban({
       {view === "list" && (
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
           {cards.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-slate-500">No pipeline activity yet.</p>
+            <p className="px-4 py-6 text-sm text-slate-500">{t("no_pipeline_activity_yet")}</p>
           ) : (
             <div className="divide-y divide-slate-100">
               {cards.map((card) => {

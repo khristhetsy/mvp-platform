@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { formatApiError } from "@/lib/api/errors";
 import { AdminLessonMediaUpload } from "@/components/admin/learning/AdminLessonMediaUpload";
@@ -70,6 +71,7 @@ async function readApiJson(res: Response): Promise<ApiJsonBody> {
 }
 
 export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
+  const t = useTranslations("adminCmp");
   const [modules, setModules] = useState<ModuleRow[]>(linkedModules);
   const [selectedModuleId, setSelectedModuleId] = useState<string>(linkedModules[0]?.id ?? "");
   const [loading, setLoading] = useState<string | null>(null);
@@ -486,30 +488,30 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
 
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="rounded-lg border border-slate-200 p-3">
-          <p className="text-sm font-semibold text-slate-900">Create module</p>
-          <p className="text-xs text-slate-500">Creates a new `learning_modules` row, then links it to this course.</p>
+          <p className="text-sm font-semibold text-slate-900">{t("create_module")}</p>
+          <p className="text-xs text-slate-500">{t("creates_a_new_learning_modules_row_then_link")}</p>
           <div className="mt-3 grid gap-2 md:grid-cols-2">
             <input
               className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-              placeholder="Title"
+              placeholder={t("title")}
               value={newModule.title ?? ""}
               onChange={(e) => setNewModule((v) => ({ ...v, title: e.target.value }))}
             />
             <input
               className="rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs"
-              placeholder="Slug"
+              placeholder={t("slug")}
               value={newModule.slug ?? ""}
               onChange={(e) => setNewModule((v) => ({ ...v, slug: e.target.value }))}
             />
             <input
               className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-              placeholder="Category"
+              placeholder={t("category")}
               value={newModule.category ?? ""}
               onChange={(e) => setNewModule((v) => ({ ...v, category: e.target.value }))}
             />
             <input
               className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-              placeholder="Readiness stage"
+              placeholder={t("readiness_stage")}
               value={newModule.readiness_stage ?? ""}
               onChange={(e) => setNewModule((v) => ({ ...v, readiness_stage: e.target.value }))}
             />
@@ -539,7 +541,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
           <textarea
             rows={3}
             className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            placeholder="Description"
+            placeholder={t("description")}
             value={newModule.description ?? ""}
             onChange={(e) => setNewModule((v) => ({ ...v, description: e.target.value }))}
           />
@@ -554,7 +556,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
         </div>
 
         <div className="rounded-lg border border-slate-200 p-3">
-          <p className="text-sm font-semibold text-slate-900">Edit module</p>
+          <p className="text-sm font-semibold text-slate-900">{t("edit_module")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             <select
               className="min-w-[240px] rounded-lg border border-slate-200 px-3 py-2 text-sm"
@@ -638,43 +640,43 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
               </button>
             </div>
           ) : (
-            <p className="mt-3 text-sm text-slate-600">Select a module to edit.</p>
+            <p className="mt-3 text-sm text-slate-600">{t("select_a_module_to_edit")}</p>
           )}
         </div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="rounded-lg border border-slate-200 p-3">
-          <p className="text-sm font-semibold text-slate-900">Lessons</p>
-          <p className="text-xs text-slate-500">Admin lesson drafts (do not replace founder lesson rendering in Phase 1).</p>
+          <p className="text-sm font-semibold text-slate-900">{t("lessons")}</p>
+          <p className="text-xs text-slate-500">{t("admin_lesson_drafts_do_not_replace_founder_l")}</p>
           {!selectedModule ? (
-            <p className="mt-2 text-sm text-slate-600">Select a module to manage lessons.</p>
+            <p className="mt-2 text-sm text-slate-600">{t("select_a_module_to_manage_lessons")}</p>
           ) : (
             <>
               <div className="mt-3 grid gap-2 md:grid-cols-2">
                 <input
                   className="rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs"
-                  placeholder="lesson_key"
+                  placeholder={t("lesson_key")}
                   value={lessonDraft.lesson_key ?? ""}
                   onChange={(e) => setLessonDraft((v) => ({ ...v, lesson_key: e.target.value }))}
                 />
                 <input
                   className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                  placeholder="Title"
+                  placeholder={t("title")}
                   value={lessonDraft.title ?? ""}
                   onChange={(e) => setLessonDraft((v) => ({ ...v, title: e.target.value }))}
                 />
                 <input
                   type="number"
                   className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                  placeholder="order"
+                  placeholder={t("order_2")}
                   value={Number(lessonDraft.order_index ?? 0)}
                   onChange={(e) => setLessonDraft((v) => ({ ...v, order_index: Number(e.target.value) }))}
                 />
                 <input
                   type="number"
                   className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                  placeholder="minutes"
+                  placeholder={t("minutes")}
                   value={Number(lessonDraft.estimated_time_minutes ?? 10)}
                   onChange={(e) => setLessonDraft((v) => ({ ...v, estimated_time_minutes: Number(e.target.value) }))}
                 />
@@ -693,7 +695,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
               <textarea
                 rows={5}
                 className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs"
-                placeholder="Lesson body (markdown)"
+                placeholder={t("lesson_body_markdown")}
                 value={lessonDraft.body_markdown ?? ""}
                 onChange={(e) => setLessonDraft((v) => ({ ...v, body_markdown: e.target.value }))}
               />
@@ -708,7 +710,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
 
               <div className="mt-4 space-y-3">
                 {lessons.length === 0 ? (
-                  <p className="text-sm text-slate-600">No lessons for this module yet.</p>
+                  <p className="text-sm text-slate-600">{t("no_lessons_for_this_module_yet")}</p>
                 ) : (
                   lessons.map((l) => (
                     <div key={l.id} className="rounded-lg border border-slate-200 p-3">
@@ -776,7 +778,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
                       {selectedModule ? (
                         <>
                           <hr className="my-4 border-slate-200" />
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Lesson media</p>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("lesson_media")}</p>
                           <div className="mt-3">
                             <AdminLessonMediaUpload
                               courseId={courseId}
@@ -811,8 +813,8 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
         </div>
 
         <div className="rounded-lg border border-slate-200 p-3">
-          <p className="text-sm font-semibold text-slate-900">Quiz editor</p>
-          <p className="text-xs text-slate-500">Multiple-choice quiz definitions (Phase 1 admin-managed).</p>
+          <p className="text-sm font-semibold text-slate-900">{t("quiz_editor")}</p>
+          <p className="text-xs text-slate-500">{t("multiple_choice_quiz_definitions_phase_1_adm")}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
@@ -873,7 +875,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
                       type="number"
                       className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
                       value={q.retry_limit ?? ""}
-                      placeholder="retry limit (optional)"
+                      placeholder={t("retry_limit_optional")}
                       onChange={(e) =>
                         setQuizzes((v) =>
                           v.map((x) =>
@@ -991,7 +993,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
                     <textarea
                       rows={2}
                       className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                      placeholder="Optional explanation"
+                      placeholder={t("optional_explanation")}
                       value={qq.explanation ?? ""}
                       onChange={(e) =>
                         setQuestions((v) => v.map((x) => (x.id === qq.id ? { ...x, explanation: e.target.value } : x)))
@@ -1002,21 +1004,21 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
               </div>
             </>
           ) : (
-            <p className="mt-3 text-sm text-slate-600">Create or select a quiz to edit questions.</p>
+            <p className="mt-3 text-sm text-slate-600">{t("create_or_select_a_quiz_to_edit_questions")}</p>
           )}
         </div>
       </div>
 
       <div className="rounded-lg border border-slate-200 p-3">
-        <p className="text-sm font-semibold text-slate-900">Founder curriculum overrides</p>
+        <p className="text-sm font-semibold text-slate-900">{t("founder_curriculum_overrides")}</p>
         <p className="text-xs text-slate-500">
           Edit static lesson content from <code className="font-mono">modules.ts</code> defaults. Database overrides
           take precedence for founders.
         </p>
         {!selectedModule ? (
-          <p className="mt-2 text-sm text-slate-600">Select a module to edit founder-facing lesson content.</p>
+          <p className="mt-2 text-sm text-slate-600">{t("select_a_module_to_edit_founder_facing_lesso")}</p>
         ) : staticLessons.length === 0 ? (
-          <p className="mt-2 text-sm text-slate-600">No static lessons for this module slug.</p>
+          <p className="mt-2 text-sm text-slate-600">{t("no_static_lessons_for_this_module_slug")}</p>
         ) : (
           <div className="mt-4 space-y-4">
             {staticLessons.map((lesson) => (
@@ -1053,7 +1055,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
                 <textarea
                   rows={4}
                   className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs"
-                  placeholder="Key points (one per line)"
+                  placeholder={t("key_points_one_per_line")}
                   value={lesson.keyPointsText}
                   onChange={(e) =>
                     setStaticLessons((rows) =>
@@ -1066,7 +1068,7 @@ export function AdminCourseContentStudio({ courseId, linkedModules }: Props) {
                 <textarea
                   rows={2}
                   className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                  placeholder="Worksheet prompt (optional)"
+                  placeholder={t("worksheet_prompt_optional")}
                   value={lesson.worksheetPrompt}
                   onChange={(e) =>
                     setStaticLessons((rows) =>

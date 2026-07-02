@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { POINT_ACTION_LABELS } from "@/lib/icfo-events/gamification";
 import type { PointAction } from "@/lib/icfo-events/gamification";
@@ -7,6 +8,7 @@ import type { PointAction } from "@/lib/icfo-events/gamification";
 const ACTIONS = Object.keys(POINT_ACTION_LABELS) as PointAction[];
 
 export function PointRulesForm({ initialRules }: { initialRules: Record<PointAction, number> }) {
+  const t = useTranslations("adminCmp");
   const [rules, setRules] = useState<Record<PointAction, number>>(initialRules);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -62,7 +64,7 @@ export function PointRulesForm({ initialRules }: { initialRules: Record<PointAct
         <button type="submit" disabled={busy} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
           {busy ? "Saving…" : "Save points"}
         </button>
-        {saved && <span className="text-xs text-emerald-700">Saved</span>}
+        {saved && <span className="text-xs text-emerald-700">{t("saved")}</span>}
       </div>
     </form>
   );

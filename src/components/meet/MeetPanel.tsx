@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Video, RefreshCw, Phone, User, Users, ExternalLink, Calendar } from "lucide-react";
 
 type Guest = { email: string; displayName: string | null; responseStatus: string | null };
@@ -43,6 +44,7 @@ const AVATAR_BG = ["#CECBF6", "#9FE1CB", "#F4C0D1", "#FAC775", "#B5D4F4", "#F099
 const AVATAR_FG = ["#3C3489", "#0F6E56", "#72243E", "#854F0B", "#0C447C", "#712B13"];
 
 export function MeetPanel() {
+  const t = useTranslations("sharedCmp");
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [connected, setConnected] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -85,13 +87,13 @@ export function MeetPanel() {
 
       {!connected ? (
         <div className="rounded-xl border border-[#B5D4F4] bg-[#E6F1FB] px-4 py-6 text-center">
-          <p className="text-sm font-medium text-[#0C447C]">Connect Google to see your Meet meetings.</p>
+          <p className="text-sm font-medium text-[#0C447C]">{t("connect_google_to_see_your_meet_meetings")}</p>
           <a href="/api/integrations/google/connect?returnTo=/admin/meet" className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[#2f6cb0] px-4 py-2 text-sm font-semibold text-white hover:bg-[#234f86]">
             <ExternalLink className="h-4 w-4" /> Connect Google
           </a>
         </div>
       ) : loading ? (
-        <p className="px-1 py-6 text-sm text-slate-400">Loading meetings…</p>
+        <p className="px-1 py-6 text-sm text-slate-400">{t("loading_meetings")}</p>
       ) : meetings.length === 0 ? (
         <div className="rounded-xl border border-slate-200/80 bg-white px-4 py-10 text-center text-sm text-slate-400">
           No upcoming meetings with a Meet link in the next 14 days.
@@ -99,7 +101,7 @@ export function MeetPanel() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
           <aside className="overflow-hidden rounded-xl border border-slate-200/80 bg-white">
-            <p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Upcoming</p>
+            <p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">{t("upcoming")}</p>
             <nav className="pb-2">
               {meetings.map((m) => {
                 const on = m.id === activeId;
@@ -131,7 +133,7 @@ export function MeetPanel() {
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-[1fr_180px]">
                 <div className="space-y-4">
                   <div>
-                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Joining info</p>
+                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("joining_info")}</p>
                     <a href={active.meetUrl} target="_blank" rel="noopener noreferrer" className="break-all text-sm text-[#185FA5] underline">{active.meetUrl.replace(/^https?:\/\//, "")}</a>
                     {active.phone ? (
                       <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500"><Phone className="h-3.5 w-3.5" /> {active.phone}{active.pin ? ` · PIN ${active.pin}` : ""}</p>
@@ -139,7 +141,7 @@ export function MeetPanel() {
                   </div>
                   {active.organizer ? (
                     <div>
-                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Organizer</p>
+                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("organizer")}</p>
                       <p className="flex items-center gap-1.5 text-sm text-slate-700"><User className="h-3.5 w-3.5 text-slate-400" /> {active.organizer.displayName ?? active.organizer.email}</p>
                     </div>
                   ) : null}

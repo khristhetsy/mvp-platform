@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import type {
@@ -101,6 +102,7 @@ const inputCls =
 
 /* ════════════════════════════════════════════════════════ */
 export function InvestorPortfolioPageClient() {
+  const t = useTranslations("investorCmp");
   const searchParams = useSearchParams();
 
   const [investments, setInvestments] = useState<PortfolioInvestment[]>([]);
@@ -373,7 +375,7 @@ export function InvestorPortfolioPageClient() {
                   {meta.label}
                 </span>
                 {inv.source === "deal_room" && (
-                  <span className="text-[9.5px] font-medium text-[#534AB7]">Platform deal</span>
+                  <span className="text-[9.5px] font-medium text-[#534AB7]">{t("platform_deal")}</span>
                 )}
               </div>
             </div>
@@ -432,13 +434,13 @@ export function InvestorPortfolioPageClient() {
                     type="button"
                     onClick={() => { openEdit(inv); setMenuOpen(null); }}
                     className="block w-full px-4 py-2.5 text-left text-[12.5px] text-slate-700 hover:bg-slate-50"
-                  >Edit</button>
+                  >{t("edit")}</button>
                   {(inv.status === "committed" || inv.status === "tracking") && (
                     <button
                       type="button"
                       onClick={() => void markAsInvested(inv)}
                       className="block w-full border-t border-slate-100 px-4 py-2.5 text-left text-[12.5px] text-emerald-700 hover:bg-emerald-50"
-                    >Mark as Invested ✓</button>
+                    >{t("mark_as_invested")}</button>
                   )}
                   {inv.source === "deal_room" && inv.deal_room_id && (
                     <Link
@@ -451,7 +453,7 @@ export function InvestorPortfolioPageClient() {
                     type="button"
                     onClick={() => void handleDelete(inv.id)}
                     className="block w-full border-t border-slate-100 px-4 py-2.5 text-left text-[12.5px] text-red-600 hover:bg-red-50"
-                  >Delete</button>
+                  >{t("delete")}</button>
                 </div>
               )}
             </div>
@@ -465,7 +467,7 @@ export function InvestorPortfolioPageClient() {
   function InvestmentTable({ items }: { items: PortfolioInvestment[] }) {
     if (!items.length) return (
       <div className="rounded-xl border border-slate-200 bg-white px-6 py-10 text-center">
-        <p className="text-sm text-slate-500">No entries here yet.</p>
+        <p className="text-sm text-slate-500">{t("no_entries_here_yet")}</p>
         <button
           type="button"
           onClick={() => openAdd({ status: tab })}
@@ -628,7 +630,7 @@ export function InvestorPortfolioPageClient() {
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search portfolio…"
+          placeholder={t("search_portfolio")}
           className="min-w-[180px] flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
         />
 
@@ -652,7 +654,7 @@ export function InvestorPortfolioPageClient() {
       {/* ── Content ── */}
       {loading ? (
         <div className="rounded-xl border border-slate-200 bg-white px-6 py-12 text-center">
-          <p className="text-sm text-slate-500">Loading portfolio…</p>
+          <p className="text-sm text-slate-500">{t("loading_portfolio")}</p>
         </div>
       ) : (
         <>
@@ -731,7 +733,7 @@ export function InvestorPortfolioPageClient() {
             <div className="grid grid-cols-2 gap-x-3.5 gap-y-3">
               {/* Status toggle */}
               <div className="col-span-2">
-                <label className={labelCls}>Status</label>
+                <label className={labelCls}>{t("status")}</label>
                 <div className="flex gap-2">
                   {(["invested", "committed", "tracking"] as PortfolioStatus[]).map((s) => (
                     <button
@@ -754,11 +756,11 @@ export function InvestorPortfolioPageClient() {
 
               {/* Company */}
               <div className="col-span-2">
-                <label className={labelCls}>Company name *</label>
+                <label className={labelCls}>{t("company_name_2")}</label>
                 <input
                   value={form.company_name}
                   onChange={field("company_name")}
-                  placeholder="e.g. NexaFlow AI"
+                  placeholder={t("e_g_nexaflow_ai")}
                   className={inputCls}
                 />
                 {form.company_slug && (
@@ -769,11 +771,11 @@ export function InvestorPortfolioPageClient() {
               </div>
 
               <div>
-                <label className={labelCls}>Sector</label>
-                <input value={form.sector} onChange={field("sector")} placeholder="e.g. FinTech" className={inputCls} />
+                <label className={labelCls}>{t("sector")}</label>
+                <input value={form.sector} onChange={field("sector")} placeholder={t("e_g_fintech")} className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>Stage</label>
+                <label className={labelCls}>{t("stage")}</label>
                 <select value={form.stage} onChange={field("stage")} className={inputCls}>
                   <option value="">Select stage</option>
                   {STAGES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -807,14 +809,14 @@ export function InvestorPortfolioPageClient() {
               {form.status === "invested" && (
                 <>
                   <div>
-                    <label className={labelCls}>Entry valuation ($)</label>
+                    <label className={labelCls}>{t("entry_valuation")}</label>
                     <input
                       type="number" min="0" value={form.entry_valuation}
                       onChange={field("entry_valuation")} placeholder="8000000" className={inputCls}
                     />
                   </div>
                   <div>
-                    <label className={labelCls}>Current valuation ($)</label>
+                    <label className={labelCls}>{t("current_valuation")}</label>
                     <input
                       type="number" min="0" value={form.current_valuation}
                       onChange={field("current_valuation")} placeholder="19000000" className={inputCls}
@@ -825,7 +827,7 @@ export function InvestorPortfolioPageClient() {
 
               {!editId && dealRooms.length > 0 && (
                 <div className="col-span-2">
-                  <label className={labelCls}>Link to deal room (optional)</label>
+                  <label className={labelCls}>{t("link_to_deal_room_optional")}</label>
                   <select value={form.deal_room_id} onChange={field("deal_room_id")} className={inputCls}>
                     <option value="">No deal room</option>
                     {dealRooms.map((dr) => <option key={dr.id} value={dr.id}>{dr.title}</option>)}
@@ -834,11 +836,11 @@ export function InvestorPortfolioPageClient() {
               )}
 
               <div className="col-span-2">
-                <label className={labelCls}>Notes</label>
+                <label className={labelCls}>{t("notes")}</label>
                 <textarea
                   value={form.notes}
                   onChange={field("notes")}
-                  placeholder="Any notes about this deal…"
+                  placeholder={t("any_notes_about_this_deal")}
                   rows={2}
                   className={`${inputCls} resize-y`}
                 />
@@ -850,7 +852,7 @@ export function InvestorPortfolioPageClient() {
                 type="button"
                 onClick={() => setShowForm(false)}
                 className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
-              >Cancel</button>
+              >{t("cancel")}</button>
               <button
                 type="button"
                 onClick={() => void handleSave()}

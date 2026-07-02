@@ -1,4 +1,5 @@
 import { Bell, ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { DonutProgress } from "@/components/ui/charts/DonutProgress";
 import { SparklineChart } from "@/components/ui/charts/SparklineChart";
 
@@ -9,6 +10,7 @@ const recentActivity = [
 ];
 
 export function MarketingDashboardPreview() {
+  const t = useTranslations("sharedCmp");
   const interestSeries = [12, 14, 15, 17, 19, 21, 23];
 
   return (
@@ -17,7 +19,7 @@ export function MarketingDashboardPreview() {
         {/* Header bar */}
         <div className="flex items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
           <div>
-            <p className="text-xs font-semibold text-[var(--navy)]">Overview</p>
+            <p className="text-xs font-semibold text-[var(--navy)]">{t("overview")}</p>
             <button
               type="button"
               className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-slate-600"
@@ -46,12 +48,12 @@ export function MarketingDashboardPreview() {
           <div className="col-span-2 flex items-center gap-3 rounded-lg border border-slate-200/80 bg-white p-3">
             <DonutProgress percent={87} size={56} strokeWidth={5} label="87" />
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Readiness Score</p>
+              <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">{t("readiness_score")}</p>
               <p className="text-lg font-semibold tabular-nums text-[var(--navy)]">87/100</p>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
                 <div className="h-full w-[92%] rounded-full bg-[var(--navy)]" />
               </div>
-              <p className="mt-1 text-[10px] text-slate-500">Diligence Completeness: 92%</p>
+              <p className="mt-1 text-[10px] text-slate-500">{t("diligence_completeness_92")}</p>
             </div>
           </div>
 
@@ -74,7 +76,7 @@ export function MarketingDashboardPreview() {
           <div className="col-span-2 rounded-lg border border-slate-200/80 bg-white p-2.5">
             <div className="flex items-end justify-between gap-2">
               <div>
-                <p className="text-[10px] font-medium text-slate-500">Investor Interest</p>
+                <p className="text-[10px] font-medium text-slate-500">{t("investor_interest")}</p>
                 <p className="text-lg font-semibold tabular-nums text-[var(--navy)]">23</p>
               </div>
               <SparklineChart values={interestSeries} width={88} height={28} stroke="var(--gold)" />
@@ -84,7 +86,7 @@ export function MarketingDashboardPreview() {
 
         {/* Recent activity */}
         <div className="mt-2 rounded-lg border border-slate-200/80 bg-white p-2.5">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Recent Activity</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{t("recent_activity")}</p>
           <ul className="mt-2 space-y-2">
             {recentActivity.map((item) => (
               <li key={item.label} className="flex items-center justify-between gap-2 text-[11px]">

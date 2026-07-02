@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { COACH_DISCLAIMER } from "@/lib/learning/class-assistant-guardrails";
 import {
   getCoachQuickPrompts,
@@ -40,6 +41,7 @@ export function FloatingFounderAICoach({
   courseSlug?: string;
   lessonSlug?: string;
 }>) {
+  const t = useTranslations("sharedCmp");
   const [open, setOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const {
@@ -94,7 +96,7 @@ export function FloatingFounderAICoach({
                 AI
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900">AI Coach</p>
+                <p className="text-sm font-semibold text-slate-900">{t("ai_coach")}</p>
                 <p className="text-[10px] leading-none text-slate-500">iCapOS Learning</p>
               </div>
             </div>
@@ -164,7 +166,7 @@ export function FloatingFounderAICoach({
                 >
                   AI
                 </div>
-                <span className="text-xs text-slate-400">Thinking…</span>
+                <span className="text-xs text-slate-400">{t("thinking")}</span>
               </div>
             ) : null}
           </div>

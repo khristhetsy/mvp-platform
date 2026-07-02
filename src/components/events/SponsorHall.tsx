@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import type { EventSponsor, SponsorTier } from "@/lib/icfo-events/types";
 
@@ -30,6 +31,7 @@ function isFeatured(s: EventSponsor): boolean {
 }
 
 export function SponsorHall({ sponsors }: { sponsors: EventSponsor[] }) {
+  const t = useTranslations("eventsCmp");
   const featured = sponsors.find(isFeatured) ?? null;
   const rest = sponsors.filter((s) => s !== featured).sort((a, b) => TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier));
 
@@ -43,7 +45,7 @@ export function SponsorHall({ sponsors }: { sponsors: EventSponsor[] }) {
       </p>
 
       {sponsors.length === 0 ? (
-        <p className="mt-6 text-sm text-[var(--text-muted)]">No sponsors yet for this event.</p>
+        <p className="mt-6 text-sm text-[var(--text-muted)]">{t("no_sponsors_yet_for_this_event")}</p>
       ) : (
         <>
           {featured && (

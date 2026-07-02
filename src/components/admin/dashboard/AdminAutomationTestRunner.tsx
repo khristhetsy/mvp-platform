@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { AutomationEngineResult } from "@/lib/automation/types";
 
@@ -17,6 +18,7 @@ function formatSummary(result: AutomationEngineResult): string {
 }
 
 export function AdminAutomationTestRunner({ isStaff }: Readonly<{ isStaff: boolean }>) {
+  const t = useTranslations("adminCmp");
   const [state, setState] = useState<RunState>("idle");
   const [summary, setSummary] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -74,11 +76,11 @@ export function AdminAutomationTestRunner({ isStaff }: Readonly<{ isStaff: boole
     <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-slate-900">Run Automation Dry Test</p>
+          <p className="text-sm font-semibold text-slate-900">{t("run_automation_dry_test")}</p>
           <p className="mt-0.5 text-xs text-slate-600">
             Executes workflow automation in safe dry-run mode
           </p>
-          <p className="mt-1 text-[10px] text-slate-500">Temporary internal testing utility.</p>
+          <p className="mt-1 text-[10px] text-slate-500">{t("temporary_internal_testing_utility")}</p>
         </div>
         <button
           type="button"

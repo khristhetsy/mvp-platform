@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { InvestorMatchOpportunityCardCompact } from "@/components/InvestorMatchOpportunityCardCompact";
 import type { InvestorActivityRow } from "@/lib/data/investor-crm";
 import type { CompanyMatchProfile } from "@/lib/matching/investor-company-matching";
@@ -155,6 +156,7 @@ export function InvestorDashboardCondensedGrid({
   topMatches: MatchRow[];
   recentActivity: InvestorActivityRow[];
 }>) {
+  const t = useTranslations("investorCmp");
   const topActivity = recentActivity.slice(0, 3);
   const weeklyTotal = watchlistCount + interestCount + introCount;
   const goalPct = Math.min(100, Math.round((weeklyTotal / 10) * 100));
@@ -168,7 +170,7 @@ export function InvestorDashboardCondensedGrid({
         {/* Engagement Pipeline */}
         <div style={card}>
           <div style={cardHeader}>
-            <span style={cardTitle}>Engagement Pipeline</span>
+            <span style={cardTitle}>{t("engagement_pipeline")}</span>
             <Link href="/investor/opportunities" style={viewLink}>View →</Link>
           </div>
           <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
@@ -191,7 +193,7 @@ export function InvestorDashboardCondensedGrid({
         {/* Pipeline Momentum */}
         <div style={card}>
           <div style={cardHeader}>
-            <span style={cardTitle}>Pipeline Momentum</span>
+            <span style={cardTitle}>{t("pipeline_momentum")}</span>
             <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 99, background: "#dcfce7", color: "#166534" }}>
               Active
             </span>
@@ -203,11 +205,11 @@ export function InvestorDashboardCondensedGrid({
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
               <div style={{ background: "#EEEDFE", borderRadius: 8, padding: "10px 8px", textAlign: "center" }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: "#534AB7" }}>{watchlistCount}</div>
-                <div style={{ fontSize: 10, color: "#534AB7", marginTop: 2 }}>Saved deals</div>
+                <div style={{ fontSize: 10, color: "#534AB7", marginTop: 2 }}>{t("saved_deals")}</div>
               </div>
               <div style={{ background: "#e0e7ff", borderRadius: 8, padding: "10px 8px", textAlign: "center" }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: "#4f46e5" }}>{introCount}</div>
-                <div style={{ fontSize: 10, color: "#4f46e5", marginTop: 2 }}>Intros sent</div>
+                <div style={{ fontSize: 10, color: "#4f46e5", marginTop: 2 }}>{t("intros_sent")}</div>
               </div>
             </div>
             <div style={{ background: "#f1f5f9", borderRadius: 99, height: 6, overflow: "hidden" }}>
@@ -220,7 +222,7 @@ export function InvestorDashboardCondensedGrid({
         {/* Recent Activity */}
         <div style={card}>
           <div style={cardHeader}>
-            <span style={cardTitle}>Recent Activity</span>
+            <span style={cardTitle}>{t("recent_activity")}</span>
             <Link href="/investor/activity" style={viewLink}>View all →</Link>
           </div>
           <div style={{ padding: "6px 0" }}>
@@ -272,7 +274,7 @@ export function InvestorDashboardCondensedGrid({
         {/* Portfolio */}
         <div style={card}>
           <div style={cardHeader}>
-            <span style={cardTitle}>Portfolio</span>
+            <span style={cardTitle}>{t("portfolio")}</span>
             <Link href="/investor/portfolio" style={viewLink}>Open →</Link>
           </div>
           <div style={{ padding: "14px 16px" }}>
@@ -302,8 +304,8 @@ export function InvestorDashboardCondensedGrid({
         <div style={card}>
           <div style={cardHeader}>
             <div>
-              <div style={cardTitle}>Recommended for you</div>
-              <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>Match score from your onboarding preferences</div>
+              <div style={cardTitle}>{t("recommended_for_you")}</div>
+              <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>{t("match_score_from_your_onboarding_preferences")}</div>
             </div>
             <Link href="/investor/opportunities" style={viewLink}>View all matches →</Link>
           </div>

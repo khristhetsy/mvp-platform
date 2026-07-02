@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 export function InvestorOpportunityNoteInput({ companyId }: { companyId: string }) {
+  const t = useTranslations("investorCmp");
   const [note, setNote] = useState<string>("");
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [loaded, setLoaded] = useState(false);
@@ -63,7 +65,7 @@ export function InvestorOpportunityNoteInput({ companyId }: { companyId: string 
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">Private note</h2>
+          <h2 className="text-sm font-semibold text-slate-900">{t("private_note")}</h2>
           <p className="mt-0.5 text-xs text-slate-500">
             Only you can see this — synced to your watchlist
           </p>
@@ -85,7 +87,7 @@ export function InvestorOpportunityNoteInput({ companyId }: { companyId: string 
           <textarea
             value={note}
             onChange={handleChange}
-            placeholder="Add a private note about this company — thesis fit, questions, follow-up items…"
+            placeholder={t("add_a_private_note_about_this_company_thesis")}
             rows={4}
             className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
           />

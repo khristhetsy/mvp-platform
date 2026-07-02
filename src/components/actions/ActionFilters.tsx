@@ -1,6 +1,7 @@
 "use client";
 
 import type { ActionCenterFilters } from "@/lib/actions/types";
+import { useTranslations } from "next-intl";
 import { NEXT_BEST_ACTION_CATEGORIES, NEXT_BEST_ACTION_PRIORITIES } from "@/lib/next-best-actions/types";
 
 export function ActionFilters({
@@ -12,13 +13,14 @@ export function ActionFilters({
   onChange: (patch: Partial<ActionCenterFilters>) => void;
   onClear: () => void;
 }>) {
+  const t = useTranslations("sharedCmp");
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/80 bg-white py-2.5">
       <input
         type="search"
         value={filters.q ?? ""}
         onChange={(e) => onChange({ q: e.target.value || undefined })}
-        placeholder="Search actions…"
+        placeholder={t("search_actions")}
         className="min-w-[160px] flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400"
       />
       <select

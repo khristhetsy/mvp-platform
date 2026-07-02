@@ -1,4 +1,5 @@
 import { MetricSkeletonRow } from "@/components/ui/Skeleton";
+import { useTranslations } from "next-intl";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 
 function LoadingSpinner({ label }: Readonly<{ label: string }>) {
@@ -46,10 +47,11 @@ export function WorkspaceRouteLoading({
 }: Readonly<{
   workspaceLabel: string;
 }>) {
+  const t = useTranslations("sharedCmp");
   return (
     <WorkspacePageContainer aria-busy="true" aria-label={`Loading ${workspaceLabel}`}>
       <div className="mb-4 flex justify-end">
-        <LoadingSpinner label="Loading page…" />
+        <LoadingSpinner label={t("loading_page")} />
       </div>
       <PageHeaderSkeleton />
       <MetricSkeletonRow />
@@ -67,10 +69,11 @@ export function MarketingRouteLoading({
 }: Readonly<{
   sectionLabel: string;
 }>) {
+  const t = useTranslations("sharedCmp");
   return (
     <section className="px-4 py-8 lg:px-8 lg:py-10" aria-busy="true" aria-label={`Loading ${sectionLabel}`}>
       <div className="mb-6 flex justify-end">
-        <LoadingSpinner label="Loading…" />
+        <LoadingSpinner label={t("loading_2")} />
       </div>
       <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-panel)] lg:p-7">
         <div className="enterprise-skeleton h-3 w-36" />

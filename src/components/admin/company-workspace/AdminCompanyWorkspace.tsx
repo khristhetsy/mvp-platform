@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { AdminCompanyCard } from "@/components/AdminCompanyCard";
 import { CompanyCompliancePanel } from "@/components/admin/company-workspace/CompanyCompliancePanel";
@@ -38,6 +39,7 @@ export function AdminCompanyWorkspace({
   adminRole?: NextBestActionRole;
   riskSignals?: RiskSignal[];
 }>) {
+  const t = useTranslations("adminCmp");
   return (
     <div className="space-y-6">
       <CompanyWorkspaceHeader data={data} />
@@ -50,7 +52,7 @@ export function AdminCompanyWorkspace({
       />
 
       {workflowDependencies.length > 0 ? (
-        <WorkflowDependencyPanel dependencies={workflowDependencies} title="Company workflow blockers" />
+        <WorkflowDependencyPanel dependencies={workflowDependencies} title={t("company_workflow_blockers")} />
       ) : null}
 
       {nextBestActions.length > 0 ? (
@@ -65,75 +67,75 @@ export function AdminCompanyWorkspace({
       ) : null}
 
       {riskSignals.length > 0 ? (
-        <PageSection title="Predictive insights" subtitle="Rules-based risk signals (Phase 1)">
+        <PageSection title={t("predictive_insights")} subtitle={t("rules_based_risk_signals_phase_1")}>
           <RiskSignalsPanel
             signals={riskSignals}
             maxItems={3}
-            title="Company risk signals"
-            subtitle="Deterministic rules — no auto-approvals or workflow changes"
+            title={t("company_risk_signals")}
+            subtitle={t("deterministic_rules_no_auto_approvals_or_wor")}
           />
         </PageSection>
       ) : null}
 
-      <PageSection title="AI company assessment" subtitle="Structured review — recommendation, strengths, concerns, and data gaps">
+      <PageSection title={t("ai_company_assessment_2")} subtitle={t("structured_review_recommendation_strengths_c")}>
         <AdminCompanyAIAssessment companyId={data.company.id} />
       </PageSection>
 
-      <PageSection title="Operational timeline" subtitle="Company-scoped events from operational_activity_events">
+      <PageSection title={t("operational_timeline")} subtitle={t("company_scoped_events_from_operational_activ")}>
         <CompanyTimelinePanel items={data.timeline} companyId={data.company.id} />
       </PageSection>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <PageSection title="Readiness" subtitle="Source: diligence reports, onboarding, remediation">
+        <PageSection title={t("readiness")} subtitle={t("source_diligence_reports_onboarding_remediat")}>
           <CompanyReadinessPanel readiness={data.readiness} companyId={data.company.id} />
         </PageSection>
 
-        <PageSection title="Investor activity" subtitle="Aggregates only — no message bodies">
+        <PageSection title={t("investor_activity")} subtitle={t("aggregates_only_no_message_bodies")}>
           <CompanyInvestorActivityPanel activity={data.investorActivity} companyId={data.company.id} />
         </PageSection>
       </div>
 
-      <PageSection title="SPV operations" subtitle="Source: spv_opportunities">
+      <PageSection title={t("spv_operations")} subtitle={t("source_spv_opportunities")}>
         <CompanySpvPanel spvs={data.spvs} companyId={data.company.id} />
       </PageSection>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <PageSection title="Compliance" subtitle="Source: compliance_events">
+        <PageSection title={t("compliance")} subtitle={t("source_compliance_events")}>
           <CompanyCompliancePanel compliance={data.compliance} companyId={data.company.id} />
         </PageSection>
 
-        <PageSection title="Documents & diligence" subtitle="Source: documents, diligence_reports">
+        <PageSection title={t("documents_diligence")} subtitle={t("source_documents_diligence_reports")}>
           <CompanyDocumentsPanel documents={data.documents} companyId={data.company.id} />
         </PageSection>
       </div>
 
-      <PageSection title="Business plan" subtitle="Founder's AI-assisted plan — sections, projections, and assumptions">
+      <PageSection title={t("business_plan")} subtitle={t("founder_s_ai_assisted_plan_sections_projecti")}>
         <CompanyBusinessPlanPanel companyId={data.company.id} />
       </PageSection>
 
-      <PageSection title="Cap table" subtitle="Founder's shareholders, ownership split, and modeled round dilution">
+      <PageSection title={t("cap_table")} subtitle={t("founder_s_shareholders_ownership_split_and_m")}>
         <CompanyCapTablePanel companyId={data.company.id} />
       </PageSection>
 
-      <PageSection title="Active queues" subtitle="Items affecting this company across operational queues">
+      <PageSection title={t("active_queues")} subtitle={t("items_affecting_this_company_across_operatio")}>
         <CompanyQueuesPanel items={data.queueItems} companyId={data.company.id} />
       </PageSection>
 
-      <PageSection title="Team discussion" subtitle="Entity-scoped comments — not investor messaging">
+      <PageSection title={t("team_discussion")} subtitle={t("entity_scoped_comments_not_investor_messagin")}>
         <CollaborationDiscussionPanel
           entityType="company"
           entityId={data.company.id}
-          title="Company discussion"
+          title={t("company_discussion")}
         />
       </PageSection>
 
-      <PageSection title="Reports & exports" subtitle="Pre-filtered admin report links">
+      <PageSection title={t("reports_exports")} subtitle={t("pre_filtered_admin_report_links")}>
         <CompanyWorkspaceReportsPanel companyId={data.company.id} companyName={data.company.company_name} />
       </PageSection>
 
       <PageSection
-        title="Review & marketplace actions"
-        subtitle="Same controls as the companies list — changes apply immediately"
+        title={t("review_marketplace_actions")}
+        subtitle={t("same_controls_as_the_companies_list_changes")}
         action={
           <Link href="/admin/companies" className="text-xs font-medium text-indigo-600 hover:text-indigo-800">
             Back to all companies

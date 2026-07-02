@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 type Submission = {
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export function AdminLessonWorksheetSubmissions({ moduleSlug, lessonId }: Props) {
+  const t = useTranslations("adminCmp");
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -67,7 +69,7 @@ export function AdminLessonWorksheetSubmissions({ moduleSlug, lessonId }: Props)
       {open ? (
         <div className="mt-3 overflow-x-auto">
           {submissions.length === 0 ? (
-            <p className="text-xs text-slate-500">No submissions yet.</p>
+            <p className="text-xs text-slate-500">{t("no_submissions_yet")}</p>
           ) : (
             <table className="w-full text-left text-xs">
               <thead>
@@ -110,7 +112,7 @@ export function AdminLessonWorksheetSubmissions({ moduleSlug, lessonId }: Props)
                             onChange={(e) => setFeedbackDraft(e.target.value)}
                             rows={3}
                             className="w-full rounded-lg border border-slate-200 p-2 text-sm"
-                            placeholder="Coach feedback…"
+                            placeholder={t("coach_feedback")}
                           />
                           <button
                             type="button"

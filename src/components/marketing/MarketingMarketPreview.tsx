@@ -1,4 +1,5 @@
 import { Coins, TrendingUp, Star } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const STATS = [
   { v: "$4.2M", l: "indicated · 30d", tone: "text-[var(--teal)]" },
@@ -18,6 +19,7 @@ const FEED = [
  * not live platform data — clearly labeled as such.
  */
 export function MarketingMarketPreview() {
+  const t = useTranslations("sharedCmp");
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[var(--shadow-card)]">
       <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-3">
@@ -25,7 +27,7 @@ export function MarketingMarketPreview() {
           <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--teal)] text-[var(--teal)]" />
           The Private Market
         </span>
-        <span className="font-mono text-[10px] text-slate-400">Illustrative preview</span>
+        <span className="font-mono text-[10px] text-slate-400">{t("illustrative_preview")}</span>
       </div>
 
       <div className="grid grid-cols-2 border-b border-slate-200">

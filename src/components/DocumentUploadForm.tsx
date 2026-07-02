@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 
 type Props = {
@@ -58,6 +59,7 @@ export function DocumentUploadForm({
   existingByType = {},
   maxUploadBytes,
 }: Props) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [documentType, setDocumentType] = useState(() => documentTypes[0]?.value ?? "PITCH_DECK");
@@ -159,7 +161,7 @@ export function DocumentUploadForm({
       </p>
 
       <div className="grid gap-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Document type</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{t("document_type")}</p>
         <div className="grid gap-2">
           {documentTypes.map((type) => {
             const active = type.value === documentType;
@@ -207,7 +209,7 @@ export function DocumentUploadForm({
       ) : null}
 
       {result?.ok === true ? (
-        <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">Upload complete.</p>
+        <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{t("upload_complete")}</p>
       ) : null}
       {result?.ok === false ? (
         <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
@@ -217,7 +219,7 @@ export function DocumentUploadForm({
 
       {debugEnabled && lastDebug ? (
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
-          <p className="font-semibold text-slate-900">Upload debug (temporary)</p>
+          <p className="font-semibold text-slate-900">{t("upload_debug_temporary")}</p>
           <pre className="mt-2 overflow-auto whitespace-pre-wrap">{JSON.stringify(lastDebug, null, 2)}</pre>
         </div>
       ) : null}

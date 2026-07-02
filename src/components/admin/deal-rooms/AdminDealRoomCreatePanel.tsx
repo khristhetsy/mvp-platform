@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export function AdminDealRoomCreatePanel({ companies, investors }: Props) {
+  const t = useTranslations("adminCmp");
   const router = useRouter();
   const [companyId, setCompanyId] = useState(companies[0]?.id ?? "");
   const [investorProfileId, setInvestorProfileId] = useState(investors[0]?.id ?? "");
@@ -83,7 +85,7 @@ export function AdminDealRoomCreatePanel({ companies, investors }: Props) {
   return (
     <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
       <label className="grid gap-1 text-sm">
-        <span className="font-medium text-slate-700">Company</span>
+        <span className="font-medium text-slate-700">{t("company")}</span>
         <select
           value={companyId}
           onChange={(event) => setCompanyId(event.target.value)}
@@ -98,7 +100,7 @@ export function AdminDealRoomCreatePanel({ companies, investors }: Props) {
       </label>
 
       <label className="grid gap-1 text-sm">
-        <span className="font-medium text-slate-700">Investor</span>
+        <span className="font-medium text-slate-700">{t("investor")}</span>
         <select
           value={investorProfileId}
           onChange={(event) => setInvestorProfileId(event.target.value)}
@@ -114,11 +116,11 @@ export function AdminDealRoomCreatePanel({ companies, investors }: Props) {
       </label>
 
       <label className="grid gap-1 text-sm md:col-span-2">
-        <span className="font-medium text-slate-700">Room title</span>
+        <span className="font-medium text-slate-700">{t("room_title")}</span>
         <input
           value={title}
           onChange={(event) => setTitle(event.target.value)}
-          placeholder="e.g. Series A diligence — Acme Co / Example Capital"
+          placeholder={t("e_g_series_a_diligence_acme_co_example_capit")}
           className="rounded-lg border border-slate-200 px-3 py-2"
           minLength={3}
           required
@@ -126,7 +128,7 @@ export function AdminDealRoomCreatePanel({ companies, investors }: Props) {
       </label>
 
       <label className="grid gap-1 text-sm">
-        <span className="font-medium text-slate-700">Status</span>
+        <span className="font-medium text-slate-700">{t("status")}</span>
         <select
           value={status}
           onChange={(event) => setStatus(event.target.value as "pending" | "active")}
@@ -138,21 +140,21 @@ export function AdminDealRoomCreatePanel({ companies, investors }: Props) {
       </label>
 
       <label className="grid gap-1 text-sm">
-        <span className="font-medium text-slate-700">SPV ID (optional)</span>
+        <span className="font-medium text-slate-700">{t("spv_id_optional")}</span>
         <input
           value={spvId}
           onChange={(event) => setSpvId(event.target.value)}
-          placeholder="UUID"
+          placeholder={t("uuid")}
           className="rounded-lg border border-slate-200 px-3 py-2"
         />
       </label>
 
       <label className="grid gap-1 text-sm md:col-span-2">
-        <span className="font-medium text-slate-700">Campaign ID (optional)</span>
+        <span className="font-medium text-slate-700">{t("campaign_id_optional")}</span>
         <input
           value={campaignId}
           onChange={(event) => setCampaignId(event.target.value)}
-          placeholder="UUID"
+          placeholder={t("uuid")}
           className="rounded-lg border border-slate-200 px-3 py-2"
         />
       </label>

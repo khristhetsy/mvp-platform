@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { formatApiError } from "@/lib/api/errors";
 import type { Database } from "@/lib/supabase/types";
 
@@ -85,6 +86,7 @@ const PATTERN_SIGNALS: Record<string, string> = {
 };
 
 function IntelligenceBanner({ questions }: { questions: Question[] }) {
+  const t = useTranslations("sharedCmp");
   const unanswered = questions.filter((q) => !q.founder_response);
   const oldestUnanswered = unanswered.reduce<number>((max, q) => {
     const d = daysSince(q.created_at ? String(q.created_at) : null) ?? 0;
@@ -127,7 +129,7 @@ function IntelligenceBanner({ questions }: { questions: Question[] }) {
             bg={oldestUnanswered >= 3 ? "#FCEBEB" : "#FAEEDA"}
           />
         )}
-        <Chip label="Benchmark: respond within 24h" color="#185FA5" bg="#E6F1FB" />
+        <Chip label={t("benchmark_respond_within_24h")} color="#185FA5" bg="#E6F1FB" />
       </div>
 
       {/* Pattern signals */}
@@ -168,6 +170,7 @@ function QACoachPanel({
   company: DealRoomCompanySnapshot;
   onInsert: (draft: string) => void;
 }) {
+  const t = useTranslations("sharedCmp");
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -239,7 +242,7 @@ function QACoachPanel({
                 <circle cx="12" cy="12" r="10" stroke="#c7d2fe" strokeWidth="3" />
                 <path d="M12 2a10 10 0 0 1 10 10" stroke="#534AB7" strokeWidth="3" strokeLinecap="round" />
               </svg>
-              <span style={{ fontSize: 11, color: "#534AB7" }}>Generating AI draft…</span>
+              <span style={{ fontSize: 11, color: "#534AB7" }}>{t("generating_ai_draft")}</span>
             </div>
           ) : error ? (
             <p style={{ fontSize: 11, color: "#A32D2D", margin: 0 }}>{error}</p>
@@ -296,6 +299,7 @@ export function DealRoomQuestionsPanel({
   initialQuestions: Question[];
   companySnapshot?: DealRoomCompanySnapshot;
 }) {
+  const t = useTranslations("sharedCmp");
   const [questions, setQuestions] = useState<Question[]>(initialQuestions);
   const [category, setCategory] = useState("other");
   const [questionText, setQuestionText] = useState("");
@@ -369,7 +373,7 @@ export function DealRoomQuestionsPanel({
       {/* Investor: ask a question */}
       {viewerRole === "investor" ? (
         <div className="rounded-lg border border-slate-200 bg-white p-3">
-          <p className="text-sm font-semibold text-slate-900">Ask a diligence question</p>
+          <p className="text-sm font-semibold text-slate-900">{t("ask_a_diligence_question")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             <select
               aria-label="Question category"
@@ -396,13 +400,13 @@ export function DealRoomQuestionsPanel({
             rows={3}
             value={questionText}
             onChange={(e) => setQuestionText(e.target.value)}
-            placeholder="Ask a structured due diligence question…"
+            placeholder={t("ask_a_structured_due_diligence_question")}
           />
         </div>
       ) : null}
 
       {sortedQuestions.length === 0 ? (
-        <p className="text-sm text-slate-600">No questions yet.</p>
+        <p className="text-sm text-slate-600">{t("no_questions_yet")}</p>
       ) : (
         <div className="space-y-3">
           {sortedQuestions.map((q) => (
@@ -466,7 +470,7 @@ export function DealRoomQuestionsPanel({
                     onChange={(e) =>
                       setResponseById((v) => ({ ...v, [q.id]: e.target.value }))
                     }
-                    placeholder="Respond (no legal advice; keep factual and educational)…"
+                    placeholder={t("respond_no_legal_advice_keep_factual_and_edu")}
                   />
                   <button
                     type="button"
@@ -479,7 +483,7 @@ export function DealRoomQuestionsPanel({
                   </button>
                 </div>
               ) : (
-                <p className="mt-2 text-xs text-slate-400">Awaiting founder response.</p>
+                <p className="mt-2 text-xs text-slate-400">{t("awaiting_founder_response")}</p>
               )}
             </div>
           ))}

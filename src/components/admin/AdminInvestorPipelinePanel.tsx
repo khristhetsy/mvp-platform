@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
@@ -109,6 +110,7 @@ type Props = Readonly<{
 }>;
 
 export function AdminInvestorPipelinePanel({ rows, initialCompanyId, initialInvestorId }: Props) {
+  const t = useTranslations("adminCmp");
   const [followUpDueOnly, setFollowUpDueOnly] = useState(false);
   const [stageFilter, setStageFilter] = useState<string>("");
   const [search, setSearch] = useState("");
@@ -206,7 +208,7 @@ export function AdminInvestorPipelinePanel({ rows, initialCompanyId, initialInve
     <section className="mt-8 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-4">
         <div>
-          <h2 className="text-base font-semibold text-slate-950">Investor pipeline</h2>
+          <h2 className="text-base font-semibold text-slate-950">{t("investor_pipeline")}</h2>
           <p className="mt-1 text-sm text-slate-500">
             Staff follow-up tracking per investor–company pair ({rows.length} relationships
             {dueCount > 0 ? `, ${dueCount} follow-ups due` : ""}).
@@ -228,7 +230,7 @@ export function AdminInvestorPipelinePanel({ rows, initialCompanyId, initialInve
       <div className="mb-4 flex flex-wrap gap-3">
         <input
           type="search"
-          placeholder="Search investor or company"
+          placeholder={t("search_investor_or_company")}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           className="min-w-[200px] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
@@ -251,7 +253,7 @@ export function AdminInvestorPipelinePanel({ rows, initialCompanyId, initialInve
 
       <div className="divide-y divide-slate-100">
         {filtered.length === 0 ? (
-          <p className="py-4 text-sm text-slate-500">No pipeline rows match these filters.</p>
+          <p className="py-4 text-sm text-slate-500">{t("no_pipeline_rows_match_these_filters")}</p>
         ) : (
           filtered.map((row) => {
             const investor = row.investor_name ?? row.investor_email ?? "Unknown investor";
@@ -333,7 +335,7 @@ export function AdminInvestorPipelinePanel({ rows, initialCompanyId, initialInve
                       onChange={(event) => setEditState({ ...editState, notes: event.target.value })}
                       rows={2}
                       className="w-full rounded border border-slate-200 px-2 py-1 text-sm"
-                      placeholder="Internal notes"
+                      placeholder={t("internal_notes")}
                     />
                     <div className="flex gap-2">
                       <button

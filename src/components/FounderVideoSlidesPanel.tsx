@@ -1,8 +1,10 @@
 import type { VideoSlide } from "@/lib/learning/video/video-types";
+import { useTranslations } from "next-intl";
 
 export function FounderVideoSlidesPanel({ slides }: Readonly<{ slides: VideoSlide[] }>) {
+  const t = useTranslations("sharedCmp");
   if (slides.length === 0) {
-    return <p className="text-sm text-slate-500">Slide outline will appear after script generation.</p>;
+    return <p className="text-sm text-slate-500">{t("slide_outline_will_appear_after_script_gener")}</p>;
   }
 
   return (

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Search, LayoutList, Columns3, Paperclip } from "lucide-react";
 import { TaskCreateDrawer } from "./TaskCreateDrawer";
@@ -12,6 +13,7 @@ type View = "list" | "board";
 type StatusFilter = "all" | TaskStatus;
 
 export function TasksView({ initialTasks }: { initialTasks: AdminTaskListItem[] }) {
+  const t = useTranslations("adminCmp");
   const [tasks, setTasks] = useState<AdminTaskListItem[]>(initialTasks);
   const [view, setView] = useState<View>("board");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -64,7 +66,7 @@ export function TasksView({ initialTasks }: { initialTasks: AdminTaskListItem[] 
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-[#0F2147]">Tasks</h1>
+          <h1 className="text-2xl font-semibold text-[#0F2147]">{t("tasks")}</h1>
           <p className="text-sm text-slate-500">{openCount} open · internal operations tracker</p>
         </div>
         <button type="button" onClick={() => setCreateOpen(true)} className="inline-flex items-center gap-1.5 rounded-full bg-[#0D9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e]"><Plus className="h-4 w-4" /> New task</button>
@@ -76,7 +78,7 @@ export function TasksView({ initialTasks }: { initialTasks: AdminTaskListItem[] 
         <div className="ml-auto flex items-center gap-2">
           <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
             <Search className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search title" className="w-40 bg-transparent text-sm focus:outline-none" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("search_title")} className="w-40 bg-transparent text-sm focus:outline-none" />
           </div>
           <div className="flex rounded-lg border border-slate-200 p-0.5">
             <button type="button" onClick={() => setView("board")} aria-label="Board view" className={`rounded-md p-1.5 ${view === "board" ? "bg-[#0F2147] text-white" : "text-slate-500 hover:bg-slate-100"}`}><Columns3 className="h-4 w-4" /></button>
@@ -87,8 +89,8 @@ export function TasksView({ initialTasks }: { initialTasks: AdminTaskListItem[] 
 
       {filtered.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-200 px-6 py-16 text-center">
-          <p className="text-sm font-medium text-slate-600">No tasks yet.</p>
-          <p className="mt-1 text-sm text-slate-400">Create one to track internal work like the founder-campaign launch.</p>
+          <p className="text-sm font-medium text-slate-600">{t("no_tasks_yet")}</p>
+          <p className="mt-1 text-sm text-slate-400">{t("create_one_to_track_internal_work_like_the_f")}</p>
         </div>
       ) : view === "board" ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -122,7 +124,7 @@ export function TasksView({ initialTasks }: { initialTasks: AdminTaskListItem[] 
                       </div>
                     );
                   })}
-                  {colTasks.length === 0 ? <p className="px-1 py-4 text-center text-[11px] text-slate-300">Empty</p> : null}
+                  {colTasks.length === 0 ? <p className="px-1 py-4 text-center text-[11px] text-slate-300">{t("empty")}</p> : null}
                 </div>
               </div>
             );

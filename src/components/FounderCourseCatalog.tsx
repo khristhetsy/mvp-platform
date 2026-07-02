@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { FloatingFounderAICoach } from "@/components/FloatingFounderAICoach";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -122,6 +123,7 @@ export function FounderCourseCatalog({
   categories: string[];
   overallPercent: number;
 }>) {
+  const t = useTranslations("sharedCmp");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("all");
 
@@ -142,16 +144,16 @@ export function FounderCourseCatalog({
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="iCapOS founder academy"
-        title="Online courses"
-        description="Educational founder training — investor preparation and learning progress. Not legal, tax, securities, or investment advice."
+        eyebrow={t("icapos_founder_academy")}
+        title={t("online_courses")}
+        description={t("educational_founder_training_investor_prepar")}
         metadata={`${courses.length} courses · ${overallPercent}% overall learning progress`}
       />
 
       <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-center">
         <input
           type="search"
-          placeholder="Search courses…"
+          placeholder={t("search_courses")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full flex-1 rounded-md border border-slate-200 px-3 py-2 text-sm outline-none ring-[var(--blue)] focus:ring-2 sm:max-w-md"
@@ -171,7 +173,7 @@ export function FounderCourseCatalog({
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-slate-600">No courses match your search.</p>
+        <p className="text-sm text-slate-600">{t("no_courses_match_your_search")}</p>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((course) => {
@@ -214,7 +216,7 @@ export function FounderCourseCatalog({
                   {/* Progress bar — always shown */}
                   <div className="mt-3">
                     <div className="flex justify-between text-xs text-slate-500">
-                      <span>Course completion</span>
+                      <span>{t("course_completion")}</span>
                       <span>{course.hasStarted ? `${course.percentComplete}%` : "Not started"}</span>
                     </div>
                     <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-100">

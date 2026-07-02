@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 
 type FeedItem = {
@@ -19,6 +20,7 @@ function timeAgo(iso: string): string {
 }
 
 export function MarketingBell() {
+  const t = useTranslations("sharedCmp");
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<FeedItem[]>([]);
   const [unread, setUnread] = useState(0);
@@ -77,7 +79,7 @@ export function MarketingBell() {
       {open ? (
         <div style={{ position: "absolute", right: 0, top: 38, width: 340, maxHeight: 440, overflowY: "auto", background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, boxShadow: "0 8px 24px rgb(12 35 64 / 0.14)", zIndex: 50 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: "0.5px solid #eef1f5", position: "sticky", top: 0, background: "#fff" }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#0f2147" }}>Notifications</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#0f2147" }}>{t("notifications")}</span>
             {unread > 0 ? (
               <button type="button" onClick={() => void markRead({ all: true })} style={{ fontSize: 11.5, color: PURPLE, background: "none", border: "none", cursor: "pointer", fontWeight: 500 }}>
                 Mark all read
@@ -85,7 +87,7 @@ export function MarketingBell() {
             ) : null}
           </div>
           {items.length === 0 ? (
-            <p style={{ fontSize: 12.5, color: "#7a8494", padding: 20, textAlign: "center" }}>You&apos;re all caught up.</p>
+            <p style={{ fontSize: 12.5, color: "#7a8494", padding: 20, textAlign: "center" }}>{t("you_re_all_caught_up")}</p>
           ) : items.map((it) => {
             const inner = (
               <div style={{ display: "flex", gap: 10, padding: "10px 14px", borderBottom: "0.5px solid #f2f4f7", background: it.read_at ? "#fff" : "#f7f6fe", cursor: it.link ? "pointer" : "default" }}>

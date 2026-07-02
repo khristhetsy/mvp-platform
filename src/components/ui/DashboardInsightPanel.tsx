@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 const DEFAULT_SERIES = [42, 48, 45, 52, 58, 61, 64];
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -16,6 +17,7 @@ export function DashboardInsightPanel({
   docOpens?: number;
   introRequests?: number;
 }>) {
+  const t = useTranslations("sharedCmp");
   const max = Math.max(...series, 1);
   const total = series.reduce((a, b) => a + b, 0);
 
@@ -35,15 +37,15 @@ export function DashboardInsightPanel({
       <div className="mb-4 grid grid-cols-3 gap-3">
         <div className="rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-slate-100 text-center">
           <p className="font-mono text-xl font-semibold text-slate-950">{profileViews ?? series.at(-1) ?? 0}</p>
-          <p className="mt-0.5 text-[11px] text-slate-500">Profile views</p>
+          <p className="mt-0.5 text-[11px] text-slate-500">{t("profile_views")}</p>
         </div>
         <div className="rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-slate-100 text-center">
           <p className="font-mono text-xl font-semibold text-slate-950">{docOpens ?? Math.round((series.at(-1) ?? 0) * 0.4)}</p>
-          <p className="mt-0.5 text-[11px] text-slate-500">Doc opens</p>
+          <p className="mt-0.5 text-[11px] text-slate-500">{t("doc_opens")}</p>
         </div>
         <div className="rounded-lg px-3 py-2.5 ring-1 ring-[#EEEDFE] text-center" style={{ background: "#EEEDFE" }}>
           <p className="font-mono text-xl font-semibold" style={{ color: "#3C3489" }}>{introRequests ?? 0}</p>
-          <p className="mt-0.5 text-[11px]" style={{ color: "#534AB7" }}>Intro requests</p>
+          <p className="mt-0.5 text-[11px]" style={{ color: "#534AB7" }}>{t("intro_requests")}</p>
         </div>
       </div>
 

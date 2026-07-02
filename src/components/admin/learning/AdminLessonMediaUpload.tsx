@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type UploadType = "video" | "slides";
@@ -33,6 +34,7 @@ export function AdminLessonMediaUpload({
   initialRenderStatus,
   onUploaded,
 }: Props) {
+  const t = useTranslations("adminCmp");
   const [videoState, setVideoState] = useState<UploadState>(existingVideoUrl ? "done" : "idle");
   const [slidesState, setSlidesState] = useState<UploadState>(existingSlideDeckUrl ? "done" : "idle");
   const [videoProgress, setVideoProgress] = useState(0);
@@ -236,7 +238,7 @@ export function AdminLessonMediaUpload({
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
       <MediaColumn
-        label="Video lesson"
+        label={t("video_lesson")}
         hint="MP4 or WebM · 250MB max"
         state={videoState}
         progress={videoProgress}
@@ -247,7 +249,7 @@ export function AdminLessonMediaUpload({
         onRemove={() => void removeMedia("video")}
       />
       <MediaColumn
-        label="Slide deck"
+        label={t("slide_deck")}
         hint="PDF or PPTX · 50MB max"
         state={slidesState}
         progress={slidesProgress}
@@ -258,8 +260,8 @@ export function AdminLessonMediaUpload({
         onRemove={() => void removeMedia("slides")}
       />
       <div className="rounded-lg border border-slate-200 p-4">
-        <p className="text-sm font-semibold text-slate-900">Generate with AI</p>
-        <p className="mt-1 text-xs text-slate-500">HeyGen · ElevenLabs · Remotion</p>
+        <p className="text-sm font-semibold text-slate-900">{t("generate_with_ai")}</p>
+        <p className="mt-1 text-xs text-slate-500">{t("heygen_elevenlabs_remotion")}</p>
         <button
           type="button"
           onClick={() => void generateVideo()}
@@ -313,6 +315,7 @@ function MediaColumn({
   onReplace: () => void;
   onRemove: () => void;
 }) {
+  const t = useTranslations("adminCmp");
   if (state === "uploading") {
     return (
       <div className="rounded-lg border border-slate-200 p-4">
@@ -356,7 +359,7 @@ function MediaColumn({
     >
       <p className="text-sm font-semibold text-slate-900">{label}</p>
       <p className="mt-1 text-xs text-slate-500">{hint}</p>
-      <p className="mt-2 text-xs text-indigo-600">Drop here or click to browse</p>
+      <p className="mt-2 text-xs text-indigo-600">{t("drop_here_or_click_to_browse")}</p>
     </button>
   );
 }

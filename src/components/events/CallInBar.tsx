@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Hand } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -28,6 +29,7 @@ export function CallInBar({
   roomUrl: string | null;
   initialQueue: CallInEntry[];
 }) {
+  const t = useTranslations("eventsCmp");
   const [queue, setQueue] = useState<CallInEntry[]>(initialQueue);
   const [busy, setBusy] = useState(false);
 
@@ -98,7 +100,7 @@ export function CallInBar({
           <Hand className="h-4 w-4" /> Call-in queue ({active.length})
         </h3>
         {active.length === 0 ? (
-          <p className="mt-2 text-sm text-[var(--text-muted)]">No raised hands yet.</p>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">{t("no_raised_hands_yet")}</p>
         ) : (
           <ul className="mt-2 space-y-2">
             {active.map((e, i) => (

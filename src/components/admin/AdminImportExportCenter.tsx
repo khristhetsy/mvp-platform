@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 import { ViewToolbar } from "@/components/ui/ViewToolbar";
 import { useViewMode } from "@/hooks/use-view-mode";
@@ -80,6 +81,7 @@ function rowStatusBadge(status: string) {
 export function AdminImportExportCenter({
   initialBatches,
 }: Readonly<{ initialBatches: ImportBatchRecord[] }>) {
+  const t = useTranslations("adminCmp");
   const { viewMode, density, setViewMode, setDensity, allowedModes } = useViewMode("admin-imports");
   const [step, setStep] = useState<WizardStep>("type");
   const [importType, setImportType] = useState<ImportType>("companies");
@@ -198,7 +200,7 @@ export function AdminImportExportCenter({
 
       {viewMode === "table" ? null : (
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Import wizard</h2>
+        <h2 className="text-lg font-semibold text-slate-950">{t("import_wizard")}</h2>
         <div className="mt-4 flex flex-wrap gap-2">
           {STEPS.map((item, index) => (
             <span
@@ -235,7 +237,7 @@ export function AdminImportExportCenter({
                 }`}
               >
                 <p className="font-medium text-slate-900">{IMPORT_TYPE_LABELS[type]}</p>
-                <p className="mt-1 text-xs text-slate-500">CSV or XLSX</p>
+                <p className="mt-1 text-xs text-slate-500">{t("csv_or_xlsx")}</p>
               </button>
             ))}
           </div>
@@ -253,7 +255,7 @@ export function AdminImportExportCenter({
                 className="hidden"
                 onChange={(event) => setFile(event.target.files?.[0] ?? null)}
               />
-              <p className="text-sm font-medium text-slate-800">Drop CSV or XLSX here</p>
+              <p className="text-sm font-medium text-slate-800">{t("drop_csv_or_xlsx_here")}</p>
               <p className="mt-1 text-xs text-slate-500">{file?.name ?? "No file selected"}</p>
             </label>
             <div className="flex gap-3">
@@ -278,7 +280,7 @@ export function AdminImportExportCenter({
 
         {step === "mapping" && preview ? (
           <div className="mt-6 space-y-4">
-            <p className="text-sm text-slate-600">Adjust column mapping before validation.</p>
+            <p className="text-sm text-slate-600">{t("adjust_column_mapping_before_validation")}</p>
             <div className="overflow-x-auto rounded-xl border border-slate-200">
               <table className="min-w-full text-left text-sm">
                 <thead className="bg-slate-50 text-slate-600">
@@ -452,7 +454,7 @@ export function AdminImportExportCenter({
       )}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Download templates</h2>
+        <h2 className="text-lg font-semibold text-slate-950">{t("download_templates")}</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {IMPORT_TYPES.map((type) => (
             <button
@@ -462,14 +464,14 @@ export function AdminImportExportCenter({
               className="rounded-xl border border-slate-200 p-4 text-left hover:border-indigo-300"
             >
               <p className="font-medium text-slate-900">{IMPORT_TYPE_LABELS[type]}</p>
-              <p className="mt-1 text-xs text-indigo-600">Download CSV template</p>
+              <p className="mt-1 text-xs text-indigo-600">{t("download_csv_template")}</p>
             </button>
           ))}
         </div>
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Export center</h2>
+        <h2 className="text-lg font-semibold text-slate-950">{t("export_center")}</h2>
         <p className="mt-1 text-sm text-slate-600">
           Exports exclude passwords, OAuth tokens, message bodies, and private file paths.
         </p>
@@ -505,7 +507,7 @@ export function AdminImportExportCenter({
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Recent imports</h2>
+        <h2 className="text-lg font-semibold text-slate-950">{t("recent_imports")}</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-slate-50 text-slate-600">
@@ -551,15 +553,15 @@ export function AdminImportExportCenter({
       <AdminCrmExportConnector />
 
       <section className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
-        <h2 className="text-lg font-semibold text-slate-950">Import safety rules</h2>
+        <h2 className="text-lg font-semibold text-slate-950">{t("import_safety_rules")}</h2>
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-700">
-          <li>Admin and analyst staff only — no founder or investor upload access.</li>
-          <li>Preview and validate before any write; error rows are never imported.</li>
-          <li>Companies import as pending review — never auto-published.</li>
-          <li>Investors import as submitted/draft — never auto-approved.</li>
-          <li>Founder contacts remain private to the founder and company.</li>
-          <li>Every preview, confirm, and export is written to audit logs.</li>
-          <li>Import batch rows store entity IDs for future rollback support.</li>
+          <li>{t("admin_and_analyst_staff_only_no_founder_or_i")}</li>
+          <li>{t("preview_and_validate_before_any_write_error")}</li>
+          <li>{t("companies_import_as_pending_review_never_aut")}</li>
+          <li>{t("investors_import_as_submitted_draft_never_au")}</li>
+          <li>{t("founder_contacts_remain_private_to_the_found")}</li>
+          <li>{t("every_preview_confirm_and_export_is_written")}</li>
+          <li>{t("import_batch_rows_store_entity_ids_for_futur")}</li>
         </ul>
       </section>
     </div>

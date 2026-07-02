@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { formatApiError } from "@/lib/api/errors";
 import type { Database } from "@/lib/supabase/types";
 
@@ -59,6 +60,7 @@ export function DealRoomDocRequestsPanel({
   initialRequests: DocRequest[];
   founderDocuments?: FounderDoc[];
 }) {
+  const t = useTranslations("sharedCmp");
   const [requests, setRequests] = useState<DocRequest[]>(initialRequests);
   const [type, setType] = useState("financials");
   const [custom, setCustom] = useState("");
@@ -165,8 +167,8 @@ export function DealRoomDocRequestsPanel({
               onClick={() => setShowPackPanel((v) => !v)}
             >
               <div>
-                <p className="text-sm font-semibold text-indigo-900">Diligence packs</p>
-                <p className="text-xs text-indigo-600">Send a preset bundle of document requests at once</p>
+                <p className="text-sm font-semibold text-indigo-900">{t("diligence_packs")}</p>
+                <p className="text-xs text-indigo-600">{t("send_a_preset_bundle_of_document_requests_at")}</p>
               </div>
               <svg
                 className={`h-4 w-4 shrink-0 text-indigo-500 transition-transform ${showPackPanel ? "rotate-180" : ""}`}
@@ -207,7 +209,7 @@ export function DealRoomDocRequestsPanel({
 
           {/* Single request */}
           <div className="rounded-lg border border-slate-200 bg-white p-3">
-            <p className="text-sm font-semibold text-slate-900">Request a document</p>
+            <p className="text-sm font-semibold text-slate-900">{t("request_a_document")}</p>
             <div className="mt-2 flex flex-wrap gap-2">
               <select
                 aria-label="Document request type"
@@ -235,7 +237,7 @@ export function DealRoomDocRequestsPanel({
                 rows={2}
                 value={custom}
                 onChange={(e) => setCustom(e.target.value)}
-                placeholder="Describe the custom document you need…"
+                placeholder={t("describe_the_custom_document_you_need")}
               />
             )}
             <p className="mt-2 text-xs text-slate-500">
@@ -247,7 +249,7 @@ export function DealRoomDocRequestsPanel({
 
       {/* --- REQUESTS LIST --- */}
       {requests.length === 0 ? (
-        <p className="text-sm text-slate-600">No document requests yet.</p>
+        <p className="text-sm text-slate-600">{t("no_document_requests_yet")}</p>
       ) : (
         <div className="space-y-3">
           {requests.map((r) => (
@@ -309,7 +311,7 @@ export function DealRoomDocRequestsPanel({
                     <input
                       aria-label="Document ID to attach"
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs"
-                      placeholder="Optional existing document UUID to attach"
+                      placeholder={t("optional_existing_document_uuid_to_attach")}
                       value={docIdById[r.id] ?? ""}
                       onChange={(e) =>
                         setDocIdById((v) => ({ ...v, [r.id]: e.target.value }))
@@ -320,7 +322,7 @@ export function DealRoomDocRequestsPanel({
                     aria-label="Fulfillment note"
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                     rows={2}
-                    placeholder="Response note (no legal advice)…"
+                    placeholder={t("response_note_no_legal_advice")}
                     value={noteById[r.id] ?? ""}
                     onChange={(e) => setNoteById((v) => ({ ...v, [r.id]: e.target.value }))}
                   />

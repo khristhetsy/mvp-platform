@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 export type WatchlistRow = {
@@ -50,6 +51,7 @@ function StatusPill({ status }: { status: string | null }) {
 }
 
 export function WatchlistPageClient({ rows }: Readonly<{ rows: WatchlistRow[] }>) {
+  const t = useTranslations("investorCmp");
   const [query, setQuery] = useState("");
 
   // Notes state: noteMap tracks live text, statusMap tracks save state per row
@@ -106,7 +108,7 @@ export function WatchlistPageClient({ rows }: Readonly<{ rows: WatchlistRow[] }>
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search watchlist…"
+          placeholder={t("search_watchlist")}
           className="min-w-[200px] flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
         />
         <Link
@@ -213,7 +215,7 @@ export function WatchlistPageClient({ rows }: Readonly<{ rows: WatchlistRow[] }>
                         type="text"
                         value={noteMap[row.id] ?? ""}
                         onChange={(e) => handleNoteChange(row.id, e.target.value)}
-                        placeholder="Add a note…"
+                        placeholder={t("add_a_note")}
                         className="w-full min-w-[160px] rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11.5px] text-slate-700 placeholder:text-slate-300 focus:border-indigo-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition"
                       />
                       {statusMap[row.id] === "saving" && (

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { AutomationRunDetail } from "@/lib/automation/admin-console-types";
@@ -12,6 +13,7 @@ export function AutomationRunDrawer({
   runId,
   onClose,
 }: Readonly<{ runId: string | null; onClose: () => void }>) {
+  const t = useTranslations("adminCmp");
   const [detail, setDetail] = useState<AutomationRunDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,13 +74,13 @@ export function AutomationRunDrawer({
       <button type="button" className="flex-1" aria-label="Close drawer" onClick={onClose} />
       <aside className="flex h-full w-full max-w-lg flex-col border-l border-slate-200 bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-          <h2 id="automation-run-title" className="text-sm font-semibold text-slate-950">Automation run</h2>
+          <h2 id="automation-run-title" className="text-sm font-semibold text-slate-950">{t("automation_run")}</h2>
           <button type="button" onClick={onClose} className="text-xs font-medium text-slate-600 hover:text-slate-950">
             Close
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-4">
-          {loading ? <p className="text-sm text-slate-600">Loading…</p> : null}
+          {loading ? <p className="text-sm text-slate-600">{t("loading")}</p> : null}
           {error ? (
             <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900" role="alert">
               {error}
@@ -90,9 +92,9 @@ export function AutomationRunDrawer({
                 <AutomationStatusBadge status={detail.status} />
                 <AutomationTriggerBadge trigger={detail.triggerType} />
                 {detail.dryRun ? (
-                  <span className="text-[10px] font-semibold uppercase text-slate-500">Dry run</span>
+                  <span className="text-[10px] font-semibold uppercase text-slate-500">{t("dry_run")}</span>
                 ) : (
-                  <span className="text-[10px] font-semibold uppercase text-indigo-700">Live</span>
+                  <span className="text-[10px] font-semibold uppercase text-indigo-700">{t("live")}</span>
                 )}
               </div>
               <dl className="grid grid-cols-2 gap-2 text-xs">
@@ -128,7 +130,7 @@ export function AutomationRunDrawer({
               ) : null}
               <AutomationFailurePanel metadata={detail.metadata} />
               <section>
-                <h3 className="text-xs font-semibold uppercase text-slate-500">Rules triggered</h3>
+                <h3 className="text-xs font-semibold uppercase text-slate-500">{t("rules_triggered")}</h3>
                 <ul className="mt-2 space-y-1 text-xs">
                   {(detail.metadata.results ?? []).map((r) => (
                     <li key={r.ruleId} className="flex justify-between gap-2">
@@ -139,14 +141,14 @@ export function AutomationRunDrawer({
                 </ul>
               </section>
               <section>
-                <h3 className="text-xs font-semibold uppercase text-slate-500">Actions executed</h3>
+                <h3 className="text-xs font-semibold uppercase text-slate-500">{t("actions_executed")}</h3>
                 <div className="mt-2">
                   <AutomationActionList actions={detail.actions} />
                 </div>
               </section>
               {detail.relatedEvents.length > 0 ? (
                 <section>
-                  <h3 className="text-xs font-semibold uppercase text-slate-500">Operational events</h3>
+                  <h3 className="text-xs font-semibold uppercase text-slate-500">{t("operational_events")}</h3>
                   <ul className="mt-2 space-y-1 text-xs text-slate-700">
                     {detail.relatedEvents.map((e) => (
                       <li key={e.id}>

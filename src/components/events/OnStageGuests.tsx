@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { mapSessionGuest } from "@/lib/icfo-events/live-session";
@@ -13,6 +14,7 @@ function raw(c: ReturnType<typeof createClient>): SupabaseClient {
 
 /** Public "on stage now" strip for a live talk show — updates live as the host swaps guests. */
 export function OnStageGuests({ sessionId }: { sessionId: string }) {
+  const t = useTranslations("eventsCmp");
   const [guests, setGuests] = useState<SessionGuest[]>([]);
 
   useEffect(() => {
@@ -44,7 +46,7 @@ export function OnStageGuests({ sessionId }: { sessionId: string }) {
 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">
-      <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">On stage now</span>
+      <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("on_stage_now")}</span>
       {onstage.map((g) => (
         <span key={g.id} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--indigo-soft)] px-3 py-1 text-sm font-medium text-[var(--indigo)]">
           🎙️ {g.displayName}

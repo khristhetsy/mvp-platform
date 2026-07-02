@@ -1,4 +1,5 @@
 import type { MessageThreadListItem } from "@/lib/messaging/types";
+import { useTranslations } from "next-intl";
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString("en-US", {
@@ -13,16 +14,17 @@ function formatDate(value: string) {
 export function AdminMessageThreadsPanel({
   threads,
 }: Readonly<{ threads: MessageThreadListItem[] }>) {
+  const t = useTranslations("sharedCmp");
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 px-5 py-4">
-        <h2 className="text-lg font-semibold text-slate-950">Message threads</h2>
+        <h2 className="text-lg font-semibold text-slate-950">{t("message_threads")}</h2>
         <p className="text-sm text-slate-500">
           Founder–investor conversations, intro context, and meeting status (read-only).
         </p>
       </div>
       {threads.length === 0 ? (
-        <p className="px-5 py-6 text-sm text-slate-600">No message threads yet.</p>
+        <p className="px-5 py-6 text-sm text-slate-600">{t("no_message_threads_yet")}</p>
       ) : (
         <div className="divide-y divide-slate-100">
           {threads.map((thread) => (

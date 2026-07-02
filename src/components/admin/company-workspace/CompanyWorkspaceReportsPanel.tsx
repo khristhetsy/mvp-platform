@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { buildCompanyReportHref } from "@/lib/admin/company-workspace-types";
@@ -29,8 +30,9 @@ export function CompanyWorkspaceReportsPanel({
   companyId,
   companyName,
 }: Readonly<{ companyId: string; companyName: string }>) {
+  const t = useTranslations("adminCmp");
   return (
-    <WorkspacePanel title="Reports & exports" subtitle={`Pre-filtered for ${companyName}`}>
+    <WorkspacePanel title={t("reports_exports")} subtitle={`Pre-filtered for ${companyName}`}>
       <div className="grid gap-3 sm:grid-cols-2">
         {REPORT_LINKS.map((report) => (
           <Link

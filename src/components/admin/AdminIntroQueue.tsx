@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useCallback } from "react";
 
 type IntroStatus = "requested" | "reviewing" | "facilitated" | "declined";
@@ -40,6 +41,7 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }>
 type Props = { introRequests: Array<Record<string, unknown>> };
 
 export function AdminIntroQueue({ introRequests }: Props) {
+  const t = useTranslations("adminCmp");
   const [statuses, setStatuses] = useState<Record<string, IntroStatus>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
@@ -74,8 +76,8 @@ export function AdminIntroQueue({ introRequests }: Props) {
   if (introRequests.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-slate-200 px-6 py-8 text-center">
-        <p className="text-sm font-medium text-slate-600">No intro requests yet</p>
-        <p className="mt-1 text-xs text-slate-400">Requests appear here when investors submit them.</p>
+        <p className="text-sm font-medium text-slate-600">{t("no_intro_requests_yet")}</p>
+        <p className="mt-1 text-xs text-slate-400">{t("requests_appear_here_when_investors_submit_t")}</p>
       </div>
     );
   }
@@ -184,7 +186,7 @@ export function AdminIntroQueue({ introRequests }: Props) {
               <div className="mt-3">
                 <input
                   type="text"
-                  placeholder="Optional facilitator note (sent with notification)…"
+                  placeholder={t("optional_facilitator_note_sent_with_notifica")}
                   value={notes[row.id] ?? ""}
                   onChange={(e) => setNotes((prev) => ({ ...prev, [row.id]: e.target.value }))}
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"

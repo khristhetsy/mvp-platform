@@ -1,6 +1,8 @@
+import { useTranslations } from "next-intl";
 export function FounderVideoCaptionsPanel({ captions }: Readonly<{ captions: string | null }>) {
+  const t = useTranslations("sharedCmp");
   if (!captions) {
-    return <p className="text-sm text-slate-500">Captions will appear after script generation.</p>;
+    return <p className="text-sm text-slate-500">{t("captions_will_appear_after_script_generation")}</p>;
   }
 
   return (

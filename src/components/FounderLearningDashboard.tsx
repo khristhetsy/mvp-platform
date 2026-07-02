@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { QuizReviewBanner } from "@/components/founder/learning/QuizReviewBanner";
 import { FounderLearningMilestones } from "@/components/FounderLearningMilestones";
 import { FounderLearningModuleCard } from "@/components/FounderLearningModuleCard";
@@ -17,6 +18,7 @@ type LearningData = Awaited<ReturnType<typeof loadFounderLearningWorkspace>>;
 export function FounderLearningDashboard({
   learning,
 }: Readonly<{ learning: LearningData }>) {
+  const t = useTranslations("sharedCmp");
   const recommendedBySlug = new Map(
     learning.recommendations.map((item) => [item.slug, item.reason]),
   );
@@ -37,36 +39,36 @@ export function FounderLearningDashboard({
     <div className="space-y-6">
       <QuizReviewBanner />
       <PageHeader
-        eyebrow="Institutional readiness intelligence"
-        title="Learning command center"
-        description="Structured programs, lessons, and readiness milestones tied to your diligence and remediation data — not a generic course marketplace."
+        eyebrow={t("institutional_readiness_intelligence")}
+        title={t("learning_command_center")}
+        description={t("structured_programs_lessons_and_readiness_mi")}
         metadata={`iCapOS readiness tier · ${learning.completedLessonsCount} lessons completed`}
         queueIndicator={
           <StatusBadge label={learning.readinessTier.label} status="info" dot />
         }
       />
 
-      <MetricRow title="Readiness intelligence" subtitle="Platform readiness progress only">
+      <MetricRow title={t("readiness_intelligence")} subtitle={t("platform_readiness_progress_only")}>
         <OperationalMetric
-          label="Curriculum progress"
+          label={t("curriculum_progress")}
           value={`${learning.overallPercent}%`}
           detail="Across published modules"
           accent="slate"
         />
         <OperationalMetric
-          label="Lessons completed"
+          label={t("lessons_completed")}
           value={String(learning.completedLessonsCount)}
           detail="Lesson-level tracking"
           accent="indigo"
         />
         <OperationalMetric
-          label="iCapOS tier"
+          label={t("icapos_tier")}
           value={`T${learning.readinessTier.tier}`}
           detail={learning.readinessTier.label}
           accent="blue"
         />
         <OperationalMetric
-          label="Current milestone"
+          label={t("current_milestone")}
           value={learning.currentMilestone?.label?.split(" ")[0] ?? "—"}
           detail={learning.currentMilestone?.label ?? "Build foundation milestones"}
           accent="violet"
@@ -93,7 +95,7 @@ export function FounderLearningDashboard({
       ) : null}
 
       <section className="grid gap-6 xl:grid-cols-2">
-        <WorkspacePanel title="Learning programs" subtitle="Structured institutional curriculum">
+        <WorkspacePanel title={t("learning_programs")} subtitle={t("structured_institutional_curriculum")}>
           <div className="space-y-3">
             {programProgress.map(({ program, percent, moduleCount }) => {
               const locked = !learning.stageAccess[program.stage];
@@ -137,9 +139,9 @@ export function FounderLearningDashboard({
           </div>
         </WorkspacePanel>
 
-        <WorkspacePanel title="Detected gaps" subtitle="From documents, onboarding, and diligence">
+        <WorkspacePanel title={t("detected_gaps")} subtitle={t("from_documents_onboarding_and_diligence")}>
           {learning.weaknesses.length === 0 ? (
-            <p className="text-sm text-slate-600">No major gaps detected. Continue advanced programs.</p>
+            <p className="text-sm text-slate-600">{t("no_major_gaps_detected_continue_advanced_pro")}</p>
           ) : (
             <ul className="space-y-2 text-sm text-slate-700">
               {learning.weaknesses.map((item) => (
@@ -151,7 +153,7 @@ export function FounderLearningDashboard({
           )}
           {learning.pendingActions.length > 0 ? (
             <div className="mt-4 border-t border-slate-100 pt-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pending actions</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("pending_actions")}</p>
               <ul className="mt-2 space-y-1 text-xs text-slate-600">
                 {learning.pendingActions.map((action) => (
                   <li key={action}>• {action}</li>
@@ -162,7 +164,7 @@ export function FounderLearningDashboard({
         </WorkspacePanel>
       </section>
 
-      <WorkspacePanel title="Program roadmap" subtitle="High-level progression">
+      <WorkspacePanel title={t("program_roadmap")} subtitle={t("high_level_progression")}>
         <WorkflowProgressRail
           steps={programProgress.map(({ program, percent }) => ({
             key: program.slug,
@@ -176,9 +178,9 @@ export function FounderLearningDashboard({
       </WorkspacePanel>
 
       <section className="grid gap-6 xl:grid-cols-2">
-        <WorkspacePanel title="Personalized lessons" subtitle="Rule-based recommendations">
+        <WorkspacePanel title={t("personalized_lessons")} subtitle={t("rule_based_recommendations")}>
           {learning.lessonRecommendations.length === 0 ? (
-            <p className="text-sm text-slate-600">Complete onboarding to unlock lesson recommendations.</p>
+            <p className="text-sm text-slate-600">{t("complete_onboarding_to_unlock_lesson_recomme")}</p>
           ) : (
             <ul className="space-y-2">
               {learning.lessonRecommendations.slice(0, 5).map((lesson) => (
@@ -199,9 +201,9 @@ export function FounderLearningDashboard({
           )}
         </WorkspacePanel>
 
-        <WorkspacePanel title="Continue learning" subtitle="In-progress modules">
+        <WorkspacePanel title={t("continue_learning")} subtitle={t("in_progress_modules")}>
           {learning.continueModules.length === 0 ? (
-            <p className="text-sm text-slate-600">No modules in progress.</p>
+            <p className="text-sm text-slate-600">{t("no_modules_in_progress")}</p>
           ) : (
             <div className="grid gap-3">
               {learning.continueModules.slice(0, 3).map((module) => (
@@ -213,8 +215,8 @@ export function FounderLearningDashboard({
       </section>
 
       <WorkspacePanel
-        title="Readiness milestones"
-        subtitle="Platform milestones — not legal or investment certification"
+        title={t("readiness_milestones")}
+        subtitle={t("platform_milestones_not_legal_or_investment")}
       >
         <FounderLearningMilestones
           milestones={learning.milestones}
@@ -229,8 +231,8 @@ export function FounderLearningDashboard({
 
       {learning.aiCoachRecommendations.length > 0 ? (
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600">Recommended for you</p>
-          <h2 className="mt-1 text-sm font-semibold text-slate-950">AI coach picks from your readiness gaps</h2>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600">{t("recommended_for_you")}</p>
+          <h2 className="mt-1 text-sm font-semibold text-slate-950">{t("ai_coach_picks_from_your_readiness_gaps")}</h2>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             {learning.aiCoachRecommendations.map((recommendation) => (
               <Link
@@ -246,7 +248,7 @@ export function FounderLearningDashboard({
         </section>
       ) : null}
 
-      <WorkspacePanel title="All modules" subtitle="Full curriculum by stage">
+      <WorkspacePanel title={t("all_modules")} subtitle={t("full_curriculum_by_stage")}>
         <div className="grid gap-4 md:grid-cols-2">
           {learning.modules.map((module) => {
             const locked = !isModuleStageUnlocked(module.readiness_stage, learning.stageAccess);

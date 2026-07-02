@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { PageSection } from "@/components/ui/workspace-layout";
@@ -12,8 +13,9 @@ export function AdminOperationsControl({
   queueSummary: AdminQueueSummaryItem[];
   serviceRoleOk: boolean;
 }>) {
+  const t = useTranslations("adminCmp");
   return (
-    <PageSection title="Operations control" subtitle="Dashboard → Queue → Entity → Action">
+    <PageSection title={t("operations_control")} subtitle={t("dashboard_queue_entity_action")}>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {queueSummary.map((item) => (
           <Link
@@ -35,9 +37,9 @@ export function AdminOperationsControl({
           className={`group flex h-full min-h-[5.5rem] cursor-pointer flex-col rounded-xl border border-indigo-200/70 bg-indigo-50/30 p-3 shadow-[var(--shadow-panel)] no-underline ${drilldownHoverClass} ${drilldownFocusClass}`}
           aria-label="Open audit center"
         >
-          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-indigo-800">Audit center</p>
-          <p className="mt-2 text-sm font-semibold text-indigo-950">Compliance timeline</p>
-          <p className="mt-auto pt-1 text-xs text-indigo-900/80">Evidence packs & export</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-indigo-800">{t("audit_center")}</p>
+          <p className="mt-2 text-sm font-semibold text-indigo-950">{t("compliance_timeline")}</p>
+          <p className="mt-auto pt-1 text-xs text-indigo-900/80">{t("evidence_packs_export")}</p>
         </Link>
         <Link
           href={getDrilldownHref("platform_health")}
@@ -45,7 +47,7 @@ export function AdminOperationsControl({
           aria-label="Open system health"
         >
           <div className="flex items-start justify-between gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">System Health</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">{t("system_health")}</p>
             <StatusBadge label={serviceRoleOk ? "OK" : "!"} status={serviceRoleOk ? "success" : "warning"} />
           </div>
           <p className="mt-2 font-mono text-lg font-semibold tabular-nums text-slate-950">→</p>

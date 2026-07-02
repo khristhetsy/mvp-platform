@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { sectorLabel } from "@/lib/icfo-events/sectors";
 import type { NetworkingSuggestion, NetworkingConnection } from "@/lib/icfo-events/networking";
 
@@ -25,6 +26,7 @@ export function NetworkingConnections({
   suggestions: NetworkingSuggestion[];
   initialConnections: NetworkingConnection[];
 }) {
+  const t = useTranslations("eventsCmp");
   const [connections, setConnections] = useState<NetworkingConnection[]>(initialConnections);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -93,8 +95,8 @@ export function NetworkingConnections({
 
   function suggestionAction(s: NetworkingSuggestion) {
     const existing = byOther.get(s.profileId);
-    if (existing?.status === "accepted") return <span className="text-xs font-medium text-emerald-700">Connected</span>;
-    if (existing?.status === "requested") return <span className="text-xs text-[var(--text-muted)]">Pending</span>;
+    if (existing?.status === "accepted") return <span className="text-xs font-medium text-emerald-700">{t("connected")}</span>;
+    if (existing?.status === "requested") return <span className="text-xs text-[var(--text-muted)]">{t("pending")}</span>;
     if (existing?.status === "declined") return <span className="text-xs text-[var(--text-muted)]">—</span>;
     return (
       <button
@@ -114,7 +116,7 @@ export function NetworkingConnections({
       {/* Incoming requests */}
       {incoming.length > 0 && (
         <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-5">
-          <h3 className="font-semibold text-[var(--navy)]">Connection requests</h3>
+          <h3 className="font-semibold text-[var(--navy)]">{t("connection_requests")}</h3>
           <ul className="mt-3 space-y-2">
             {incoming.map((c) => (
               <li key={c.id} className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] px-3 py-2">
@@ -146,7 +148,7 @@ export function NetworkingConnections({
 
       {/* Suggestions */}
       <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-5">
-        <h3 className="font-semibold text-[var(--navy)]">Suggested connections</h3>
+        <h3 className="font-semibold text-[var(--navy)]">{t("suggested_connections")}</h3>
         {suggestions.length === 0 ? (
           <p className="mt-1 text-sm text-[var(--text-muted)]">
             No matches yet. As more attendees opt in and share interests, sector-matched people will appear here.
@@ -179,13 +181,13 @@ export function NetworkingConnections({
       {/* Accepted connections */}
       {accepted.length > 0 && (
         <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-5">
-          <h3 className="font-semibold text-[var(--navy)]">Your connections</h3>
+          <h3 className="font-semibold text-[var(--navy)]">{t("your_connections")}</h3>
           <ul className="mt-3 space-y-2">
             {accepted.map((c) => (
               <li key={c.id} className="flex items-center gap-3 rounded-lg border border-[var(--border-subtle)] px-3 py-2">
                 <Avatar name={c.otherName} />
                 <span className="text-sm font-medium text-[var(--navy)]">{c.otherName}</span>
-                <span className="ml-auto text-xs font-medium text-emerald-700">Connected</span>
+                <span className="ml-auto text-xs font-medium text-emerald-700">{t("connected")}</span>
               </li>
             ))}
           </ul>

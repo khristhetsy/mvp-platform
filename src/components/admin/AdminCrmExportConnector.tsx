@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 import { CRM_EXPORT_ENTITY_TYPES, type CrmExportEntityType, type CrmExportPreview } from "@/lib/crm-connectors/types";
 import { CRM_ENTITY_LABELS } from "@/lib/crm-connectors/display";
@@ -7,6 +8,7 @@ import { PageSection } from "@/components/ui/workspace-layout";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export function AdminCrmExportConnector() {
+  const t = useTranslations("adminCmp");
   const [entityType, setEntityType] = useState<CrmExportEntityType>("companies");
   const [format, setFormat] = useState<"csv" | "json">("csv");
   const [preview, setPreview] = useState<CrmExportPreview | null>(null);
@@ -33,10 +35,10 @@ export function AdminCrmExportConnector() {
 
   return (
     <div id="crm-export">
-    <PageSection title="CRM Export Connector">
+    <PageSection title={t("crm_export_connector")}>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <StatusBadge label="Export only" status="success" />
-        <StatusBadge label="No live HubSpot sync" status="neutral" />
+        <StatusBadge label={t("export_only")} status="success" />
+        <StatusBadge label={t("no_live_hubspot_sync")} status="neutral" />
       </div>
       <p className="mb-4 text-xs text-slate-600">
         Sanitized HubSpot-style field mapping → preview → download package. No API sync, no contact creation, and no
@@ -45,7 +47,7 @@ export function AdminCrmExportConnector() {
 
       <div className="flex flex-wrap gap-3 text-sm">
         <label className="block">
-          <span className="text-xs font-medium text-slate-600">Entity type</span>
+          <span className="text-xs font-medium text-slate-600">{t("entity_type")}</span>
           <select
             value={entityType}
             onChange={(e) => setEntityType(e.target.value as CrmExportEntityType)}
@@ -59,7 +61,7 @@ export function AdminCrmExportConnector() {
           </select>
         </label>
         <label className="block">
-          <span className="text-xs font-medium text-slate-600">Format</span>
+          <span className="text-xs font-medium text-slate-600">{t("format")}</span>
           <select
             value={format}
             onChange={(e) => setFormat(e.target.value as "csv" | "json")}
@@ -101,7 +103,7 @@ export function AdminCrmExportConnector() {
             ))}
           </ul>
           <div>
-            <p className="mb-1 font-semibold text-slate-700">Mapped fields</p>
+            <p className="mb-1 font-semibold text-slate-700">{t("mapped_fields")}</p>
             <div className="grid gap-1 sm:grid-cols-2">
               {preview.mappedFields.map((f) => (
                 <div key={f.hubspotField} className="rounded border border-slate-100 bg-white px-2 py-1">

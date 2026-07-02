@@ -1,20 +1,22 @@
+import { useTranslations } from "next-intl";
 import type { GmailFoundationStatus } from "@/lib/email/types";
 import { PageSection } from "@/components/ui/workspace-layout";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 export function EmailFoundationSection({ status }: Readonly<{ status: GmailFoundationStatus }>) {
+  const t = useTranslations("adminCmp");
   return (
-    <PageSection title="Gmail / email foundation (Phase 1)">
+    <PageSection title={t("gmail_email_foundation_phase_1")}>
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <StatusBadge
           label={status.draftingAvailable ? "Drafting available" : "Unavailable"}
           status={status.draftingAvailable ? "success" : "neutral"}
         />
-        <StatusBadge label="Auto-send disabled" status="neutral" />
+        <StatusBadge label={t("auto_send_disabled")} status="neutral" />
         {status.googleConnected ? (
-          <StatusBadge label="Google connected" status="success" />
+          <StatusBadge label={t("google_connected")} status="success" />
         ) : (
-          <StatusBadge label="Google not connected" status="neutral" />
+          <StatusBadge label={t("google_not_connected")} status="neutral" />
         )}
         {!status.googleConnected ? (
           <a

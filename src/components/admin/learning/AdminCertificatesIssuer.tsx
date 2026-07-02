@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { formatApiError } from "@/lib/api/errors";
 
@@ -14,6 +15,7 @@ type IssueCertificateResponse = {
 };
 
 export function AdminCertificatesIssuer({ onIssued }: Props) {
+  const t = useTranslations("adminCmp");
   const [founderId, setFounderId] = useState("");
   const [companyId, setCompanyId] = useState("");
   const [programId, setProgramId] = useState("");
@@ -58,7 +60,7 @@ export function AdminCertificatesIssuer({ onIssued }: Props) {
 
       <div className="grid gap-3 md:grid-cols-2">
         <label className="block text-sm">
-          <span className="text-slate-600">Founder user id (UUID)</span>
+          <span className="text-slate-600">{t("founder_user_id_uuid")}</span>
           <input
             className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs"
             value={founderId}
@@ -66,7 +68,7 @@ export function AdminCertificatesIssuer({ onIssued }: Props) {
           />
         </label>
         <label className="block text-sm">
-          <span className="text-slate-600">Company id (optional)</span>
+          <span className="text-slate-600">{t("company_id_optional")}</span>
           <input
             className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs"
             value={companyId}
@@ -77,7 +79,7 @@ export function AdminCertificatesIssuer({ onIssued }: Props) {
 
       <div className="grid gap-3 md:grid-cols-2">
         <label className="block text-sm">
-          <span className="text-slate-600">Course/program id (optional)</span>
+          <span className="text-slate-600">{t("course_program_id_optional")}</span>
           <input
             className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs"
             value={programId}
@@ -85,7 +87,7 @@ export function AdminCertificatesIssuer({ onIssued }: Props) {
           />
         </label>
         <label className="block text-sm">
-          <span className="text-slate-600">Status</span>
+          <span className="text-slate-600">{t("status")}</span>
           <select
             className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
             value={status}
@@ -99,7 +101,7 @@ export function AdminCertificatesIssuer({ onIssued }: Props) {
       </div>
 
       <label className="block text-sm">
-        <span className="text-slate-600">Certificate title</span>
+        <span className="text-slate-600">{t("certificate_title")}</span>
         <input
           className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
           value={title}

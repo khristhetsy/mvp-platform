@@ -1,8 +1,10 @@
 import type { ActionTimelineItem } from "@/lib/actions/types";
+import { useTranslations } from "next-intl";
 
 export function ActionTimeline({ items }: Readonly<{ items: ActionTimelineItem[] }>) {
+  const t = useTranslations("sharedCmp");
   if (items.length === 0) {
-    return <p className="text-xs text-slate-500">No related operational events yet.</p>;
+    return <p className="text-xs text-slate-500">{t("no_related_operational_events_yet")}</p>;
   }
 
   return (

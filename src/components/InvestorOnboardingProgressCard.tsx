@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { InvestorOnboardingProgress } from "@/lib/investor/profile";
 import { DonutProgress } from "@/components/ui/charts/DonutProgress";
 import { WorkflowProgressRail } from "@/components/ui/WorkflowProgressRail";
@@ -12,6 +13,7 @@ export function InvestorOnboardingProgressCard({
    *  banner instead of returning null when approved. */
   inPage?: boolean;
 }>) {
+  const t = useTranslations("sharedCmp");
   if (progress.isComplete && !inPage) {
     return null;
   }
@@ -25,7 +27,7 @@ export function InvestorOnboardingProgressCard({
           </svg>
         </div>
         <div>
-          <p className="text-sm font-semibold text-emerald-900">Account approved — welcome to the marketplace</p>
+          <p className="text-sm font-semibold text-emerald-900">{t("account_approved_welcome_to_the_marketplace")}</p>
           <p className="text-xs leading-5 text-emerald-700">
             You have full access to deal flow, investor matches, and the data room.
           </p>
@@ -86,14 +88,14 @@ export function InvestorOnboardingProgressCard({
 
           {progress.adminFeedback ? (
             <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-              <p className="text-[11px] font-semibold text-amber-800">Admin feedback</p>
+              <p className="text-[11px] font-semibold text-amber-800">{t("admin_feedback")}</p>
               <p className="mt-0.5 text-xs leading-5 text-amber-700">{progress.adminFeedback}</p>
             </div>
           ) : null}
 
           <div className="mt-4">
             <div className="mb-1 flex justify-between text-xs font-medium text-slate-700">
-              <span>Progress</span>
+              <span>{t("progress")}</span>
               <span className="font-mono tabular-nums">{progress.percent}%</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">

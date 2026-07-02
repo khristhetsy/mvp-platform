@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type { CollaborationVisibility } from "@/lib/collaboration/types";
 
 export function CollaborationCommentForm({
@@ -20,6 +21,7 @@ export function CollaborationCommentForm({
   }) => Promise<void>;
   disabled?: boolean;
 }>) {
+  const t = useTranslations("sharedCmp");
   const [body, setBody] = useState("");
   const [visibility, setVisibility] = useState(defaultVisibility);
   const [isInternalNote, setIsInternalNote] = useState(false);
@@ -51,7 +53,7 @@ export function CollaborationCommentForm({
         rows={3}
         maxLength={4000}
         disabled={disabled || pending}
-        placeholder="Add a comment… Use @name for mentions (foundation)."
+        placeholder={t("add_a_comment_use_name_for_mentions_foundati")}
         className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 disabled:opacity-60"
       />
       <div className="flex flex-wrap items-center gap-2">

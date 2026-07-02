@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 
 type SectorOption = { slug: string; label: string };
@@ -14,6 +15,7 @@ export function ApplyToPresentForm({
   slug: string;
   sectors: SectorOption[];
 }) {
+  const t = useTranslations("eventsCmp");
   const router = useRouter();
   const [kind, setKind] = useState<"presenter" | "panelist" | "founder_showcase">("presenter");
   const [topic, setTopic] = useState("");
@@ -61,7 +63,7 @@ export function ApplyToPresentForm({
   if (done) {
     return (
       <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-6">
-        <h2 className="font-semibold text-emerald-800">Application submitted</h2>
+        <h2 className="font-semibold text-emerald-800">{t("application_submitted")}</h2>
         <p className="mt-1 text-sm text-emerald-700">
           Thanks — our team will review it and let you know. You&apos;ll get a notification with the decision.
         </p>
@@ -78,7 +80,7 @@ export function ApplyToPresentForm({
   return (
     <form onSubmit={submit} className="grid gap-4 rounded-xl border border-[var(--border-subtle)] bg-white p-6 shadow-[var(--shadow-panel)]">
       <label className="block">
-        <span className="text-sm font-medium text-[var(--text-secondary)]">Format</span>
+        <span className="text-sm font-medium text-[var(--text-secondary)]">{t("format")}</span>
         <select
           value={kind}
           onChange={(e) => setKind(e.target.value as typeof kind)}
@@ -91,20 +93,20 @@ export function ApplyToPresentForm({
       </label>
 
       <label className="block">
-        <span className="text-sm font-medium text-[var(--text-secondary)]">Topic</span>
+        <span className="text-sm font-medium text-[var(--text-secondary)]">{t("topic")}</span>
         <input
           required
           maxLength={200}
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
           className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
-          placeholder="What will you present?"
+          placeholder={t("what_will_you_present")}
         />
       </label>
 
       {sectors.length > 0 && (
         <label className="block">
-          <span className="text-sm font-medium text-[var(--text-secondary)]">Sector track</span>
+          <span className="text-sm font-medium text-[var(--text-secondary)]">{t("sector_track")}</span>
           <select
             value={sectorSlug}
             onChange={(e) => setSectorSlug(e.target.value)}
@@ -118,25 +120,25 @@ export function ApplyToPresentForm({
       )}
 
       <label className="block">
-        <span className="text-sm font-medium text-[var(--text-secondary)]">Short bio</span>
+        <span className="text-sm font-medium text-[var(--text-secondary)]">{t("short_bio")}</span>
         <textarea
           rows={3}
           maxLength={3000}
           value={bio}
           onChange={(e) => setBio(e.target.value)}
           className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
-          placeholder="A few lines about you and why this topic."
+          placeholder={t("a_few_lines_about_you_and_why_this_topic")}
         />
       </label>
 
       <label className="block">
-        <span className="text-sm font-medium text-[var(--text-secondary)]">Links</span>
+        <span className="text-sm font-medium text-[var(--text-secondary)]">{t("links")}</span>
         <textarea
           rows={2}
           value={linksText}
           onChange={(e) => setLinksText(e.target.value)}
           className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
-          placeholder="LinkedIn, deck, website — one per line"
+          placeholder={t("linkedin_deck_website_one_per_line")}
         />
         <span className="mt-1 block text-xs text-[var(--text-muted)]">Full URLs (https://…), one per line.</span>
       </label>

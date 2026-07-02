@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActionablePanelRow } from "@/components/ui/drilldown";
@@ -30,15 +31,16 @@ export function CompanyTimelinePanel({
   items,
   companyId,
 }: Readonly<{ items: OperationalActivityFeedItem[]; companyId: string }>) {
+  const t = useTranslations("adminCmp");
   return (
     <WorkspacePanel
-      title="Recent operational activity"
+      title={t("recent_operational_activity")}
       subtitle={`${items.length} event${items.length === 1 ? "" : "s"} · Source: operational_activity_events`}
     >
       {items.length === 0 ? (
         <EmptyState
-          title="No operational events yet"
-          description="New platform actions involving this company will appear here as operational activity is recorded."
+          title={t("no_operational_events_yet")}
+          description={t("new_platform_actions_involving_this_company")}
           guidance="Investor interests, onboarding milestones, compliance events, and SPV updates will populate this timeline."
           metadata="Limit 25 most recent events"
         />

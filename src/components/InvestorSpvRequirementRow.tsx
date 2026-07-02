@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { formatParticipationRequirementCategory } from "@/lib/spv/participation-display";
 import type { SpvParticipationRequirementRecord } from "@/lib/spv/types";
@@ -14,6 +15,7 @@ function requirementDocument(req: SpvParticipationRequirementRecord) {
 export function InvestorSpvRequirementRow({
   requirement,
 }: Readonly<{ requirement: SpvParticipationRequirementRecord }>) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
@@ -62,11 +64,11 @@ export function InvestorSpvRequirementRow({
       ) : null}
 
       {requirement.status === "approved" ? (
-        <p className="mt-1 text-emerald-800">Approved — operational review complete</p>
+        <p className="mt-1 text-emerald-800">{t("approved_operational_review_complete")}</p>
       ) : null}
 
       {requirement.status === "waived" ? (
-        <p className="mt-1 text-slate-600">Waived by admin</p>
+        <p className="mt-1 text-slate-600">{t("waived_by_admin")}</p>
       ) : null}
 
       {canUpload ? (

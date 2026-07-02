@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { ComplianceEventRecord } from "@/lib/compliance/types";
 import { StatusBadge, severityToStatus } from "@/components/ui/StatusBadge";
@@ -12,6 +13,7 @@ export function AdminComplianceQueue({
   events: ComplianceEventRecord[];
   title: string;
 }>) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -35,7 +37,7 @@ export function AdminComplianceQueue({
   }
 
   if (events.length === 0) {
-    return <p className="text-sm text-slate-500">No events in this section.</p>;
+    return <p className="text-sm text-slate-500">{t("no_events_in_this_section")}</p>;
   }
 
   return (
@@ -62,7 +64,7 @@ export function AdminComplianceQueue({
           <textarea
             value={notes[event.id] ?? ""}
             onChange={(e) => setNotes((prev) => ({ ...prev, [event.id]: e.target.value }))}
-            placeholder="Internal notes (staff only)"
+            placeholder={t("internal_notes_staff_only")}
             rows={2}
             className="mt-3 w-full rounded-lg border px-2 py-1 text-xs"
           />

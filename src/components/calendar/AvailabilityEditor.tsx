@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Clock, Check, Plus, Trash2 } from "lucide-react";
 import type { AvailabilitySettings, WeeklyRule, ScheduleQuestion } from "@/lib/scheduling/types";
 
@@ -27,6 +28,7 @@ function rulesToDays(rules: WeeklyRule[]): DayState[] {
 }
 
 export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
+  const t = useTranslations("sharedCmp");
   const [days, setDays] = useState<DayState[]>(() => rulesToDays([]));
   const [timezone, setTimezone] = useState(LOCAL_TZ);
   const [slotMinutes, setSlotMinutes] = useState(30);
@@ -114,7 +116,7 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
   const setDay = (i: number, patch: Partial<DayState>) =>
     setDays((prev) => prev.map((d, idx) => (idx === i ? { ...d, ...patch } : d)));
 
-  if (loading) return <p className="text-sm text-slate-500">Loading availability…</p>;
+  if (loading) return <p className="text-sm text-slate-500">{t("loading_availability")}</p>;
 
   return (
     <div className="space-y-4">
@@ -129,7 +131,7 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
 
       {bookingPath ? (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#B5D4F4] bg-[#E6F1FB] px-3 py-2 text-sm text-[#0C447C]">
-          <span className="font-medium">Your booking link:</span>
+          <span className="font-medium">{t("your_booking_link")}</span>
           <a href={bookingPath} className="truncate rounded bg-white/70 px-2 py-0.5 text-xs underline-offset-2 hover:underline">
             {bookingUrl || bookingPath}
           </a>
@@ -150,28 +152,28 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
 
       <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
         <label className="mb-4 block text-sm">
-          <span className="mb-1 block text-xs font-medium text-slate-500">Meeting name</span>
+          <span className="mb-1 block text-xs font-medium text-slate-500">{t("meeting_name")}</span>
           <input
             value={meetingTitle}
             onChange={(e) => setMeetingTitle(e.target.value)}
             placeholder={`Meeting with you (e.g. "ICFO intro call")`}
             className="w-full max-w-md rounded-lg border border-slate-200 px-3 py-1.5 text-sm"
           />
-          <span className="mt-1 block text-[11px] text-slate-400">Shown on your booking page. Leave blank to use a default.</span>
+          <span className="mt-1 block text-[11px] text-slate-400">{t("shown_on_your_booking_page_leave_blank_to_us")}</span>
         </label>
         <div className="mb-4 flex flex-wrap gap-4">
           <label className="text-sm">
-            <span className="mb-1 block text-xs font-medium text-slate-500">Timezone</span>
+            <span className="mb-1 block text-xs font-medium text-slate-500">{t("timezone")}</span>
             <input value={timezone} onChange={(e) => setTimezone(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
           </label>
           <label className="text-sm">
-            <span className="mb-1 block text-xs font-medium text-slate-500">Slot length</span>
+            <span className="mb-1 block text-xs font-medium text-slate-500">{t("slot_length")}</span>
             <select value={slotMinutes} onChange={(e) => setSlotMinutes(Number(e.target.value))} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm">
               {[15, 30, 45, 60].map((n) => <option key={n} value={n}>{n} min</option>)}
             </select>
           </label>
           <label className="text-sm">
-            <span className="mb-1 block text-xs font-medium text-slate-500">Buffer between</span>
+            <span className="mb-1 block text-xs font-medium text-slate-500">{t("buffer_between")}</span>
             <select value={bufferMinutes} onChange={(e) => setBufferMinutes(Number(e.target.value))} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm">
               {[0, 5, 10, 15, 30].map((n) => <option key={n} value={n}>{n} min</option>)}
             </select>
@@ -192,7 +194,7 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
                   <input type="time" value={d.end} onChange={(e) => setDay(i, { end: e.target.value })} className="rounded-lg border border-slate-200 px-2 py-1 text-sm" />
                 </div>
               ) : (
-                <span className="text-sm text-slate-400">Unavailable</span>
+                <span className="text-sm text-slate-400">{t("unavailable")}</span>
               )}
             </div>
           ))}
@@ -202,8 +204,8 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
         <div className="mt-5 border-t border-slate-100 pt-4">
           <div className="mb-2 flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-slate-900">Booking questions</p>
-              <p className="text-xs text-slate-500">Asked on your booking page. Answers arrive with each booking.</p>
+              <p className="text-sm font-semibold text-slate-900">{t("booking_questions")}</p>
+              <p className="text-xs text-slate-500">{t("asked_on_your_booking_page_answers_arrive_wi")}</p>
             </div>
             <button type="button" onClick={addQuestion} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"><Plus className="h-3.5 w-3.5" /> Add question</button>
           </div>
@@ -211,7 +213,7 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
             {questions.map((q) => (
               <div key={q.id} className="rounded-lg border border-slate-200 p-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <input value={q.label} onChange={(e) => updateQuestion(q.id, { label: e.target.value })} placeholder="Question label" className="min-w-[180px] flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
+                  <input value={q.label} onChange={(e) => updateQuestion(q.id, { label: e.target.value })} placeholder={t("question_label")} className="min-w-[180px] flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
                   <select value={q.type} onChange={(e) => updateQuestion(q.id, { type: e.target.value as ScheduleQuestion["type"] })} className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm">
                     <option value="short_text">Short text</option>
                     <option value="single">Single choice</option>
@@ -233,7 +235,7 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
                 ) : null}
               </div>
             ))}
-            {questions.length === 0 ? <p className="text-xs text-slate-400">No questions yet. Add one to collect info from bookers.</p> : null}
+            {questions.length === 0 ? <p className="text-xs text-slate-400">{t("no_questions_yet_add_one_to_collect_info_fro")}</p> : null}
           </div>
         </div>
 

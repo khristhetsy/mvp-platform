@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Check, Lock, Sparkles, ArrowRight } from "lucide-react";
 import type { InvestorStageView } from "@/lib/investor-journey/stages";
 import type { InvestorStageCoach } from "@/lib/investor-journey/coach";
@@ -13,10 +14,11 @@ export function InvestorJourneyTracker({
   stageView,
   coach,
 }: Readonly<{ stageView: InvestorStageView; coach: InvestorStageCoach }>) {
+  const t = useTranslations("investorCmp");
   return (
     <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-400">Your journey</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-400">{t("your_journey")}</p>
         <p className="text-[11px] text-slate-400">{stageView.percent}% complete</p>
       </div>
 

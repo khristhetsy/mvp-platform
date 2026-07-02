@@ -5,6 +5,7 @@
 // nothing is written until the admin clicks Apply (advise + confirmed actions).
 
 import { useCallback, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 
 const PURPLE = "#534AB7";
@@ -29,6 +30,7 @@ export function CopilotPanel({
   pageId?: string;
   onApplied?: () => void;
 }) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -155,15 +157,15 @@ export function CopilotPanel({
           )
         ))}
 
-        {busy ? <div style={{ alignSelf: "flex-start", fontSize: 12, color: "#7a8494" }}>Thinking…</div> : null}
+        {busy ? <div style={{ alignSelf: "flex-start", fontSize: 12, color: "#7a8494" }}>{t("thinking")}</div> : null}
 
         {action ? (
           <div style={{ border: "1px solid #CECBF6", background: "#F6F5FC", borderRadius: 10, padding: 12 }}>
-            <p style={{ fontSize: 12, fontWeight: 600, color: "#3C3489", margin: "0 0 4px" }}>Proposed action</p>
-            <p style={{ fontSize: 11.5, color: "#5f5e5a", margin: "0 0 10px" }}>Nothing is saved until you confirm.</p>
+            <p style={{ fontSize: 12, fontWeight: 600, color: "#3C3489", margin: "0 0 4px" }}>{t("proposed_action")}</p>
+            <p style={{ fontSize: 11.5, color: "#5f5e5a", margin: "0 0 10px" }}>{t("nothing_is_saved_until_you_confirm")}</p>
             <div style={{ display: "flex", gap: 8 }}>
               <button type="button" onClick={() => void applyAction()} disabled={busy} style={{ background: PURPLE, color: "#fff", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>{actionLabel}</button>
-              <button type="button" onClick={() => setAction(null)} style={{ background: "#fff", color: "#5f5e5a", border: "1px solid #d7dce4", borderRadius: 8, padding: "7px 12px", fontSize: 12.5, cursor: "pointer" }}>Dismiss</button>
+              <button type="button" onClick={() => setAction(null)} style={{ background: "#fff", color: "#5f5e5a", border: "1px solid #d7dce4", borderRadius: 8, padding: "7px 12px", fontSize: 12.5, cursor: "pointer" }}>{t("dismiss")}</button>
             </div>
           </div>
         ) : null}

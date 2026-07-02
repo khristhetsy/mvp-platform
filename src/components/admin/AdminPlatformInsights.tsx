@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
@@ -141,6 +142,7 @@ async function loadInsights(): Promise<Insight[]> {
 }
 
 export async function AdminPlatformInsights() {
+  const t = await getTranslations("adminCmp");
   const insights = await loadInsights();
 
   if (insights.length === 0) {
@@ -148,9 +150,9 @@ export async function AdminPlatformInsights() {
       <div className="rounded-xl border border-slate-200 bg-white px-6 py-5">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-emerald-400" />
-          <p className="text-sm font-semibold text-slate-900">Platform Insights</p>
+          <p className="text-sm font-semibold text-slate-900">{t("platform_insights")}</p>
         </div>
-        <p className="mt-1.5 text-sm text-slate-500">No anomalies detected. Platform operating normally.</p>
+        <p className="mt-1.5 text-sm text-slate-500">{t("no_anomalies_detected_platform_operating_nor")}</p>
       </div>
     );
   }
@@ -159,7 +161,7 @@ export async function AdminPlatformInsights() {
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
         <div>
-          <p className="text-sm font-semibold text-slate-900">Platform Insights</p>
+          <p className="text-sm font-semibold text-slate-900">{t("platform_insights")}</p>
           <p className="mt-0.5 text-xs text-slate-500">Automated anomaly detection · {insights.length} item{insights.length !== 1 ? "s" : ""} flagged</p>
         </div>
         {insights.some((i) => i.severity === "high") && (

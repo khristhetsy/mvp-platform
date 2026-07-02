@@ -1,6 +1,7 @@
 "use client";
 
 import { CapitalOSLogo } from "@/components/CapitalOSLogo";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -88,6 +89,7 @@ function ProfileDropdown({
   profileSubtitle?: string;
   workspace: WorkspaceId;
 }>) {
+  const t = useTranslations("sharedCmp");
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -197,6 +199,7 @@ function ProfileDropdown({
 }
 
 export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profileEmail, onMenuClick }: Readonly<Props>) {
+  const t = useTranslations("sharedCmp");
   const companyLabel = profileSubtitle?.trim() || "Select company";
 
   return (
@@ -231,7 +234,7 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profi
               <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
               <path d="M16.5 16.5L21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            <span className="hidden lg:inline">Search</span>
+            <span className="hidden lg:inline">{t("search")}</span>
             <kbd className="hidden rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 lg:inline">⌘K</kbd>
           </button>
           <button

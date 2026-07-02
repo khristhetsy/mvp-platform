@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 export type FunnelStage = {
   label: string;
   count: number;
@@ -22,6 +23,7 @@ const STAGE_COLORS = [
 ];
 
 export function AdminConversionFunnel({ stages }: Readonly<{ stages: FunnelStage[] }>) {
+  const t = useTranslations("adminCmp");
   if (stages.length === 0) return null;
 
   const maxCount = Math.max(1, stages[0]?.count ?? 1);
@@ -77,8 +79,8 @@ export function AdminConversionFunnel({ stages }: Readonly<{ stages: FunnelStage
       <div className="flex items-center gap-3 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
         <div className="w-44 shrink-0" />
         <div className="flex-1" />
-        <div className="w-16 shrink-0 text-right">Count</div>
-        <div className="w-12 shrink-0 text-right">Conv.</div>
+        <div className="w-16 shrink-0 text-right">{t("count")}</div>
+        <div className="w-12 shrink-0 text-right">{t("conv")}</div>
       </div>
     </div>
   );

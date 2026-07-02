@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   BarChart3,
@@ -124,6 +125,7 @@ export function PageBuilderBlockRenderer({
   previewMode = "desktop",
   nested = false,
 }: Readonly<{ block: PageBlock; previewMode?: PreviewMode; nested?: boolean }>) {
+  const t = useTranslations("sharedCmp");
   switch (block.type) {
     case "hero":
       return (
@@ -415,7 +417,7 @@ export function PageBuilderBlockRenderer({
                 <h2 className="text-sm font-semibold">{asString(block.props.title) || "Compliance notice"}</h2>
                 <p className="mt-1 text-xs leading-5">{asString(block.props.body)}</p>
                 {Boolean(block.props.required) ? (
-                  <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide opacity-80">Required disclosure</p>
+                  <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide opacity-80">{t("required_disclosure")}</p>
                 ) : null}
               </div>
             </div>

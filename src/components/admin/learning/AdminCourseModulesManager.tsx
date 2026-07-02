@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { formatApiError } from "@/lib/api/errors";
 
@@ -21,6 +22,7 @@ type Props = {
 };
 
 export function AdminCourseModulesManager({ courseId, initialLinks, initialModules }: Props) {
+  const t = useTranslations("adminCmp");
   const [allModules, setAllModules] = useState<ModuleRow[]>(initialModules);
   const [links, setLinks] = useState<LinkRow[]>(initialLinks);
   const [loading, setLoading] = useState(false);
@@ -142,7 +144,7 @@ export function AdminCourseModulesManager({ courseId, initialLinks, initialModul
       {error ? <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">{error}</div> : null}
 
       {linked.length === 0 ? (
-        <p className="text-sm text-slate-600">No modules linked yet.</p>
+        <p className="text-sm text-slate-600">{t("no_modules_linked_yet")}</p>
       ) : (
         <div className="divide-y divide-slate-100 rounded-lg border border-slate-200">
           {linked.map((l) => (

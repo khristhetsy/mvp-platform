@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Sparkles, X, Send } from "lucide-react";
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -15,6 +16,7 @@ const QUICK = [
 /** Floating "Info Desk" launcher that opens the event AI assistant. Present on
  *  every venue page so attendees can ask without leaving where they are. */
 export function EventInfoDesk({ slug }: { slug: string }) {
+  const t = useTranslations("eventsCmp");
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([
     { role: "assistant", content: "Hi! I'm your event guide. Ask me where to go, what's next, or who you should meet." },
@@ -99,8 +101,8 @@ export function EventInfoDesk({ slug }: { slug: string }) {
             <Sparkles className="h-4 w-4" aria-hidden />
           </span>
           <div>
-            <p className="text-sm font-medium text-white">Event Assistant</p>
-            <p className="text-[11px]" style={{ color: "#8e9bb0" }}>Info &amp; Help Desk</p>
+            <p className="text-sm font-medium text-white">{t("event_assistant")}</p>
+            <p className="text-[11px]" style={{ color: "#8e9bb0" }}>{t("info_help_desk")}</p>
           </div>
         </div>
         <button onClick={() => setOpen(false)} aria-label="Close" className="text-white/70 hover:text-white">
@@ -154,7 +156,7 @@ export function EventInfoDesk({ slug }: { slug: string }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send(input)}
-          placeholder="Ask anything about the event…"
+          placeholder={t("ask_anything_about_the_event")}
           maxLength={500}
           className="flex-1 rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-sm"
         />

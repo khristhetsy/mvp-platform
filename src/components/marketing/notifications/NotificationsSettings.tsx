@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { cadenceLabel, cadenceOptions, DIGEST_TIMES, TIMEZONES } from "./cadence-options";
 
 type Channel = "in_app" | "email" | "push";
@@ -86,6 +87,7 @@ function ChannelChips({
 }
 
 export function NotificationsSettings() {
+  const t = useTranslations("sharedCmp");
   const [data, setData] = useState<Loaded | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [prefs, setPrefs] = useState<Record<string, PrefRow>>({});
@@ -159,7 +161,7 @@ export function NotificationsSettings() {
   }, [data, prefs, settings]);
 
   if (loading || !data || !settings) {
-    return <p style={{ fontSize: 13, color: "#5f5e5a", padding: 24 }}>Loading notification settings…</p>;
+    return <p style={{ fontSize: 13, color: "#5f5e5a", padding: 24 }}>{t("loading_notification_settings")}</p>;
   }
 
   const groupCount = (gid: string) => {
@@ -242,19 +244,19 @@ export function NotificationsSettings() {
       {/* Right: master control + live preview */}
       <div style={{ display: "flex", flexDirection: "column", gap: 16, position: "sticky", top: 12 }}>
         <div style={card}>
-          <div style={{ padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", fontSize: 13, fontWeight: 600, color: "#0f2147" }}>Controls</div>
+          <div style={{ padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", fontSize: 13, fontWeight: 600, color: "#0f2147" }}>{t("controls")}</div>
           <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>
-            <Row label="Master switch" hint="Mutes everything when off">
-              <Switch on={settings.master_on} label="Master switch" onToggle={() => updateSettings({ master_on: !settings.master_on })} />
+            <Row label={t("master_switch")} hint="Mutes everything when off">
+              <Switch on={settings.master_on} label={t("master_switch")} onToggle={() => updateSettings({ master_on: !settings.master_on })} />
             </Row>
-            <Row label="Digest time" hint="When the morning brief fires">
+            <Row label={t("digest_time")} hint="When the morning brief fires">
               <select value={settings.digest_time} onChange={(e) => updateSettings({ digest_time: e.target.value })}
                 style={selectStyle} aria-label="Digest time">
                 {DIGEST_TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </Row>
-            <Row label="Quiet hours" hint="Holds non-urgent email/push">
-              <Switch on={settings.quiet_hours_on} label="Quiet hours" onToggle={() => updateSettings({ quiet_hours_on: !settings.quiet_hours_on })} />
+            <Row label={t("quiet_hours")} hint="Holds non-urgent email/push">
+              <Switch on={settings.quiet_hours_on} label={t("quiet_hours")} onToggle={() => updateSettings({ quiet_hours_on: !settings.quiet_hours_on })} />
             </Row>
             {settings.quiet_hours_on ? (
               <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 2 }}>
@@ -264,10 +266,10 @@ export function NotificationsSettings() {
               </div>
             ) : null}
             <div>
-              <p style={{ fontSize: 12.5, fontWeight: 500, color: "#0f2147", margin: "0 0 6px" }}>Default channels</p>
+              <p style={{ fontSize: 12.5, fontWeight: 500, color: "#0f2147", margin: "0 0 6px" }}>{t("default_channels")}</p>
               <ChannelChips value={settings.default_channels} onChange={(ch) => updateSettings({ default_channels: ch })} />
             </div>
-            <Row label="Timezone" hint="">
+            <Row label={t("timezone")} hint="">
               <select value={settings.timezone} onChange={(e) => updateSettings({ timezone: e.target.value })} style={selectStyle} aria-label="Timezone">
                 {(TIMEZONES.includes(settings.timezone) ? TIMEZONES : [settings.timezone, ...TIMEZONES]).map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
@@ -276,10 +278,10 @@ export function NotificationsSettings() {
         </div>
 
         <div style={card}>
-          <div style={{ padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", fontSize: 13, fontWeight: 600, color: "#0f2147" }}>Live preview</div>
+          <div style={{ padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", fontSize: 13, fontWeight: 600, color: "#0f2147" }}>{t("live_preview")}</div>
           <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
             {previews.length === 0 ? (
-              <p style={{ fontSize: 12, color: "#7a8494", padding: 4 }}>Nothing enabled to preview.</p>
+              <p style={{ fontSize: 12, color: "#7a8494", padding: 4 }}>{t("nothing_enabled_to_preview")}</p>
             ) : previews.map((p) => (
               <div key={p.id} style={{ border: "0.5px solid #eef1f5", borderRadius: 8, padding: "8px 10px", background: "#fbfbfd" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -304,7 +306,7 @@ export function NotificationsSettings() {
           Reset
         </button>
         {msg ? <span style={{ fontSize: 12.5, color: msg.ok ? "#0F6E56" : "#A32D2D" }}>{msg.text}</span> : null}
-        {dirty && !msg ? <span style={{ fontSize: 12.5, color: "#854F0B" }}>Unsaved changes</span> : null}
+        {dirty && !msg ? <span style={{ fontSize: 12.5, color: "#854F0B" }}>{t("unsaved_changes")}</span> : null}
       </div>
     </div>
   );

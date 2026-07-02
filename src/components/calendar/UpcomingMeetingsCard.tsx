@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { CalendarClock, Video } from "lucide-react";
 import type { CalendarEventRecord } from "@/lib/scheduling/types";
@@ -16,6 +17,7 @@ export function UpcomingMeetingsCard({
   calendarHref?: string;
   scheduleHref?: string;
 }) {
+  const t = useTranslations("sharedCmp");
   const [events, setEvents] = useState<CalendarEventRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,7 +60,7 @@ export function UpcomingMeetingsCard({
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-400">Loading…</p>
+        <p className="text-sm text-slate-400">{t("loading_2")}</p>
       ) : upcoming.length === 0 ? (
         <p className="text-sm text-slate-500">
           No meetings in the next 7 days.{" "}
@@ -78,7 +80,7 @@ export function UpcomingMeetingsCard({
               </span>
               <span className="flex-1 truncate text-sm text-slate-900">{e.title}</span>
               {e.meet_url ? (
-                <a href={e.meet_url} className="shrink-0 text-[#534AB7] hover:text-[#3C3489]" title="Join Google Meet">
+                <a href={e.meet_url} className="shrink-0 text-[#534AB7] hover:text-[#3C3489]" title={t("join_google_meet")}>
                   <Video className="h-3.5 w-3.5" />
                 </a>
               ) : null}

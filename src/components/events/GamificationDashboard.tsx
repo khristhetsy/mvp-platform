@@ -1,4 +1,5 @@
 import type { LeaderboardEntry, MemberStats } from "@/lib/icfo-events/gamification";
+import { useTranslations } from "next-intl";
 import type { MissionProgress } from "@/lib/icfo-events/missions";
 
 const BADGE_BG = ["#E6F1FB", "#E1F5EE", "#FAEEDA", "#EAF3DE", "#EEEDFE"];
@@ -17,32 +18,33 @@ export function GamificationDashboard({
   leaderboard: LeaderboardEntry[];
   meId: string;
 }) {
+  const t = useTranslations("eventsCmp");
   return (
     <div className="p-4 sm:p-5">
-      <h1 className="text-xl font-semibold text-[var(--navy)]">Gamification</h1>
+      <h1 className="text-xl font-semibold text-[var(--navy)]">{t("gamification")}</h1>
       <p className="mt-1 text-sm text-[var(--text-muted)]">
         Points for real participation — missions, badges, leaderboard. Rewards are status, not prizes.
       </p>
 
       <div className="mt-5 grid grid-cols-3 gap-3">
         <div className="rounded-xl p-4 text-white" style={{ background: "#0c2340" }}>
-          <p className="text-xs" style={{ color: "#aeb8c7" }}>Engagement points</p>
+          <p className="text-xs" style={{ color: "#aeb8c7" }}>{t("engagement_points")}</p>
           <p className="mt-1 text-2xl font-semibold">{stats.points.toLocaleString()}</p>
         </div>
         <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
-          <p className="text-xs text-[var(--text-secondary)]">Rank</p>
+          <p className="text-xs text-[var(--text-secondary)]">{t("rank")}</p>
           <p className="mt-1 text-2xl font-semibold" style={{ color: "#3B6D11" }}>{rank ? `#${rank}` : "—"}</p>
         </div>
         <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
-          <p className="text-xs text-[var(--text-secondary)]">Badges</p>
+          <p className="text-xs text-[var(--text-secondary)]">{t("badges")}</p>
           <p className="mt-1 text-2xl font-semibold text-[var(--navy)]">{stats.badges.length}</p>
         </div>
       </div>
 
       <div className="mt-3 rounded-xl border border-[var(--border-subtle)] bg-white p-4">
-        <h2 className="text-sm font-medium text-[var(--navy)]">Badges earned</h2>
+        <h2 className="text-sm font-medium text-[var(--navy)]">{t("badges_earned")}</h2>
         {stats.badges.length === 0 ? (
-          <p className="mt-2 text-sm text-[var(--text-muted)]">No badges yet — join a session or connect with someone to start earning.</p>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">{t("no_badges_yet_join_a_session_or_connect_with")}</p>
         ) : (
           <div className="mt-2.5 flex flex-wrap gap-2">
             {stats.badges.map((b, i) => (
@@ -60,9 +62,9 @@ export function GamificationDashboard({
 
       <div className="mt-3 grid gap-3 md:grid-cols-2">
         <section className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
-          <h2 className="text-sm font-medium text-[var(--navy)]">Active missions</h2>
+          <h2 className="text-sm font-medium text-[var(--navy)]">{t("active_missions")}</h2>
           {missions.length === 0 ? (
-            <p className="mt-2 text-sm text-[var(--text-muted)]">No active missions right now.</p>
+            <p className="mt-2 text-sm text-[var(--text-muted)]">{t("no_active_missions_right_now")}</p>
           ) : (
             <div className="mt-3 space-y-3.5">
               {missions.map((m) => {
@@ -83,13 +85,13 @@ export function GamificationDashboard({
               })}
             </div>
           )}
-          <p className="mt-3 text-[11px] text-[var(--text-muted)]">Rewards are status, not prizes — top contributors get speaker priority.</p>
+          <p className="mt-3 text-[11px] text-[var(--text-muted)]">{t("rewards_are_status_not_prizes_top_contributo")}</p>
         </section>
 
         <section className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
-          <h2 className="text-sm font-medium text-[var(--navy)]">Leaderboard</h2>
+          <h2 className="text-sm font-medium text-[var(--navy)]">{t("leaderboard")}</h2>
           {leaderboard.length === 0 ? (
-            <p className="mt-2 text-sm text-[var(--text-muted)]">No points awarded yet.</p>
+            <p className="mt-2 text-sm text-[var(--text-muted)]">{t("no_points_awarded_yet")}</p>
           ) : (
             <div className="mt-2.5 space-y-0.5">
               {leaderboard.map((e) => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import type { SessionQuestion, SessionChatMessage } from "@/lib/icfo-events/live-session";
@@ -28,6 +29,7 @@ export function LiveSessionPanel({
   initialQuestions: SessionQuestion[];
   initialChat: SessionChatMessage[];
 }) {
+  const t = useTranslations("eventsCmp");
   const [tab, setTab] = useState<"qa" | "chat">("qa");
   const [questions, setQuestions] = useState<SessionQuestion[]>(initialQuestions);
   const [chat, setChat] = useState<SessionChatMessage[]>(initialChat);
@@ -245,7 +247,7 @@ export function LiveSessionPanel({
               value={qInput}
               onChange={(e) => setQInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && submitQuestion()}
-              placeholder="Ask a question…"
+              placeholder={t("ask_a_question")}
               maxLength={500}
               className="flex-1 rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
             />
@@ -255,7 +257,7 @@ export function LiveSessionPanel({
           </div>
           <ul className="mt-3 space-y-2">
             {sortedQuestions.length === 0 ? (
-              <li className="text-sm text-[var(--text-muted)]">No questions yet. Be the first to ask.</li>
+              <li className="text-sm text-[var(--text-muted)]">{t("no_questions_yet_be_the_first_to_ask")}</li>
             ) : (
               sortedQuestions.map((q) => (
                 <li key={q.id} className="flex items-start gap-3 rounded-lg border border-[var(--border-subtle)] px-3 py-2">
@@ -272,7 +274,7 @@ export function LiveSessionPanel({
                     <p className="text-sm text-[var(--text-primary)]">{q.body}</p>
                     <p className="mt-0.5 text-xs text-[var(--text-muted)]">
                       {q.profileId === me.id ? "You" : q.authorName}
-                      {q.isAnswered && <span className="ml-2 rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-700">Answered</span>}
+                      {q.isAnswered && <span className="ml-2 rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-700">{t("answered")}</span>}
                     </p>
                     {isStaff && (
                       <div className="mt-1 flex gap-2">
@@ -294,7 +296,7 @@ export function LiveSessionPanel({
         <div className="flex h-72 flex-col p-3">
           <div className="flex-1 space-y-1.5 overflow-y-auto">
             {chat.length === 0 ? (
-              <p className="text-sm text-[var(--text-muted)]">No messages yet.</p>
+              <p className="text-sm text-[var(--text-muted)]">{t("no_messages_yet")}</p>
             ) : (
               chat.map((m) => (
                 <div key={m.id} className="text-sm">
@@ -312,7 +314,7 @@ export function LiveSessionPanel({
               value={cInput}
               onChange={(e) => setCInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendChat()}
-              placeholder="Message…"
+              placeholder={t("message")}
               maxLength={1000}
               className="flex-1 rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
             />

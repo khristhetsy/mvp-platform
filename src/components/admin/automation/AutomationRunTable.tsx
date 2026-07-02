@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import type { AutomationRunListItem } from "@/lib/automation/admin-console-types";
 import { AutomationStatusBadge } from "@/components/admin/automation/AutomationStatusBadge";
 import { AutomationTriggerBadge } from "@/components/admin/automation/AutomationTriggerBadge";
@@ -6,8 +7,9 @@ export function AutomationRunTable({
   runs,
   onSelect,
 }: Readonly<{ runs: AutomationRunListItem[]; onSelect: (id: string) => void }>) {
+  const t = useTranslations("adminCmp");
   if (!runs.length) {
-    return <p className="text-sm text-slate-600">No automation runs match these filters.</p>;
+    return <p className="text-sm text-slate-600">{t("no_automation_runs_match_these_filters")}</p>;
   }
 
   return (

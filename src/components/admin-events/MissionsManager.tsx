@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { POINT_ACTION_LABELS } from "@/lib/icfo-events/gamification";
 import type { PointAction } from "@/lib/icfo-events/gamification";
@@ -8,6 +9,7 @@ import type { Mission } from "@/lib/icfo-events/missions";
 const ACTIONS = Object.keys(POINT_ACTION_LABELS) as PointAction[];
 
 export function MissionsManager({ initialMissions }: { initialMissions: Mission[] }) {
+  const t = useTranslations("adminCmp");
   const [missions, setMissions] = useState<Mission[]>(initialMissions);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -59,16 +61,16 @@ export function MissionsManager({ initialMissions }: { initialMissions: Mission[
 
   return (
     <div className="mt-8">
-      <h2 className="text-lg font-semibold text-[var(--navy)]">Missions</h2>
+      <h2 className="text-lg font-semibold text-[var(--navy)]">{t("missions")}</h2>
       <p className="mt-1 text-sm text-[var(--text-muted)]">
         Bundle actions into a mission; completing all of them in one event earns the bonus.
       </p>
 
       <form onSubmit={create} className="mt-4 grid gap-3 rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
-        <input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={120} placeholder="Mission title (e.g. Full participant)" className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
-        <input value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} placeholder="Description (optional)" className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
+        <input value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={120} placeholder={t("mission_title_e_g_full_participant")} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
+        <input value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} placeholder={t("description_optional")} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
         <div>
-          <span className="text-xs text-[var(--text-muted)]">Required actions</span>
+          <span className="text-xs text-[var(--text-muted)]">{t("required_actions")}</span>
           <div className="mt-2 flex flex-wrap gap-2">
             {ACTIONS.map((a) => {
               const on = actions.includes(a);
@@ -94,7 +96,7 @@ export function MissionsManager({ initialMissions }: { initialMissions: Mission[
 
       <div className="mt-4 space-y-2">
         {missions.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)]">No missions yet.</p>
+          <p className="text-sm text-[var(--text-muted)]">{t("no_missions_yet")}</p>
         ) : (
           missions.map((m) => (
             <div key={m.id} className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] bg-white px-4 py-3">

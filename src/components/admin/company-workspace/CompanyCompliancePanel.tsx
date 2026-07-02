@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge, severityToStatus } from "@/components/ui/StatusBadge";
@@ -12,20 +13,21 @@ export function CompanyCompliancePanel({
   compliance: AdminCompanyWorkspaceData["compliance"];
   companyId: string;
 }>) {
+  const t = useTranslations("adminCmp");
   return (
-    <WorkspacePanel title="Compliance summary" subtitle="Open and recent events for this company">
+    <WorkspacePanel title={t("compliance_summary")} subtitle={t("open_and_recent_events_for_this_company")}>
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
           <p className="text-lg font-semibold text-slate-900">{compliance.openCount}</p>
-          <p className="text-xs text-slate-500">Open / under review</p>
+          <p className="text-xs text-slate-500">{t("open_under_review")}</p>
         </div>
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
           <p className="text-lg font-semibold text-red-700">{compliance.criticalCount}</p>
-          <p className="text-xs text-slate-500">Critical</p>
+          <p className="text-xs text-slate-500">{t("critical")}</p>
         </div>
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center">
           <p className="text-lg font-semibold text-amber-700">{compliance.highCount}</p>
-          <p className="text-xs text-slate-500">High severity</p>
+          <p className="text-xs text-slate-500">{t("high_severity")}</p>
         </div>
       </div>
       {compliance.nextAction ? (
@@ -43,7 +45,7 @@ export function CompanyCompliancePanel({
         />
       </div>
       {compliance.recentEvents.length === 0 ? (
-        <EmptyState title="No compliance events" description="No compliance events recorded for this company." />
+        <EmptyState title={t("no_compliance_events")} description={t("no_compliance_events_recorded_for_this_compa")} />
       ) : (
         <ul className="divide-y divide-slate-100">
           {compliance.recentEvents.map((event) => (

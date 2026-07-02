@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { PollResults } from "@/lib/icfo-events/polls";
 
 /** Attendee-facing live poll. Polls the API so a newly-launched poll appears
  *  and results update without a page reload. */
 export function EventPollWidget({ slug }: { slug: string }) {
+  const t = useTranslations("eventsCmp");
   const [data, setData] = useState<PollResults | null>(null);
   const [voting, setVoting] = useState(false);
 
@@ -48,7 +50,7 @@ export function EventPollWidget({ slug }: { slug: string }) {
 
   return (
     <div className="mt-4 rounded-xl border border-[var(--border-subtle)] bg-white p-4 shadow-[var(--shadow-card)]">
-      <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "#0F6E56" }}>Live poll</p>
+      <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "#0F6E56" }}>{t("live_poll")}</p>
       <p className="mt-1 text-sm font-medium text-[var(--navy)]">{poll.question}</p>
       <div className="mt-3 space-y-2">
         {poll.options.map((o, i) => {

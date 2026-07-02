@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { FieldType, AutoSource } from "@/lib/esignature/types";
 import { BRAND } from "@/lib/esignature/types";
 import { SignaturePad } from "./SignaturePad";
@@ -34,6 +35,7 @@ type Props = {
 const ACCENT = "#534AB7";
 
 export function SignerClient(props: Props) {
+  const t = useTranslations("sharedCmp");
   const [consented, setConsented] = useState(props.consentAccepted);
   const [values, setValues] = useState<Record<string, string>>({});
   const [activeSig, setActiveSig] = useState<string | null>(null);
@@ -92,7 +94,7 @@ export function SignerClient(props: Props) {
     return (
       <Shell>
         <div style={{ textAlign: "center", maxWidth: 460, margin: "0 auto", paddingTop: 80 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827" }}>Thank you — you&apos;re done</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827" }}>{t("thank_you_you_re_done")}</h1>
           <p style={{ fontSize: 15, color: "#6b7280", lineHeight: 1.6 }}>
             Your signature has been recorded for <strong>{props.documentName}</strong>. A sealed copy will be emailed to you shortly.
           </p>
@@ -169,6 +171,7 @@ function PdfSignSurface({
   onText: (id: string, v: string) => void;
   onOpenSignature: (id: string) => void;
 }) {
+  const t = useTranslations("sharedCmp");
   const [error, setError] = useState<string | null>(previewUrl ? null : "The document could not be loaded.");
 
   useEffect(() => {
@@ -234,6 +237,7 @@ function FieldOverlay({
   onText: (id: string, v: string) => void;
   onOpenSignature: (id: string) => void;
 }) {
+  const t = useTranslations("sharedCmp");
   const style: React.CSSProperties = {
     position: "absolute",
     left: `${field.x * 100}%`,
@@ -251,7 +255,7 @@ function FieldOverlay({
   // Auto-filled (date / company) — read-only.
   if (auto !== null) {
     return (
-      <div style={{ ...style, background: "#f1efe8", border: "1px solid #d3d1c7", color: "#444441", padding: "0 4px" }} title="Auto-filled">
+      <div style={{ ...style, background: "#f1efe8", border: "1px solid #d3d1c7", color: "#444441", padding: "0 4px" }} title={t("auto_filled")}>
         <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{auto || "—"}</span>
       </div>
     );

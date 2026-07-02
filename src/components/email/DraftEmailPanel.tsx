@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { formatDraftForClipboard } from "@/lib/email/display";
 import type { EmailDraft, EmailTemplateType } from "@/lib/email/types";
 import type { UserRole } from "@/lib/supabase/types";
@@ -50,6 +51,7 @@ export function DraftEmailPanel({
   gmailConnected?: boolean;
   googleConnected?: boolean;
 }>) {
+  const t = useTranslations("sharedCmp");
   const options = TEMPLATES_BY_ROLE[role] ?? [];
   const [open, setOpen] = useState(false);
   const [templateType, setTemplateType] = useState<EmailTemplateType>(
@@ -155,7 +157,7 @@ export function DraftEmailPanel({
         >
           {busy ? "Drafting…" : "Draft email"}
         </button>
-        <span className="text-[10px] text-slate-500">Draft only — not sent</span>
+        <span className="text-[10px] text-slate-500">{t("draft_only_not_sent")}</span>
       </div>
 
       {error ? <p className="mt-2 text-xs text-red-700">{error}</p> : null}
@@ -184,12 +186,12 @@ export function DraftEmailPanel({
 
           {gmailConnected || googleConnected ? (
             <div className="mt-3 border-t border-slate-100 pt-3">
-              <p className="mb-1.5 text-[10px] font-semibold text-slate-700">Send via your Gmail</p>
+              <p className="mb-1.5 text-[10px] font-semibold text-slate-700">{t("send_via_your_gmail")}</p>
               <input
                 type="email"
                 value={recipientEmail}
                 onChange={(e) => setRecipientEmail(e.target.value)}
-                placeholder="Recipient email address"
+                placeholder={t("recipient_email_address")}
                 className="w-full rounded border border-slate-200 px-2 py-1 text-[11px]"
               />
               <div className="mt-1.5 flex items-center gap-2">
@@ -201,7 +203,7 @@ export function DraftEmailPanel({
                 >
                   {sending ? "Sending…" : "Send"}
                 </button>
-                {sent ? <span className="text-[10px] text-emerald-700">Sent successfully</span> : null}
+                {sent ? <span className="text-[10px] text-emerald-700">{t("sent_successfully")}</span> : null}
               </div>
             </div>
           ) : (

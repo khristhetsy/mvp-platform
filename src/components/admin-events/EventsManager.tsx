@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import Link from "next/link";
 import { EVENT_SECTORS } from "@/lib/icfo-events/sectors";
@@ -41,6 +42,7 @@ function formatApiError(error: unknown, fallback: string): string {
 }
 
 export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] }) {
+  const t = useTranslations("adminCmp");
   const [events, setEvents] = useState<EventRecord[]>(initialEvents);
   const [showForm, setShowForm] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -116,7 +118,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
     <div className="mx-auto max-w-5xl px-4 py-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--text-primary)]">Events</h1>
+          <h1 className="text-xl font-semibold text-[var(--text-primary)]">{t("events")}</h1>
           <p className="mt-1 text-sm text-[var(--text-muted)]">
             Create and publish iCFO Events. Education &amp; community only — no securities offerings here.
           </p>
@@ -139,32 +141,32 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
         <form onSubmit={createEvent} className="mt-5 rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
           <div className="grid gap-4">
             <label className="block">
-              <span className="text-sm font-medium text-[var(--text-secondary)]">Title</span>
+              <span className="text-sm font-medium text-[var(--text-secondary)]">{t("title")}</span>
               <input
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 maxLength={200}
                 className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
-                placeholder="e.g. FinTech Founder Showcase — Summer 2026"
+                placeholder={t("e_g_fintech_founder_showcase_summer_2026")}
               />
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium text-[var(--text-secondary)]">Summary</span>
+              <span className="text-sm font-medium text-[var(--text-secondary)]">{t("summary")}</span>
               <textarea
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
                 maxLength={2000}
                 rows={3}
                 className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
-                placeholder="A short description shown on the public event page."
+                placeholder={t("a_short_description_shown_on_the_public_even")}
               />
             </label>
 
             <div className="grid grid-cols-2 gap-4">
               <label className="block">
-                <span className="text-sm font-medium text-[var(--text-secondary)]">Format</span>
+                <span className="text-sm font-medium text-[var(--text-secondary)]">{t("format")}</span>
                 <select
                   value={format}
                   onChange={(e) => setFormat(e.target.value as EventFormat)}
@@ -176,7 +178,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                 </select>
               </label>
               <label className="block">
-                <span className="text-sm font-medium text-[var(--text-secondary)]">Visibility</span>
+                <span className="text-sm font-medium text-[var(--text-secondary)]">{t("visibility")}</span>
                 <select
                   value={visibility}
                   onChange={(e) => setVisibility(e.target.value as EventVisibility)}
@@ -189,8 +191,8 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
             </div>
 
             <div>
-              <span className="text-sm font-medium text-[var(--text-secondary)]">Sector tracks</span>
-              <p className="text-xs text-[var(--text-muted)]">An event must have at least one track before it can be published.</p>
+              <span className="text-sm font-medium text-[var(--text-secondary)]">{t("sector_tracks")}</span>
+              <p className="text-xs text-[var(--text-muted)]">{t("an_event_must_have_at_least_one_track_before")}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {EVENT_SECTORS.map((s) => {
                   const on = sectorSlugs.includes(s.slug);

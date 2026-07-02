@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Lightbulb } from "lucide-react";
 
 /**
@@ -9,6 +10,7 @@ import { Lightbulb } from "lucide-react";
  * them from the tip card.
  */
 export function TipsPreferenceToggle() {
+  const t = useTranslations("sharedCmp");
   const [showTips, setShowTips] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -55,8 +57,8 @@ export function TipsPreferenceToggle() {
       <div className="flex items-start gap-2.5">
         <Lightbulb className="mt-0.5 h-5 w-5 text-[var(--gold)]" strokeWidth={1.75} aria-hidden />
         <div>
-          <p className="text-sm font-semibold text-slate-950">Daily tips</p>
-          <p className="text-xs text-slate-500">Show a Tip of the Day on your dashboard.</p>
+          <p className="text-sm font-semibold text-slate-950">{t("daily_tips")}</p>
+          <p className="text-xs text-slate-500">{t("show_a_tip_of_the_day_on_your_dashboard")}</p>
         </div>
       </div>
       <button

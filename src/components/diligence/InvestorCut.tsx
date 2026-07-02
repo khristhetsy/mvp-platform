@@ -1,11 +1,13 @@
 "use client";
 
 import { FileDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { StateChip } from "./StateChip";
 import type { ReportPayload } from "@/lib/diligence/serialize";
 import type { Severity, Verification } from "@/lib/diligence/types";
 
 export function InvestorCut({ dealId, payload }: { dealId: string; payload: ReportPayload }) {
+  const t = useTranslations("sharedCmp");
   const eng = payload.engagement as Record<string, unknown>;
   const findings = payload.findings as Record<string, unknown>[];
   const responses = payload.responses as Record<string, unknown>[];
@@ -24,15 +26,15 @@ export function InvestorCut({ dealId, payload }: { dealId: string; payload: Repo
 
       {eng.posture || eng.recommendation ? (
         <section className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
-          <h2 className="text-sm font-semibold text-slate-800">Verdict</h2>
-          {eng.posture ? <p className="mt-1 text-sm text-slate-700"><span className="font-medium">Posture:</span> {String(eng.posture)}</p> : null}
-          {eng.recommendation ? <p className="mt-1 text-sm text-slate-700"><span className="font-medium">Recommendation:</span> {String(eng.recommendation)}</p> : null}
+          <h2 className="text-sm font-semibold text-slate-800">{t("verdict")}</h2>
+          {eng.posture ? <p className="mt-1 text-sm text-slate-700"><span className="font-medium">{t("posture")}</span> {String(eng.posture)}</p> : null}
+          {eng.recommendation ? <p className="mt-1 text-sm text-slate-700"><span className="font-medium">{t("recommendation")}</span> {String(eng.recommendation)}</p> : null}
         </section>
       ) : null}
 
       {findings.length ? (
         <section className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
-          <h2 className="border-b border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800">Findings</h2>
+          <h2 className="border-b border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800">{t("findings")}</h2>
           <ul className="divide-y divide-slate-50">
             {findings.map((f) => (
               <li key={String(f.id)} className="px-4 py-3">
@@ -51,7 +53,7 @@ export function InvestorCut({ dealId, payload }: { dealId: string; payload: Repo
 
       {responses.length ? (
         <section className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
-          <h2 className="border-b border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800">Founder responses</h2>
+          <h2 className="border-b border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800">{t("founder_responses")}</h2>
           <ul className="divide-y divide-slate-50">
             {responses.map((r) => (
               <li key={String(r.id)} className="px-4 py-3">
@@ -65,7 +67,7 @@ export function InvestorCut({ dealId, payload }: { dealId: string; payload: Repo
 
       {conditions.length ? (
         <section className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
-          <h2 className="border-b border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800">Conditions</h2>
+          <h2 className="border-b border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800">{t("conditions")}</h2>
           <ul className="divide-y divide-slate-50">
             {conditions.map((c) => (
               <li key={String(c.id)} className="flex items-center justify-between px-4 py-2.5 text-sm">

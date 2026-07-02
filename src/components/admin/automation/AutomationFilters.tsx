@@ -1,9 +1,11 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AUTOMATION_TRIGGER_TYPES } from "@/lib/automation/types";
 
 export function AutomationFilters() {
+  const t = useTranslations("adminCmp");
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -18,7 +20,7 @@ export function AutomationFilters() {
   return (
     <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200/80 bg-white p-3">
       <label className="text-xs">
-        <span className="font-medium text-slate-600">Status</span>
+        <span className="font-medium text-slate-600">{t("status")}</span>
         <select
           className="mt-1 block rounded-md border border-slate-200 px-2 py-1.5 text-sm"
           value={searchParams.get("status") ?? ""}
@@ -32,7 +34,7 @@ export function AutomationFilters() {
         </select>
       </label>
       <label className="text-xs">
-        <span className="font-medium text-slate-600">Trigger</span>
+        <span className="font-medium text-slate-600">{t("trigger")}</span>
         <select
           className="mt-1 block rounded-md border border-slate-200 px-2 py-1.5 text-sm"
           value={searchParams.get("trigger") ?? ""}
@@ -47,7 +49,7 @@ export function AutomationFilters() {
         </select>
       </label>
       <label className="text-xs">
-        <span className="font-medium text-slate-600">Dry run</span>
+        <span className="font-medium text-slate-600">{t("dry_run")}</span>
         <select
           className="mt-1 block rounded-md border border-slate-200 px-2 py-1.5 text-sm"
           value={searchParams.get("dryRun") ?? ""}
@@ -59,7 +61,7 @@ export function AutomationFilters() {
         </select>
       </label>
       <label className="text-xs">
-        <span className="font-medium text-slate-600">Entity</span>
+        <span className="font-medium text-slate-600">{t("entity")}</span>
         <select
           className="mt-1 block rounded-md border border-slate-200 px-2 py-1.5 text-sm"
           value={searchParams.get("entityType") ?? ""}
@@ -80,10 +82,10 @@ export function AutomationFilters() {
         Failures only
       </label>
       <label className="text-xs">
-        <span className="font-medium text-slate-600">Search</span>
+        <span className="font-medium text-slate-600">{t("search")}</span>
         <input
           className="mt-1 block w-40 rounded-md border border-slate-200 px-2 py-1.5 text-sm"
-          placeholder="trigger, entity…"
+          placeholder={t("trigger_entity")}
           defaultValue={searchParams.get("q") ?? ""}
           onBlur={(e) => update("q", e.target.value.trim() || null)}
         />

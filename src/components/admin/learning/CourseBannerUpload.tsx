@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -52,6 +53,7 @@ function uploadBanner(file: File, onProgress: (percent: number) => void) {
 }
 
 export function CourseBannerUpload({ value, onUpload, onRemove }: Props) {
+  const t = useTranslations("adminCmp");
   const inputRef = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<UploadState>(value ? "preview" : "empty");
   const [progress, setProgress] = useState(0);
@@ -119,7 +121,7 @@ export function CourseBannerUpload({ value, onUpload, onRemove }: Props) {
   if (state === "uploading") {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <p className="text-sm font-medium text-slate-800">Uploading banner…</p>
+        <p className="text-sm font-medium text-slate-800">{t("uploading_banner")}</p>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
           <div className="h-full rounded-full bg-indigo-600 transition-all" style={{ width: `${progress}%` }} />
         </div>
@@ -131,7 +133,7 @@ export function CourseBannerUpload({ value, onUpload, onRemove }: Props) {
   if (state === "error") {
     return (
       <div className="rounded-xl border border-rose-300 bg-rose-50 p-4">
-        <p className="text-sm font-medium text-rose-900">Banner upload failed</p>
+        <p className="text-sm font-medium text-rose-900">{t("banner_upload_failed")}</p>
         <p className="mt-1 text-xs text-rose-800">{errorMessage ?? "Please try again."}</p>
       </div>
     );
@@ -187,8 +189,8 @@ export function CourseBannerUpload({ value, onUpload, onRemove }: Props) {
         dragActive ? "border-indigo-400 bg-indigo-50/50" : "border-slate-300 bg-slate-50"
       }`}
     >
-      <p className="text-sm font-medium text-slate-800">Drag & drop course banner</p>
-      <p className="mt-1 text-xs text-slate-500">JPG, PNG, or WebP · max 5MB</p>
+      <p className="text-sm font-medium text-slate-800">{t("drag_drop_course_banner")}</p>
+      <p className="mt-1 text-xs text-slate-500">{t("jpg_png_or_webp_max_5mb")}</p>
       <p className="mt-3 text-xs font-medium text-indigo-700">or click to browse</p>
       <input
         ref={inputRef}

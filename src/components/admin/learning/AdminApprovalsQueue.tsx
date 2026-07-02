@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { formatApiError } from "@/lib/api/errors";
 
@@ -16,6 +17,7 @@ type Props = {
 type Action = "approve" | "publish" | "unpublish" | "archive";
 
 export function AdminApprovalsQueue({ programs, modules, lessons, quizzes }: Props) {
+  const t = useTranslations("adminCmp");
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [noteById, setNoteById] = useState<Record<string, string>>({});
@@ -51,7 +53,7 @@ export function AdminApprovalsQueue({ programs, modules, lessons, quizzes }: Pro
   }
 
   if (items.length === 0) {
-    return <p className="text-sm text-slate-600">No content pending review.</p>;
+    return <p className="text-sm text-slate-600">{t("no_content_pending_review")}</p>;
   }
 
   return (
@@ -111,7 +113,7 @@ export function AdminApprovalsQueue({ programs, modules, lessons, quizzes }: Pro
               <div className="mt-2">
                 <input
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs"
-                  placeholder="Optional review note (stored in status history)"
+                  placeholder={t("optional_review_note_stored_in_status_histor")}
                   value={noteById[x.id] ?? ""}
                   onChange={(e) => setNoteById((v) => ({ ...v, [x.id]: e.target.value }))}
                 />
@@ -120,7 +122,7 @@ export function AdminApprovalsQueue({ programs, modules, lessons, quizzes }: Pro
               loading === `${x.type}:${x.id}:publish` ||
               loading === `${x.type}:${x.id}:unpublish` ||
               loading === `${x.type}:${x.id}:archive` ? (
-                <p className="mt-2 text-xs text-slate-500">Saving…</p>
+                <p className="mt-2 text-xs text-slate-500">{t("saving")}</p>
               ) : null}
             </div>
           ))}

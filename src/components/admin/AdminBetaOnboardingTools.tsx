@@ -1,10 +1,12 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 type InviteRole = "founder" | "investor";
 
 export function AdminBetaOnboardingTools() {
+  const t = useTranslations("adminCmp");
   const [role, setRole] = useState<InviteRole>("founder");
   const [email, setEmail] = useState("");
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
@@ -51,7 +53,7 @@ export function AdminBetaOnboardingTools() {
     <div className="space-y-4">
       <form onSubmit={generateInvite} className="grid gap-3 md:grid-cols-2">
         <label className="grid gap-1 text-sm">
-          <span className="font-medium text-slate-700">Invite role</span>
+          <span className="font-medium text-slate-700">{t("invite_role")}</span>
           <select
             value={role}
             onChange={(event) => setRole(event.target.value as InviteRole)}
@@ -62,12 +64,12 @@ export function AdminBetaOnboardingTools() {
           </select>
         </label>
         <label className="grid gap-1 text-sm">
-          <span className="font-medium text-slate-700">Email prefill (optional)</span>
+          <span className="font-medium text-slate-700">{t("email_prefill_optional")}</span>
           <input
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="investor@firm.com"
+            placeholder={t("investor_firm_com")}
             className="rounded-lg border border-slate-200 px-3 py-2"
           />
         </label>
@@ -87,7 +89,7 @@ export function AdminBetaOnboardingTools() {
 
       {inviteUrl ? (
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Invite URL</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("invite_url")}</p>
           <p className="mt-1 break-all font-mono text-xs text-slate-800">{inviteUrl}</p>
           <button
             type="button"
@@ -100,9 +102,9 @@ export function AdminBetaOnboardingTools() {
       ) : null}
 
       <ul className="text-xs leading-5 text-slate-500">
-        <li>Founder invites: onboarding → company profile → documents → readiness.</li>
-        <li>Investor invites: onboarding → staff approval required before full marketplace access.</li>
-        <li>Links are audit-logged; no credentials are sent automatically.</li>
+        <li>{t("founder_invites_onboarding_company_profile_d")}</li>
+        <li>{t("investor_invites_onboarding_staff_approval_r")}</li>
+        <li>{t("links_are_audit_logged_no_credentials_are_se")}</li>
       </ul>
     </div>
   );

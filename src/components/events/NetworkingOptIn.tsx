@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { EVENT_SECTORS } from "@/lib/icfo-events/sectors";
 
 export function NetworkingOptIn({
@@ -12,6 +13,7 @@ export function NetworkingOptIn({
   initialOptedIn: boolean;
   initialInterests: string[];
 }) {
+  const t = useTranslations("eventsCmp");
   const [optedIn, setOptedIn] = useState(initialOptedIn);
   const [interests, setInterests] = useState<string[]>(initialInterests);
   const [busy, setBusy] = useState(false);
@@ -46,7 +48,7 @@ export function NetworkingOptIn({
     <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-5">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-semibold text-[var(--navy)]">Networking</h3>
+          <h3 className="font-semibold text-[var(--navy)]">{t("networking")}</h3>
           <p className="text-sm text-[var(--text-muted)]">
             Opt in to be matched with other attendees by shared interests. Off by default; names only, no
             contact details shared.
@@ -71,7 +73,7 @@ export function NetworkingOptIn({
 
       {optedIn && (
         <div className="mt-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">Your interests</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">{t("your_interests")}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {EVENT_SECTORS.map((s) => {
               const on = interests.includes(s.slug);
@@ -97,7 +99,7 @@ export function NetworkingOptIn({
           >
             {busy ? "Saving…" : "Save interests"}
           </button>
-          {saved && <span className="ml-2 text-xs text-emerald-700">Saved</span>}
+          {saved && <span className="ml-2 text-xs text-emerald-700">{t("saved")}</span>}
         </div>
       )}
 

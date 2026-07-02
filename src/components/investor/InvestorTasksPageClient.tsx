@@ -27,6 +27,7 @@ function IcoSearch() {
 }
 
 import React, { Suspense } from "react";
+import { useTranslations } from "next-intl";
 import { useState, useEffect, useCallback } from "react";
 import type { Task, TaskStatus, TaskPriority, TaskType, InternalUser } from "@/lib/tasks/types";
 import type { GoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
@@ -174,6 +175,7 @@ export function InvestorTasksPageClient({
   currentUserId?: string;
   showTaskTypeFilter?: boolean;
 }>) {
+  const t = useTranslations("investorCmp");
 
   const [tasks, setTasks]         = useState<Task[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -367,7 +369,7 @@ export function InvestorTasksPageClient({
         </div>
 
         {/* search */}
-        <input type="search" placeholder="Search tasks…" value={query}
+        <input type="search" placeholder={t("search_tasks")} value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="min-w-[140px] flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none" />
 
@@ -398,7 +400,7 @@ export function InvestorTasksPageClient({
       {/* quick-add form */}
       {showForm && (
         <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <input autoFocus type="text" placeholder="Task title…" value={newTitle}
+          <input autoFocus type="text" placeholder={t("task_title")} value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") void handleCreate(); if (e.key === "Escape") setShowForm(false); }}
             className="mb-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none" />
@@ -442,12 +444,12 @@ export function InvestorTasksPageClient({
       <div className="border-t border-slate-100 bg-slate-50/80 px-4 py-4">
         <div className="mb-3 grid grid-cols-2 gap-3">
           <div className="col-span-2">
-            <label className="mb-1 block text-[10.5px] font-medium text-slate-500">Title</label>
+            <label className="mb-1 block text-[10.5px] font-medium text-slate-500">{t("title")}</label>
             <input type="text" value={editForm?.title ?? ""} onChange={(e) => setEditForm(f => f ? { ...f, title: e.target.value } : f)}
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none" />
           </div>
           <div>
-            <label className="mb-1 block text-[10.5px] font-medium text-slate-500">Priority</label>
+            <label className="mb-1 block text-[10.5px] font-medium text-slate-500">{t("priority")}</label>
             <select value={editForm?.priority ?? "medium"} onChange={(e) => setEditForm(f => f ? { ...f, priority: e.target.value as TaskPriority } : f)}
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none">
               <option value="high">High</option>
@@ -456,14 +458,14 @@ export function InvestorTasksPageClient({
             </select>
           </div>
           <div className="col-span-2">
-            <label className="mb-1 block text-[10.5px] font-medium text-slate-500">Due date</label>
+            <label className="mb-1 block text-[10.5px] font-medium text-slate-500">{t("due_date")}</label>
             <input type="date" value={editForm?.due_date ?? ""} onChange={(e) => setEditForm(f => f ? { ...f, due_date: e.target.value } : f)}
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none" />
           </div>
           <div className="col-span-2">
-            <label className="mb-1 block text-[10.5px] font-medium text-slate-500">Notes</label>
+            <label className="mb-1 block text-[10.5px] font-medium text-slate-500">{t("notes")}</label>
             <textarea rows={3} value={editForm?.description ?? ""} onChange={(e) => setEditForm(f => f ? { ...f, description: e.target.value } : f)}
-              placeholder="Add context, links, or next steps…"
+              placeholder={t("add_context_links_or_next_steps")}
               className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none" />
           </div>
         </div>
@@ -478,7 +480,7 @@ export function InvestorTasksPageClient({
               </svg>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[12.5px] font-medium text-slate-900">Google Calendar</p>
+              <p className="text-[12.5px] font-medium text-slate-900">{t("google_calendar")}</p>
               <p className="mt-0.5 text-[10.5px] text-slate-400">
                 {!googleConnected ? "Connect Google in Settings to enable"
                   : !hasDue ? "Set a due date to add to calendar"
@@ -504,7 +506,7 @@ export function InvestorTasksPageClient({
 
         <div className="flex justify-end gap-2">
           <button type="button" onClick={() => { setExpandedId(null); setEditForm(null); }}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100">Cancel</button>
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100">{t("cancel")}</button>
           <button type="button" onClick={() => void handleEditSave(task.id)} disabled={editSaving || !editForm?.title.trim()}
             className="rounded-lg border border-slate-900 bg-slate-900 px-4 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50">
             {editSaving ? "Saving…" : "Save changes"}
@@ -545,7 +547,7 @@ export function InvestorTasksPageClient({
                   </span>
                 )}
                 {isSynced && (
-                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600">In Calendar</span>
+                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600">{t("in_calendar")}</span>
                 )}
                 {task.description && !isOpen && (
                   <span className="max-w-[200px] truncate text-[10.5px] italic text-slate-400">{task.description}</span>
@@ -587,8 +589,8 @@ export function InvestorTasksPageClient({
       );
     };
 
-    if (loading) return <EmptyShell><p className="text-sm text-slate-500">Loading…</p></EmptyShell>;
-    if (!visible.length) return <EmptyShell><p className="text-sm text-slate-500">No tasks found.</p></EmptyShell>;
+    if (loading) return <EmptyShell><p className="text-sm text-slate-500">{t("loading")}</p></EmptyShell>;
+    if (!visible.length) return <EmptyShell><p className="text-sm text-slate-500">{t("no_tasks_found")}</p></EmptyShell>;
 
     return (
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -656,7 +658,7 @@ export function InvestorTasksPageClient({
                         </p>
                       )}
                       {task.google_calendar_event_id && (
-                        <p className="mt-1 text-[11px] text-blue-600">In Calendar</p>
+                        <p className="mt-1 text-[11px] text-blue-600">{t("in_calendar")}</p>
                       )}
                       {expandedId === task.id && editForm && (
                         <div onClick={(e) => e.stopPropagation()}>
@@ -711,7 +713,7 @@ export function InvestorTasksPageClient({
               <p className={`text-sm font-medium text-slate-900 ${isDone ? "line-through" : ""}`}>{task.title}</p>
               <div className="mt-1 flex flex-wrap gap-1.5">
                 <PriorityPill priority={task.priority} />
-                {task.google_calendar_event_id && <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600">In Calendar</span>}
+                {task.google_calendar_event_id && <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-600">{t("in_calendar")}</span>}
               </div>
             </div>
             {task.due_date && (
@@ -747,7 +749,7 @@ export function InvestorTasksPageClient({
         </div>
 
         {/* grouped tasks */}
-        {loading ? <EmptyShell><p className="text-sm text-slate-500">Loading…</p></EmptyShell> : (
+        {loading ? <EmptyShell><p className="text-sm text-slate-500">{t("loading")}</p></EmptyShell> : (
           <div className="flex flex-col gap-3">
             {groups.map((g) => (
               <div key={g.label} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -774,7 +776,7 @@ export function InvestorTasksPageClient({
               </div>
             )}
             {!groups.length && !done.length && (
-              <EmptyShell><p className="text-sm text-slate-500">No tasks found.</p></EmptyShell>
+              <EmptyShell><p className="text-sm text-slate-500">{t("no_tasks_found")}</p></EmptyShell>
             )}
           </div>
         )}
@@ -786,8 +788,8 @@ export function InvestorTasksPageClient({
   /* GRID VIEW                                                        */
   /* ─────────────────────────────────────────────────────────────── */
   function GridView() {
-    if (loading) return <EmptyShell><p className="text-sm text-slate-500">Loading…</p></EmptyShell>;
-    if (!visible.length) return <EmptyShell><p className="text-sm text-slate-500">No tasks found.</p></EmptyShell>;
+    if (loading) return <EmptyShell><p className="text-sm text-slate-500">{t("loading")}</p></EmptyShell>;
+    if (!visible.length) return <EmptyShell><p className="text-sm text-slate-500">{t("no_tasks_found")}</p></EmptyShell>;
 
     return (
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
@@ -825,7 +827,7 @@ export function InvestorTasksPageClient({
                     {overdue ? "⚠ " : "📅 "}{fmt(task.due_date)}
                   </p>
                 )}
-                {isSynced && <p className="mt-1 text-[11px] text-blue-600">In Calendar</p>}
+                {isSynced && <p className="mt-1 text-[11px] text-blue-600">{t("in_calendar")}</p>}
                 {task.description && !isOpen && (
                   <p className="mt-1.5 line-clamp-2 text-[11px] italic text-slate-400">{task.description}</p>
                 )}

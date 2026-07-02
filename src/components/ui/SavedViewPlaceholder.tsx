@@ -1,18 +1,20 @@
 "use client";
 
 import { BookmarkPlus } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function SavedViewPlaceholder() {
+  const t = useTranslations("sharedCmp");
   return (
     <button
       type="button"
       disabled
-      title="Saved views coming soon"
+      title={t("saved_views_coming_soon")}
       className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-400"
     >
       <BookmarkPlus className="h-3.5 w-3.5" aria-hidden />
       Saved views
-      <span className="rounded bg-slate-200/80 px-1.5 py-0.5 text-[10px] uppercase tracking-wide">Soon</span>
+      <span className="rounded bg-slate-200/80 px-1.5 py-0.5 text-[10px] uppercase tracking-wide">{t("soon")}</span>
     </button>
   );
 }

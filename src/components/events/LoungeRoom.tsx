@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { useEventPresence } from "@/components/events/EventPresenceProvider";
@@ -24,6 +25,7 @@ export function LoungeRoom({
   me: Me;
   initialTables: LoungeTable[];
 }) {
+  const t = useTranslations("eventsCmp");
   const { muted } = useEventPresence();
   const [tables, setTables] = useState<LoungeTable[]>(initialTables);
   const [selectedId, setSelectedId] = useState<string | null>(initialTables[0]?.id ?? null);
@@ -158,11 +160,11 @@ export function LoungeRoom({
       {/* Tables list */}
       <aside className="rounded-xl border border-[var(--border-subtle)] bg-white p-3">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-sm font-semibold text-[var(--navy)]">Topic tables</h2>
+          <h2 className="text-sm font-semibold text-[var(--navy)]">{t("topic_tables")}</h2>
         </div>
         <ul className="mt-2 space-y-1">
           {tables.length === 0 && (
-            <li className="px-2 py-3 text-xs text-[var(--text-muted)]">No tables yet — start one below.</li>
+            <li className="px-2 py-3 text-xs text-[var(--text-muted)]">{t("no_tables_yet_start_one_below")}</li>
           )}
           {tables.map((t) => (
             <li key={t.id}>
@@ -184,7 +186,7 @@ export function LoungeRoom({
           <input
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            placeholder="New table topic"
+            placeholder={t("new_table_topic")}
             maxLength={120}
             className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1.5 text-sm"
             onKeyDown={(e) => e.key === "Enter" && createTable()}
@@ -216,7 +218,7 @@ export function LoungeRoom({
 
             <div className="flex-1 space-y-2 overflow-y-auto px-4 py-3">
               {messages.length === 0 ? (
-                <p className="text-sm text-[var(--text-muted)]">No messages yet. Say hello 👋</p>
+                <p className="text-sm text-[var(--text-muted)]">{t("no_messages_yet_say_hello")}</p>
               ) : (
                 messages.map((m) => (
                   <div key={m.id} className="text-sm">
@@ -240,7 +242,7 @@ export function LoungeRoom({
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && send()}
-                  placeholder="Message the table…"
+                  placeholder={t("message_the_table")}
                   maxLength={1000}
                   className="flex-1 rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
                 />

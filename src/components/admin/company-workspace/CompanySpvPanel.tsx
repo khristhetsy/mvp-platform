@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -8,15 +9,16 @@ export function CompanySpvPanel({
   spvs,
   companyId,
 }: Readonly<{ spvs: AdminCompanyWorkspaceSpvSummary[]; companyId: string }>) {
+  const t = useTranslations("adminCmp");
   return (
     <WorkspacePanel
-      title="SPV opportunities"
+      title={t("spv_opportunities")}
       subtitle={`${spvs.length} SPV${spvs.length === 1 ? "" : "s"} linked to this company`}
     >
       {spvs.length === 0 ? (
         <EmptyState
-          title="No SPV opportunities"
-          description="This company does not have SPV opportunities yet."
+          title={t("no_spv_opportunities")}
+          description={t("this_company_does_not_have_spv_opportunities")}
           actionLabel="View all SPVs"
           actionHref="/admin/spvs"
         />

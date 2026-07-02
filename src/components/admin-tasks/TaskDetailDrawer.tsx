@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import { Archive, Loader2, Send } from "lucide-react";
 import { Drawer } from "./Drawer";
@@ -19,6 +20,7 @@ export function TaskDetailDrawer({
   onClose: () => void;
   onChanged: () => void;
 }) {
+  const t = useTranslations("adminCmp");
   const [detail, setDetail] = useState<AdminTaskDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [comment, setComment] = useState("");
@@ -72,7 +74,7 @@ export function TaskDetailDrawer({
       footer={
         task ? (
           <div className="flex items-center gap-2">
-            <input value={comment} onChange={(e) => setComment(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addComment(); }} placeholder="Add a comment…" className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#0D9488] focus:outline-none" />
+            <input value={comment} onChange={(e) => setComment(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addComment(); }} placeholder={t("add_a_comment")} className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#0D9488] focus:outline-none" />
             <button type="button" onClick={() => void addComment()} disabled={!comment.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-[#0D9488] px-3 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50"><Send className="h-4 w-4" /></button>
           </div>
         ) : null
@@ -81,7 +83,7 @@ export function TaskDetailDrawer({
       {loading && !detail ? (
         <div className="flex items-center justify-center py-12 text-slate-400"><Loader2 className="h-5 w-5 animate-spin" /></div>
       ) : !task ? (
-        <p className="text-sm text-slate-400">Task not found.</p>
+        <p className="text-sm text-slate-400">{t("task_not_found")}</p>
       ) : (
         <div className="space-y-5">
           <div className="flex flex-wrap items-center gap-2">
@@ -97,10 +99,10 @@ export function TaskDetailDrawer({
 
           {task.tags.length > 0 ? <div className="flex flex-wrap gap-1.5">{task.tags.map((t) => <TagChip key={t} tag={t} />)}</div> : null}
 
-          {task.description ? <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{task.description}</p> : <p className="text-xs text-slate-400">No description.</p>}
+          {task.description ? <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{task.description}</p> : <p className="text-xs text-slate-400">{t("no_description")}</p>}
 
           <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Attachments</h3>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{t("attachments")}</h3>
             <div className="space-y-2">
               <AttachmentUploader
                 taskId={task.id}
@@ -116,7 +118,7 @@ export function TaskDetailDrawer({
           </section>
 
           <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Activity</h3>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{t("activity")}</h3>
             <ActivityFeed activity={detail.activity} />
           </section>
 

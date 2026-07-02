@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 const TYPE_LABEL: Record<string, string> = {
   keynote: "Keynote",
@@ -40,6 +41,7 @@ function fmtTime(iso: string | null): string {
 /** Parallel sector rooms: a track switcher that drives a now-playing player and
  *  that track's agenda, plus the live/scheduled track cards. */
 export function SectorTracksRoom({ tracks }: { tracks: TrackData[] }) {
+  const t = useTranslations("eventsCmp");
   const firstLive = tracks.findIndex((t) => t.isLive);
   const [active, setActive] = useState(firstLive >= 0 ? firstLive : 0);
 
@@ -110,7 +112,7 @@ export function SectorTracksRoom({ tracks }: { tracks: TrackData[] }) {
         <div className="rounded-xl border border-[var(--border-subtle)] p-3">
           <p className="text-sm font-semibold text-[var(--navy)]">{track.label} agenda</p>
           {track.agenda.length === 0 ? (
-            <p className="mt-3 text-sm text-[var(--text-muted)]">Sessions will be announced soon.</p>
+            <p className="mt-3 text-sm text-[var(--text-muted)]">{t("sessions_will_be_announced_soon")}</p>
           ) : (
             <ul className="mt-2">
               {track.agenda.map((s) => {

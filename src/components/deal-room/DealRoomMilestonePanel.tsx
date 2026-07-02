@@ -1,6 +1,7 @@
 "use client";
 
 import { computeEngagementSnapshot } from "@/lib/deal-rooms/metrics";
+import { useTranslations } from "next-intl";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -203,6 +204,7 @@ export function DealRoomMilestonePanel({
   docRequests: DocRequest[];
   activity: ActivityEvent[];
 }>) {
+  const t = useTranslations("sharedCmp");
   const step = getMilestoneStep(room, questions, docRequests, activity);
   const snapshot = computeEngagementSnapshot({ questions, docRequests, activity });
 
@@ -304,21 +306,21 @@ export function DealRoomMilestonePanel({
           </p>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <p style={{ fontSize: 11, color: "#7F77DD", margin: "0 0 2px" }}>Engagement</p>
+              <p style={{ fontSize: 11, color: "#7F77DD", margin: "0 0 2px" }}>{t("engagement")}</p>
               <p style={{ fontSize: 20, fontWeight: 500, color: "#3C3489", margin: 0, lineHeight: 1 }}>
                 {snapshot.engagementScore}
                 <span style={{ fontSize: 12, fontWeight: 400 }}> / 100</span>
               </p>
             </div>
             <div>
-              <p style={{ fontSize: 11, color: "#7F77DD", margin: "0 0 2px" }}>Questions</p>
+              <p style={{ fontSize: 11, color: "#7F77DD", margin: "0 0 2px" }}>{t("questions")}</p>
               <p style={{ fontSize: 20, fontWeight: 500, color: "#3C3489", margin: 0, lineHeight: 1 }}>
                 {resolvedQ}
                 <span style={{ fontSize: 12, fontWeight: 400 }}> / {questions.length}</span>
               </p>
             </div>
             <div>
-              <p style={{ fontSize: 11, color: "#7F77DD", margin: "0 0 2px" }}>Documents</p>
+              <p style={{ fontSize: 11, color: "#7F77DD", margin: "0 0 2px" }}>{t("documents")}</p>
               <p style={{ fontSize: 20, fontWeight: 500, color: "#3C3489", margin: 0, lineHeight: 1 }}>
                 {fulfilledDocs}
                 <span style={{ fontSize: 12, fontWeight: 400 }}> / {docRequests.length}</span>
@@ -333,7 +335,7 @@ export function DealRoomMilestonePanel({
             {questions.length > 0 ? (
               <div>
                 <div className="mb-1.5 flex justify-between">
-                  <p className="text-xs text-slate-500">Questions resolved</p>
+                  <p className="text-xs text-slate-500">{t("questions_resolved")}</p>
                   <p className="text-xs font-semibold text-slate-900">{resolvedQ} / {questions.length}</p>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
@@ -344,7 +346,7 @@ export function DealRoomMilestonePanel({
             {docRequests.length > 0 ? (
               <div>
                 <div className="mb-1.5 flex justify-between">
-                  <p className="text-xs text-slate-500">Documents fulfilled</p>
+                  <p className="text-xs text-slate-500">{t("documents_fulfilled")}</p>
                   <p className="text-xs font-semibold text-slate-900">{fulfilledDocs} / {docRequests.length}</p>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">

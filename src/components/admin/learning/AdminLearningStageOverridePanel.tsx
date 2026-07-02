@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import type { CapitalStage } from "@/lib/learning/capital-stages";
 import { CAPITAL_STAGE_UNLOCK_THRESHOLD } from "@/lib/learning/capital-stages";
@@ -26,6 +27,7 @@ type Props = {
 };
 
 export function AdminLearningStageOverridePanel({ founderId, companyId, adminName, stages }: Props) {
+  const t = useTranslations("adminCmp");
   // Local override state: undefined = no override (use auto), true/false = force
   const [localOverrides, setLocalOverrides] = useState<Partial<Record<CapitalStage, boolean | undefined>>>(
     Object.fromEntries(stages.map((s) => [s.stage, s.overrideUnlocked])),
@@ -52,7 +54,7 @@ export function AdminLearningStageOverridePanel({ founderId, companyId, adminNam
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
       <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
-        <h2 className="text-sm font-semibold text-slate-900">Stage access override</h2>
+        <h2 className="text-sm font-semibold text-slate-900">{t("stage_access_override")}</h2>
         <p className="mt-0.5 text-xs text-slate-500">
           Bypass the {CAPITAL_STAGE_UNLOCK_THRESHOLD}% threshold for this founder. All overrides are audit-logged.
         </p>

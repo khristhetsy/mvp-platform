@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import {
   DndContext,
@@ -126,6 +127,7 @@ export function LayoutBlockRegionsEditor({
   onChange: (block: PageBlock) => void;
   onSelectBlock: (blockId: string) => void;
 }>) {
+  const t = useTranslations("sharedCmp");
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const regions = useMemo(() => {
@@ -181,7 +183,7 @@ export function LayoutBlockRegionsEditor({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-slate-500">Drag blocks between regions or use add buttons. Layout nesting is limited to one level.</p>
+      <p className="text-xs text-slate-500">{t("drag_blocks_between_regions_or_use_add_butto")}</p>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -218,7 +220,7 @@ export function LayoutBlockRegionsEditor({
                 <RegionDropZone layoutBlockId={layoutBlock.id} regionKey={region.key} isOver={Boolean(activeId)}>
                   <div className="space-y-1.5">
                     {region.blocks.length === 0 ? (
-                      <p className="py-4 text-center text-[11px] text-slate-500">Drop block here</p>
+                      <p className="py-4 text-center text-[11px] text-slate-500">{t("drop_block_here")}</p>
                     ) : (
                       region.blocks.map((child) => (
                         <SortableRegionBlock

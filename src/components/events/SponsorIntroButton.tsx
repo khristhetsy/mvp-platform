@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 
 export function SponsorIntroButton({
@@ -12,6 +13,7 @@ export function SponsorIntroButton({
   sponsorName: string;
   isAuthenticated: boolean;
 }) {
+  const t = useTranslations("eventsCmp");
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -75,7 +77,7 @@ export function SponsorIntroButton({
         onChange={(e) => setMessage(e.target.value)}
         rows={2}
         maxLength={1000}
-        placeholder="Optional: a line about what you're looking for"
+        placeholder={t("optional_a_line_about_what_you_re_looking_fo")}
         className="mt-2 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
       />
       {error && <p className="mt-1 text-sm text-rose-700">{error}</p>}

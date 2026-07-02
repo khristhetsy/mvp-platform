@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { AdminLearningAtRiskNudgeButton } from "@/components/admin/learning/AdminLearningAtRiskNudgeButton";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
@@ -13,15 +14,16 @@ function formatLastActivity(lastActivityAt: string | null) {
 }
 
 export async function AdminLearningAtRisk() {
+  const t = await getTranslations("adminCmp");
   const founders = await getLearningAtRiskFounders(7);
 
   return (
     <WorkspacePanel
-      title="At-risk founders"
-      subtitle="No learning activity in the last 7 days, sorted by days inactive"
+      title={t("at_risk_founders")}
+      subtitle={t("no_learning_activity_in_the_last_7_days_sort")}
     >
       {founders.length === 0 ? (
-        <p className="text-sm text-slate-600">All founders have recent learning activity.</p>
+        <p className="text-sm text-slate-600">{t("all_founders_have_recent_learning_activity")}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">

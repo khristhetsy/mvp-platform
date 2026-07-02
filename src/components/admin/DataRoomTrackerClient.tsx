@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ClipboardCheck, Send } from "lucide-react";
@@ -14,6 +15,7 @@ export function DataRoomTrackerClient({
   rows: DataRoomTrackerRow[];
   summary: DataRoomTrackerSummary;
 }) {
+  const t = useTranslations("adminCmp");
   const [filter, setFilter] = useState<Filter>("core_incomplete");
   const [sent, setSent] = useState<Record<string, "sending" | "done" | "error">>({});
 
@@ -48,7 +50,7 @@ export function DataRoomTrackerClient({
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Admin · Operations</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">{t("admin_operations")}</p>
         <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold text-slate-950">
           <ClipboardCheck className="h-6 w-6 text-[var(--gold)]" strokeWidth={1.75} aria-hidden /> Diligence tracker
         </h1>

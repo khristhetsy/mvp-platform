@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   FEATURE_COMPARISON,
   FOUNDER_PRICING_PLANS,
@@ -82,12 +83,13 @@ export function PlanComparisonSection({
   founderCtaHref?: string;
   founderCtaLabel?: string;
 }>) {
+  const t = useTranslations("sharedCmp");
   return (
     <div className="space-y-12">
       <section>
         <div className="mb-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-600">Founder plans</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Choose the right founder workspace</h2>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-600">{t("founder_plans")}</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{t("choose_the_right_founder_workspace")}</h2>
         </div>
         <div className="grid gap-5 lg:grid-cols-3">
           {FOUNDER_PRICING_PLANS.map((plan) => (
@@ -107,7 +109,7 @@ export function PlanComparisonSection({
         <section className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
           <div className="grid gap-6 lg:grid-cols-[1fr_0.8fr] lg:items-center">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Investors</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">{t("investors")}</p>
               <h3 className="mt-2 text-xl font-semibold text-slate-950">{INVESTOR_PRICING_PLAN.title}</h3>
               <p className="mt-2 text-3xl font-semibold text-slate-950">{INVESTOR_PRICING_PLAN.priceLabel}</p>
               <ul className="mt-4 space-y-2">
@@ -131,7 +133,7 @@ export function PlanComparisonSection({
       {showComparisonTable ? (
         <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 px-6 py-4">
-            <h3 className="text-lg font-semibold text-slate-950">Feature comparison</h3>
+            <h3 className="text-lg font-semibold text-slate-950">{t("feature_comparison")}</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">

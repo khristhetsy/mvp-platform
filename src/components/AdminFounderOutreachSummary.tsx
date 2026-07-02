@@ -1,11 +1,13 @@
 import type { FounderOutreachAdminSummary } from "@/lib/founder-crm/admin-outreach-summary";
+import { useTranslations } from "next-intl";
 
 export function AdminFounderOutreachSummary({
   summary,
 }: Readonly<{ summary: FounderOutreachAdminSummary }>) {
+  const t = useTranslations("sharedCmp");
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-950">Founder outreach (aggregate)</h2>
+      <h2 className="text-lg font-semibold text-slate-950">{t("founder_outreach_aggregate")}</h2>
       <p className="mt-1 text-sm text-slate-500">
         Compliance-safe metadata only — private contact details are not shown to admins.
       </p>

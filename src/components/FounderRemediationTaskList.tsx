@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { RemediationTaskRecord } from "@/lib/remediation/types";
@@ -33,6 +34,7 @@ export function FounderRemediationTaskList({
   learningLinks?: Record<string, { slug: string; title: string }>;
   compact?: boolean;
 }>) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const [rows, setRows] = useState(tasks);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -99,11 +101,11 @@ export function FounderRemediationTaskList({
                 <h3 className="mt-2 text-sm font-semibold text-slate-950">{task.title}</h3>
                 <p className="mt-1 text-sm leading-6 text-slate-600">{task.description}</p>
                 <p className="mt-2 text-xs text-slate-500">
-                  <span className="font-medium text-slate-700">Recommended:</span> {task.recommended_action}
+                  <span className="font-medium text-slate-700">{t("recommended")}</span> {task.recommended_action}
                 </p>
                 {learningLinks[task.source_key] ? (
                   <p className="mt-2 text-xs text-indigo-700">
-                    <span className="font-medium text-indigo-900">Recommended learning:</span>{" "}
+                    <span className="font-medium text-indigo-900">{t("recommended_learning")}</span>{" "}
                     {learningLinks[task.source_key].title}
                   </p>
                 ) : null}

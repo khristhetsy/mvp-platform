@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ONBOARDING_STEPS } from "@/lib/onboarding/progress";
 import type { FounderOnboardingProgress } from "@/lib/onboarding/progress";
 import { DonutProgress } from "@/components/ui/charts/DonutProgress";
@@ -13,6 +14,7 @@ export function FounderOnboardingProgressCard({
    *  banner instead of returning null when isComplete. */
   inPage?: boolean;
 }>) {
+  const t = useTranslations("sharedCmp");
   if (progress.isComplete && !inPage) {
     return null;
   }
@@ -26,7 +28,7 @@ export function FounderOnboardingProgressCard({
           </svg>
         </div>
         <div>
-          <p className="text-sm font-semibold text-emerald-900">Stage 1 complete — you&apos;re now in Qualify</p>
+          <p className="text-sm font-semibold text-emerald-900">{t("stage_1_complete_you_re_now_in_qualify")}</p>
           <p className="text-xs leading-5 text-emerald-700">
             Your company profile and funding are in. Next: build your data room and readiness from your dashboard to reach investors.
           </p>
@@ -63,7 +65,7 @@ export function FounderOnboardingProgressCard({
           </p>
           <div className="mt-4">
             <div className="mb-1 flex justify-between text-xs font-medium text-slate-700">
-              <span>Progress</span>
+              <span>{t("progress")}</span>
               <span className="font-mono tabular-nums">{progress.percent}%</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">

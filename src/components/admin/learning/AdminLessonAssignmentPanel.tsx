@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import type { CapitalStage } from "@/lib/learning/capital-stages";
 import { CAPITAL_STAGE_META } from "@/lib/learning/capital-stages";
@@ -26,6 +27,7 @@ type Props = {
 const STAGE_ORDER: CapitalStage[] = ["stage_0", "stage_1", "stage_2", "stage_3"];
 
 export function AdminLessonAssignmentPanel({ founderId, companyId, adminName, lessons }: Props) {
+  const t = useTranslations("adminCmp");
   const [assignedKeys, setAssignedKeys] = useState<Set<string>>(
     new Set(lessons.filter((l) => l.assigned).map((l) => l.key)),
   );
@@ -75,7 +77,7 @@ export function AdminLessonAssignmentPanel({ founderId, companyId, adminName, le
       <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">Assign lessons</h2>
+            <h2 className="text-sm font-semibold text-slate-900">{t("assign_lessons")}</h2>
             <p className="mt-0.5 text-xs text-slate-500">
               {assignedCount} lesson{assignedCount !== 1 ? "s" : ""} assigned — appear at top of founder&apos;s plan
             </p>
@@ -167,7 +169,7 @@ export function AdminLessonAssignmentPanel({ founderId, companyId, adminName, le
           );
         })}
         {filteredLessons.length === 0 && (
-          <p className="px-6 py-4 text-sm text-slate-400">No lessons for this filter.</p>
+          <p className="px-6 py-4 text-sm text-slate-400">{t("no_lessons_for_this_filter")}</p>
         )}
       </div>
       <div className="border-t border-slate-100 px-6 py-4">

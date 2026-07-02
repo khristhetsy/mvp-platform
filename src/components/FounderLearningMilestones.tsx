@@ -1,4 +1,5 @@
 import type { ReadinessMilestone } from "@/lib/learning/types";
+import { useTranslations } from "next-intl";
 
 export function FounderLearningMilestones({
   milestones,
@@ -9,10 +10,11 @@ export function FounderLearningMilestones({
   currentLabel: string | null;
   nextLabel: string | null;
 }>) {
+  const t = useTranslations("sharedCmp");
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-violet-50 p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-700">Current milestone</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo-700">{t("current_milestone")}</p>
         <p className="mt-1 text-lg font-semibold text-slate-950">{currentLabel ?? "Building foundation"}</p>
         {nextLabel ? <p className="mt-2 text-sm text-slate-600">{nextLabel}</p> : null}
       </div>

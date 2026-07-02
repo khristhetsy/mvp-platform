@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 type FacilitatedRow = {
@@ -43,12 +44,13 @@ export async function InvestorFacilitatedIntrosPanel({
 }: {
   investorId: string;
 }) {
+  const t = await getTranslations("investorCmp");
   const rows = await loadFacilitatedIntros(investorId);
 
   if (rows.length === 0) {
     return (
       <div className="mb-8 rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-8 text-center">
-        <p className="text-sm font-medium text-slate-600">No facilitated connections yet</p>
+        <p className="text-sm font-medium text-slate-600">{t("no_facilitated_connections_yet")}</p>
         <p className="mt-1 text-xs text-slate-400">
           When an admin facilitates an intro request, the company appears here as a portfolio connection.
         </p>
@@ -66,7 +68,7 @@ export async function InvestorFacilitatedIntrosPanel({
     <div className="mb-8">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-base font-semibold text-slate-900">Facilitated connections</h2>
+          <h2 className="text-base font-semibold text-slate-900">{t("facilitated_connections")}</h2>
           <p className="mt-0.5 text-xs text-slate-500">
             Companies where your intro request was facilitated by the iCapOS team
           </p>

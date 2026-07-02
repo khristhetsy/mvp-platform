@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { InvestorActivityRow } from "@/lib/data/investor-crm";
 
@@ -169,6 +170,7 @@ export function InvestorActivityTimelineClient({
   activities: InvestorActivityRow[];
   error?: string | null;
 }) {
+  const t = useTranslations("sharedCmp");
   const [filter, setFilter] = useState<FilterKey>("all");
 
   const filtered = filter === "all"
@@ -207,8 +209,8 @@ export function InvestorActivityTimelineClient({
       {/* Header */}
       <div style={{ padding: "16px 18px 14px", borderBottom: "0.5px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap" as const, gap: 8 }}>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>Recent Activity</div>
-          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>Your marketplace actions · last 30 days</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{t("recent_activity")}</div>
+          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>{t("your_marketplace_actions_last_30_days")}</div>
         </div>
         <div style={{ display: "flex", gap: 4 }}>
           {FILTER_TABS.map((t) => (

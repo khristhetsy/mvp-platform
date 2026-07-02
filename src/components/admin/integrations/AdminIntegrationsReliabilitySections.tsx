@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 import type { loadIntegrationsAdminConsole } from "@/lib/integrations/admin-console";
 import { healthScoreBadgeStatus } from "@/lib/integrations/health-scoring";
@@ -24,9 +25,10 @@ function deliveryStatusBadge(status: string) {
 }
 
 export function IntegrationHealthSummarySection({ payload }: Readonly<{ payload: Payload }>) {
+  const t = useTranslations("adminCmp");
   const { health, healthScoring } = payload;
   return (
-    <PageSection title="Integration health summary">
+    <PageSection title={t("integration_health_summary")}>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <StatusBadge
           label={`Overall: ${healthScoring.overallScore}`}
@@ -36,12 +38,12 @@ export function IntegrationHealthSummarySection({ payload }: Readonly<{ payload:
         <p className="text-xs text-slate-600">{healthScoring.overallReasons.join(" ")}</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <HealthStat label="Active connections" value={health.activeConnections} />
-        <HealthStat label="Failed (24h)" value={health.failedDeliveries24h} />
-        <HealthStat label="Pending retries" value={health.pendingRetries} />
-        <HealthStat label="Retry queue" value={payload.failedQueue.length} />
-        <HealthStat label="Last successful delivery" value={health.lastSuccessfulDeliveryAt ? "Recorded" : "—"} sub={formatTs(health.lastSuccessfulDeliveryAt)} />
-        <HealthStat label="Last failure" value={health.lastFailureAt ? "Recorded" : "—"} sub={formatTs(health.lastFailureAt)} />
+        <HealthStat label={t("active_connections")} value={health.activeConnections} />
+        <HealthStat label={t("failed_24h")} value={health.failedDeliveries24h} />
+        <HealthStat label={t("pending_retries")} value={health.pendingRetries} />
+        <HealthStat label={t("retry_queue")} value={payload.failedQueue.length} />
+        <HealthStat label={t("last_successful_delivery")} value={health.lastSuccessfulDeliveryAt ? "Recorded" : "—"} sub={formatTs(health.lastSuccessfulDeliveryAt)} />
+        <HealthStat label={t("last_failure")} value={health.lastFailureAt ? "Recorded" : "—"} sub={formatTs(health.lastFailureAt)} />
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         {healthScoring.connections.map((c) => (
@@ -72,13 +74,14 @@ export function FailedDeliveryQueueSection({
   onRetry: (id: string) => void;
   busy: string | null;
 }>) {
+  const t = useTranslations("adminCmp");
   return (
-    <PageSection title="Failed delivery queue">
+    <PageSection title={t("failed_delivery_queue")}>
       <p className="mb-3 text-xs text-slate-500">
         Failed and retrying deliveries with attempt counts and scheduled retries. Max attempts are enforced on retry.
       </p>
       {!payload.failedQueue.length ? (
-        <p className="text-sm text-slate-600">No failed deliveries in the queue.</p>
+        <p className="text-sm text-slate-600">{t("no_failed_deliveries_in_the_queue")}</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200/80">
           <table className="min-w-full text-left text-xs">
@@ -122,7 +125,7 @@ export function FailedDeliveryQueueSection({
                           Retry
                         </button>
                       ) : isAdmin && atMax ? (
-                        <span className="text-[10px] text-slate-400">Max attempts</span>
+                        <span className="text-[10px] text-slate-400">{t("max_attempts")}</span>
                       ) : null}
                     </td>
                   </tr>
@@ -137,8 +140,9 @@ export function FailedDeliveryQueueSection({
 }
 
 export function DeliveryTimelineSection({ payload }: Readonly<{ payload: Payload }>) {
+  const t = useTranslations("adminCmp");
   return (
-    <PageSection title="Delivery timeline">
+    <PageSection title={t("delivery_timeline")}>
       <div className="space-y-2">
         {payload.timeline.map((row) => (
           <div
@@ -154,7 +158,7 @@ export function DeliveryTimelineSection({ payload }: Readonly<{ payload: Payload
             ) : null}
           </div>
         ))}
-        {!payload.timeline.length ? <p className="text-sm text-slate-600">No deliveries yet.</p> : null}
+        {!payload.timeline.length ? <p className="text-sm text-slate-600">{t("no_deliveries_yet")}</p> : null}
       </div>
     </PageSection>
   );
@@ -173,6 +177,7 @@ export function SubscriptionPresetsSection({
   webhookId?: string;
   onMessage: (msg: string) => void;
 }>) {
+  const t = useTranslations("adminCmp");
   const [busy, setBusy] = useState<string | null>(null);
   const connectionIds = [slackId, webhookId].filter(Boolean) as string[];
 
@@ -196,7 +201,7 @@ export function SubscriptionPresetsSection({
   }
 
   return (
-    <PageSection title="Event subscription presets">
+    <PageSection title={t("event_subscription_presets")}>
       <p className="mb-3 text-xs text-slate-500">
         Safe bundles of event types for compliance, automation, SPV, imports, audit, and collaboration.
       </p>
@@ -251,6 +256,7 @@ export function PayloadPreviewPanel({
   connectionId,
   isAdmin,
 }: Readonly<{ connectionId: string; isAdmin: boolean }>) {
+  const t = useTranslations("adminCmp");
   const [templateId, setTemplateId] = useState("critical_compliance");
   const [preview, setPreview] = useState<PayloadPreviewView | null>(null);
   const [loading, setLoading] = useState(false);
@@ -289,7 +295,7 @@ export function PayloadPreviewPanel({
   }
 
   return (
-    <PageSection title="Payload preview">
+    <PageSection title={t("payload_preview")}>
       <p className="mb-2 text-xs text-slate-500">
         Sanitized outbound shape only — no webhook URLs, secrets, message bodies, or document paths.
       </p>
@@ -344,9 +350,10 @@ export function SlackTestTemplatesSection({
   onTest: (connectionId: string, templateId: string) => void;
   busy: string | null;
 }>) {
+  const t = useTranslations("adminCmp");
   if (!slackId) return null;
   return (
-    <PageSection title="Slack test templates">
+    <PageSection title={t("slack_test_templates")}>
       <p className="mb-3 text-xs text-slate-500">
         Send realistic sanitized Slack notifications for common operational scenarios.
       </p>
@@ -374,10 +381,11 @@ export function SlackTestTemplatesSection({
 }
 
 export function ExportDeliveriesSection({ isStaff }: Readonly<{ isStaff: boolean }>) {
+  const t = useTranslations("adminCmp");
   if (!isStaff) return null;
   return (
-    <PageSection title="Export delivery logs">
-      <p className="mb-2 text-xs text-slate-500">Staff-only export of delivery metadata (no secrets or raw payloads).</p>
+    <PageSection title={t("export_delivery_logs")}>
+      <p className="mb-2 text-xs text-slate-500">{t("staff_only_export_of_delivery_metadata_no_se")}</p>
       <div className="flex gap-2">
         <a
           href="/api/admin/integrations/export?format=csv"

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AutomationEngineResult } from "@/lib/automation/types";
@@ -18,6 +19,7 @@ function formatResult(result: AutomationEngineResult): string {
 }
 
 export function AutomationExecutionControls({ isAdmin }: Readonly<{ isAdmin: boolean }>) {
+  const t = useTranslations("adminCmp");
   const router = useRouter();
   const [state, setState] = useState<RunState>("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -71,8 +73,8 @@ export function AutomationExecutionControls({ isAdmin }: Readonly<{ isAdmin: boo
 
   return (
     <div className="rounded-xl border border-slate-200/80 bg-white p-4">
-      <p className="text-sm font-semibold text-slate-900">Manual execution</p>
-      <p className="mt-0.5 text-xs text-slate-600">Bounded rules-based passes — in-app actions only.</p>
+      <p className="text-sm font-semibold text-slate-900">{t("manual_execution")}</p>
+      <p className="mt-0.5 text-xs text-slate-600">{t("bounded_rules_based_passes_in_app_actions_on")}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
@@ -92,12 +94,12 @@ export function AutomationExecutionControls({ isAdmin }: Readonly<{ isAdmin: boo
             Run bounded live pass
           </button>
         ) : (
-          <p className="self-center text-[10px] text-slate-500">Live passes: admin only</p>
+          <p className="self-center text-[10px] text-slate-500">{t("live_passes_admin_only")}</p>
         )}
       </div>
       {confirmLive ? (
         <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-950">
-          <p className="font-semibold">Confirm bounded live automation pass</p>
+          <p className="font-semibold">{t("confirm_bounded_live_automation_pass")}</p>
           <p className="mt-1">
             This may create in-app next actions, notifications, and operational events. No external email or
             approvals. Max 25 rules per pass with cooldown guards.

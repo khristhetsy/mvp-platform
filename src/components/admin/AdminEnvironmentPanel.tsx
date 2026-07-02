@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import type { EnvironmentStatusSummary } from "@/lib/env";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 
@@ -19,29 +20,30 @@ function StatusRow({
 export function AdminEnvironmentPanel({
   status,
 }: Readonly<{ status: EnvironmentStatusSummary }>) {
+  const t = useTranslations("adminCmp");
   return (
     <WorkspacePanel
-      title="Environment status"
-      subtitle="Deployment tier and configuration — secrets are never displayed"
+      title={t("environment_status")}
+      subtitle={t("deployment_tier_and_configuration_secrets_ar")}
     >
       <ul className="space-y-2">
-        <StatusRow label="APP_ENV" value={status.appEnv} />
-        <StatusRow label="NODE_ENV" value={status.nodeEnv ?? "—"} />
-        <StatusRow label="VERCEL_ENV" value={status.vercelEnv ?? "—"} />
-        <StatusRow label="App URL" value={status.appUrl ?? "Not set"} />
+        <StatusRow label={t("app_env")} value={status.appEnv} />
+        <StatusRow label={t("node_env")} value={status.nodeEnv ?? "—"} />
+        <StatusRow label={t("vercel_env")} value={status.vercelEnv ?? "—"} />
+        <StatusRow label={t("app_url")} value={status.appUrl ?? "Not set"} />
         <StatusRow
-          label="Supabase project host"
+          label={t("supabase_project_host")}
           value={status.supabaseProjectHost ?? "Not configured"}
           ok={status.supabasePublicConfigured}
         />
         <StatusRow
-          label="Service role key"
+          label={t("service_role_key")}
           value={status.serviceRoleConfigured ? "Configured" : "Missing"}
           ok={status.serviceRoleConfigured}
           detail="Presence only — value is never shown"
         />
         <StatusRow
-          label="Env validation"
+          label={t("env_validation")}
           value={status.envValidationOk ? "Required keys present" : "Missing required keys"}
           ok={status.envValidationOk}
           detail={status.missingEnvKeys.length ? `Missing: ${status.missingEnvKeys.join(", ")}` : undefined}
@@ -50,7 +52,7 @@ export function AdminEnvironmentPanel({
 
       {status.warnings.length > 0 ? (
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          <p className="font-semibold">Warnings</p>
+          <p className="font-semibold">{t("warnings")}</p>
           <ul className="mt-1 list-disc space-y-1 pl-4 text-xs">
             {status.warnings.map((warning) => (
               <li key={warning}>{warning}</li>

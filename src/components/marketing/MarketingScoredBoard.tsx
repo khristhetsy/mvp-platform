@@ -1,4 +1,5 @@
 import { LayoutGrid } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export type ScoredBoardRow = {
   symbol: string;
@@ -63,6 +64,7 @@ export function MarketingScoredBoard({
   bare?: boolean;
   showTrend?: boolean;
 }>) {
+  const t = useTranslations("sharedCmp");
   const cols = showTrend
     ? "sm:grid-cols-[1.7fr_0.9fr_0.7fr_1.2fr_0.8fr]"
     : "sm:grid-cols-[1.7fr_0.9fr_1.1fr_0.8fr]";
@@ -83,11 +85,11 @@ export function MarketingScoredBoard({
       </div>
 
       <div className={`hidden gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 font-mono text-[9.5px] uppercase tracking-wide text-slate-400 sm:grid ${cols}`}>
-        <div>Symbol</div>
+        <div>{t("symbol")}</div>
         <div className="text-right">{scoreLabel}</div>
-        {showTrend ? <div className="text-right">Trend</div> : null}
+        {showTrend ? <div className="text-right">{t("trend")}</div> : null}
         <div>{metricLabel}</div>
-        <div className="text-right">Sector</div>
+        <div className="text-right">{t("sector")}</div>
       </div>
 
       <div>

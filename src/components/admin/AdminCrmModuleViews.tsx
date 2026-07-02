@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AdminFounderOutreachSummary } from "@/components/AdminFounderOutreachSummary";
@@ -71,6 +72,7 @@ function CrmViewTabs({
 }
 
 function AdminCrmModuleViewsInner(props: Props) {
+  const t = useTranslations("adminCmp");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { filters } = useAdminQueryFilters("crm");
@@ -119,8 +121,8 @@ function AdminCrmModuleViewsInner(props: Props) {
           <AdminInvestorCrmTimeline activities={filteredActivity} />
           {filteredActivity.length === 0 && props.crmActivity.length > 0 ? (
             <ModuleEmptyState
-              title="No matching CRM activity"
-              description="Try clearing filters or adjusting the activity type."
+              title={t("no_matching_crm_activity")}
+              description={t("try_clearing_filters_or_adjusting_the_activi")}
             />
           ) : null}
         </>
@@ -157,8 +159,9 @@ function AdminCrmModuleViewsInner(props: Props) {
 }
 
 export function AdminCrmModuleViews(props: Props) {
+  const t = useTranslations("adminCmp");
   return (
-    <Suspense fallback={<p className="text-sm text-slate-500">Loading filters…</p>}>
+    <Suspense fallback={<p className="text-sm text-slate-500">{t("loading_filters")}</p>}>
       <AdminCrmModuleViewsInner {...props} />
     </Suspense>
   );

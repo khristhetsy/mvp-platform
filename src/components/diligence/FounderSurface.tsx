@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useCallback, useRef, useState } from "react";
 import { Upload, Send, Loader2, FileCheck2, FileDown } from "lucide-react";
 import { useToast } from "@/components/ui/ToastProvider";
@@ -11,6 +12,7 @@ import type { Disposition, Severity, Verification } from "@/lib/diligence/types"
 const DISPOSITIONS: Disposition[] = ["agree", "remediating", "clarify", "dispute", "awaiting"];
 
 export function FounderSurface({ engagementId, view }: { engagementId: string; view: FounderView }) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const { toast } = useToast();
   const { engagement, findings, docRequests, responses } = view;
@@ -68,7 +70,7 @@ export function FounderSurface({ engagementId, view }: { engagementId: string; v
         <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold text-slate-950">
           Diligence — {engagement.company_name} <StateChip variant={engagement.lifecycle_stage as "responding"} />
         </h1>
-        <p className="mt-1 text-sm text-slate-600">Review each finding, respond, and upload supporting documents.</p>
+        <p className="mt-1 text-sm text-slate-600">{t("review_each_finding_respond_and_upload_suppo")}</p>
         <a href={`/api/founder/diligence/${engagementId}/export`} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
           <FileDown className="h-4 w-4" /> Download PDF
         </a>
@@ -78,7 +80,7 @@ export function FounderSurface({ engagementId, view }: { engagementId: string; v
       <section className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
         <h2 className="border-b border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800">Findings ({findings.length})</h2>
         {findings.length === 0 ? (
-          <p className="p-4 text-sm text-slate-500">No findings have been shared yet.</p>
+          <p className="p-4 text-sm text-slate-500">{t("no_findings_have_been_shared_yet")}</p>
         ) : (
           <ul className="divide-y divide-slate-50">
             {findings.map((f) => (
@@ -103,7 +105,7 @@ export function FounderSurface({ engagementId, view }: { engagementId: string; v
       {findings.length > 0 ? (
         <section className="space-y-3 rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
           <h2 className="text-sm font-semibold text-slate-800">Respond {picked.length ? `to ${picked.join(", ")}` : "(select findings above)"}</h2>
-          <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} placeholder="Your response…" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+          <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} placeholder={t("your_response")} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
           <div className="flex flex-wrap items-center gap-3">
             <label className="text-sm text-slate-600">Disposition
               <select value={disposition} onChange={(e) => setDisposition(e.target.value as Disposition)} className="ml-2 rounded border border-slate-300 px-2 py-1 text-sm capitalize">
@@ -120,7 +122,7 @@ export function FounderSurface({ engagementId, view }: { engagementId: string; v
       {/* Data-room requests */}
       {docRequests.length > 0 ? (
         <section className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
-          <h2 className="border-b border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800">Document requests</h2>
+          <h2 className="border-b border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800">{t("document_requests")}</h2>
           <ul className="divide-y divide-slate-50">
             {docRequests.map((d) => (
               <li key={d.id} className="flex items-center justify-between gap-3 px-4 py-3">
@@ -144,7 +146,7 @@ export function FounderSurface({ engagementId, view }: { engagementId: string; v
       {/* Submitted responses */}
       {responses.length > 0 ? (
         <section className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
-          <h2 className="border-b border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800">Your responses</h2>
+          <h2 className="border-b border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800">{t("your_responses")}</h2>
           <ul className="divide-y divide-slate-50">
             {responses.map((r) => (
               <li key={r.id} className="px-4 py-3">

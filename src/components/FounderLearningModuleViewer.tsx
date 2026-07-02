@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { LessonNotes } from "@/components/founder/learning/LessonNotes";
@@ -21,6 +22,7 @@ export function FounderLearningModuleViewer({
   content: LearningModuleContent;
   initialProgress: LearningProgressRecord | null;
 }>) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const storageKey = `learning:${moduleSlug}:lessons`;
   const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
@@ -105,7 +107,7 @@ export function FounderLearningModuleViewer({
       {error ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Module objectives</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("module_objectives")}</p>
         <ul className="mt-3 space-y-2 text-sm text-slate-700">
           {content.objectives.map((objective) => (
             <li key={objective}>• {objective}</li>

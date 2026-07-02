@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   MIGRATION_VERIFICATION_UNAVAILABLE,
@@ -7,6 +8,7 @@ import {
 export function AdminMigrationWarningBanner({
   migrations,
 }: Readonly<{ migrations: MigrationVerificationResult }>) {
+  const t = useTranslations("adminCmp");
   if (
     migrations.ok ||
     migrations.verificationUnavailable ||
@@ -20,7 +22,7 @@ export function AdminMigrationWarningBanner({
       role="alert"
       className="mb-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
     >
-      <p className="font-semibold">Migration verification failed</p>
+      <p className="font-semibold">{t("migration_verification_failed")}</p>
       <p className="mt-1 leading-6">
         Required floor <code className="rounded bg-amber-100 px-1 text-xs">{migrations.floor}</code> is not confirmed
         on this database. {migrations.detail}

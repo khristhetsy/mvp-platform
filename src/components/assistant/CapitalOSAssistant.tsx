@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Send, Sparkles, X } from "lucide-react";
@@ -48,6 +49,7 @@ function inferClientMode(pathname: string, workspace: ReturnType<typeof resolveW
 }
 
 export function CapitalOSAssistant() {
+  const t = useTranslations("sharedCmp");
   const pathname = usePathname() ?? "";
   const workspace = resolveWorkspaceFromPath(pathname);
   const [open, setOpen] = useState(false);
@@ -308,7 +310,7 @@ export function CapitalOSAssistant() {
                 >
                   AI
                 </div>
-                <span className="text-xs text-slate-400" role="status" aria-live="polite">Preparing guidance…</span>
+                <span className="text-xs text-slate-400" role="status" aria-live="polite">{t("preparing_guidance")}</span>
               </div>
             ) : null}
             {error ? (
@@ -320,7 +322,7 @@ export function CapitalOSAssistant() {
 
           {lastResponse?.suggestedActions?.length ? (
             <div className="shrink-0 border-t border-slate-100 px-3 py-2">
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Suggested actions</p>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">{t("suggested_actions")}</p>
               <div className="flex flex-wrap gap-1.5">
                 {lastResponse.suggestedActions.slice(0, 4).map((action) => (
                   <Link
@@ -374,7 +376,7 @@ export function CapitalOSAssistant() {
               onKeyDown={(event) => {
                 if (event.key === "Enter") void sendMessage(message);
               }}
-              placeholder="Ask about this workspace…"
+              placeholder={t("ask_about_this_workspace")}
               className="min-w-0 flex-1 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             />
             <button

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { FloatingFounderAICoach } from "@/components/FloatingFounderAICoach";
@@ -34,6 +35,7 @@ export function FounderLessonViewer({
   prevHref: string | null;
   nextHref: string | null;
 }>) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const [completed, setCompleted] = useState(initialProgress?.status === "completed");
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
@@ -144,8 +146,8 @@ export function FounderLessonViewer({
 
       {celebrating || completed ? (
         <section className="rounded-lg border border-emerald-200 bg-emerald-50 p-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">Readiness milestone reached</p>
-          <h2 className="mt-1 text-lg font-semibold text-emerald-950">Lesson complete — nice work.</h2>
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">{t("readiness_milestone_reached")}</p>
+          <h2 className="mt-1 text-lg font-semibold text-emerald-950">{t("lesson_complete_nice_work")}</h2>
           <p className="mt-2 text-sm text-emerald-900">
             Your progress is saved. Badges and module completion update automatically.
           </p>
@@ -167,11 +169,11 @@ export function FounderLessonViewer({
         </section>
       ) : null}
 
-      <WorkspacePanel title="Learning objective" subtitle="Institutional readiness focus">
+      <WorkspacePanel title={t("learning_objective")} subtitle={t("institutional_readiness_focus")}>
         <p className="text-sm leading-6 text-slate-700">{lesson.learningObjective}</p>
       </WorkspacePanel>
 
-      <WorkspacePanel title="Lesson content" subtitle="Core material">
+      <WorkspacePanel title={t("lesson_content")} subtitle={t("core_material")}>
         <p className="text-sm leading-7 text-slate-700">{lesson.summary}</p>
         <ul className="mt-4 space-y-2">
           {lesson.keyPoints.map((point) => (
@@ -183,7 +185,7 @@ export function FounderLessonViewer({
       </WorkspacePanel>
 
       {lesson.takeaways && lesson.takeaways.length > 0 ? (
-        <WorkspacePanel title="Key takeaways" subtitle="Apply on the platform">
+        <WorkspacePanel title={t("key_takeaways")} subtitle={t("apply_on_the_platform")}>
           <ul className="space-y-1 text-sm text-slate-700">
             {lesson.takeaways.map((item) => (
               <li key={item}>• {item}</li>
@@ -194,7 +196,7 @@ export function FounderLessonViewer({
 
       {lesson.readinessImpact ? (
         <section className="rounded-lg border border-indigo-100 bg-indigo-50/40 p-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-800">Readiness score impact</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-800">{t("readiness_score_impact")}</p>
           <p className="mt-2 text-sm text-indigo-950">{lesson.readinessImpact.description}</p>
           <p className="mt-2 text-xs text-indigo-800">
             Categories: {lesson.readinessImpact.categories.join(" · ")} · Platform signal +{lesson.readinessImpact.points}
@@ -203,7 +205,7 @@ export function FounderLessonViewer({
       ) : null}
 
       {lesson.founderAction ? (
-        <WorkspacePanel title="Founder action" subtitle="Operational task">
+        <WorkspacePanel title={t("founder_action")} subtitle={t("operational_task")}>
           <p className="text-sm font-medium text-slate-900">{lesson.founderAction.label}</p>
           <p className="mt-1 text-sm text-slate-600">{lesson.founderAction.description}</p>
           {lesson.founderAction.href ? (
@@ -218,7 +220,7 @@ export function FounderLessonViewer({
       ) : null}
 
       {lesson.relatedChecklist ? (
-        <WorkspacePanel title="Related checklist" subtitle="Diligence preparation">
+        <WorkspacePanel title={t("related_checklist")} subtitle={t("diligence_preparation")}>
           <p className="text-sm text-slate-700">{lesson.relatedChecklist}</p>
         </WorkspacePanel>
       ) : null}
@@ -230,7 +232,7 @@ export function FounderLessonViewer({
       ) : null}
 
       {lesson.quiz && lesson.quiz.questions.length > 0 ? (
-        <WorkspacePanel title="Readiness check" subtitle={`Passing score ${lesson.quiz.passingScore}%`}>
+        <WorkspacePanel title={t("readiness_check")} subtitle={`Passing score ${lesson.quiz.passingScore}%`}>
           <div className="space-y-4">
             {lesson.quiz.questions.map((question) => (
               <fieldset key={question.id} className="rounded-lg border border-slate-100 p-4">

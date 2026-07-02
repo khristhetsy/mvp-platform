@@ -7,8 +7,10 @@
 // links open in a new tab. Falls back to plain text when there's no HTML.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 export function EmailBody({ html, text }: { html?: string | null; text?: string | null }) {
+  const t = useTranslations("sharedCmp");
   const ref = useRef<HTMLIFrameElement>(null);
   const obsRef = useRef<ResizeObserver | null>(null);
   const [height, setHeight] = useState(60);
@@ -50,7 +52,7 @@ export function EmailBody({ html, text }: { html?: string | null; text?: string 
   return (
     <iframe
       ref={ref}
-      title="Email content"
+      title={t("email_content")}
       sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
       srcDoc={srcDoc}
       onLoad={onLoad}

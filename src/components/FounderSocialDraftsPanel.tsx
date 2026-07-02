@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import type { SocialOutreachReadinessResult } from "@/lib/founder-crm/social-outreach-readiness";
 import type { OutreachCampaignRecord, SocialOutreachDraftRecord } from "@/lib/founder-crm/types";
@@ -53,6 +54,7 @@ export function FounderSocialDraftsPanel({
   socialReadiness,
   campaigns,
 }: Readonly<Props>) {
+  const t = useTranslations("sharedCmp");
   const router = useRouter();
   const [drafts, setDrafts] = useState(initialDrafts);
   const [draftType, setDraftType] = useState<string>("linkedin_campaign_announcement");
@@ -228,7 +230,7 @@ export function FounderSocialDraftsPanel({
   return (
     <div className="space-y-6">
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">Social outreach readiness</h2>
+        <h2 className="text-lg font-semibold text-slate-950">{t("social_outreach_readiness")}</h2>
         <p className="mt-1 text-sm text-slate-600">
           Founder-controlled content only — no LinkedIn API, OAuth, auto-posting, or scraping.
         </p>
@@ -243,7 +245,7 @@ export function FounderSocialDraftsPanel({
       </section>
 
       <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-        <h3 className="text-sm font-semibold text-amber-950">Compliance guardrails</h3>
+        <h3 className="text-sm font-semibold text-amber-950">{t("compliance_guardrails")}</h3>
         <ul className="mt-2 list-disc pl-5 text-sm text-amber-900">
           {COMPLIANCE_WARNINGS.map((warning) => (
             <li key={warning}>{warning}</li>
@@ -253,7 +255,7 @@ export function FounderSocialDraftsPanel({
 
       <section className="grid gap-6 xl:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-950">Generate social draft</h2>
+          <h2 className="text-lg font-semibold text-slate-950">{t("generate_social_draft")}</h2>
           <div className="mt-4 grid gap-3">
             <label className="text-xs font-medium text-slate-600">
               Draft type
@@ -325,7 +327,7 @@ export function FounderSocialDraftsPanel({
           <h2 className="text-lg font-semibold text-slate-950">Saved drafts ({drafts.length})</h2>
           <div className="mt-4 max-h-64 divide-y divide-slate-100 overflow-y-auto">
             {drafts.length === 0 ? (
-              <p className="py-3 text-sm text-slate-500">No social drafts yet.</p>
+              <p className="py-3 text-sm text-slate-500">{t("no_social_drafts_yet")}</p>
             ) : (
               drafts.map((row) => (
                 <button
@@ -347,7 +349,7 @@ export function FounderSocialDraftsPanel({
 
       {(title || body || activeDraft) && (
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-950">Draft editor</h2>
+          <h2 className="text-lg font-semibold text-slate-950">{t("draft_editor")}</h2>
           {complianceStatus === "flagged" || riskyPhrases.length > 0 ? (
             <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
               Compliance flagged
@@ -358,7 +360,7 @@ export function FounderSocialDraftsPanel({
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             className="mt-4 w-full rounded-lg border px-3 py-2 text-sm font-medium"
-            placeholder="Post title"
+            placeholder={t("post_title")}
           />
           <textarea
             value={body}
@@ -371,7 +373,7 @@ export function FounderSocialDraftsPanel({
             }}
             rows={12}
             className="mt-3 w-full rounded-lg border px-3 py-2 text-sm leading-6"
-            placeholder="Post body"
+            placeholder={t("post_body")}
           />
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" disabled={loading} onClick={() => void saveEdits()} className="rounded-lg border px-3 py-1.5 text-sm">
@@ -392,7 +394,7 @@ export function FounderSocialDraftsPanel({
               Archive
             </button>
           </div>
-          <p className="mt-3 text-xs text-slate-500">Copy manually to LinkedIn or X — iCapOS does not post on your behalf.</p>
+          <p className="mt-3 text-xs text-slate-500">{t("copy_manually_to_linkedin_or_x_icapos_does_n")}</p>
         </section>
       )}
 
