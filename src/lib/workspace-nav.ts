@@ -17,28 +17,6 @@ export type WorkspaceNavSection = {
   items: WorkspaceNavItem[];
 };
 
-/** Admin operations cluster: companies, SPVs, investors, deal rooms, CRM. */
-export const adminOperationsNav: WorkspaceNavItem[] = [
-  { href: "/admin/companies", label: "Companies", requiredPermission: "manage_companies" },
-  { href: "/admin/spvs", label: "SPVs", requiredPermission: "manage_spvs" },
-  { href: "/admin/investors", label: "Investors", requiredPermission: "manage_investors" },
-  { href: "/admin/partner-scores", label: "Partner Scores", requiredPermission: "manage_investors" },
-  { href: "/admin/deal-rooms", label: "Deal Rooms", requiredPermission: "manage_deal_rooms" },
-  {
-    href: "/admin/crm",
-    label: "CRM",
-    requiredPermission: "manage_crm",
-    children: [
-      { href: "/admin/crm", label: "Activity" },
-      { href: "/admin/crm/pipeline", label: "Pipeline" },
-      { href: "/admin/crm/messages", label: "Messages" },
-      { href: "/admin/crm/outreach", label: "Outreach" },
-    ],
-  },
-  { href: "/admin/matching", label: "Matching", requiredPermission: "manage_matching" },
-  { href: "/admin/readiness", label: "Readiness Scores", requiredPermission: "manage_companies" },
-];
-
 export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     items: [
@@ -70,6 +48,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       { href: "/admin/deal-rooms",     label: "Deal Rooms",      requiredPermission: "manage_deal_rooms" },
       { href: "/admin/spvs",           label: "SPVs",            requiredPermission: "manage_spvs"       },
       { href: "/admin/matching",       label: "Matching",        requiredPermission: "manage_matching"   },
+      { href: "/admin/partner-scores", label: "Partner Scores",  requiredPermission: "manage_investors"  },
     ],
   },
   {
@@ -139,7 +118,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         label: "Analytics",
         requiredPermission: "view_analytics",
         children: [
-          { href: "/admin/analytics", label: "Analytics" },
+          { href: "/admin/analytics", label: "Overview" },
           { href: "/admin/funnels",   label: "Activation funnels" },
           { href: "/admin/reports",   label: "Reports"   },
           { href: "/admin/insights",  label: "Insights"  },
