@@ -970,6 +970,25 @@ export const ADMIN_SOPS: SopEntry[] = [
     behindScenes: "Full step-by-step and troubleshooting live in docs/deploy-verify-calendar-email.md.",
     warnings: ["Pages 500 until the migrations are applied for that tier; email is silent until Resend is configured."],
   },
+  {
+    id: 64,
+    part: "I",
+    title: "Run the day from the Daily Operating Console",
+    summary: "Use /admin/playbook — the self-syncing operating playbook — to work each day in order.",
+    permission: "view_admin_dashboard",
+    keywords: ["playbook", "daily console", "operating console", "daily operations", "runbook", "operating loop", "where do i start", "morning routine", "ops console"],
+    steps: [
+      "Open Admin → Operation → Daily Console (/admin/playbook).",
+      "Clear any drift warning at the top: undocumented surfaces show as empty cards to fill in; orphaned entries (from removed menu items) are listed under 'Needs cleanup'.",
+      "Work the blocks in order — Open the day, Core operations, then Close the day — following each card's steps.",
+      "Watch the live 'pending' badges (investors awaiting accreditation, intro requests, event applications) and clear them at their surface.",
+      "Admins can edit any card's steps, cadence, gates, and role note inline — content lives in the database, so updating the playbook never needs a deploy.",
+    ],
+    behindScenes:
+      "The console reads the SAME admin nav registry the sidebar renders from and joins editable content from the playbook_module / _step / _flag tables. Because the module list is never duplicated, adding, renaming, or removing a menu item flows through automatically or lights up as drift — the menu is the doc.",
+    reversibility: "Editing a card is non-destructive and immediate; there is no publish step. Removing steps just clears them.",
+    warnings: ["Hard-gate flags (amber) are operating rules, e.g. 'no restricted investor access until kyc_status = verified' — do not treat them as optional."],
+  },
 ];
 
 /** Lookup an SOP by id. */

@@ -102,6 +102,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     title: "Operation",
     items: [
+      { href: "/admin/playbook",         label: "Daily Console",   requiredPermission: "view_admin_dashboard" },
       { href: "/admin/actions",          label: "Action Center",   requiredPermission: "view_actions"         },
       {
         href: "/admin/learning",
