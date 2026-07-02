@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { runAeoComplianceCheck, AEO_CHECK_LABELS, type AeoViolation } from "@/lib/aeo/compliance";
+import { CopilotPanel } from "@/components/marketing/copilot/CopilotPanel";
 
 const PURPLE = "#534AB7";
 type Section = { id: string; heading: string; body: string };
@@ -91,6 +92,8 @@ export function AeoEditorClient({ id }: { id: string }) {
   const addFaq = () => setFaq((f) => [...f, { q: "", a: "" }]);
 
   return (
+    <>
+    <CopilotPanel topic="aeo" pageId={id} onApplied={load} />
     <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 280px", gap: 16, alignItems: "start" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div style={card}>
@@ -198,5 +201,6 @@ export function AeoEditorClient({ id }: { id: string }) {
         </div>
       </div>
     </div>
+    </>
   );
 }

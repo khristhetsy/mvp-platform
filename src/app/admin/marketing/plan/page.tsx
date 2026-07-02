@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { getPlans } from "@/lib/marketing/plans";
 import { isClaudeConfigured } from "@/lib/claude";
 import { PlanClient } from "./PlanClient";
+import { CopilotPanel } from "@/components/marketing/copilot/CopilotPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export default async function MarketingPlanPage() {
         </div>
       </div>
       <PlanClient plans={plans} aiEnabled={isClaudeConfigured()} />
+      <CopilotPanel topic="cmo" />
     </div>
   );
 }

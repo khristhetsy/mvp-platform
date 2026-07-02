@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/supabase/auth";
 import { AeoListClient } from "@/components/aeo/admin/AeoListClient";
+import { CopilotPanel } from "@/components/marketing/copilot/CopilotPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export default async function AeoAdminPage() {
         </p>
       </div>
       <AeoListClient />
+      <CopilotPanel topic="aeo" />
     </div>
   );
 }
