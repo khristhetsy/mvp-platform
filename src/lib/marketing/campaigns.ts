@@ -1,6 +1,8 @@
 import { marketingDb } from "./db";
 import { makeUnsubscribeToken, sendMarketingEmail } from "./send";
 import { isUnsubscribed } from "./contacts";
+import { emitNotification } from "./notifications/emit";
+import { listAdminIds } from "./notifications/store";
 import type { MarketingCampaign } from "./types";
 
 export async function getCampaigns(): Promise<MarketingCampaign[]> {
@@ -119,6 +121,29 @@ export async function sendCampaign(campaignId: string): Promise<{
     .from("marketing_campaigns")
     .update({ status: "sent", sent_at: new Date().toISOString(), stat_sent: sent })
     .eq("id", campaignId);
+
+  // Notify — "batch send complete". Goes to the campaign owner, or all admins if
+  // there's no owner. Best-effort: never let a notification failure break a send.
+  try {
+    const owner = (campaign.created_by as string | null) ?? null;
+    const admins = owner ? [owner] : await listAdminIds();
+    const name = (campaign.name as string) ?? "Campaign";
+    const body = `“${name}” finished — ${sent} delivered${failed ? `, ${failed} failed` : ""}${skipped ? `, ${skipped} skipped` : ""}.`;
+    await Promise.all(
+      admins.map((adminId) =>
+        emitNotification({
+          adminId,
+          typeId: "campaigns.batch_complete",
+          title: "Batch send complete",
+          body,
+          link: "/admin/marketing/campaigns",
+          dedupeKey: `campaigns.batch_complete:${campaignId}`,
+        }),
+      ),
+    );
+  } catch {
+    /* notifications are best-effort */
+  }
 
   return { sent, skipped, failed };
 }

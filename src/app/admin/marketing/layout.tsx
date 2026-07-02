@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { MarketingBell } from "@/components/marketing/notifications/MarketingBell";
 
 const NAV = [
   { label: "Dashboard",    href: "/admin/marketing" },
@@ -13,6 +14,7 @@ const NAV = [
   { label: "Templates",    href: "/admin/marketing/templates" },
   { label: "Analytics",    href: "/admin/marketing/analytics" },
   { label: "Suppressions", href: "/admin/marketing/suppressions" },
+  { label: "Settings",     href: "/admin/marketing/settings/notifications" },
 ];
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
@@ -43,11 +45,14 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </div>
           <span style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)" }}>Marketing hub</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#1D9E75" }} />
-          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-            Sending via <span style={{ color: "#534AB7", fontWeight: 500 }}>mail.myicfos.com</span>
-          </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#1D9E75" }} />
+            <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+              Sending via <span style={{ color: "#534AB7", fontWeight: 500 }}>mail.myicfos.com</span>
+            </span>
+          </div>
+          <MarketingBell />
         </div>
       </div>
 
