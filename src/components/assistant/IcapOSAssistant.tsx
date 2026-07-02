@@ -48,7 +48,7 @@ function inferClientMode(pathname: string, workspace: ReturnType<typeof resolveW
   return "founder_workflow";
 }
 
-export function CapitalOSAssistant() {
+export function IcapOSAssistant() {
   const t = useTranslations("sharedCmp");
   const pathname = usePathname() ?? "";
   const workspace = resolveWorkspaceFromPath(pathname);

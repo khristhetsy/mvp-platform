@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Brain, BarChart3, FileText, Users } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
-import { CapitalOSLogo } from "@/components/CapitalOSLogo";
+import { IcapOSLogo } from "@/components/IcapOSLogo";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingScoredBoard, type ScoredBoardRow } from "@/components/marketing/MarketingScoredBoard";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
@@ -91,7 +91,7 @@ export default async function FoundersPage() {
       >
         <div className="mx-auto grid max-w-5xl gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
           <div>
-            <CapitalOSLogo height={44} tagline priority className="mb-6" />
+            <IcapOSLogo height={44} tagline priority className="mb-6" />
             <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-[var(--teal-muted)] px-3.5 py-1.5 font-mono text-[11.5px] text-[var(--teal)]">
               <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--teal)] text-[var(--teal)]" />
               For founders preparing institutional raises

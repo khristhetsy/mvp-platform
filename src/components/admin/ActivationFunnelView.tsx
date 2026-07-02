@@ -69,7 +69,7 @@ export function ActivationFunnelView({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <FunnelColumn title={t("founder_activation")} steps={founder} accent="#534AB7" />
+        <FunnelColumn title={t("founder_activation")} steps={founder} accent="#2E78F5" />
         <FunnelColumn title={t("investor_activation")} steps={investor} accent="#1D9E75" />
       </div>
 

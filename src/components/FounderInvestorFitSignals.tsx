@@ -36,8 +36,8 @@ export function FounderInvestorFitSignals({
           ) : null}
           {strongCount !== undefined ? (
             <div className="rounded-lg px-3 py-2.5 ring-1 ring-[#EEEDFE]" style={{ background: "#EEEDFE" }}>
-              <p className="text-[11px]" style={{ color: "#534AB7" }}>{t("strong_matches")}</p>
-              <p className="mt-0.5 font-mono text-2xl font-semibold" style={{ color: "#3C3489" }}>{strongCount}</p>
+              <p className="text-[11px]" style={{ color: "#2E78F5" }}>{t("strong_matches")}</p>
+              <p className="mt-0.5 font-mono text-2xl font-semibold" style={{ color: "#1A6CE4" }}>{strongCount}</p>
             </div>
           ) : null}
         </div>
@@ -49,7 +49,7 @@ export function FounderInvestorFitSignals({
             key={signal}
             className="flex items-start gap-2.5 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700"
           >
-            <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#534AB7]" />
+            <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#2E78F5]" />
             {signal}
           </li>
         ))}

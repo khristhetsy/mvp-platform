@@ -30,10 +30,10 @@ const LEVEL_STYLES: Record<
     badgeLabel: "ACTION",
   },
   opportunity: {
-    borderColor: "#534AB7",
+    borderColor: "#2E78F5",
     bg: "#fafaff",
     badge: "#EEEDFE",
-    badgeText: "#3C3489",
+    badgeText: "#1A6CE4",
     badgeLabel: "OPPORTUNITY",
   },
   positive: {
@@ -87,7 +87,7 @@ export function FounderProactiveInsights({
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       {/* Accent bar */}
-      <div style={{ height: 3, background: "linear-gradient(90deg,#534AB7,#7c3aed)" }} />
+      <div style={{ height: 3, background: "linear-gradient(90deg,#2E78F5,#7c3aed)" }} />
 
       <div className="p-5">
         {/* Header */}
@@ -101,7 +101,7 @@ export function FounderProactiveInsights({
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path
                   d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"
-                  stroke="#534AB7" strokeWidth="2" strokeLinejoin="round"
+                  stroke="#2E78F5" strokeWidth="2" strokeLinejoin="round"
                 />
               </svg>
             </div>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
-const ACCENT = "#534AB7";
+const ACCENT = "#2E78F5";
 const W = 460;
 const H = 180;
 

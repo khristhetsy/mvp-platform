@@ -2,7 +2,7 @@
 
 import type { ReadinessBenchmark } from "@/lib/data/readiness-benchmark";
 
-const ACCENT = "#534AB7";
+const ACCENT = "#2E78F5";
 
 function PercentileBar({ percentile }: { percentile: number }) {
   return (

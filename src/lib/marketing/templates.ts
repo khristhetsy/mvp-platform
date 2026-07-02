@@ -68,7 +68,7 @@ export const SEED_TEMPLATES = [
 <p>We built <strong>iCapOS</strong> — a platform that scores startups across 13 investment-readiness factors, giving investors a clear signal before they spend time on due diligence.</p>
 <p>Think of it as a pre-diligence filter: you see an investability rating from 0–100, broken down by team, market, financials, exit potential, and more — all based on the company's actual documents and data.</p>
 <p>We're offering a <strong>free company rating</strong> so you can see the depth of insight before committing to anything.</p>
-<p><a href="{{cta_url}}" style="display:inline-block;background:#534AB7;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:500;">Get a free rating →</a></p>
+<p><a href="{{cta_url}}" style="display:inline-block;background:#2E78F5;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:500;">Get a free rating →</a></p>
 <p>Happy to walk you through it if you'd prefer a quick call.</p>
 <p>Best,<br>The iCapOS Team</p>
 </div>`,
@@ -95,7 +95,7 @@ The iCapOS Team`,
   <li>Identify deal-breakers before taking a meeting</li>
   <li>Track portfolio companies over time</li>
 </ul>
-<p><a href="{{cta_url}}" style="display:inline-block;background:#534AB7;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:500;">See a sample report →</a></p>
+<p><a href="{{cta_url}}" style="display:inline-block;background:#2E78F5;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:500;">See a sample report →</a></p>
 <p>Worth 10 minutes?</p>
 <p>Best,<br>The iCapOS Team</p>
 </div>`,

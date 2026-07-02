@@ -41,7 +41,7 @@ const ROUND_PHASES: Record<RoundType, PhaseConfig[]> = {
       weeks: 3,
       description: "Tighten narrative, build target list, get intros lined up.",
       actions: ["Finalise pitch deck (≤12 slides)", "Build list of 30–50 angels", "Request 5–10 warm intros", "Set up data room basics"],
-      color: "#534AB7",
+      color: "#2E78F5",
     },
     {
       label: "First meetings",
@@ -71,7 +71,7 @@ const ROUND_PHASES: Record<RoundType, PhaseConfig[]> = {
       weeks: 4,
       description: "Build institutional-grade materials. Get warm intros to target funds.",
       actions: ["Finalise deck + data room", "Build list of 50–80 seed funds", "Request intros through portfolio", "Prep for metrics questions"],
-      color: "#534AB7",
+      color: "#2E78F5",
     },
     {
       label: "First meetings",
@@ -108,7 +108,7 @@ const ROUND_PHASES: Record<RoundType, PhaseConfig[]> = {
       weeks: 6,
       description: "Build metrics story, get to Series A–ready state before going out.",
       actions: ["Reach target ARR / growth rate", "Build board-level data room", "Get advisors aligned", "Brief existing investors"],
-      color: "#534AB7",
+      color: "#2E78F5",
     },
     {
       label: "Relationship building",
@@ -307,7 +307,7 @@ export function FundingTimelinePlanner() {
                 type="button"
                 onClick={() => setRoundType(r)}
                 className="rounded-full px-3 py-1.5 text-xs font-semibold transition"
-                style={{ background: roundType === r ? "#534AB7" : "#F1F5F9", color: roundType === r ? "white" : "#475569" }}
+                style={{ background: roundType === r ? "#2E78F5" : "#F1F5F9", color: roundType === r ? "white" : "#475569" }}
               >
                 {ROUND_TYPE_LABELS[r]}
               </button>
@@ -328,7 +328,7 @@ export function FundingTimelinePlanner() {
       {/* Summary strip */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">
-          <p className="text-xl font-bold" style={{ color: weeksUntilStart < 0 ? "#dc2626" : "#534AB7" }}>
+          <p className="text-xl font-bold" style={{ color: weeksUntilStart < 0 ? "#dc2626" : "#2E78F5" }}>
             {weeksUntilStart < 0 ? `${Math.abs(weeksUntilStart)}w ago` : `${weeksUntilStart}w`}
           </p>
           <p className="text-[10px] text-slate-500">{t("until_prep_starts")}</p>
@@ -407,7 +407,7 @@ export function FundingTimelinePlanner() {
         <div className="px-4 py-3">
           <div className="space-y-2">
             {[
-              { label: "Warm intros requested", value: math.intros, color: "#534AB7" },
+              { label: "Warm intros requested", value: math.intros, color: "#2E78F5" },
               { label: "First meetings", value: math.firstMeetings, color: "#0ea5e9" },
               ...(math.partnerMeetings > 0 ? [{ label: "Partner meetings", value: math.partnerMeetings, color: "#059669" }] : []),
               { label: "Term sheets", value: math.termSheets, color: "#d97706" },
@@ -432,7 +432,7 @@ export function FundingTimelinePlanner() {
 
       {/* Key rules */}
       <div className="rounded-xl border border-indigo-100 bg-[#FAFAFF] px-4 py-3">
-        <p className="mb-2 text-xs font-semibold" style={{ color: "#534AB7" }}>{t("rules_for_a_tight_process")}</p>
+        <p className="mb-2 text-xs font-semibold" style={{ color: "#2E78F5" }}>{t("rules_for_a_tight_process")}</p>
         <div className="space-y-1">
           {[
             "Run all meetings in parallel, not sequentially — momentum is your leverage",
@@ -442,7 +442,7 @@ export function FundingTimelinePlanner() {
             "If a VC goes quiet, move on — follow up once, then reallocate your energy",
           ].map((rule, i) => (
             <div key={i} className="flex items-start gap-2">
-              <span className="mt-0.5 text-[10px]" style={{ color: "#534AB7" }}>•</span>
+              <span className="mt-0.5 text-[10px]" style={{ color: "#2E78F5" }}>•</span>
               <p className="text-[11px] leading-relaxed text-slate-600">{rule}</p>
             </div>
           ))}

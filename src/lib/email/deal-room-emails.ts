@@ -9,7 +9,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getUserLocale, getUserLocaleByEmail } from "@/lib/i18n/user-locale";
 import { emailTranslator, type EmailT } from "@/lib/i18n/email-i18n";
 
-const ACCENT = "#534AB7";
+const ACCENT = "#2E78F5";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
 
 // ── Shared HTML wrapper ───────────────────────────────────────────────────────

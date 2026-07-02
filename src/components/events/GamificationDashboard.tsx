@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl";
 import type { MissionProgress } from "@/lib/icfo-events/missions";
 
 const BADGE_BG = ["#E6F1FB", "#E1F5EE", "#FAEEDA", "#EAF3DE", "#EEEDFE"];
-const BADGE_FG = ["#185FA5", "#0F6E56", "#854F0B", "#3B6D11", "#3C3489"];
+const BADGE_FG = ["#185FA5", "#0F6E56", "#854F0B", "#3B6D11", "#1A6CE4"];
 
 export function GamificationDashboard({
   stats,

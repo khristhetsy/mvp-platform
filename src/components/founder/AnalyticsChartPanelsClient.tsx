@@ -21,7 +21,7 @@ function DStatBox({ label, value }: { label: string; value: string }) {
 type BVariant = "success" | "medium" | "high" | "neutral" | "critical";
 const BCLS: Record<BVariant, string> = {
   success: "bg-[#EAF3DE] text-[#1E6D3C]",
-  medium: "bg-[#EEEDFE] text-[#3C3489]",
+  medium: "bg-[#EEEDFE] text-[#1A6CE4]",
   high: "bg-[#FAEEDA] text-[#854F0B]",
   neutral: "bg-slate-100 text-slate-600",
   critical: "bg-[#FCEBEB] text-[#A32D2D]",
@@ -44,7 +44,7 @@ function AdviceBox({ lines }: { lines: string[] }) {
       <div className="mb-3 flex items-center gap-2">
         <div
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-          style={{ background: "#534AB7" }}
+          style={{ background: "#2E78F5" }}
         >
           AI
         </div>
@@ -149,7 +149,7 @@ function DrawerContent({
                     <span className="text-[11px] font-semibold text-slate-800">{count}</span>
                   </div>
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                    <div className="h-full rounded-full" style={{ width: `${(count / maxVal) * 100}%`, background: "#534AB7" }} />
+                    <div className="h-full rounded-full" style={{ width: `${(count / maxVal) * 100}%`, background: "#2E78F5" }} />
                   </div>
                 </div>
               ))}
@@ -317,7 +317,7 @@ function DrawerContent({
         {totalActivity > 0 && (
           <div className="mt-4 space-y-2">
             {[
-              { label: "Expressed interest", value: analytics.investorInterestCount, color: "#534AB7" },
+              { label: "Expressed interest", value: analytics.investorInterestCount, color: "#2E78F5" },
               { label: "Intro requests", value: analytics.introRequestCount, color: "#854F0B" },
               { label: "Saved deals", value: analytics.savedByInvestorsCount, color: "#0369a1" },
             ].map((row) => {
@@ -422,7 +422,7 @@ function DrawerContent({
         <div className="mt-4">
           <div className="mb-1 flex items-center justify-between text-[11px]">
             <span className="text-slate-500">{t("current_readiness")}</span>
-            <span className="font-semibold" style={{ color: latestScore >= 80 ? "#3B6D11" : latestScore >= 50 ? "#534AB7" : "#854F0B" }}>
+            <span className="font-semibold" style={{ color: latestScore >= 80 ? "#3B6D11" : latestScore >= 50 ? "#2E78F5" : "#854F0B" }}>
               {latestScore}%
             </span>
           </div>
@@ -431,7 +431,7 @@ function DrawerContent({
               className="h-full rounded-full"
               style={{
                 width: `${latestScore}%`,
-                background: latestScore >= 80 ? "#3B6D11" : latestScore >= 50 ? "#534AB7" : "#854F0B",
+                background: latestScore >= 80 ? "#3B6D11" : latestScore >= 50 ? "#2E78F5" : "#854F0B",
               }}
             />
           </div>
@@ -532,14 +532,14 @@ export function AnalyticsChartPanelsClient({ analytics }: { analytics: FounderAn
   const outreachMax = Math.max(...outreachEntries.map(([, v]) => v), 1);
 
   const socialRows = [
-    { label: "Total drafts", value: analytics.socialDraftGenerated, color: "#534AB7" },
+    { label: "Total drafts", value: analytics.socialDraftGenerated, color: "#2E78F5" },
     { label: "Copied", value: analytics.socialDraftCopied, color: "#3B6D11" },
     { label: "Flagged compliance", value: analytics.socialDraftFlagged, color: "#A32D2D" },
   ];
   const socialMax = Math.max(...socialRows.map((r) => r.value), 1);
 
   const activityRows = [
-    { label: "Expressed interest", value: analytics.investorInterestCount, color: "#534AB7" },
+    { label: "Expressed interest", value: analytics.investorInterestCount, color: "#2E78F5" },
     { label: "Intro requests", value: analytics.introRequestCount, color: "#3B6D11" },
     { label: "Saved deals", value: analytics.savedByInvestorsCount, color: "#0369a1" },
   ];
@@ -565,7 +565,7 @@ export function AnalyticsChartPanelsClient({ analytics }: { analytics: FounderAn
                     <span className="text-xs font-semibold text-slate-800">{count}</span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                    <div className="h-full rounded-full" style={{ width: `${(count / outreachMax) * 100}%`, background: "#534AB7" }} />
+                    <div className="h-full rounded-full" style={{ width: `${(count / outreachMax) * 100}%`, background: "#2E78F5" }} />
                   </div>
                 </div>
               ))}
@@ -632,7 +632,7 @@ export function AnalyticsChartPanelsClient({ analytics }: { analytics: FounderAn
                         className="h-full rounded-full"
                         style={{
                           width: `${row.score}%`,
-                          background: row.score >= 80 ? "#3B6D11" : row.score >= 50 ? "#534AB7" : "#854F0B",
+                          background: row.score >= 80 ? "#3B6D11" : row.score >= 50 ? "#2E78F5" : "#854F0B",
                         }}
                       />
                     </div>

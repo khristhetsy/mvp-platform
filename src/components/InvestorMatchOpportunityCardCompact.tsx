@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 const CIRC = 2 * Math.PI * 17; // r=17 → ≈106.8
 
 function donutColor(score: number): string {
-  if (score >= 85) return "#534AB7";
+  if (score >= 85) return "#2E78F5";
   if (score >= 70) return "#6366f1";
   return "#2563eb";
 }
@@ -43,7 +43,7 @@ export function InvestorMatchOpportunityCardCompact({
         padding: 12,
         transition: "box-shadow .15s, border-color .15s",
       }}
-      className="group hover:border-[#534AB7] hover:shadow-[0_4px_14px_rgba(83,74,183,.15)]"
+      className="group hover:border-[#2E78F5] hover:shadow-[0_4px_14px_rgba(83,74,183,.15)]"
     >
       {/* Top row: donut + company info */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
@@ -99,7 +99,7 @@ export function InvestorMatchOpportunityCardCompact({
         ) : (
           <span />
         )}
-        <span style={{ fontSize: 10, fontWeight: 600, color: "#534AB7" }}>{t("view_2")}</span>
+        <span style={{ fontSize: 10, fontWeight: 600, color: "#2E78F5" }}>{t("view_2")}</span>
       </div>
     </Link>
   );

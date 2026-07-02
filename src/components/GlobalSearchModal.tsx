@@ -45,7 +45,7 @@ const PAGES: PageShortcut[] = [
 // ── Type icons ────────────────────────────────────────────────────────────────
 
 function TypeIcon({ type }: { type: SearchResult["type"] | "page" }) {
-  const ACCENT = "#534AB7";
+  const ACCENT = "#2E78F5";
 
   if (type === "contact") return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -259,7 +259,7 @@ export function GlobalSearchModal({ workspace = "founder" }: Props) {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ animation: "spin 0.8s linear infinite", flexShrink: 0 }}>
               <style>{"@keyframes spin { to { transform: rotate(360deg) } }"}</style>
               <circle cx="12" cy="12" r="10" stroke="#d1d5db" strokeWidth="2" />
-              <path d="M12 2a10 10 0 0 1 10 10" stroke="#534AB7" strokeWidth="2" strokeLinecap="round" />
+              <path d="M12 2a10 10 0 0 1 10 10" stroke="#2E78F5" strokeWidth="2" strokeLinecap="round" />
             </svg>
           )}
           <kbd style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", background: "#f3f4f6", border: "1px solid #e5e7eb", borderRadius: 4, padding: "2px 6px", flexShrink: 0 }}>

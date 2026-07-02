@@ -35,13 +35,13 @@ export function buildFunnelDigestEmail(funnels: Awaited<ReturnType<typeof loadAc
   const link = `${appUrl()}/admin/funnels`;
   const html = `
   <div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;color:#0f172a;">
-    <p style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#534AB7;font-weight:600;margin:0 0 6px;">Weekly report</p>
+    <p style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#2E78F5;font-weight:600;margin:0 0 6px;">Weekly report</p>
     <h1 style="font-size:20px;margin:0 0 14px;">Activation funnels</h1>
     <h2 style="font-size:15px;margin:0 0 6px;color:#334155;">Founder activation</h2>
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin:0 0 18px;border:1px solid #e2e8f0;border-radius:8px;">${stepsHtml(funnels.founder)}</table>
     <h2 style="font-size:15px;margin:0 0 6px;color:#334155;">Investor activation</h2>
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin:0 0 18px;border:1px solid #e2e8f0;border-radius:8px;">${stepsHtml(funnels.investor)}</table>
-    <a href="${link}" style="display:inline-block;background:#534AB7;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:8px;">Open the full report →</a>
+    <a href="${link}" style="display:inline-block;background:#2E78F5;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:8px;">Open the full report →</a>
     <p style="font-size:11px;color:#94a3b8;margin:18px 0 0;">The red percentage marks the biggest drop between steps — the place to focus.</p>
   </div>`;
 

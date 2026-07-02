@@ -70,7 +70,7 @@ export function PlaybookConsole({ initial, isAdmin, endpoints = ADMIN_ENDPOINTS 
       <nav style={{ position: "sticky", top: 12, display: "flex", flexDirection: "column", gap: 14, fontSize: 12.5 }}>
         {BLOCK_ORDER.map((b) => documented[b].length ? (
           <div key={b}>
-            <p style={{ fontSize: 10.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#534AB7", margin: "0 0 6px" }}>{BLOCK_LABEL[b]}</p>
+            <p style={{ fontSize: 10.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".08em", color: "#2E78F5", margin: "0 0 6px" }}>{BLOCK_LABEL[b]}</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 3, borderLeft: "2px solid #E4E1F6", paddingLeft: 10 }}>
               {documented[b].map((card) => (
                 <a key={card.navId} href={`#pb-${card.navId}`} style={{ color: "#3d3d3a", textDecoration: "none" }}>{card.label}</a>

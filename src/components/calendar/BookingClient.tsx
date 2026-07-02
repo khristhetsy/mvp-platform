@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Clock, Video, Check, Globe, ChevronLeft, ChevronRight } from "lucide-react";
-import { CapitalOSLogo } from "@/components/CapitalOSLogo";
+import { IcapOSLogo } from "@/components/IcapOSLogo";
 import type { TimeInterval, ScheduleQuestion } from "@/lib/scheduling/types";
 
 const LOCAL_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -186,7 +186,7 @@ export function BookingClient({
       <div className="grid grid-cols-1 md:grid-cols-[200px_minmax(0,1fr)]">
         {/* Meeting info */}
         <div className="border-b border-slate-100 p-5 md:border-b-0 md:border-r">
-          <CapitalOSLogo height={24} />
+          <IcapOSLogo height={24} />
           <div className="mt-5 mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#E6F1FB] text-sm font-semibold text-[#0C447C]">{initials(hostName)}</div>
           <p className="text-xs text-slate-500">{hostName}</p>
           <p className="mb-3 text-lg font-semibold text-slate-950">{title}</p>

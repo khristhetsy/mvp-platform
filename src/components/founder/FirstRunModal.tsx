@@ -104,7 +104,7 @@ export function FirstRunModal({ hasNoDocuments }: Props) {
 
         {/* Header strip */}
         <div style={{
-          background: "linear-gradient(135deg, #534AB7 0%, #7c73e6 100%)",
+          background: "linear-gradient(135deg, #2E78F5 0%, #7c73e6 100%)",
           padding: "24px 28px 20px",
           position: "relative",
         }}>
@@ -165,7 +165,7 @@ export function FirstRunModal({ hasNoDocuments }: Props) {
               {currentStep.icon}
             </div>
             <div>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "#534AB7", textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 4px" }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#2E78F5", textTransform: "uppercase", letterSpacing: ".08em", margin: "0 0 4px" }}>
                 Step {currentStep.step} of {STEPS.length}
               </p>
               <h3 style={{ fontSize: 17, fontWeight: 700, color: "#111827", margin: "0 0 8px", lineHeight: 1.3 }}>
@@ -199,7 +199,7 @@ export function FirstRunModal({ hasNoDocuments }: Props) {
                 onClick={() => setActiveStep((s) => s + 1)}
                 style={{
                   fontSize: 13, fontWeight: 600, color: "white",
-                  background: "#534AB7", border: "none", borderRadius: 10,
+                  background: "#2E78F5", border: "none", borderRadius: 10,
                   padding: "9px 18px", cursor: "pointer",
                 }}
               >
@@ -211,7 +211,7 @@ export function FirstRunModal({ hasNoDocuments }: Props) {
                 onClick={dismiss}
                 style={{
                   fontSize: 13, fontWeight: 600, color: "white",
-                  background: "#534AB7", borderRadius: 10,
+                  background: "#2E78F5", borderRadius: 10,
                   padding: "9px 18px", textDecoration: "none",
                   display: "inline-block",
                 }}
@@ -224,7 +224,7 @@ export function FirstRunModal({ hasNoDocuments }: Props) {
               href={currentStep.action.href}
               onClick={dismiss}
               style={{
-                fontSize: 13, fontWeight: 600, color: "#534AB7",
+                fontSize: 13, fontWeight: 600, color: "#2E78F5",
                 background: "#EEEDFE", borderRadius: 10,
                 padding: "9px 18px", textDecoration: "none",
                 display: isLast ? "none" : "inline-block",

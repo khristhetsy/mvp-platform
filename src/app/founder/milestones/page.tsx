@@ -32,7 +32,7 @@ function formatProgress(m: MilestoneResult): string {
 // ─── Category icons ──────────────────────────────────────────────────────────
 
 function CategoryIcon({ id }: { id: string }) {
-  const style = { color: "#534AB7" };
+  const style = { color: "#2E78F5" };
   if (id === "profile") {
     return (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" style={style} aria-hidden>
@@ -74,7 +74,7 @@ function CategoryIcon({ id }: { id: string }) {
 // ─── Milestone row icon ───────────────────────────────────────────────────────
 
 function MilestoneRowIcon({ id, achieved }: { id: string; achieved: boolean }) {
-  const color = achieved ? "#534AB7" : "#94a3b8";
+  const color = achieved ? "#2E78F5" : "#94a3b8";
 
   const icons: Record<string, React.ReactElement> = {
     profile_started: (
@@ -175,7 +175,7 @@ function MilestoneRow({ milestone }: { milestone: MilestoneResult }) {
                 ) : null}
                 <span
                   className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-                  style={{ background: "#EEEDFE", color: "#534AB7" }}
+                  style={{ background: "#EEEDFE", color: "#2E78F5" }}
                 >
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <polyline points="20 6 9 17 4 12" />
@@ -201,7 +201,7 @@ function MilestoneRow({ milestone }: { milestone: MilestoneResult }) {
                 className="h-full rounded-full transition-all"
                 style={{
                   width: `${Math.round((milestone.progress.current / milestone.progress.target) * 100)}%`,
-                  background: "#534AB7",
+                  background: "#2E78F5",
                 }}
               />
             </div>
@@ -241,7 +241,7 @@ function CategorySection({ category }: { category: MilestoneCategory }) {
               className="h-full rounded-full"
               style={{
                 width: `${Math.round((achievedCount / total) * 100)}%`,
-                background: "#534AB7",
+                background: "#2E78F5",
               }}
             />
           </div>
@@ -285,7 +285,7 @@ export default async function FounderMilestonesPage() {
 
         {/* Summary bar */}
         <div className="mb-8 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div style={{ height: 3, background: "linear-gradient(90deg,#534AB7,#7c3aed,#06b6d4)" }} />
+          <div style={{ height: 3, background: "linear-gradient(90deg,#2E78F5,#7c3aed,#06b6d4)" }} />
           <div className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-2xl font-bold text-slate-900">
@@ -297,12 +297,12 @@ export default async function FounderMilestonesPage() {
             <div className="flex-1 sm:max-w-sm">
               <div className="mb-1.5 flex items-center justify-between">
                 <span className="text-xs font-medium text-slate-500">{t("overall_progress")}</span>
-                <span className="text-xs font-semibold" style={{ color: "#534AB7" }}>{pct}%</span>
+                <span className="text-xs font-semibold" style={{ color: "#2E78F5" }}>{pct}%</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                 <div
                   className="h-full rounded-full transition-all"
-                  style={{ width: `${pct}%`, background: "linear-gradient(90deg,#534AB7,#7c3aed)" }}
+                  style={{ width: `${pct}%`, background: "linear-gradient(90deg,#2E78F5,#7c3aed)" }}
                 />
               </div>
             </div>

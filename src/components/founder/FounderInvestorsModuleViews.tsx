@@ -30,7 +30,7 @@ function donutSlicePath(cx: number, cy: number, rOuter: number, rInner: number, 
   ].join(" ");
 }
 
-const DONUT_COLORS = ["#534AB7", "#3B6D11", "#0369a1", "#854F0B"] as const;
+const DONUT_COLORS = ["#2E78F5", "#3B6D11", "#0369a1", "#854F0B"] as const;
 const DONUT_LABELS = ["Interested", "Pledged", "Intro Req.", "Follow-up"] as const;
 
 function PipelineDonut({ counts }: Readonly<{ counts: [number, number, number, number] }>) {
@@ -206,7 +206,7 @@ function PipelineClickCard({
 type DrawerGroup = "interested" | "pledged" | "intro" | "followup";
 
 const DRAWER_CFG = {
-  interested: { label: "Interested",      ac: "#534AB7", ab: "#EEEDFE" },
+  interested: { label: "Interested",      ac: "#2E78F5", ab: "#EEEDFE" },
   pledged:    { label: "Pledged",          ac: "#0F6E56", ab: "#E1F5EE" },
   intro:      { label: "Intro requested", ac: "#185FA5", ab: "#E6F1FB" },
   followup:   { label: "Follow-up",       ac: "#854F0B", ab: "#FAEEDA" },
@@ -542,7 +542,7 @@ function FounderInvestorsModuleViewsInner({
                 label={t("interested")}
                 value={String(donutCounts[0])}
                 sub={cardSubs.interested}
-                accentColor="#534AB7"
+                accentColor="#2E78F5"
                 accentBg="#EEEDFE"
                 onClick={() => setDrawerGroup("interested")}
               />

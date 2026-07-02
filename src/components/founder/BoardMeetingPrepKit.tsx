@@ -190,7 +190,7 @@ function buildPreRead(stage: BoardStage, metrics: Record<string, string>, compan
 
 function AgendaCard({ item, index }: { item: AgendaItem; index: number }) {
   const [expanded, setExpanded] = useState(false);
-  const colors = ["#534AB7", "#059669", "#0ea5e9", "#7c3aed", "#d97706", "#dc2626", "#0f766e", "#be185d"];
+  const colors = ["#2E78F5", "#059669", "#0ea5e9", "#7c3aed", "#d97706", "#dc2626", "#0f766e", "#be185d"];
   const color = colors[index % colors.length];
 
   return (
@@ -291,7 +291,7 @@ export function BoardMeetingPrepKit() {
             type="button"
             onClick={() => setStage(s)}
             className="rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition"
-            style={{ background: stage === s ? "#534AB7" : "#F1F5F9", color: stage === s ? "white" : "#475569" }}
+            style={{ background: stage === s ? "#2E78F5" : "#F1F5F9", color: stage === s ? "white" : "#475569" }}
           >
             {s === "seed" ? "Seed" : "Series A"}
           </button>
@@ -309,7 +309,7 @@ export function BoardMeetingPrepKit() {
             className="flex-1 rounded-lg py-2 text-xs font-semibold transition"
             style={{
               background: tab === t ? "white" : "transparent",
-              color: tab === t ? "#534AB7" : "#94a3b8",
+              color: tab === t ? "#2E78F5" : "#94a3b8",
               boxShadow: tab === t ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
             }}
           >
@@ -322,7 +322,7 @@ export function BoardMeetingPrepKit() {
       {tab === "agenda" ? (
         <div className="space-y-3">
           <div className="rounded-xl border border-indigo-100 bg-[#FAFAFF] px-4 py-3">
-            <p className="text-xs font-semibold" style={{ color: "#534AB7" }}>{t("how_to_run_a_great_board_meeting")}</p>
+            <p className="text-xs font-semibold" style={{ color: "#2E78F5" }}>{t("how_to_run_a_great_board_meeting")}</p>
             <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">
               Send the pre-read 48h before. Start on time. Use the meeting to decide, not to inform — boards should read the materials in advance. Leave with clear action items and owners.
             </p>
@@ -382,7 +382,7 @@ export function BoardMeetingPrepKit() {
                 type="button"
                 onClick={copy}
                 className="text-[11px] font-semibold transition"
-                style={{ color: copied ? "#059669" : "#534AB7" }}
+                style={{ color: copied ? "#059669" : "#2E78F5" }}
               >
                 {copied ? "Copied!" : "Copy all"}
               </button>

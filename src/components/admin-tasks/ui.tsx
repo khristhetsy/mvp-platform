@@ -1,12 +1,12 @@
 // Small presentational primitives for admin tasks. Brand: navy #0F2147,
-// teal #0D9488, mint #5EEAD4, plus per-status / per-priority colors.
+// teal #2E78F5, mint #BFDBFE, plus per-status / per-priority colors.
 
 import type { TaskPriority, TaskStatus } from "@/lib/admin-tasks/types";
 import { PRIORITY_LABELS, STATUS_LABELS } from "@/lib/admin-tasks/types";
 
 const STATUS_STYLE: Record<TaskStatus, string> = {
   todo: "bg-slate-100 text-slate-700",
-  in_progress: "bg-[#CCFBF1] text-[#0F766E]",
+  in_progress: "bg-[#CCFBF1] text-[#1A6CE4]",
   review: "bg-amber-100 text-amber-800",
   done: "bg-emerald-100 text-emerald-800",
 };
@@ -42,14 +42,14 @@ export function OwnerAvatar({ label }: { label: string | null }) {
   if (!label) return null;
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#0F2147] text-[10px] font-semibold text-[#5EEAD4]">{initials(label)}</span>
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#0F2147] text-[10px] font-semibold text-[#BFDBFE]">{initials(label)}</span>
       <span className="text-xs text-slate-600">{label}</span>
     </span>
   );
 }
 
 export function TagChip({ tag }: { tag: string }) {
-  return <span className="inline-flex items-center rounded-md bg-[#CCFBF1] px-2 py-0.5 text-[11px] font-medium text-[#0F766E]">{tag}</span>;
+  return <span className="inline-flex items-center rounded-md bg-[#CCFBF1] px-2 py-0.5 text-[11px] font-medium text-[#1A6CE4]">{tag}</span>;
 }
 
 export function dueLabel(due: string | null): { text: string; overdue: boolean } | null {

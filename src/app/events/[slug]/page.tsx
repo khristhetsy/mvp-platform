@@ -264,7 +264,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
   const bannerHtml = sanitizeBannerHtml(event.bannerHtml);
   const bannerTheme: Record<string, { bg: string; text: string; border: string }> = {
-    indigo: { bg: "#EEEDFE", text: "#3C3489", border: "transparent" },
+    indigo: { bg: "#EEEDFE", text: "#1A6CE4", border: "transparent" },
     teal: { bg: "#E1F5EE", text: "#0F6E56", border: "transparent" },
     navy: { bg: "#0f2147", text: "#dbe4f5", border: "transparent" },
     plain: { bg: "#ffffff", text: "#0f2147", border: "var(--border-subtle)" },

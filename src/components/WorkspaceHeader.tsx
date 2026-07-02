@@ -1,6 +1,6 @@
 "use client";
 
-import { CapitalOSLogo } from "@/components/CapitalOSLogo";
+import { IcapOSLogo } from "@/components/IcapOSLogo";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -216,7 +216,7 @@ export function WorkspaceHeader({ workspace, profileName, profileSubtitle, profi
           </svg>
         </button>
         <Link href="/" className="flex shrink-0 items-center self-center">
-          <CapitalOSLogo height={28} />
+          <IcapOSLogo height={28} />
         </Link>
         <WorkspaceBreadcrumbs workspace={workspace} />
         <span className="hidden rounded-md bg-[var(--blue-muted)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--blue-hover)] sm:inline">

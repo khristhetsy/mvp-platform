@@ -75,9 +75,9 @@ export function StageUnlockBanner() {
   return (
     <div className="mb-6 overflow-hidden rounded-xl border border-[#CECBF6] bg-[#F4F3FE]">
       <div className="flex items-start gap-3 px-5 py-4">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#534AB7] text-white"><Rocket className="h-5 w-5" /></span>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#2E78F5] text-white"><Rocket className="h-5 w-5" /></span>
         <div className="min-w-0 flex-1">
-          <span className="inline-flex items-center gap-1.5 rounded-md bg-[#EEEDFE] px-2 py-0.5 text-[11px] font-medium text-[#3C3489]">{u.badge}</span>
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-[#EEEDFE] px-2 py-0.5 text-[11px] font-medium text-[#1A6CE4]">{u.badge}</span>
           <p className="mt-1.5 text-base font-semibold text-slate-950">{u.title}</p>
           <p className="text-sm text-slate-600">{u.subtitle}</p>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -88,7 +88,7 @@ export function StageUnlockBanner() {
             ))}
           </div>
           <div className="mt-4 flex items-center gap-4">
-            <Link href={u.cta.href} onClick={dismiss} className="inline-flex items-center gap-1.5 rounded-lg bg-[#534AB7] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3C3489]">
+            <Link href={u.cta.href} onClick={dismiss} className="inline-flex items-center gap-1.5 rounded-lg bg-[#2E78F5] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1A6CE4]">
               {u.cta.label} <ArrowRight className="h-4 w-4" />
             </Link>
             <button type="button" onClick={dismiss} className="text-sm text-slate-500 hover:text-slate-800">{t("got_it")}</button>

@@ -57,7 +57,7 @@ export async function GET(request: Request) {
       })),
     });
 
-    const filename = `capitalos_insights_${windowDays}d_${snapshot.generatedAt.slice(0, 10)}.csv`;
+    const filename = `icapos_insights_${windowDays}d_${snapshot.generatedAt.slice(0, 10)}.csv`;
     return new NextResponse(csv, {
       status: 200,
       headers: {

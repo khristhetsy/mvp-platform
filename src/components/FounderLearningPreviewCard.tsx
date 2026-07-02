@@ -34,12 +34,12 @@ export function FounderLearningPreviewCard({
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs text-slate-500">{t("overall_progress")}</span>
-          <span className="text-xs font-semibold text-[#534AB7]">{overallPercent}%</span>
+          <span className="text-xs font-semibold text-[#2E78F5]">{overallPercent}%</span>
         </div>
         <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
           <div
             className="h-full rounded-full transition-all"
-            style={{ width: `${overallPercent}%`, background: "#534AB7" }}
+            style={{ width: `${overallPercent}%`, background: "#2E78F5" }}
           />
         </div>
       </div>
@@ -60,17 +60,17 @@ export function FounderLearningPreviewCard({
               <div key={mod.slug} className="flex items-center gap-3">
                 <Link
                   href={`/founder/learning/${mod.slug}`}
-                  className="flex-1 min-w-0 text-xs font-medium text-slate-800 hover:text-[#534AB7] truncate"
+                  className="flex-1 min-w-0 text-xs font-medium text-slate-800 hover:text-[#2E78F5] truncate"
                 >
                   {mod.title}
                 </Link>
                 <div className="w-16 sm:flex-1 shrink-0 h-1.5 rounded-full bg-slate-100 overflow-hidden">
                   <div
                     className="h-full rounded-full"
-                    style={{ width: `${pct}%`, background: pct === 100 ? "#3B6D11" : "#534AB7" }}
+                    style={{ width: `${pct}%`, background: pct === 100 ? "#3B6D11" : "#2E78F5" }}
                   />
                 </div>
-                <span className={`shrink-0 text-[11px] font-medium w-8 text-right ${pct === 100 ? "text-[#3B6D11]" : pct > 0 ? "text-[#534AB7]" : "text-slate-400"}`}>
+                <span className={`shrink-0 text-[11px] font-medium w-8 text-right ${pct === 100 ? "text-[#3B6D11]" : pct > 0 ? "text-[#2E78F5]" : "text-slate-400"}`}>
                   {pct === 100 ? "Done" : pct > 0 ? `${pct}%` : "—"}
                 </span>
               </div>
@@ -83,13 +83,13 @@ export function FounderLearningPreviewCard({
             <Link
               key={rec.slug}
               href={`/founder/learning/${rec.slug}`}
-              className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 hover:border-[#534AB7]/30 hover:bg-[#EEEDFE]/40"
+              className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 hover:border-[#2E78F5]/30 hover:bg-[#EEEDFE]/40"
             >
               <div>
                 <p className="text-xs font-semibold text-slate-950">{rec.title}</p>
                 <p className="mt-0.5 text-[11px] text-slate-500">{rec.reason}</p>
               </div>
-              <span className="ml-3 shrink-0 text-xs font-semibold text-[#534AB7]">{t("start")}</span>
+              <span className="ml-3 shrink-0 text-xs font-semibold text-[#2E78F5]">{t("start")}</span>
             </Link>
           ))}
         </div>

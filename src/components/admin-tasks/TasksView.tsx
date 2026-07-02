@@ -69,7 +69,7 @@ export function TasksView({ initialTasks }: { initialTasks: AdminTaskListItem[] 
           <h1 className="text-2xl font-semibold text-[#0F2147]">{t("tasks")}</h1>
           <p className="text-sm text-slate-500">{openCount} open · internal operations tracker</p>
         </div>
-        <button type="button" onClick={() => setCreateOpen(true)} className="inline-flex items-center gap-1.5 rounded-full bg-[#0D9488] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0f766e]"><Plus className="h-4 w-4" /> New task</button>
+        <button type="button" onClick={() => setCreateOpen(true)} className="inline-flex items-center gap-1.5 rounded-full bg-[#2E78F5] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1A6CE4]"><Plus className="h-4 w-4" /> New task</button>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -107,7 +107,7 @@ export function TasksView({ initialTasks }: { initialTasks: AdminTaskListItem[] 
                     const due = dueLabel(t.due_date);
                     return (
                       <div key={t.id} role="button" tabIndex={0} onClick={() => setDetailId(t.id)} onKeyDown={(e) => { if (e.key === "Enter") setDetailId(t.id); }}
-                        className="cursor-pointer rounded-lg border border-slate-200 bg-white p-3 hover:border-[#0D9488] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488]">
+                        className="cursor-pointer rounded-lg border border-slate-200 bg-white p-3 hover:border-[#2E78F5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2E78F5]">
                         <p className="text-sm font-medium text-slate-800">{t.title}</p>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           <PriorityDot priority={t.priority} />

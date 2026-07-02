@@ -15,7 +15,7 @@ export type OutreachCoachSnapshot = {
   founderGoals: string | null;
 };
 
-const ACCENT = "#534AB7";
+const ACCENT = "#2E78F5";
 
 // ---------------------------------------------------------------------------
 // Copy button helper
@@ -67,7 +67,7 @@ function CoachingResult({ result, onReset }: { result: OutreachCoachResult; onRe
             How to frame this
           </span>
         </div>
-        <p style={{ fontSize: 13, color: "#3C3489", margin: 0, lineHeight: 1.6 }}>{result.framing}</p>
+        <p style={{ fontSize: 13, color: "#1A6CE4", margin: 0, lineHeight: 1.6 }}>{result.framing}</p>
         <button
           type="button"
           onClick={() => setShowWhy((v) => !v)}
@@ -76,7 +76,7 @@ function CoachingResult({ result, onReset }: { result: OutreachCoachResult; onRe
           {showWhy ? "Hide rationale" : "Why this framing?"}
         </button>
         {showWhy && (
-          <p style={{ fontSize: 11, color: "#534AB7", margin: "6px 0 0", lineHeight: 1.5, fontStyle: "italic" }}>
+          <p style={{ fontSize: 11, color: "#2E78F5", margin: "6px 0 0", lineHeight: 1.5, fontStyle: "italic" }}>
             {result.whyFraming}
           </p>
         )}
@@ -260,7 +260,7 @@ export function InvestorOutreachCoach({
             Per-investor outreach coaching
           </span>
         </div>
-        <p style={{ fontSize: 12, color: "#3C3489", margin: 0, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 12, color: "#1A6CE4", margin: 0, lineHeight: 1.6 }}>
           Select an investor from your CRM. We&apos;ll analyse their profile and tell you exactly how to frame your outreach — before you send a word.
         </p>
       </div>

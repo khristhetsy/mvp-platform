@@ -44,8 +44,8 @@ export function DashboardInsightPanel({
           <p className="mt-0.5 text-[11px] text-slate-500">{t("doc_opens")}</p>
         </div>
         <div className="rounded-lg px-3 py-2.5 ring-1 ring-[#EEEDFE] text-center" style={{ background: "#EEEDFE" }}>
-          <p className="font-mono text-xl font-semibold" style={{ color: "#3C3489" }}>{introRequests ?? 0}</p>
-          <p className="mt-0.5 text-[11px]" style={{ color: "#534AB7" }}>{t("intro_requests")}</p>
+          <p className="font-mono text-xl font-semibold" style={{ color: "#1A6CE4" }}>{introRequests ?? 0}</p>
+          <p className="mt-0.5 text-[11px]" style={{ color: "#2E78F5" }}>{t("intro_requests")}</p>
         </div>
       </div>
 
@@ -57,7 +57,7 @@ export function DashboardInsightPanel({
             className="flex-1 rounded-sm"
             style={{
               height: `${Math.max(10, (value / max) * 100)}%`,
-              background: i === series.length - 1 ? "#534AB7" : "#EEEDFE",
+              background: i === series.length - 1 ? "#2E78F5" : "#EEEDFE",
             }}
           />
         ))}

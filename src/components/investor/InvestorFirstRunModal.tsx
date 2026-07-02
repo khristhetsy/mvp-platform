@@ -79,7 +79,7 @@ export function InvestorFirstRunModal({ isNew }: { isNew: boolean }) {
           @keyframes ifrSlideUp { from { opacity: 0; transform: translate(-50%, calc(-50% + 24px)) } to { opacity: 1; transform: translate(-50%, -50%) } }
         `}</style>
 
-        <div style={{ background: "linear-gradient(135deg, #534AB7 0%, #7c73e6 100%)", padding: "24px 28px 20px", position: "relative" }}>
+        <div style={{ background: "linear-gradient(135deg, #2E78F5 0%, #7c73e6 100%)", padding: "24px 28px 20px", position: "relative" }}>
           <button
             type="button" onClick={dismiss} aria-label="Dismiss"
             style={{ position: "absolute", top: 14, right: 16, width: 28, height: 28, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 16, lineHeight: 1 }}
@@ -104,14 +104,14 @@ export function InvestorFirstRunModal({ isNew }: { isNew: boolean }) {
 
         <div style={{ padding: "24px 28px 26px" }}>
           <div style={{ fontSize: 34, lineHeight: 1, marginBottom: 12 }} aria-hidden>{currentStep.icon}</div>
-          <p style={{ fontSize: 12, fontWeight: 700, color: "#534AB7", margin: "0 0 4px" }}>Step {activeStep + 1} of {STEPS.length}</p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: "#2E78F5", margin: "0 0 4px" }}>Step {activeStep + 1} of {STEPS.length}</p>
           <h3 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", margin: "0 0 8px" }}>{currentStep.title}</h3>
           <p style={{ fontSize: 14, lineHeight: 1.6, color: "#475569", margin: "0 0 20px" }}>{currentStep.description}</p>
 
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Link
               href={currentStep.action.href} onClick={dismiss}
-              style={{ display: "inline-flex", alignItems: "center", background: "#534AB7", color: "white", textDecoration: "none", fontWeight: 600, fontSize: 14, padding: "10px 18px", borderRadius: 10 }}
+              style={{ display: "inline-flex", alignItems: "center", background: "#2E78F5", color: "white", textDecoration: "none", fontWeight: 600, fontSize: 14, padding: "10px 18px", borderRadius: 10 }}
             >
               {currentStep.action.label} →
             </Link>

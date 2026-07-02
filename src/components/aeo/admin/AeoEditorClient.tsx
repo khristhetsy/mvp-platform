@@ -6,7 +6,7 @@ import Link from "next/link";
 import { runAeoComplianceCheck, AEO_CHECK_LABELS, type AeoViolation } from "@/lib/aeo/compliance";
 import { CopilotPanel } from "@/components/marketing/copilot/CopilotPanel";
 
-const PURPLE = "#534AB7";
+const PURPLE = "#2E78F5";
 type Section = { id: string; heading: string; body: string };
 type Faq = { q: string; a: string };
 

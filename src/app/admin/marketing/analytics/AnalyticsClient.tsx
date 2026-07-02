@@ -50,10 +50,10 @@ const RECOMMENDATIONS = [
   },
   {
     icon: "ti-clock",
-    color: { bg: "#EEEDFE", color: "#534AB7" },
+    color: { bg: "#EEEDFE", color: "#2E78F5" },
     priority: "Quick win",
     priorityBg: "#EEEDFE",
-    priorityColor: "#3C3489",
+    priorityColor: "#1A6CE4",
     title: "Schedule sends Tuesday 9–11am or Thursday 2–4pm",
     desc: "Family office and fund manager personas engage mid-morning before deal flow meetings, or early afternoon. Track open rate by send time to validate your best window.",
   },
@@ -140,8 +140,8 @@ export default function AnalyticsClient({ metrics, dailyOpens }: Props) {
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Last 30 days · mail.myicfos.com</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#EEEDFE", border: "0.5px solid #AFA9EC", borderRadius: 10, padding: "6px 12px" }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#534AB7" }} />
-          <span style={{ fontSize: 12, color: "#3C3489", fontWeight: 500 }}>CMO assistant active</span>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2E78F5" }} />
+          <span style={{ fontSize: 12, color: "#1A6CE4", fontWeight: 500 }}>CMO assistant active</span>
         </div>
       </div>
 
@@ -198,7 +198,7 @@ export default function AnalyticsClient({ metrics, dailyOpens }: Props) {
               <div key={f.label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                 <div style={{ fontSize: 12, color: "var(--muted-foreground)", width: 68, textAlign: "right", flexShrink: 0 }}>{f.label}</div>
                 <div style={{ flex: 1, height: 26, background: "var(--muted)", borderRadius: 6, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${pct}%`, background: "#CECBF6", borderRadius: 6, display: "flex", alignItems: "center", paddingLeft: 8, fontSize: 12, fontWeight: 500, color: "#3C3489", minWidth: f.val > 0 ? 40 : 0 }}>
+                  <div style={{ height: "100%", width: `${pct}%`, background: "#CECBF6", borderRadius: 6, display: "flex", alignItems: "center", paddingLeft: 8, fontSize: 12, fontWeight: 500, color: "#1A6CE4", minWidth: f.val > 0 ? 40 : 0 }}>
                     {f.val > 0 ? f.val.toLocaleString() : ""}
                   </div>
                 </div>
@@ -222,7 +222,7 @@ export default function AnalyticsClient({ metrics, dailyOpens }: Props) {
               return (
                 <div key={d.date} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>{d.count}</div>
-                  <div style={{ width: "100%", height, borderRadius: "3px 3px 0 0", background: isToday ? "#534AB7" : "#EEEDFE" }} />
+                  <div style={{ width: "100%", height, borderRadius: "3px 3px 0 0", background: isToday ? "#2E78F5" : "#EEEDFE" }} />
                   <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 4 }}>{d.date}</div>
                 </div>
               );
@@ -278,7 +278,7 @@ export default function AnalyticsClient({ metrics, dailyOpens }: Props) {
       {/* Virtual CMO Chat */}
       <div style={{ ...card, padding: "16px 18px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-          <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#534AB7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 11, color: "#fff", fontWeight: 500 }}>AI</div>
+          <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#2E78F5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 11, color: "#fff", fontWeight: 500 }}>AI</div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 500 }}>Virtual CMO</div>
             <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Powered by Claude · iCapOS Marketing</div>
@@ -289,7 +289,7 @@ export default function AnalyticsClient({ metrics, dailyOpens }: Props) {
           {messages.map((m, i) => (
             <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", gap: 8, alignItems: "flex-start" }}>
               {m.role === "assistant" && (
-                <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#534AB7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 10, color: "#fff", fontWeight: 500, marginTop: 2 }}>AI</div>
+                <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#2E78F5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 10, color: "#fff", fontWeight: 500, marginTop: 2 }}>AI</div>
               )}
               <div style={{ borderRadius: m.role === "user" ? "12px 12px 2px 12px" : "12px 12px 12px 2px", background: m.role === "user" ? "#EEEDFE" : "var(--muted)", color: m.role === "user" ? "#26215C" : "var(--foreground)", padding: "10px 14px", fontSize: 13, lineHeight: 1.6, maxWidth: 520 }}>
                 {m.content}
@@ -298,7 +298,7 @@ export default function AnalyticsClient({ metrics, dailyOpens }: Props) {
           ))}
           {loading && (
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#534AB7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 500 }}>AI</div>
+              <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#2E78F5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 500 }}>AI</div>
               <div style={{ background: "var(--muted)", borderRadius: "12px 12px 12px 2px", padding: "10px 14px", fontSize: 13, color: "var(--muted-foreground)" }}>Thinking...</div>
             </div>
           )}
@@ -319,7 +319,7 @@ export default function AnalyticsClient({ metrics, dailyOpens }: Props) {
             placeholder="Ask your CMO anything..."
             style={{ flex: 1, padding: "8px 12px", fontSize: 13, borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }} />
           <button onClick={() => send(input)} disabled={loading || !input.trim()}
-            style={{ padding: "8px 16px", fontSize: 13, borderRadius: 8, border: "none", background: "#534AB7", color: "#fff", cursor: "pointer", opacity: loading || !input.trim() ? 0.5 : 1 }}>
+            style={{ padding: "8px 16px", fontSize: 13, borderRadius: 8, border: "none", background: "#2E78F5", color: "#fff", cursor: "pointer", opacity: loading || !input.trim() ? 0.5 : 1 }}>
             Send
           </button>
         </div>

@@ -319,7 +319,7 @@ export function FounderReadinessDonutCards({
               label: "Profile fields",
               status: profilePercent === 100 ? "Complete" : `${profilePercent}%`,
               bg: profilePercent === 100 ? "#EAF3DE" : "#EEEDFE",
-              color: profilePercent === 100 ? "#3B6D11" : "#3C3489",
+              color: profilePercent === 100 ? "#3B6D11" : "#1A6CE4",
             },
           ],
           meaning:
@@ -349,7 +349,7 @@ export function FounderReadinessDonutCards({
       value: `${readinessScore}/100`,
       detail: readinessDetail,
       pct: readinessScore / 100,
-      color: "#534AB7",
+      color: "#2E78F5",
       href: "/founder/readiness",
     },
     {
@@ -367,7 +367,7 @@ export function FounderReadinessDonutCards({
       value: `${uploadedCount}/${checklistTotal}`,
       detail: `${missingCount} key ${missingCount === 1 ? "document" : "documents"} missing`,
       pct: checklistTotal > 0 ? uploadedCount / checklistTotal : 0,
-      color: "#534AB7",
+      color: "#2E78F5",
       href: "/founder/readiness/documents",
     },
     {
@@ -389,7 +389,7 @@ export function FounderReadinessDonutCards({
             key={card.key}
             type="button"
             onClick={() => setOpen(open === card.key ? null : card.key)}
-            className="group flex min-h-[8.75rem] flex-col rounded-xl border border-slate-200/80 bg-white p-5 text-left shadow-[var(--shadow-card)] transition hover:border-[#534AB7]/50 hover:shadow-[var(--shadow-panel)]"
+            className="group flex min-h-[8.75rem] flex-col rounded-xl border border-slate-200/80 bg-white p-5 text-left shadow-[var(--shadow-card)] transition hover:border-[#2E78F5]/50 hover:shadow-[var(--shadow-panel)]"
             aria-expanded={open === card.key}
           >
             <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-500">
@@ -406,7 +406,7 @@ export function FounderReadinessDonutCards({
               </div>
               <DonutChart pct={card.pct} color={card.color} />
             </div>
-            <p className="mt-3 text-[10px] font-medium" style={{ color: "#534AB7" }}>
+            <p className="mt-3 text-[10px] font-medium" style={{ color: "#2E78F5" }}>
               {open === card.key ? "Close ↑" : "Details →"}
             </p>
           </button>
@@ -440,7 +440,7 @@ export function FounderReadinessDonutCards({
                   {config.href ? (
                     <Link
                       href={config.href}
-                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-[#534AB7] hover:bg-[#EEEDFE]"
+                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-[#2E78F5] hover:bg-[#EEEDFE]"
                       onClick={() => setOpen(null)}
                     >
                       Open page →
@@ -495,7 +495,7 @@ export function FounderReadinessDonutCards({
                 <div className="mb-3 flex items-center gap-2.5">
                   <div
                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
-                    style={{ background: "#534AB7" }}
+                    style={{ background: "#2E78F5" }}
                   >
                     AI
                   </div>

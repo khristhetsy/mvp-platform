@@ -75,7 +75,7 @@ export function AdminLearningStageOverridePanel({ founderId, companyId, adminNam
                         className="h-full rounded-full transition-all"
                         style={{
                           width: `${row.pct}%`,
-                          background: row.pct >= CAPITAL_STAGE_UNLOCK_THRESHOLD ? "#3B6D11" : "#534AB7",
+                          background: row.pct >= CAPITAL_STAGE_UNLOCK_THRESHOLD ? "#3B6D11" : "#2E78F5",
                         }}
                       />
                     </div>

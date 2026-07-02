@@ -208,14 +208,14 @@ export default async function MyProgressPage() {
                               className="h-full rounded-full transition-all"
                               style={{
                                 width: `${pct}%`,
-                                background: pct >= 80 ? "#3B6D11" : unlocked ? "#534AB7" : "#CBD5E1",
+                                background: pct >= 80 ? "#3B6D11" : unlocked ? "#2E78F5" : "#CBD5E1",
                               }}
                             />
                           </div>
                         </div>
                         <span
                           className="text-sm font-semibold"
-                          style={{ color: pct >= 80 ? "#3B6D11" : unlocked ? "#534AB7" : "#94A3B8" }}
+                          style={{ color: pct >= 80 ? "#3B6D11" : unlocked ? "#2E78F5" : "#94A3B8" }}
                         >
                           {pct}%
                         </span>

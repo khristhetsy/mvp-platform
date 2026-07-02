@@ -20,10 +20,10 @@ const DOORS: DoorDef[] = [
   { key: "sessions", room: "Main Stage", label: "SESSIONS", Icon: Presentation, meta: (n) => ({ text: `${n} watching`, color: "#A32D2D" }) },
   { key: "networking", room: "Networking", label: "NETWORKING", Icon: Users, meta: (n) => ({ text: `${n} here · tables open`, color: "#0F6E56" }) },
   { key: "ondemand", room: "On-Demand", label: "ON-DEMAND", Icon: Tv, meta: (n) => ({ text: `${n} browsing`, color: "#185FA5" }) },
-  { key: "sponsors", room: "Sponsor Hall", label: "EXPO HALL", Icon: Store, meta: (n) => ({ text: `${n} at booths`, color: "#534AB7" }) },
+  { key: "sponsors", room: "Sponsor Hall", label: "EXPO HALL", Icon: Store, meta: (n) => ({ text: `${n} at booths`, color: "#2E78F5" }) },
 ];
 
-const FIGS = ["#34507a", "#5DCAA5", "#85B7EB", "#AFA9EC", "#F0997B", "#9FE1CB", "#534AB7"];
+const FIGS = ["#34507a", "#5DCAA5", "#85B7EB", "#AFA9EC", "#F0997B", "#9FE1CB", "#2E78F5"];
 const FIG_POS = [
   { left: -120, top: 60, z: 20, s: 1 },
   { left: 80, top: 70, z: 40, s: 1.1 },

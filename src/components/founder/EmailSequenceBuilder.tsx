@@ -386,7 +386,7 @@ function TouchCard({
     });
   }
 
-  const touchColors = ["#534AB7", "#059669", "#d97706", "#dc2626"];
+  const touchColors = ["#2E78F5", "#059669", "#d97706", "#dc2626"];
   const color = touchColors[(touch.touch - 1) % touchColors.length];
 
   return (
@@ -410,7 +410,7 @@ function TouchCard({
             type="button"
             onClick={() => copy(subject, "subject")}
             className="text-[10px] font-medium transition"
-            style={{ color: copied === "subject" ? "#059669" : "#534AB7" }}
+            style={{ color: copied === "subject" ? "#059669" : "#2E78F5" }}
           >
             {copied === "subject" ? "Copied!" : "Copy"}
           </button>
@@ -426,7 +426,7 @@ function TouchCard({
             type="button"
             onClick={() => copy(body, "body")}
             className="text-[10px] font-medium transition"
-            style={{ color: copied === "body" ? "#059669" : "#534AB7" }}
+            style={{ color: copied === "body" ? "#059669" : "#2E78F5" }}
           >
             {copied === "body" ? "Copied!" : "Copy"}
           </button>
@@ -494,7 +494,7 @@ export function EmailSequenceBuilder() {
 
       {/* Intro */}
       <div className="rounded-xl border border-indigo-100 bg-[#FAFAFF] px-4 py-3">
-        <p className="text-xs font-semibold" style={{ color: "#534AB7" }}>{t("how_to_use_this")}</p>
+        <p className="text-xs font-semibold" style={{ color: "#2E78F5" }}>{t("how_to_use_this")}</p>
         <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">
           Select investor type, fill in your variables, then copy each email. Personalise the text in [brackets] before sending — the more specific those lines, the higher your reply rate.
         </p>
@@ -511,7 +511,7 @@ export function EmailSequenceBuilder() {
               onClick={() => setInvestorType(t)}
               className="rounded-full px-3 py-1.5 text-xs font-semibold transition"
               style={{
-                background: investorType === t ? "#534AB7" : "#F1F5F9",
+                background: investorType === t ? "#2E78F5" : "#F1F5F9",
                 color: investorType === t ? "white" : "#475569",
               }}
             >
@@ -563,7 +563,7 @@ export function EmailSequenceBuilder() {
           <div key={t.touch} className="flex flex-1 flex-col items-center">
             <div className="flex w-full items-center">
               <div className="flex-1" style={{ height: 2, background: i === 0 ? "transparent" : "#E2E8F0" }} />
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ background: "#534AB7" }}>
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ background: "#2E78F5" }}>
                 {t.touch}
               </div>
               <div className="flex-1" style={{ height: 2, background: i === sequence.length - 1 ? "transparent" : "#E2E8F0" }} />

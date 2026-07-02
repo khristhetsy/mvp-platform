@@ -32,14 +32,14 @@ export default async function FounderSettingsPage() {
             href="/founder/preview"
             style={{
               display: "inline-flex", alignItems: "center", gap: 6,
-              fontSize: 13, fontWeight: 600, color: "#534AB7",
+              fontSize: 13, fontWeight: 600, color: "#2E78F5",
               background: "#EEEDFE", borderRadius: 10,
               padding: "8px 16px", textDecoration: "none",
             }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" stroke="#534AB7" strokeWidth="2" />
-              <circle cx="12" cy="12" r="3" stroke="#534AB7" strokeWidth="2" />
+              <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" stroke="#2E78F5" strokeWidth="2" />
+              <circle cx="12" cy="12" r="3" stroke="#2E78F5" strokeWidth="2" />
             </svg>
             Preview as investor
           </Link>

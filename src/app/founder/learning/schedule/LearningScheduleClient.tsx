@@ -86,7 +86,7 @@ function AdviceBox({ lines }: { lines: string[] }) {
       <div className="mb-3 flex items-center gap-2">
         <div
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-          style={{ background: "#534AB7" }}
+          style={{ background: "#2E78F5" }}
         >
           AI
         </div>

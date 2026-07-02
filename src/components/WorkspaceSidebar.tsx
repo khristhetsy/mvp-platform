@@ -12,7 +12,7 @@ import type { WorkspaceId, WorkspaceNavItem } from "@/lib/workspace-nav";
 import { getAdminWorkspaceNavSections, getFounderWorkspaceNavSections, getInvestorWorkspaceNavSections, getWorkspaceNav, workspaceLabel } from "@/lib/workspace-nav";
 import { getWorkspaceNavIcon } from "@/lib/ui/nav-icons";
 import { useToast } from "@/components/ui/ToastProvider";
-import { CapitalOSLogo } from "@/components/CapitalOSLogo";
+import { IcapOSLogo } from "@/components/IcapOSLogo";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 // Complete English → Spanish dictionary for every sidebar nav label + section
@@ -435,7 +435,7 @@ export function WorkspaceSidebar({
         {locked ? (
           <Lock className="ml-auto h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={1.75} aria-hidden />
         ) : item.href.endsWith("/inbox") && unreadEmail > 0 ? (
-          <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#534AB7] px-1.5 text-[11px] font-semibold text-white">
+          <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#2E78F5] px-1.5 text-[11px] font-semibold text-white">
             {unreadEmail > 99 ? "99+" : unreadEmail}
           </span>
         ) : null}
@@ -485,7 +485,7 @@ export function WorkspaceSidebar({
     <>
       <div className="border-b border-slate-200/80 bg-[var(--surface-sidebar)] px-4 py-4">
         <Link href="/" className="block" onClick={onClose}>
-          <CapitalOSLogo height={32} />
+          <IcapOSLogo height={32} />
         </Link>
         <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
         {founderStage ? (

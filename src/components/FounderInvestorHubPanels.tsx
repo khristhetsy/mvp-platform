@@ -300,7 +300,7 @@ export function FounderInvestorHubPanels({
           type="button"
           onClick={() => setHubTab("coach")}
           className={`rounded-lg px-4 py-2 text-sm font-medium ${hubTab === "coach" ? "text-white" : "text-slate-600"}`}
-          style={hubTab === "coach" ? { background: "#534AB7" } : {}}
+          style={hubTab === "coach" ? { background: "#2E78F5" } : {}}
         >
           ✦ Outreach coach
         </button>

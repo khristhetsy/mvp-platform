@@ -112,7 +112,7 @@ export function AdminManualClient({ entries }: { entries: Entry[] }) {
                           ) : null}
                           <span
                             className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium ${
-                              locked ? "bg-[#F1EFE8] text-[#444441]" : "bg-[#EEEDFE] text-[#3C3489]"
+                              locked ? "bg-[#F1EFE8] text-[#444441]" : "bg-[#EEEDFE] text-[#1A6CE4]"
                             }`}
                           >
                             {locked ? <Lock className="h-3 w-3" /> : null}

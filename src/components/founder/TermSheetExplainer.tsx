@@ -199,7 +199,7 @@ function ClauseCard({ clause }: { clause: Clause }) {
       <div className="flex items-start justify-between gap-3 px-4 py-3.5">
         <div>
           <div className="mb-1 flex items-center gap-2">
-            <span className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em]" style={{ background: "#EEEDFE", color: "#534AB7" }}>
+            <span className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em]" style={{ background: "#EEEDFE", color: "#2E78F5" }}>
               {clause.category}
             </span>
             <span className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em]" style={{ background: risk.bg, color: risk.text }}>
@@ -219,8 +219,8 @@ function ClauseCard({ clause }: { clause: Clause }) {
             onClick={() => setTab(t)}
             className="flex-1 py-2 text-[11px] font-semibold transition"
             style={{
-              color: tab === t ? "#534AB7" : "#94a3b8",
-              borderBottom: tab === t ? "2px solid #534AB7" : "2px solid transparent",
+              color: tab === t ? "#2E78F5" : "#94a3b8",
+              borderBottom: tab === t ? "2px solid #2E78F5" : "2px solid transparent",
               background: "transparent",
             }}
           >
@@ -239,8 +239,8 @@ function ClauseCard({ clause }: { clause: Clause }) {
               <p className="text-[11px] italic leading-relaxed text-slate-600">{clause.example}</p>
             </div>
             <div className="rounded-lg px-3 py-2.5 ring-1 ring-slate-100" style={{ background: "#EEEDFE" }}>
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#534AB7" }}>{t("founder_stance")}</p>
-              <p className="text-[11px] leading-relaxed" style={{ color: "#3C3489" }}>{clause.founderFriendly}</p>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#2E78F5" }}>{t("founder_stance")}</p>
+              <p className="text-[11px] leading-relaxed" style={{ color: "#1A6CE4" }}>{clause.founderFriendly}</p>
             </div>
           </div>
         ) : tab === "flags" ? (
@@ -327,7 +327,7 @@ export function TermSheetExplainer() {
       {/* Stats strip */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Clauses covered", value: CLAUSES.length, color: "#534AB7" },
+          { label: "Clauses covered", value: CLAUSES.length, color: "#2E78F5" },
           { label: "High-risk terms", value: highRiskCount, color: "#dc2626" },
           { label: "Categories", value: CATEGORIES.length, color: "#16a34a" },
         ].map((s) => (
@@ -355,7 +355,7 @@ export function TermSheetExplainer() {
               onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
               className="rounded-full px-3 py-1 text-[11px] font-semibold transition"
               style={{
-                background: activeCategory === cat ? "#534AB7" : "#F1F5F9",
+                background: activeCategory === cat ? "#2E78F5" : "#F1F5F9",
                 color: activeCategory === cat ? "white" : "#475569",
               }}
             >

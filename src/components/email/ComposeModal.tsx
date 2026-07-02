@@ -35,7 +35,7 @@ function textToHtml(t: string): string {
 }
 
 const SIG_ATTR = "data-icapos-signature";
-const SWATCHES = ["#0F2147", "#185FA5", "#0D9488", "#475569", "#A32D2D", "#000000"];
+const SWATCHES = ["#0F2147", "#185FA5", "#2E78F5", "#475569", "#A32D2D", "#000000"];
 
 export interface ComposeModalProps {
   open: boolean;

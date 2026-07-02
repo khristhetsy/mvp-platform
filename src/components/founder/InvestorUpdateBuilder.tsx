@@ -169,7 +169,7 @@ function SectionEditor({
             type="button"
             onClick={() => setShowTip((o) => !o)}
             className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-indigo-50 text-[10px] font-bold transition hover:bg-indigo-100"
-            style={{ color: "#534AB7" }}
+            style={{ color: "#2E78F5" }}
             aria-label="Show tip"
           >
             ?
@@ -288,7 +288,7 @@ export function InvestorUpdateBuilder() {
                 type="button"
                 onClick={() => setStage(s)}
                 className="rounded-full px-3 py-1 text-[11px] font-semibold transition"
-                style={{ background: stage === s ? "#534AB7" : "#F1F5F9", color: stage === s ? "white" : "#475569" }}
+                style={{ background: stage === s ? "#2E78F5" : "#F1F5F9", color: stage === s ? "white" : "#475569" }}
               >
                 {STAGE_GUIDANCE[s].label}
               </button>
@@ -304,7 +304,7 @@ export function InvestorUpdateBuilder() {
                 type="button"
                 onClick={() => setFrequency(f)}
                 className="rounded-full px-3 py-1 text-[11px] font-semibold transition capitalize"
-                style={{ background: frequency === f ? "#534AB7" : "#F1F5F9", color: frequency === f ? "white" : "#475569" }}
+                style={{ background: frequency === f ? "#2E78F5" : "#F1F5F9", color: frequency === f ? "white" : "#475569" }}
               >
                 {f}
               </button>
@@ -316,7 +316,7 @@ export function InvestorUpdateBuilder() {
       {/* Stage guidance */}
       <div className="rounded-xl border border-indigo-100 bg-[#FAFAFF] px-4 py-3">
         <div className="mb-1.5 flex items-center gap-2">
-          <p className="text-xs font-semibold" style={{ color: "#534AB7" }}>{guidance.label} guidance</p>
+          <p className="text-xs font-semibold" style={{ color: "#2E78F5" }}>{guidance.label} guidance</p>
           <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[9px] font-semibold text-indigo-700">
             {guidance.frequency} · {guidance.lengthTarget}
           </span>
@@ -325,7 +325,7 @@ export function InvestorUpdateBuilder() {
         <div className="space-y-1">
           {guidance.extraTips.map((tip, i) => (
             <div key={i} className="flex items-start gap-2">
-              <span className="mt-0.5 text-[10px]" style={{ color: "#534AB7" }}>•</span>
+              <span className="mt-0.5 text-[10px]" style={{ color: "#2E78F5" }}>•</span>
               <p className="text-[11px] leading-relaxed text-slate-600">{tip}</p>
             </div>
           ))}
@@ -343,7 +343,7 @@ export function InvestorUpdateBuilder() {
                 type="button"
                 onClick={() => navigator.clipboard.writeText(tpl)}
                 className="shrink-0 text-[10px] font-medium"
-                style={{ color: "#534AB7" }}
+                style={{ color: "#2E78F5" }}
               >
                 Copy
               </button>
@@ -410,7 +410,7 @@ export function InvestorUpdateBuilder() {
           onClick={copyUpdate}
           disabled={!filledRequired}
           className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition disabled:opacity-40"
-          style={{ background: "#534AB7" }}
+          style={{ background: "#2E78F5" }}
         >
           {copied ? "Copied!" : "Copy full update"}
         </button>

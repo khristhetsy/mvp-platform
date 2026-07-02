@@ -34,7 +34,7 @@ function CmoBox({ title, text, actions }: { title: string; text: string; actions
   return (
     <div style={{ background: "linear-gradient(135deg,#0c2340 0%,#1a3a60 100%)", borderRadius: 12, padding: "14px 16px" }}>
       <div style={{ fontSize: 10, fontWeight: 600, color: "#EEEDFE", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
-        <span style={{ width: 14, height: 14, background: "#534AB7", borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#fff" }}>★</span>
+        <span style={{ width: 14, height: 14, background: "#2E78F5", borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#fff" }}>★</span>
         CMO Recommendation
       </div>
       <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", marginBottom: 6 }}>{title}</div>
@@ -42,7 +42,7 @@ function CmoBox({ title, text, actions }: { title: string; text: string; actions
       <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
         {actions.map((a, i) => (
           <div key={i} style={{ background: "rgba(255,255,255,.08)", border: "0.5px solid rgba(255,255,255,.15)", borderRadius: 8, padding: "8px 12px", display: "flex", alignItems: "flex-start", gap: 8 }}>
-            <span style={{ background: "#534AB7", color: "#fff", fontSize: 10, fontWeight: 700, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+            <span style={{ background: "#2E78F5", color: "#fff", fontSize: 10, fontWeight: 700, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
               {i + 1}
             </span>
             <span style={{ fontSize: 11.5, color: "#e2e8f4", lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: a }} />
@@ -108,7 +108,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
       value: `${openRate.toFixed(1)}%`,
       delta: openRate >= 21 ? "Above 21% benchmark" : `${(21 - openRate).toFixed(1)}pts below benchmark`,
       good: openRate >= 21,
-      valueColor: "#534AB7",
+      valueColor: "#2E78F5",
     },
     {
       key: "click-rate" as MetricKey,
@@ -147,18 +147,18 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
               cursor: "pointer",
               textAlign: "left",
               width: "100%",
-              border: open === s.key ? "1.5px solid #534AB7" : "0.5px solid #e2e6ed",
+              border: open === s.key ? "1.5px solid #2E78F5" : "0.5px solid #e2e6ed",
               transition: "border-color .15s, box-shadow .15s",
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 2px 12px rgba(83,74,183,.15)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#534AB7"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 1px 3px rgb(12 35 64 / 0.06)"; (e.currentTarget as HTMLButtonElement).style.borderColor = open === s.key ? "#534AB7" : "#e2e6ed"; }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 2px 12px rgba(83,74,183,.15)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#2E78F5"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 1px 3px rgb(12 35 64 / 0.06)"; (e.currentTarget as HTMLButtonElement).style.borderColor = open === s.key ? "#2E78F5" : "#e2e6ed"; }}
           >
             <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 6 }}>{s.label}</div>
             <div style={{ fontSize: 24, fontWeight: 500, color: s.valueColor }}>{s.value}</div>
             <div style={{ fontSize: 11, marginTop: 4, color: s.good ? "#0F6E56" : "#993C1D" }}>
               {s.good ? "↑" : "↓"} {s.delta}
             </div>
-            <div style={{ fontSize: 10, color: "#534AB7", marginTop: 6, opacity: 0.7 }}>{t("click_for_full_report")}</div>
+            <div style={{ fontSize: 10, color: "#2E78F5", marginTop: 6, opacity: 0.7 }}>{t("click_for_full_report")}</div>
           </button>
         ))}
       </div>
@@ -282,7 +282,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
                   <div style={{ marginBottom: 14 }}>
                     <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>{t("open_rate_by_campaign")}</div>
                     {campaignRows.map((c, i) => {
-                      const colors = ["#534AB7", "#7C76D0", "#AFAAE3", "#CFCDF2", "#DDDCF8"];
+                      const colors = ["#2E78F5", "#7C76D0", "#AFAAE3", "#CFCDF2", "#DDDCF8"];
                       return (
                         <BarRow
                           key={c.name}
@@ -370,7 +370,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
                   actions={[
                     "<strong style='color:#fff'>One primary CTA per email, above the fold.</strong> Multiple links dilute click rate and confuse readers. Pick one action per email — schedule a call, view the dashboard, or download a document — and make it a prominent button.",
                     "<strong style='color:#fff'>Use action verbs in CTA copy.</strong> \"Schedule your intro call\" outperforms \"Click here\" by 15–30%. Be specific about what happens after the click so recipients know the value.",
-                    "<strong style='color:#fff'>Test button color — try platform purple (#534AB7).</strong> High-contrast buttons typically see 10–20% higher click rates. Your current email style may be using low-contrast CTAs. Run an A/B test on the next campaign send.",
+                    "<strong style='color:#fff'>Test button color — try platform purple (#2E78F5).</strong> High-contrast buttons typically see 10–20% higher click rates. Your current email style may be using low-contrast CTAs. Run an A/B test on the next campaign send.",
                   ]}
                 />
               </div>

@@ -129,8 +129,8 @@ function CheckCircle({ done }: { done: boolean }) {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true" className="shrink-0">
       <circle cx="9" cy="9" r="8"
-        stroke={done ? "#534AB7" : "#cbd5e1"} strokeWidth="1.5"
-        fill={done ? "#534AB7" : "transparent"} />
+        stroke={done ? "#2E78F5" : "#cbd5e1"} strokeWidth="1.5"
+        fill={done ? "#2E78F5" : "transparent"} />
       {done && <path d="M5.5 9l2.5 2.5 5-5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />}
     </svg>
   );
@@ -801,7 +801,7 @@ export function InvestorTasksPageClient({
           return (
             <div key={task.id}
               className={`overflow-hidden rounded-xl border bg-white transition-shadow hover:shadow-sm ${
-                isOpen ? "border-[#534AB7]" : "border-slate-200"
+                isOpen ? "border-[#2E78F5]" : "border-slate-200"
               } ${isDone ? "opacity-55" : ""} ${overdue ? "border-red-200 bg-red-50/20" : ""}`}>
               <div className="cursor-pointer p-3" onClick={() => toggleExpand(task)}>
                 <div className="mb-2 flex items-start justify-between gap-2">

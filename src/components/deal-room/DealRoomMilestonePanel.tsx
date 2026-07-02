@@ -83,8 +83,8 @@ function daysSince(iso: string): number {
 }
 
 const EVENT_META: Record<string, { label: string; icon: string; bg: string; color: string }> = {
-  room_created:       { label: "Room created",                  icon: "ti-door-enter",        bg: "#EEEDFE", color: "#534AB7" },
-  room_viewed:        { label: "Room viewed by investor",        icon: "ti-eye",               bg: "#EEEDFE", color: "#534AB7" },
+  room_created:       { label: "Room created",                  icon: "ti-door-enter",        bg: "#EEEDFE", color: "#2E78F5" },
+  room_viewed:        { label: "Room viewed by investor",        icon: "ti-eye",               bg: "#EEEDFE", color: "#2E78F5" },
   room_status_changed:{ label: "Room status changed",           icon: "ti-refresh",            bg: "#E6F1FB", color: "#185FA5" },
   question_created:   { label: "Question asked by investor",     icon: "ti-help",              bg: "#FAEEDA", color: "#854F0B" },
   founder_responded:  { label: "You responded to a question",    icon: "ti-message-reply",     bg: "#EAF3DE", color: "#3B6D11" },
@@ -133,7 +133,7 @@ function MilestoneNode({
               position: "absolute",
               inset: -5,
               borderRadius: "50%",
-              border: "2px solid #534AB7",
+              border: "2px solid #2E78F5",
               opacity: 0.35,
             }}
           />
@@ -143,7 +143,7 @@ function MilestoneNode({
             width: 36,
             height: 36,
             borderRadius: "50%",
-            background: done || active ? "#534AB7" : "var(--color-background-secondary, #f8f7f5)",
+            background: done || active ? "#2E78F5" : "var(--color-background-secondary, #f8f7f5)",
             border: done || active ? "none" : "1.5px solid var(--color-border-tertiary)",
             display: "flex",
             alignItems: "center",
@@ -167,7 +167,7 @@ function MilestoneNode({
         style={{
           fontSize: 11,
           fontWeight: active || done ? 500 : 400,
-          color: active || done ? "#534AB7" : "var(--color-text-secondary)",
+          color: active || done ? "#2E78F5" : "var(--color-text-secondary)",
           textAlign: "center",
           margin: 0,
           lineHeight: 1.3,
@@ -178,7 +178,7 @@ function MilestoneNode({
       <p
         style={{
           fontSize: 10,
-          color: active ? "#534AB7" : "var(--color-text-secondary)",
+          color: active ? "#2E78F5" : "var(--color-text-secondary)",
           textAlign: "center",
           margin: 0,
           fontWeight: active ? 500 : 400,
@@ -230,7 +230,7 @@ export function DealRoomMilestonePanel({
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       {/* Accent bar */}
-      <div style={{ height: 3, background: "#534AB7" }} />
+      <div style={{ height: 3, background: "#2E78F5" }} />
 
       <div className="p-5">
         {/* Header */}
@@ -244,7 +244,7 @@ export function DealRoomMilestonePanel({
           <div className="flex shrink-0 items-center gap-2">
             <span
               className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-              style={{ background: "#EEEDFE", color: "#3C3489" }}
+              style={{ background: "#EEEDFE", color: "#1A6CE4" }}
             >
               {room.status.charAt(0).toUpperCase() + room.status.slice(1)}
             </span>
@@ -274,7 +274,7 @@ export function DealRoomMilestonePanel({
               left: "10%",
               width: progressW,
               height: 2,
-              background: "#534AB7",
+              background: "#2E78F5",
               zIndex: 0,
             }}
           />
@@ -296,7 +296,7 @@ export function DealRoomMilestonePanel({
             style={{
               fontSize: 11,
               fontWeight: 500,
-              color: "#534AB7",
+              color: "#2E78F5",
               textTransform: "uppercase",
               letterSpacing: "0.08em",
               margin: "0 0 10px",
@@ -307,21 +307,21 @@ export function DealRoomMilestonePanel({
           <div className="grid grid-cols-3 gap-3">
             <div>
               <p style={{ fontSize: 11, color: "#7F77DD", margin: "0 0 2px" }}>{t("engagement")}</p>
-              <p style={{ fontSize: 20, fontWeight: 500, color: "#3C3489", margin: 0, lineHeight: 1 }}>
+              <p style={{ fontSize: 20, fontWeight: 500, color: "#1A6CE4", margin: 0, lineHeight: 1 }}>
                 {snapshot.engagementScore}
                 <span style={{ fontSize: 12, fontWeight: 400 }}> / 100</span>
               </p>
             </div>
             <div>
               <p style={{ fontSize: 11, color: "#7F77DD", margin: "0 0 2px" }}>{t("questions")}</p>
-              <p style={{ fontSize: 20, fontWeight: 500, color: "#3C3489", margin: 0, lineHeight: 1 }}>
+              <p style={{ fontSize: 20, fontWeight: 500, color: "#1A6CE4", margin: 0, lineHeight: 1 }}>
                 {resolvedQ}
                 <span style={{ fontSize: 12, fontWeight: 400 }}> / {questions.length}</span>
               </p>
             </div>
             <div>
               <p style={{ fontSize: 11, color: "#7F77DD", margin: "0 0 2px" }}>{t("documents")}</p>
-              <p style={{ fontSize: 20, fontWeight: 500, color: "#3C3489", margin: 0, lineHeight: 1 }}>
+              <p style={{ fontSize: 20, fontWeight: 500, color: "#1A6CE4", margin: 0, lineHeight: 1 }}>
                 {fulfilledDocs}
                 <span style={{ fontSize: 12, fontWeight: 400 }}> / {docRequests.length}</span>
               </p>
@@ -339,7 +339,7 @@ export function DealRoomMilestonePanel({
                   <p className="text-xs font-semibold text-slate-900">{resolvedQ} / {questions.length}</p>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full rounded-full" style={{ width: `${qPct}%`, background: "#534AB7" }} />
+                  <div className="h-full rounded-full" style={{ width: `${qPct}%`, background: "#2E78F5" }} />
                 </div>
               </div>
             ) : null}
@@ -350,7 +350,7 @@ export function DealRoomMilestonePanel({
                   <p className="text-xs font-semibold text-slate-900">{fulfilledDocs} / {docRequests.length}</p>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full rounded-full" style={{ width: `${docPct}%`, background: "#534AB7" }} />
+                  <div className="h-full rounded-full" style={{ width: `${docPct}%`, background: "#2E78F5" }} />
                 </div>
               </div>
             ) : null}

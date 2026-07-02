@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { WorkspaceSidebar } from "@/components/WorkspaceSidebar";
-import { CapitalOSAssistant } from "@/components/assistant/CapitalOSAssistant";
+import { IcapOSAssistant } from "@/components/assistant/IcapOSAssistant";
 import { GlobalSearchModal } from "@/components/GlobalSearchModal";
 import type { WorkspaceId } from "@/lib/workspace-nav";
 
@@ -43,7 +43,7 @@ export function WorkspaceShell({
         <main className="mx-auto w-full max-w-[1600px] flex-1 overflow-x-hidden overflow-y-auto bg-[var(--background)] px-4 py-5 lg:px-6 lg:py-6">
           {children}
         </main>
-        <CapitalOSAssistant />
+        <IcapOSAssistant />
         <GlobalSearchModal workspace={workspace} />
       </div>
     </div>

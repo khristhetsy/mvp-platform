@@ -6,7 +6,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const ACCENT = "#534AB7";
+const ACCENT = "#2E78F5";
 
 export default async function InviteAcceptPage({
   searchParams,

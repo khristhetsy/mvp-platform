@@ -8,7 +8,7 @@ import { useCallback, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 
-const PURPLE = "#534AB7";
+const PURPLE = "#2E78F5";
 type Msg = { role: "user" | "assistant"; content: string };
 type Action =
   | { type: "create_aeo_page"; payload: Record<string, unknown> }
@@ -143,7 +143,7 @@ export function CopilotPanel({
             <p style={{ margin: "0 0 10px" }}>{topic === "aeo" ? "I help you write citable /learn pages that stay compliance-safe. Ask me anything, or:" : "I'm your AI CMO. Ask about performance, segments, or this week's plan:"}</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {SUGGESTIONS[topic].map((s) => (
-                <button key={s} type="button" onClick={() => void send(s)} style={{ fontSize: 12, color: "#3C3489", background: "#EEEDFE", border: "1px solid #CECBF6", borderRadius: 999, padding: "5px 10px", cursor: "pointer" }}>{s}</button>
+                <button key={s} type="button" onClick={() => void send(s)} style={{ fontSize: 12, color: "#1A6CE4", background: "#EEEDFE", border: "1px solid #CECBF6", borderRadius: 999, padding: "5px 10px", cursor: "pointer" }}>{s}</button>
               ))}
             </div>
           </div>
@@ -161,7 +161,7 @@ export function CopilotPanel({
 
         {action ? (
           <div style={{ border: "1px solid #CECBF6", background: "#F6F5FC", borderRadius: 10, padding: 12 }}>
-            <p style={{ fontSize: 12, fontWeight: 600, color: "#3C3489", margin: "0 0 4px" }}>{t("proposed_action")}</p>
+            <p style={{ fontSize: 12, fontWeight: 600, color: "#1A6CE4", margin: "0 0 4px" }}>{t("proposed_action")}</p>
             <p style={{ fontSize: 11.5, color: "#5f5e5a", margin: "0 0 10px" }}>{t("nothing_is_saved_until_you_confirm")}</p>
             <div style={{ display: "flex", gap: 8 }}>
               <button type="button" onClick={() => void applyAction()} disabled={busy} style={{ background: PURPLE, color: "#fff", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>{actionLabel}</button>

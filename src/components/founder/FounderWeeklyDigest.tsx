@@ -181,7 +181,7 @@ export function FounderWeeklyDigest({
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       {/* Gradient accent bar */}
-      <div style={{ height: 3, background: "linear-gradient(90deg,#534AB7,#7c3aed,#06b6d4)" }} />
+      <div style={{ height: 3, background: "linear-gradient(90deg,#2E78F5,#7c3aed,#06b6d4)" }} />
 
       {/* Header row — always visible */}
       <button
@@ -206,7 +206,7 @@ export function FounderWeeklyDigest({
         <div className="flex items-center gap-3">
           <span
             className="hidden rounded-full px-2.5 py-1 text-[10px] font-semibold sm:inline"
-            style={{ background: "#EEEDFE", color: "#534AB7" }}
+            style={{ background: "#EEEDFE", color: "#2E78F5" }}
           >
             {priorities.length} priorities this week
           </span>
@@ -261,7 +261,7 @@ export function FounderWeeklyDigest({
                 className="rounded-xl px-3 py-3 text-center"
                 style={{ background: "#F8F7FD" }}
               >
-                <p className="text-xl font-semibold" style={{ color: "#534AB7" }}>{h.value}</p>
+                <p className="text-xl font-semibold" style={{ color: "#2E78F5" }}>{h.value}</p>
                 <p className="mt-0.5 text-[11px] font-medium text-slate-600">{h.label}</p>
                 <p className="text-[10px] text-slate-400">{h.sub}</p>
               </div>
@@ -280,7 +280,7 @@ export function FounderWeeklyDigest({
                     <div
                       style={{
                         width: 6, height: 6, borderRadius: "50%", flexShrink: 0, marginTop: 5,
-                        background: item.type === "doc" ? "#534AB7" : item.type === "room" ? "#7c3aed" : "#e2e8f0",
+                        background: item.type === "doc" ? "#2E78F5" : item.type === "room" ? "#7c3aed" : "#e2e8f0",
                       }}
                     />
                     <div className="min-w-0 flex-1">
@@ -308,7 +308,7 @@ export function FounderWeeklyDigest({
                   >
                     <span
                       className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white mt-0.5"
-                      style={{ background: "#534AB7" }}
+                      style={{ background: "#2E78F5" }}
                     >
                       {i + 1}
                     </span>

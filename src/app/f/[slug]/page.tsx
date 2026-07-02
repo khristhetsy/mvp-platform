@@ -87,7 +87,7 @@ function formatFunding(amount: number | null): string {
   return `$${amount.toLocaleString()}`;
 }
 
-const ACCENT = "#534AB7";
+const ACCENT = "#2E78F5";
 
 export default async function InvestorOnePagerPage({
   params,
@@ -340,7 +340,7 @@ function MetricCard({
           {value}
         </a>
       ) : (
-        <p style={{ fontSize: 16, fontWeight: 700, color: accent ? "#3C3489" : "#111827", margin: 0 }}>
+        <p style={{ fontSize: 16, fontWeight: 700, color: accent ? "#1A6CE4" : "#111827", margin: 0 }}>
           {value}
         </p>
       )}

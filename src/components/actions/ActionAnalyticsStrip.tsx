@@ -141,9 +141,9 @@ export function ActionAnalyticsStrip({
         <StatCard
           label={t("active")}
           value={analytics.open}
-          icon={<IconActivity color="#534AB7" />}
+          icon={<IconActivity color="#2E78F5" />}
           iconBg="#EEEDFB"
-          valueFg="#3C3489"
+          valueFg="#1A6CE4"
         />
         <StatCard
           label={t("overdue")}
@@ -176,9 +176,9 @@ export function ActionAnalyticsStrip({
         <StatCard
           label={t("pending_requirements")}
           value={analytics.pendingRequirements ?? 0}
-          icon={<IconClock color="#534AB7" />}
+          icon={<IconClock color="#2E78F5" />}
           iconBg="#EEEDFB"
-          valueFg="#3C3489"
+          valueFg="#1A6CE4"
         />
         <StatCard
           label={t("overdue")}

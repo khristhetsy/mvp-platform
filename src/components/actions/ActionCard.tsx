@@ -14,7 +14,7 @@ function isDisplayOverdue(action: NextBestAction): boolean {
 const PRIORITY_STYLE: Record<string, { borderColor: string; iconColor: string; dotBg: string; ctaBg: string; ctaColor: string }> = {
   critical: { borderColor: "#FCA5A5", iconColor: "#A32D2D", dotBg: "#FEF2F2",  ctaBg: "#FCEBEB", ctaColor: "#A32D2D" },
   high:     { borderColor: "#FCD34D", iconColor: "#854F0B", dotBg: "#FFFBEB",  ctaBg: "#FEF3CD", ctaColor: "#854F0B" },
-  medium:   { borderColor: "#A5B4FC", iconColor: "#534AB7", dotBg: "#EEF2FF",  ctaBg: "#EEEDFB", ctaColor: "#534AB7" },
+  medium:   { borderColor: "#A5B4FC", iconColor: "#2E78F5", dotBg: "#EEF2FF",  ctaBg: "#EEEDFB", ctaColor: "#2E78F5" },
   normal:   { borderColor: "#CBD5E1", iconColor: "#475569", dotBg: "#F8FAFC",  ctaBg: "#F1F5F9", ctaColor: "#475569" },
   low:      { borderColor: "#CBD5E1", iconColor: "#94a3b8", dotBg: "#F8FAFC",  ctaBg: "#F1F5F9", ctaColor: "#94a3b8" },
 };

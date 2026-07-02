@@ -80,7 +80,7 @@ export function UpcomingMeetingsCard({
               </span>
               <span className="flex-1 truncate text-sm text-slate-900">{e.title}</span>
               {e.meet_url ? (
-                <a href={e.meet_url} className="shrink-0 text-[#534AB7] hover:text-[#3C3489]" title={t("join_google_meet")}>
+                <a href={e.meet_url} className="shrink-0 text-[#2E78F5] hover:text-[#1A6CE4]" title={t("join_google_meet")}>
                   <Video className="h-3.5 w-3.5" />
                 </a>
               ) : null}

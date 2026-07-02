@@ -37,7 +37,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{
-            width: 22, height: 22, borderRadius: 5, background: "#534AB7",
+            width: 22, height: 22, borderRadius: 5, background: "#2E78F5",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EEEDFE" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -51,7 +51,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#1D9E75" }} />
             <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-              Sending via <span style={{ color: "#534AB7", fontWeight: 500 }}>mail.myicfos.com</span>
+              Sending via <span style={{ color: "#2E78F5", fontWeight: 500 }}>mail.myicfos.com</span>
             </span>
           </div>
           <MarketingBell />
@@ -80,8 +80,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 padding: "9px 12px",
                 fontSize: 12,
                 fontWeight: active ? 500 : 400,
-                color: active ? "#534AB7" : "var(--muted-foreground)",
-                borderBottom: active ? "2px solid #534AB7" : "2px solid transparent",
+                color: active ? "#2E78F5" : "var(--muted-foreground)",
+                borderBottom: active ? "2px solid #2E78F5" : "2px solid transparent",
                 textDecoration: "none",
                 whiteSpace: "nowrap",
                 transition: "color 0.15s",

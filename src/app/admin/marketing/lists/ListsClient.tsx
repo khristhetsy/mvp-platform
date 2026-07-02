@@ -77,7 +77,7 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Group contacts into lists to target campaigns</div>
         </div>
         <button onClick={openCreate}
-          style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer" }}>
+          style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
           + New list
         </button>
       </div>
@@ -143,7 +143,7 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
                 Cancel
               </button>
               <button onClick={save} disabled={saving || !form.name.trim()}
-                style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer", opacity: saving || !form.name.trim() ? 0.6 : 1 }}>
+                style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer", opacity: saving || !form.name.trim() ? 0.6 : 1 }}>
                 {saving ? "Saving…" : editId ? "Save changes" : "Create list"}
               </button>
             </div>

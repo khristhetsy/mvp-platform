@@ -92,9 +92,9 @@ export default async function InvestorDealRoomIndexPage() {
           <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="#534AB7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-                <polyline points="17 21 17 13 7 13 7 21" stroke="#534AB7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-                <polyline points="7 3 7 8 15 8" stroke="#534AB7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="#2E78F5" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+                <polyline points="17 21 17 13 7 13 7 21" stroke="#2E78F5" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+                <polyline points="7 3 7 8 15 8" stroke="#2E78F5" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
             <p className="mb-2 text-base font-bold text-slate-900">{t("no_deal_rooms_yet")}</p>

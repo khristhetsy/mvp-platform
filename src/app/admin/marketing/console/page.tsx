@@ -20,7 +20,7 @@ export default async function MarketingConsolePage() {
   return (
     <div style={{ padding: 24, maxWidth: 1000, margin: "0 auto" }}>
       <div style={{ marginBottom: 18 }}>
-        <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".16em", color: "#534AB7", margin: 0 }}>{t("mktConsole")}</p>
+        <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".16em", color: "#2E78F5", margin: 0 }}>{t("mktConsole")}</p>
         <h1 style={{ fontSize: 24, fontWeight: 600, color: "#0f2147", margin: "6px 0 4px", letterSpacing: "-0.01em" }}>{t("marketingConsoleTitle")}</h1>
         <p style={{ fontSize: 13, color: "#5f5e5a", margin: 0, maxWidth: 680 }}>
           The eleven-module marketing loop in operating order — Open, then Core, then Close — each card linking to the hub surface where the work happens. Compliance gates are marked; steps and cadence are editable inline by admins.

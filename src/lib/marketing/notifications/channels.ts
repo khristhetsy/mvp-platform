@@ -35,12 +35,12 @@ function emailHtml(p: DeliveryPayload): string {
   const safeBody = escapeHtml(p.body);
   return [
     '<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#0f2147;">',
-    '<div style="border-left:3px solid #534AB7;padding:8px 16px;margin-bottom:16px;">',
-    `<div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#534AB7;">Marketing hub</div>`,
+    '<div style="border-left:3px solid #2E78F5;padding:8px 16px;margin-bottom:16px;">',
+    `<div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#2E78F5;">Marketing hub</div>`,
     `<div style="font-size:18px;font-weight:bold;margin-top:4px;">${safeTitle}</div>`,
     "</div>",
     `<p style="font-size:14px;line-height:1.6;color:#334155;">${safeBody}</p>`,
-    `<p style="margin-top:20px;"><a href="${url}" style="display:inline-block;background:#534AB7;color:#fff;text-decoration:none;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:bold;">Open in the hub</a></p>`,
+    `<p style="margin-top:20px;"><a href="${url}" style="display:inline-block;background:#2E78F5;color:#fff;text-decoration:none;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:bold;">Open in the hub</a></p>`,
     '<p style="margin-top:24px;font-size:11px;color:#94a3b8;">You can change what triggers these emails in Marketing hub › Settings › Notifications.</p>',
     "</div>",
   ].join("");

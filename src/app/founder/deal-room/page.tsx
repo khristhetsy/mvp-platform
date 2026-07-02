@@ -108,7 +108,7 @@ export default async function FounderDealRoomIndexPage() {
                   const progressW = `${((step - 1) / 4) * 80}%`;
                   return (
                     <div key={r.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-                      <div style={{ height: 3, background: "#534AB7" }} />
+                      <div style={{ height: 3, background: "#2E78F5" }} />
                       <div className="p-4">
                         <div className="mb-4 flex items-start justify-between gap-3">
                           <div>
@@ -120,7 +120,7 @@ export default async function FounderDealRoomIndexPage() {
                           <div className="flex shrink-0 items-center gap-2">
                             <span
                               className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-                              style={{ background: "#EEEDFE", color: "#3C3489" }}
+                              style={{ background: "#EEEDFE", color: "#1A6CE4" }}
                             >
                               {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
                             </span>
@@ -136,7 +136,7 @@ export default async function FounderDealRoomIndexPage() {
                         {/* Mini milestone track */}
                         <div className="relative flex items-start">
                           <div style={{ position: "absolute", top: 10, left: "10%", width: "80%", height: 2, background: "#e5e7eb" }} />
-                          <div style={{ position: "absolute", top: 10, left: "10%", width: progressW, height: 2, background: "#534AB7" }} />
+                          <div style={{ position: "absolute", top: 10, left: "10%", width: progressW, height: 2, background: "#2E78F5" }} />
                           {STAGES.map((label, i) => {
                             const nodeStep = i + 1;
                             const done = nodeStep < step;
@@ -146,7 +146,7 @@ export default async function FounderDealRoomIndexPage() {
                                 <div
                                   style={{
                                     width: 20, height: 20, borderRadius: "50%", position: "relative", zIndex: 1,
-                                    background: done || active ? "#534AB7" : "#f1f5f9",
+                                    background: done || active ? "#2E78F5" : "#f1f5f9",
                                     border: done || active ? "none" : "1.5px solid #e2e8f0",
                                     display: "flex", alignItems: "center", justifyContent: "center",
                                   }}
@@ -161,7 +161,7 @@ export default async function FounderDealRoomIndexPage() {
                                 </div>
                                 <p
                                   className="truncate text-center"
-                                  style={{ fontSize: 10, maxWidth: "100%", color: active || done ? "#534AB7" : "#94a3b8", fontWeight: active ? 500 : 400 }}
+                                  style={{ fontSize: 10, maxWidth: "100%", color: active || done ? "#2E78F5" : "#94a3b8", fontWeight: active ? 500 : 400 }}
                                 >
                                   {label}
                                 </p>

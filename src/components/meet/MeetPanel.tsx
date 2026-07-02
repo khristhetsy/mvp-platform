@@ -41,7 +41,7 @@ function rsvpCounts(guests: Guest[]): string {
 }
 
 const AVATAR_BG = ["#CECBF6", "#9FE1CB", "#F4C0D1", "#FAC775", "#B5D4F4", "#F0997B"];
-const AVATAR_FG = ["#3C3489", "#0F6E56", "#72243E", "#854F0B", "#0C447C", "#712B13"];
+const AVATAR_FG = ["#1A6CE4", "#0F6E56", "#72243E", "#854F0B", "#0C447C", "#712B13"];
 
 export function MeetPanel() {
   const t = useTranslations("sharedCmp");

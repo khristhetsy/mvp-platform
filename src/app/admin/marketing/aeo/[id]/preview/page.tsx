@@ -21,8 +21,8 @@ export default async function AeoPreviewPage({ params }: { params: Promise<{ id:
 
   return (
     <div style={{ background: "#fff", minHeight: "100vh" }}>
-      <div style={{ background: "#EEF0FB", borderBottom: "1px solid #CECBF6", padding: "8px 16px", fontSize: 12, color: "#3C3489" }}>
-        <Link href={`/admin/marketing/aeo/${id}/edit`} style={{ color: "#3C3489", fontWeight: 600 }}>← Back to editor</Link>
+      <div style={{ background: "#EEF0FB", borderBottom: "1px solid #CECBF6", padding: "8px 16px", fontSize: 12, color: "#1A6CE4" }}>
+        <Link href={`/admin/marketing/aeo/${id}/edit`} style={{ color: "#1A6CE4", fontWeight: 600 }}>← Back to editor</Link>
         <span style={{ marginLeft: 12 }}>Previewing <code>/learn/{page.slug}</code> · status: {page.status}</span>
       </div>
       <JsonLd data={jsonLd} />

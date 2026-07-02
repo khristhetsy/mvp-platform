@@ -34,9 +34,9 @@ function CheckIcon({ done }: { done: boolean }) {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <circle
         cx="8" cy="8" r="7"
-        stroke={done ? "#534AB7" : "var(--border)"}
+        stroke={done ? "#2E78F5" : "var(--border)"}
         strokeWidth="1.5"
-        fill={done ? "#534AB7" : "transparent"}
+        fill={done ? "#2E78F5" : "transparent"}
       />
       {done && (
         <path d="M5 8l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -128,12 +128,12 @@ export function TaskWidget() {
         justifyContent: "space-between",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#534AB7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2E78F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
           </svg>
           <span style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)" }}>{t("my_tasks")}</span>
           {activeCnt > 0 && (
-            <span style={{ fontSize: 10, fontWeight: 500, padding: "1px 6px", borderRadius: 10, background: "#EEEDFE", color: "#534AB7" }}>
+            <span style={{ fontSize: 10, fontWeight: 500, padding: "1px 6px", borderRadius: 10, background: "#EEEDFE", color: "#2E78F5" }}>
               {activeCnt}
             </span>
           )}
@@ -159,7 +159,7 @@ export function TaskWidget() {
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
-            style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}
+            style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}
           >
             <span style={{ fontSize: 14, lineHeight: 1 }}>+</span> Add
           </button>
@@ -197,7 +197,7 @@ export function TaskWidget() {
             <button
               onClick={handleCreate}
               disabled={saving || !form.title.trim()}
-              style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer", opacity: !form.title.trim() ? 0.5 : 1 }}
+              style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer", opacity: !form.title.trim() ? 0.5 : 1 }}
             >
               {saving ? "…" : "Save"}
             </button>
@@ -266,7 +266,7 @@ export function TaskWidget() {
                     )}
                     {/* Assigned badge */}
                     {isAssigned && (
-                      <span style={{ fontSize: 10, color: "#534AB7", background: "#EEEDFE", padding: "1px 6px", borderRadius: 10 }}>
+                      <span style={{ fontSize: 10, color: "#2E78F5", background: "#EEEDFE", padding: "1px 6px", borderRadius: 10 }}>
                         → Assigned
                       </span>
                     )}

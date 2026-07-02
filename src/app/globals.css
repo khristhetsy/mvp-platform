@@ -16,18 +16,18 @@
   --text-muted: #64748b;
 
   /* Brand — deep navy + blue */
-  --navy: #0c2340;
+  --navy: #0A1A40;
   --navy-hover: #091a30;
   --navy-muted: #e8edf4;
-  --gold: #534AB7;
-  --gold-hover: #3C3489;
+  --gold: #2E78F5;
+  --gold-hover: #1A6CE4;
   --gold-muted: #EEEDFB;
 
-  /* Indigo (alias of brand gold) + teal — Private Market surfaces */
-  --indigo: #534AB7;
-  --indigo-hover: #3C3489;
-  --indigo-soft: #EEEDFB;
-  /* #0F766E passes WCAG AA (5.4:1) on white for text; #0D9488 did not (3.7:1). */
+  /* Royal-blue accent (formerly indigo) — Private Market surfaces */
+  --indigo: #2E78F5;
+  --indigo-hover: #1A6CE4;
+  --indigo-soft: #E7F0FE;
+  /* #0F766E passes WCAG AA (5.4:1) on white for text. */
   --teal: #0f766e;
   --teal-hover: #0c5f53;
   --teal-muted: #ecfdf5;

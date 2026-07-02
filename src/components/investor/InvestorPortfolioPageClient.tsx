@@ -366,7 +366,7 @@ export function InvestorPortfolioPageClient() {
                 {inv.company_slug && (
                   <Link
                     href={`/investor/opportunities`}
-                    className="text-[10px] font-medium text-[#534AB7] hover:underline"
+                    className="text-[10px] font-medium text-[#2E78F5] hover:underline"
                   >↗ View</Link>
                 )}
               </div>
@@ -375,7 +375,7 @@ export function InvestorPortfolioPageClient() {
                   {meta.label}
                 </span>
                 {inv.source === "deal_room" && (
-                  <span className="text-[9.5px] font-medium text-[#534AB7]">{t("platform_deal")}</span>
+                  <span className="text-[9.5px] font-medium text-[#2E78F5]">{t("platform_deal")}</span>
                 )}
               </div>
             </div>
@@ -510,7 +510,7 @@ export function InvestorPortfolioPageClient() {
   function PledgeCard({ pledge }: { pledge: PledgeRecord }) {
     return (
       <div className="flex items-center gap-4 border-b border-slate-100 px-4 py-3 last:border-0 hover:bg-slate-50/50">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EEEDFE] text-[11px] font-bold text-[#534AB7]">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EEEDFE] text-[11px] font-bold text-[#2E78F5]">
           {initials(pledge.company_name)}
         </div>
         <div className="min-w-0 flex-1">
@@ -764,7 +764,7 @@ export function InvestorPortfolioPageClient() {
                   className={inputCls}
                 />
                 {form.company_slug && (
-                  <p className="mt-1 text-[11px] text-[#534AB7]">
+                  <p className="mt-1 text-[11px] text-[#2E78F5]">
                     Platform company — linked to iCapOS profile
                   </p>
                 )}

@@ -75,36 +75,36 @@ export default async function FounderAnalyticsPage() {
             }}>
               <div style={{
                 width: 40, height: 40, borderRadius: 10,
-                background: "#534AB7",
+                background: "#2E78F5",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 20, flexShrink: 0,
               }}>
                 💡
               </div>
               <div>
-                <p style={{ fontSize: 14, fontWeight: 700, color: "#3C3489", margin: "0 0 4px" }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: "#1A6CE4", margin: "0 0 4px" }}>
                   Your analytics are ready — now generate some activity
                 </p>
-                <p style={{ fontSize: 13, color: "#534AB7", margin: "0 0 12px", lineHeight: 1.6 }}>
+                <p style={{ fontSize: 13, color: "#2E78F5", margin: "0 0 12px", lineHeight: 1.6 }}>
                   Charts and metrics populate as you upload documents, add investors, and build your readiness score. Here&apos;s what to do first:
                 </p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   <a href="/founder/documents" style={{
                     fontSize: 12, fontWeight: 600, color: "white",
-                    background: "#534AB7", borderRadius: 8, padding: "6px 14px",
+                    background: "#2E78F5", borderRadius: 8, padding: "6px 14px",
                     textDecoration: "none",
                   }}>
                     Upload documents
                   </a>
                   <a href="/founder/investors/outreach" style={{
-                    fontSize: 12, fontWeight: 600, color: "#534AB7",
+                    fontSize: 12, fontWeight: 600, color: "#2E78F5",
                     background: "white", border: "1px solid #c4b5fd", borderRadius: 8,
                     padding: "6px 14px", textDecoration: "none",
                   }}>
                     Add investors to CRM
                   </a>
                   <a href="/founder/readiness" style={{
-                    fontSize: 12, fontWeight: 600, color: "#534AB7",
+                    fontSize: 12, fontWeight: 600, color: "#2E78F5",
                     background: "white", border: "1px solid #c4b5fd", borderRadius: 8,
                     padding: "6px 14px", textDecoration: "none",
                   }}>

@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 
   const date = pkg.generatedAt.slice(0, 10);
   const slug = entityType.replace(/_/g, "-");
-  const filename = `capitalos-crm-${slug}-${date}.${format}`;
+  const filename = `icapos-crm-${slug}-${date}.${format}`;
 
   if (format === "json") {
     return new NextResponse(crmPackageToJson(pkg), {

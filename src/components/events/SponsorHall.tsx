@@ -10,7 +10,7 @@ const TIER_LABEL: Record<SponsorTier, string> = {
   silver: "Silver",
   community: "Community",
 };
-const SQUARE_BG = ["#0c2340", "#27500A", "#534AB7", "#185FA5", "#993C1D"];
+const SQUARE_BG = ["#0c2340", "#27500A", "#2E78F5", "#185FA5", "#993C1D"];
 
 function initials(name: string): string {
   return name

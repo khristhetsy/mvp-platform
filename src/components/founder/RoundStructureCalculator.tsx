@@ -138,7 +138,7 @@ function SliderInput({
     <div>
       <div className="mb-1.5 flex items-center justify-between">
         <label className="text-xs font-semibold text-slate-700">{label}</label>
-        <span className="font-mono text-xs font-bold" style={{ color: "#534AB7" }}>{format(value)}</span>
+        <span className="font-mono text-xs font-bold" style={{ color: "#2E78F5" }}>{format(value)}</span>
       </div>
       <input
         type="range"
@@ -148,7 +148,7 @@ function SliderInput({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-200"
-        style={{ accentColor: "#534AB7" }}
+        style={{ accentColor: "#2E78F5" }}
       />
       <div className="mt-0.5 flex justify-between text-[9px] text-slate-400">
         <span>{format(min)}</span>
@@ -164,7 +164,7 @@ function OwnershipBar({
   shareholders: Array<{ id: string; label: string; pct: number }>;
 }) {
   const COLORS: Record<string, string> = {
-    founder_1: "#534AB7",
+    founder_1: "#2E78F5",
     founder_2: "#7c3aed",
     employees: "#06b6d4",
     option_pool: "#0ea5e9",
@@ -247,7 +247,7 @@ export function RoundStructureCalculator() {
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       {/* Accent bar */}
-      <div style={{ height: 3, background: "linear-gradient(90deg,#534AB7,#7c3aed,#06b6d4)" }} />
+      <div style={{ height: 3, background: "linear-gradient(90deg,#2E78F5,#7c3aed,#06b6d4)" }} />
 
       <div className="p-5">
         {/* Header */}
@@ -255,7 +255,7 @@ export function RoundStructureCalculator() {
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "#EEEDFE" }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                stroke="#534AB7" strokeWidth="1.8" strokeLinecap="round" />
+                stroke="#2E78F5" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
           </div>
           <div>
@@ -278,7 +278,7 @@ export function RoundStructureCalculator() {
                     onClick={() => setRoundType(t)}
                     className="flex-1 rounded-md py-1.5 text-xs font-semibold transition"
                     style={{
-                      background: roundType === t ? "#534AB7" : "transparent",
+                      background: roundType === t ? "#2E78F5" : "transparent",
                       color: roundType === t ? "white" : "#64748b",
                     }}
                   >
@@ -300,7 +300,7 @@ export function RoundStructureCalculator() {
                       onClick={() => setSafeType(t)}
                       className="flex-1 rounded-md py-1.5 text-[10px] font-semibold transition"
                       style={{
-                        background: safeType === t ? "#534AB7" : "transparent",
+                        background: safeType === t ? "#2E78F5" : "transparent",
                         color: safeType === t ? "white" : "#64748b",
                       }}
                     >
@@ -355,7 +355,7 @@ export function RoundStructureCalculator() {
                   className="rounded-xl px-3 py-2 text-center"
                   style={{ background: "#F8F7FD" }}
                 >
-                  <p className="font-mono text-sm font-bold" style={{ color: "#534AB7" }}>{m.value}</p>
+                  <p className="font-mono text-sm font-bold" style={{ color: "#2E78F5" }}>{m.value}</p>
                   <p className="mt-0.5 text-[10px] text-slate-500">{m.label}</p>
                 </div>
               ))}

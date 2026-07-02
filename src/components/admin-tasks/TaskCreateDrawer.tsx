@@ -62,7 +62,7 @@ export function TaskCreateDrawer({
     }
   };
 
-  const field = "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#0D9488] focus:outline-none focus:ring-1 focus:ring-[#0D9488]";
+  const field = "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#2E78F5] focus:outline-none focus:ring-1 focus:ring-[#2E78F5]";
 
   return (
     <Drawer

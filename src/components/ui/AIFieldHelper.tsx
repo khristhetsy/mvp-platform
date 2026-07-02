@@ -35,8 +35,8 @@ export function AIFieldHelper({ benchmark, draft, onInsert }: Props) {
         className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-all"
         style={
           open
-            ? { background: "#534AB7", borderColor: "#534AB7", color: "white" }
-            : { background: "transparent", borderColor: "#c7d2fe", color: "#534AB7" }
+            ? { background: "#2E78F5", borderColor: "#2E78F5", color: "white" }
+            : { background: "transparent", borderColor: "#c7d2fe", color: "#2E78F5" }
         }
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -59,10 +59,10 @@ export function AIFieldHelper({ benchmark, draft, onInsert }: Props) {
           {/* Insight header */}
           <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-3" style={{ borderBottom: "1px solid #e0e7ff" }}>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: "#534AB7" }}>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em]" style={{ color: "#2E78F5" }}>
                 Investor insight
               </p>
-              <p className="mt-1 text-xs leading-5" style={{ color: "#3C3489" }}>
+              <p className="mt-1 text-xs leading-5" style={{ color: "#1A6CE4" }}>
                 {benchmark}
               </p>
             </div>
@@ -96,7 +96,7 @@ export function AIFieldHelper({ benchmark, draft, onInsert }: Props) {
                 type="button"
                 onClick={handleInsert}
                 className="rounded-full px-4 py-2 text-xs font-semibold text-white"
-                style={{ background: "#534AB7" }}
+                style={{ background: "#2E78F5" }}
               >
                 Insert draft
               </button>

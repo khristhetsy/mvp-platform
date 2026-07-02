@@ -108,19 +108,19 @@ export function FounderStageOverride({
           <p className="text-sm font-semibold text-slate-950">{t("journey_stage_override")}</p>
           <p className="text-xs text-slate-500">{t("force_advance_or_roll_back_this_founder_s_st")}</p>
         </div>
-        {current ? <span className="ml-auto rounded-full bg-[#EEEDFE] px-2.5 py-0.5 text-[11px] font-medium text-[#3C3489]">Current: {STAGES.find((s) => s.value === current)?.label ?? current}</span> : null}
+        {current ? <span className="ml-auto rounded-full bg-[#EEEDFE] px-2.5 py-0.5 text-[11px] font-medium text-[#1A6CE4]">Current: {STAGES.find((s) => s.value === current)?.label ?? current}</span> : null}
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="text-xs text-slate-500">
           Set stage
-          <select value={stage} onChange={(e) => setStage(e.target.value)} className="mt-1 block rounded-lg border border-slate-200 px-2.5 py-2 text-sm text-slate-700 focus:border-[#534AB7] focus:outline-none">
+          <select value={stage} onChange={(e) => setStage(e.target.value)} className="mt-1 block rounded-lg border border-slate-200 px-2.5 py-2 text-sm text-slate-700 focus:border-[#2E78F5] focus:outline-none">
             {STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
         </label>
         <label className="flex-1 text-xs text-slate-500" style={{ minWidth: 200 }}>
           Reason (recorded)
-          <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("why_are_you_overriding")} className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#534AB7] focus:outline-none" />
+          <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("why_are_you_overriding")} className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#2E78F5] focus:outline-none" />
         </label>
         <button type="button" disabled={saving || !stage || stage === current} onClick={() => void apply()} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} {saving ? "Saving…" : "Set stage"}

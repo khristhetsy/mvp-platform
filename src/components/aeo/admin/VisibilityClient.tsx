@@ -48,7 +48,7 @@ export function VisibilityClient() {
     <div style={{ ...card, padding: 0, overflow: "hidden" }}>
       <div style={{ padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", display: "flex", justifyContent: "space-between" }}>
         <span style={{ fontSize: 13, fontWeight: 600, color: "#0f2147" }}>Answer Grid · {data.provider}</span>
-        {data.shareOfVoice != null ? <span style={{ fontSize: 12, color: "#534AB7", fontWeight: 600 }}>Share of voice {Math.round(data.shareOfVoice * 100)}%</span> : null}
+        {data.shareOfVoice != null ? <span style={{ fontSize: 12, color: "#2E78F5", fontWeight: 600 }}>Share of voice {Math.round(data.shareOfVoice * 100)}%</span> : null}
       </div>
       <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
         <tbody>

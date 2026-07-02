@@ -25,7 +25,7 @@ const EVENT_CONFIGS: Record<DealRoomActivityType, EventMeta> = {
   room_created: {
     label: "Room created",
     color: "#EEEDFE",
-    icon: mkIcon(<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></>, "#534AB7"),
+    icon: mkIcon(<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></>, "#2E78F5"),
   },
   room_viewed: {
     label: "Room viewed",

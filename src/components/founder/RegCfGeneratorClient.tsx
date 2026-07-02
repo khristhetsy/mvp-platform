@@ -107,7 +107,7 @@ export function RegCfGeneratorClient() {
               return (
                 <li key={d.key} className="border-b border-slate-100 px-4 py-3 last:border-0">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EEEDFE] text-[#3C3489]"><FileText className="h-4 w-4" /></span>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EEEDFE] text-[#1A6CE4]"><FileText className="h-4 w-4" /></span>
                     <div className="min-w-0 flex-1">
                       <p className="flex items-center gap-2 text-sm font-medium text-slate-900">
                         {d.label}
@@ -119,7 +119,7 @@ export function RegCfGeneratorClient() {
                       {has ? (
                         <button type="button" onClick={() => startEdit(d.key)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5" /> Edit</button>
                       ) : null}
-                      <button type="button" disabled={busy === d.key} onClick={() => void generate(d.key)} className="inline-flex items-center gap-1.5 rounded-lg bg-[#534AB7] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#3C3489] disabled:opacity-50">
+                      <button type="button" disabled={busy === d.key} onClick={() => void generate(d.key)} className="inline-flex items-center gap-1.5 rounded-lg bg-[#2E78F5] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1A6CE4] disabled:opacity-50">
                         {busy === d.key ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : has ? <Sparkles className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
                         {busy === d.key ? "Drafting…" : has ? "Regenerate" : "Generate"}
                       </button>
@@ -128,7 +128,7 @@ export function RegCfGeneratorClient() {
 
                   {isEditing ? (
                     <div className="mt-3">
-                      <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={12} className="w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs leading-relaxed focus:border-[#534AB7] focus:outline-none" />
+                      <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={12} className="w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs leading-relaxed focus:border-[#2E78F5] focus:outline-none" />
                       <div className="mt-2 flex items-center gap-2">
                         <button type="button" disabled={busy === d.key} onClick={() => void save(d.key)} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50"><Check className="h-3.5 w-3.5" /> Save</button>
                         <button type="button" onClick={() => setEditing(null)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50">{t("cancel")}</button>
@@ -145,7 +145,7 @@ export function RegCfGeneratorClient() {
       </div>
 
       <div className="flex items-center gap-3">
-        <button type="button" onClick={downloadPacket} disabled={draftedCount === 0} className="inline-flex items-center gap-1.5 rounded-lg bg-[#534AB7] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3C3489] disabled:opacity-50">
+        <button type="button" onClick={downloadPacket} disabled={draftedCount === 0} className="inline-flex items-center gap-1.5 rounded-lg bg-[#2E78F5] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1A6CE4] disabled:opacity-50">
           <Download className="h-4 w-4" /> Download prep packet
         </button>
         <span className="text-xs text-slate-400">{draftedCount} of {REGCF_DOCS.length} drafted</span>

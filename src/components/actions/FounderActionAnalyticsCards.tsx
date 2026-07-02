@@ -114,7 +114,7 @@ function DStatBox({ label, value }: { label: string; value: string }) {
 const PRI_CLS: Record<string, string> = {
   critical: "bg-[#FCEBEB] text-[#A32D2D]",
   high:     "bg-[#FAEEDA] text-[#854F0B]",
-  medium:   "bg-[#EEEDFE] text-[#3C3489]",
+  medium:   "bg-[#EEEDFE] text-[#1A6CE4]",
   low:      "bg-slate-100 text-slate-500",
   normal:   "bg-slate-100 text-slate-600",
 };
@@ -139,7 +139,7 @@ function AdviceBox({ lines }: { lines: string[] }) {
       <div className="mb-3 flex items-center gap-2">
         <div
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-          style={{ background: "#534AB7" }}
+          style={{ background: "#2E78F5" }}
         >
           AI
         </div>
@@ -455,7 +455,7 @@ function DrawerContent({
         <BRow
           name="Still open"
           badge={`${analytics.open} remaining`}
-          badgeCls="bg-[#EEEDFE] text-[#3C3489]"
+          badgeCls="bg-[#EEEDFE] text-[#1A6CE4]"
         />
         {analytics.overdue > 0 && (
           <BRow
@@ -524,8 +524,8 @@ export function FounderActionAnalyticsCards({
           value={analytics.open}
           icon={<IconActivity />}
           iconBg="#EEEDFB"
-          iconColor="#534AB7"
-          valueFg="#3C3489"
+          iconColor="#2E78F5"
+          valueFg="#1A6CE4"
           onClick={() => setOpen("active")}
         />
         <AnalyticsCard

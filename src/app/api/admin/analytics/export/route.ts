@@ -31,7 +31,7 @@ export async function GET(request: Request) {
 
   if (format === "csv") {
     const csv = analyticsSnapshotToCsv(snapshot);
-    const filename = `capitalos_analytics_${windowDays}d_${snapshot.generatedAt.slice(0, 10)}.csv`;
+    const filename = `icapos_analytics_${windowDays}d_${snapshot.generatedAt.slice(0, 10)}.csv`;
     return new NextResponse(csv, {
       status: 200,
       headers: {

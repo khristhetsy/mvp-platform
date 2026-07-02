@@ -313,7 +313,7 @@ const KPI_DATA: KPIEntry[] = [
 const CATEGORIES: KPICategory[] = ["Revenue", "Retention", "Unit economics", "Financials", "Growth"];
 
 const CATEGORY_COLORS: Record<KPICategory, string> = {
-  Revenue: "#534AB7",
+  Revenue: "#2E78F5",
   Retention: "#059669",
   "Unit economics": "#d97706",
   Financials: "#0ea5e9",
@@ -337,7 +337,7 @@ function KPICalculator({ kpi }: { kpi: KPIEntry }) {
 
   return (
     <div className="mt-3 rounded-lg border border-indigo-100 bg-[#FAFAFF] p-3">
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#534AB7" }}>{t("calculator")}</p>
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#2E78F5" }}>{t("calculator")}</p>
       <div className="mb-3 grid gap-2 sm:grid-cols-2">
         {calc.inputs.map((inp) => (
           <div key={inp.id}>
@@ -361,7 +361,7 @@ function KPICalculator({ kpi }: { kpi: KPIEntry }) {
           {results.map((r, i) => (
             <div key={i} className="rounded-lg bg-white px-3 py-2 shadow-sm ring-1 ring-indigo-100">
               <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-400">{r.label}</p>
-              <p className="text-base font-bold" style={{ color: "#534AB7" }}>{r.value}</p>
+              <p className="text-base font-bold" style={{ color: "#2E78F5" }}>{r.value}</p>
             </div>
           ))}
         </div>
@@ -419,8 +419,8 @@ function KPICard({ kpi }: { kpi: KPIEntry }) {
                   onClick={() => setTab(t)}
                   className="flex-1 py-2 text-[11px] font-semibold capitalize transition"
                   style={{
-                    color: tab === t ? "#534AB7" : "#94a3b8",
-                    borderBottom: tab === t ? `2px solid #534AB7` : "2px solid transparent",
+                    color: tab === t ? "#2E78F5" : "#94a3b8",
+                    borderBottom: tab === t ? `2px solid #2E78F5` : "2px solid transparent",
                   }}
                 >
                   {t}
@@ -513,7 +513,7 @@ export function FounderKPIGlossary() {
 
       {/* Intro */}
       <div className="rounded-xl border border-indigo-100 bg-[#FAFAFF] px-4 py-3">
-        <p className="text-xs font-semibold" style={{ color: "#534AB7" }}>{t("how_to_use_this")}</p>
+        <p className="text-xs font-semibold" style={{ color: "#2E78F5" }}>{t("how_to_use_this")}</p>
         <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">
           Every definition includes a formula, a real example, good benchmarks, and a red flag to watch for. Open the Calculator tab on any metric to compute your own numbers.
         </p>

@@ -32,7 +32,7 @@ type Props = {
   fields: SignField[];
 };
 
-const ACCENT = "#534AB7";
+const ACCENT = "#2E78F5";
 
 export function SignerClient(props: Props) {
   const t = useTranslations("sharedCmp");

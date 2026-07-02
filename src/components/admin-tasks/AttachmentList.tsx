@@ -65,7 +65,7 @@ export function AttachmentList({
       <ul className="space-y-1.5">
         {attachments.map((a) => (
           <li key={a.id} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
-            <FileText className="h-4 w-4 shrink-0 text-[#0D9488]" aria-hidden />
+            <FileText className="h-4 w-4 shrink-0 text-[#2E78F5]" aria-hidden />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-xs font-medium text-slate-800" title={a.file_name}>{a.file_name}</span>
               <span className="text-[10px] uppercase tracking-wide text-slate-400">{a.source_format} · {fmtSize(a.size_bytes)}{a.converted_to_pdf ? " · PDF preview" : ""}</span>

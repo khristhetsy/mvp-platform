@@ -41,7 +41,7 @@ const VARIANT_STYLES: Record<
 > = {
   success: { accent: "#1D9E75", icon: CheckCircle2, iconClass: "text-emerald-600" },
   error: { accent: "#D94F4F", icon: AlertCircle, iconClass: "text-rose-600" },
-  info: { accent: "#534AB7", icon: Info, iconClass: "text-indigo-600" },
+  info: { accent: "#2E78F5", icon: Info, iconClass: "text-indigo-600" },
 };
 
 function ToastCard({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number) => void }) {

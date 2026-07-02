@@ -25,7 +25,7 @@ export const CAPITAL_STAGE_META: Record<
     label: "Stage 0 — Foundation",
     subtitle: "Pre-fundraise basics",
     level: "Beginner",
-    color: "#534AB7",
+    color: "#2E78F5",
     bgColor: "#EEEDFE",
     borderColor: "#C7C4F0",
     icon: "🏗️",

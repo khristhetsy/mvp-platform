@@ -29,7 +29,7 @@ import { NBA_DISCLAIMER } from "@/lib/next-best-actions/types";
 const PRIORITY_CONF = {
   critical: { label: "Critical", dot: "#A32D2D", headerBg: "#FEF2F2", border: "#FCA5A5", ctaBg: "#FCEBEB", ctaColor: "#A32D2D", cta: "Resolve" },
   high:     { label: "High",     dot: "#854F0B", headerBg: "#FFFBEB", border: "#FCD34D", ctaBg: "#FEF3CD", ctaColor: "#854F0B", cta: "Review"  },
-  medium:   { label: "Medium",   dot: "#534AB7", headerBg: "#EEF2FF", border: "#A5B4FC", ctaBg: "#EEEDFB", ctaColor: "#534AB7", cta: "Open"    },
+  medium:   { label: "Medium",   dot: "#2E78F5", headerBg: "#EEF2FF", border: "#A5B4FC", ctaBg: "#EEEDFB", ctaColor: "#2E78F5", cta: "Open"    },
   normal:   { label: "Normal",   dot: "#475569", headerBg: "#F8FAFC", border: "#CBD5E1", ctaBg: "#F1F5F9", ctaColor: "#475569", cta: "Open"    },
   low:      { label: "Low",      dot: "#94a3b8", headerBg: "#F8FAFC", border: "#E2E8F0", ctaBg: "#F1F5F9", ctaColor: "#94a3b8", cta: "Open"    },
 } as const;

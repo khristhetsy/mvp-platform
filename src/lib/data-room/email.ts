@@ -40,11 +40,11 @@ export function buildDataRoomReminderEmail(input: {
 
   const html = `
   <div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;color:#0f172a;">
-    <p style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#534AB7;font-weight:600;margin:0 0 6px;">${t("dataRoom.eyebrow")}</p>
+    <p style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#2E78F5;font-weight:600;margin:0 0 6px;">${t("dataRoom.eyebrow")}</p>
     <h1 style="font-size:20px;margin:0 0 10px;">${headline}</h1>
     <p style="font-size:15px;line-height:1.6;color:#334155;margin:0 0 14px;">${greeting} ${lead}</p>
     ${missingLabels.length ? `<p style="font-size:14px;color:#334155;margin:0 0 6px;font-weight:600;">${t("dataRoom.stillNeeded")}</p><ul style="font-size:14px;color:#334155;margin:0 0 16px;padding-left:18px;">${listItems}</ul>` : ""}
-    <a href="${link}" style="display:inline-block;background:#534AB7;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:8px;">${t("dataRoom.cta")}</a>
+    <a href="${link}" style="display:inline-block;background:#2E78F5;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:8px;">${t("dataRoom.cta")}</a>
     <p style="font-size:12px;color:#94a3b8;margin:18px 0 0;line-height:1.5;">${t("dataRoom.note", { percent: state.percent, completed: state.completed, total: state.total })}</p>
   </div>`;
 

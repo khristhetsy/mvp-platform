@@ -7,7 +7,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-const ACCENT = "#534AB7";
+const ACCENT = "#2E78F5";
 
 const PUBLIC_FIELDS = [
   "id",
@@ -336,7 +336,7 @@ function MetricCard({ label, value, accent, href }: { label: string; value: stri
       {href ? (
         <a href={href} target="_blank" rel="noopener noreferrer" style={{ fontSize: 15, fontWeight: 700, color: ACCENT, textDecoration: "none" }}>{value}</a>
       ) : (
-        <p style={{ fontSize: 16, fontWeight: 700, color: accent ? "#3C3489" : "#111827", margin: 0 }}>{value}</p>
+        <p style={{ fontSize: 16, fontWeight: 700, color: accent ? "#1A6CE4" : "#111827", margin: 0 }}>{value}</p>
       )}
     </div>
   );

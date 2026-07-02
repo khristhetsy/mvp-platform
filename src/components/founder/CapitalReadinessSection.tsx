@@ -74,7 +74,7 @@ function PriBadge({ level }: { level: "critical" | "high" | "medium" | "low" }) 
   const cfg = {
     critical: "bg-[#FCEBEB] text-[#A32D2D]",
     high: "bg-[#FAEEDA] text-[#854F0B]",
-    medium: "bg-[#EEEDFE] text-[#3C3489]",
+    medium: "bg-[#EEEDFE] text-[#1A6CE4]",
     low: "bg-slate-100 text-slate-600",
   };
   return (
@@ -105,7 +105,7 @@ function AdviceBox({ items }: { items: string[] }) {
       <div className="mb-3 flex items-center gap-2">
         <div
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
-          style={{ background: "#534AB7" }}
+          style={{ background: "#2E78F5" }}
         >
           AI
         </div>
@@ -142,7 +142,7 @@ function BRow({
   const cls = {
     critical: "bg-[#FCEBEB] text-[#A32D2D]",
     high: "bg-[#FAEEDA] text-[#854F0B]",
-    medium: "bg-[#EEEDFE] text-[#3C3489]",
+    medium: "bg-[#EEEDFE] text-[#1A6CE4]",
     neutral: "bg-slate-100 text-slate-600",
     success: "bg-[#EAF3DE] text-[#3B6D11]",
   };
@@ -380,7 +380,7 @@ export function CapitalReadinessSection({
   // Cards
   // -------------------------------------------------------------------------
   const cardClass =
-    "group relative flex flex-col rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)] transition hover:border-[#534AB7] hover:shadow-[0_0_0_3px_#EEEDFE] cursor-pointer";
+    "group relative flex flex-col rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)] transition hover:border-[#2E78F5] hover:shadow-[0_0_0_3px_#EEEDFE] cursor-pointer";
 
   return (
     <>
@@ -403,9 +403,9 @@ export function CapitalReadinessSection({
                 <p className="font-mono text-xl font-semibold text-slate-950">{readinessScore}/100</p>
                 <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">{readinessDetail}</p>
               </div>
-              <DonutChart pct={readinessScore / 100} color="#534AB7" />
+              <DonutChart pct={readinessScore / 100} color="#2E78F5" />
             </div>
-            <p className="mt-3 text-[10px] font-medium text-[#534AB7]">{t("tap_to_explore")}</p>
+            <p className="mt-3 text-[10px] font-medium text-[#2E78F5]">{t("tap_to_explore")}</p>
           </button>
 
           {/* Raise Progress */}
@@ -418,7 +418,7 @@ export function CapitalReadinessSection({
               </div>
               <DonutChart pct={raiseProgress === "Published" ? Math.max(0.2, fillPct) : 0.1} color="#7F77DD" />
             </div>
-            <p className="mt-3 text-[10px] font-medium text-[#534AB7]">{t("tap_to_explore")}</p>
+            <p className="mt-3 text-[10px] font-medium text-[#2E78F5]">{t("tap_to_explore")}</p>
           </button>
 
           {/* Indicative Interest */}
@@ -433,9 +433,9 @@ export function CapitalReadinessSection({
                   From {pledgeSummary.investorCount} {pledgeSummary.investorCount === 1 ? "investor" : "investors"}
                 </p>
               </div>
-              <DonutChart pct={Math.max(0.05, fillPct)} color="#534AB7" />
+              <DonutChart pct={Math.max(0.05, fillPct)} color="#2E78F5" />
             </div>
-            <p className="mt-3 text-[10px] font-medium text-[#534AB7]">{t("tap_to_explore")}</p>
+            <p className="mt-3 text-[10px] font-medium text-[#2E78F5]">{t("tap_to_explore")}</p>
           </button>
 
           {/* Investor Activity — two-segment donut */}
@@ -448,12 +448,12 @@ export function CapitalReadinessSection({
               </div>
               <DonutChart
                 pct={totalActivity > 0 ? Math.max(0.05, interestCount / Math.max(1, totalActivity)) : 0.05}
-                color="#534AB7"
+                color="#2E78F5"
                 pct2={totalActivity > 0 ? Math.max(0.02, savedCount / Math.max(1, totalActivity)) : 0}
                 color2="#AFA9EC"
               />
             </div>
-            <p className="mt-3 text-[10px] font-medium text-[#534AB7]">{t("tap_to_explore")}</p>
+            <p className="mt-3 text-[10px] font-medium text-[#2E78F5]">{t("tap_to_explore")}</p>
           </button>
         </div>
       </section>

@@ -44,8 +44,8 @@ function LetterPreview({ template, compact = false }: { template: Partial<Market
   return (
     <div style={{ background: "#fff", border: "0.5px solid #E5E3DC", borderRadius: 8, padding: "32px 40px", fontFamily: "Georgia, serif", maxWidth: 560, margin: "0 auto", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
       {/* Letterhead */}
-      <div style={{ borderBottom: "2px solid #534AB7", paddingBottom: 12, marginBottom: 20 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: "#534AB7", letterSpacing: "0.04em" }}>iCapOS</div>
+      <div style={{ borderBottom: "2px solid #2E78F5", paddingBottom: 12, marginBottom: 20 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: "#2E78F5", letterSpacing: "0.04em" }}>iCapOS</div>
         <div style={{ fontSize: 11, color: "#888780", marginTop: 2 }}>outreach@mail.myicfos.com · icapos.com</div>
       </div>
 
@@ -81,7 +81,7 @@ function LetterPreview({ template, compact = false }: { template: Partial<Market
       <div style={{ borderTop: "0.5px solid #D3D1C7", marginTop: 28, paddingTop: 12 }}>
         <div style={{ fontSize: 11, color: "#B4B2A9", textAlign: "center" }}>
           You&apos;re receiving this because you opted in at icapos.com ·{" "}
-          <span style={{ color: "#534AB7" }}>Unsubscribe</span>
+          <span style={{ color: "#2E78F5" }}>Unsubscribe</span>
         </div>
       </div>
     </div>
@@ -135,7 +135,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
         </div>
         <button
           onClick={() => { setEditing({ name: "", subject: "", html_body: "", status: "draft" }); setActiveTab("write"); }}
-          style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer" }}>
+          style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
           + New template
         </button>
       </div>
@@ -176,7 +176,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
           <div style={{ display: "flex", gap: 0, borderBottom: "0.5px solid var(--border)", marginBottom: 14 }}>
             {(["write", "preview"] as const).map((tab) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
-                style={{ padding: "7px 16px", fontSize: 12, fontWeight: activeTab === tab ? 500 : 400, color: activeTab === tab ? "#534AB7" : "var(--muted-foreground)", background: "transparent", border: "none", borderBottom: activeTab === tab ? "2px solid #534AB7" : "2px solid transparent", cursor: "pointer" }}>
+                style={{ padding: "7px 16px", fontSize: 12, fontWeight: activeTab === tab ? 500 : 400, color: activeTab === tab ? "#2E78F5" : "var(--muted-foreground)", background: "transparent", border: "none", borderBottom: activeTab === tab ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>
                 {tab === "write" ? "Write" : "Preview as letter"}
               </button>
             ))}
@@ -210,7 +210,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
 
           <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
             <button onClick={handleSave} disabled={saving}
-              style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer" }}>
+              style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
               {saving ? "Saving…" : "Save template"}
             </button>
             <button onClick={() => setEditing(null)}

@@ -6,7 +6,7 @@ import { summarize, modelRound } from "@/lib/cap-table/compute";
 import type { Holder, HolderGroup, RoundModel } from "@/lib/cap-table/types";
 
 const GROUP_LABEL: Record<HolderGroup, string> = { founder: "Founder", pool: "Option pool", investor: "Investor" };
-const SLICE_COLORS = ["#1D9E75", "#5DCAA5", "#9FE1CB", "#378ADD", "#85B7EB", "#534AB7", "#D85A30", "#D4537E", "#BA7517"];
+const SLICE_COLORS = ["#1D9E75", "#5DCAA5", "#9FE1CB", "#378ADD", "#85B7EB", "#2E78F5", "#D85A30", "#D4537E", "#BA7517"];
 
 function money(n: number): string {
   const abs = Math.abs(n);

@@ -298,11 +298,11 @@ export default async function FounderDashboardPage() {
             <WorkspacePanel title={t("capital_raise_overview_2")} subtitle={t("non_binding_marketplace_interest")}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg px-4 py-3 ring-1 ring-[#EEEDFE]" style={{ background: "#EEEDFE" }}>
-                  <p className="text-xs font-medium" style={{ color: "#534AB7" }}>{t("total_pledged")}</p>
-                  <p className="mt-1.5 font-mono text-2xl font-semibold" style={{ color: "#3C3489" }}>
+                  <p className="text-xs font-medium" style={{ color: "#2E78F5" }}>{t("total_pledged")}</p>
+                  <p className="mt-1.5 font-mono text-2xl font-semibold" style={{ color: "#1A6CE4" }}>
                     {formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
                   </p>
-                  <p className="mt-1 text-[11px]" style={{ color: "#534AB7" }}>
+                  <p className="mt-1 text-[11px]" style={{ color: "#2E78F5" }}>
                     {pledgeSummary.investorCount} investor{pledgeSummary.investorCount === 1 ? "" : "s"}
                   </p>
                 </div>
@@ -320,7 +320,7 @@ export default async function FounderDashboardPage() {
                 <div className="mt-4">
                   <div className="mb-1 flex items-center justify-between">
                     <span className="text-[11px] text-slate-500">{t("raise_progress")}</span>
-                    <span className="text-[11px] font-semibold" style={{ color: "#534AB7" }}>
+                    <span className="text-[11px] font-semibold" style={{ color: "#2E78F5" }}>
                       {Math.round(Math.min(100, (pledgeSummary.totalPledged / Number(company.funding_amount)) * 100))}%
                     </span>
                   </div>
@@ -329,7 +329,7 @@ export default async function FounderDashboardPage() {
                       className="h-full rounded-full"
                       style={{
                         width: `${Math.min(100, (pledgeSummary.totalPledged / Number(company.funding_amount)) * 100)}%`,
-                        background: "#534AB7",
+                        background: "#2E78F5",
                       }}
                     />
                   </div>
@@ -373,7 +373,7 @@ export default async function FounderDashboardPage() {
                             ? "bg-[#EAF3DE] text-[#3B6D11]"
                             : doc.status === "rejected"
                             ? "bg-[#FCEBEB] text-[#A32D2D]"
-                            : "bg-[#EEEDFE] text-[#3C3489]"
+                            : "bg-[#EEEDFE] text-[#1A6CE4]"
                         }`}
                       >
                         {doc.status ?? "uploaded"}

@@ -5,7 +5,7 @@ import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingScoredBoard, type ScoredBoardRow } from "@/components/marketing/MarketingScoredBoard";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
-import { CapitalOSLogo } from "@/components/CapitalOSLogo";
+import { IcapOSLogo } from "@/components/IcapOSLogo";
 import { loadPublicMarketStats } from "@/lib/marketing/market-stats";
 import { JsonLd } from "@/components/seo/JsonLd";
 import {
@@ -95,7 +95,7 @@ export default async function Home() {
       >
         <div className="mx-auto grid max-w-5xl gap-8 xl:grid-cols-[1.05fr_0.95fr] xl:items-center">
           <div className="flex flex-col justify-center">
-            <CapitalOSLogo height={52} tagline priority className="mb-6" />
+            <IcapOSLogo height={52} tagline priority className="mb-6" />
             <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--indigo-soft)] bg-[var(--indigo-soft)] px-3.5 py-1.5 font-mono text-[11.5px] text-[var(--indigo)]">
               <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--indigo)] text-[var(--indigo)]" />
               Live · {money(stats.indicated30d)} indicated · 30d
@@ -167,7 +167,7 @@ export default async function Home() {
         </div>
 
         <div className="mx-auto mt-10 flex max-w-5xl flex-wrap items-center justify-between gap-4 border-y border-slate-200/80 py-5">
-          <CapitalOSLogo height={40} tagline />
+          <IcapOSLogo height={40} tagline />
           <div className="flex flex-wrap items-center gap-6 text-xs font-medium text-slate-500">
             <span>{t("trusted_by_founders_preparing_institutional_ra")}</span>
             <span className="hidden h-4 w-px bg-slate-200 sm:block" aria-hidden />

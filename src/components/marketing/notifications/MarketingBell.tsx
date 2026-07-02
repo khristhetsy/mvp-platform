@@ -9,7 +9,7 @@ type FeedItem = {
   link: string | null; read_at: string | null; created_at: string;
 };
 
-const PURPLE = "#534AB7";
+const PURPLE = "#2E78F5";
 
 function timeAgo(iso: string): string {
   const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));

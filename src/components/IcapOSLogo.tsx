@@ -5,7 +5,7 @@
  */
 const LOGO_RATIO = 713 / 200; // master artwork aspect ratio
 
-export function CapitalOSLogo({
+export function IcapOSLogo({
   className = "",
   height = 32,
   priority = false,

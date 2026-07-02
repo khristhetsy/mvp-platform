@@ -41,7 +41,7 @@ const DEFAULT_W = 0.22;
 const DEFAULT_H = 0.05;
 
 const FIELD_COLORS: Record<FieldType, string> = {
-  signature: "#534AB7",
+  signature: "#2E78F5",
   date: "#1D9E75",
   company: "#BA7517",
   text: "#185FA5",

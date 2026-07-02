@@ -5,11 +5,11 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type { PitchDeckAnalysis, PitchDeckSection } from "@/app/api/founder/pitch-deck-analyze/route";
 
-const ACCENT = "#534AB7";
+const ACCENT = "#2E78F5";
 
 const VERDICT_STYLES: Record<PitchDeckSection["verdict"], { bg: string; color: string; label: string }> = {
   strong:     { bg: "#dcfce7", color: "#065f46", label: "Strong"      },
-  good:       { bg: "#EEEDFE", color: "#3C3489", label: "Good"        },
+  good:       { bg: "#EEEDFE", color: "#1A6CE4", label: "Good"        },
   needs_work: { bg: "#fef9c3", color: "#92400e", label: "Needs work"  },
   missing:    { bg: "#fee2e2", color: "#991b1b", label: "Missing"     },
 };

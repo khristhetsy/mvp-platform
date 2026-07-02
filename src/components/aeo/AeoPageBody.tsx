@@ -13,7 +13,7 @@ export function AeoPageBody({ page }: { page: AeoPage }) {
     <article className="mx-auto max-w-3xl px-5 py-12 md:py-16">
       <header>
         {page.eyebrow ? (
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#534AB7]">{page.eyebrow}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#2E78F5]">{page.eyebrow}</p>
         ) : null}
         <h1 className="mt-2 text-3xl font-semibold leading-tight text-slate-950 md:text-4xl">{page.h1}</h1>
         {page.lede ? <p className="mt-3 text-lg leading-relaxed text-slate-600">{page.lede}</p> : null}

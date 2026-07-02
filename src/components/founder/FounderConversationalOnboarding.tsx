@@ -136,7 +136,7 @@ function computeScore(opts: {
 
 function ContextCard({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mt-5 rounded-xl px-4 py-3.5 text-sm leading-6" style={{ background: "#EEEDFE", color: "#3C3489" }}>
+    <div className="mt-5 rounded-xl px-4 py-3.5 text-sm leading-6" style={{ background: "#EEEDFE", color: "#1A6CE4" }}>
       {children}
     </div>
   );
@@ -153,8 +153,8 @@ function Chip({
       onClick={onClick}
       className="rounded-full border px-4 py-2 text-sm font-medium transition-all"
       style={{
-        background: selected ? "#534AB7" : "transparent",
-        borderColor: selected ? "#534AB7" : "#e2e8f0",
+        background: selected ? "#2E78F5" : "transparent",
+        borderColor: selected ? "#2E78F5" : "#e2e8f0",
         color: selected ? "white" : "#475569",
       }}
     >
@@ -175,13 +175,13 @@ function OptionCard({
       className="flex w-full items-start gap-3 rounded-xl border px-4 py-3.5 text-left transition-all"
       style={{
         background: selected ? "#EEEDFE" : "white",
-        borderColor: selected ? "#534AB7" : "#e2e8f0",
+        borderColor: selected ? "#2E78F5" : "#e2e8f0",
       }}
     >
       <div
         style={{
           width: 18, height: 18, borderRadius: "50%", flexShrink: 0, marginTop: 2,
-          background: selected ? "#534AB7" : "transparent",
+          background: selected ? "#2E78F5" : "transparent",
           border: selected ? "none" : "2px solid #cbd5e1",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}
@@ -189,7 +189,7 @@ function OptionCard({
         {selected ? <div style={{ width: 6, height: 6, borderRadius: "50%", background: "white" }} /> : null}
       </div>
       <div>
-        <p className="text-sm font-medium" style={{ color: selected ? "#3C3489" : "#0f172a", margin: 0 }}>{label}</p>
+        <p className="text-sm font-medium" style={{ color: selected ? "#1A6CE4" : "#0f172a", margin: 0 }}>{label}</p>
         <p className="text-xs mt-0.5" style={{ color: selected ? "#7F77DD" : "#94a3b8", margin: 0 }}>{sub}</p>
       </div>
     </button>
@@ -205,7 +205,7 @@ function ScoreRing({ score }: { score: number }) {
       <circle cx={50} cy={50} r={r} fill="none" stroke="#e2e8f0" strokeWidth={8} />
       <circle
         cx={50} cy={50} r={r} fill="none"
-        stroke="#534AB7" strokeWidth={8}
+        stroke="#2E78F5" strokeWidth={8}
         strokeDasharray={`${dash} ${circ}`}
         strokeDashoffset={circ / 4}
         strokeLinecap="round"
@@ -367,7 +367,7 @@ export function FounderConversationalOnboarding({
                 >
                   <div
                     className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white mt-0.5"
-                    style={{ background: "#534AB7" }}
+                    style={{ background: "#2E78F5" }}
                   >
                     {i + 1}
                   </div>
@@ -382,7 +382,7 @@ export function FounderConversationalOnboarding({
               type="button"
               onClick={() => router.push("/founder/dashboard")}
               className="rounded-full px-6 py-3 text-sm font-semibold text-white"
-              style={{ background: "linear-gradient(135deg,#534AB7,#7c3aed)" }}
+              style={{ background: "linear-gradient(135deg,#2E78F5,#7c3aed)" }}
             >
               Open my dashboard
             </button>
@@ -418,7 +418,7 @@ export function FounderConversationalOnboarding({
                   width: i + 1 <= step ? 20 : 8,
                   height: 8,
                   borderRadius: 4,
-                  background: i + 1 < step ? "#534AB7" : i + 1 === step ? "#534AB7" : "#e2e8f0",
+                  background: i + 1 < step ? "#2E78F5" : i + 1 === step ? "#2E78F5" : "#e2e8f0",
                   transition: "all 0.3s ease",
                   opacity: i + 1 <= step ? 1 : 0.5,
                 }}
@@ -558,7 +558,7 @@ export function FounderConversationalOnboarding({
                 />
               </div>
               {Number(amount) > 0 ? (
-                <p className="mt-2 text-sm font-semibold" style={{ color: "#534AB7" }}>
+                <p className="mt-2 text-sm font-semibold" style={{ color: "#2E78F5" }}>
                   {formatAmount(Number(amount))}
                 </p>
               ) : null}
@@ -641,7 +641,7 @@ export function FounderConversationalOnboarding({
             disabled={!canAdvance() || saving}
             onClick={() => void handleNext()}
             className="rounded-full px-6 py-2.5 text-sm font-semibold text-white transition disabled:opacity-40"
-            style={{ background: "linear-gradient(135deg,#534AB7,#7c3aed)" }}
+            style={{ background: "linear-gradient(135deg,#2E78F5,#7c3aed)" }}
           >
             {saving
               ? "Saving…"

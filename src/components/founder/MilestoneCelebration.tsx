@@ -103,7 +103,7 @@ export function MilestoneCelebration({ achieved }: Props) {
 
         {/* Confetti dots */}
         <div style={{ position: "absolute", inset: 0, overflow: "hidden", borderRadius: 16, pointerEvents: "none" }}>
-          {["#534AB7","#818cf8","#fbbf24","#34d399","#f472b6"].map((color, i) => (
+          {["#2E78F5","#818cf8","#fbbf24","#34d399","#f472b6"].map((color, i) => (
             <div key={i} style={{
               position: "absolute",
               width: 6, height: 6, borderRadius: "50%",
@@ -125,7 +125,7 @@ export function MilestoneCelebration({ achieved }: Props) {
           style={{
             marginTop: 4,
             padding: "8px 20px", borderRadius: 99,
-            background: "#534AB7", color: "white",
+            background: "#2E78F5", color: "white",
             fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer",
           }}
         >

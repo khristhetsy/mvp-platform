@@ -345,7 +345,7 @@ export function PageBuilderLab() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `capitalos-page-builder-${pageSlug}.json`;
+    a.download = `icapos-page-builder-${pageSlug}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };

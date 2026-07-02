@@ -6,7 +6,7 @@ import { BUSINESS_PLAN_SECTIONS } from "./sections";
 import type { BusinessPlan } from "./types";
 
 const NAVY = "#0c2340";
-const INDIGO = "#534AB7";
+const INDIGO = "#2E78F5";
 const MUTED = "#64748b";
 
 function money(n: number): string {

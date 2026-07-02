@@ -111,16 +111,16 @@ function IntelligenceBanner({ questions }: { questions: Question[] }) {
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"
-            stroke="#534AB7" strokeWidth="2" strokeLinejoin="round" fill="#534AB7" />
+            stroke="#2E78F5" strokeWidth="2" strokeLinejoin="round" fill="#2E78F5" />
         </svg>
-        <span style={{ fontSize: 10, fontWeight: 700, color: "#534AB7", textTransform: "uppercase", letterSpacing: ".07em" }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: "#2E78F5", textTransform: "uppercase", letterSpacing: ".07em" }}>
           Deal room intelligence
         </span>
       </div>
 
       {/* Stats row */}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <Chip label={`${questions.length} questions`} color="#534AB7" bg="#DDD9F9" />
+        <Chip label={`${questions.length} questions`} color="#2E78F5" bg="#DDD9F9" />
         <Chip label={`${unanswered.length} unanswered`} color={unanswered.length > 0 ? "#854F0B" : "#1E6D3C"} bg={unanswered.length > 0 ? "#FAEEDA" : "#EAF3DE"} />
         {oldestUnanswered >= 1 && (
           <Chip
@@ -135,10 +135,10 @@ function IntelligenceBanner({ questions }: { questions: Question[] }) {
       {/* Pattern signals */}
       {focusedCategories.map(([cat, count]) => (
         <div key={cat} style={{ background: "white", borderRadius: 8, padding: "8px 10px", display: "flex", gap: 8, alignItems: "flex-start" }}>
-          <span style={{ fontSize: 9, fontWeight: 700, background: "#EEEDFE", color: "#534AB7", padding: "2px 6px", borderRadius: 10, whiteSpace: "nowrap", marginTop: 1 }}>
+          <span style={{ fontSize: 9, fontWeight: 700, background: "#EEEDFE", color: "#2E78F5", padding: "2px 6px", borderRadius: 10, whiteSpace: "nowrap", marginTop: 1 }}>
             {CATEGORY_LABELS[cat] ?? cat} ×{count}
           </span>
-          <p style={{ fontSize: 11, color: "#3C3489", margin: 0, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 11, color: "#1A6CE4", margin: 0, lineHeight: 1.5 }}>
             {PATTERN_SIGNALS[cat] ?? `${count} questions in this category — address them comprehensively.`}
           </p>
         </div>
@@ -214,7 +214,7 @@ function QACoachPanel({
         className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold transition"
         style={{
           background: open ? "#EEEDFE" : "white",
-          color: open ? "#534AB7" : "#6366f1",
+          color: open ? "#2E78F5" : "#6366f1",
           border: "1px solid #c7d2fe",
         }}
       >
@@ -240,9 +240,9 @@ function QACoachPanel({
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 0" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ animation: "spin 1s linear infinite" }}>
                 <circle cx="12" cy="12" r="10" stroke="#c7d2fe" strokeWidth="3" />
-                <path d="M12 2a10 10 0 0 1 10 10" stroke="#534AB7" strokeWidth="3" strokeLinecap="round" />
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="#2E78F5" strokeWidth="3" strokeLinecap="round" />
               </svg>
-              <span style={{ fontSize: 11, color: "#534AB7" }}>{t("generating_ai_draft")}</span>
+              <span style={{ fontSize: 11, color: "#2E78F5" }}>{t("generating_ai_draft")}</span>
             </div>
           ) : error ? (
             <p style={{ fontSize: 11, color: "#A32D2D", margin: 0 }}>{error}</p>
@@ -261,7 +261,7 @@ function QACoachPanel({
                   type="button"
                   onClick={() => { onInsert(draft); setOpen(false); }}
                   className="rounded-full px-3 py-1 text-[10px] font-semibold text-white transition hover:opacity-90"
-                  style={{ background: "#534AB7" }}
+                  style={{ background: "#2E78F5" }}
                 >
                   Insert draft
                 </button>
@@ -269,7 +269,7 @@ function QACoachPanel({
                   type="button"
                   onClick={() => void fetchDraft()}
                   className="rounded-full px-3 py-1 text-[10px] font-semibold transition hover:opacity-80"
-                  style={{ background: "white", color: "#534AB7", border: "1px solid #c7d2fe" }}
+                  style={{ background: "white", color: "#2E78F5", border: "1px solid #c7d2fe" }}
                 >
                   Regenerate
                 </button>
@@ -418,7 +418,7 @@ export function DealRoomQuestionsPanel({
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <span
                   className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em]"
-                  style={{ background: "#EEEDFE", color: "#534AB7" }}
+                  style={{ background: "#EEEDFE", color: "#2E78F5" }}
                 >
                   {q.category ?? "other"}
                 </span>
@@ -477,7 +477,7 @@ export function DealRoomQuestionsPanel({
                     disabled={loading !== null || !(responseById[q.id] ?? "").trim()}
                     onClick={() => void respond(q.id)}
                     className="rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                    style={{ background: "#534AB7" }}
+                    style={{ background: "#2E78F5" }}
                   >
                     {loading === `respond:${q.id}` ? "Saving…" : "Send response"}
                   </button>

@@ -53,9 +53,9 @@ export function AttachmentUploader({
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => { e.preventDefault(); setDragging(false); onFiles(e.dataTransfer.files); }}
-        className={`flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] ${dragging ? "border-[#0D9488] bg-[#F0FDFA]" : "border-slate-200 hover:border-slate-300"}`}
+        className={`flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2E78F5] ${dragging ? "border-[#2E78F5] bg-[#EFF6FF]" : "border-slate-200 hover:border-slate-300"}`}
       >
-        {busy ? <Loader2 className="h-5 w-5 animate-spin text-[#0D9488]" /> : <UploadCloud className="h-5 w-5 text-slate-400" aria-hidden />}
+        {busy ? <Loader2 className="h-5 w-5 animate-spin text-[#2E78F5]" /> : <UploadCloud className="h-5 w-5 text-slate-400" aria-hidden />}
         <p className="text-xs font-medium text-slate-700">{busy ? "Uploading…" : "Drop a file or click to upload"}</p>
         <p className="text-[10px] text-slate-400">{t("pdf_docx_pptx_max_25_mb_pptx_previews_as_pdf")}</p>
         <input ref={inputRef} type="file" className="hidden" accept=".pdf,.docx,.pptx" onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} />

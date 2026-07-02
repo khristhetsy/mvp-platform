@@ -21,7 +21,7 @@ export function EmailFoundationSection({ status }: Readonly<{ status: GmailFound
         {!status.googleConnected ? (
           <a
             href="/api/integrations/google/connect?returnTo=/admin/integrations"
-            className="ml-auto inline-flex items-center rounded-md bg-[#534AB7] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#3C3489]"
+            className="ml-auto inline-flex items-center rounded-md bg-[#2E78F5] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1A6CE4]"
           >
             Connect Google
           </a>

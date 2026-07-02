@@ -18,7 +18,7 @@ const S = {
   title: { fontSize: 16, fontWeight: 600, color: "var(--foreground)", margin: 0 } as React.CSSProperties,
   btn: (v: "primary" | "ghost" | "danger") => ({
     padding: "6px 14px", fontSize: 12, fontWeight: 500, borderRadius: 6, border: "none", cursor: "pointer",
-    background: v === "primary" ? "#534AB7" : v === "danger" ? "#FCEBEB" : "var(--muted)",
+    background: v === "primary" ? "#2E78F5" : v === "danger" ? "#FCEBEB" : "var(--muted)",
     color: v === "danger" ? "#A32D2D" : v === "ghost" ? "var(--foreground)" : "#fff",
   } as React.CSSProperties),
   table: { width: "100%", borderCollapse: "collapse" as const, fontSize: 12 },

@@ -12,7 +12,7 @@ type DrawerGroup = "interests" | "introRequests" | "savedDeals";
 
 const DRAWER_CFG = {
   interests: {
-    accent: "#534AB7",
+    accent: "#2E78F5",
     accentBg: "#EEEDFE",
     label: "Expressed interest",
   },
@@ -99,7 +99,7 @@ function DrawerStatBox({ label, value }: { label: string; value: string }) {
 // ---------------------------------------------------------------------------
 type RowVariant = "medium" | "high" | "neutral" | "success";
 const VARIANT_CLS: Record<RowVariant, string> = {
-  medium: "bg-[#EEEDFE] text-[#3C3489]",
+  medium: "bg-[#EEEDFE] text-[#1A6CE4]",
   high: "bg-[#FAEEDA] text-[#854F0B]",
   neutral: "bg-slate-100 text-slate-600",
   success: "bg-[#EAF3DE] text-[#1E6D3C]",
@@ -133,7 +133,7 @@ function AdviceBox({ lines }: { lines: string[] }) {
       <div className="mb-3 flex items-center gap-2">
         <div
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-          style={{ background: "#534AB7" }}
+          style={{ background: "#2E78F5" }}
         >
           AI
         </div>

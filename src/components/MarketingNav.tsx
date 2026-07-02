@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
-import { CapitalOSLogo } from "@/components/CapitalOSLogo";
+import { IcapOSLogo } from "@/components/IcapOSLogo";
 
 export const marketingNavItems = [
   { href: "/", label: "Overview" },
@@ -28,8 +28,8 @@ export function MarketingNav() {
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-[var(--shadow-panel)] backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 lg:px-6">
         <Link href="/" className="flex shrink-0 items-center" onClick={() => setMobileOpen(false)}>
-          <CapitalOSLogo height={32} className="md:hidden" />
-          <CapitalOSLogo height={28} className="hidden md:block" priority />
+          <IcapOSLogo height={32} className="md:hidden" />
+          <IcapOSLogo height={28} className="hidden md:block" priority />
         </Link>
 
         <nav className="hidden items-center gap-5 text-sm font-medium text-slate-600 lg:flex" aria-label="Primary">

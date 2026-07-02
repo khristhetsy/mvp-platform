@@ -126,7 +126,7 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{sequences.length} total</div>
         </div>
         <button onClick={() => setShowCreate(!showCreate)}
-          style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer" }}>
+          style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
           + New sequence
         </button>
       </div>
@@ -141,7 +141,7 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
               onKeyDown={(e) => e.key === "Enter" && handleCreateSequence()}
               style={{ flex: 1, fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }} />
             <button onClick={handleCreateSequence} disabled={saving}
-              style={{ fontSize: 12, padding: "7px 14px", borderRadius: 8, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer" }}>
+              style={{ fontSize: 12, padding: "7px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
               {saving ? "Creating…" : "Create"}
             </button>
             <button onClick={() => setShowCreate(false)}
@@ -175,7 +175,7 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
                 {steps.sort((a, b) => a.step_order - b.step_order).map((step, i) => (
                   <div key={step.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 8 }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
-                      <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#EEEDFE", color: "#3C3489", fontSize: 11, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#EEEDFE", color: "#1A6CE4", fontSize: 11, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center" }}>
                         {step.step_order}
                       </div>
                       {i < steps.length - 1 && <div style={{ width: 1, height: 12, background: "var(--border)", margin: "3px 0" }} />}
@@ -218,7 +218,7 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button onClick={() => handleAddStep(seq.id, steps.length + 1)}
-                        style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer" }}>
+                        style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
                         Add step
                       </button>
                       <button onClick={() => setAddingStep(null)}
@@ -238,7 +238,7 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
                 <div style={{ display: "flex", gap: 6, marginTop: 12, paddingTop: 12, borderTop: "0.5px solid var(--border)" }}>
                   {seq.status === "draft" && (
                     <button onClick={() => handleStatusChange(seq.id, "active")}
-                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer" }}>
+                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
                       Activate
                     </button>
                   )}
@@ -250,7 +250,7 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
                   )}
                   {seq.status === "paused" && (
                     <button onClick={() => handleStatusChange(seq.id, "active")}
-                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer" }}>
+                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
                       Resume
                     </button>
                   )}

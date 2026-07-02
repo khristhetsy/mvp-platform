@@ -73,7 +73,7 @@ function Terminal({ title, message }: { title: string; message: string }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F8F9FC", padding: "40px 20px", fontFamily: "system-ui, sans-serif" }}>
       <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 20, padding: "40px 44px", maxWidth: 460, textAlign: "center" }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: "#534AB7", letterSpacing: "0.04em", margin: "0 0 16px" }}>{BRAND.productName}</p>
+        <p style={{ fontSize: 13, fontWeight: 600, color: "#2E78F5", letterSpacing: "0.04em", margin: "0 0 16px" }}>{BRAND.productName}</p>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: "#111827", margin: "0 0 10px" }}>{title}</h1>
         <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6, margin: 0 }}>{message}</p>
       </div>

@@ -34,7 +34,7 @@ export function DashboardExpandableSection({
             gap: 6,
             fontSize: 13,
             fontWeight: 600,
-            color: "#534AB7",
+            color: "#2E78F5",
             background: "#EEEDFE",
             border: "none",
             borderRadius: 99,
@@ -48,14 +48,14 @@ export function DashboardExpandableSection({
           {expanded ? (
             <>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M18 15l-6-6-6 6" stroke="#534AB7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M18 15l-6-6-6 6" stroke="#2E78F5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               {hideLabel}
             </>
           ) : (
             <>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M6 9l6 6 6-6" stroke="#534AB7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M6 9l6 6 6-6" stroke="#2E78F5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               {showLabel}
             </>

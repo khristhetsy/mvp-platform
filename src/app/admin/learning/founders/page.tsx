@@ -241,14 +241,14 @@ export default async function AdminLearningFoundersPage() {
                               className="h-full rounded-full transition-all"
                               style={{
                                 width: `${row.overallPct}%`,
-                                background: row.overallPct >= 80 ? "#3B6D11" : "#534AB7",
+                                background: row.overallPct >= 80 ? "#3B6D11" : "#2E78F5",
                               }}
                             />
                           </div>
                           <span className="text-xs text-slate-600">{row.overallPct}%</span>
                         </div>
                       </td>
-                      <td className="px-5 py-4 font-semibold" style={{ color: row.rating >= 70 ? "#3B6D11" : row.rating >= 40 ? "#534AB7" : "#B91C1C" }}>
+                      <td className="px-5 py-4 font-semibold" style={{ color: row.rating >= 70 ? "#3B6D11" : row.rating >= 40 ? "#2E78F5" : "#B91C1C" }}>
                         {row.rating}
                       </td>
                       <td className="px-5 py-4 text-sm text-slate-600">{row.completedCount}</td>

@@ -172,7 +172,7 @@ export function TaskReminderToast() {
               marginTop: 6,
               fontSize: 11.5,
               fontWeight: 600,
-              color: "#534AB7",
+              color: "#2E78F5",
               textDecoration: "none",
             }}
           >

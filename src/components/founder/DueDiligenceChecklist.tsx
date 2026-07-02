@@ -233,7 +233,7 @@ function CategorySection({
           <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
             <div
               className="h-full rounded-full transition-all duration-300"
-              style={{ width: `${pct}%`, background: pct === 100 ? "#059669" : "#534AB7" }}
+              style={{ width: `${pct}%`, background: pct === 100 ? "#059669" : "#2E78F5" }}
             />
           </div>
         </div>
@@ -319,7 +319,7 @@ export function DueDiligenceChecklist() {
       {/* Stats strip */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">
-          <p className="text-xl font-bold" style={{ color: "#534AB7" }}>{alwaysDone}/{alwaysItems.length}</p>
+          <p className="text-xl font-bold" style={{ color: "#2E78F5" }}>{alwaysDone}/{alwaysItems.length}</p>
           <p className="text-[10px] text-slate-500">{t("critical_items_ready")}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">
@@ -334,7 +334,7 @@ export function DueDiligenceChecklist() {
 
       {/* Intro */}
       <div className="rounded-xl border border-indigo-100 bg-[#FAFAFF] px-4 py-3">
-        <p className="text-xs font-semibold" style={{ color: "#534AB7" }}>{t("what_this_covers")}</p>
+        <p className="text-xs font-semibold" style={{ color: "#2E78F5" }}>{t("what_this_covers")}</p>
         <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">
           This checklist covers what institutional investors — VCs, family offices, and angels writing $500K+ — typically request during diligence. Start with &quot;Always requested&quot; items before your first LP meeting.
         </p>
@@ -354,7 +354,7 @@ export function DueDiligenceChecklist() {
             onClick={() => setFilterUrgency(key as "all" | "always" | "often")}
             className="rounded-full px-3 py-1 text-[11px] font-semibold transition"
             style={{
-              background: filterUrgency === key ? "#534AB7" : "#F1F5F9",
+              background: filterUrgency === key ? "#2E78F5" : "#F1F5F9",
               color: filterUrgency === key ? "white" : "#475569",
             }}
           >

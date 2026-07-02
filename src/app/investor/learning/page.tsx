@@ -7,7 +7,7 @@ import { FOUNDER_COURSES, listCourseCategories } from "@/lib/learning/courses";
 
 export const dynamic = "force-dynamic";
 
-const ACCENT = "#534AB7";
+const ACCENT = "#2E78F5";
 
 const CATEGORY_COLORS: Record<string, { bg: string; color: string }> = {
   "Investor Readiness": { bg: "#EEEDFE", color: ACCENT },

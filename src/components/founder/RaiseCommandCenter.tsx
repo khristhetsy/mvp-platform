@@ -70,7 +70,7 @@ function RoomsSection({ rooms }: { rooms: CommandCenterRoom[] }) {
     return (
       <div className="rounded-xl border border-dashed border-slate-200 p-5 text-center text-sm text-slate-400">
         No active deal rooms.{" "}
-        <Link href="/founder/deal-room" className="font-semibold" style={{ color: "#534AB7" }}>
+        <Link href="/founder/deal-room" className="font-semibold" style={{ color: "#2E78F5" }}>
           Open a room →
         </Link>
       </div>
@@ -149,7 +149,7 @@ function FollowUpsSection({ investors }: { investors: CommandCenterInvestor[] })
     return (
       <div className="rounded-xl border border-dashed border-slate-200 p-5 text-center text-sm text-slate-400">
         No pending follow-ups.{" "}
-        <Link href="/founder/investor-pipeline" className="font-semibold" style={{ color: "#534AB7" }}>
+        <Link href="/founder/investor-pipeline" className="font-semibold" style={{ color: "#2E78F5" }}>
           View pipeline →
         </Link>
       </div>
@@ -201,7 +201,7 @@ function FollowUpsSection({ investors }: { investors: CommandCenterInvestor[] })
       <Link
         href="/founder/investor-pipeline"
         className="block pt-1 text-center text-xs font-semibold"
-        style={{ color: "#534AB7" }}
+        style={{ color: "#2E78F5" }}
       >
         View full pipeline →
       </Link>
@@ -242,13 +242,13 @@ function MetricsStrip({
       label: "Active rooms",
       value: `${roomCount}`,
       sub: "",
-      color: "#534AB7",
+      color: "#2E78F5",
     },
     {
       label: "Pledged",
       value: pledgePct !== null ? `${pledgePct}%` : "$0",
       sub: pledgePct !== null ? " of target" : " raised",
-      color: pledgePct && pledgePct >= 50 ? "#16a34a" : "#534AB7",
+      color: pledgePct && pledgePct >= 50 ? "#16a34a" : "#2E78F5",
     },
     {
       label: "Follow-ups",
@@ -348,8 +348,8 @@ export function RaiseCommandCenter({
               onClick={() => setTab(t.key)}
               className="flex items-center gap-1.5 px-5 py-3 text-xs font-semibold transition"
               style={{
-                color: tab === t.key ? "#534AB7" : "#64748b",
-                borderBottom: tab === t.key ? "2px solid #534AB7" : "2px solid transparent",
+                color: tab === t.key ? "#2E78F5" : "#64748b",
+                borderBottom: tab === t.key ? "2px solid #2E78F5" : "2px solid transparent",
                 background: "transparent",
               }}
             >
@@ -359,7 +359,7 @@ export function RaiseCommandCenter({
                   className="rounded-full px-1.5 py-0.5 text-[9px] font-bold"
                   style={{
                     background: tab === t.key ? "#EEEDFE" : "#f1f5f9",
-                    color: tab === t.key ? "#534AB7" : "#64748b",
+                    color: tab === t.key ? "#2E78F5" : "#64748b",
                   }}
                 >
                   {t.badge}
@@ -385,7 +385,7 @@ export function RaiseCommandCenter({
           <Link
             key={link.href}
             href={link.href}
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-700 transition hover:border-indigo-200 hover:bg-[#EEEDFE] hover:text-[#534AB7]"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-700 transition hover:border-indigo-200 hover:bg-[#EEEDFE] hover:text-[#2E78F5]"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d={link.icon} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />

@@ -14,7 +14,7 @@ function looksHtml(s: string): boolean {
   return /<[a-z!/][\s\S]*>/i.test(s);
 }
 
-const SWATCHES = ["#0F2147", "#185FA5", "#0D9488", "#475569", "#A32D2D", "#000000"];
+const SWATCHES = ["#0F2147", "#185FA5", "#2E78F5", "#475569", "#A32D2D", "#000000"];
 
 /**
  * Rich email-signature editor (contentEditable). Produces HTML that's sanitized

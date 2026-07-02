@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const ACCENT = "#534AB7";
+const ACCENT = "#2E78F5";
 
 type State = {
   isPublished: boolean;

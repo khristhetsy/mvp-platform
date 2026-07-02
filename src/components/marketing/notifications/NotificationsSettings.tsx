@@ -23,7 +23,7 @@ type Loaded = {
   prefs: PrefRow[];
 };
 
-const PURPLE = "#534AB7";
+const PURPLE = "#2E78F5";
 const CHANNEL_LABEL: Record<Channel, string> = { in_app: "In-app", email: "Email", push: "Push" };
 const PUSH_ENABLED = false;
 

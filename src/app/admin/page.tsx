@@ -124,7 +124,7 @@ export default async function AdminDashboardPage() {
             <p className="text-xs font-medium" style={{ color: "#AFA9EC" }}>{t("eyebrow")}</p>
             <h1 className="text-lg font-medium text-white">{t("title")}</h1>
           </div>
-          <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: "#534AB7", color: "#EEEDFE" }}>
+          <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: "#2E78F5", color: "#EEEDFE" }}>
             {profile.role}
           </span>
         </div>

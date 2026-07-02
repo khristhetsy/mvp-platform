@@ -38,7 +38,7 @@ function DStatBox({ label, value }: { label: string; value: string }) {
 type BVariant = "success" | "medium" | "high" | "neutral" | "critical";
 const BCLS: Record<BVariant, string> = {
   success: "bg-[#EAF3DE] text-[#1E6D3C]",
-  medium: "bg-[#EEEDFE] text-[#3C3489]",
+  medium: "bg-[#EEEDFE] text-[#1A6CE4]",
   high: "bg-[#FAEEDA] text-[#854F0B]",
   neutral: "bg-slate-100 text-slate-600",
   critical: "bg-[#FCEBEB] text-[#A32D2D]",
@@ -61,7 +61,7 @@ function AdviceBox({ lines }: { lines: string[] }) {
       <div className="mb-3 flex items-center gap-2">
         <div
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-          style={{ background: "#534AB7" }}
+          style={{ background: "#2E78F5" }}
         >
           AI
         </div>
@@ -481,17 +481,17 @@ function OutreachKit({
       >
         <div className="flex items-center gap-2">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="#534AB7" strokeWidth="2" />
-            <polyline points="22,6 12,13 2,6" stroke="#534AB7" strokeWidth="2" />
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="#2E78F5" strokeWidth="2" />
+            <polyline points="22,6 12,13 2,6" stroke="#2E78F5" strokeWidth="2" />
           </svg>
-          <span className="text-xs font-semibold" style={{ color: "#534AB7" }}>{t("outreach_kit")}</span>
-          <span className="rounded-full px-2 py-0.5 text-[9px] font-bold" style={{ background: "#534AB7", color: "white" }}>{t("new")}</span>
+          <span className="text-xs font-semibold" style={{ color: "#2E78F5" }}>{t("outreach_kit")}</span>
+          <span className="rounded-full px-2 py-0.5 text-[9px] font-bold" style={{ background: "#2E78F5", color: "white" }}>{t("new")}</span>
         </div>
         <svg
           width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"
           style={{ transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "rotate(0)" }}
         >
-          <path d="M6 9l6 6 6-6" stroke="#534AB7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M6 9l6 6 6-6" stroke="#2E78F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
@@ -514,7 +514,7 @@ function OutreachKit({
                 type="button"
                 onClick={() => copy(subject, "subject")}
                 className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition"
-                style={{ background: copiedSubject ? "#EAF3DE" : "#EEEDFE", color: copiedSubject ? "#1E6D3C" : "#534AB7" }}
+                style={{ background: copiedSubject ? "#EAF3DE" : "#EEEDFE", color: copiedSubject ? "#1E6D3C" : "#2E78F5" }}
               >
                 {copiedSubject ? "Copied ✓" : "Copy"}
               </button>
@@ -532,7 +532,7 @@ function OutreachKit({
                 type="button"
                 onClick={() => copy(editedBody, "body")}
                 className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold transition"
-                style={{ background: copiedBody ? "#EAF3DE" : "#EEEDFE", color: copiedBody ? "#1E6D3C" : "#534AB7" }}
+                style={{ background: copiedBody ? "#EAF3DE" : "#EEEDFE", color: copiedBody ? "#1E6D3C" : "#2E78F5" }}
               >
                 {copiedBody ? "Copied ✓" : "Copy"}
               </button>

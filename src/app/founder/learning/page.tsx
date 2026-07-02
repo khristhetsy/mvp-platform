@@ -85,7 +85,7 @@ function stageIcon(stage: CapitalStage) {
     stage_2: "#C2410C",
     stage_3: "#7E22CE",
   };
-  const color = colors[stage] ?? "#534AB7";
+  const color = colors[stage] ?? "#2E78F5";
   if (stage === "stage_0") return <IconLayers color={color} />;
   if (stage === "stage_1") return <IconTrendingUp color={color} />;
   if (stage === "stage_2") return <IconZapStage color={color} />;
@@ -214,13 +214,13 @@ export default async function FounderLearningPage() {
                               <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                                 <div
                                   className="h-full rounded-full transition-all"
-                                  style={{ width: `${pct}%`, background: pct >= 80 ? "#3B6D11" : "#534AB7" }}
+                                  style={{ width: `${pct}%`, background: pct >= 80 ? "#3B6D11" : "#2E78F5" }}
                                 />
                               </div>
                             </div>
                             <span
                               className="w-10 text-right text-xs font-semibold"
-                              style={{ color: pct >= 80 ? "#3B6D11" : "#534AB7" }}
+                              style={{ color: pct >= 80 ? "#3B6D11" : "#2E78F5" }}
                             >
                               {pct}%
                             </span>
@@ -308,7 +308,7 @@ export default async function FounderLearningPage() {
                 <div
                   className="mx-auto my-4 flex h-20 w-20 items-center justify-center rounded-full"
                   style={{
-                    background: `conic-gradient(#534AB7 0% ${rating}%, #F1F5F9 ${rating}% 100%)`,
+                    background: `conic-gradient(#2E78F5 0% ${rating}%, #F1F5F9 ${rating}% 100%)`,
                   }}
                 >
                   <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white">
@@ -333,7 +333,7 @@ export default async function FounderLearningPage() {
                 <div className="divide-y divide-slate-100">
                   {(
                     [
-                      { href: "/founder/learning/plan",     svgIcon: <IconBrain color="#534AB7" />,          label: "My AI learning plan", bg: "#EEEDFB" },
+                      { href: "/founder/learning/plan",     svgIcon: <IconBrain color="#2E78F5" />,          label: "My AI learning plan", bg: "#EEEDFB" },
                       { href: "/founder/learning/schedule", svgIcon: <IconCalendarDays color="#3B6D11" />,   label: "View my schedule",    bg: "#EAF3DE" },
                       { href: "/founder/learning/progress", svgIcon: <IconBarChart color="#92400E" />,        label: "Progress & badges",   bg: "#FEF3C7" },
                     ]

@@ -16,7 +16,7 @@ interface Props {
 }
 
 const AVATAR_COLORS = [
-  { bg: "#EEEDFE", color: "#3C3489" },
+  { bg: "#EEEDFE", color: "#1A6CE4" },
   { bg: "#E1F5EE", color: "#085041" },
   { bg: "#E6F1FB", color: "#0C447C" },
   { bg: "#FAEEDA", color: "#633806" },
@@ -26,13 +26,13 @@ const EVENT_COLOR: Record<string, { bg: string; color: string }> = {
   sent:       { bg: "#F1EFE8", color: "#5F5E5A" },
   delivered:  { bg: "#E1F5EE", color: "#0F6E56" },
   opened:     { bg: "#E6F1FB", color: "#185FA5" },
-  clicked:    { bg: "#EEEDFE", color: "#3C3489" },
+  clicked:    { bg: "#EEEDFE", color: "#1A6CE4" },
   bounced:    { bg: "#FAEEDA", color: "#854F0B" },
   unsubscribed: { bg: "#FCEBEB", color: "#A32D2D" },
   spam_complaint: { bg: "#FCEBEB", color: "#A32D2D" },
 };
 const SOURCE_BADGE: Record<string, { bg: string; color: string }> = {
-  icfo:       { bg: "#EEEDFE", color: "#3C3489" },
+  icfo:       { bg: "#EEEDFE", color: "#1A6CE4" },
   cold:       { bg: "#F1EFE8", color: "#444441" },
   csv_import: { bg: "#E6F1FB", color: "#185FA5" },
   csv:        { bg: "#E6F1FB", color: "#185FA5" },
@@ -162,7 +162,7 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
             ↑ Import CSV
           </button>
           <button onClick={() => { setShowAdd(!showAdd); setShowImport(false); }}
-            style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 12px", borderRadius: 8, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer" }}>
+            style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 12px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
             + Add contact
           </button>
         </div>
@@ -246,10 +246,10 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
                 {/* Tags cell */}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
                   {tags.map((tag) => (
-                    <span key={tag} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10, padding: "2px 6px", borderRadius: 12, background: "#EEEDFE", color: "#3C3489", fontWeight: 500 }}>
+                    <span key={tag} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10, padding: "2px 6px", borderRadius: 12, background: "#EEEDFE", color: "#1A6CE4", fontWeight: 500 }}>
                       {tag}
                       {isEditingTags && (
-                        <button onClick={() => removeTag(c, tag)} style={{ background: "none", border: "none", cursor: "pointer", color: "#3C3489", padding: 0, lineHeight: 1, fontSize: 11 }}>×</button>
+                        <button onClick={() => removeTag(c, tag)} style={{ background: "none", border: "none", cursor: "pointer", color: "#1A6CE4", padding: 0, lineHeight: 1, fontSize: 11 }}>×</button>
                       )}
                     </span>
                   ))}
@@ -262,7 +262,7 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
                         if (e.key === "Escape") setEditTagsId(null);
                       }}
                       placeholder="add tag…"
-                      style={{ fontSize: 10, width: 70, border: "1px solid #534AB7", borderRadius: 8, padding: "2px 5px", outline: "none", background: "var(--input)" }}
+                      style={{ fontSize: 10, width: 70, border: "1px solid #2E78F5", borderRadius: 8, padding: "2px 5px", outline: "none", background: "var(--input)" }}
                     />
                   ) : (
                     <button onClick={() => { setEditTagsId(c.id); setTagInput(""); }}
@@ -306,7 +306,7 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
             )}
             {page < totalPages && (
               <a href={`/admin/marketing/contacts?page=${page + 1}&search=${search}&list_id=${listId}&tag=${tagFilter}`}
-                style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "none", background: "#534AB7", color: "#EEEDFE", textDecoration: "none" }}>
+                style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", textDecoration: "none" }}>
                 Next →
               </a>
             )}
@@ -334,7 +334,7 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
                   {activity.contact.company && <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{activity.contact.company}</div>}
                   <div style={{ marginTop: 8, display: "flex", gap: 4, flexWrap: "wrap" }}>
                     {(activity.contact.tags ?? []).map((t) => (
-                      <span key={t} style={{ fontSize: 10, padding: "2px 6px", borderRadius: 12, background: "#EEEDFE", color: "#3C3489" }}>{t}</span>
+                      <span key={t} style={{ fontSize: 10, padding: "2px 6px", borderRadius: 12, background: "#EEEDFE", color: "#1A6CE4" }}>{t}</span>
                     ))}
                   </div>
                   {activity.unsubscribed && (
@@ -439,7 +439,7 @@ function AddContactForm({ lists, onDone }: { lists: MarketingList[]; onDone: () 
       )}
       {error && <div style={{ color: "#A32D2D", fontSize: 12, marginTop: 8 }}>{error}</div>}
       <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-        <button type="submit" disabled={saving} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer" }}>{saving ? "Saving…" : "Save contact"}</button>
+        <button type="submit" disabled={saving} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>{saving ? "Saving…" : "Save contact"}</button>
         <button type="button" onClick={onDone} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>Cancel</button>
       </div>
     </form>

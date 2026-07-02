@@ -100,7 +100,7 @@ export default async function MarketingDashboardPage() {
         </div>
         <Link
           href="/admin/marketing/campaigns"
-          style={{ display: "flex", alignItems: "center", gap: 6, background: "#534AB7", color: "#EEEDFE", padding: "7px 14px", borderRadius: 8, fontSize: 12, textDecoration: "none", fontWeight: 500 }}
+          style={{ display: "flex", alignItems: "center", gap: 6, background: "#2E78F5", color: "#EEEDFE", padding: "7px 14px", borderRadius: 8, fontSize: 12, textDecoration: "none", fontWeight: 500 }}
         >
           + New campaign
         </Link>
@@ -115,7 +115,7 @@ export default async function MarketingDashboardPage() {
         <div style={{ ...card, overflow: "hidden" }}>
           <div style={{ padding: "12px 16px", borderBottom: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ fontSize: 13, fontWeight: 500 }}>Active campaigns</span>
-            <Link href="/admin/marketing/campaigns" style={{ fontSize: 12, color: "#534AB7", textDecoration: "none" }}>View all →</Link>
+            <Link href="/admin/marketing/campaigns" style={{ fontSize: 12, color: "#2E78F5", textDecoration: "none" }}>View all →</Link>
           </div>
           {(campaigns.data ?? []).length === 0 ? (
             <div style={{ padding: "24px 16px", fontSize: 13, color: "var(--muted-foreground)", textAlign: "center" }}>No active campaigns yet.</div>
@@ -133,11 +133,11 @@ export default async function MarketingDashboardPage() {
                       {(c.list as { name?: string } | null)?.name ?? "No list"} · {c.stat_sent.toLocaleString()} sent
                     </div>
                     <div style={{ height: 3, background: "var(--muted)", borderRadius: 2, marginTop: 6, overflow: "hidden" }}>
-                      <div style={{ height: "100%", width: `${prog}%`, background: "#534AB7", borderRadius: 2 }} />
+                      <div style={{ height: "100%", width: `${prog}%`, background: "#2E78F5", borderRadius: 2 }} />
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: "#534AB7" }}>{openR}{openR !== "—" ? "%" : ""}</div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: "#2E78F5" }}>{openR}{openR !== "—" ? "%" : ""}</div>
                     <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>open</div>
                   </div>
                   <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500, whiteSpace: "nowrap" }}>
@@ -153,7 +153,7 @@ export default async function MarketingDashboardPage() {
         <div style={{ ...card, overflow: "hidden" }}>
           <div style={{ padding: "12px 16px", borderBottom: "0.5px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ fontSize: 13, fontWeight: 500 }}>Active sequences</span>
-            <Link href="/admin/marketing/sequences" style={{ fontSize: 12, color: "#534AB7", textDecoration: "none" }}>View all →</Link>
+            <Link href="/admin/marketing/sequences" style={{ fontSize: 12, color: "#2E78F5", textDecoration: "none" }}>View all →</Link>
           </div>
           {(sequences.data ?? []).length === 0 ? (
             <div style={{ padding: "24px 16px", fontSize: 13, color: "var(--muted-foreground)", textAlign: "center" }}>No active sequences yet.</div>
@@ -179,7 +179,7 @@ export default async function MarketingDashboardPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10 }}>
           {[
             { label: "Sent",      val: sent,   color: "var(--muted-foreground)", bg: "var(--muted)" },
-            { label: "Opened",    val: opened,  color: "#534AB7",                bg: "#EEEDFE" },
+            { label: "Opened",    val: opened,  color: "#2E78F5",                bg: "#EEEDFE" },
             { label: "Clicked",   val: clicked, color: "#0F6E56",                bg: "#E1F5EE" },
           ].map((s) => (
             <div key={s.label} style={{ background: s.bg, borderRadius: 8, padding: "10px 14px" }}>

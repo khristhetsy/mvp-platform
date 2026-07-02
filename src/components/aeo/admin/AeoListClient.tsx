@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-const PURPLE = "#534AB7";
+const PURPLE = "#2E78F5";
 
 type PageRow = {
   id: string; slug: string; status: "draft" | "in_review" | "published";

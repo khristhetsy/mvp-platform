@@ -297,7 +297,7 @@ function OpportunitiesTable({ rows }: { rows: InvestorOpportunityRow[] }) {
                   </Link>
                   <Link
                     href={`/investor/portfolio?add_company_id=${row.companyId}&company_name=${encodeURIComponent(row.companyName)}${row.slug ? `&slug=${row.slug}` : ""}`}
-                    className="rounded-md border border-[#534AB7] bg-[#EEEDFE] px-2.5 py-1 text-[11px] font-medium text-[#534AB7] transition-colors hover:bg-[#534AB7] hover:text-white"
+                    className="rounded-md border border-[#2E78F5] bg-[#EEEDFE] px-2.5 py-1 text-[11px] font-medium text-[#2E78F5] transition-colors hover:bg-[#2E78F5] hover:text-white"
                   >
                     + Track
                   </Link>

@@ -134,9 +134,9 @@ function StageNode({
   const isFuture  = index > currentIndex;
 
   const nodeColor = isDone
-    ? "#534AB7"
+    ? "#2E78F5"
     : isCurrent
-    ? "#534AB7"
+    ? "#2E78F5"
     : "#e2e8f0";
 
   const labelColor = isFuture ? "text-slate-400" : "text-slate-800";
@@ -149,7 +149,7 @@ function StageNode({
         <div
           className="h-0.5 flex-1"
           style={{
-            background: index === 0 ? "transparent" : isDone || isCurrent ? "#534AB7" : "#e2e8f0",
+            background: index === 0 ? "transparent" : isDone || isCurrent ? "#2E78F5" : "#e2e8f0",
           }}
         />
 
@@ -180,7 +180,7 @@ function StageNode({
               className="absolute inset-0 rounded-full"
               style={{
                 animation: "ping 2s cubic-bezier(0,0,0.2,1) infinite",
-                background: "#534AB7",
+                background: "#2E78F5",
                 opacity: 0.2,
               }}
             />
@@ -191,7 +191,7 @@ function StageNode({
         <div
           className="h-0.5 flex-1"
           style={{
-            background: index === total - 1 ? "transparent" : isDone ? "#534AB7" : "#e2e8f0",
+            background: index === total - 1 ? "transparent" : isDone ? "#2E78F5" : "#e2e8f0",
           }}
         />
       </div>
@@ -199,7 +199,7 @@ function StageNode({
       {/* Label */}
       <p
         className={`mt-1.5 truncate text-center text-[10px] font-semibold ${labelColor}`}
-        style={isCurrent ? { color: "#534AB7" } : undefined}
+        style={isCurrent ? { color: "#2E78F5" } : undefined}
       >
         {stage.shortLabel}
       </p>
@@ -244,7 +244,7 @@ export function FounderFundraisingMilestoneTracker({
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       {/* Accent bar */}
-      <div style={{ height: 3, background: "linear-gradient(90deg,#534AB7,#7c3aed,#06b6d4)" }} />
+      <div style={{ height: 3, background: "linear-gradient(90deg,#2E78F5,#7c3aed,#06b6d4)" }} />
 
       <div className="p-5">
         {/* Header */}
@@ -255,7 +255,7 @@ export function FounderFundraisingMilestoneTracker({
               style={{ background: "#EEEDFE" }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M3 17l4-8 4 4 4-6 4 10" stroke="#534AB7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M3 17l4-8 4 4 4-6 4 10" stroke="#2E78F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
             <div>
@@ -265,7 +265,7 @@ export function FounderFundraisingMilestoneTracker({
           </div>
           <span
             className="rounded-full px-2.5 py-1 text-[10px] font-bold"
-            style={{ background: "#EEEDFE", color: "#534AB7" }}
+            style={{ background: "#EEEDFE", color: "#2E78F5" }}
           >
             {current.label}
           </span>
@@ -292,7 +292,7 @@ export function FounderFundraisingMilestoneTracker({
           <div className="mb-2 flex items-center gap-2">
             <span
               className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em]"
-              style={{ background: "#534AB7", color: "white" }}
+              style={{ background: "#2E78F5", color: "white" }}
             >
               Now
             </span>
@@ -305,7 +305,7 @@ export function FounderFundraisingMilestoneTracker({
               <div key={i} className="flex items-start gap-2">
                 <div
                   className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white"
-                  style={{ background: "#534AB7" }}
+                  style={{ background: "#2E78F5" }}
                 >
                   {i + 1}
                 </div>

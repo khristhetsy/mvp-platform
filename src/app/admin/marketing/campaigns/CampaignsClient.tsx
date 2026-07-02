@@ -110,7 +110,7 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
         </div>
         <button
           onClick={() => setShowCreate(!showCreate)}
-          style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer" }}
+          style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}
         >
           <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> New campaign
         </button>
@@ -169,7 +169,7 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
             {!form.scheduled_at && (
               <button onClick={() => handleCreate(true)}
                 disabled={saving || !form.name || !form.list_id || !form.template_id}
-                style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer", opacity: (!form.name || !form.list_id || !form.template_id) ? 0.5 : 1 }}>
+                style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer", opacity: (!form.name || !form.list_id || !form.template_id) ? 0.5 : 1 }}>
                 Send now
               </button>
             )}
@@ -219,7 +219,7 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", borderBottom: "0.5px solid var(--border)" }}>
                   {[
                     { label: "Sent",      value: c.stat_sent.toLocaleString(),            color: "var(--foreground)" },
-                    { label: "Opened",    value: rate(c.stat_opened, c.stat_sent),        color: "#534AB7" },
+                    { label: "Opened",    value: rate(c.stat_opened, c.stat_sent),        color: "#2E78F5" },
                     { label: "Clicked",   value: rate(c.stat_clicked, c.stat_sent),       color: "#1D9E75" },
                     { label: "Bounced",   value: rate(c.stat_bounced, c.stat_sent),       color: "#854F0B" },
                   ].map((stat, i) => (
@@ -234,7 +234,7 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
                 <div style={{ padding: "10px 16px", display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                   {c.status === "draft" && (
                     <button onClick={() => handleAction(c.id, "send")} disabled={acting === c.id + "send"}
-                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer" }}>
+                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
                       {acting === c.id + "send" ? "Sending…" : "Send now"}
                     </button>
                   )}
@@ -249,7 +249,7 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
                   )}
                   {c.status === "paused" && (
                     <button onClick={() => handleAction(c.id, "send")} disabled={acting === c.id + "send"}
-                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer" }}>
+                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
                       Resume
                     </button>
                   )}
@@ -323,7 +323,7 @@ function AnalyticsPanel({ data }: { data: CampaignDetail }) {
   const stats = [
     { label: "Sent",          value: data.stat_sent,          color: "var(--foreground)" },
     { label: "Delivered",     value: data.stat_delivered,     color: "#0F6E56" },
-    { label: "Opened",        value: data.stat_opened,        color: "#534AB7" },
+    { label: "Opened",        value: data.stat_opened,        color: "#2E78F5" },
     { label: "Clicked",       value: data.stat_clicked,       color: "#1D9E75" },
     { label: "Bounced",       value: data.stat_bounced,       color: "#854F0B" },
     { label: "Unsubscribed",  value: data.stat_unsubscribed,  color: "#A32D2D" },
@@ -368,7 +368,7 @@ function AnalyticsPanel({ data }: { data: CampaignDetail }) {
           <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8, color: "var(--muted-foreground)" }}>FUNNEL</div>
           {[
             { label: "Delivered", value: data.stat_delivered, color: "#0F6E56" },
-            { label: "Opened",    value: data.stat_opened,    color: "#534AB7" },
+            { label: "Opened",    value: data.stat_opened,    color: "#2E78F5" },
             { label: "Clicked",   value: data.stat_clicked,   color: "#1D9E75" },
           ].map((s) => (
             <div key={s.label} style={{ marginBottom: 6 }}>
@@ -397,7 +397,7 @@ function AnalyticsPanel({ data }: { data: CampaignDetail }) {
               sent:       { bg: "#F1EFE8", color: "#5F5E5A" },
               delivered:  { bg: "#E1F5EE", color: "#0F6E56" },
               opened:     { bg: "#E6F1FB", color: "#185FA5" },
-              clicked:    { bg: "#EEEDFE", color: "#534AB7" },
+              clicked:    { bg: "#EEEDFE", color: "#2E78F5" },
               bounced:    { bg: "#FAEEDA", color: "#854F0B" },
               unsubscribed: { bg: "#FCEBEB", color: "#A32D2D" },
               spam_complaint: { bg: "#FCEBEB", color: "#A32D2D" },

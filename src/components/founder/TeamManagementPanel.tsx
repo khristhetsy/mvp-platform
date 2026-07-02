@@ -21,7 +21,7 @@ type Invite = {
   expires_at: string;
 };
 
-const ACCENT = "#534AB7";
+const ACCENT = "#2E78F5";
 
 function RoleBadge({ role }: { role: string }) {
   const colors: Record<string, { bg: string; color: string }> = {

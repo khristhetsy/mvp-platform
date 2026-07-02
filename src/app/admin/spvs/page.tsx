@@ -274,7 +274,7 @@ export default async function AdminSpvsPage() {
             <div className="mb-6 grid grid-cols-4 gap-4">
               <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
                 <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Active SPVs</p>
-                <p className="mt-1 text-2xl font-semibold" style={{ color: "#534AB7" }}>{opportunities.length}</p>
+                <p className="mt-1 text-2xl font-semibold" style={{ color: "#2E78F5" }}>{opportunities.length}</p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
                 <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Blocked</p>

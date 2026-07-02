@@ -5,7 +5,7 @@ import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { Task, TaskStatus, TaskPriority, TaskCategory, InternalUser } from "@/lib/tasks/types";
 import type { GoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 
-const GCAL_PURPLE = "#534AB7";
+const GCAL_PURPLE = "#2E78F5";
 const GCAL_LIGHT  = "#EEEDFE";
 
 type ViewMode = "kanban" | "list";
@@ -26,7 +26,7 @@ const STATUS_MAP: Record<TaskStatus, { bg: string; color: string; label: string 
 };
 
 const DEPT_MAP: Record<TaskCategory, { bg: string; color: string; dot: string; label: string }> = {
-  marketing: { bg: "#EEEDFE", color: "#3C3489", dot: "#534AB7", label: "Marketing"  },
+  marketing: { bg: "#EEEDFE", color: "#1A6CE4", dot: "#2E78F5", label: "Marketing"  },
   ir_dept:   { bg: "#E6F1FB", color: "#0C447C", dot: "#185FA5", label: "IR Dept"    },
   admin_dept:{ bg: "#F1EFE8", color: "#444441", dot: "#5F5E5A", label: "Admin Dept" },
   sales_dept:{ bg: "#E1F5EE", color: "#085041", dot: "#0F6E56", label: "Sales Dept" },
@@ -41,7 +41,7 @@ function initials(name: string | null | undefined, email: string | null | undefi
 }
 
 function avatarColor(str: string): string {
-  const palette = ["#534AB7", "#1D9E75", "#185FA5", "#854F0B", "#A32D2D"];
+  const palette = ["#2E78F5", "#1D9E75", "#185FA5", "#854F0B", "#A32D2D"];
   let n = 0;
   for (let i = 0; i < str.length; i++) n += str.charCodeAt(i);
   return palette[n % palette.length];
@@ -162,7 +162,7 @@ function TaskCard({
   // ── Edit mode ──────────────────────────────────────────────────────────────
   if (editing) {
     return (
-      <div style={{ ...cardBase, border: "0.5px solid #534AB7" }}>
+      <div style={{ ...cardBase, border: "0.5px solid #2E78F5" }}>
         <div style={{ marginBottom: 8 }}>
           <input
             autoFocus
@@ -245,7 +245,7 @@ function TaskCard({
             disabled={saving || !form.title.trim()}
             style={{
               fontSize: 11, padding: "4px 12px", borderRadius: 6, border: "none",
-              background: "#534AB7", color: "#EEEDFE", cursor: "pointer",
+              background: "#2E78F5", color: "#EEEDFE", cursor: "pointer",
               opacity: !form.title.trim() ? 0.5 : 1,
             }}
           >
@@ -814,7 +814,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
                 onClick={() => setViewMode(v)}
                 style={{
                   padding: "5px 12px", fontSize: 12, border: "none", cursor: "pointer",
-                  background: viewMode === v ? "#534AB7" : "transparent",
+                  background: viewMode === v ? "#2E78F5" : "transparent",
                   color: viewMode === v ? "#EEEDFE" : "#64748b",
                   display: "flex", alignItems: "center", gap: 5,
                 }}
@@ -829,7 +829,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
             style={{
               display: "flex", alignItems: "center", gap: 5, fontSize: 12,
               padding: "6px 14px", borderRadius: 8, border: "none",
-              background: "#534AB7", color: "#EEEDFE", cursor: "pointer",
+              background: "#2E78F5", color: "#EEEDFE", cursor: "pointer",
             }}
           >
             <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Assign task
@@ -887,7 +887,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
         {[
           { label: "Total tasks", value: total,  color: "#0c2340" },
-          { label: "To-do",       value: todo,   color: "#534AB7" },
+          { label: "To-do",       value: todo,   color: "#2E78F5" },
           { label: "In progress", value: inProg, color: "#185FA5" },
           { label: "Done",        value: done,   color: "#0F6E56" },
         ].map(({ label, value, color }) => (
@@ -1023,7 +1023,7 @@ export function TasksClient({ initialTasks, internalUsers, currentUserId, google
             <button
               onClick={handleCreate}
               disabled={saving || !form.title.trim()}
-              style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#534AB7", color: "#EEEDFE", cursor: "pointer", opacity: !form.title.trim() ? 0.5 : 1 }}
+              style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer", opacity: !form.title.trim() ? 0.5 : 1 }}
             >
               {saving ? "Creating…" : "Create task"}
             </button>

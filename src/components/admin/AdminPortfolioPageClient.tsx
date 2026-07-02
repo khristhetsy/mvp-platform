@@ -33,7 +33,7 @@ function moic(row: AdminPortfolioRow): number | null {
 function stageColor(stage: InvestmentStage | null) {
   switch (stage) {
     case "pre_seed":
-    case "seed":       return { bg: "#EEEDFE", color: "#3C3489" };
+    case "seed":       return { bg: "#EEEDFE", color: "#1A6CE4" };
     case "series_a":
     case "series_b":   return { bg: "#E6F1FB", color: "#0C447C" };
     case "growth":
@@ -227,7 +227,7 @@ export function AdminPortfolioPageClient() {
                     cursor: "pointer",
                     fontWeight: active ? 500 : 400,
                     background: active ? (s === "stale" ? "#FFFBEB" : "#EEEDFE") : "var(--color-background-secondary)",
-                    color: active ? (s === "stale" ? "#854F0B" : "#3C3489") : "var(--color-text-secondary)",
+                    color: active ? (s === "stale" ? "#854F0B" : "#1A6CE4") : "var(--color-text-secondary)",
                     border: active ? "none" : "0.5px solid var(--color-border-tertiary)",
                   }}
                 >
@@ -385,14 +385,14 @@ export function AdminPortfolioPageClient() {
                         {inv.company_id ? (
                           <Link
                             href={`/admin/companies/${inv.company_id}`}
-                            style={{ color: "#534AB7", fontSize: 11, fontWeight: 500, textDecoration: "none" }}
+                            style={{ color: "#2E78F5", fontSize: 11, fontWeight: 500, textDecoration: "none" }}
                           >
                             View →
                           </Link>
                         ) : inv.company_slug ? (
                           <Link
                             href={`/deals/${inv.company_slug}`}
-                            style={{ color: "#534AB7", fontSize: 11, fontWeight: 500, textDecoration: "none" }}
+                            style={{ color: "#2E78F5", fontSize: 11, fontWeight: 500, textDecoration: "none" }}
                           >
                             View →
                           </Link>

@@ -23,7 +23,7 @@ type DrawerKey =
 function IcoCheck({ c = "#3B6D11" }: { c?: string }) {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
 }
-function IcoShield({ c = "#534AB7" }: { c?: string }) {
+function IcoShield({ c = "#2E78F5" }: { c?: string }) {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
 }
 function IcoUsers({ c = "#0369a1" }: { c?: string }) {
@@ -35,7 +35,7 @@ function IcoDollar({ c = "#854F0B" }: { c?: string }) {
 function IcoWrench({ c = "#A32D2D" }: { c?: string }) {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>;
 }
-function IcoBook({ c = "#534AB7" }: { c?: string }) {
+function IcoBook({ c = "#2E78F5" }: { c?: string }) {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>;
 }
 function IcoMail({ c = "#0369a1" }: { c?: string }) {
@@ -101,7 +101,7 @@ function DStatBox({ label, value }: { label: string; value: string }) {
 type BVariant = "success" | "medium" | "high" | "neutral" | "critical";
 const BCLS: Record<BVariant, string> = {
   success:  "bg-[#EAF3DE] text-[#1E6D3C]",
-  medium:   "bg-[#EEEDFE] text-[#3C3489]",
+  medium:   "bg-[#EEEDFE] text-[#1A6CE4]",
   high:     "bg-[#FAEEDA] text-[#854F0B]",
   neutral:  "bg-slate-100 text-slate-600",
   critical: "bg-[#FCEBEB] text-[#A32D2D]",
@@ -123,7 +123,7 @@ function AdviceBox({ lines }: { lines: string[] }) {
   return (
     <div className="mt-4 rounded-xl p-4" style={{ background: "#1e1b4b" }}>
       <div className="mb-3 flex items-center gap-2">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: "#534AB7" }}>
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: "#2E78F5" }}>
           AI
         </div>
         <span className="text-sm font-medium" style={{ color: "#e0e7ff" }}>{t("founder_intelligence")}</span>
@@ -380,8 +380,8 @@ function DrawerContent({
           <DStatBox label={t("remaining")} value={String(remaining)} />
         </div>
         <div className="mt-4">
-          <div className="mb-1 flex justify-between text-[11px]"><span className="text-slate-500">{t("modules_completed")}</span><span className="font-semibold" style={{ color: "#534AB7" }}>{a.learningModulesCompleted}/{a.learningModulesPublished}</span></div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full" style={{ width: `${a.learningPercent}%`, background: "#534AB7" }} /></div>
+          <div className="mb-1 flex justify-between text-[11px]"><span className="text-slate-500">{t("modules_completed")}</span><span className="font-semibold" style={{ color: "#2E78F5" }}>{a.learningModulesCompleted}/{a.learningModulesPublished}</span></div>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full" style={{ width: `${a.learningPercent}%`, background: "#2E78F5" }} /></div>
         </div>
         <p className="mt-5 text-xs font-semibold text-slate-900">{t("module_breakdown")}</p>
         <div className="mt-2">
@@ -492,7 +492,7 @@ export function AnalyticsCardsClient({ analytics: a }: { analytics: FounderAnaly
       {/* Row 1 */}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <ACard label={t("onboarding_progress")} value={`${a.onboardingPercent}%`} detail={a.onboardingCompletedAt ? `Completed ${new Date(a.onboardingCompletedAt).toLocaleDateString("en-US")}` : "Current snapshot"} icon={<IcoCheck />} iconBg="#E1F5EE" valColor="#3B6D11" onClick={() => setOpen("onboarding")} />
-        <ACard label={t("readiness_score")} value={a.readinessScore != null ? `${a.readinessScore}` : "—"} detail="Latest diligence report" icon={<IcoShield />} iconBg="#EEEDFB" valColor="#3C3489" onClick={() => setOpen("readiness")} />
+        <ACard label={t("readiness_score")} value={a.readinessScore != null ? `${a.readinessScore}` : "—"} detail="Latest diligence report" icon={<IcoShield />} iconBg="#EEEDFB" valColor="#1A6CE4" onClick={() => setOpen("readiness")} />
         <ACard label={t("private_contacts")} value={String(a.privateContactCount)} detail="Founder CRM contacts" icon={<IcoUsers />} iconBg="#E0F2FE" valColor="#0369a1" onClick={() => setOpen("contacts")} />
         <ACard label={t("investor_pledges")} value={a.pledgeTotalDisplay} detail={`${a.pledgeInvestorCount} investors · platform activity`} icon={<IcoDollar />} iconBg="#FEF3CD" valColor="#854F0B" onClick={() => setOpen("pledges")} />
       </section>
@@ -500,7 +500,7 @@ export function AnalyticsCardsClient({ analytics: a }: { analytics: FounderAnaly
       {/* Row 2 */}
       <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <ACard label={t("remediation_active")} value={String(a.remediation.active)} detail={`${a.remediation.completed} completed · ${a.remediation.open} open`} icon={<IcoWrench />} iconBg="#FCEBEB" valColor={a.remediation.active > 0 ? "#A32D2D" : "#0c2340"} onClick={() => setOpen("remediation")} />
-        <ACard label={t("learning_progress")} value={`${a.learningPercent}%`} detail={`${a.learningModulesCompleted}/${a.learningModulesPublished} modules`} icon={<IcoBook />} iconBg="#EEEDFB" valColor="#3C3489" onClick={() => setOpen("learning")} />
+        <ACard label={t("learning_progress")} value={`${a.learningPercent}%`} detail={`${a.learningModulesCompleted}/${a.learningModulesPublished} modules`} icon={<IcoBook />} iconBg="#EEEDFB" valColor="#1A6CE4" onClick={() => setOpen("learning")} />
         <ACard label={t("message_threads")} value={String(a.messageThreadCount)} detail={`${a.meetingsScheduled} meetings scheduled`} icon={<IcoMail />} iconBg="#E0F2FE" valColor="#0369a1" onClick={() => setOpen("messages")} />
         <ACard label={t("queued_outreach")} value={String(a.queuedMessageCount)} detail={`${a.campaignDraftCount} draft · ${a.campaignQueuedCount} queued`} icon={<IcoSend />} iconBg="#E1F5EE" valColor="#3B6D11" onClick={() => setOpen("outreach")} />
       </section>

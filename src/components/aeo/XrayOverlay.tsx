@@ -15,8 +15,8 @@ export function XrayOverlay({ jsonLd }: { jsonLd: Record<string, unknown> }) {
     <>
       {on ? (
         <style>{`
-          [data-aeo]{position:relative;outline:2px dashed #534AB7;outline-offset:4px;border-radius:8px}
-          [data-aeo]::before{content:attr(data-aeo);position:absolute;top:-10px;left:8px;background:#534AB7;color:#fff;font-size:10px;font-weight:600;letter-spacing:.04em;padding:1px 6px;border-radius:4px;text-transform:uppercase;z-index:5}
+          [data-aeo]{position:relative;outline:2px dashed #2E78F5;outline-offset:4px;border-radius:8px}
+          [data-aeo]::before{content:attr(data-aeo);position:absolute;top:-10px;left:8px;background:#2E78F5;color:#fff;font-size:10px;font-weight:600;letter-spacing:.04em;padding:1px 6px;border-radius:4px;text-transform:uppercase;z-index:5}
           [data-aeo="citable-answer"]{outline-color:#0F6E56}
           [data-aeo="citable-answer"]::before{background:#0F6E56}
           [data-aeo="faq"]{outline-color:#185FA5}
@@ -30,7 +30,7 @@ export function XrayOverlay({ jsonLd }: { jsonLd: Record<string, unknown> }) {
         <div style={{ display: "flex", gap: 8 }}>
           <button
             type="button" onClick={() => setOn((v) => !v)}
-            style={{ background: on ? "#534AB7" : "#fff", color: on ? "#fff" : "#334155", border: "1px solid #534AB7", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 8px rgb(12 35 64 / 0.12)" }}
+            style={{ background: on ? "#2E78F5" : "#fff", color: on ? "#fff" : "#334155", border: "1px solid #2E78F5", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 8px rgb(12 35 64 / 0.12)" }}
           >
             AEO X-ray {on ? "on" : "off"}
           </button>
@@ -48,7 +48,7 @@ export function XrayOverlay({ jsonLd }: { jsonLd: Record<string, unknown> }) {
         ) : null}
       </div>
 
-      <div style={{ position: "fixed", bottom: 16, right: 16, zIndex: 60, background: "#EEF0FB", color: "#3C3489", border: "1px solid #CECBF6", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 500, maxWidth: 260 }}>
+      <div style={{ position: "fixed", bottom: 16, right: 16, zIndex: 60, background: "#EEF0FB", color: "#1A6CE4", border: "1px solid #CECBF6", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 500, maxWidth: 260 }}>
         Admin preview only — the X-ray never appears on the public page.
       </div>
     </>

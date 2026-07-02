@@ -44,7 +44,7 @@ const ACTIVITY_ICON: Record<string, React.ReactElement> = {
     </svg>
   ),
   meeting_requested: (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#534AB7" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2E78F5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
     </svg>
   ),
@@ -137,7 +137,7 @@ const cardTitle: React.CSSProperties = {
 
 const viewLink: React.CSSProperties = {
   fontSize: 12,
-  color: "#534AB7",
+  color: "#2E78F5",
   textDecoration: "none",
   fontWeight: 500,
   whiteSpace: "nowrap",
@@ -176,7 +176,7 @@ export function InvestorDashboardCondensedGrid({
           <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
             {[
               { label: "Watchlist", count: watchlistCount, color: "#6366f1", href: "/investor/watchlist" },
-              { label: "Interests",  count: interestCount,  color: "#534AB7", href: "/investor/interest-pipeline" },
+              { label: "Interests",  count: interestCount,  color: "#2E78F5", href: "/investor/interest-pipeline" },
               { label: "Intros",     count: introCount,     color: "#7c3aed", href: "/investor/interest-pipeline" },
             ].map((row) => (
               <div key={row.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -204,8 +204,8 @@ export function InvestorDashboardCondensedGrid({
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
               <div style={{ background: "#EEEDFE", borderRadius: 8, padding: "10px 8px", textAlign: "center" }}>
-                <div style={{ fontSize: 22, fontWeight: 700, color: "#534AB7" }}>{watchlistCount}</div>
-                <div style={{ fontSize: 10, color: "#534AB7", marginTop: 2 }}>{t("saved_deals")}</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "#2E78F5" }}>{watchlistCount}</div>
+                <div style={{ fontSize: 10, color: "#2E78F5", marginTop: 2 }}>{t("saved_deals")}</div>
               </div>
               <div style={{ background: "#e0e7ff", borderRadius: 8, padding: "10px 8px", textAlign: "center" }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: "#4f46e5" }}>{introCount}</div>
@@ -213,7 +213,7 @@ export function InvestorDashboardCondensedGrid({
               </div>
             </div>
             <div style={{ background: "#f1f5f9", borderRadius: 99, height: 6, overflow: "hidden" }}>
-              <div style={{ background: "#534AB7", height: "100%", width: `${goalPct}%`, borderRadius: 99 }} />
+              <div style={{ background: "#2E78F5", height: "100%", width: `${goalPct}%`, borderRadius: 99 }} />
             </div>
             <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 6 }}>{goalPct}% of weekly goal</div>
           </div>
@@ -247,7 +247,7 @@ export function InvestorDashboardCondensedGrid({
                       {row.company_id ? (
                         <Link
                           href={`/investor/opportunities/${row.company_id}/report`}
-                          style={{ fontSize: 12, fontWeight: 600, color: "#534AB7", textDecoration: "none", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                          style={{ fontSize: 12, fontWeight: 600, color: "#2E78F5", textDecoration: "none", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
                         >
                           {row.company_name ?? "Company"} →
                         </Link>
@@ -288,7 +288,7 @@ export function InvestorDashboardCondensedGrid({
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6 }}>
               {[
                 { val: watchlistCount, label: "Saved",    color: "#6366f1", bg: "#e0e7ff" },
-                { val: interestCount,  label: "Interest", color: "#534AB7", bg: "#EEEDFE" },
+                { val: interestCount,  label: "Interest", color: "#2E78F5", bg: "#EEEDFE" },
                 { val: introCount,     label: "Intros",   color: "#7c3aed", bg: "#ede9fe" },
               ].map((s) => (
                 <div key={s.label} style={{ background: s.bg, borderRadius: 8, padding: "8px 4px", textAlign: "center" }}>

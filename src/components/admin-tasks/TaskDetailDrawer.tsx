@@ -64,7 +64,7 @@ export function TaskDetailDrawer({
 
   const task = detail?.task;
   const due = task ? dueLabel(task.due_date) : null;
-  const field = "rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs focus:border-[#0D9488] focus:outline-none";
+  const field = "rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs focus:border-[#2E78F5] focus:outline-none";
 
   return (
     <Drawer
@@ -74,8 +74,8 @@ export function TaskDetailDrawer({
       footer={
         task ? (
           <div className="flex items-center gap-2">
-            <input value={comment} onChange={(e) => setComment(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addComment(); }} placeholder={t("add_a_comment")} className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#0D9488] focus:outline-none" />
-            <button type="button" onClick={() => void addComment()} disabled={!comment.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-[#0D9488] px-3 py-2 text-sm font-semibold text-white hover:bg-[#0f766e] disabled:opacity-50"><Send className="h-4 w-4" /></button>
+            <input value={comment} onChange={(e) => setComment(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addComment(); }} placeholder={t("add_a_comment")} className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[#2E78F5] focus:outline-none" />
+            <button type="button" onClick={() => void addComment()} disabled={!comment.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-[#2E78F5] px-3 py-2 text-sm font-semibold text-white hover:bg-[#1A6CE4] disabled:opacity-50"><Send className="h-4 w-4" /></button>
           </div>
         ) : null
       }

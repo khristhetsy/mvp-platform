@@ -85,7 +85,7 @@ export function EditModule({ card, onClose, onSaved, patchUrl = "/api/admin/play
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
               <span style={label}>{t("steps")}</span>
-              <button type="button" onClick={() => setSteps((s) => [...s, ""])} style={{ fontSize: 12, color: "#534AB7", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>+ Add step</button>
+              <button type="button" onClick={() => setSteps((s) => [...s, ""])} style={{ fontSize: 12, color: "#2E78F5", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>+ Add step</button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {steps.map((s, i) => (
@@ -101,7 +101,7 @@ export function EditModule({ card, onClose, onSaved, patchUrl = "/api/admin/play
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
               <span style={label}>{t("gates_guardrails")}</span>
-              <button type="button" onClick={() => setFlags((f) => [...f, { kind: "guardrail", label: "" }])} style={{ fontSize: 12, color: "#534AB7", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>+ Add flag</button>
+              <button type="button" onClick={() => setFlags((f) => [...f, { kind: "guardrail", label: "" }])} style={{ fontSize: 12, color: "#2E78F5", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>+ Add flag</button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {flags.map((f, i) => (
@@ -122,7 +122,7 @@ export function EditModule({ card, onClose, onSaved, patchUrl = "/api/admin/play
 
         <div style={{ padding: "12px 16px", borderTop: "0.5px solid #eef1f5", display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <button type="button" onClick={onClose} style={{ fontSize: 13, color: "#5f5e5a", background: "#fff", border: "1px solid #d7dce4", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>{t("cancel")}</button>
-          <button type="button" onClick={() => void save()} disabled={saving} style={{ fontSize: 13, fontWeight: 600, color: "#fff", background: "#534AB7", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer" }}>{saving ? "Saving…" : "Save"}</button>
+          <button type="button" onClick={() => void save()} disabled={saving} style={{ fontSize: 13, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer" }}>{saving ? "Saving…" : "Save"}</button>
         </div>
       </div>
     </div>

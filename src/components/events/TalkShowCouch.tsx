@@ -23,7 +23,7 @@ const SEAT_COLORS = [
   { bg: "#9FE1CB", fg: "#0F6E56" },
   { bg: "#FAC775", fg: "#854F0B" },
   { bg: "#F5C4B3", fg: "#993C1D" },
-  { bg: "#C9D2FB", fg: "#3C3489" },
+  { bg: "#C9D2FB", fg: "#1A6CE4" },
 ];
 const MIN_SEATS = 4;
 

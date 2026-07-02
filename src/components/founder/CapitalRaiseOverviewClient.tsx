@@ -72,7 +72,7 @@ function DStatBox({ label, value }: { label: string; value: string }) {
 type BVariant = "success" | "medium" | "high" | "neutral" | "critical";
 const BCLS: Record<BVariant, string> = {
   success: "bg-[#EAF3DE] text-[#1E6D3C]",
-  medium: "bg-[#EEEDFE] text-[#3C3489]",
+  medium: "bg-[#EEEDFE] text-[#1A6CE4]",
   high: "bg-[#FAEEDA] text-[#854F0B]",
   neutral: "bg-slate-100 text-slate-600",
   critical: "bg-[#FCEBEB] text-[#A32D2D]",
@@ -95,7 +95,7 @@ function AdviceBox({ lines }: { lines: string[] }) {
       <div className="mb-3 flex items-center gap-2">
         <div
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-          style={{ background: "#534AB7" }}
+          style={{ background: "#2E78F5" }}
         >
           AI
         </div>
@@ -203,10 +203,10 @@ function DrawerContent({
           <div className="mt-4">
             <div className="mb-1 flex items-center justify-between text-[11px]">
               <span className="text-slate-500">{t("round_progress")}</span>
-              <span className="font-semibold" style={{ color: "#534AB7" }}>{fillPct}%</span>
+              <span className="font-semibold" style={{ color: "#2E78F5" }}>{fillPct}%</span>
             </div>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full rounded-full" style={{ width: `${fillPct}%`, background: "#534AB7" }} />
+              <div className="h-full rounded-full" style={{ width: `${fillPct}%`, background: "#2E78F5" }} />
             </div>
           </div>
         )}

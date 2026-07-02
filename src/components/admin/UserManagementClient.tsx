@@ -37,7 +37,7 @@ type AuditEntry = {
 const ROLES: UserRole[] = ["founder", "investor", "admin", "analyst"];
 
 const ROLE_COLORS: Record<string, string> = {
-  admin: "bg-[#EEEDFE] text-[#3C3489]",
+  admin: "bg-[#EEEDFE] text-[#1A6CE4]",
   founder: "bg-[#E1F5EE] text-[#085041]",
   investor: "bg-[#E6F1FB] text-[#0C447C]",
   analyst: "bg-[#FAEEDA] text-[#633806]",
@@ -60,7 +60,7 @@ function initials(user: ManagedUser) {
 
 function avatarColor(role: string) {
   const map: Record<string, string> = {
-    admin: "bg-[#EEEDFE] text-[#3C3489]",
+    admin: "bg-[#EEEDFE] text-[#1A6CE4]",
     founder: "bg-[#E1F5EE] text-[#085041]",
     investor: "bg-[#E6F1FB] text-[#0C447C]",
     analyst: "bg-[#FAEEDA] text-[#633806]",
@@ -86,7 +86,7 @@ function auditLabel(entry: AuditEntry, t: T): string {
 }
 
 function auditDot(action: string): string {
-  if (action === "admin.user_role_changed") return "bg-[#534AB7]";
+  if (action === "admin.user_role_changed") return "bg-[#2E78F5]";
   if (action === "admin.staff_invited") return "bg-[#1D9E75]";
   if (action === "admin.user_deactivated") return "bg-[#E24B4A]";
   if (action === "admin.user_reactivated") return "bg-[#185FA5]";

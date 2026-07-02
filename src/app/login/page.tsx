@@ -2,7 +2,7 @@ import Link from "next/link";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { getTranslations } from "next-intl/server";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
-import { CapitalOSLogo } from "@/components/CapitalOSLogo";
+import { IcapOSLogo } from "@/components/IcapOSLogo";
 
 export default async function LoginPage() {
   const t = await getTranslations("appPages");
@@ -11,7 +11,7 @@ export default async function LoginPage() {
       <section className="px-4 py-8 lg:px-8 lg:py-10">
         <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
-            <CapitalOSLogo height={52} tagline priority className="mb-6" />
+            <IcapOSLogo height={52} tagline priority className="mb-6" />
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--gold)]">{t("platform_access")}</p>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight text-[var(--navy)] md:text-5xl">
               Sign in to continue your capital readiness workflow.

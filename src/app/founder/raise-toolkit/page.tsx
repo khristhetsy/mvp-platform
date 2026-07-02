@@ -44,7 +44,7 @@ const TOOL_ICONS: Record<string, { path: string; color: string }> = {
   },
   sparkles: {
     path: "M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z",
-    color: "#3C3489",
+    color: "#1A6CE4",
   },
 };
 
@@ -146,7 +146,7 @@ const TAG_COLORS: Record<string, { bg: string; text: string }> = {
   Planning:      { bg: "#FFF7ED", text: "#9A3412" },
   Governance:    { bg: "#F0FDF4", text: "#14532D" },
   Reference:     { bg: "#F8FAFC", text: "#475569" },
-  AI:            { bg: "#EEEDFE", text: "#3C3489" },
+  AI:            { bg: "#EEEDFE", text: "#1A6CE4" },
 };
 
 export default async function RaiseToolkitPage() {
@@ -235,9 +235,9 @@ export default async function RaiseToolkitPage() {
 
                   {/* CTA */}
                   <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "#534AB7" }}>{t("open_tool")}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#2E78F5" }}>{t("open_tool")}</span>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M5 12h14M13 6l6 6-6 6" stroke="#534AB7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M5 12h14M13 6l6 6-6 6" stroke="#2E78F5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
                 </div>

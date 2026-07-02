@@ -18,7 +18,7 @@ interface Props {
 
 type ViewMode = "card" | "list" | "tree";
 
-const ACCENT = "#534AB7";
+const ACCENT = "#2E78F5";
 
 const STATUS_MAP: Record<string, { bg: string; color: string; label: string }> = {
   draft:    { bg: "#F1EFE8", color: "#5F5E5A", label: "Draft" },
@@ -40,13 +40,13 @@ const PRIORITY_MAP: Record<string, { bg: string; color: string }> = {
 
 const CHANNEL_COLOR_MAP: Record<string, { bg: string; color: string }> = {
   email:        { bg: "#E6F1FB", color: "#185FA5" },
-  content:      { bg: "#EEEDFE", color: "#3C3489" },
+  content:      { bg: "#EEEDFE", color: "#1A6CE4" },
   social:       { bg: "#FBEAF0", color: "#993556" },
   paid:         { bg: "#FAECE7", color: "#993C1D" },
   events:       { bg: "#E1F5EE", color: "#0F6E56" },
   pr:           { bg: "#EAF3DE", color: "#3B6D11" },
   seo:          { bg: "#FAEEDA", color: "#854F0B" },
-  partnerships: { bg: "#EEEDFE", color: "#3C3489" },
+  partnerships: { bg: "#EEEDFE", color: "#1A6CE4" },
   other:        { bg: "#F1EFE8", color: "#5F5E5A" },
 };
 

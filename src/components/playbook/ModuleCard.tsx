@@ -23,7 +23,7 @@ export function ModuleCard({
   const noSteps = card.state === "no_steps";
 
   return (
-    <div id={`pb-${card.navId}`} style={{ scrollMarginTop: 16, background: "#fff", border: "0.5px solid #e2e6ed", borderLeft: `3px solid ${undocumented ? "#EF9F27" : "#534AB7"}`, borderRadius: 12, boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)", padding: 18 }}>
+    <div id={`pb-${card.navId}`} style={{ scrollMarginTop: 16, background: "#fff", border: "0.5px solid #e2e6ed", borderLeft: `3px solid ${undocumented ? "#EF9F27" : "#2E78F5"}`, borderRadius: 12, boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)", padding: 18 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -38,9 +38,9 @@ export function ModuleCard({
           {c?.roleNote ? <p style={{ fontSize: 12.5, color: "#5f5e5a", margin: "4px 0 0" }}>{c.roleNote}</p> : null}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          {c ? <span style={{ fontSize: 11, fontWeight: 500, color: "#3C3489", background: "#EEEDFE", padding: "2px 9px", borderRadius: 999, whiteSpace: "nowrap" }}>{CADENCE_LABEL[c.cadence]}</span> : null}
+          {c ? <span style={{ fontSize: 11, fontWeight: 500, color: "#1A6CE4", background: "#EEEDFE", padding: "2px 9px", borderRadius: 999, whiteSpace: "nowrap" }}>{CADENCE_LABEL[c.cadence]}</span> : null}
           {isAdmin ? (
-            <button type="button" onClick={onEdit} style={{ fontSize: 12, color: "#534AB7", background: "none", border: "0.5px solid #CECBF6", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontWeight: 500 }}>
+            <button type="button" onClick={onEdit} style={{ fontSize: 12, color: "#2E78F5", background: "none", border: "0.5px solid #CECBF6", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontWeight: 500 }}>
               {undocumented ? "Add steps" : "Edit"}
             </button>
           ) : null}

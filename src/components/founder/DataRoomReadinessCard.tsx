@@ -19,7 +19,7 @@ export function DataRoomReadinessCard({
   const state = computeDataRoomState(documents);
   const complete = state.fullComplete;
 
-  const ringColor = complete ? "#1D9E75" : state.coreComplete ? "#534AB7" : "#BA7517";
+  const ringColor = complete ? "#1D9E75" : state.coreComplete ? "#2E78F5" : "#BA7517";
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-panel)] sm:p-6">
@@ -65,7 +65,7 @@ export function DataRoomReadinessCard({
           </span>
         </div>
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
-          <div className="h-full rounded-full" style={{ width: `${(state.coreCompleted / Math.max(1, state.coreTotal)) * 100}%`, background: state.coreComplete ? "#1D9E75" : "#534AB7" }} />
+          <div className="h-full rounded-full" style={{ width: `${(state.coreCompleted / Math.max(1, state.coreTotal)) * 100}%`, background: state.coreComplete ? "#1D9E75" : "#2E78F5" }} />
         </div>
         {!state.coreComplete && (
           <p className="mt-2 text-xs text-slate-600">

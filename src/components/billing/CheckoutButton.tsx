@@ -44,7 +44,7 @@ export function CheckoutButton({
         padding: "8px 20px",
         borderRadius: 8,
         border: recommended ? "none" : "0.5px solid #e2e6ed",
-        background: recommended ? "#534AB7" : "transparent",
+        background: recommended ? "#2E78F5" : "transparent",
         color: recommended ? "#EEEDFE" : "#0c2340",
         cursor: "pointer",
         opacity: loading ? 0.6 : 1,

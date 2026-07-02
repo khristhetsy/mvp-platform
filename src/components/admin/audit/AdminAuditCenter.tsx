@@ -137,8 +137,8 @@ export function AdminAuditCenter({
       a.href = url;
       a.download =
         format === "csv"
-          ? `capitalos-audit-${new Date().toISOString().slice(0, 10)}.csv`
-          : `capitalos-audit-${new Date().toISOString().slice(0, 10)}.json`;
+          ? `icapos-audit-${new Date().toISOString().slice(0, 10)}.csv`
+          : `icapos-audit-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {

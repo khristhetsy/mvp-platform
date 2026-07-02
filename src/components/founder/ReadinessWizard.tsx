@@ -38,7 +38,7 @@ function ScoreRing({ score, size = 64, strokeWidth = 6 }: { score: number; size?
   const r = (size - strokeWidth) / 2;
   const circ = 2 * Math.PI * r;
   const filled = (score / 100) * circ;
-  const color = score >= 80 ? "#16a34a" : score >= 65 ? "#d97706" : "#534AB7";
+  const color = score >= 80 ? "#16a34a" : score >= 65 ? "#d97706" : "#2E78F5";
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
@@ -105,7 +105,7 @@ function StepCard({
           <div
             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
             style={{
-              background: step.status === "done" ? "#16a34a" : step.status === "current" ? "#534AB7" : "#e2e8f0",
+              background: step.status === "done" ? "#16a34a" : step.status === "current" ? "#2E78F5" : "#e2e8f0",
             }}
           >
             {step.status === "done" ? (
@@ -122,7 +122,7 @@ function StepCard({
 
           <div>
             <p className="text-sm font-semibold text-slate-900">{step.title}</p>
-            <p className="text-[10px]" style={{ color: step.status === "current" ? "#534AB7" : "#94a3b8" }}>
+            <p className="text-[10px]" style={{ color: step.status === "current" ? "#2E78F5" : "#94a3b8" }}>
               {step.status === "done" ? "Complete" : `+${step.pointValue} pts toward 80`}
             </p>
           </div>
@@ -144,7 +144,7 @@ function StepCard({
               type="button"
               onClick={onComplete}
               className="mt-3 rounded-lg px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90"
-              style={{ background: "#534AB7" }}
+              style={{ background: "#2E78F5" }}
             >
               Mark as done →
             </button>
@@ -187,7 +187,7 @@ export function ReadinessWizard({
           <Link
             href={item.href}
             className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white"
-            style={{ background: "#534AB7" }}
+            style={{ background: "#2E78F5" }}
           >
             Go to settings →
           </Link>
@@ -206,7 +206,7 @@ export function ReadinessWizard({
           <Link
             href="/founder/documents"
             className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white"
-            style={{ background: "#534AB7" }}
+            style={{ background: "#2E78F5" }}
           >
             Upload document →
           </Link>
@@ -277,7 +277,7 @@ export function ReadinessWizard({
               className="h-full rounded-full transition-all duration-500"
               style={{
                 width: `${(simulatedScore / targetScore) * 100}%`,
-                background: simulatedScore >= targetScore ? "#16a34a" : "#534AB7",
+                background: simulatedScore >= targetScore ? "#16a34a" : "#2E78F5",
               }}
             />
           </div>
@@ -293,7 +293,7 @@ export function ReadinessWizard({
           <div className="relative flex-shrink-0">
             <ScoreRing score={simulatedScore} size={48} strokeWidth={5} />
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <span className="text-[11px] font-bold" style={{ color: simulatedScore >= 80 ? "#16a34a" : "#534AB7" }}>
+              <span className="text-[11px] font-bold" style={{ color: simulatedScore >= 80 ? "#16a34a" : "#2E78F5" }}>
                 {simulatedScore}
               </span>
             </div>

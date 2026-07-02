@@ -54,9 +54,9 @@ function eventIcon(stroke: string) {
 const CONFIGS: Record<string, EventConfig> = {
   room_created: {
     label: "Room created",
-    bg: "#EEEDFE", color: "#534AB7",
+    bg: "#EEEDFE", color: "#2E78F5",
     icon: (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#534AB7" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2E78F5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
       </svg>
     ),
@@ -202,7 +202,7 @@ export function DealRoomActivityPanel({ roomId }: { roomId: string }) {
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
         <div className="flex items-center gap-2.5">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ background: "#EEEDFE" }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#534AB7" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2E78F5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
             </svg>
           </div>

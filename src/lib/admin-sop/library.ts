@@ -1004,7 +1004,7 @@ export const ADMIN_SOPS: SopEntry[] = [
       "Core — Email campaigns: build and QA the campaign, split large sends into thirds, and send only after compliance review is approved (/admin/marketing/campaigns, sequences at /admin/marketing/sequences).",
       "Core — Phone follow-up: call only non-suppressed leads; cap at two attempts per lead, then close. Log via CRM outreach (/admin/crm/outreach).",
       "Core — Content and assets: keep templates and pillar content fresh — review anything older than ~30 days (/admin/marketing/templates and the AEO pages at /admin/marketing/aeo).",
-      "Core — Brand consistency: keep to the approved navy → royal-blue palette. Deprecated hexes (#0D9488, #5EEAD4, #534AB7 / #3C3489) are flagged by CI — fix the flagged files.",
+      "Core — Brand consistency: keep to the approved navy and royal-blue palette. The legacy teal and indigo brand colors are flagged by the pre-deploy check — fix any flagged files before shipping.",
       "Core — AI CMO advisory: read the AI CMO's recommendations (Marketing hub → Plan, /admin/marketing/plan, and the AI CMO copilot) and act on them manually. The advisory is read-only.",
       "Core — SEO / AEO: check answer-engine visibility and publish or refresh citable pages at /admin/marketing/aeo; turn gaps into content tasks.",
       "Close — End of day: review today's engagement rollup (/admin/marketing/analytics), stage tomorrow's batches, note open blockers, and write a one-line log.",
