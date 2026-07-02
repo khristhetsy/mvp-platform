@@ -1622,7 +1622,18 @@
     "your_lesson_order": "Your lesson order",
     "your_personalised_lesson_sequence_admin_assign": "Your personalised lesson sequence — admin-assigned lessons appear first.",
     "your_standing": "Your standing",
-    "icapos_registered_investors_matched_to_your_co": "iCapOS registered investors matched to your company — separate from your private CRM."
+    "icapos_registered_investors_matched_to_your_co": "iCapOS registered investors matched to your company — separate from your private CRM.",
+    "share": "Share",
+    "organizer": "Organizer",
+    "online_event": "Online event",
+    "youre_registered": "You're registered",
+    "free_registration": "Free registration",
+    "countdown_days": "Days",
+    "countdown_hours": "Hours",
+    "countdown_minutes": "Minutes",
+    "countdown_seconds": "Seconds",
+    "add_to_calendar": "Add to calendar",
+    "calendar_ics": "iCal / Outlook"
   },
   "founderCmp": {
     "strong": "% strong",
@@ -2544,6 +2555,27 @@
     "order_2": "order",
     "owner_email": "owner email",
     "retry_limit_optional": "retry limit (optional)",
-    "trigger_entity": "trigger, entity…"
+    "trigger_entity": "trigger, entity…",
+    "banner_editor_title": "Page banner and side rail",
+    "banner_editor_desc": "An editable banner shown on the public event page, plus the countdown and organizer details in the side rail.",
+    "banner_heading_label": "Banner heading",
+    "banner_body_label": "Banner content",
+    "banner_bg_label": "Background",
+    "bg_indigo": "Indigo",
+    "bg_teal": "Teal",
+    "bg_navy": "Navy",
+    "bg_plain": "Plain",
+    "show_countdown_label": "Show countdown to start time",
+    "organizer_name_label": "Organizer name",
+    "organizer_phone_label": "Organizer phone",
+    "organizer_email_label": "Organizer email",
+    "save_banner": "Save banner",
+    "fmt_bold": "Bold",
+    "fmt_italic": "Italic",
+    "fmt_underline": "Underline",
+    "fmt_link": "Insert link",
+    "fmt_bullet": "Bullet list",
+    "fmt_align_left": "Align left",
+    "fmt_align_center": "Align center"
   }
 }

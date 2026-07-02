@@ -14,6 +14,9 @@ import { SessionVideo } from "@/components/events/SessionVideo";
 import { LiveSessionPanel } from "@/components/events/LiveSessionPanel";
 import { CallInBar } from "@/components/events/CallInBar";
 import { OnStageGuests } from "@/components/events/OnStageGuests";
+import { EventCountdown } from "@/components/events/EventCountdown";
+import { EventSideRail } from "@/components/events/EventSideRail";
+import { sanitizeBannerHtml } from "@/lib/icfo-events/sanitize-html";
 import { loadSessionQuestions, loadSessionChat, loadCallInQueue } from "@/lib/icfo-events/live-session";
 import type { SessionQuestion, SessionChatMessage, CallInEntry } from "@/lib/icfo-events/live-session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -124,19 +127,22 @@ async function SponsorLockup({ sponsors }: { sponsors: EventSponsor[] }) {
         </div>
       )}
       {others.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-4">
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {others.map((s) => (
             <Link
               key={s.eventSponsorId}
               href={`/events/sponsors/${s.id}`}
-              className="flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-white px-3 py-2 transition hover:border-[var(--indigo)]"
+              className="flex items-center gap-2.5 rounded-xl border border-[var(--border-subtle)] bg-white px-3 py-2.5 transition hover:border-[var(--indigo)]"
             >
               {s.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={s.logoUrl} alt={s.name} className="h-6 object-contain" />
+                <img src={s.logoUrl} alt={s.name} className="h-8 w-8 flex-none rounded-lg object-contain" />
               ) : (
-                <span className="text-sm font-medium text-[var(--text-secondary)]">{s.name}</span>
+                <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-[var(--indigo-soft)] text-xs font-semibold text-[var(--indigo)]">
+                  {initials(s.name)}
+                </span>
               )}
+              <span className="truncate text-sm font-medium text-[var(--navy)]">{s.name}</span>
             </Link>
           ))}
         </div>
@@ -256,6 +262,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
     profile ? getMemberStats(adminClient, event.id, profile.id).catch(() => null) : Promise.resolve(null),
   ]);
 
+  const bannerHtml = sanitizeBannerHtml(event.bannerHtml);
+  const bannerTheme: Record<string, { bg: string; text: string; border: string }> = {
+    indigo: { bg: "#EEEDFE", text: "#3C3489", border: "transparent" },
+    teal: { bg: "#E1F5EE", text: "#0F6E56", border: "transparent" },
+    navy: { bg: "#0f2147", text: "#dbe4f5", border: "transparent" },
+    plain: { bg: "#ffffff", text: "#0f2147", border: "var(--border-subtle)" },
+  };
+  const bnr = bannerTheme[event.bannerBg] ?? bannerTheme.indigo;
+  const formatLabel = t("online_event");
+
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Event",
@@ -273,7 +289,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
     <MarketingShell>
       <JsonLd data={jsonLd} />
 
-      <section className="mx-auto max-w-4xl px-4 py-14">
+      <section className="mx-auto max-w-6xl px-4 py-14">
         <div className="relative overflow-hidden rounded-2xl" style={{ background: "#0c2340" }}>
           {coverUrl && (
             <>
@@ -356,6 +372,28 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             </Link>
           ))}
         </div>
+
+        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="min-w-0">
+
+            {bannerHtml && (
+              <div className="rounded-2xl p-6" style={{ background: bnr.bg, border: `1px solid ${bnr.border}` }}>
+                {event.bannerTitle && (
+                  <h2 className="text-lg font-semibold" style={{ color: bnr.text }}>{event.bannerTitle}</h2>
+                )}
+                <div
+                  className="mt-2 text-sm leading-relaxed [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
+                  style={{ color: bnr.text }}
+                  dangerouslySetInnerHTML={{ __html: bannerHtml }}
+                />
+              </div>
+            )}
+
+            {event.showCountdown && event.startsAt && (
+              <div className={bannerHtml ? "mt-6" : ""}>
+                <EventCountdown startsAt={event.startsAt} />
+              </div>
+            )}
 
         {event.sectors.length > 0 && (
           <div className="mt-8">
@@ -554,6 +592,22 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             </ol>
           </div>
         )}
+          </div>
+
+          <aside className="lg:sticky lg:top-6 lg:self-start">
+            <EventSideRail
+              title={event.title}
+              startsAt={event.startsAt}
+              endsAt={event.endsAt}
+              formatLabel={formatLabel}
+              organizerName={event.organizerName}
+              organizerPhone={event.organizerPhone}
+              organizerEmail={event.organizerEmail}
+              alreadyRegistered={Boolean(registration)}
+              ended={event.status === "ended"}
+            />
+          </aside>
+        </div>
       </section>
 
       <ComplianceBlock />

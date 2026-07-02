@@ -1622,7 +1622,18 @@
     "your_lesson_order": "El orden de tus lecciones",
     "your_personalised_lesson_sequence_admin_assign": "Tu secuencia de lecciones personalizada; las lecciones asignadas por el administrador aparecen primero.",
     "your_standing": "Tu situación",
-    "icapos_registered_investors_matched_to_your_co": "Inversores registrados en iCapOS que coinciden con tu empresa, separados de tu CRM privado."
+    "icapos_registered_investors_matched_to_your_co": "Inversores registrados en iCapOS que coinciden con tu empresa, separados de tu CRM privado.",
+    "share": "Compartir",
+    "organizer": "Organizador",
+    "online_event": "Evento en línea",
+    "youre_registered": "Estás registrado",
+    "free_registration": "Registro gratuito",
+    "countdown_days": "Días",
+    "countdown_hours": "Horas",
+    "countdown_minutes": "Minutos",
+    "countdown_seconds": "Segundos",
+    "add_to_calendar": "Añadir al calendario",
+    "calendar_ics": "iCal / Outlook"
   },
   "founderCmp": {
     "strong": "% sólido",
@@ -2544,6 +2555,27 @@
     "order_2": "orden",
     "owner_email": "correo del responsable",
     "retry_limit_optional": "límite de reintentos (opcional)",
-    "trigger_entity": "disparador, entidad…"
+    "trigger_entity": "disparador, entidad…",
+    "banner_editor_title": "Banner de la página y barra lateral",
+    "banner_editor_desc": "Un banner editable que se muestra en la página pública del evento, además de la cuenta regresiva y los datos del organizador en la barra lateral.",
+    "banner_heading_label": "Título del banner",
+    "banner_body_label": "Contenido del banner",
+    "banner_bg_label": "Fondo",
+    "bg_indigo": "Índigo",
+    "bg_teal": "Verde azulado",
+    "bg_navy": "Azul marino",
+    "bg_plain": "Simple",
+    "show_countdown_label": "Mostrar cuenta regresiva hasta la hora de inicio",
+    "organizer_name_label": "Nombre del organizador",
+    "organizer_phone_label": "Teléfono del organizador",
+    "organizer_email_label": "Correo del organizador",
+    "save_banner": "Guardar banner",
+    "fmt_bold": "Negrita",
+    "fmt_italic": "Cursiva",
+    "fmt_underline": "Subrayado",
+    "fmt_link": "Insertar enlace",
+    "fmt_bullet": "Lista con viñetas",
+    "fmt_align_left": "Alinear a la izquierda",
+    "fmt_align_center": "Centrar"
   }
 }

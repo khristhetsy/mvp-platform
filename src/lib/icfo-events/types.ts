@@ -45,6 +45,13 @@ export interface EventRecord {
   coverPath: string | null;
   coverOverlay: number;
   coverFocal: string;
+  bannerTitle: string | null;
+  bannerHtml: string | null;
+  bannerBg: string;
+  showCountdown: boolean;
+  organizerName: string | null;
+  organizerPhone: string | null;
+  organizerEmail: string | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;

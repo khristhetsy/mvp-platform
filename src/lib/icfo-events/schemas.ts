@@ -30,6 +30,13 @@ export const updateEventSchema = z.object({
   startsAt: z.string().datetime().nullable().optional(),
   endsAt: z.string().datetime().nullable().optional(),
   sectors: z.array(sectorTrackInput).max(MAX_SECTOR_TRACKS).optional(),
+  bannerTitle: z.string().max(160).nullable().optional(),
+  bannerHtml: z.string().max(8000).nullable().optional(),
+  bannerBg: z.enum(["indigo", "teal", "navy", "plain"]).optional(),
+  showCountdown: z.boolean().optional(),
+  organizerName: z.string().max(160).nullable().optional(),
+  organizerPhone: z.string().max(60).nullable().optional(),
+  organizerEmail: z.string().email().max(200).nullable().optional().or(z.literal("")),
 });
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 

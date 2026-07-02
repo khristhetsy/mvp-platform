@@ -9,6 +9,7 @@ import type {
   UpdateEventInput,
 } from "./schemas";
 import { slugify } from "./schemas";
+import { sanitizeBannerHtml, normalizeBannerBg } from "./sanitize-html";
 import type {
   EventRecord,
   EventSectorTrack,
@@ -39,6 +40,13 @@ function mapEvent(r: EventRow): EventRecord {
     coverPath: (r.cover_path as string | null) ?? null,
     coverOverlay: Number(r.cover_overlay ?? 55),
     coverFocal: (r.cover_focal as string | null) ?? "center",
+    bannerTitle: (r.banner_title as string | null) ?? null,
+    bannerHtml: (r.banner_html as string | null) ?? null,
+    bannerBg: (r.banner_bg as string | null) ?? "indigo",
+    showCountdown: r.show_countdown === undefined ? true : Boolean(r.show_countdown),
+    organizerName: (r.organizer_name as string | null) ?? null,
+    organizerPhone: (r.organizer_phone as string | null) ?? null,
+    organizerEmail: (r.organizer_email as string | null) ?? null,
     createdBy: String(r.created_by),
     createdAt: String(r.created_at),
     updatedAt: String(r.updated_at),
@@ -239,6 +247,13 @@ export async function updateEvent(
   if (input.visibility !== undefined) patch.visibility = input.visibility;
   if (input.startsAt !== undefined) patch.starts_at = input.startsAt;
   if (input.endsAt !== undefined) patch.ends_at = input.endsAt;
+  if (input.bannerTitle !== undefined) patch.banner_title = input.bannerTitle;
+  if (input.bannerHtml !== undefined) patch.banner_html = sanitizeBannerHtml(input.bannerHtml);
+  if (input.bannerBg !== undefined) patch.banner_bg = normalizeBannerBg(input.bannerBg);
+  if (input.showCountdown !== undefined) patch.show_countdown = input.showCountdown;
+  if (input.organizerName !== undefined) patch.organizer_name = input.organizerName;
+  if (input.organizerPhone !== undefined) patch.organizer_phone = input.organizerPhone;
+  if (input.organizerEmail !== undefined) patch.organizer_email = input.organizerEmail;
 
   const { data, error } = await raw(supabase)
     .from("events")

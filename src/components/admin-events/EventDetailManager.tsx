@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { EVENT_SECTORS, sectorLabel } from "@/lib/icfo-events/sectors";
 import { GuestRoster } from "@/components/events/GuestRoster";
+import { BannerEditor } from "@/components/admin-events/BannerEditor";
 import type {
   EventWithDetail,
   EventSession,
@@ -544,6 +545,9 @@ export function EventDetailManager({
           </div>
         </form>
       </section>
+
+      {/* Page banner, countdown & side rail */}
+      <BannerEditor event={event} />
 
       {/* Sessions */}
       <section className="mt-6 rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
