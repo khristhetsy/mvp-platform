@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
@@ -94,6 +95,7 @@ export default async function InvestorOnePagerPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const t = await getTranslations("appPages");
   const company = await getPublishedCompanyBySlug(slug);
   if (!company) notFound();
 
@@ -211,20 +213,20 @@ export default async function InvestorOnePagerPage({
           gap: 12, marginBottom: 20,
         }}>
           <MetricCard
-            label="Funding ask"
+            label={t("funding_ask")}
             value={formatFunding(company.funding_amount)}
             accent
           />
           <MetricCard
-            label="Revenue stage"
+            label={t("revenue_stage")}
             value={stageLabel ?? "—"}
           />
           {geography && (
-            <MetricCard label="Location" value={geography} />
+            <MetricCard label={t("location")} value={geography} />
           )}
           {company.website && (
             <MetricCard
-              label="Website"
+              label={t("website")}
               value={company.website.replace(/^https?:\/\/(www\.)?/, "")}
               href={company.website}
             />
@@ -233,7 +235,7 @@ export default async function InvestorOnePagerPage({
 
         {/* Use of funds */}
         {company.use_of_funds && (
-          <Section title="Use of funds" icon={
+          <Section title={t("use_of_funds")} icon={
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
@@ -246,7 +248,7 @@ export default async function InvestorOnePagerPage({
 
         {/* Founder goals */}
         {company.founder_goals && (
-          <Section title="What we're looking for" icon={
+          <Section title={t("what_we_re_looking_for")} icon={
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="10" />
               <circle cx="12" cy="12" r="3" />

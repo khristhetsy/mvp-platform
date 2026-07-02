@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { NotificationsPanel } from "@/components/NotificationsPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
@@ -17,6 +18,7 @@ export const dynamic = "force-dynamic";
 
 export default async function NotificationsPage() {
   const profile = await getCurrentUserProfile();
+  const t = await getTranslations("appPages");
 
   if (!profile) {
     redirect("/auth/sign-in");
@@ -31,12 +33,12 @@ export default async function NotificationsPage() {
     <AppShell
       workspace={workspace}
       profileName={profile.full_name ?? profile.email ?? "User"}
-      profileSubtitle="Notifications"
+      profileSubtitle={t("notifications")}
     >
       <PageHeader
-        eyebrow="Activity"
-        title="Notifications"
-        description="Unified alerts for investor activity, onboarding, remediation, learning, reviews, and billing events."
+        eyebrow={t("activity")}
+        title={t("notifications")}
+        description={t("unified_alerts_for_investor_activity_onboardin")}
       />
 
       <NotificationsPanel />

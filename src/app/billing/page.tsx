@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { UpgradeRequestActions } from "@/components/UpgradeRequestActions";
 import { CheckoutButton, ManageSubscriptionButton } from "@/components/billing/CheckoutButton";
@@ -34,6 +35,7 @@ function trialDaysRemaining(trialEndsAt: string | null) {
 
 export default async function BillingPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
 
   if (profile.role !== "founder") {
     redirect("/upgrade");
@@ -60,8 +62,8 @@ export default async function BillingPage() {
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"}>
       <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Billing</p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Billing overview</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">{t("billing")}</p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{t("billing_overview")}</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
           iCapOS billing is powered by Lemon Squeezy. Choose a plan below to start your subscription.
         </p>
@@ -113,11 +115,11 @@ export default async function BillingPage() {
 
         {isPaymentsEnabled() && !hasLsCustomer ? (
           <div className="mt-8">
-            <h2 className="text-base font-semibold text-slate-950">Choose a plan</h2>
-            <p className="mt-1 text-sm text-slate-600">Select a plan to activate your subscription.</p>
+            <h2 className="text-base font-semibold text-slate-950">{t("choose_a_plan")}</h2>
+            <p className="mt-1 text-sm text-slate-600">{t("select_a_plan_to_activate_your_subscription")}</p>
             <div className="mt-4 flex flex-wrap gap-3">
-              <CheckoutButton planType="founder_basic" label="Founder Basic — $499/mo" />
-              <CheckoutButton planType="founder_professional" label="Founder Professional — $1,000/mo" recommended />
+              <CheckoutButton planType="founder_basic" label={t("founder_basic_499_mo")} />
+              <CheckoutButton planType="founder_professional" label={t("founder_professional_1_000_mo")} recommended />
             </div>
           </div>
         ) : null}
@@ -147,8 +149,8 @@ export default async function BillingPage() {
 
         {!isPaymentsEnabled() ? (
           <div className="mt-10 border-t border-slate-200 pt-8">
-            <h2 className="text-base font-semibold text-slate-950">Upgrade requests</h2>
-            <p className="mt-1 text-sm text-slate-600">Submit a request — no payment will be processed yet.</p>
+            <h2 className="text-base font-semibold text-slate-950">{t("upgrade_requests")}</h2>
+            <p className="mt-1 text-sm text-slate-600">{t("submit_a_request_no_payment_will_be_processed")}</p>
             <div className="mt-4">
               <UpgradeRequestActions requestedPlan={requestedPlan} />
             </div>

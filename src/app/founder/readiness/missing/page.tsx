@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { getTranslations } from "next-intl/server";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderReadinessMissingPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
 
@@ -33,22 +35,22 @@ export default async function FounderReadinessMissingPage() {
       <FounderFeatureGate featureKey="readiness">
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Readiness"
-            title="Missing documents"
-            description="Documents still needed to complete your readiness checklist."
+            eyebrow={t("readiness")}
+            title={t("missing_documents")}
+            description={t("documents_still_needed_to_complete_your_readin")}
           />
 
           {!company ? (
-            <WorkspacePanel title="Company profile required" subtitle="Complete setup to view missing documents">
-              <p className="text-sm text-slate-600">Create your company profile to track missing documents.</p>
+            <WorkspacePanel title={t("company_profile_required")} subtitle={t("complete_setup_to_view_missing_documents")}>
+              <p className="text-sm text-slate-600">{t("create_your_company_profile_to_track_missing_d")}</p>
             </WorkspacePanel>
           ) : (
             <WorkspacePanel
-              title="Missing key documents"
+              title={t("missing_key_documents")}
               subtitle={`${missingDocuments.length} item${missingDocuments.length !== 1 ? "s" : ""} missing`}
             >
               {missingDocuments.length === 0 ? (
-                <p className="text-sm text-emerald-700">All key documents are uploaded.</p>
+                <p className="text-sm text-emerald-700">{t("all_key_documents_are_uploaded")}</p>
               ) : (
                 <ul className="grid gap-2 text-sm text-slate-700">
                   {missingDocuments.map((item) => {
@@ -86,7 +88,7 @@ export default async function FounderReadinessMissingPage() {
               {Array.isArray(diligenceReport?.missing_documents) &&
               (diligenceReport.missing_documents as string[]).length > 0 ? (
                 <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 p-4">
-                  <p className="text-sm font-semibold text-amber-950">AI report flagged missing items</p>
+                  <p className="text-sm font-semibold text-amber-950">{t("ai_report_flagged_missing_items")}</p>
                   <ul className="mt-2 space-y-1 text-sm text-amber-900">
                     {(diligenceReport.missing_documents as string[]).map((item) => (
                       <li key={item}>• {item}</li>

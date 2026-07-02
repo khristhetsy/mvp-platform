@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InvestorPortfolioPage() {
   const { profile, investorId } = await requireInvestorWorkspaceSession();
+  const t = await getTranslations("appPages");
   const { investorProfile } = await loadInvestorWorkspaceContext(profile);
 
   if (!canInvestorPerformSensitiveActions(investorProfile)) {
@@ -25,13 +27,13 @@ export default async function InvestorPortfolioPage() {
       role="INVESTOR"
       workspace="investor"
       profileName={profile.full_name ?? profile.email ?? "Investor"}
-      profileSubtitle="Investor account"
+      profileSubtitle={t("investor_account")}
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Investor workspace"
-          title="Portfolio"
-          description="Track your pledges, investments, and returns across all deals — linked and self-reported."
+          eyebrow={t("investor_workspace_2")}
+          title={t("portfolio")}
+          description={t("track_your_pledges_investments_and_returns_acr")}
         />
         <InvestorFeatureGate>
           {/* Facilitated intro connections — server-rendered */}

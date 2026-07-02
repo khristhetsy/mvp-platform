@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/supabase/auth";
+import { getTranslations } from "next-intl/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
@@ -51,6 +52,7 @@ function UploadIcon() {
 
 export default async function FounderQualifyPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
   const state = await evaluateFounderJourney(supabase, profile.id);
@@ -96,15 +98,15 @@ export default async function FounderQualifyPage() {
         </div>
 
         <PageHeader
-          eyebrow="Stage 2 · Qualify"
-          title="Prove you're investor-ready"
-          description="Upload your due-diligence materials and reach the readiness threshold, then submit for admin review to unlock Deploy."
+          eyebrow={t("stage_2_qualify")}
+          title={t("prove_you_re_investor_ready")}
+          description={t("upload_your_due_diligence_materials_and_reach")}
         />
 
         {/* Readiness meter */}
         <section className="rounded-2xl border border-slate-200 bg-white p-6">
           <div className="flex items-baseline justify-between">
-            <h2 className="text-sm font-medium text-slate-600">Readiness score</h2>
+            <h2 className="text-sm font-medium text-slate-600">{t("readiness_score")}</h2>
             <p className="text-sm text-slate-500">
               Target <span className="font-semibold text-slate-900">{READINESS_THRESHOLD}%</span> to submit
             </p>
@@ -164,7 +166,7 @@ export default async function FounderQualifyPage() {
 
         {/* Required documents */}
         <section className="mt-6">
-          <h2 className="mb-3 text-sm font-medium text-slate-900">Required documents</h2>
+          <h2 className="mb-3 text-sm font-medium text-slate-900">{t("required_documents")}</h2>
           <ul className="space-y-2">
             {checklist.map(({ doc, satisfied, fileName }) => (
               <li
@@ -189,7 +191,7 @@ export default async function FounderQualifyPage() {
                   )}
                 </div>
                 {satisfied ? (
-                  <span className="flex-shrink-0 text-xs font-medium text-emerald-600">Done</span>
+                  <span className="flex-shrink-0 text-xs font-medium text-emerald-600">{t("done")}</span>
                 ) : (
                   <Link
                     href="/founder/documents"
@@ -225,7 +227,7 @@ export default async function FounderQualifyPage() {
             </div>
           ) : (
             <div className="text-sm text-slate-600">
-              <p className="font-medium text-slate-900">Not ready to submit yet</p>
+              <p className="font-medium text-slate-900">{t("not_ready_to_submit_yet")}</p>
               <ul className="mt-2 space-y-1 text-slate-500">
                 {!readinessQualified ? (
                   <li>• Reach a readiness score of {READINESS_THRESHOLD}%.</li>

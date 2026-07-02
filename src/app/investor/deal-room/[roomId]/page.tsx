@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
@@ -24,6 +25,7 @@ function formatCurrency(n: number | null | undefined): string | null {
 
 export default async function InvestorDealRoomPage({ params }: PageProps) {
   const profile = await requireRole(["investor"]);
+  const t = await getTranslations("appPages");
   const { roomId } = await params;
   const supabase = await createServerSupabaseClient();
   const admin = createServiceRoleClient();
@@ -97,15 +99,15 @@ export default async function InvestorDealRoomPage({ params }: PageProps) {
       role="INVESTOR"
       workspace="investor"
       profileName={profile.full_name ?? profile.email ?? "Investor"}
-      profileSubtitle="Investor account"
+      profileSubtitle={t("investor_account")}
     >
       {!hasViewed && <DealRoomViewEventTrigger roomId={roomId} />}
 
       <div className="space-y-6">
         <PageHeader
-          eyebrow="Deal room"
+          eyebrow={t("deal_room")}
           title={room.title}
-          description="Ask structured due diligence questions and request documents. No funding commitment implied."
+          description={t("ask_structured_due_diligence_questions_and_req")}
           metadata={`status: ${room.status}`}
         />
 
@@ -196,14 +198,14 @@ export default async function InvestorDealRoomPage({ params }: PageProps) {
         />
 
         <section className="grid gap-6 xl:grid-cols-2">
-          <WorkspacePanel title="Questions" subtitle={`${(questions ?? []).length} recent`}>
+          <WorkspacePanel title={t("questions")} subtitle={`${(questions ?? []).length} recent`}>
             <DealRoomQuestionsPanel
               roomId={roomId}
               viewerRole="investor"
               initialQuestions={questions ?? []}
             />
           </WorkspacePanel>
-          <WorkspacePanel title="Document requests" subtitle={`${(docRequests ?? []).length} recent`}>
+          <WorkspacePanel title={t("document_requests")} subtitle={`${(docRequests ?? []).length} recent`}>
             <DealRoomDocRequestsPanel
               roomId={roomId}
               viewerRole="investor"
@@ -212,7 +214,7 @@ export default async function InvestorDealRoomPage({ params }: PageProps) {
           </WorkspacePanel>
         </section>
 
-        <WorkspacePanel title="Collaboration" subtitle="Discussion thread">
+        <WorkspacePanel title={t("collaboration")} subtitle={t("discussion_thread")}>
           <CollaborationDiscussionPanel entityType="deal_room" entityId={roomId} />
         </WorkspacePanel>
       </div>

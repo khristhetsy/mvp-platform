@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { getTranslations } from "next-intl/server";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { FounderSpvStatusPanel } from "@/components/FounderSpvStatusPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -17,6 +18,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderSpvsPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
 
   let company: Company | null = null;
   let companyError: string | null = null;
@@ -94,9 +96,9 @@ export default async function FounderSpvsPage() {
     >
       <FounderFeatureGate featureKey="capital_raise">
         <PageHeader
-          eyebrow="Founder workspace"
-          title="SPVs"
-          description="Special Purpose Vehicles created by iCapOS admin to pool investor capital."
+          eyebrow={t("founder_workspace_2")}
+          title={t("spvs")}
+          description={t("special_purpose_vehicles_created_by_icapos_adm")}
         />
 
         {companyError ? (
@@ -138,7 +140,7 @@ export default async function FounderSpvsPage() {
 
             {/* Explainer */}
             <section className="mb-6 rounded-2xl border border-indigo-100 bg-indigo-50 p-5">
-              <h2 className="text-sm font-semibold text-indigo-900">What is an SPV?</h2>
+              <h2 className="text-sm font-semibold text-indigo-900">{t("what_is_an_spv")}</h2>
               <p className="mt-1.5 text-xs leading-5 text-indigo-700">
                 A Special Purpose Vehicle (SPV) is a legal entity created by iCapOS admin to pool multiple investors
                 into a single line on your cap table. When an SPV is formed for your company, you&apos;ll see it here

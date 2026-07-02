@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { notFound } from "next/navigation";
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function KPIGlossaryPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
 
   const supabase = await createServerSupabaseClient();
   const flags = await loadFeatureFlags(supabase);
@@ -19,14 +21,14 @@ export default async function KPIGlossaryPage() {
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
-      profileSubtitle="KPI glossary"
+      profileSubtitle={t("kpi_glossary")}
     >
       <FounderFeatureGate featureKey="dashboard">
         <div className="mx-auto max-w-3xl space-y-6">
           <PageHeader
-            eyebrow="Financial literacy"
-            title="Founder KPI glossary"
-            description="Plain-English definitions, formulas, benchmarks, and calculators for every metric investors ask about."
+            eyebrow={t("financial_literacy")}
+            title={t("founder_kpi_glossary")}
+            description={t("plain_english_definitions_formulas_benchmarks")}
           />
           <FounderKPIGlossary />
         </div>

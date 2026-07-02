@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/supabase/auth";
+import { getTranslations } from "next-intl/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
@@ -85,6 +86,7 @@ function ToolLaunchers() {
 
 export default async function FounderOptimizePage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
 
   const supabase = await createServerSupabaseClient();
@@ -156,15 +158,15 @@ export default async function FounderOptimizePage() {
         </div>
 
         <PageHeader
-          eyebrow="Stage 4 · Optimize"
-          title="Manage and scale your raise"
-          description="Track your round close, keep investors updated, and hit the milestones that carry your raise to the finish."
+          eyebrow={t("stage_4_optimize")}
+          title={t("manage_and_scale_your_raise")}
+          description={t("track_your_round_close_keep_investors_updated")}
         />
 
         {/* Round close thermometer */}
         <section className="rounded-2xl border border-slate-200 bg-white p-6">
           <div className="flex items-baseline justify-between">
-            <h2 className="text-sm font-medium text-slate-600">Round close</h2>
+            <h2 className="text-sm font-medium text-slate-600">{t("round_close")}</h2>
             <p className="text-sm text-slate-500">
               <span className="font-semibold text-slate-900">{formatPledgeTotal(totalPledged, currency)}</span>
               {target > 0 ? ` of ${formatPledgeTotal(target, currency)}` : " committed"}
@@ -186,11 +188,11 @@ export default async function FounderOptimizePage() {
 
         {/* Engagement metrics */}
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <MetricCard value={String(investorCount)} label="Committed investors" />
+          <MetricCard value={String(investorCount)} label={t("committed_investors")} />
           <MetricCard value={String(dealRoomCount)} label={`Deal room${dealRoomCount === 1 ? "" : "s"}`} />
           <MetricCard
             value={daysSinceUpdate === null ? "—" : `${daysSinceUpdate}d`}
-            label="Since last update"
+            label={t("since_last_update")}
           />
         </div>
 
@@ -213,7 +215,7 @@ export default async function FounderOptimizePage() {
 
         {/* Milestones */}
         <section className="mt-6">
-          <h2 className="mb-3 text-sm font-medium text-slate-900">Milestones</h2>
+          <h2 className="mb-3 text-sm font-medium text-slate-900">{t("milestones")}</h2>
           <ul className="space-y-2">
             {milestones.map((m) => (
               <li
@@ -242,7 +244,7 @@ export default async function FounderOptimizePage() {
 
         {/* Ongoing tools */}
         <section className="mt-6">
-          <h2 className="mb-3 text-sm font-medium text-slate-900">Ongoing tools</h2>
+          <h2 className="mb-3 text-sm font-medium text-slate-900">{t("ongoing_tools")}</h2>
           <ToolLaunchers />
         </section>
       </FounderJourneyGate>

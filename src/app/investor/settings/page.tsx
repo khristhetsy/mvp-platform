@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { BetaFeedbackForm } from "@/components/beta/BetaFeedbackForm";
 import { GoogleCalendarConnectionCard } from "@/components/GoogleCalendarConnectionCard";
@@ -20,6 +21,7 @@ export default async function InvestorSettingsPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
+  const t = await getTranslations("appPages");
   const { tab: rawTab } = await searchParams;
   const tab: Tab = rawTab === "integrations" || rawTab === "feedback" ? rawTab : "profile";
 
@@ -33,12 +35,12 @@ export default async function InvestorSettingsPage({
       role="INVESTOR"
       workspace="investor"
       profileName={profile.full_name ?? profile.email ?? "Investor"}
-      profileSubtitle="Investor account"
+      profileSubtitle={t("investor_account")}
     >
       <PageHeader
-        eyebrow="Investor workspace"
-        title="Settings"
-        description="Manage your investor profile, integrations, and preferences."
+        eyebrow={t("investor_workspace_2")}
+        title={t("settings")}
+        description={t("manage_your_investor_profile_integrations_and")}
       />
 
       <InvestorSettingsNav active={tab} />
@@ -46,7 +48,7 @@ export default async function InvestorSettingsPage({
       {tab === "profile" && (
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
           <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
-            <h2 className="text-sm font-semibold text-slate-900">Investor profile</h2>
+            <h2 className="text-sm font-semibold text-slate-900">{t("investor_profile")}</h2>
             <p className="mt-0.5 text-xs text-slate-500">
               Update your investment thesis, sectors, check size, and preferences.
               Changes are saved to your profile immediately.
@@ -65,11 +67,11 @@ export default async function InvestorSettingsPage({
       {tab === "integrations" && (
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
           <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
-            <h2 className="text-sm font-semibold text-slate-900">Integrations</h2>
-            <p className="mt-0.5 text-xs text-slate-500">Connect third-party tools to your investor workspace.</p>
+            <h2 className="text-sm font-semibold text-slate-900">{t("integrations")}</h2>
+            <p className="mt-0.5 text-xs text-slate-500">{t("connect_third_party_tools_to_your_investor_wor")}</p>
           </div>
           <div className="p-6">
-            <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
+            <Suspense fallback={<p className="text-sm text-slate-500">{t("loading_2")}</p>}>
               <GoogleCalendarConnectionCard status={googleStatus} returnPath="/investor/settings?tab=integrations" />
             </Suspense>
           </div>
@@ -79,8 +81,8 @@ export default async function InvestorSettingsPage({
       {tab === "feedback" && (
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
           <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
-            <h2 className="text-sm font-semibold text-slate-900">Feedback</h2>
-            <p className="mt-0.5 text-xs text-slate-500">Help us improve iCapOS for investors.</p>
+            <h2 className="text-sm font-semibold text-slate-900">{t("feedback")}</h2>
+            <p className="mt-0.5 text-xs text-slate-500">{t("help_us_improve_icapos_for_investors")}</p>
           </div>
           <div className="p-6">
             <BetaFeedbackForm />

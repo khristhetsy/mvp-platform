@@ -1,5 +1,6 @@
 import { verifyUnsubscribeToken } from "@/lib/marketing/send";
 import { addUnsubscribe } from "@/lib/marketing/contacts";
+import { getTranslations } from "next-intl/server";
 
 interface Props {
   searchParams: Promise<{ token?: string }>;
@@ -7,6 +8,7 @@ interface Props {
 
 export default async function UnsubscribePage({ searchParams }: Props) {
   const params = await searchParams;
+  const t = await getTranslations("appPages");
   const token = params.token ?? "";
 
   const email = verifyUnsubscribeToken(token);
@@ -15,7 +17,7 @@ export default async function UnsubscribePage({ searchParams }: Props) {
     return (
       <div style={page}>
         <div style={card}>
-          <h1 style={heading}>Invalid link</h1>
+          <h1 style={heading}>{t("invalid_link")}</h1>
           <p style={body}>
             This unsubscribe link is invalid or has expired. If you want to
             unsubscribe, please reply to the email with &quot;unsubscribe&quot; in the
@@ -33,7 +35,7 @@ export default async function UnsubscribePage({ searchParams }: Props) {
     <div style={page}>
       <div style={card}>
         <div style={check}>✓</div>
-        <h1 style={heading}>You&apos;ve been unsubscribed</h1>
+        <h1 style={heading}>{t("you_ve_been_unsubscribed")}</h1>
         <p style={body}>
           <strong>{email}</strong> has been removed from our mailing list.
           You won&apos;t receive any further marketing emails from us.

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { getTranslations } from "next-intl/server";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
@@ -20,6 +21,7 @@ function formatStatusCounts(counts: Record<string, number>) {
 
 export default async function FounderAnalyticsPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const analytics = await loadFounderAnalytics(profile);
 
@@ -37,17 +39,17 @@ export default async function FounderAnalyticsPage() {
     >
       <FounderFeatureGate featureKey="analytics">
         <PageHeader
-          eyebrow="Founder workspace"
-          title="Analytics"
-          description="Overview of your readiness, outreach, funding, and learning progress. Current snapshot — no external tracking."
+          eyebrow={t("founder_workspace_2")}
+          title={t("analytics")}
+          description={t("overview_of_your_readiness_outreach_funding_an")}
         />
 
         {!analytics ? (
-          <WorkspacePanel title="No company linked" subtitle="Complete setup to view analytics">
+          <WorkspacePanel title={t("no_company_linked")} subtitle={t("complete_setup_to_view_analytics")}>
             <FounderEmptyState
               icon="📊"
-              title="Analytics start after onboarding"
-              description="Complete your company profile and add at least one document to unlock readiness, outreach, and funding analytics."
+              title={t("analytics_start_after_onboarding")}
+              description={t("complete_your_company_profile_and_add_at_least")}
               steps={[
                 { icon: "🏢", label: "Complete your company profile in Settings" },
                 { icon: "📄", label: "Upload your pitch deck or financial model" },

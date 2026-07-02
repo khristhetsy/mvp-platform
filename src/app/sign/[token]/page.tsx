@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { getTranslations } from "next-intl/server";
 import { getRequestByToken, listFieldsForToken, markViewed } from "@/lib/esignature/public";
 import { signatureSignedUrl, writeSignatureAudit } from "@/lib/esignature/storage";
 import { BRAND } from "@/lib/esignature/types";
@@ -9,17 +10,18 @@ export const dynamic = "force-dynamic";
 
 export default async function SignPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
+  const t = await getTranslations("appPages");
   const supabase = createServiceRoleClient();
   const request = await getRequestByToken(supabase, token);
 
   if (!request) {
-    return <Terminal title="Link not found" message="This signing link is invalid or has expired." />;
+    return <Terminal title={t("link_not_found")} message="This signing link is invalid or has expired." />;
   }
   if (request.status === "voided") {
-    return <Terminal title="Document voided" message="This document has been voided by the sender and can no longer be signed." />;
+    return <Terminal title={t("document_voided")} message="This document has been voided by the sender and can no longer be signed." />;
   }
   if (request.status === "completed" || request.status === "signed") {
-    return <Terminal title="Already signed" message="Thank you — this document has already been completed. A copy was emailed to you." />;
+    return <Terminal title={t("already_signed")} message="Thank you — this document has already been completed. A copy was emailed to you." />;
   }
 
   // First open: record the 'opened' event + flip sent → viewed.

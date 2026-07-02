@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { InvestorPrivateMarketBoard } from "@/components/investor/InvestorPrivateMarketBoard";
 import { InvestorPrivateMarketSummary } from "@/components/investor/InvestorPrivateMarketSummary";
 import { InvestorPrivateMarketTicker } from "@/components/investor/InvestorPrivateMarketTicker";
@@ -25,6 +26,7 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 export default async function InvestorOpportunitiesPage() {
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
+  const t = await getTranslations("appPages");
   void trackInvestorOpportunityView(investorId);
 
   // eslint-disable-next-line react-hooks/purity -- server component; time window is intentional
@@ -99,13 +101,13 @@ export default async function InvestorOpportunitiesPage() {
       role="INVESTOR"
       workspace="investor"
       profileName={profile.full_name ?? profile.email ?? "Investor"}
-      profileSubtitle="Private Market"
+      profileSubtitle={t("private_market")}
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Investor workspace"
-          title="Private Market"
-          description="Diligence-ready deals, scored and ranked to your thesis. Readiness, your match, and indicated interest at a glance."
+          eyebrow={t("investor_workspace_2")}
+          title={t("private_market")}
+          description={t("diligence_ready_deals_scored_and_ranked_to_you")}
           actions={
             <p className="flex flex-wrap gap-x-1 gap-y-1 text-sm text-slate-500">
               <Link href="/deals" className="font-semibold text-[var(--blue)] hover:underline">

@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PitchDeckAnalyzerPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
 
@@ -39,9 +41,9 @@ export default async function PitchDeckAnalyzerPage() {
       <FounderFeatureGate featureKey="ai_diligence">
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Raise toolkit"
-            title="Pitch deck AI analyzer"
-            description="Get scored, slide-by-slide AI feedback on your pitch deck from the perspective of a top VC."
+            eyebrow={t("raise_toolkit_2")}
+            title={t("pitch_deck_ai_analyzer")}
+            description={t("get_scored_slide_by_slide_ai_feedback_on_your")}
           />
           <PitchDeckAnalyzerClient
             hasPitchDeck={Boolean(pitchDeck)}

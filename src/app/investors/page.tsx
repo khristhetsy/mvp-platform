@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Gauge, Target, FolderLock, Coins, TrendingUp, Star, Eye } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingLiveTicker, type TickerItem } from "@/components/marketing/MarketingLiveTicker";
@@ -41,6 +42,7 @@ const WHY = [
 ];
 
 export default async function InvestorsPage() {
+  const t = await getTranslations("appPages");
   const supabase = createServiceRoleClient();
   let listings: Awaited<ReturnType<typeof listMarketplaceListings>> = [];
 
@@ -93,7 +95,7 @@ export default async function InvestorsPage() {
           {/* Deal proof card */}
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[var(--shadow-card)]">
             <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--teal-muted)] font-mono text-[13px] font-semibold text-[var(--teal)]">FOX</span>
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--teal-muted)] font-mono text-[13px] font-semibold text-[var(--teal)]">{t("fox")}</span>
               <div className="flex-1">
                 <div className="font-mono text-sm font-semibold text-[var(--navy)]">FOX·EYES</div>
                 <div className="text-[11.5px] text-slate-400">Vision AI · raising $2.5M</div>
@@ -105,10 +107,10 @@ export default async function InvestorsPage() {
             </div>
             <div className="divide-y divide-slate-100 text-[12.5px]">
               <div className="flex items-center justify-between py-3.5 text-slate-500">
-                <span>Readiness</span><b className="font-mono font-semibold text-[var(--teal)]">84.0 · Strong ▲3.2</b>
+                <span>{t("readiness")}</span><b className="font-mono font-semibold text-[var(--teal)]">84.0 · Strong ▲3.2</b>
               </div>
               <div className="flex items-center justify-between py-3.5 text-slate-500">
-                <span>Round filled</span>
+                <span>{t("round_filled")}</span>
                 <span className="text-right">
                   <b className="font-mono font-semibold text-[var(--navy)]">72%</b>
                   <span className="mt-1 block h-[7px] w-[130px] overflow-hidden rounded-full bg-slate-200">
@@ -117,10 +119,10 @@ export default async function InvestorsPage() {
                 </span>
               </div>
               <div className="flex items-center justify-between py-3.5 text-slate-500">
-                <span>Indicated interest</span><b className="font-mono font-semibold text-[var(--navy)]">$1.8M / $2.5M</b>
+                <span>{t("indicated_interest")}</span><b className="font-mono font-semibold text-[var(--navy)]">$1.8M / $2.5M</b>
               </div>
               <div className="flex items-center justify-between py-3.5 text-slate-500">
-                <span>Data room</span><b className="font-mono font-semibold text-[var(--indigo)]">Open</b>
+                <span>{t("data_room")}</span><b className="font-mono font-semibold text-[var(--indigo)]">Open</b>
               </div>
             </div>
             <Link href="/deals" className="mt-4 block rounded-lg bg-[var(--indigo)] py-2.5 text-center text-[13px] font-semibold text-white">
@@ -133,14 +135,14 @@ export default async function InvestorsPage() {
       {/* Live ticker */}
       <section className="px-4 pb-2 pt-12 lg:px-8">
         <div className="mx-auto max-w-5xl">
-          <MarketingLiveTicker items={TICKER} label="Sample · what investors are doing" />
+          <MarketingLiveTicker items={TICKER} label={t("sample_what_investors_are_doing")} />
         </div>
       </section>
 
       {/* Why cards */}
       <section className="px-4 py-14 lg:px-8">
         <div className="mx-auto max-w-5xl">
-          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--indigo)]">Why investors use iCapOS</p>
+          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--indigo)]">{t("why_investors_use_icapos")}</p>
           <h2 className="mt-3 text-center text-2xl font-semibold tracking-tight text-[var(--navy)] md:text-3xl">
             Quality deal flow, without the work.
           </h2>
@@ -163,8 +165,8 @@ export default async function InvestorsPage() {
       {/* Live listings (real data) */}
       <section className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-14 lg:px-8">
         <div className="mx-auto max-w-5xl">
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">Live marketplace</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--navy)]">Published opportunities</h2>
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">{t("live_marketplace")}</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--navy)]">{t("published_opportunities")}</h2>
           <p className="mt-2 text-sm text-slate-500">
             {listings.length} {listings.length === 1 ? "listing" : "listings"} currently live · Admin-approved · Compliance disclosures included
           </p>
@@ -187,7 +189,7 @@ export default async function InvestorsPage() {
       {/* CTA band */}
       <section className="px-4 py-16 text-center lg:px-8" style={{ background: "linear-gradient(135deg, var(--indigo), var(--indigo-hover))" }}>
         <div className="mx-auto max-w-3xl">
-          <h2 className="text-3xl font-semibold tracking-tight text-white">See the deals matched to your thesis.</h2>
+          <h2 className="text-3xl font-semibold tracking-tight text-white">{t("see_the_deals_matched_to_your_thesis")}</h2>
           <p className="mx-auto mt-3 max-w-[46ch] text-[15px] text-white/85">
             Request verified investor access to the Private Market.
           </p>

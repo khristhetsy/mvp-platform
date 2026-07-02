@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { MessagingThreadWorkspace } from "@/components/MessagingThreadWorkspace";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InvestorMessagesPage() {
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
+  const t = await getTranslations("appPages");
   const [threadsResult, googleStatus] = await Promise.all([
     listInvestorMessageThreads(supabase, investorId),
     getGoogleConnectionStatus(supabase, investorId),
@@ -21,12 +23,12 @@ export default async function InvestorMessagesPage() {
       role="INVESTOR"
       workspace="investor"
       profileName={profile.full_name ?? profile.email ?? "Investor"}
-      profileSubtitle="Investor account"
+      profileSubtitle={t("investor_account")}
     >
       <PageHeader
-        eyebrow="Investor workspace"
-        title="Messages"
-        description="Controlled conversations with founders after intro requests, follow-ups, and meeting scheduling."
+        eyebrow={t("investor_workspace_2")}
+        title={t("messages")}
+        description={t("controlled_conversations_with_founders_after_i")}
       />
 
       <InvestorFeatureGate>

@@ -1,19 +1,21 @@
 import Link from "next/link";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
+import { getTranslations } from "next-intl/server";
 import { CapitalOSLogo } from "@/components/CapitalOSLogo";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 
 const fields = ["Company name", "Industry", "Stage", "Location", "Funding target", "Revenue stage"];
 
-export default function SubmitCompanyPage() {
+export default async function SubmitCompanyPage() {
+  const t = await getTranslations("appPages");
   return (
     <MarketingShell>
       <section className="px-4 py-8 lg:px-8 lg:py-10">
         <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[0.85fr_1.15fr]">
           <div>
             <CapitalOSLogo height={48} tagline priority className="mb-6" />
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--gold)]">Submit company</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--gold)]">{t("submit_company")}</p>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight text-[var(--navy)] md:text-5xl">
               Start your iCapOS readiness review.
             </h1>

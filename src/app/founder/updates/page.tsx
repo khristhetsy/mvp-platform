@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderUpdatesPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
 
@@ -25,9 +27,9 @@ export default async function FounderUpdatesPage() {
     >
       <FounderFeatureGate featureKey="investor_access">
         <PageHeader
-          eyebrow="Founder workspace"
-          title="Investor updates"
-          description="Broadcast company milestones to investors watching your company. Published updates trigger in-app notifications."
+          eyebrow={t("founder_workspace_2")}
+          title={t("investor_updates")}
+          description={t("broadcast_company_milestones_to_investors_watc")}
         />
         <FounderCompanyUpdatesClient initialUpdates={updates ?? []} />
       </FounderFeatureGate>

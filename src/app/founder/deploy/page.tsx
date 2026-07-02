@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/supabase/auth";
+import { getTranslations } from "next-intl/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
@@ -122,6 +123,7 @@ function ToolLaunchers() {
 
 export default async function FounderDeployPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
 
   let crmView: ReturnType<typeof buildFounderInvestorCrmView> | null = null;
@@ -176,9 +178,9 @@ export default async function FounderDeployPage() {
           </div>
 
           <PageHeader
-            eyebrow="Stage 3 · Deploy"
-            title="Run your raise"
-            description="Track your investor pipeline, keep momentum with follow-ups, and run outreach to close your round."
+            eyebrow={t("stage_3_deploy")}
+            title={t("run_your_raise")}
+            description={t("track_your_investor_pipeline_keep_momentum_wit")}
             actions={
               <Link
                 href="/founder/investors"
@@ -210,11 +212,11 @@ export default async function FounderDeployPage() {
 
           {/* Investor pipeline list */}
           <section className="mt-6">
-            <h2 className="mb-3 text-sm font-medium text-slate-900">Investor pipeline</h2>
+            <h2 className="mb-3 text-sm font-medium text-slate-900">{t("investor_pipeline_2")}</h2>
             {pipelineList.length === 0 ? (
               <EmptyState
-                title="No investor activity yet"
-                description="As investors express interest or request intros, they'll appear here. Start outreach to build your pipeline."
+                title={t("no_investor_activity_yet")}
+                description={t("as_investors_express_interest_or_request_intro")}
                 secondaryActionLabel="Open investor CRM"
                 secondaryActionHref="/founder/investors"
               />
@@ -271,7 +273,7 @@ export default async function FounderDeployPage() {
 
           {/* Outreach tools */}
           <section className="mt-6">
-            <h2 className="mb-3 text-sm font-medium text-slate-900">Outreach tools</h2>
+            <h2 className="mb-3 text-sm font-medium text-slate-900">{t("outreach_tools")}</h2>
             <ToolLaunchers />
           </section>
         </FounderFeatureGate>

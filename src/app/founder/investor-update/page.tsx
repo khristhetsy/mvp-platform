@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { notFound } from "next/navigation";
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InvestorUpdatePage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
 
   const supabase = await createServerSupabaseClient();
   const flags = await loadFeatureFlags(supabase);
@@ -19,14 +21,14 @@ export default async function InvestorUpdatePage() {
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
-      profileSubtitle="Investor update builder"
+      profileSubtitle={t("investor_update_builder")}
     >
       <FounderFeatureGate featureKey="dashboard">
         <div className="mx-auto max-w-3xl space-y-6">
           <PageHeader
-            eyebrow="Investor relations"
-            title="Investor update builder"
-            description="Build monthly or quarterly investor updates that build trust and generate introductions — with stage-appropriate tone guidance."
+            eyebrow={t("investor_relations")}
+            title={t("investor_update_builder")}
+            description={t("build_monthly_or_quarterly_investor_updates_th")}
           />
           <InvestorUpdateBuilder />
         </div>

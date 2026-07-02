@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { getTranslations } from "next-intl/server";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -27,6 +28,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderReadinessPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
 
@@ -71,14 +73,14 @@ export default async function FounderReadinessPage() {
       <FounderFeatureGate featureKey="readiness">
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Readiness"
-            title="Checklist"
-            description="Track profile completion, document progress, diligence review status, and recommended next actions."
+            eyebrow={t("readiness")}
+            title={t("checklist")}
+            description={t("track_profile_completion_document_progress_dil")}
           />
 
           {!company ? (
-            <WorkspacePanel title="Company profile required" subtitle="Link a company to track readiness">
-              <p className="text-sm text-slate-600">Create your company profile to start tracking readiness.</p>
+            <WorkspacePanel title={t("company_profile_required")} subtitle={t("link_a_company_to_track_readiness")}>
+              <p className="text-sm text-slate-600">{t("create_your_company_profile_to_start_tracking")}</p>
               <Link
                 href="/founder/onboarding"
                 className="mt-4 inline-flex rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white"
@@ -119,12 +121,12 @@ export default async function FounderReadinessPage() {
                   tasks={remediation.tasks}
                   summary={remediation.summary}
                   learningLinks={remediation.learningLinks}
-                  title="Readiness remediation action plan"
+                  title={t("readiness_remediation_action_plan")}
                 />
               </section>
 
               <section className="mt-6">
-                <WorkspacePanel title="Recommended next actions" subtitle="Prioritized steps to improve readiness">
+                <WorkspacePanel title={t("recommended_next_actions")} subtitle={t("prioritized_steps_to_improve_readiness")}>
                   {recommendedActions.length === 0 ? (
                     <p className="text-sm text-slate-600">
                       No immediate actions. Your readiness materials look complete.

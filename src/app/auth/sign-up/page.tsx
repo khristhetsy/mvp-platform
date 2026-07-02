@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { getTranslations } from "next-intl/server";
 import { SignUpForm } from "@/components/SignUpForm";
 import { isPrivateBetaMode } from "@/lib/env/private-beta";
 
@@ -9,7 +10,8 @@ const trustPoints = [
   "Server-enforced entitlements and subscription controls",
 ];
 
-export default function SignUpPage() {
+export default async function SignUpPage() {
+  const t = await getTranslations("appPages");
   const privateBetaMode = isPrivateBetaMode();
 
   return (
@@ -58,8 +60,8 @@ export default function SignUpPage() {
                 </svg>
               </span>
               <div>
-                <p className="text-sm font-semibold text-white">Secure & trusted</p>
-                <p className="text-xs text-slate-300">Enterprise-grade auth, RLS, and role-checked access</p>
+                <p className="text-sm font-semibold text-white">{t("secure_trusted")}</p>
+                <p className="text-xs text-slate-300">{t("enterprise_grade_auth_rls_and_role_checked_acc")}</p>
               </div>
             </div>
             <p className="mt-4 text-sm leading-6 text-slate-300">
@@ -71,7 +73,7 @@ export default function SignUpPage() {
       </aside>
 
       <main className="flex min-h-screen flex-col justify-center px-6 py-10 sm:px-10 lg:px-12 xl:px-16">
-        <Suspense fallback={<p className="text-sm text-slate-500">Loading signup...</p>}>
+        <Suspense fallback={<p className="text-sm text-slate-500">{t("loading_signup")}</p>}>
           <SignUpForm privateBetaMode={privateBetaMode} />
         </Suspense>
       </main>

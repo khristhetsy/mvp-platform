@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
@@ -38,6 +39,7 @@ function fmtTime(iso: string | null): string {
 
 export default async function TalkShowPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const t = await getTranslations("appPages");
   const supabase = await createServerSupabaseClient();
   const event = await getEventBySlug(supabase, slug).catch(() => null);
   if (!event || event.status === "draft" || event.status === "archived") notFound();
@@ -120,7 +122,7 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
                 </div>
 
                 <div>
-                  <h2 className="text-sm font-semibold text-[var(--navy)]">Call-in queue</h2>
+                  <h2 className="text-sm font-semibold text-[var(--navy)]">{t("call_in_queue")}</h2>
                   {stage && isLive && profile && me ? (
                     <CallInBar
                       sessionId={stage.id}
@@ -135,13 +137,13 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
                       {!isLive ? "The call-in line opens when the show goes on air." : "Sign in to raise your hand for a call-in."}
                     </div>
                   )}
-                  <p className="mt-2 text-xs text-[var(--text-muted)]">Host curates the couch — guests are admin-approved.</p>
+                  <p className="mt-2 text-xs text-[var(--text-muted)]">{t("host_curates_the_couch_guests_are_admin_approv")}</p>
                 </div>
               </div>
 
               {stage && isLive && profile && me && (
                 <div className="mt-4">
-                  <h2 className="text-sm font-semibold text-[var(--navy)]">Live Q&amp;A &amp; chat</h2>
+                  <h2 className="text-sm font-semibold text-[var(--navy)]">{t("live_q_a_chat")}</h2>
                   <LiveSessionPanel
                     sessionId={stage.id}
                     eventId={event.id}

@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { WatchlistPageClient } from "@/components/investor/WatchlistPageClient";
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InvestorWatchlistPage() {
   const { profile, investorId } = await requireInvestorWorkspaceSession();
+  const t = await getTranslations("appPages");
 
   const admin = createServiceRoleClient();
   // Cast required: notes column added in migration 20260619004, types not yet regenerated
@@ -59,13 +61,13 @@ export default async function InvestorWatchlistPage() {
       role="INVESTOR"
       workspace="investor"
       profileName={profile.full_name ?? profile.email ?? "Investor"}
-      profileSubtitle="Investor account"
+      profileSubtitle={t("investor_account")}
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Investor workspace"
-          title="Watchlist"
-          description="Saved deals and companies you are tracking across the iCapOS marketplace."
+          eyebrow={t("investor_workspace_2")}
+          title={t("watchlist")}
+          description={t("saved_deals_and_companies_you_are_tracking_acr")}
         />
         <InvestorFeatureGate>
           <InvestorWatchlistAISummary rows={rows} />

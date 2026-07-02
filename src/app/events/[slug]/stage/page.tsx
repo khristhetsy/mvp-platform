@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
@@ -32,6 +33,7 @@ function fmtTime(iso: string | null): string {
 
 export default async function MainStagePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const t = await getTranslations("appPages");
   const supabase = await createServerSupabaseClient();
   const event = await getEventBySlug(supabase, slug).catch(() => null);
   if (!event || event.status === "draft" || event.status === "archived") notFound();
@@ -81,7 +83,7 @@ export default async function MainStagePage({ params }: { params: Promise<{ slug
                   />
                   {upNext.length > 0 && (
                     <div className="mt-4">
-                      <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Up next on the main stage</h2>
+                      <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("up_next_on_the_main_stage")}</h2>
                       <ul className="mt-2 divide-y divide-[var(--border-subtle)] overflow-hidden rounded-xl border border-[var(--border-subtle)]">
                         {upNext.map((s) => (
                           <li key={s.id} className="flex items-center justify-between px-4 py-2.5">
@@ -95,7 +97,7 @@ export default async function MainStagePage({ params }: { params: Promise<{ slug
                 </div>
 
                 <div>
-                  <h2 className="text-sm font-semibold text-[var(--navy)]">Live Q&amp;A</h2>
+                  <h2 className="text-sm font-semibold text-[var(--navy)]">{t("live_q_a")}</h2>
                   {stage && isLive && profile && me ? (
                     <LiveSessionPanel
                       sessionId={stage.id}

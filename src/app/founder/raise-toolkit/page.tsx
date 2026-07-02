@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { getTranslations } from "next-intl/server";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
@@ -150,6 +151,7 @@ const TAG_COLORS: Record<string, { bg: string; text: string }> = {
 
 export default async function RaiseToolkitPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
 
   return (
@@ -159,9 +161,9 @@ export default async function RaiseToolkitPage() {
     >
       <FounderFeatureGate featureKey="dashboard">
         <PageHeader
-          eyebrow="Raise Toolkit"
-          title="Fundraising tools"
-          description="Everything you need to prepare, practice, and close your round."
+          eyebrow={t("raise_toolkit")}
+          title={t("fundraising_tools")}
+          description={t("everything_you_need_to_prepare_practice_and_cl")}
         />
 
         <div
@@ -233,7 +235,7 @@ export default async function RaiseToolkitPage() {
 
                   {/* CTA */}
                   <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "#534AB7" }}>Open tool</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#534AB7" }}>{t("open_tool")}</span>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                       <path d="M5 12h14M13 6l6 6-6 6" stroke="#534AB7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>

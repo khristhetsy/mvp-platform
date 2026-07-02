@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { MessagingThreadWorkspace } from "@/components/MessagingThreadWorkspace";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import {
@@ -18,6 +19,7 @@ type PageProps = { params: Promise<{ threadId: string }> };
 
 export default async function FounderMessageThreadPage({ params }: PageProps) {
   const { threadId } = await params;
+  const t = await getTranslations("appPages");
   const profile = await requireRole(["founder"]);
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
@@ -47,8 +49,8 @@ export default async function FounderMessageThreadPage({ params }: PageProps) {
       profileSubtitle={company.company_name}
     >
       <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Founder Workspace</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Messages</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">{t("founder_workspace")}</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{t("messages")}</h1>
       </div>
 
       <FounderFeatureGate featureKey="investor_access">

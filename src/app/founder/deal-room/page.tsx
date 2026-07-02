@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { getTranslations } from "next-intl/server";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderDealRoomIndexPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
 
@@ -77,18 +79,18 @@ export default async function FounderDealRoomIndexPage() {
       <FounderFeatureGate featureKey="investor_access">
         <div className="space-y-6">
           <PageHeader
-            eyebrow="Deal room"
-            title="Investor deal rooms"
-            description="Structured diligence collaboration. No public access. No legal or investment advice."
+            eyebrow={t("deal_room")}
+            title={t("investor_deal_rooms")}
+            description={t("structured_diligence_collaboration_no_public_a_2")}
             metadata={`${(rooms ?? []).length} rooms`}
           />
 
-          <WorkspacePanel title="Rooms" subtitle="Your company deal rooms">
+          <WorkspacePanel title={t("rooms")} subtitle={t("your_company_deal_rooms")}>
             {(rooms ?? []).length === 0 ? (
               <FounderEmptyState
                 icon="🔐"
-                title="No deal rooms yet"
-                description="Deal rooms open when an investor expresses interest in your company. They provide a private, structured space for diligence — Q&A, document requests, and status tracking."
+                title={t("no_deal_rooms_yet")}
+                description={t("deal_rooms_open_when_an_investor_expresses_int")}
                 steps={[
                   { icon: "📋", label: "Publish your company profile to become visible to investors" },
                   { icon: "👀", label: "An investor views your listing and requests access" },
@@ -177,8 +179,8 @@ export default async function FounderDealRoomIndexPage() {
 
           {/* Activity feed */}
           <WorkspacePanel
-            title="Activity feed"
-            subtitle="Recent investor engagement across all rooms"
+            title={t("activity_feed")}
+            subtitle={t("recent_investor_engagement_across_all_rooms")}
           >
             <DealRoomActivityFeed events={activityEvents} />
           </WorkspacePanel>

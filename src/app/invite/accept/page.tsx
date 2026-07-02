@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -13,9 +14,10 @@ export default async function InviteAcceptPage({
   searchParams: Promise<{ token?: string }>;
 }) {
   const { token } = await searchParams;
+  const t = await getTranslations("appPages");
 
   if (!token) {
-    return <ErrorPage title="Invalid link" message="This invite link is missing a token. Please check the email and try again." />;
+    return <ErrorPage title={t("invalid_link")} message="This invite link is missing a token. Please check the email and try again." />;
   }
 
   const admin = createServiceRoleClient();
@@ -28,13 +30,13 @@ export default async function InviteAcceptPage({
     .maybeSingle();
 
   if (!invite) {
-    return <ErrorPage title="Invite not found" message="This invite link is invalid or has already been used." />;
+    return <ErrorPage title={t("invite_not_found")} message="This invite link is invalid or has already been used." />;
   }
   if (invite.status !== "pending") {
-    return <ErrorPage title="Invite no longer valid" message={`This invite has been ${invite.status}. Please ask your co-founder to send a new one.`} />;
+    return <ErrorPage title={t("invite_no_longer_valid")} message={`This invite has been ${invite.status}. Please ask your co-founder to send a new one.`} />;
   }
   if (new Date(invite.expires_at) < new Date()) {
-    return <ErrorPage title="Invite expired" message="This invite link has expired (invites are valid for 7 days). Please ask your co-founder to send a new one." />;
+    return <ErrorPage title={t("invite_expired")} message="This invite link has expired (invites are valid for 7 days). Please ask your co-founder to send a new one." />;
   }
 
   // Fetch company name separately (avoids join type inference issues)

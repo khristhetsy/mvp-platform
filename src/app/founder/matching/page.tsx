@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { FounderMatchingCenterPanel } from "@/components/founder/FounderMatchingCenterPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderMatchingPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
 
   let setupError: string | null = null;
@@ -34,13 +36,13 @@ export default async function FounderMatchingPage() {
       <FounderFeatureGate featureKey="investor_access">
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Founder workspace"
-            title="Matching Center"
-            description="Ranked platform investor matches for your company using the existing iCapOS matching engine."
+            eyebrow={t("founder_workspace_2")}
+            title={t("matching_center")}
+            description={t("ranked_platform_investor_matches_for_your_comp")}
           />
 
           {!company ? (
-            <WorkspacePanel title="Company profile required" subtitle="Link a company to view investor matches">
+            <WorkspacePanel title={t("company_profile_required")} subtitle={t("link_a_company_to_view_investor_matches")}>
               <p className="text-sm text-slate-600">
                 Complete your company setup to see ranked investor matches and fit signals here.
               </p>

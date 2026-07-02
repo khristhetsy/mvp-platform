@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { getTranslations } from "next-intl/server";
 import { InvestorTasksPageClient } from "@/components/investor/InvestorTasksPageClient";
 import { requireRole } from "@/lib/supabase/auth";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderTasksPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
 
   const admin = createServiceRoleClient();
   const [googleStatus, internalUsers] = await Promise.all([
@@ -20,12 +22,12 @@ export default async function FounderTasksPage() {
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
-      profileSubtitle="Founder account"
+      profileSubtitle={t("founder_account")}
     >
       <PageHeader
-        eyebrow="Founder workspace"
-        title="My Tasks"
-        description="Track action items, investor follow-ups, and capital-raise to-dos."
+        eyebrow={t("founder_workspace_2")}
+        title={t("my_tasks")}
+        description={t("track_action_items_investor_follow_ups_and_cap")}
       />
       <InvestorTasksPageClient
         googleConnected={googleStatus.connected}

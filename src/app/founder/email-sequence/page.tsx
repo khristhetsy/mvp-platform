@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { notFound } from "next/navigation";
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function EmailSequencePage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
 
   const supabase = await createServerSupabaseClient();
   const flags = await loadFeatureFlags(supabase);
@@ -19,14 +21,14 @@ export default async function EmailSequencePage() {
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
-      profileSubtitle="Email sequence builder"
+      profileSubtitle={t("email_sequence_builder")}
     >
       <FounderFeatureGate featureKey="dashboard">
         <div className="mx-auto max-w-3xl space-y-6">
           <PageHeader
-            eyebrow="Investor outreach"
-            title="Email sequence builder"
-            description="4-touch outreach sequences tailored to VC, angel, family office, and corporate investors — with timing guidance and copy you can send today."
+            eyebrow={t("investor_outreach")}
+            title={t("email_sequence_builder")}
+            description={t("4_touch_outreach_sequences_tailored_to_vc_ange")}
           />
           <EmailSequenceBuilder />
         </div>

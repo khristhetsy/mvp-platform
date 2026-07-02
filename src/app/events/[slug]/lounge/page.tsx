@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
@@ -21,6 +22,7 @@ export const metadata = { title: "Networking Lounge — iCFO Events", robots: { 
 
 export default async function LoungePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const t = await getTranslations("appPages");
   const supabase = await createServerSupabaseClient();
   const event = await getEventBySlug(supabase, slug).catch(() => null);
   if (!event || !["published", "live"].includes(event.status)) notFound();
@@ -49,7 +51,7 @@ export default async function LoungePage({ params }: { params: Promise<{ slug: s
           <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--border-subtle)] shadow-[var(--shadow-card)]">
             <EventVenueHeader slug={slug} current="networking" tracksHref={tracksHref} />
             <div className="p-4 sm:p-5">
-              <h1 className="text-xl font-semibold text-[var(--navy)]">Networking Lounge</h1>
+              <h1 className="text-xl font-semibold text-[var(--navy)]">{t("networking_lounge")}</h1>
               <p className="mt-1 text-sm text-[var(--text-muted)]">
                 Join a topic table, or connect with a sector-matched attendee. Introductions are double opt-in.
                 Education &amp; community — not an offer of securities.
@@ -58,7 +60,7 @@ export default async function LoungePage({ params }: { params: Promise<{ slug: s
               <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_320px]">
                 <LoungeRoom eventId={event.id} me={me} initialTables={tables} />
                 <div>
-                  <h2 className="mb-2 text-sm font-semibold text-[var(--navy)]">Suggested for you</h2>
+                  <h2 className="mb-2 text-sm font-semibold text-[var(--navy)]">{t("suggested_for_you")}</h2>
                   <NetworkingConnections eventId={event.id} suggestions={suggestions} initialConnections={connections} />
                 </div>
               </div>

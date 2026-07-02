@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { requireRole } from "@/lib/supabase/auth";
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderSettingsPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
 
   return (
@@ -22,9 +24,9 @@ export default async function FounderSettingsPage() {
       profileSubtitle={company?.company_name ?? "Your company"}
     >
       <PageHeader
-        eyebrow="Settings"
-        title="Company profile"
-        description="Edit your public listing, company details, and branding."
+        eyebrow={t("settings")}
+        title={t("company_profile")}
+        description={t("edit_your_public_listing_company_details_and_b")}
         actions={
           <Link
             href="/founder/preview"
@@ -56,8 +58,8 @@ export default async function FounderSettingsPage() {
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
-          <h2 className="text-sm font-semibold text-slate-900">Company profile</h2>
-          <p className="mt-0.5 text-xs text-slate-500">Edit your public listing and company details</p>
+          <h2 className="text-sm font-semibold text-slate-900">{t("company_profile")}</h2>
+          <p className="mt-0.5 text-xs text-slate-500">{t("edit_your_public_listing_and_company_details")}</p>
         </div>
         <div className="p-6">
           <CompanySettingsForm company={company} />
@@ -66,7 +68,7 @@ export default async function FounderSettingsPage() {
               <CollaborationDiscussionPanel
                 entityType="company"
                 entityId={company.id}
-                title="Company discussion"
+                title={t("company_discussion")}
               />
             </div>
           ) : null}
@@ -74,7 +76,7 @@ export default async function FounderSettingsPage() {
       </section>
 
       <section className="mt-6 space-y-3">
-        <h2 className="text-sm font-semibold text-slate-900">Preferences</h2>
+        <h2 className="text-sm font-semibold text-slate-900">{t("preferences")}</h2>
         <TipsPreferenceToggle />
         <SignatureSettings />
       </section>

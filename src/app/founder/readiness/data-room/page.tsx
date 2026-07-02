@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { DataRoomReadinessCard } from "@/components/founder/DataRoomReadinessCard";
@@ -13,6 +14,7 @@ export const metadata = { title: "Data room" };
 
 export default async function FounderDataRoomPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
   const documents = company ? (await listCompanyDocuments(supabase, company.id)).data ?? [] : [];
@@ -25,9 +27,9 @@ export default async function FounderDataRoomPage() {
       <FounderFeatureGate featureKey="readiness">
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Due diligence"
-            title="Your data room"
-            description="Everything investors and our diligence team need, in one place. Finish each item to unlock investor access."
+            eyebrow={t("due_diligence")}
+            title={t("your_data_room")}
+            description={t("everything_investors_and_our_diligence_team_ne")}
           />
           <DataRoomReadinessCard documents={documents} />
         </WorkspacePageContainer>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
+import { getTranslations } from "next-intl/server";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { PlanComparisonSection } from "@/components/PlanComparisonSection";
@@ -16,12 +17,13 @@ export const metadata = {
   },
 };
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const t = await getTranslations("appPages");
   return (
     <MarketingShell>
       <section className="mx-auto max-w-5xl px-4 py-12 lg:px-8 lg:py-16">
         <div className="max-w-3xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--gold)]">Pricing</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--gold)]">{t("pricing")}</p>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight text-[var(--navy)] md:text-5xl">
             Enterprise-ready plans for founders and investors.
           </h1>

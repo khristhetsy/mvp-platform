@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -31,6 +32,7 @@ const PROFILE_HINTS: Record<string, { hint: string; href: string }> = {
 
 export default async function ReadinessWizardPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
 
@@ -72,9 +74,9 @@ export default async function ReadinessWizardPage() {
       <FounderFeatureGate featureKey="readiness">
         <div className="mx-auto max-w-2xl space-y-6">
           <PageHeader
-            eyebrow="Readiness"
-            title="Score improvement wizard"
-            description="Complete each step to reach 80+ and unlock institutional investor conversations."
+            eyebrow={t("readiness")}
+            title={t("score_improvement_wizard")}
+            description={t("complete_each_step_to_reach_80_and_unlock_inst")}
           />
           <ReadinessWizard
             currentScore={currentScore}

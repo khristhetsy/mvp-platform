@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, ArrowLeft, CalendarDays } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
@@ -34,6 +35,7 @@ function fmtRange(start: string | null, end: string | null): string {
 
 export default async function EventsListPage() {
   const supabase = await createServerSupabaseClient();
+  const t = await getTranslations("appPages");
   let events: EventRecord[] = [];
   try {
     events = await listPublicEvents(supabase);
@@ -72,7 +74,7 @@ export default async function EventsListPage() {
           {events.length === 0 ? (
             <div className="rounded-xl border border-[var(--border-subtle)] bg-white px-6 py-16 text-center">
               <CalendarDays className="mx-auto h-8 w-8 text-[var(--text-muted)]" />
-              <p className="mt-3 text-sm font-medium text-[var(--text-primary)]">No events scheduled yet</p>
+              <p className="mt-3 text-sm font-medium text-[var(--text-primary)]">{t("no_events_scheduled_yet")}</p>
               <p className="mt-1 text-sm text-[var(--text-muted)]">
                 Check back soon — the first sector showcases are being lined up.
               </p>
@@ -90,7 +92,7 @@ export default async function EventsListPage() {
                       {ev.format.replace("_", " ")}
                     </span>
                     {ev.status === "live" && (
-                      <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">Live</span>
+                      <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">{t("live")}</span>
                     )}
                   </div>
                   <h2 className="mt-2 text-lg font-semibold text-[var(--navy)]">{ev.title}</h2>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { getTranslations } from "next-intl/server";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { PlanComparisonSection } from "@/components/PlanComparisonSection";
@@ -30,6 +31,7 @@ function readParam(value: string | string[] | undefined) {
 }
 
 async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: SearchParams }>) {
+  const t = await getTranslations("appPages");
   const params = await searchParams;
   const featureKey = parseUpgradeFeature(readParam(params.feature));
   const highlightPlan = parseUpgradePlan(readParam(params.plan));
@@ -54,7 +56,7 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
     <>
       <section className="mx-auto max-w-7xl px-6 py-16">
         <div className="max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-indigo-600">Upgrade</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-indigo-600">{t("upgrade")}</p>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950 md:text-5xl">
             {featureLock ? featureLock.headline : "Upgrade your iCapOS workspace"}
           </h1>
@@ -69,7 +71,7 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
 
         {subscription && profile?.role === "founder" ? (
           <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Your account</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">{t("your_account")}</h2>
             <dl className="mt-4 grid gap-3 text-sm text-slate-700 md:grid-cols-2 lg:grid-cols-4">
               <div>
                 <dt className="font-medium text-slate-900">Current plan</dt>
@@ -122,18 +124,18 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
 
         {founderCanCheckout ? (
           <div className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-950">Upgrade your plan</h2>
+            <h2 className="text-lg font-semibold text-slate-950">{t("upgrade_your_plan")}</h2>
             <p className="mt-2 text-sm text-slate-600">
               Pick a plan and check out securely with Lemon Squeezy. Your access updates immediately after payment.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <CheckoutButton planType="founder_basic" label="Founder Basic — $499/mo" />
-              <CheckoutButton planType="founder_professional" label="Founder Professional — $1,000/mo" recommended />
+              <CheckoutButton planType="founder_basic" label={t("founder_basic_499_mo")} />
+              <CheckoutButton planType="founder_professional" label={t("founder_professional_1_000_mo")} recommended />
             </div>
           </div>
         ) : profile ? (
           <div className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-950">Request an upgrade</h2>
+            <h2 className="text-lg font-semibold text-slate-950">{t("request_an_upgrade")}</h2>
             <p className="mt-2 text-sm text-slate-600">
               Billing checkout is not live yet. Submit a request and our team will follow up.
             </p>
@@ -173,10 +175,11 @@ async function UpgradePageContent({ searchParams }: Readonly<{ searchParams: Sea
   );
 }
 
-export default function UpgradePage({ searchParams }: Readonly<{ searchParams: SearchParams }>) {
+export default async function UpgradePage({ searchParams }: Readonly<{ searchParams: SearchParams }>) {
+  const t = await getTranslations("appPages");
   return (
     <MarketingShell>
-      <Suspense fallback={<p className="px-6 py-16 text-sm text-slate-500">Loading upgrade options...</p>}>
+      <Suspense fallback={<p className="px-6 py-16 text-sm text-slate-500">{t("loading_upgrade_options")}</p>}>
         <UpgradePageContent searchParams={searchParams} />
       </Suspense>
       <MarketingFooter />

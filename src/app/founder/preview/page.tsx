@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -58,6 +59,7 @@ function formatFunding(amount: number | null): string {
 
 export default async function FounderPreviewPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   if (!company) notFound();
 
@@ -261,12 +263,12 @@ export default async function FounderPreviewPage() {
 
         {/* Key metrics */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20 }}>
-          <MetricCard label="Funding ask" value={formatFunding(pub.funding_amount)} accent />
-          <MetricCard label="Revenue stage" value={stageLabel ?? "—"} />
-          {geography && <MetricCard label="Location" value={geography} />}
+          <MetricCard label={t("funding_ask")} value={formatFunding(pub.funding_amount)} accent />
+          <MetricCard label={t("revenue_stage")} value={stageLabel ?? "—"} />
+          {geography && <MetricCard label={t("location")} value={geography} />}
           {pub.website && (
             <MetricCard
-              label="Website"
+              label={t("website")}
               value={pub.website.replace(/^https?:\/\/(www\.)?/, "")}
               href={pub.website}
             />
@@ -274,13 +276,13 @@ export default async function FounderPreviewPage() {
         </div>
 
         {pub.use_of_funds && (
-          <Section title="Use of funds" icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="#374151" strokeWidth="2"/><path d="M12 6v2m0 8v2M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke="#374151" strokeWidth="2" strokeLinecap="round"/></svg>}>
+          <Section title={t("use_of_funds")} icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="#374151" strokeWidth="2"/><path d="M12 6v2m0 8v2M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke="#374151" strokeWidth="2" strokeLinecap="round"/></svg>}>
             <FormattedText text={pub.use_of_funds} />
           </Section>
         )}
 
         {pub.founder_goals && (
-          <Section title="What we&apos;re looking for" icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="#374151" strokeWidth="2"/><circle cx="12" cy="12" r="6" stroke="#374151" strokeWidth="2"/><circle cx="12" cy="12" r="2" stroke="#374151" strokeWidth="2"/></svg>}>
+          <Section title={t("what_we_re_looking_for")} icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="#374151" strokeWidth="2"/><circle cx="12" cy="12" r="6" stroke="#374151" strokeWidth="2"/><circle cx="12" cy="12" r="2" stroke="#374151" strokeWidth="2"/></svg>}>
             <FormattedText text={pub.founder_goals} />
           </Section>
         )}

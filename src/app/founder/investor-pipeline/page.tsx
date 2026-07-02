@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
@@ -17,6 +18,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InvestorPipelinePage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
 
   // Pre-load investors server-side (safe columns only — no contact_email/phone)
@@ -37,9 +39,9 @@ export default async function InvestorPipelinePage() {
       <FounderFeatureGate featureKey="investor_access">
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Investor Pipeline"
-            title="Investor Pipeline"
-            description="Track and manage your investor relationships, pledges, and outreach progress."
+            eyebrow={t("investor_pipeline")}
+            title={t("investor_pipeline")}
+            description={t("track_and_manage_your_investor_relationships_p")}
           />
           <InvestorPipelineClient initialData={initialInvestors ?? []} />
         </WorkspacePageContainer>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireInvestorWorkspaceSession } from "@/lib/supabase/auth";
 import { FOUNDER_COURSES, listCourseCategories } from "@/lib/learning/courses";
@@ -24,6 +25,7 @@ function categoryStyle(cat: string) {
 
 export default async function InvestorLearningPage() {
   const { profile } = await requireInvestorWorkspaceSession();
+  const t = await getTranslations("appPages");
   const categories = listCourseCategories();
 
   return (
@@ -31,12 +33,12 @@ export default async function InvestorLearningPage() {
       role="INVESTOR"
       workspace="investor"
       profileName={profile.full_name ?? profile.email ?? "Investor"}
-      profileSubtitle="Investor account"
+      profileSubtitle={t("investor_account")}
     >
       <PageHeader
-        eyebrow="Investor workspace"
-        title="Learning"
-        description="Courses and guides to help you evaluate startups, structure diligence, and make better investment decisions."
+        eyebrow={t("investor_workspace_2")}
+        title={t("learning")}
+        description={t("courses_and_guides_to_help_you_evaluate_startu")}
         metadata={`${FOUNDER_COURSES.length} courses`}
       />
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CounselReviewBanner } from "@/components/legal/CounselReviewBanner";
+import { getTranslations } from "next-intl/server";
 
 export const metadata = { title: "Security – iCapOS" };
 
@@ -7,7 +8,8 @@ export const metadata = { title: "Security – iCapOS" };
  * Security overview — structure and headings only. Substantive security
  * commitments are counsel/security-team reviewed copy; do not invent specifics.
  */
-export default function SecurityPage() {
+export default async function SecurityPage() {
+  const t = await getTranslations("appPages");
   const sections = [
     { h: "1. Data protection", note: "Encryption in transit and at rest; key management. (Pending review.)" },
     { h: "2. Infrastructure", note: "Hosting, isolation, and backup posture. (Pending review.)" },
@@ -25,8 +27,8 @@ export default function SecurityPage() {
           <Link href="/" className="text-sm font-semibold text-[var(--navy)] hover:underline">
             ← Back to iCapOS
           </Link>
-          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-950">Security</h1>
-          <p className="mt-2 text-sm text-slate-500">How iCapOS protects platform data.</p>
+          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-950">{t("security")}</h1>
+          <p className="mt-2 text-sm text-slate-500">{t("how_icapos_protects_platform_data")}</p>
         </div>
 
         <CounselReviewBanner />

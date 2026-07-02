@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { getTranslations } from "next-intl/server";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -261,6 +262,7 @@ function CategorySection({ category }: { category: MilestoneCategory }) {
 
 export default async function FounderMilestonesPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const supabase = await createServerSupabaseClient();
   const serviceSupabase = createServiceRoleClient();
   const company = await ensureFounderCompanyForUser(profile);
@@ -276,9 +278,9 @@ export default async function FounderMilestonesPage() {
     <FounderAppShell>
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Progress"
-          title="Milestones"
-          description="Track your fundraising journey — from setting up your profile to closing your round."
+          eyebrow={t("progress")}
+          title={t("milestones")}
+          description={t("track_your_fundraising_journey_from_setting_up")}
         />
 
         {/* Summary bar */}
@@ -294,7 +296,7 @@ export default async function FounderMilestonesPage() {
             </div>
             <div className="flex-1 sm:max-w-sm">
               <div className="mb-1.5 flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-500">Overall progress</span>
+                <span className="text-xs font-medium text-slate-500">{t("overall_progress")}</span>
                 <span className="text-xs font-semibold" style={{ color: "#534AB7" }}>{pct}%</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-slate-100">

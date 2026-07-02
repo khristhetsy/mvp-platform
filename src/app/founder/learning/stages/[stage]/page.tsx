@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { FloatingFounderAICoach } from "@/components/FloatingFounderAICoach";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
@@ -35,6 +36,7 @@ export default async function StageContentPage({
   params: Promise<{ stage: string }>;
 }) {
   const { stage: stageParam } = await params;
+  const t = await getTranslations("appPages");
 
   if (!STAGES.includes(stageParam as CapitalStage)) {
     notFound();
@@ -131,7 +133,7 @@ export default async function StageContentPage({
           {!unlocked && (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center">
               <p className="text-4xl">🔒</p>
-              <h2 className="mt-3 text-lg font-semibold text-slate-900">Stage locked</h2>
+              <h2 className="mt-3 text-lg font-semibold text-slate-900">{t("stage_locked")}</h2>
               <p className="mt-2 text-sm text-slate-600">
                 Complete{" "}
                 {prevMeta ? (
@@ -320,7 +322,7 @@ export default async function StageContentPage({
                       </div>
                     ) : (
                       <div className="mt-4">
-                        <p className="mb-2 text-xs text-slate-400">Not yet submitted</p>
+                        <p className="mb-2 text-xs text-slate-400">{t("not_yet_submitted")}</p>
                         <Link
                           href={`/founder/learning/stages/${stage}/deliverable`}
                           className="block w-full rounded-lg border border-slate-200 bg-white py-2 text-center text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
@@ -368,7 +370,7 @@ export default async function StageContentPage({
                 {/* Navigation to other stages */}
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                   <div className="border-b border-slate-100 bg-slate-50 px-5 py-3.5">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">All stages</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">{t("all_stages")}</p>
                   </div>
                   <div className="divide-y divide-slate-100">
                     {STAGES.map((s) => {

@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -30,6 +31,7 @@ type RawInvestor = {
 
 export default async function CommandCenterPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
   const serviceSupabase = createServiceRoleClient();
@@ -124,9 +126,9 @@ export default async function CommandCenterPage() {
       <FounderFeatureGate featureKey="dashboard">
         <div className="mx-auto max-w-3xl space-y-6">
           <PageHeader
-            eyebrow="Command center"
-            title="Raise war room"
-            description="Every active deal room, pending follow-up, and next action in one place."
+            eyebrow={t("command_center")}
+            title={t("raise_war_room")}
+            description={t("every_active_deal_room_pending_follow_up_and_n")}
           />
           <RaiseCommandCenter
             rooms={commandRooms}

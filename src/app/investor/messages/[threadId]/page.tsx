@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { MessagingThreadWorkspace } from "@/components/MessagingThreadWorkspace";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
@@ -17,6 +18,7 @@ type PageProps = { params: Promise<{ threadId: string }> };
 
 export default async function InvestorMessageThreadPage({ params }: PageProps) {
   const { threadId } = await params;
+  const t = await getTranslations("appPages");
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
 
   const [threadsResult, detailResult, googleStatus] = await Promise.all([
@@ -35,9 +37,9 @@ export default async function InvestorMessageThreadPage({ params }: PageProps) {
       role="INVESTOR"
       workspace="investor"
       profileName={profile.full_name ?? profile.email ?? "Investor"}
-      profileSubtitle="Investor account"
+      profileSubtitle={t("investor_account")}
     >
-      <PageHeader eyebrow="Investor workspace" title="Messages" />
+      <PageHeader eyebrow={t("investor_workspace_2")} title={t("messages")} />
 
       <InvestorFeatureGate>
         <MessagingThreadWorkspace

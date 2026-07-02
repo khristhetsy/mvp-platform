@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FloatingFounderAICoach } from "@/components/FloatingFounderAICoach";
+import { getTranslations } from "next-intl/server";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -95,6 +96,7 @@ const STAGES: CapitalStage[] = ["stage_0", "stage_1", "stage_2", "stage_3"];
 
 export default async function FounderLearningPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const companyName = company?.company_name ?? "Your company";
 
@@ -171,9 +173,9 @@ export default async function FounderLearningPage() {
       <FounderFeatureGate featureKey="elearning">
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Founder workspace"
-            title="Learning overview"
-            description="Track your capital readiness journey across all 4 stages."
+            eyebrow={t("founder_workspace_2")}
+            title={t("learning_overview")}
+            description={t("track_your_capital_readiness_journey_across_al")}
           />
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -182,8 +184,8 @@ export default async function FounderLearningPage() {
               {/* Stage ladder */}
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                 <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
-                  <h2 className="text-sm font-semibold text-slate-900">Capital readiness stages</h2>
-                  <p className="mt-0.5 text-xs text-slate-500">Complete each stage at 80%+ to unlock the next</p>
+                  <h2 className="text-sm font-semibold text-slate-900">{t("capital_readiness_stages")}</h2>
+                  <p className="mt-0.5 text-xs text-slate-500">{t("complete_each_stage_at_80_to_unlock_the_next")}</p>
                 </div>
                 <div className="divide-y divide-slate-100">
                   {STAGES.map((stage) => {
@@ -241,7 +243,7 @@ export default async function FounderLearningPage() {
                   <h2 className="text-sm font-semibold text-slate-900">
                     Lessons in {CAPITAL_STAGE_META[activeStage].label}
                   </h2>
-                  <p className="mt-0.5 text-xs text-slate-500">Your current stage — pick up where you left off</p>
+                  <p className="mt-0.5 text-xs text-slate-500">{t("your_current_stage_pick_up_where_you_left_off")}</p>
                 </div>
                 <div className="divide-y divide-slate-100">
                   {weekLessons.map(({ moduleSlug: _moduleSlug, lesson, done }, idx) => (
@@ -283,7 +285,7 @@ export default async function FounderLearningPage() {
                     </Link>
                   ))}
                   {weekLessons.length === 0 && (
-                    <p className="px-6 py-4 text-sm text-slate-400">No lessons available for this stage yet.</p>
+                    <p className="px-6 py-4 text-sm text-slate-400">{t("no_lessons_available_for_this_stage_yet")}</p>
                   )}
                 </div>
                 <div className="border-t border-slate-100 px-6 py-3">
@@ -326,7 +328,7 @@ export default async function FounderLearningPage() {
 
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                 <div className="border-b border-slate-100 bg-slate-50 px-5 py-3.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Quick actions</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">{t("quick_actions")}</p>
                 </div>
                 <div className="divide-y divide-slate-100">
                   {(
@@ -362,8 +364,8 @@ export default async function FounderLearningPage() {
             <div className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white">
               <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Library</p>
-                  <h2 className="mt-0.5 text-sm font-semibold text-slate-900">Course catalog</h2>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("library")}</p>
+                  <h2 className="mt-0.5 text-sm font-semibold text-slate-900">{t("course_catalog")}</h2>
                 </div>
                 <Link
                   href="/founder/learning/courses"
@@ -404,7 +406,7 @@ export default async function FounderLearningPage() {
                       </div>
                       <p className="text-sm font-semibold leading-snug text-slate-900">{course.title}</p>
                       <p className="line-clamp-2 text-xs leading-relaxed text-slate-500">{course.description}</p>
-                      <span className="text-[11px] font-semibold text-indigo-600 group-hover:underline">View →</span>
+                      <span className="text-[11px] font-semibold text-indigo-600 group-hover:underline">{t("view")}</span>
                     </Link>
                   );
                 })}

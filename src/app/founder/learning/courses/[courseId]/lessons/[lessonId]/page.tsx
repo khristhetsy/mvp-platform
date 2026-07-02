@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
@@ -22,6 +23,7 @@ type PageProps = {
 
 export default async function FounderAdminLessonPage({ params }: PageProps) {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const { courseId, lessonId } = await params;
   const company = await ensureFounderCompanyForUser(profile);
   if (!company) notFound();
@@ -49,9 +51,9 @@ export default async function FounderAdminLessonPage({ params }: PageProps) {
       <FounderFeatureGate featureKey="elearning">
         <div className="space-y-6">
           <PageHeader
-            eyebrow="Admin-authored lesson"
+            eyebrow={t("admin_authored_lesson")}
             title={lesson.title}
-            description="Educational content only. No investment, legal, or tax advice."
+            description={t("educational_content_only_no_investment_legal_o")}
             actions={
               <Link
                 href={`/founder/learning/courses/${courseId}`}
@@ -66,7 +68,7 @@ export default async function FounderAdminLessonPage({ params }: PageProps) {
             Educational content only. No investment, legal, or tax advice. No guarantee of funding outcomes.
           </div>
 
-          <WorkspacePanel title="Lesson" subtitle={`${lesson.estimated_time_minutes} minutes estimated`}>
+          <WorkspacePanel title={t("lesson")} subtitle={`${lesson.estimated_time_minutes} minutes estimated`}>
             <FounderAdminLessonClient
               courseId={courseId}
               lessonId={lessonId}

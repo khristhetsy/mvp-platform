@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CalendarDays } from "lucide-react";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
@@ -35,6 +36,7 @@ function fmtRange(start: string | null, end: string | null): string {
 
 export default async function SectorPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const t = await getTranslations("appPages");
   if (!isValidSectorSlug(slug)) notFound();
 
   const supabase = await createServerSupabaseClient();
@@ -53,7 +55,7 @@ export default async function SectorPage({ params }: { params: Promise<{ slug: s
         <Link href="/events" className="inline-flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--navy)]">
           <ArrowLeft className="h-4 w-4" /> All events
         </Link>
-        <p className="mt-4 text-sm font-semibold uppercase tracking-wide text-[var(--indigo)]">Sector track</p>
+        <p className="mt-4 text-sm font-semibold uppercase tracking-wide text-[var(--indigo)]">{t("sector_track")}</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--navy)] sm:text-4xl">{label}</h1>
         <p className="mt-3 max-w-2xl text-[var(--text-secondary)]">
           Founder showcases, panels, and talk shows in {label}. Education and community — deals stay behind the
@@ -65,7 +67,7 @@ export default async function SectorPage({ params }: { params: Promise<{ slug: s
             <div className="rounded-xl border border-[var(--border-subtle)] bg-white px-6 py-16 text-center">
               <CalendarDays className="mx-auto h-8 w-8 text-[var(--text-muted)]" />
               <p className="mt-3 text-sm font-medium text-[var(--text-primary)]">No {label} events yet</p>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">Check back soon.</p>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">{t("check_back_soon")}</p>
             </div>
           ) : (
             events.map((ev) => (

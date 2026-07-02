@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AnalyticsBreakdownPanel } from "@/components/AnalyticsBreakdownPanel";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
 import { MetricCard } from "@/components/MetricCard";
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InvestorAnalyticsPage() {
   const { profile, investorId } = await requireInvestorWorkspaceSession();
+  const t = await getTranslations("appPages");
   const [analytics] = await Promise.all([
     loadInvestorAnalytics(investorId, 30),
   ]);
@@ -21,33 +23,33 @@ export default async function InvestorAnalyticsPage() {
       role="INVESTOR"
       workspace="investor"
       profileName={profile.full_name ?? profile.email ?? "Investor"}
-      profileSubtitle="Investor account"
+      profileSubtitle={t("investor_account")}
     >
       <PageHeader
-        eyebrow="Investor workspace"
-        title="Analytics"
-        description="Your engagement command center — saved deals, interests, messaging, and match signals from iCapOS data only."
+        eyebrow={t("investor_workspace_2")}
+        title={t("analytics")}
+        description={t("your_engagement_command_center_saved_deals_int")}
       />
 
       <InvestorFeatureGate>
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <MetricCard label="Saved deals" value={String(analytics.savedDeals)} detail="Companies on your watchlist" accent="indigo" href="/investor/portfolio" />
+          <MetricCard label={t("saved_deals")} value={String(analytics.savedDeals)} detail="Companies on your watchlist" accent="indigo" href="/investor/portfolio" />
           <MetricCard
-            label="Expressed interests"
+            label={t("expressed_interests")}
             value={String(analytics.expressedInterests)}
             detail="Interest records across listings"
             accent="violet"
             href="/investor/portfolio"
           />
           <MetricCard
-            label="Intro requests"
+            label={t("intro_requests")}
             value={String(analytics.introRequests)}
             detail="Warm intro and follow-up requests"
             accent="blue"
             href="/investor/messages"
           />
           <MetricCard
-            label="Recommended deals"
+            label={t("recommended_deals")}
             value={String(analytics.recommendedOpportunities)}
             detail={
               analytics.averageMatchScore != null
@@ -58,7 +60,7 @@ export default async function InvestorAnalyticsPage() {
             href="/investor/opportunities"
           />
           <MetricCard
-            label="Message threads"
+            label={t("message_threads")}
             value={String(analytics.messageThreadCount)}
             detail={`${analytics.meetingsScheduled} meetings scheduled`}
             accent="slate"
@@ -68,21 +70,21 @@ export default async function InvestorAnalyticsPage() {
 
         <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <MetricCard
-            label="Pledged total"
+            label={t("pledged_total")}
             value={analytics.pledgeTotalDisplay}
             detail={`${analytics.indicativeTotalDisplay} indicative interest`}
             accent="slate"
             href="/investor/portfolio"
           />
           <MetricCard
-            label="Pending / indicative"
+            label={t("pending_indicative")}
             value={String(analytics.pendingInterestCount)}
             detail={`${analytics.portfolioInterestCount} portfolio interest rows`}
             accent="violet"
             href="/investor/portfolio"
           />
           <MetricCard
-            label="Recent CRM activity"
+            label={t("recent_crm_activity")}
             value={String(analytics.recentActivityCount)}
             detail="Events in your timeline"
             accent="blue"
@@ -92,8 +94,8 @@ export default async function InvestorAnalyticsPage() {
 
         <section className="mt-8 grid gap-6 xl:grid-cols-2">
           <AnalyticsBreakdownPanel
-            title="Engagement summary"
-            subtitle="Current snapshot from your records"
+            title={t("engagement_summary")}
+            subtitle={t("current_snapshot_from_your_records")}
             rows={[
               { label: "Saved deals", value: String(analytics.savedDeals) },
               { label: "Expressed interests", value: String(analytics.expressedInterests) },
@@ -103,7 +105,7 @@ export default async function InvestorAnalyticsPage() {
               { label: "Avg match score", value: analytics.averageMatchScore != null ? `${analytics.averageMatchScore}%` : "—" },
             ]}
           />
-          <WorkspacePanel title="Portfolio / pending interest" subtitle="From your interest records">
+          <WorkspacePanel title={t("portfolio_pending_interest")} subtitle={t("from_your_interest_records")}>
             <p className="text-sm text-slate-700">
               <span className="font-medium text-slate-900">{analytics.portfolioInterestCount}</span> companies with
               interest, pledge, or indicative amounts tracked.

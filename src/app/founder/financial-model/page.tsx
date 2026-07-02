@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/supabase/auth";
+import { getTranslations } from "next-intl/server";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -12,6 +13,7 @@ export const metadata = { title: "Financial model" };
 
 export default async function FounderFinancialModelPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
 
   const supabase = await createServerSupabaseClient();
   const flags = await loadFeatureFlags(supabase);
@@ -20,13 +22,13 @@ export default async function FounderFinancialModelPage() {
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
-      profileSubtitle="Financial model"
+      profileSubtitle={t("financial_model")}
     >
       <FounderJourneyGate minStage="qualify">
         <PageHeader
-          eyebrow="Raise Toolkit"
-          title="Financial model"
-          description="A driver-based 3-year model investors can open in Excel. Used the AI Business Plan? Your projections carry over automatically. If not, build it here — you set the drivers, we do the math."
+          eyebrow={t("raise_toolkit")}
+          title={t("financial_model")}
+          description={t("a_driver_based_3_year_model_investors_can_open")}
         />
         <FinancialModelClient />
       </FounderJourneyGate>

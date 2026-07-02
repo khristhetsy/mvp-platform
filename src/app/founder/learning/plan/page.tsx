@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FloatingFounderAICoach } from "@/components/FloatingFounderAICoach";
+import { getTranslations } from "next-intl/server";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -33,6 +34,7 @@ const PRIORITY_CONFIG = {
 
 export default async function MyLearningPlanPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
 
   const lessonProgress = company
@@ -130,9 +132,9 @@ export default async function MyLearningPlanPage() {
       <FounderFeatureGate featureKey="elearning">
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Learning"
-            title="My learning plan"
-            description="Your personalised lesson sequence — admin-assigned lessons appear first."
+            eyebrow={t("learning")}
+            title={t("my_learning_plan")}
+            description={t("your_personalised_lesson_sequence_admin_assign")}
             actions={
               <Link
                 href="/founder/learning"
@@ -160,7 +162,7 @@ export default async function MyLearningPlanPage() {
           {/* Plan list */}
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
             <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
-              <h2 className="text-sm font-semibold text-slate-900">Your lesson order</h2>
+              <h2 className="text-sm font-semibold text-slate-900">{t("your_lesson_order")}</h2>
               <p className="mt-0.5 text-xs text-slate-500">
                 {assignedCount > 0
                   ? `${assignedCount} lesson${assignedCount > 1 ? "s" : ""} assigned by your admin — shown first`

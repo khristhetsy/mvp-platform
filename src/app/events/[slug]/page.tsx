@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { CalendarDays } from "lucide-react";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
@@ -95,13 +96,14 @@ function initials(name: string): string {
   return name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 }
 
-function SponsorLockup({ sponsors }: { sponsors: EventSponsor[] }) {
+async function SponsorLockup({ sponsors }: { sponsors: EventSponsor[] }) {
+  const t = await getTranslations("appPages");
   if (sponsors.length === 0) return null;
   const presenting = sponsors.filter((s) => s.placement === "presenting");
   const others = sponsors.filter((s) => s.placement !== "presenting");
   return (
     <div id="partners" className="mt-10 scroll-mt-24">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Partners</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("partners")}</h2>
       {presenting.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-3">
           {presenting.map((s) => (
@@ -110,7 +112,7 @@ function SponsorLockup({ sponsors }: { sponsors: EventSponsor[] }) {
               href={`/events/sponsors/${s.id}`}
               className="flex items-center gap-3 rounded-xl border border-[var(--indigo)] bg-[var(--indigo-soft)] px-4 py-3 transition hover:brightness-95"
             >
-              <span className="text-xs font-medium uppercase tracking-wide text-[var(--indigo)]">Presented with</span>
+              <span className="text-xs font-medium uppercase tracking-wide text-[var(--indigo)]">{t("presented_with")}</span>
               {s.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={s.logoUrl} alt={s.name} className="h-7 object-contain" />
@@ -143,11 +145,12 @@ function SponsorLockup({ sponsors }: { sponsors: EventSponsor[] }) {
   );
 }
 
-function Presenters({ presenters }: { presenters: EventPresenter[] }) {
+async function Presenters({ presenters }: { presenters: EventPresenter[] }) {
+  const t = await getTranslations("appPages");
   if (presenters.length === 0) return null;
   return (
     <div className="mt-10">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Speakers</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("speakers")}</h2>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {presenters.map((p) => (
           <div key={p.id} className="rounded-xl border border-[var(--border-subtle)] bg-white px-4 py-3">
@@ -180,6 +183,7 @@ function Presenters({ presenters }: { presenters: EventPresenter[] }) {
 
 export default async function EventDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const t = await getTranslations("appPages");
   const event = await loadEvent(slug);
 
   if (!event || event.status === "draft" || event.status === "archived") {
@@ -294,10 +298,10 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                 </span>
                 <span className="capitalize">· {event.format.replace("_", " ")}</span>
                 {event.status === "live" && (
-                  <span className="rounded-full px-2 py-0.5 text-xs font-medium text-white" style={{ background: "#3a1d1d" }}>Live now</span>
+                  <span className="rounded-full px-2 py-0.5 text-xs font-medium text-white" style={{ background: "#3a1d1d" }}>{t("live_now")}</span>
                 )}
                 {event.status === "ended" && (
-                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs">Concluded</span>
+                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs">{t("concluded")}</span>
                 )}
               </div>
               {event.summary && <p className="mt-4 max-w-2xl text-sm" style={{ color: "#cdd6e4" }}>{event.summary}</p>}
@@ -355,7 +359,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
         {event.sectors.length > 0 && (
           <div className="mt-8">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Sector tracks</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("sector_tracks")}</h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {event.sectors.map((s) => {
                 const count = event.sessions.filter((x) => x.sectorSlug === s.sectorSlug).length;
@@ -381,9 +385,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
         <SponsorLockup sponsors={sponsors} />
 
         <div id="agenda" className="mt-10 scroll-mt-24">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Agenda</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("agenda")}</h2>
           {visibleSessions.length === 0 ? (
-            <p className="mt-3 text-sm text-[var(--text-muted)]">Sessions will be announced soon.</p>
+            <p className="mt-3 text-sm text-[var(--text-muted)]">{t("sessions_will_be_announced_soon")}</p>
           ) : (
             <ol className="mt-4 space-y-3">
               {visibleSessions.map((s) => (
@@ -435,7 +439,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                         <p className="text-sm font-medium text-[var(--navy)]">
                           Premieres {new Date(s.startsAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                         </p>
-                        <p className="mt-1 text-xs text-[var(--text-muted)]">The recording unlocks at the premiere time.</p>
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">{t("the_recording_unlocks_at_the_premiere_time")}</p>
                       </div>
                     ) : (
                       <SessionVideo src={playback.get(s.id) as string} eventId={event.id} sessionId={s.id} />
@@ -506,7 +510,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
         {missions.length > 0 && (
           <div className="mt-10">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Missions</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("missions")}</h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {missions.map((m) => (
                 <div key={m.id} className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
@@ -533,7 +537,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
 
         {leaderboard.length > 0 && (
           <div className="mt-10">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Leaderboard</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("leaderboard")}</h2>
             <p className="mt-1 text-xs text-[var(--text-muted)]">
               Points reward participation — status, not prizes.
             </p>

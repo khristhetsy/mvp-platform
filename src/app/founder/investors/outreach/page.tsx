@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { FounderInvestorHubPanels } from "@/components/FounderInvestorHubPanels";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderInvestorOutreachPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
 
   let hub: Awaited<ReturnType<typeof loadFounderInvestorHub>> | null = null;
@@ -34,15 +36,15 @@ export default async function FounderInvestorOutreachPage() {
       <FounderFeatureGate featureKey="investor_access">
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Investors"
-            title="Outreach & CRM"
-            description="Private investor CRM, email outreach pipeline, and social drafts."
+            eyebrow={t("investors")}
+            title={t("outreach_crm")}
+            description={t("private_investor_crm_email_outreach_pipeline_a")}
           />
 
           <MilestoneCelebration achieved={outreachMilestones} />
 
           {!company ? (
-            <WorkspacePanel title="Company profile required" subtitle="Link a company to manage outreach">
+            <WorkspacePanel title={t("company_profile_required")} subtitle={t("link_a_company_to_manage_outreach")}>
               <p className="text-sm text-slate-600">
                 Complete your company setup to access outreach tools.
               </p>
@@ -69,8 +71,8 @@ export default async function FounderInvestorOutreachPage() {
               }}
             />
           ) : (
-            <WorkspacePanel title="Outreach hub" subtitle="Loading…">
-              <p className="text-sm text-slate-500">Unable to load outreach data.</p>
+            <WorkspacePanel title={t("outreach_hub")} subtitle={t("loading_2")}>
+              <p className="text-sm text-slate-500">{t("unable_to_load_outreach_data")}</p>
             </WorkspacePanel>
           )}
         </WorkspacePageContainer>

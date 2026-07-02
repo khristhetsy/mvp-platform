@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { getTranslations } from "next-intl/server";
 import { FounderConversationalOnboarding } from "@/components/founder/FounderConversationalOnboarding";
 import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingProgressCard";
 import { loadFounderOnboardingPageData } from "@/lib/onboarding/load-founder-onboarding";
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderOnboardingPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const data = await loadFounderOnboardingPageData(profile);
 
   if (!data) {
@@ -29,7 +31,7 @@ export default async function FounderOnboardingPage() {
     >
       <div className="space-y-6">
         <div className="max-w-3xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Founder onboarding</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{t("founder_onboarding")}</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
             Let&apos;s get you set up
           </h1>

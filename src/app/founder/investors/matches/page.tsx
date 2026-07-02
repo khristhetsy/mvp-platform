@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { getTranslations } from "next-intl/server";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderInvestorMatchesPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
 
   let hub: Awaited<ReturnType<typeof loadFounderInvestorHub>> | null = null;
@@ -30,24 +32,24 @@ export default async function FounderInvestorMatchesPage() {
       <FounderFeatureGate featureKey="investor_access">
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Investors"
-            title="Platform matches"
-            description="iCapOS registered investors matched to your company — separate from your private CRM."
+            eyebrow={t("investors")}
+            title={t("platform_matches")}
+            description={t("icapos_registered_investors_matched_to_your_co")}
           />
 
           {!company ? (
-            <WorkspacePanel title="Company profile required" subtitle="Complete setup to see matches">
+            <WorkspacePanel title={t("company_profile_required")} subtitle={t("complete_setup_to_see_matches")}>
               <p className="text-sm text-slate-600">
                 Complete your company setup to view platform investor matches.
               </p>
             </WorkspacePanel>
           ) : (
             <WorkspacePanel
-              title="Matched investors"
+              title={t("matched_investors")}
               subtitle={`${matches.length} platform investor${matches.length !== 1 ? "s" : ""} matched`}
             >
               {matches.length === 0 ? (
-                <p className="text-sm text-slate-500">No platform matches available yet.</p>
+                <p className="text-sm text-slate-500">{t("no_platform_matches_available_yet")}</p>
               ) : (
                 <div className="divide-y divide-slate-100">
                   {matches.map((row) => (

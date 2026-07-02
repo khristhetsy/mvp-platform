@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { getTranslations } from "next-intl/server";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -53,6 +54,7 @@ type PageProps = {
 
 export default async function BrowseCoursesPage({ searchParams }: PageProps) {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const { stage: stageFilter = "", difficulty: difficultyFilter = "" } = await searchParams;
 
@@ -116,9 +118,9 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
       <FounderFeatureGate featureKey="elearning">
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Learning"
-            title="Browse all courses"
-            description="Capital stage lessons and curated courses — all in one place."
+            eyebrow={t("learning")}
+            title={t("browse_all_courses")}
+            description={t("capital_stage_lessons_and_curated_courses_all")}
           />
 
           <div className="mb-6">
@@ -186,8 +188,8 @@ export default async function BrowseCoursesPage({ searchParams }: PageProps) {
           {courses.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white px-8 py-16 text-center">
               <p className="text-3xl">📚</p>
-              <p className="mt-3 text-sm font-medium text-slate-700">No courses found</p>
-              <p className="mt-1 text-xs text-slate-400">Try removing a filter.</p>
+              <p className="mt-3 text-sm font-medium text-slate-700">{t("no_courses_found")}</p>
+              <p className="mt-1 text-xs text-slate-400">{t("try_removing_a_filter")}</p>
               <Link
                 href="/founder/learning/courses"
                 className="mt-4 inline-block text-xs font-semibold text-indigo-600 hover:underline"

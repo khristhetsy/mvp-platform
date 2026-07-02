@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -11,6 +12,7 @@ import { createClient } from "@/lib/supabase/client";
  * have the new user set a password before sending them into the admin workspace.
  */
 export default function AcceptInvitePage() {
+  const t = useTranslations("appPages");
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -80,7 +82,7 @@ export default function AcceptInvitePage() {
       <form onSubmit={handleSubmit} className="w-full max-w-md space-y-5 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#534AB7]">iCapOS</p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">Set your password</h1>
+          <h1 className="mt-1 text-2xl font-bold text-slate-900">{t("set_your_password")}</h1>
           <p className="mt-1 text-sm text-slate-600">
             {email ? `Finish setting up ${email}.` : "Finish setting up your account."} Choose a password to access your workspace.
           </p>

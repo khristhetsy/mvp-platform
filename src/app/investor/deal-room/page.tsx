@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -26,6 +27,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export default async function InvestorDealRoomIndexPage() {
   const profile = await requireRole(["investor"]);
+  const t = await getTranslations("appPages");
   const supabase = await createServerSupabaseClient();
   const admin = createServiceRoleClient();
 
@@ -76,13 +78,13 @@ export default async function InvestorDealRoomIndexPage() {
       role="INVESTOR"
       workspace="investor"
       profileName={profile.full_name ?? profile.email ?? "Investor"}
-      profileSubtitle="Investor account"
+      profileSubtitle={t("investor_account")}
     >
       <div className="space-y-6">
         <PageHeader
-          eyebrow="Deal room"
-          title="Founder deal rooms"
-          description="Structured diligence collaboration. No public access. No funding commitment implied."
+          eyebrow={t("deal_room")}
+          title={t("founder_deal_rooms")}
+          description={t("structured_diligence_collaboration_no_public_a")}
           metadata={`${roomList.length} room${roomList.length !== 1 ? "s" : ""}${activeCount > 0 ? ` · ${activeCount} active` : ""}`}
         />
 
@@ -95,7 +97,7 @@ export default async function InvestorDealRoomIndexPage() {
                 <polyline points="7 3 7 8 15 8" stroke="#534AB7" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <p className="mb-2 text-base font-bold text-slate-900">No deal rooms yet</p>
+            <p className="mb-2 text-base font-bold text-slate-900">{t("no_deal_rooms_yet")}</p>
             <p className="mx-auto mb-6 max-w-sm text-sm text-slate-500 leading-relaxed">
               Deal rooms open automatically when you express interest in a company and the founder enables structured diligence.
             </p>

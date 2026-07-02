@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { getTranslations } from "next-intl/server";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -21,6 +22,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderReadinessDiligencePage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
 
@@ -50,18 +52,18 @@ export default async function FounderReadinessDiligencePage() {
       <FounderFeatureGate featureKey="readiness">
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Readiness"
-            title="Diligence & review"
-            description="Admin review status, AI diligence report, and company profile completion."
+            eyebrow={t("readiness")}
+            title={t("diligence_review")}
+            description={t("admin_review_status_ai_diligence_report_and_co")}
           />
 
           {!company ? (
-            <WorkspacePanel title="Company profile required" subtitle="Complete setup to view review status">
-              <p className="text-sm text-slate-600">Create your company profile to access diligence review.</p>
+            <WorkspacePanel title={t("company_profile_required")} subtitle={t("complete_setup_to_view_review_status")}>
+              <p className="text-sm text-slate-600">{t("create_your_company_profile_to_access_diligenc")}</p>
             </WorkspacePanel>
           ) : (
             <section className="grid gap-6 xl:grid-cols-2">
-              <WorkspacePanel title="Company profile checklist" subtitle="Completion status for core company fields">
+              <WorkspacePanel title={t("company_profile_checklist")} subtitle={t("completion_status_for_core_company_fields")}>
                 <div className="grid gap-3">
                   {profileCompletion.items.map((item) => (
                     <div
@@ -87,17 +89,17 @@ export default async function FounderReadinessDiligencePage() {
                 </Link>
               </WorkspacePanel>
 
-              <WorkspacePanel title="Diligence & review status" subtitle="Admin review and AI diligence outputs">
+              <WorkspacePanel title={t("diligence_review_status")} subtitle={t("admin_review_and_ai_diligence_outputs")}>
                 <div className="grid gap-4">
                   <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                    <p className="text-sm font-medium text-slate-600">Review status</p>
+                    <p className="text-sm font-medium text-slate-600">{t("review_status")}</p>
                     <p className="mt-1 text-lg font-semibold text-slate-950">
                       {formatReviewStatus(reviewStatus ? String(reviewStatus) : null)}
                     </p>
                     {reviewNotes ? <p className="mt-2 text-sm leading-6 text-slate-600">{reviewNotes}</p> : null}
                   </div>
                   <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 p-4 ring-1 ring-indigo-100">
-                    <p className="text-sm font-medium text-indigo-700">AI diligence report</p>
+                    <p className="text-sm font-medium text-indigo-700">{t("ai_diligence_report")}</p>
                     {diligenceReport ? (
                       <>
                         <p className="mt-1 text-lg font-semibold text-slate-950">
@@ -108,7 +110,7 @@ export default async function FounderReadinessDiligencePage() {
                         ) : null}
                       </>
                     ) : (
-                      <p className="mt-2 text-sm text-slate-600">No AI diligence report generated yet.</p>
+                      <p className="mt-2 text-sm text-slate-600">{t("no_ai_diligence_report_generated_yet")}</p>
                     )}
                   </div>
                 </div>

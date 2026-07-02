@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -17,6 +18,7 @@ type PageProps = {
 
 export default async function FounderAdminCourseQuizPage({ params }: PageProps) {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const { courseId } = await params;
   const company = await ensureFounderCompanyForUser(profile);
   if (!company) notFound();
@@ -34,9 +36,9 @@ export default async function FounderAdminCourseQuizPage({ params }: PageProps) 
       <FounderFeatureGate featureKey="elearning">
         <div className="space-y-6">
           <PageHeader
-            eyebrow="Course quiz"
+            eyebrow={t("course_quiz")}
             title={quiz.title}
-            description="Educational quiz. Answers are graded server-side. No answers are revealed before submission."
+            description={t("educational_quiz_answers_are_graded_server_sid")}
             actions={
               <Link
                 href={`/founder/learning/courses/${courseId}`}
@@ -51,7 +53,7 @@ export default async function FounderAdminCourseQuizPage({ params }: PageProps) 
             Educational content only. No investment, legal, or tax advice. No guarantee of funding outcomes.
           </div>
 
-          <WorkspacePanel title="Quiz" subtitle={`${questions.length} questions · passing ${quiz.passing_score}%`}>
+          <WorkspacePanel title={t("quiz")} subtitle={`${questions.length} questions · passing ${quiz.passing_score}%`}>
             <FounderAdminCourseQuizClient courseId={courseId} quizId={quiz.id} questions={questions} retryLimit={quiz.retry_limit} />
           </WorkspacePanel>
         </div>

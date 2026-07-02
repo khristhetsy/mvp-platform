@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DocumentQualityPanel } from "@/components/founder/DocumentQualityPanel";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 import { FounderAppShell } from "@/components/FounderAppShell";
@@ -39,6 +40,7 @@ const FOUNDER_DOCUMENT_TYPES: { label: string; value: string; aliases?: string[]
 
 export default async function DocumentUploadPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
   const {
@@ -81,17 +83,17 @@ export default async function DocumentUploadPage() {
       <FounderFeatureGate featureKey="documents">
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Documents"
-            title="Upload diligence documents"
-            description="Files are stored in a private bucket and served through signed, role-checked URLs only."
+            eyebrow={t("documents")}
+            title={t("upload_diligence_documents")}
+            description={t("files_are_stored_in_a_private_bucket_and_serve")}
           />
         <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
         <div className="cap-surface-card p-4 sm:p-6">
 
           {!company ? (
             <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950">
-              <p className="font-semibold">No company profile is linked to your account.</p>
-              <p className="mt-2">Please create a company profile first, then return here to upload your pitch deck.</p>
+              <p className="font-semibold">{t("no_company_profile_is_linked_to_your_account")}</p>
+              <p className="mt-2">{t("please_create_a_company_profile_first_then_ret")}</p>
               <Link
                 href="/founder/onboarding"
                 className="cap-btn-primary mt-4 inline-flex rounded-lg px-5 py-2.5 text-sm font-semibold"
@@ -111,7 +113,7 @@ export default async function DocumentUploadPage() {
 
           {debugEnabled ? (
             <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700">
-              <p className="font-semibold text-slate-900">Dev diagnostics (temporary)</p>
+              <p className="font-semibold text-slate-900">{t("dev_diagnostics_temporary")}</p>
               <pre className="mt-2 whitespace-pre-wrap">
 {JSON.stringify(
   {
@@ -138,7 +140,7 @@ export default async function DocumentUploadPage() {
 
           {/* Uploaded files list */}
           <div className="cap-surface-card p-4 sm:p-6">
-            <h2 className="text-base font-semibold text-slate-950">Uploaded files</h2>
+            <h2 className="text-base font-semibold text-slate-950">{t("uploaded_files")}</h2>
             <div className="mt-4 divide-y divide-slate-100">
               {(documents ?? []).length > 0 ? (
                 documents?.map((document) => {
@@ -158,7 +160,7 @@ export default async function DocumentUploadPage() {
                   );
                 })
               ) : (
-                <p className="py-3 text-sm text-slate-600">No documents uploaded yet.</p>
+                <p className="py-3 text-sm text-slate-600">{t("no_documents_uploaded_yet")}</p>
               )}
             </div>
             <Link href="/founder/report" className="cap-btn-secondary mt-5 inline-flex rounded-lg px-5 py-2.5 text-sm font-semibold">

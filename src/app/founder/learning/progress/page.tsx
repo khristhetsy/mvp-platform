@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { getTranslations } from "next-intl/server";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -74,6 +75,7 @@ const BADGES = [
 
 export default async function MyProgressPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
 
   const lessonProgress = company
@@ -137,9 +139,9 @@ export default async function MyProgressPage() {
       <FounderFeatureGate featureKey="elearning">
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Learning"
-            title="My progress"
-            description="Completion by stage, quiz scores, and badges earned."
+            eyebrow={t("learning")}
+            title={t("my_progress")}
+            description={t("completion_by_stage_quiz_scores_and_badges_ear")}
             actions={
               <Link
                 href="/founder/learning"
@@ -173,7 +175,7 @@ export default async function MyProgressPage() {
               {/* Module completion bars */}
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                 <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
-                  <h2 className="text-sm font-semibold text-slate-900">Stage completion</h2>
+                  <h2 className="text-sm font-semibold text-slate-900">{t("stage_completion")}</h2>
                 </div>
                 <div className="divide-y divide-slate-100">
                   {STAGES.map((stage) => {
@@ -227,11 +229,11 @@ export default async function MyProgressPage() {
               {/* Quiz history */}
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                 <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
-                  <h2 className="text-sm font-semibold text-slate-900">Recent quiz scores</h2>
+                  <h2 className="text-sm font-semibold text-slate-900">{t("recent_quiz_scores")}</h2>
                 </div>
                 <div className="divide-y divide-slate-100">
                   {(quizAttempts ?? []).length === 0 ? (
-                    <p className="px-6 py-4 text-sm text-slate-400">No quiz attempts yet.</p>
+                    <p className="px-6 py-4 text-sm text-slate-400">{t("no_quiz_attempts_yet")}</p>
                   ) : (
                     (quizAttempts ?? []).map((q) => {
                       const mod = CAPITAL_STAGE_MODULES.find((m) => m.slug === q.module_slug);
@@ -283,14 +285,14 @@ export default async function MyProgressPage() {
                         </div>
                         <p className="line-clamp-2 text-[10px] leading-tight text-slate-500">{badge.label}</p>
                         {earned && (
-                          <p className="mt-0.5 text-[9px] font-semibold text-green-700">Earned</p>
+                          <p className="mt-0.5 text-[9px] font-semibold text-green-700">{t("earned")}</p>
                         )}
                       </div>
                     );
                   })}
                 </div>
                 <div className="border-t border-slate-100 px-5 py-3 text-center">
-                  <p className="text-xs text-slate-400">Complete stages to unlock badges</p>
+                  <p className="text-xs text-slate-400">{t("complete_stages_to_unlock_badges")}</p>
                 </div>
               </div>
             </div>

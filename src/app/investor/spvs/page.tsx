@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { InvestorFeatureGate } from "@/components/InvestorFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { InvestorSpvWorkspace } from "@/components/InvestorSpvWorkspace";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { canInvestorPerformSensitiveActions } from "@/lib/investor/access";
@@ -18,6 +19,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InvestorSpvsPage() {
   const { profile } = await requireInvestorWorkspaceSession();
+  const t = await getTranslations("appPages");
   const { investorProfile } = await loadInvestorWorkspaceContext(profile);
   const investorProfileId = investorProfile?.id;
 
@@ -41,12 +43,12 @@ export default async function InvestorSpvsPage() {
       role="INVESTOR"
       workspace="investor"
       profileName={profile.full_name ?? profile.email ?? "Investor"}
-      profileSubtitle="SPV participation"
+      profileSubtitle={t("spv_participation")}
     >
       <PageHeader
-        eyebrow="Portfolio & deals"
-        title="SPVs"
-        description="Review admin-managed SPV opportunities and express non-binding indicative interest. Legal documents and eligibility checks are required before any investment."
+        eyebrow={t("portfolio_deals")}
+        title={t("spvs")}
+        description={t("review_admin_managed_spv_opportunities_and_exp")}
       />
 
       {investorProfileId ? (
@@ -60,14 +62,14 @@ export default async function InvestorSpvsPage() {
           <CollaborationDiscussionPanel
             entityType="investor"
             entityId={investorProfileId}
-            title="Investor workspace discussion"
+            title={t("investor_workspace_discussion")}
           />
         </div>
       ) : null}
 
       {workflowDependencies.length > 0 ? (
         <div className="mb-6">
-          <WorkflowDependencyPanel dependencies={workflowDependencies} title="Participation blockers" />
+          <WorkflowDependencyPanel dependencies={workflowDependencies} title={t("participation_blockers")} />
         </div>
       ) : null}
 

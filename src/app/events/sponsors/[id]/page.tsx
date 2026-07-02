@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
@@ -47,6 +48,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function SponsorBoothPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const t = await getTranslations("appPages");
   const booth = await loadBooth(id);
   if (!booth) notFound();
 
@@ -103,7 +105,7 @@ export default async function SponsorBoothPage({ params }: { params: Promise<{ i
 
         {booth.downloads.length > 0 && (
           <div className="mt-8">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Resources</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("resources")}</h2>
             <div className="mt-3 flex flex-wrap gap-2">
               {booth.downloads.map((d) => (
                 <a
@@ -122,7 +124,7 @@ export default async function SponsorBoothPage({ params }: { params: Promise<{ i
 
         {booth.hostedSessions.length > 0 && (
           <div className="mt-8">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Sessions hosted</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("sessions_hosted")}</h2>
             <div className="mt-3 space-y-2">
               {booth.hostedSessions.map((s) => (
                 <Link
@@ -140,7 +142,7 @@ export default async function SponsorBoothPage({ params }: { params: Promise<{ i
 
         {booth.events.length > 0 && (
           <div className="mt-10">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Partnering at</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t("partnering_at")}</h2>
             <div className="mt-3 space-y-2">
               {booth.events.map((e) => (
                 <Link

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { CapitalReadyBadge } from "@/components/CapitalReadyBadge";
 import { CompanyPledgeSummaryBlock } from "@/components/CompanyPledgeSummary";
 import { ComplianceNotice } from "@/components/ComplianceNotice";
@@ -19,6 +20,7 @@ export default async function DealDetailPage({
   params: Promise<{ slug: string }>;
 }>) {
   const { slug } = await params;
+  const t = await getTranslations("appPages");
   const supabase = createServiceRoleClient();
   const deal = await getMarketplaceListingBySlug(supabase, slug);
 
@@ -63,7 +65,7 @@ export default async function DealDetailPage({
             </p>
           </div>
           <div className="rounded-xl border border-[var(--navy)] bg-[var(--navy)] p-5 text-white shadow-[var(--shadow-panel)] lg:min-w-64">
-            <p className="text-sm text-slate-300">Published</p>
+            <p className="text-sm text-slate-300">{t("published")}</p>
             <p className="mt-2 text-2xl font-semibold">
               {deal.publishedAt
                 ? new Date(deal.publishedAt).toLocaleDateString(undefined, {
@@ -73,16 +75,16 @@ export default async function DealDetailPage({
                   })
                 : "Recently"}
             </p>
-            <p className="mt-2 text-sm text-slate-300">Admin-reviewed listing</p>
+            <p className="mt-2 text-sm text-slate-300">{t("admin_reviewed_listing")}</p>
           </div>
         </div>
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl bg-slate-50 p-5">
-            <p className="text-sm text-slate-500">Funding target</p>
+            <p className="text-sm text-slate-500">{t("funding_target")}</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{deal.fundingTarget ?? "TBD"}</p>
           </div>
           <div className="rounded-2xl bg-slate-50 p-5">
-            <p className="text-sm text-slate-500">Minimum investment</p>
+            <p className="text-sm text-slate-500">{t("minimum_investment")}</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{deal.minimumInvestment ?? "TBD"}</p>
           </div>
         </div>

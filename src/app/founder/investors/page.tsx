@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
 import { FounderInvestorsModuleViews } from "@/components/founder/FounderInvestorsModuleViews";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -17,6 +18,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderInvestorsPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
 
   let crmView: ReturnType<typeof buildFounderInvestorCrmView> | null = null;
@@ -41,19 +43,19 @@ export default async function FounderInvestorsPage() {
       <FounderFeatureGate featureKey="investor_access">
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Investors"
-            title="Overview"
-            description="Platform investor activity, pipeline summary, and engagement tracking for your company."
+            eyebrow={t("investors")}
+            title={t("overview")}
+            description={t("platform_investor_activity_pipeline_summary_an")}
           />
 
           {!company ? (
-            <WorkspacePanel title="Company profile required" subtitle="Link a company to view investor activity">
+            <WorkspacePanel title={t("company_profile_required")} subtitle={t("link_a_company_to_view_investor_activity")}>
               <p className="text-sm text-slate-600">
                 Complete your company setup to see investor relationship activity here.
               </p>
             </WorkspacePanel>
           ) : !crmView || crmView.isEmpty ? (
-            <WorkspacePanel title="Platform investor activity" subtitle={company.company_name}>
+            <WorkspacePanel title={t("platform_investor_activity")} subtitle={company.company_name}>
               <p className="text-sm leading-6 text-slate-600">
                 No platform investor activity yet. Inbound interest will appear here when registered investors
                 engage with your listing.

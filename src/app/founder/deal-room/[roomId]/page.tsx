@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { getTranslations } from "next-intl/server";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -17,6 +18,7 @@ type PageProps = { params: Promise<{ roomId: string }> };
 
 export default async function FounderDealRoomPage({ params }: PageProps) {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const { roomId } = await params;
   const supabase = await createServerSupabaseClient();
 
@@ -43,13 +45,13 @@ export default async function FounderDealRoomPage({ params }: PageProps) {
   if (!room) notFound();
 
   return (
-    <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle="Deal room">
+    <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle={t("deal_room")}>
       <FounderFeatureGate featureKey="investor_access">
         <div className="space-y-6">
           <PageHeader
-            eyebrow="Deal room"
+            eyebrow={t("deal_room")}
             title={room.title}
-            description="Respond to investor diligence questions and document requests. Educational/diligence collaboration only."
+            description={t("respond_to_investor_diligence_questions_and_do")}
             metadata={`status: ${room.status}`}
           />
 
@@ -83,7 +85,7 @@ export default async function FounderDealRoomPage({ params }: PageProps) {
           />
 
           <section className="grid gap-6 xl:grid-cols-2">
-            <WorkspacePanel title="Investor questions" subtitle={`${(questions ?? []).length} recent`}>
+            <WorkspacePanel title={t("investor_questions")} subtitle={`${(questions ?? []).length} recent`}>
               <DealRoomQuestionsPanel
                 roomId={roomId}
                 viewerRole="founder"
@@ -91,7 +93,7 @@ export default async function FounderDealRoomPage({ params }: PageProps) {
                 companySnapshot={companySnapshot}
               />
             </WorkspacePanel>
-            <WorkspacePanel title="Document requests" subtitle={`${(docRequests ?? []).length} recent`}>
+            <WorkspacePanel title={t("document_requests")} subtitle={`${(docRequests ?? []).length} recent`}>
               <DealRoomDocRequestsPanel
                 roomId={roomId}
                 viewerRole="founder"
@@ -105,7 +107,7 @@ export default async function FounderDealRoomPage({ params }: PageProps) {
             </WorkspacePanel>
           </section>
 
-          <WorkspacePanel title="Collaboration" subtitle="Discussion thread">
+          <WorkspacePanel title={t("collaboration")} subtitle={t("discussion_thread")}>
             <CollaborationDiscussionPanel entityType="deal_room" entityId={roomId} />
           </WorkspacePanel>
 

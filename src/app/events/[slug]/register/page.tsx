@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { ArrowLeft } from "lucide-react";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
@@ -13,6 +14,7 @@ export const metadata = { title: "Register — iCFO Events", robots: { index: fa
 
 export default async function RegisterPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const t = await getTranslations("appPages");
   const supabase = await createServerSupabaseClient();
   const event = await getEventBySlug(supabase, slug).catch(() => null);
   if (!event || event.status === "draft" || event.status === "archived") notFound();
@@ -27,7 +29,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ slug:
           <ArrowLeft className="h-4 w-4" /> Back to event
         </Link>
         <h1 className="mt-3 text-2xl font-bold tracking-tight text-[var(--navy)]">{event.title}</h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">Free registration — a few quick questions so we can tailor your experience.</p>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">{t("free_registration_a_few_quick_questions_so_we")}</p>
 
         <div className="mt-6">
           <EventRegistrationForm eventId={event.id} slug={slug} />

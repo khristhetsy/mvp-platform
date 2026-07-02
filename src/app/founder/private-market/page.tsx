@@ -1,5 +1,6 @@
 import { LayoutGrid, Star, Gauge } from "lucide-react";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { getTranslations } from "next-intl/server";
 import { FounderPrivateMarketBoard } from "@/components/founder/FounderPrivateMarketBoard";
 import { FounderPrivateMarketTicker } from "@/components/founder/FounderPrivateMarketTicker";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderPrivateMarketPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
 
   const board = company
@@ -32,13 +34,13 @@ export default async function FounderPrivateMarketPage() {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Founder workspace"
-          title="Private Market"
-          description="Approved investors ranked by fit to your company. Identities are hidden until interest is mutual — you see fit, criteria, and focus."
+          eyebrow={t("founder_workspace_2")}
+          title={t("private_market")}
+          description={t("approved_investors_ranked_by_fit_to_your_compa")}
         />
 
         {!company ? (
-          <WorkspacePanel title="Company profile required" subtitle="Link a company to see your investor matches">
+          <WorkspacePanel title={t("company_profile_required")} subtitle={t("link_a_company_to_see_your_investor_matches")}>
             <p className="text-sm text-slate-600">
               Complete your company setup to see investors ranked to your raise here.
             </p>

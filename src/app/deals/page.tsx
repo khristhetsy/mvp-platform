@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Gauge, Star, LayoutGrid, ArrowRight, TrendingUp, Coins } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import type { TickerItem } from "@/components/marketing/MarketingLiveTicker";
@@ -63,6 +64,7 @@ const DEAL_ROWS: ScoredBoardRow[] = [
 ];
 
 export default async function DealsPage() {
+  const t = await getTranslations("appPages");
   const supabase = createServiceRoleClient();
   let listings: Awaited<ReturnType<typeof listMarketplaceListings>> = [];
 
@@ -95,7 +97,7 @@ export default async function DealsPage() {
               Investor marketplace
             </span>
             <h1 className="mt-5 max-w-[16ch] text-4xl font-semibold leading-[1.08] tracking-tight text-[var(--navy)] md:text-5xl">
-              The <span className="text-[var(--blue)]">Private Market</span> where readiness meets capital.
+              The <span className="text-[var(--blue)]">{t("private_market")}</span> where readiness meets capital.
             </h1>
             <p className="mt-5 max-w-[46ch] text-base leading-7 text-slate-600">
               Scored founders, quality investors, and indicated interest in the open. Listings are shown for
@@ -166,7 +168,7 @@ export default async function DealsPage() {
 
             {/* board */}
             <MarketingScoredBoard
-              title="Diligence-ready deals"
+              title={t("diligence_ready_deals")}
               meta="4 deals · ranked by readiness"
               scoreLabel="Readiness"
               metricLabel="Indicated"
@@ -187,8 +189,8 @@ export default async function DealsPage() {
         <div className="mx-auto max-w-5xl">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">Live marketplace</p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--navy)]">Published opportunities</h2>
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">{t("live_marketplace")}</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--navy)]">{t("published_opportunities")}</h2>
             </div>
             <p className="font-mono text-sm font-medium text-slate-500">
               {listings.length} {listings.length === 1 ? "listing" : "listings"} live · admin-approved
@@ -213,7 +215,7 @@ export default async function DealsPage() {
       {/* Two-sided explainer */}
       <section className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-14 lg:px-8">
         <div className="mx-auto max-w-5xl">
-          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">A two-sided market</p>
+          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">{t("a_two_sided_market")}</p>
           <h2 className="mt-3 text-center text-2xl font-semibold tracking-tight text-[var(--navy)] md:text-3xl">
             Both sides scored. Both sides see the market move.
           </h2>

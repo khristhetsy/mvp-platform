@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { SponsorPortalClient } from "@/components/events/SponsorPortalClient";
@@ -13,6 +14,7 @@ export const metadata = { title: "Sponsor portal — iCFO Events" };
 
 export default async function SponsorPortalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const t = await getTranslations("appPages");
   const profile = await getCurrentUserProfile();
   if (!profile) redirect(`/auth/sign-in?next=/sponsor/${id}`);
 
@@ -29,7 +31,7 @@ export default async function SponsorPortalPage({ params }: { params: Promise<{ 
   return (
     <MarketingShell>
       <section className="mx-auto max-w-3xl px-4 py-12">
-        <p className="text-sm font-semibold uppercase tracking-wide text-[var(--indigo)]">Sponsor portal</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-[var(--indigo)]">{t("sponsor_portal")}</p>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-[var(--navy)]">{sponsor.name}</h1>
         <Link href={`/events/sponsors/${id}`} className="mt-1 inline-block text-sm text-[var(--blue)] hover:underline">
           View public booth →

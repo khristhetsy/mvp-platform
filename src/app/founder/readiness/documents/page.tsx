@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { getTranslations } from "next-intl/server";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -36,6 +37,7 @@ function checklistStatusClass(status: "missing" | "uploaded" | "needs_review") {
 
 export default async function FounderReadinessDocumentsPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
 
@@ -51,18 +53,18 @@ export default async function FounderReadinessDocumentsPage() {
       <FounderFeatureGate featureKey="readiness">
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Readiness"
-            title="Document checklist"
-            description="Required diligence documents and upload status."
+            eyebrow={t("readiness")}
+            title={t("document_checklist")}
+            description={t("required_diligence_documents_and_upload_status")}
           />
 
           {!company ? (
-            <WorkspacePanel title="Company profile required" subtitle="Complete setup to view document checklist">
-              <p className="text-sm text-slate-600">Create your company profile to track document uploads.</p>
+            <WorkspacePanel title={t("company_profile_required")} subtitle={t("complete_setup_to_view_document_checklist")}>
+              <p className="text-sm text-slate-600">{t("create_your_company_profile_to_track_document")}</p>
             </WorkspacePanel>
           ) : (
             <WorkspacePanel
-              title="Document checklist"
+              title={t("document_checklist")}
               subtitle={`${uploadedCount} of ${checklist.length} uploaded`}
               action={
                 <Link

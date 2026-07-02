@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { CounselReviewBanner } from "@/components/legal/CounselReviewBanner";
+import { getTranslations } from "next-intl/server";
 
 export const metadata = { title: "Terms of Service – iCapOS" };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const t = await getTranslations("appPages");
   const effective = "June 1, 2025";
 
   return (
@@ -14,7 +16,7 @@ export default function TermsPage() {
           <Link href="/" className="text-sm font-semibold text-[var(--navy)] hover:underline">
             ← Back to iCapOS
           </Link>
-          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-950">Terms of Service</h1>
+          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-950">{t("terms_of_service")}</h1>
           <p className="mt-2 text-sm text-slate-500">Effective date: {effective}</p>
         </div>
 

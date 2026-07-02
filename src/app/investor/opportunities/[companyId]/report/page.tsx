@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { InvestorCompanyReportView } from "@/components/InvestorCompanyReportView";
 import { InvestorDealBrief } from "@/components/investor/InvestorDealBrief";
@@ -17,6 +18,7 @@ export default async function InvestorCompanyReportPage({
   params: Promise<{ companyId: string }>;
 }>) {
   const { companyId } = await params;
+  const t = await getTranslations("appPages");
   const { profile, investorId } = await requireInvestorWorkspaceSession();
   const { investorProfile } = await loadInvestorWorkspaceContext(profile);
 
@@ -38,7 +40,7 @@ export default async function InvestorCompanyReportPage({
       role="INVESTOR"
       workspace="investor"
       profileName={profile.full_name ?? profile.email ?? "Investor"}
-      profileSubtitle="Company report"
+      profileSubtitle={t("company_report")}
     >
       <p className="mb-6 text-sm text-slate-500">
         <Link href="/investor/opportunities" className="font-semibold text-indigo-600 hover:text-indigo-500">

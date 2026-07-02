@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/supabase/auth";
+import { getTranslations } from "next-intl/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
@@ -160,6 +161,7 @@ type StageCounts = {
 
 export default async function FounderJourneyPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
   const state = await evaluateFounderJourney(supabase, profile.id);
@@ -207,9 +209,9 @@ export default async function FounderJourneyPage() {
       profileSubtitle={company?.company_name ?? "Your company"}
     >
       <PageHeader
-        eyebrow="Founder journey"
-        title="Your iCapOS Journey"
-        description="Track your progress through each stage — from profile setup to active investor engagement."
+        eyebrow={t("founder_journey")}
+        title={t("your_icapos_journey")}
+        description={t("track_your_progress_through_each_stage_from_pr")}
       />
 
       {/* Stage timeline */}

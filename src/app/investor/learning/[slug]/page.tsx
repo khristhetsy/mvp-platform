@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { getCourseBySlug, courseLessonCount, courseDurationMinutes, formatCourseDuration } from "@/lib/learning/courses";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -9,6 +10,7 @@ export default async function InvestorCoursePage({
   params,
 }: Readonly<{ params: Promise<{ slug: string }> }>) {
   await requireRole(["investor", "admin", "analyst"]);
+  const t = await getTranslations("appPages");
   const { slug } = await params;
 
   const course = getCourseBySlug(slug);
@@ -40,7 +42,7 @@ export default async function InvestorCoursePage({
       {/* What you'll learn */}
       {course.whatYouWillLearn && course.whatYouWillLearn.length > 0 && (
         <div className="rounded-xl border border-slate-200 bg-white p-6">
-          <h2 className="text-base font-semibold text-slate-900">What founders learn in this course</h2>
+          <h2 className="text-base font-semibold text-slate-900">{t("what_founders_learn_in_this_course")}</h2>
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {course.whatYouWillLearn.map((item, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
@@ -54,7 +56,7 @@ export default async function InvestorCoursePage({
 
       {/* Curriculum */}
       <div>
-        <h2 className="text-base font-semibold text-slate-900">Course curriculum</h2>
+        <h2 className="text-base font-semibold text-slate-900">{t("course_curriculum")}</h2>
         <p className="mt-0.5 text-sm text-slate-500">
           Educational content only — not legal, tax, or investment advice.
         </p>

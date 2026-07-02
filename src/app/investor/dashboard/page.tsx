@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { getTranslations } from "next-intl/server";
 import { TipOfTheDay } from "@/components/tips/TipOfTheDay";
 import { InvestorOnboardingProgressCard } from "@/components/InvestorOnboardingProgressCard";
 import { investorCompanyLabel, loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
@@ -21,6 +22,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InvestorDashboardPage() {
   const { profile, supabase, investorId } = await requireInvestorWorkspaceSession();
+  const t = await getTranslations("appPages");
   const { investorProfile } = await loadInvestorWorkspaceContext(profile);
   const investorProgress = investorProfile ? computeInvestorOnboardingProgress(investorProfile) : null;
 
@@ -47,12 +49,12 @@ export default async function InvestorDashboardPage() {
       role="INVESTOR"
       workspace="investor"
       profileName={profile.full_name ?? profile.email ?? "Investor"}
-      profileSubtitle="Investor account"
+      profileSubtitle={t("investor_account")}
     >
       <PageHeader
-        eyebrow="Investor terminal"
-        title="Dashboard"
-        description="Opportunity pipeline, watchlist, expressed interest, and relationship activity."
+        eyebrow={t("investor_terminal")}
+        title={t("dashboard")}
+        description={t("opportunity_pipeline_watchlist_expressed_inter")}
       />
 
       <TipOfTheDay profileId={profile.id} audience="investor" />

@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireRole } from "@/lib/supabase/auth";
 import { notFound } from "next/navigation";
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PitchPracticePage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
 
   const supabase = await createServerSupabaseClient();
   const flags = await loadFeatureFlags(supabase);
@@ -19,14 +21,14 @@ export default async function PitchPracticePage() {
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
-      profileSubtitle="Pitch practice"
+      profileSubtitle={t("pitch_practice")}
     >
       <FounderFeatureGate featureKey="dashboard">
         <div className="mx-auto max-w-3xl space-y-6">
           <PageHeader
-            eyebrow="Fundraising prep"
-            title="Pitch practice simulator"
-            description="Answer real investor questions using proven frameworks. Read the framework, write your answer, then compare to a strong example."
+            eyebrow={t("fundraising_prep")}
+            title={t("pitch_practice_simulator")}
+            description={t("answer_real_investor_questions_using_proven_fr")}
           />
           <PitchPracticeSimulator />
         </div>

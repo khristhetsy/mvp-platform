@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { getTranslations } from "next-intl/server";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RegCfGeneratorClient } from "@/components/founder/RegCfGeneratorClient";
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderRegCfPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
 
   // Off by default — only reachable once an admin enables founder:regcf.
   const supabase = await createServerSupabaseClient();
@@ -20,13 +22,13 @@ export default async function FounderRegCfPage() {
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
-      profileSubtitle="Reg CF Materials"
+      profileSubtitle={t("reg_cf_materials")}
     >
       <FounderJourneyGate minStage="deploy">
         <PageHeader
-          eyebrow="Raise Toolkit"
-          title="Reg CF Materials Generator"
-          description="AI-draft your Regulation Crowdfunding documents from your company profile. You edit, download, and own them — and run your raise on your own. Drafts only; have counsel review."
+          eyebrow={t("raise_toolkit")}
+          title={t("reg_cf_materials_generator")}
+          description={t("ai_draft_your_regulation_crowdfunding_document")}
         />
         <RegCfGeneratorClient />
       </FounderJourneyGate>

@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { CounselReviewBanner } from "@/components/legal/CounselReviewBanner";
+import { getTranslations } from "next-intl/server";
 
 export const metadata = { title: "Privacy Policy – iCapOS" };
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const t = await getTranslations("appPages");
   const effective = "June 1, 2025";
 
   return (
@@ -14,7 +16,7 @@ export default function PrivacyPage() {
           <Link href="/" className="text-sm font-semibold text-[var(--navy)] hover:underline">
             ← Back to iCapOS
           </Link>
-          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-950">Privacy Policy</h1>
+          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-slate-950">{t("privacy_policy")}</h1>
           <p className="mt-2 text-sm text-slate-500">Effective date: {effective}</p>
         </div>
 
@@ -35,7 +37,7 @@ export default function PrivacyPage() {
           </p>
 
           <h2 className="mt-6 text-base font-semibold text-slate-900">2. How We Use Your Information</h2>
-          <p>We use collected information to:</p>
+          <p>{t("we_use_collected_information_to")}</p>
           <ul className="mt-2 list-disc pl-5 space-y-1">
             <li>Provide, operate, and maintain the Platform</li>
             <li>Match founders with investors based on stated criteria</li>

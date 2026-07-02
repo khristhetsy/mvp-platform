@@ -1,5 +1,6 @@
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
+import { getTranslations } from "next-intl/server";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { formatError } from "@/lib/errors/format-error";
@@ -23,6 +24,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderCapitalRaisePage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
 
   let company: Company | null = null;
   let companyError: string | null = null;
@@ -65,9 +67,9 @@ export default async function FounderCapitalRaisePage() {
       <FounderJourneyGate minStage="deploy">
       <FounderFeatureGate featureKey="capital_raise">
         <PageHeader
-          eyebrow="Founder workspace"
-          title="Capital raise"
-          description="Track indicative interest, pledge totals, and marketplace raise status."
+          eyebrow={t("founder_workspace_2")}
+          title={t("capital_raise")}
+          description={t("track_indicative_interest_pledge_totals_and_ma")}
         />
 
       {companyError ? (
@@ -83,11 +85,11 @@ export default async function FounderCapitalRaisePage() {
       ) : null}
 
       {!company ? (
-        <WorkspacePanel title="Company profile required" subtitle="Link a company to track capital raise progress">
+        <WorkspacePanel title={t("company_profile_required")} subtitle={t("link_a_company_to_track_capital_raise_progress")}>
           <FounderEmptyState
             icon="💰"
-            title="Complete your profile to track your raise"
-            description="Set your funding target, publish your company profile, and start receiving indicative interest from investors on the platform."
+            title={t("complete_your_profile_to_track_your_raise")}
+            description={t("set_your_funding_target_publish_your_company_p")}
             action={{ label: "Complete onboarding", href: "/founder/onboarding" }}
             secondaryAction={{ label: "Company settings", href: "/founder/settings" }}
           />
@@ -120,7 +122,7 @@ export default async function FounderCapitalRaisePage() {
           </section>
 
           <section className="mt-8 grid gap-6 xl:grid-cols-2">
-            <WorkspacePanel title="Capital Raise Overview" subtitle="Non-binding marketplace interest">
+            <WorkspacePanel title={t("capital_raise_overview")} subtitle={t("non_binding_marketplace_interest")}>
               <CapitalRaiseOverviewClient
                 pledgeSummary={pledgeSummary}
                 investorActivity={investorActivity}
@@ -134,7 +136,7 @@ export default async function FounderCapitalRaisePage() {
               </p>
             </WorkspacePanel>
 
-            <WorkspacePanel title="Investor pipeline" subtitle="Interest tied to your listing">
+            <WorkspacePanel title={t("investor_pipeline_2")} subtitle={t("interest_tied_to_your_listing")}>
               {activityError ? (
                 <div className="rounded-lg border border-red-100 bg-red-50 p-4 text-sm text-red-700">
                   Could not load investor activity. Please refresh or contact support.
@@ -145,8 +147,8 @@ export default async function FounderCapitalRaisePage() {
                   investorActivity.savedDeals.length === 0) ? (
                 <FounderEmptyState
                   icon="🎯"
-                  title="No investor activity yet"
-                  description="Investor interests, intro requests, and saved deals appear here once your company is published and investors engage with your listing."
+                  title={t("no_investor_activity_yet")}
+                  description={t("investor_interests_intro_requests_and_saved_de")}
                   action={{ label: "Publish your profile", href: "/founder/settings" }}
                 />
               ) : (

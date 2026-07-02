@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Bot, Lock, ShieldCheck, Sparkles, Brain, BarChart3, Building2 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingScoredBoard, type ScoredBoardRow } from "@/components/marketing/MarketingScoredBoard";
@@ -53,6 +54,7 @@ function band(readiness: number | null): "high" | "mid" | "low" {
 
 export default async function Home() {
   const stats = await loadPublicMarketStats();
+  const t = await getTranslations("appPages");
 
   const statCells = [
     { v: money(stats.indicated30d), l: "indicated · 30d", tone: "text-[var(--teal)]" },
@@ -167,7 +169,7 @@ export default async function Home() {
         <div className="mx-auto mt-10 flex max-w-5xl flex-wrap items-center justify-between gap-4 border-y border-slate-200/80 py-5">
           <CapitalOSLogo height={40} tagline />
           <div className="flex flex-wrap items-center gap-6 text-xs font-medium text-slate-500">
-            <span>Trusted by founders preparing institutional raises</span>
+            <span>{t("trusted_by_founders_preparing_institutional_ra")}</span>
             <span className="hidden h-4 w-px bg-slate-200 sm:block" aria-hidden />
             <span className="flex items-center gap-1.5">
               <Bot className="h-3.5 w-3.5 text-[var(--blue)]" strokeWidth={1.75} />
@@ -180,7 +182,7 @@ export default async function Home() {
       {/* Live private market — real data */}
       <section className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-14 lg:px-8">
         <div className="mx-auto max-w-5xl">
-          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">The Private Market</p>
+          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">{t("the_private_market")}</p>
           <h2 className="mt-3 text-center text-2xl font-semibold tracking-tight text-[var(--navy)] md:text-3xl">
             Scored founders. Quality investors. Real activity.
           </h2>
@@ -236,7 +238,7 @@ export default async function Home() {
             {/* deal board */}
             {dealRows.length > 0 ? (
               <MarketingScoredBoard
-                title="Diligence-ready deals"
+                title={t("diligence_ready_deals")}
                 meta={`${dealRows.length} live · ranked by readiness`}
                 scoreLabel="Readiness"
                 metricLabel="Indicated"
@@ -259,7 +261,7 @@ export default async function Home() {
       <section className="px-4 py-14 lg:px-8">
         <div className="mx-auto max-w-5xl">
           <div className="mb-9 text-center">
-            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">The platform</p>
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">{t("the_platform")}</p>
             <h2 className="mt-3 text-2xl font-semibold tracking-tight text-[var(--navy)] md:text-3xl">
               Everything you need, in one institutional platform.
             </h2>
@@ -281,7 +283,7 @@ export default async function Home() {
       {/* FAQ */}
       <section className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-14 lg:px-8">
         <div className="mx-auto max-w-5xl">
-          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">FAQ</p>
+          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--blue)]">{t("faq")}</p>
           <h2 className="mt-3 text-center text-2xl font-semibold tracking-tight text-[var(--navy)] md:text-3xl">
             Common questions
           </h2>

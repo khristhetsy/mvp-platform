@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/supabase/auth";
+import { getTranslations } from "next-intl/server";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -12,6 +13,7 @@ export const metadata = { title: "Cap table" };
 
 export default async function FounderCapTablePage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
 
   const supabase = await createServerSupabaseClient();
   const flags = await loadFeatureFlags(supabase);
@@ -20,13 +22,13 @@ export default async function FounderCapTablePage() {
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
-      profileSubtitle="Cap table"
+      profileSubtitle={t("cap_table")}
     >
       <FounderJourneyGate minStage="qualify">
         <PageHeader
-          eyebrow="Raise Toolkit"
-          title="Cap table"
-          description="Lay out who owns what, model a round to see dilution, and export an investor-ready cap table. It saves to your Documents and counts toward readiness."
+          eyebrow={t("raise_toolkit")}
+          title={t("cap_table")}
+          description={t("lay_out_who_owns_what_model_a_round_to_see_dil")}
         />
         <CapTableClient />
       </FounderJourneyGate>

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { InvestorKycClient, type KycItemView } from "@/components/investor/InvestorKycClient";
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InvestorVerificationPage() {
   const { profile } = await requireInvestorWorkspaceSession();
+  const t = await getTranslations("appPages");
   const investorProfile = await getInvestorProfileByProfileId(profile.id);
 
   // Stage 2 only opens once the profile (Stage 1) is approved.
@@ -58,13 +60,13 @@ export default async function InvestorVerificationPage() {
       role="INVESTOR"
       workspace="investor"
       profileName={profile.full_name ?? profile.email ?? "Investor"}
-      profileSubtitle="Verification"
+      profileSubtitle={t("verification")}
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Stage 2 · Verification"
-          title="Identity & accreditation"
-          description="Verify who you are and that you qualify to invest. This is reviewed by the iCapOS team and unlocks full deal-flow access."
+          eyebrow={t("stage_2_verification")}
+          title={t("identity_accreditation")}
+          description={t("verify_who_you_are_and_that_you_qualify_to_inv")}
         />
         <div className="max-w-2xl">
           <InvestorKycClient

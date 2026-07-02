@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Brain, BarChart3, FileText, Users } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { CapitalOSLogo } from "@/components/CapitalOSLogo";
 import { MarketingFooter } from "@/components/MarketingFooter";
@@ -79,7 +80,8 @@ const INVESTOR_ROWS: ScoredBoardRow[] = [
   { symbol: "OAK·9", name: "Oakline Syndicate", score: 64.9, band: "low", metricMain: "0 pledges", metricSub: "—", tags: ["Generalist"] },
 ];
 
-export default function FoundersPage() {
+export default async function FoundersPage() {
+  const t = await getTranslations("appPages");
   return (
     <MarketingShell>
       {/* Hero */}
@@ -149,7 +151,7 @@ export default function FoundersPage() {
       {/* How it works */}
       <section className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-14 lg:px-8">
         <div className="mx-auto max-w-5xl">
-          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--teal)]">How it works</p>
+          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--teal)]">{t("how_it_works")}</p>
           <h2 className="mt-3 text-center text-2xl font-semibold tracking-tight text-[var(--navy)] md:text-3xl">
             From first upload to investor-ready.
           </h2>
@@ -168,7 +170,7 @@ export default function FoundersPage() {
       {/* The Private Market */}
       <section className="px-4 py-14 lg:px-8">
         <div className="mx-auto max-w-5xl">
-          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--teal)]">The Private Market</p>
+          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--teal)]">{t("the_private_market")}</p>
           <h2 className="mt-3 text-center text-2xl font-semibold tracking-tight text-[var(--navy)] md:text-3xl">
             See the investors you&apos;ll be matched with.
           </h2>
@@ -177,7 +179,7 @@ export default function FoundersPage() {
           </p>
           <div className="mt-8">
             <MarketingScoredBoard
-              title="Investors"
+              title={t("investors")}
               meta="5 vetted investors · sorted by quality score"
               scoreLabel="Quality"
               metricLabel="Pledge interest"
@@ -190,7 +192,7 @@ export default function FoundersPage() {
       {/* Capabilities */}
       <section className="border-t border-slate-200/80 bg-slate-50/60 px-4 py-14 lg:px-8">
         <div className="mx-auto max-w-5xl">
-          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--indigo)]">Core capabilities</p>
+          <p className="text-center font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--indigo)]">{t("core_capabilities")}</p>
           <h2 className="mt-3 text-center text-2xl font-semibold tracking-tight text-[var(--navy)] md:text-3xl">
             Built for the institutional raise process.
           </h2>
@@ -213,7 +215,7 @@ export default function FoundersPage() {
       {/* CTA band */}
       <section className="px-4 py-16 text-center lg:px-8" style={{ background: "linear-gradient(135deg, var(--teal), var(--teal-hover))" }}>
         <div className="mx-auto max-w-3xl">
-          <h2 className="text-3xl font-semibold tracking-tight text-white">See where your raise stands today.</h2>
+          <h2 className="text-3xl font-semibold tracking-tight text-white">{t("see_where_your_raise_stands_today")}</h2>
           <p className="mx-auto mt-3 max-w-[46ch] text-[15px] text-white/85">
             Get your Capital Readiness Score and a gap report — free to start.
           </p>

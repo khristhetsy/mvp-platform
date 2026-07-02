@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { getPublishedAdminCourse, getPublishedCourseQuiz, listPublishedAdminCourseModules, listPublishedAdminLessonsForModule } from "@/lib/learning/admin-courses";
@@ -15,6 +16,7 @@ type PageProps = {
 
 export default async function FounderAdminCoursePage({ params }: PageProps) {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const { courseId } = await params;
   const company = await ensureFounderCompanyForUser(profile);
   if (!company) notFound();
@@ -133,11 +135,11 @@ export default async function FounderAdminCoursePage({ params }: PageProps) {
 
           {/* Curriculum */}
           <div>
-            <h2 className="text-lg font-semibold text-slate-950">Course content</h2>
-            <p className="mt-1 text-sm text-slate-500">Educational content only — not legal, tax, or investment advice.</p>
+            <h2 className="text-lg font-semibold text-slate-950">{t("course_content")}</h2>
+            <p className="mt-1 text-sm text-slate-500">{t("educational_content_only_not_legal_tax_or_inve")}</p>
             <div className="mt-4 space-y-4">
               {modules.length === 0 ? (
-                <p className="text-sm text-slate-500">No published modules yet.</p>
+                <p className="text-sm text-slate-500">{t("no_published_modules_yet")}</p>
               ) : (
                 modules.map((m) => {
                   const lessons = lessonsByModule.get(m.slug) ?? [];
@@ -185,7 +187,7 @@ export default async function FounderAdminCoursePage({ params }: PageProps) {
           {/* Certificates */}
           {(certificates ?? []).length > 0 ? (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
-              <h2 className="text-sm font-semibold text-emerald-900">Certificate of Completion</h2>
+              <h2 className="text-sm font-semibold text-emerald-900">{t("certificate_of_completion")}</h2>
               {(certificates ?? []).map((c) => (
                 <div key={c.id} className="mt-2">
                   <p className="font-semibold text-emerald-800">{c.certificate_title}</p>
@@ -195,7 +197,7 @@ export default async function FounderAdminCoursePage({ params }: PageProps) {
             </div>
           ) : courseProgress?.status === "completed" ? (
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm text-slate-600">Course completed. No certificate issued for this course.</p>
+              <p className="text-sm text-slate-600">{t("course_completed_no_certificate_issued_for_thi")}</p>
             </div>
           ) : null}
 

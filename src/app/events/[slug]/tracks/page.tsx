@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
@@ -40,6 +41,7 @@ function stageEmbed(s: EventSession | null): { embedUrl: string | null; joinUrl:
 
 export default async function TracksPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const t = await getTranslations("appPages");
   const supabase = await createServerSupabaseClient();
   const event = await getEventBySlug(supabase, slug).catch(() => null);
   if (!event || event.status === "draft" || event.status === "archived") notFound();
@@ -78,7 +80,7 @@ export default async function TracksPage({ params }: { params: Promise<{ slug: s
             <EventVenueHeader slug={slug} current="ondemand" tracksHref={`/events/${slug}/tracks`} />
             <SectorTracksRoom tracks={tracks} />
           </div>
-          <p className="mt-3 text-center text-xs text-[var(--text-muted)]">Parallel sector rooms — each with its own now-playing session and agenda.</p>
+          <p className="mt-3 text-center text-xs text-[var(--text-muted)]">{t("parallel_sector_rooms_each_with_its_own_now_pl")}</p>
           <LiveAnnouncementPopup />
           <EventInfoDesk slug={slug} />
         </EventPresenceProvider>

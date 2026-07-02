@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FounderAppShell } from "@/components/FounderAppShell";
+import { getTranslations } from "next-intl/server";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TipOfTheDay } from "@/components/tips/TipOfTheDay";
@@ -45,6 +46,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FounderDashboardPage() {
   const profile = await requireRole(["founder"]);
+  const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
   const supabase = await createServerSupabaseClient();
   const serviceSupabase = createServiceRoleClient();
@@ -123,9 +125,9 @@ export default async function FounderDashboardPage() {
     >
       <FounderFeatureGate featureKey="dashboard">
         <PageHeader
-          eyebrow="Founder terminal"
+          eyebrow={t("founder_terminal")}
           title={companyName}
-          description="Readiness, capital raise, investor engagement, and marketplace publication."
+          description={t("readiness_capital_raise_investor_engagement_an")}
           actions={
             <div className="flex w-full flex-wrap gap-2 sm:w-auto">
               <Link
@@ -242,7 +244,7 @@ export default async function FounderDashboardPage() {
                 summary={remediation.summary}
                 learningLinks={remediation.learningLinks}
                 compact
-                title="Priority remediation tasks"
+                title={t("priority_remediation_tasks")}
               />
             </div>
           ) : null}
@@ -285,18 +287,18 @@ export default async function FounderDashboardPage() {
           {/* Engagement trend */}
           <section className="mb-8">
             <DashboardInsightPanel
-              title="Engagement trend"
-              subtitle="Workspace activity snapshot — last 7 days"
+              title={t("engagement_trend")}
+              subtitle={t("workspace_activity_snapshot_last_7_days")}
               introRequests={investorActivity?.introRequests.length ?? 0}
             />
           </section>
 
           {/* Capital Raise Overview + Investor Pipeline */}
           <section className="mb-8 grid gap-5 xl:grid-cols-2">
-            <WorkspacePanel title="Capital raise overview" subtitle="Non-binding marketplace interest">
+            <WorkspacePanel title={t("capital_raise_overview_2")} subtitle={t("non_binding_marketplace_interest")}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-lg px-4 py-3 ring-1 ring-[#EEEDFE]" style={{ background: "#EEEDFE" }}>
-                  <p className="text-xs font-medium" style={{ color: "#534AB7" }}>Total pledged</p>
+                  <p className="text-xs font-medium" style={{ color: "#534AB7" }}>{t("total_pledged")}</p>
                   <p className="mt-1.5 font-mono text-2xl font-semibold" style={{ color: "#3C3489" }}>
                     {formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
                   </p>
@@ -305,7 +307,7 @@ export default async function FounderDashboardPage() {
                   </p>
                 </div>
                 <div className="rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-                  <p className="text-xs font-medium text-slate-600">Funding target</p>
+                  <p className="text-xs font-medium text-slate-600">{t("funding_target")}</p>
                   <p className="mt-1.5 font-mono text-2xl font-semibold text-slate-950">
                     {company?.funding_amount ? formatPledgeTotal(Number(company.funding_amount)) : "TBD"}
                   </p>
@@ -317,7 +319,7 @@ export default async function FounderDashboardPage() {
               {company?.funding_amount && Number(company.funding_amount) > 0 ? (
                 <div className="mt-4">
                   <div className="mb-1 flex items-center justify-between">
-                    <span className="text-[11px] text-slate-500">Raise progress</span>
+                    <span className="text-[11px] text-slate-500">{t("raise_progress")}</span>
                     <span className="text-[11px] font-semibold" style={{ color: "#534AB7" }}>
                       {Math.round(Math.min(100, (pledgeSummary.totalPledged / Number(company.funding_amount)) * 100))}%
                     </span>
@@ -341,8 +343,8 @@ export default async function FounderDashboardPage() {
             {investorActivity ? (
               <DashboardPipelinePanel activity={investorActivity} />
             ) : (
-              <WorkspacePanel title="Investor pipeline" subtitle="Read-only activity on your listing">
-                <p className="text-sm text-slate-600">Investor activity will appear once your company is linked.</p>
+              <WorkspacePanel title={t("investor_pipeline_2")} subtitle={t("read_only_activity_on_your_listing")}>
+                <p className="text-sm text-slate-600">{t("investor_activity_will_appear_once_your_compan")}</p>
               </WorkspacePanel>
             )}
           </section>
@@ -350,8 +352,8 @@ export default async function FounderDashboardPage() {
           {/* Recent Activity */}
           <section className="mb-8">
             <WorkspacePanel
-              title="Recent activity"
-              subtitle="Documents and data room status"
+              title={t("recent_activity_2")}
+              subtitle={t("documents_and_data_room_status")}
               action={
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                   {documentStatus}
@@ -379,7 +381,7 @@ export default async function FounderDashboardPage() {
                     </div>
                   ))
                 ) : (
-                  <p className="py-3 text-sm text-slate-600">No documents uploaded yet.</p>
+                  <p className="py-3 text-sm text-slate-600">{t("no_documents_uploaded_yet")}</p>
                 )}
               </div>
             </WorkspacePanel>
