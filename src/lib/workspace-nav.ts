@@ -46,7 +46,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
     ],
   },
   {
-    title: "Contacts",
+    title: "Directory",
     items: [
       { href: "/admin/companies",  label: "Companies",  requiredPermission: "manage_companies" },
       { href: "/admin/investors",  label: "Investors",  requiredPermission: "manage_investors" },
@@ -98,15 +98,13 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
     ],
   },
   {
-    title: "Team",
-    items: [
-      { href: "/admin/tasks", label: "Tasks", requiredPermission: "view_admin_dashboard" },
-    ],
-  },
-  {
-    title: "Operation",
+    title: "Operations",
     items: [
       { href: "/admin/actions",          label: "Action Center",   requiredPermission: "view_actions"         },
+      { href: "/admin/tasks",            label: "Tasks",           requiredPermission: "view_admin_dashboard" },
+      { href: "/admin/portfolio",        label: "Portfolio",       requiredPermission: "view_admin_dashboard" },
+      { href: "/admin/readiness",        label: "Readiness Scores",requiredPermission: "manage_companies"    },
+      { href: "/admin/data-room",         label: "Diligence Tracker",requiredPermission: "manage_companies"   },
       {
         href: "/admin/learning",
         label: "Learning",
@@ -117,9 +115,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/learning/founders", label: "Founder roster" },
         ],
       },
-      { href: "/admin/portfolio",        label: "Portfolio",       requiredPermission: "view_admin_dashboard" },
-      { href: "/admin/readiness",        label: "Readiness Scores",requiredPermission: "manage_companies"    },
-      { href: "/admin/data-room",         label: "Diligence Tracker",requiredPermission: "manage_companies"   },
       {
         href: "/admin/events",
         label: "Events",
@@ -132,10 +127,12 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/events/gamification", label: "Gamification" },
         ],
       },
+      { href: "/admin/manual",           label: "Operations Manual",requiredPermission: "view_admin_dashboard" },
+      { href: "/admin/playbook",         label: "Daily Console",    requiredPermission: "view_admin_dashboard" },
     ],
   },
   {
-    title: "Reports",
+    title: "Reports & Compliance",
     items: [
       {
         href: "/admin/analytics",
@@ -160,17 +157,9 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
     ],
   },
   {
-    title: "Admin",
+    title: "Documents & Comms",
     items: [
-      { href: "/admin/profile",            label: "My Profile",       requiredPermission: "view_admin_dashboard" },
-      { href: "/admin/billing",           label: "Billing",          requiredPermission: "manage_billing"      },
-      { href: "/admin/users/manage",      label: "User Management",  requiredPermission: "manage_users"        },
-      { href: "/admin/users/permissions", label: "User Permissions", requiredPermission: "manage_users"        },
-      { href: "/admin/manual",            label: "Operations Manual",requiredPermission: "view_admin_dashboard" },
-      { href: "/admin/playbook",          label: "Daily Console",    requiredPermission: "view_admin_dashboard" },
-      { href: "/admin/feature-controls",  label: "Feature Controls", requiredPermission: "manage_settings"      },
-      { href: "/admin/signatures",        label: "E-Signatures",     requiredPermission: "review_documents"     },
-      { href: "/admin/diligence",         label: "Diligence",        requiredPermission: "manage_diligence"     },
+      { href: "/admin/inbox",     label: "Inbox",        requiredPermission: "view_admin_dashboard" },
       {
         href: "/admin/calendar",
         label: "Calendar",
@@ -181,7 +170,18 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/meet",     label: "Meet"       },
         ],
       },
-      { href: "/admin/inbox",     label: "Inbox",            requiredPermission: "view_admin_dashboard" },
+      { href: "/admin/signatures",        label: "E-Signatures",     requiredPermission: "review_documents"     },
+      { href: "/admin/diligence",         label: "Diligence Review", requiredPermission: "manage_diligence"     },
+    ],
+  },
+  {
+    title: "Governance & System",
+    items: [
+      { href: "/admin/users/manage",      label: "User Management",  requiredPermission: "manage_users"        },
+      { href: "/admin/users/permissions", label: "User Permissions", requiredPermission: "manage_users"        },
+      { href: "/admin/feature-controls",  label: "Feature Controls", requiredPermission: "manage_settings"      },
+      { href: "/admin/billing",           label: "Billing",          requiredPermission: "manage_billing"      },
+      { href: "/admin/profile",           label: "My Profile",       requiredPermission: "view_admin_dashboard" },
       {
         href: "/admin/integrations",
         label: "System",
@@ -254,22 +254,34 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
         ],
       },
       {
-        href: "/founder/raise-toolkit",
-        label: "Raise Toolkit",
+        href: "/founder/business-plan",
+        label: "Docs & models",
         children: [
-          { href: "/founder/term-sheet", label: "Term sheet explainer", minStage: "qualify" },
-          { href: "/founder/pitch-practice", label: "Pitch practice", minStage: "qualify" },
-          { href: "/founder/email-sequence", label: "Email sequences", minStage: "qualify" },
-          { href: "/founder/due-diligence", label: "Due diligence checklist", minStage: "qualify" },
-          { href: "/founder/investor-update", label: "Investor update builder", minStage: "qualify" },
-          { href: "/founder/funding-timeline", label: "Funding timeline", minStage: "qualify" },
-          { href: "/founder/board-prep", label: "Board meeting prep", minStage: "qualify" },
-          { href: "/founder/kpi-glossary", label: "KPI glossary", minStage: "qualify" },
-          { href: "/founder/pitch-deck-analyzer", label: "Pitch deck analyzer", minStage: "qualify" },
           { href: "/founder/business-plan", label: "Business plan", minStage: "qualify" },
           { href: "/founder/financial-model", label: "Financial model", minStage: "qualify" },
           { href: "/founder/cap-table", label: "Cap table", minStage: "qualify" },
           { href: "/founder/reg-cf", label: "Reg CF materials", minStage: "deploy" },
+        ],
+      },
+      {
+        href: "/founder/pitch-practice",
+        label: "Prep & practice",
+        children: [
+          { href: "/founder/pitch-practice", label: "Pitch practice", minStage: "qualify" },
+          { href: "/founder/pitch-deck-analyzer", label: "Pitch deck analyzer", minStage: "qualify" },
+          { href: "/founder/board-prep", label: "Board meeting prep", minStage: "qualify" },
+          { href: "/founder/term-sheet", label: "Term sheet explainer", minStage: "qualify" },
+          { href: "/founder/kpi-glossary", label: "KPI glossary", minStage: "qualify" },
+        ],
+      },
+      {
+        href: "/founder/email-sequence",
+        label: "Outreach & planning",
+        children: [
+          { href: "/founder/email-sequence", label: "Email sequences", minStage: "qualify" },
+          { href: "/founder/investor-update", label: "Investor update builder", minStage: "qualify" },
+          { href: "/founder/funding-timeline", label: "Funding timeline", minStage: "qualify" },
+          { href: "/founder/due-diligence", label: "Due diligence checklist", minStage: "qualify" },
         ],
       },
       { href: "/events", label: "Events", minStage: "qualify" },
