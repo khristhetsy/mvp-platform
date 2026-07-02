@@ -1170,6 +1170,21 @@
     "topSignalDomains": "Principales dominios de señal",
     "uploadStructuredPlatformData": "Sube datos estructurados de la plataforma con vista previa, validación y registro de auditoría. Las importaciones nunca aprueban inversores ni publican empresas automáticamente.",
     "workflowAutomationHealth": "Estado de la automatización de flujos",
-    "workflowAutomation": "Automatización de flujos"
+    "workflowAutomation": "Automatización de flujos",
+    "aiSeoPages": "Páginas de IA SEO / Motor de respuestas",
+    "aiVisibility": "Visibilidad en IA",
+    "campaigns": "Campañas",
+    "emailTemplates": "Plantillas de correo",
+    "marketingConsoleTitle": "Consola operativa diaria de marketing",
+    "marketingPlan": "Plan de marketing",
+    "mktAeo": "Marketing · AEO",
+    "mktAeoEdit": "Marketing · AEO · Editar",
+    "mktAeoVisibility": "Marketing · AEO · Visibilidad",
+    "mktConsole": "Marketing · Consola",
+    "notificationsReminders": "Notificaciones y recordatorios",
+    "overviewP": "Resumen",
+    "profileP": "Perfil",
+    "sequences": "Secuencias",
+    "structuredEditor": "Editor estructurado"
   }
 }

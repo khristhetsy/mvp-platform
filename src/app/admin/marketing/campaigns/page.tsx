@@ -1,4 +1,5 @@
 import { requireRole } from "@/lib/supabase/auth";
+import { getTranslations } from "next-intl/server";
 import { getCampaigns } from "@/lib/marketing/campaigns";
 import { getLists } from "@/lib/marketing/contacts";
 import { getTemplates } from "@/lib/marketing/templates";
@@ -7,6 +8,7 @@ import { CampaignsClient } from "./CampaignsClient";
 export const dynamic = "force-dynamic";
 
 export default async function MarketingCampaignsPage() {
+  const t = await getTranslations("adminPages");
   await requireRole(["admin"]);
   const [campaigns, lists, templates] = await Promise.all([
     getCampaigns(),
@@ -16,7 +18,7 @@ export default async function MarketingCampaignsPage() {
   return (
     <div style={{ padding: 24 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 500 }}>Campaigns</h1>
+        <h1 style={{ fontSize: 18, fontWeight: 500 }}>{t("campaigns")}</h1>
       </div>
       <CampaignsClient campaigns={campaigns} lists={lists} templates={templates} />
     </div>

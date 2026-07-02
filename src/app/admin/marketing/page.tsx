@@ -1,4 +1,5 @@
 import { requireRole } from "@/lib/supabase/auth";
+import { getTranslations } from "next-intl/server";
 import { marketingDb } from "@/lib/marketing/db";
 import Link from "next/link";
 import { MarketingStatCards } from "@/components/marketing/MarketingStatCards";
@@ -30,6 +31,7 @@ const card = {
 } as React.CSSProperties;
 
 export default async function MarketingDashboardPage() {
+  const t = await getTranslations("adminPages");
   await requireRole(["admin"]);
   const supabase = await marketingDb();
   // eslint-disable-next-line react-hooks/purity
@@ -93,7 +95,7 @@ export default async function MarketingDashboardPage() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 16, fontWeight: 500, color: "var(--foreground)", marginBottom: 2 }}>Overview</h1>
+          <h1 style={{ fontSize: 16, fontWeight: 500, color: "var(--foreground)", marginBottom: 2 }}>{t("overviewP")}</h1>
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Last 30 days</div>
         </div>
         <Link

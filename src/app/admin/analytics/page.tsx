@@ -66,7 +66,7 @@ export default async function AdminAnalyticsPage({
           profileEmail={profile.email ?? undefined}
     >
       <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Admin Workspace</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">{t("adminWorkspace")}</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Analytics</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Platform-wide command center using live Supabase data. Aggregate counts only — no external analytics

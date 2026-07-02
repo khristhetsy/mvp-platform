@@ -1170,6 +1170,21 @@
     "topSignalDomains": "Top signal domains",
     "uploadStructuredPlatformData": "Upload structured platform data with preview, validation, and audit logging. Imports never auto-approve investors or publish companies.",
     "workflowAutomationHealth": "Workflow Automation Health",
-    "workflowAutomation": "Workflow automation"
+    "workflowAutomation": "Workflow automation",
+    "aiSeoPages": "AI SEO / Answer Engine pages",
+    "aiVisibility": "AI visibility",
+    "campaigns": "Campaigns",
+    "emailTemplates": "Email Templates",
+    "marketingConsoleTitle": "Marketing Daily Operating Console",
+    "marketingPlan": "Marketing plan",
+    "mktAeo": "Marketing · AEO",
+    "mktAeoEdit": "Marketing · AEO · Edit",
+    "mktAeoVisibility": "Marketing · AEO · Visibility",
+    "mktConsole": "Marketing · Console",
+    "notificationsReminders": "Notifications & reminders",
+    "overviewP": "Overview",
+    "profileP": "Profile",
+    "sequences": "Sequences",
+    "structuredEditor": "Structured editor"
   }
 }
