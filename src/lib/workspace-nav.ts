@@ -79,16 +79,20 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         href: "/admin/marketing",
         label: "Marketing Hub",
         requiredPermission: "view_admin_dashboard",
+        // Keep in sync with the marketing hub top-bar (src/app/admin/marketing/layout.tsx).
         children: [
-          { href: "/admin/marketing",                 label: "Dashboard"    },
-          { href: "/admin/marketing/contacts",        label: "Contacts"     },
-          { href: "/admin/marketing/campaigns",       label: "Campaigns"    },
-          { href: "/admin/marketing/sequences",       label: "Sequences"    },
-          { href: "/admin/marketing/templates",       label: "Templates"    },
-          { href: "/admin/marketing/lists",           label: "Lists"        },
-          { href: "/admin/marketing/suppressions",    label: "Suppressions" },
-          { href: "/admin/marketing/analytics",       label: "Analytics"    },
-          { href: "/admin/marketing/plan",            label: "Plans"        },
+          { href: "/admin/marketing",                     label: "Dashboard"    },
+          { href: "/admin/marketing/console",             label: "Console"      },
+          { href: "/admin/marketing/plan",                label: "Plan"         },
+          { href: "/admin/marketing/contacts",            label: "Contacts"     },
+          { href: "/admin/marketing/lists",               label: "Lists"        },
+          { href: "/admin/marketing/campaigns",           label: "Campaigns"    },
+          { href: "/admin/marketing/sequences",           label: "Sequences"    },
+          { href: "/admin/marketing/templates",           label: "Templates"    },
+          { href: "/admin/marketing/analytics",           label: "Analytics"    },
+          { href: "/admin/marketing/aeo",                 label: "AEO"          },
+          { href: "/admin/marketing/suppressions",        label: "Suppressions" },
+          { href: "/admin/marketing/settings/notifications", label: "Settings"  },
         ],
       },
     ],
@@ -363,6 +367,9 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
   },
   {
     title: "Stage 3 · Deals access",
+    // Kept to actual deal access; cross-cutting tools (Communications, Calendar,
+    // Learning, Analytics) live in the Workspace group below so the stage reads
+    // as a clean funnel step.
     items: [
       {
         href: "/investor/opportunities",
@@ -375,6 +382,23 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/investor/deals", label: "Diligence" },
         ],
       },
+      { href: "/events", label: "Events" },
+      { href: "/investor/partner-score", label: "Partner Score" },
+    ],
+  },
+  {
+    title: "Stage 4 · Manage deals",
+    items: [
+      { href: "/investor/portfolio", label: "Portfolio" },
+      { href: "/investor/spvs", label: "SPVs & closings" },
+      { href: "/investor/activity", label: "Recent Activity" },
+    ],
+  },
+  {
+    title: "Workspace",
+    items: [
+      { href: "/investor/actions", label: "Action Center" },
+      { href: "/investor/tasks", label: "Tasks" },
       {
         href: "/investor/inbox",
         label: "Communications",
@@ -391,25 +415,8 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/investor/schedule", label: "Scheduling" },
         ],
       },
-      { href: "/events", label: "Events" },
-      { href: "/investor/partner-score", label: "Partner Score" },
       { href: "/investor/learning", label: "Learning" },
       { href: "/investor/analytics", label: "Analytics" },
-    ],
-  },
-  {
-    title: "Stage 4 · Manage deals",
-    items: [
-      { href: "/investor/portfolio", label: "Portfolio" },
-      { href: "/investor/spvs", label: "SPVs & closings" },
-      { href: "/investor/activity", label: "Recent Activity" },
-    ],
-  },
-  {
-    title: "Workspace",
-    items: [
-      { href: "/investor/actions", label: "Action Center" },
-      { href: "/investor/tasks", label: "Tasks" },
       { href: "/notifications", label: "Notifications" },
       { href: "/investor/settings", label: "Settings" },
     ],
