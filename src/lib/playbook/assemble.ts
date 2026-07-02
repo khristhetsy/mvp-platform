@@ -2,17 +2,13 @@
 // the playbook_* editorial content, merges them in nav order, and computes drift.
 // Nav-driven order guarantees the loop matches the menu.
 
-import { createServiceRoleClient } from "@/lib/supabase/admin";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { playbookNavSurfaces, playbookNavIds } from "./nav";
 import { MARKETING_SURFACES, marketingSurfaceIds, MARKETING_KEY_PREFIX } from "./marketing-nav";
 import type { PlaybookNavSurface } from "./nav";
 import type { AssembledPlaybook, PlaybookCard, PlaybookContent, OrphanEntry, PlaybookStep, PlaybookFlag } from "./types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function db(): SupabaseClient<any> {
-  return createServiceRoleClient() as unknown as SupabaseClient;
-}
+const db = serviceRoleClientUntyped;
 
 interface ModuleRow {
   nav_id: string;

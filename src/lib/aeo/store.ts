@@ -1,14 +1,10 @@
 // AEO data-access. Uses the service-role client (writes are admin-gated at the API
 // layer; the public render path reads published rows server-side).
 
-import { createServiceRoleClient } from "@/lib/supabase/admin";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { rowToPage, type AeoPage, type AeoPageRow, type AeoStatus, type ComplianceStatus } from "./types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function db(): SupabaseClient<any> {
-  return createServiceRoleClient() as unknown as SupabaseClient;
-}
+const db = serviceRoleClientUntyped;
 
 const COLS =
   "id,slug,status,eyebrow,h1,lede,definition_answer,defined_term,sections,faq,meta_description,compliance_status,published_at,updated_at";

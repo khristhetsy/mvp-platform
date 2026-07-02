@@ -1,14 +1,10 @@
 // Upsert editorial content for one nav surface (module row + its steps + flags).
 // Used by PATCH /api/admin/playbook/[navId]. Admin-only is enforced at the route.
 
-import { createServiceRoleClient } from "@/lib/supabase/admin";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import type { PlaybookBlock, Cadence, FlagKind } from "./types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function db(): SupabaseClient<any> {
-  return createServiceRoleClient() as unknown as SupabaseClient;
-}
+const db = serviceRoleClientUntyped;
 
 export interface UpsertInput {
   block?: PlaybookBlock;

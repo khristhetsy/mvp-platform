@@ -29,7 +29,7 @@ function req(action: string) {
 }
 
 /** Fake service-role client: companies read returns the company; update is captured. */
-function fakeAdmin(updateSpy: ReturnType<typeof vi.fn>) {
+function fakeAdmin(updateSpy: (patch: unknown) => void) {
   return {
     from: vi.fn(() => ({
       select: vi.fn().mockReturnValue({

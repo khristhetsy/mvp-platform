@@ -8,6 +8,8 @@
     "build:staging": "APP_ENV=staging next build",
     "build:production": "APP_ENV=production next build",
     "check:env": "node scripts/check-env.mjs",
+    "db:types": "supabase gen types typescript --project-id \"$SUPABASE_PROJECT_ID\" --schema public > src/lib/supabase/types.ts",
+    "db:types:check": "node scripts/check-types-fresh.mjs",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit --project tsconfig.build.json",

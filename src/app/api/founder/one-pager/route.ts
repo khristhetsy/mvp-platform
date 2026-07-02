@@ -15,7 +15,7 @@ const BodySchema = z.object({
 
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["founder"]);
-  if ("error" in auth) return auth.error;
+  if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json().catch(() => ({}));
   const parsed = BodySchema.safeParse(body);

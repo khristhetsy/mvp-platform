@@ -2,14 +2,11 @@
 // maps those keys to REAL, defensive queries. Any query that fails (missing table
 // or column) returns null and simply renders no badge — never a fabricated number.
 
-import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 
 // Loose client — these tables live in different domains and aren't in the generated
 // types; access is admin-gated at the route layer.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function db(): any {
-  return createServiceRoleClient();
-}
+const db = serviceRoleClientUntyped;
 
 async function safeCount(run: () => PromiseLike<{ count: number | null; error: unknown }>): Promise<number | null> {
   try {

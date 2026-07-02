@@ -27,6 +27,13 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      # Informational: flags Supabase tables that exist in migrations but are
+      # missing from the generated types (no column-level type safety). Not
+      # blocking yet — regenerate with `npm run db:types`, then make it strict.
+      - name: Supabase type drift (informational)
+        run: npm run db:types:check
+        continue-on-error: true
+
       - name: Test
         run: npm test
 
