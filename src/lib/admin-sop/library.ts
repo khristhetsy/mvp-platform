@@ -989,6 +989,56 @@ export const ADMIN_SOPS: SopEntry[] = [
     reversibility: "Editing a card is non-destructive and immediate; there is no publish step. Removing steps just clears them.",
     warnings: ["Hard-gate flags (amber) are operating rules, e.g. 'no restricted investor access until kyc_status = verified' — do not treat them as optional."],
   },
+  {
+    id: 65,
+    part: "G",
+    title: "Run the marketing daily operating loop",
+    summary: "The Open → Core → Close marketing loop across the hub's real surfaces.",
+    permission: "view_admin_dashboard",
+    keywords: ["marketing", "marketing console", "daily loop", "marketing operations", "campaigns", "daily marketing", "marketing routine", "open core close", "marketing daily", "operator loop"],
+    steps: [
+      "Open — Dashboard: review the engagement funnel and integration health at Marketing hub → Dashboard (/admin/marketing).",
+      "Open — Action review: clear staged and scheduled campaigns and any bounce or webhook alerts (/admin/marketing/campaigns; platform queue at /admin/actions).",
+      "Open — Replies: work unhandled replies in the inbox (/admin/inbox) and CRM messages (/admin/crm/messages). Route interested → follow-up, unsubscribe → suppression, and anything mentioning guarantees or placement → securities counsel (do not answer directly).",
+      "Core — Lead pipeline: leads live in Odoo (the external system of record). Review the mirrored contacts and list hygiene before any send (/admin/marketing/contacts, /admin/marketing/lists). Do not schedule a segment until its import is clean.",
+      "Core — Email campaigns: build and QA the campaign, split large sends into thirds, and send only after compliance review is approved (/admin/marketing/campaigns, sequences at /admin/marketing/sequences).",
+      "Core — Phone follow-up: call only non-suppressed leads; cap at two attempts per lead, then close. Log via CRM outreach (/admin/crm/outreach).",
+      "Core — Content and assets: keep templates and pillar content fresh — review anything older than ~30 days (/admin/marketing/templates and the AEO pages at /admin/marketing/aeo).",
+      "Core — Brand consistency: keep to the approved navy → royal-blue palette. Deprecated hexes (#0D9488, #5EEAD4, #534AB7 / #3C3489) are flagged by CI — fix the flagged files.",
+      "Core — AI CMO advisory: read the AI CMO's recommendations (Marketing hub → Plan, /admin/marketing/plan, and the AI CMO copilot) and act on them manually. The advisory is read-only.",
+      "Core — SEO / AEO: check answer-engine visibility and publish or refresh citable pages at /admin/marketing/aeo; turn gaps into content tasks.",
+      "Close — End of day: review today's engagement rollup (/admin/marketing/analytics), stage tomorrow's batches, note open blockers, and write a one-line log.",
+    ],
+    behindScenes:
+      "Odoo is the external system of record for leads; Supabase carries a read mirror plus the console's own action state. Engagement metrics come from marketing_events (send / open / click / reply / signup) — there is deliberately no funding or outcome data to report. The AI CMO reads analytics only and never writes operational tables. The playbook (/admin/playbook) documents the steps; the Marketing hub surfaces are where they are performed.",
+    reversibility: "Most steps are review or queue actions; a scheduled campaign can be paused or cancelled before it sends.",
+    warnings: [
+      "Never schedule a send on a segment whose import is not clean.",
+      "Never send a campaign that has not passed compliance review.",
+    ],
+  },
+  {
+    id: 66,
+    part: "F",
+    title: "Marketing compliance gates",
+    summary: "The load-bearing rules that keep outbound marketing in the engagement register and out of securities-offer territory.",
+    permission: "manage_compliance",
+    keywords: ["marketing compliance", "engagement register", "copy review", "two attempt cap", "2 attempt", "suppress on convert", "suppression", "reg cf", "securities counsel", "outcome language", "guarantees", "placement"],
+    steps: [
+      "Engagement, not outcome: marketing reporting aggregates engagement only (sends, opens, clicks, replies, signups). Never record or promise a fundraising outcome or a guaranteed result — the data model does not store one.",
+      "Copy-review gate: a campaign must pass compliance review before it can send. An unreviewed or rejected campaign is blocked — the send control is disabled and the send action is refused.",
+      "Two-attempt phone cap: call each lead at most twice, then close the task. The cap is enforced, not advisory.",
+      "Suppress-on-convert: when a lead signs up they are added to the suppression list automatically. Suppressed and unsubscribed contacts are excluded from every send and call queue.",
+      "Reg CF intermediary tension: any reply mentioning guarantees or placement is routed to securities counsel for review before any external commitment. Do not respond to those directly.",
+    ],
+    behindScenes:
+      "These are enforced in schema and route logic, not just UI copy: engagement-only tables (no outcome columns), a send handler that hard-checks compliance approval, a database cap on call attempts, and recipient queries that exclude the suppression list.",
+    reversibility: "The gates are preventive — they block a non-compliant action rather than something to undo. A campaign can be revised and re-reviewed.",
+    warnings: [
+      "These are enforcement rules, not style guidance — do not work around them.",
+      "'Educational community content only — not an offer of securities' applies to all outbound marketing.",
+    ],
+  },
 ];
 
 /** Lookup an SOP by id. */
