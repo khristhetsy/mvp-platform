@@ -13,6 +13,7 @@ const NAV = [
   { label: "Sequences",    href: "/admin/marketing/sequences" },
   { label: "Templates",    href: "/admin/marketing/templates" },
   { label: "Analytics",    href: "/admin/marketing/analytics" },
+  { label: "AEO",          href: "/admin/marketing/aeo" },
   { label: "Suppressions", href: "/admin/marketing/suppressions" },
   { label: "Settings",     href: "/admin/marketing/settings/notifications" },
 ];

@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
+import { listPublishedSlugs } from "@/lib/aeo/store";
 
 const SITE = "https://icapos.com";
 
-/** Public marketing + trust routes. */
-export default function sitemap(): MetadataRoute.Sitemap {
+/** Public marketing + trust routes, plus published AEO (/learn) pages. */
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const routes: { path: string; changeFrequency: "daily" | "weekly" | "monthly"; priority: number }[] = [
     { path: "", changeFrequency: "daily", priority: 1 },
@@ -17,10 +18,26 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/security", changeFrequency: "monthly", priority: 0.3 },
   ];
 
-  return routes.map((r) => ({
+  const base: MetadataRoute.Sitemap = routes.map((r) => ({
     url: `${SITE}${r.path}`,
     lastModified: now,
     changeFrequency: r.changeFrequency,
     priority: r.priority,
   }));
+
+  // Published AEO pillar pages (best-effort — never break the sitemap on error).
+  let learn: MetadataRoute.Sitemap = [];
+  try {
+    const pages = await listPublishedSlugs();
+    learn = pages.map((p) => ({
+      url: `${SITE}/learn/${p.slug}`,
+      lastModified: p.updatedAt ? new Date(p.updatedAt) : now,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    }));
+  } catch {
+    learn = [];
+  }
+
+  return [...base, ...learn];
 }
