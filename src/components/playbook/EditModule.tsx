@@ -7,7 +7,7 @@ const NAVY = "#0f2147";
 const input: React.CSSProperties = { width: "100%", fontSize: 13, padding: "7px 9px", borderRadius: 8, border: "1px solid #d7dce4", fontFamily: "inherit", boxSizing: "border-box" };
 const label: React.CSSProperties = { fontSize: 11.5, fontWeight: 600, color: NAVY, display: "block", marginBottom: 4 };
 
-export function EditModule({ card, onClose, onSaved }: { card: PlaybookCard; onClose: () => void; onSaved: () => void }) {
+export function EditModule({ card, onClose, onSaved, patchUrl = "/api/admin/playbook/module" }: { card: PlaybookCard; onClose: () => void; onSaved: () => void; patchUrl?: string }) {
   const c = card.content;
   const [block, setBlock] = useState<PlaybookBlock>(c?.block ?? "core");
   const [cadence, setCadence] = useState<Cadence>(c?.cadence ?? "daily");
@@ -21,7 +21,7 @@ export function EditModule({ card, onClose, onSaved }: { card: PlaybookCard; onC
   const save = async () => {
     setSaving(true); setErr(null);
     try {
-      const res = await fetch("/api/admin/playbook/module", {
+      const res = await fetch(patchUrl, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           navId: card.navId, block, cadence,

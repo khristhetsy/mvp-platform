@@ -5,6 +5,8 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { playbookNavSurfaces, playbookNavIds } from "./nav";
+import { MARKETING_SURFACES, marketingSurfaceIds, MARKETING_KEY_PREFIX } from "./marketing-nav";
+import type { PlaybookNavSurface } from "./nav";
 import type { AssembledPlaybook, PlaybookCard, PlaybookContent, OrphanEntry, PlaybookStep, PlaybookFlag } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,17 +42,17 @@ function toContent(m: ModuleRow): PlaybookContent {
   };
 }
 
-export async function assemblePlaybook(): Promise<AssembledPlaybook> {
+async function loadModules(): Promise<ModuleRow[]> {
   const { data } = await db()
     .from("playbook_module")
     .select("nav_id,block,sort_order,role_note,cadence,count_source,updated_at,steps:playbook_step(step_no,body),flags:playbook_flag(kind,label)")
     .order("sort_order");
+  return (data ?? []) as ModuleRow[];
+}
 
-  const modules = (data ?? []) as ModuleRow[];
+function buildCards(modules: ModuleRow[], surfaces: PlaybookNavSurface[]): PlaybookCard[] {
   const byNavId = new Map(modules.map((m) => [m.nav_id, m]));
-  const navIds = playbookNavIds();
-
-  const cards: PlaybookCard[] = playbookNavSurfaces().map((nav) => {
+  return surfaces.map((nav) => {
     const m = byNavId.get(nav.id);
     const content = m ? toContent(m) : null;
     return {
@@ -62,11 +64,29 @@ export async function assemblePlaybook(): Promise<AssembledPlaybook> {
       state: !content ? "undocumented" : content.steps.length ? "ok" : "no_steps",
     };
   });
+}
+
+export async function assemblePlaybook(): Promise<AssembledPlaybook> {
+  const modules = await loadModules();
+  const navIds = playbookNavIds();
+  const cards = buildCards(modules, playbookNavSurfaces());
 
   // Orphaned: editorial content whose nav_id no longer matches any menu item.
+  // Marketing-console rows (mkt:*) belong to a different console — never flag them here.
   const orphaned: OrphanEntry[] = modules
-    .filter((m) => !navIds.has(m.nav_id))
+    .filter((m) => !m.nav_id.startsWith(MARKETING_KEY_PREFIX) && !navIds.has(m.nav_id))
     .map((m) => ({ navId: m.nav_id, block: m.block, steps: (m.steps ?? []).length }));
 
+  return { cards, orphaned, generatedAt: new Date().toISOString() };
+}
+
+/** The marketing-scoped console: only mkt:* modules, over the curated surface list. */
+export async function assembleMarketingConsole(): Promise<AssembledPlaybook> {
+  const modules = (await loadModules()).filter((m) => m.nav_id.startsWith(MARKETING_KEY_PREFIX));
+  const ids = marketingSurfaceIds();
+  const cards = buildCards(modules, MARKETING_SURFACES);
+  const orphaned: OrphanEntry[] = modules
+    .filter((m) => !ids.has(m.nav_id))
+    .map((m) => ({ navId: m.nav_id, block: m.block, steps: (m.steps ?? []).length }));
   return { cards, orphaned, generatedAt: new Date().toISOString() };
 }

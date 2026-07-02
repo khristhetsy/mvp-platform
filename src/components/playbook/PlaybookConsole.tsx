@@ -10,25 +10,38 @@ import { EditModule } from "./EditModule";
 const NAVY = "#0f2147";
 const BLOCK_ORDER: PlaybookBlock[] = ["open", "core", "close"];
 
-export function PlaybookConsole({ initial, isAdmin }: { initial: AssembledPlaybook; isAdmin: boolean }) {
+export interface ConsoleEndpoints {
+  get: string;
+  counts: string | null;
+  patch: string;
+}
+
+const ADMIN_ENDPOINTS: ConsoleEndpoints = {
+  get: "/api/admin/playbook",
+  counts: "/api/admin/playbook/counts",
+  patch: "/api/admin/playbook/module",
+};
+
+export function PlaybookConsole({ initial, isAdmin, endpoints = ADMIN_ENDPOINTS }: { initial: AssembledPlaybook; isAdmin: boolean; endpoints?: ConsoleEndpoints }) {
   const [data, setData] = useState<AssembledPlaybook>(initial);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [editing, setEditing] = useState<PlaybookCard | null>(null);
 
   const loadCounts = useCallback(async () => {
+    if (!endpoints.counts) return;
     try {
-      const res = await fetch("/api/admin/playbook/counts");
+      const res = await fetch(endpoints.counts);
       if (res.ok) setCounts((await res.json()).counts ?? {});
     } catch { /* counts are best-effort */ }
-  }, []);
+  }, [endpoints.counts]);
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/playbook");
+      const res = await fetch(endpoints.get);
       if (res.ok) setData(await res.json());
     } catch { /* keep current */ }
     void loadCounts();
-  }, [loadCounts]);
+  }, [endpoints.get, loadCounts]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void loadCounts(); }, [loadCounts]);
@@ -108,7 +121,7 @@ export function PlaybookConsole({ initial, isAdmin }: { initial: AssembledPlaybo
         <p style={{ fontSize: 11, color: "#9aa3b0", margin: 0 }}>Generated {new Date(data.generatedAt).toLocaleString()} · reads the live admin menu, so it can’t drift.</p>
       </div>
 
-      {editing ? <EditModule card={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void refresh(); }} /> : null}
+      {editing ? <EditModule card={editing} patchUrl={endpoints.patch} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void refresh(); }} /> : null}
     </div>
   );
 }
