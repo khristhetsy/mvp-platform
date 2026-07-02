@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { AdminReportsPanel } from "@/components/AdminReportsPanel";
 import { AdminReportsModuleViews } from "@/components/admin/AdminReportsModuleViews";
 import { AppShell } from "@/components/AppShell";
@@ -67,6 +68,7 @@ function toFilterOption(row: {
 
 export default async function AdminReportsPage() {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("adminPages");
   const admin = createServiceRoleClient();
   const options = await loadAdminReportFilterOptions(admin);
 
@@ -80,9 +82,9 @@ export default async function AdminReportsPage() {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Admin workspace"
-          title="Audit export & reporting"
-          description="Generate internal JSON or CSV summaries from existing platform data for compliance, diligence, and operational oversight. Not legal filings, tax reports, or external compliance integrations."
+          eyebrow={t("adminWorkspace2")}
+          title={t("auditExportReporting")}
+          description={t("generateInternalJsonOr")}
         />
 
         <AdminReportsModuleViews sections={[...REPORT_SECTIONS]}>

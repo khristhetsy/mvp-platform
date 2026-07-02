@@ -31,6 +31,7 @@ import type {
 } from "@/lib/spv/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
+import { getTranslations } from "next-intl/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { resolveSpvDependencies } from "@/lib/automation/dependencies";
 import { CollaborationDiscussionPanel } from "@/components/collaboration/CollaborationDiscussionPanel";
@@ -178,6 +179,7 @@ async function loadAdminSpvWorkspace(): Promise<{ data: SpvWorkspaceData | null;
 
 export default async function AdminSpvsPage() {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("irAdmin.spvs");
 
   if (isAdminModuleComingSoon("spvs")) {
     return (
@@ -190,9 +192,9 @@ export default async function AdminSpvsPage() {
       >
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="SPV operations"
-            title="SPV command center"
-            description="Readiness, investor document intake, and indicative participation."
+            eyebrow={t("eyebrow")}
+            title={t("title")}
+            description={t("desc")}
           />
           <WorkspaceModulePlaceholder title="SPV workflow" />
         </WorkspacePageContainer>
@@ -243,9 +245,9 @@ export default async function AdminSpvsPage() {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="SPV operations"
-          title="SPV command center"
-          description="Readiness, investor document intake, and indicative participation. Use Refresh readiness per SPV — no sync on page load."
+          eyebrow={t("eyebrow")}
+          title={t("title")}
+          description={t("descLong")}
           metadata="Operational tracking only — not legal formation or securities execution"
           actions={
             primarySpvId ? (

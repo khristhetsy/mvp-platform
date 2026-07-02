@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
@@ -16,6 +17,8 @@ export default async function AdminLearningCoursesPage() {
   }
 
   const profile = await requireRole(["admin", "analyst"]);
+
+  const t = await getTranslations("learnAdmin");
   const supabase = createServiceRoleClient();
 
   const { data: programs } = await supabase
@@ -35,9 +38,9 @@ export default async function AdminLearningCoursesPage() {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Admin Learning"
-          title="Courses"
-          description="Educational content only. No investment/legal/tax advice."
+          eyebrow={t("eyebrowAdmin")}
+          title={t("coursesTitle")}
+          description={t("coursesDesc")}
           actions={
             <Link
               href="/admin/learning/courses/new"

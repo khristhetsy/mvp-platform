@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -16,6 +17,8 @@ export default async function AdminNewLearningCoursePage() {
 
   const profile = await requireRole(["admin", "analyst"]);
 
+
+  const t = await getTranslations("learnAdmin");
   return (
     <AppShell
       role="ADMIN"
@@ -26,9 +29,9 @@ export default async function AdminNewLearningCoursePage() {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Admin Learning"
-          title="New course"
-          description="Create a new course (program). Educational content only."
+          eyebrow={t("eyebrowAdmin")}
+          title={t("coursesNewTitle")}
+          description={t("coursesNewDesc")}
           metadata="Educational content only. No investment/legal/tax advice. No funding guarantees."
         />
         <WorkspacePanel title="Course editor" subtitle="Phase 1">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { AdminBetaOperationsDashboard } from "@/components/admin/beta/AdminBetaOperationsDashboard";
 import { AdminMigrationWarningBanner } from "@/components/admin/AdminMigrationWarningBanner";
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminBetaOperationsPage() {
   const profile = await requireRole(["admin", "analyst"]);
 
+  const t = await getTranslations("adminPages");
   if (isAdminModuleComingSoon("betaOperations")) {
     return (
       <AppShell
@@ -25,11 +27,11 @@ export default async function AdminBetaOperationsPage() {
       >
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Private beta"
-            title="Beta Operations"
-            description="Staff-supervised cohort activation, observability, support tooling, and operational queues."
+            eyebrow={t("privateBeta")}
+            title={t("betaOperations")}
+            description={t("staffSupervisedCohortActivation")}
           />
-          <WorkspaceModulePlaceholder title="Beta operations" />
+          <WorkspaceModulePlaceholder title={t("betaOperations2")} />
         </WorkspacePageContainer>
       </AppShell>
     );
@@ -49,9 +51,9 @@ export default async function AdminBetaOperationsPage() {
         <AdminMigrationWarningBanner migrations={snapshot.launchReadiness.migrations} />
 
         <PageHeader
-          eyebrow="Private beta"
-          title="Beta Operations"
-          description="Staff-supervised cohort activation, observability, support tooling, and operational queues."
+          eyebrow={t("privateBeta")}
+          title={t("betaOperations")}
+          description={t("staffSupervisedCohortActivation")}
           metadata={`See system health for launch readiness · Generated ${new Date(snapshot.generatedAt).toLocaleString("en-US")}`}
         />
 

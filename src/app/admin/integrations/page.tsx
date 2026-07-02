@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { AdminIntegrationsConsole } from "@/components/admin/integrations/AdminIntegrationsConsole";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -16,6 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminIntegrationsPage() {
   const profile = await requireRole(["admin", "analyst"]);
 
+  const t = await getTranslations("adminPages");
   if (isAdminModuleComingSoon("integrations")) {
     return (
       <AppShell
@@ -27,11 +29,11 @@ export default async function AdminIntegrationsPage() {
       >
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Admin Workspace"
-            title="External integrations"
-            description="Enterprise connectivity foundation — Slack, webhooks, email, and document signing."
+            eyebrow={t("adminWorkspace")}
+            title={t("externalIntegrations")}
+            description={t("enterpriseConnectivityFoundationSlack2")}
           />
-          <WorkspaceModulePlaceholder title="Third-party integrations" />
+          <WorkspaceModulePlaceholder title={t("thirdPartyIntegrations")} />
         </WorkspacePageContainer>
       </AppShell>
     );
@@ -59,9 +61,9 @@ export default async function AdminIntegrationsPage() {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Admin Workspace"
-          title="External integrations"
-          description="Enterprise connectivity foundation — Slack and signed webhooks with sanitized outbound events, delivery logs, and audit visibility."
+          eyebrow={t("adminWorkspace")}
+          title={t("externalIntegrations")}
+          description={t("enterpriseConnectivityFoundationSlack")}
         />
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-xl border border-slate-200 bg-white p-5 hover:border-indigo-300 transition-colors">

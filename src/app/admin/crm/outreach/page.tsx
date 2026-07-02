@@ -7,11 +7,13 @@ import { getFounderOutreachAdminSummary } from "@/lib/founder-crm/admin-outreach
 import { listAdminInvestorActivity } from "@/lib/data/investor-interests";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminCrmOutreachPage() {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("irAdmin.crm");
 
   let setupError: string | null = null;
   let investorActivity = {
@@ -51,10 +53,10 @@ export default async function AdminCrmOutreachPage() {
       profileEmail={profile.email ?? undefined}
     >
       <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">CRM</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Outreach</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">{t("eyebrow")}</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{t("outreach")}</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Founder outreach campaign stats and platform investor interest activity.
+          {t("outreachDesc")}
         </p>
       </div>
 

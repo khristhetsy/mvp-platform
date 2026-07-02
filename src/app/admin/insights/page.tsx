@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { MetricCard } from "@/components/MetricCard";
@@ -15,6 +16,7 @@ export default async function AdminInsightsPage({
   searchParams,
 }: Readonly<{ searchParams?: Record<string, string | string[] | undefined> }>) {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("adminPages");
   const windowDays = clampTrendWindowDays(
     typeof searchParams?.window === "string" ? searchParams.window : null,
   );
@@ -77,9 +79,9 @@ export default async function AdminInsightsPage({
 
       {view === "table" ? (
         <section className="mt-4 grid gap-6 xl:grid-cols-2">
-          <WorkspacePanel title="Top risk signals (table)" subtitle="Platform-level · aggregate only">
+          <WorkspacePanel title={t("topRiskSignalsTable")} subtitle={t("platformLevelAggregateOnly")}>
             <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm" aria-label="Top risk signals">
+              <table className="min-w-full text-left text-sm" aria-label={t("topRiskSignals")}>
                 <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600">
                   <tr>
                     <th scope="col" className="px-3 py-2">Severity</th>
@@ -99,9 +101,9 @@ export default async function AdminInsightsPage({
               </table>
             </div>
           </WorkspacePanel>
-          <WorkspacePanel title="Recommended actions (table)" subtitle="No actions auto-created">
+          <WorkspacePanel title={t("recommendedActionsTable")} subtitle={t("noActionsAutoCreated")}>
             <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm" aria-label="Recommended actions">
+              <table className="min-w-full text-left text-sm" aria-label={t("recommendedActions")}>
                 <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600">
                   <tr>
                     <th scope="col" className="px-3 py-2">Priority</th>
@@ -128,7 +130,7 @@ export default async function AdminInsightsPage({
 
       {view === "segments" ? (
         <section className="mt-4 grid gap-6 xl:grid-cols-2">
-          <WorkspacePanel title="Risk distribution" subtitle="Counts by severity">
+          <WorkspacePanel title={t("riskDistribution")} subtitle={t("countsBySeverity")}>
             <div className="grid gap-3 sm:grid-cols-2">
               {[
                 ["critical", insights.riskOverview.critical],
@@ -143,7 +145,7 @@ export default async function AdminInsightsPage({
               ))}
             </div>
           </WorkspacePanel>
-          <WorkspacePanel title="Top signal domains" subtitle="Grouped by signal type">
+          <WorkspacePanel title={t("topSignalDomains")} subtitle={t("groupedBySignalType")}>
             <div className="grid gap-2 text-sm text-slate-700">
               {Array.from(
                 insights.signals.reduce((acc, s) => {
@@ -165,15 +167,15 @@ export default async function AdminInsightsPage({
 
       {view === "table" || view === "segments" ? null : (
       <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Critical risks" value={String(insights.riskOverview.critical)} detail="Score ≥ 85" accent="indigo" href="/admin/insights?view=segments" />
-        <MetricCard label="High risks" value={String(insights.riskOverview.high)} detail="Score 65–84" accent="violet" href="/admin/insights?view=segments" />
-        <MetricCard label="Medium risks" value={String(insights.riskOverview.medium)} detail="Score 40–64" accent="blue" href="/admin/insights?view=segments" />
-        <MetricCard label="Avg risk score" value={String(insights.riskOverview.scoreAvg)} detail="Across platform signals" accent="slate" href="/admin/analytics" />
+        <MetricCard label={t("criticalRisks")} value={String(insights.riskOverview.critical)} detail="Score ≥ 85" accent="indigo" href="/admin/insights?view=segments" />
+        <MetricCard label={t("highRisks")} value={String(insights.riskOverview.high)} detail="Score 65–84" accent="violet" href="/admin/insights?view=segments" />
+        <MetricCard label={t("mediumRisks")} value={String(insights.riskOverview.medium)} detail="Score 40–64" accent="blue" href="/admin/insights?view=segments" />
+        <MetricCard label={t("avgRiskScore")} value={String(insights.riskOverview.scoreAvg)} detail="Across platform signals" accent="slate" href="/admin/analytics" />
       </section>
       )}
 
       <section className="mt-8 grid gap-6 xl:grid-cols-2">
-        <WorkspacePanel title="Risk overview" subtitle="Platform-level signals (aggregate only)">
+        <WorkspacePanel title={t("riskOverview")} subtitle={t("platformLevelSignalsAggregate")}>
           {topSignals.length === 0 ? (
             <p className="text-sm text-slate-600">No signals available.</p>
           ) : (
@@ -203,7 +205,7 @@ export default async function AdminInsightsPage({
           </p>
         </WorkspacePanel>
 
-        <WorkspacePanel title="Recommended actions" subtitle="No actions are auto-created in Phase 1">
+        <WorkspacePanel title={t("recommendedActions")} subtitle={t("noActionsAreAuto")}>
           {topRecs.length === 0 ? (
             <p className="text-sm text-slate-600">No recommendations generated.</p>
           ) : (

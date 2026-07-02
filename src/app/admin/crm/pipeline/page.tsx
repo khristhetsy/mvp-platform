@@ -4,11 +4,13 @@ import { formatError } from "@/lib/errors/format-error";
 import { listAdminInvestorPipeline } from "@/lib/investor-crm/admin-pipeline";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminCrmPipelinePage() {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("irAdmin.crm");
 
   let setupError: string | null = null;
   let pipelineRows: Awaited<ReturnType<typeof listAdminInvestorPipeline>> = [];
@@ -29,10 +31,10 @@ export default async function AdminCrmPipelinePage() {
       profileEmail={profile.email ?? undefined}
     >
       <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">CRM</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Pipeline</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">{t("eyebrow")}</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{t("pipeline")}</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Investor–company pipeline status across all active deal relationships.
+          {t("pipelineDesc")}
         </p>
       </div>
 

@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { assemblePlaybook } from "@/lib/playbook/assemble";
 import { PlaybookConsole } from "@/components/playbook/PlaybookConsole";
@@ -7,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminPlaybookPage() {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("adminPages");
   const assembled = await assemblePlaybook();
   const isAdmin = profile.role === "admin";
 
@@ -15,7 +17,7 @@ export default async function AdminPlaybookPage() {
       role="ADMIN"
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
-      profileSubtitle="Daily Operating Console"
+      profileSubtitle={t("dailyOperatingConsole")}
       profileEmail={profile.email ?? undefined}
     >
       <div style={{ marginBottom: 18 }}>

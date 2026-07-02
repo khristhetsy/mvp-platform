@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -13,6 +14,7 @@ type PageProps = { params: Promise<{ roomId: string }> };
 
 export default async function AdminDealRoomDetailPage({ params }: PageProps) {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("adminPages");
   const { roomId } = await params;
   const supabase = createServiceRoleClient();
 
@@ -39,7 +41,7 @@ export default async function AdminDealRoomDetailPage({ params }: PageProps) {
       <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role}
           profileEmail={profile.email ?? undefined}>
         <WorkspacePageContainer>
-          <PageHeader eyebrow="Deal rooms" title="Deal room not found" description="Invalid room id." />
+          <PageHeader eyebrow={t("dealRooms")} title={t("dealRoomNotFound")} description={t("invalidRoomId")} />
         </WorkspacePageContainer>
       </AppShell>
     );
@@ -50,9 +52,9 @@ export default async function AdminDealRoomDetailPage({ params }: PageProps) {
           profileEmail={profile.email ?? undefined}>
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Deal room"
+          eyebrow={t("dealRoom")}
           title={room.title}
-          description="Admin oversight view. Educational/diligence collaboration only."
+          description={t("adminOversightViewEducational")}
           actions={
             <div className="flex flex-wrap gap-2">
               <Link
@@ -72,7 +74,7 @@ export default async function AdminDealRoomDetailPage({ params }: PageProps) {
         />
 
         <section className="grid gap-6 xl:grid-cols-2">
-          <WorkspacePanel title="Questions" subtitle={`${(questionsRes.data ?? []).length} recent`}>
+          <WorkspacePanel title={t("questions")} subtitle={`${(questionsRes.data ?? []).length} recent`}>
             {(questionsRes.data ?? []).length === 0 ? (
               <p className="text-sm text-slate-600">No questions yet.</p>
             ) : (
@@ -96,7 +98,7 @@ export default async function AdminDealRoomDetailPage({ params }: PageProps) {
             )}
           </WorkspacePanel>
 
-          <WorkspacePanel title="Document requests" subtitle={`${(docsRes.data ?? []).length} recent`}>
+          <WorkspacePanel title={t("documentRequests")} subtitle={`${(docsRes.data ?? []).length} recent`}>
             {(docsRes.data ?? []).length === 0 ? (
               <p className="text-sm text-slate-600">No document requests yet.</p>
             ) : (
@@ -122,7 +124,7 @@ export default async function AdminDealRoomDetailPage({ params }: PageProps) {
           </WorkspacePanel>
         </section>
 
-        <WorkspacePanel title="Activity timeline" subtitle="Latest events">
+        <WorkspacePanel title={t("activityTimeline")} subtitle={t("latestEvents")}>
           {(activityRes.data ?? []).length === 0 ? (
             <p className="text-sm text-slate-600">No activity yet.</p>
           ) : (
@@ -137,7 +139,7 @@ export default async function AdminDealRoomDetailPage({ params }: PageProps) {
           )}
         </WorkspacePanel>
 
-        <WorkspacePanel title="Collaboration" subtitle="Comments & internal notes">
+        <WorkspacePanel title={t("collaboration")} subtitle={t("commentsInternalNotes")}>
           <CollaborationDiscussionPanel
             entityType="deal_room"
             entityId={roomId}

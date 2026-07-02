@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -16,6 +17,8 @@ export default async function AdminLearningApprovalsPage() {
   }
 
   const profile = await requireRole(["admin", "analyst"]);
+
+  const t = await getTranslations("learnAdmin");
   const supabase = createServiceRoleClient();
 
   const { data: pendingPrograms } = await supabase
@@ -56,14 +59,14 @@ export default async function AdminLearningApprovalsPage() {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Admin Learning"
-          title="Approvals"
-          description="Educational content only. Review workflow statuses and publish decisions."
+          eyebrow={t("eyebrowAdmin")}
+          title={t("approvalsTitle")}
+          description={t("approvalsDesc")}
           metadata="Phase 1: approve/publish/archive with status history"
         />
 
         <WorkspacePanel
-          title="Pending review queue"
+          title={t("approvalsQueue")}
           subtitle={`${(pendingPrograms ?? []).length + (pendingModules ?? []).length + (pendingLessons ?? []).length + (pendingQuizzes ?? []).length} items`}
         >
           <AdminApprovalsQueue

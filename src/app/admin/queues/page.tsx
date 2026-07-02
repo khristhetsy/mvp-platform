@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { AdminQueuesPanel } from "@/components/admin/AdminQueuesPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PageErrorAlert } from "@/components/ui/PageErrorAlert";
@@ -15,6 +16,7 @@ type PageProps = {
 
 export default async function AdminQueuesPage({ searchParams }: PageProps) {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("adminPages");
   const params = await searchParams;
   const admin = createServiceRoleClient();
 
@@ -48,9 +50,9 @@ export default async function AdminQueuesPage({ searchParams }: PageProps) {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Admin Workspace"
-          title="Operations Queues"
-          description="Actionable admin queues across company reviews, investor approvals, compliance, SPV readiness, remediation, and imports."
+          eyebrow={t("adminWorkspace")}
+          title={t("operationsQueues")}
+          description={t("actionableAdminQueuesAcross")}
         />
         {loadFailed ? <PageErrorAlert message="Couldn't load the operations queues." /> : null}
         <AdminQueuesPanel snapshot={snapshot} initialQueue={params.queue} />

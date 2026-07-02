@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { requirePermissionPage } from "@/lib/api/permissions";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -16,6 +17,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Manage event" };
 
 export default async function AdminEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await getTranslations("adminPages");
   const { profile, effective } = await requirePermissionPage("manage_events");
   const { id } = await params;
   const admin = createServiceRoleClient();
@@ -36,7 +38,7 @@ export default async function AdminEventDetailPage({ params }: { params: Promise
       role="ADMIN"
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
-      profileSubtitle="Manage event"
+      profileSubtitle={t("manageEvent")}
     >
       <EventDetailManager
         event={event}

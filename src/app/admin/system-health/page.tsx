@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { AdminActionHealthProvider } from "@/components/AdminActionHealthProvider";
 import { AdminBetaOnboardingTools } from "@/components/admin/AdminBetaOnboardingTools";
@@ -16,6 +17,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminSystemHealthPage() {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("adminPages");
   const launchReadiness = await buildLaunchReadinessSnapshot();
   const environmentStatus = getEnvironmentStatusSummary();
 
@@ -46,7 +48,7 @@ export default async function AdminSystemHealthPage() {
         <AdminLaunchReadinessPanel snapshot={launchReadiness} />
 
         <div className="mt-8">
-          <WorkspacePanel title="Beta operations" subtitle="Cohort activation and support">
+          <WorkspacePanel title={t("betaOperations2")} subtitle={t("cohortActivationAndSupport")}>
             <p className="text-sm text-slate-600">
               Monitor founder/investor activation, inactivity flags, feedback queue, and operational event stream.
             </p>
@@ -60,7 +62,7 @@ export default async function AdminSystemHealthPage() {
         </div>
 
         <div className="mt-8">
-          <WorkspacePanel title="Beta onboarding tools" subtitle="Generate curated signup links (audit-logged)">
+          <WorkspacePanel title={t("betaOnboardingTools")} subtitle={t("generateCuratedSignupLinks")}>
             <AdminBetaOnboardingTools />
           </WorkspacePanel>
         </div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
@@ -41,6 +42,7 @@ export default async function AdminAnalyticsPage({
   searchParams,
 }: Readonly<{ searchParams?: Record<string, string | string[] | undefined> }>) {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("adminPages");
   const windowDays = clampTrendWindowDays(
     typeof searchParams?.window === "string" ? searchParams.window : null,
   );
@@ -108,9 +110,9 @@ export default async function AdminAnalyticsPage({
 
       {view === "table" ? (
         <section className="mt-4">
-          <WorkspacePanel title="Core metrics (table)" subtitle="Aggregate only">
+          <WorkspacePanel title={t("coreMetricsTable")} subtitle={t("aggregateOnly")}>
             <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm" aria-label="Core metrics">
+              <table className="min-w-full text-left text-sm" aria-label={t("coreMetrics")}>
                 <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-600">
                   <tr>
                     <th scope="col" className="px-3 py-2">Metric</th>
@@ -146,7 +148,7 @@ export default async function AdminAnalyticsPage({
 
       {view === "segments" ? (
         <section className="mt-4 grid gap-6 xl:grid-cols-2">
-          <WorkspacePanel title="Bottlenecks (segments)" subtitle="Counts only · drill down via links below">
+          <WorkspacePanel title={t("bottlenecksSegments")} subtitle={t("countsOnlyDrillDown")}>
             <div className="grid gap-2 text-sm text-slate-700">
               {analytics.bottlenecks.cards.map((card) => (
                 <div key={card.key} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
@@ -156,7 +158,7 @@ export default async function AdminAnalyticsPage({
               ))}
             </div>
           </WorkspacePanel>
-          <WorkspacePanel title="Health reasons" subtitle="Deterministic scoring">
+          <WorkspacePanel title={t("healthReasons")} subtitle={t("deterministicScoring")}>
             <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
               {analytics.health.reasons.length ? analytics.health.reasons.map((r) => <li key={r}>{r}</li>) : <li>No critical backlogs detected</li>}
             </ul>
@@ -167,28 +169,28 @@ export default async function AdminAnalyticsPage({
       {view === "table" || view === "segments" ? null : (
       <section className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Companies"
+          label={t("companies")}
           value={String(analytics.metrics.totalCompanies)}
           detail={`${analytics.metrics.pendingCompanyReviews} pending review · ${analytics.metrics.publishedCompanies} published`}
           accent="indigo"
           href="/admin/companies"
         />
         <MetricCard
-          label="Investors"
+          label={t("investors")}
           value={String(analytics.metrics.totalInvestors)}
           detail={`${analytics.metrics.approvedInvestors} approved · ${analytics.metrics.expressedInterests} interests`}
           accent="violet"
           href="/admin/investors"
         />
         <MetricCard
-          label="Active SPVs"
+          label={t("activeSpvs")}
           value={String(analytics.metrics.activeSpvs)}
           detail={`Avg readiness: ${formatPct(analytics.metrics.spvChecklistReadinessAvg)} checklist`}
           accent="blue"
           href="/admin/spvs"
         />
         <MetricCard
-          label="Health"
+          label={t("health")}
           value={analytics.health.score}
           detail={analytics.health.reasons.slice(0, 2).join(" · ") || "No critical backlogs detected"}
           accent="slate"
@@ -200,8 +202,8 @@ export default async function AdminAnalyticsPage({
       {/* Conversion funnel */}
       <section className="mt-8">
         <WorkspacePanel
-          title="Marketplace Conversion Funnel"
-          subtitle="Platform-wide deal flow from company registration to facilitated intro"
+          title={t("marketplaceConversionFunnel")}
+          subtitle={t("platformWideDealFlow")}
         >
           <AdminConversionFunnel
             stages={[
@@ -249,7 +251,7 @@ export default async function AdminAnalyticsPage({
       </section>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-2">
-        <WorkspacePanel title="Platform Overview" subtitle={`Aggregate metrics · last ${windowDays} days for windowed cards`}>
+        <WorkspacePanel title={t("platformOverview")} subtitle={`Aggregate metrics · last ${windowDays} days for windowed cards`}>
           <div className="grid gap-3 text-sm sm:grid-cols-2">
             <div>
               <p className="text-slate-600">Indicative amount (aggregate)</p>
@@ -281,7 +283,7 @@ export default async function AdminAnalyticsPage({
           </p>
         </WorkspacePanel>
 
-        <WorkspacePanel title="Capital Pipeline" subtitle="SPV readiness trends and bottlenecks">
+        <WorkspacePanel title={t("capitalPipeline")} subtitle={t("spvReadinessTrendsAnd")}>
           <div className="grid gap-2 text-sm sm:grid-cols-2">
             <p className="text-slate-700">
               Checklist avg: <span className="font-semibold">{formatPct(analytics.metrics.spvChecklistReadinessAvg)}</span>
@@ -307,7 +309,7 @@ export default async function AdminAnalyticsPage({
       </section>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-2">
-        <WorkspacePanel title="Founder Readiness" subtitle="Aggregate indicators (no private docs or notes)">
+        <WorkspacePanel title={t("founderReadiness")} subtitle={t("aggregateIndicatorsNoPrivate")}>
           <div className="grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
             <p>
               Pending company reviews:{" "}
@@ -328,7 +330,7 @@ export default async function AdminAnalyticsPage({
           </p>
         </WorkspacePanel>
 
-        <WorkspacePanel title="Investor Engagement" subtitle={`Last ${windowDays} days`}>
+        <WorkspacePanel title={t("investorEngagement")} subtitle={`Last ${windowDays} days`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-sm text-slate-700">
               <p>
@@ -353,7 +355,7 @@ export default async function AdminAnalyticsPage({
           </div>
         </WorkspacePanel>
 
-        <WorkspacePanel title="Workflow Automation Health" subtitle={`Last ${windowDays} days`}>
+        <WorkspacePanel title={t("workflowAutomationHealth")} subtitle={`Last ${windowDays} days`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-sm text-slate-700">
               <p>
@@ -374,7 +376,7 @@ export default async function AdminAnalyticsPage({
           </div>
         </WorkspacePanel>
 
-        <WorkspacePanel title="Compliance Trends" subtitle={`Last ${windowDays} days`}>
+        <WorkspacePanel title={t("complianceTrends")} subtitle={`Last ${windowDays} days`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-sm text-slate-700">
               <p>
@@ -395,7 +397,7 @@ export default async function AdminAnalyticsPage({
           </div>
         </WorkspacePanel>
 
-        <WorkspacePanel title="Import/Export Activity" subtitle={`Last ${windowDays} days`}>
+        <WorkspacePanel title={t("importExportActivity")} subtitle={`Last ${windowDays} days`}>
           <div className="grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
             <p>
               Imports processed: <span className="font-semibold">{analytics.metrics.importsProcessedWindow}</span>
@@ -418,7 +420,7 @@ export default async function AdminAnalyticsPage({
           </p>
         </WorkspacePanel>
 
-        <WorkspacePanel title="Collaboration Activity" subtitle={`Last ${windowDays} days (metadata only)`}>
+        <WorkspacePanel title={t("collaborationActivity")} subtitle={`Last ${windowDays} days (metadata only)`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-sm text-slate-700">
               <p>
@@ -432,7 +434,7 @@ export default async function AdminAnalyticsPage({
           </div>
         </WorkspacePanel>
 
-        <WorkspacePanel title="SPV Bottlenecks" subtitle="Operational blockers (sample list)">
+        <WorkspacePanel title={t("spvBottlenecks")} subtitle={t("operationalBlockersSampleList")}>
           {analytics.bottlenecks.cards.filter((c) => c.count > 0).length === 0 ? (
             <p className="text-sm text-slate-600">No bottlenecks detected in the current snapshot.</p>
           ) : (

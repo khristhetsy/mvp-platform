@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { AdminImportExportCenter } from "@/components/admin/AdminImportExportCenter";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminImportsPage() {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("adminPages");
   const admin = createServiceRoleClient();
   let batches: Awaited<ReturnType<typeof listImportBatches>> = [];
 
@@ -29,9 +31,9 @@ export default async function AdminImportsPage() {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Admin Workspace"
-          title="Import / Export Center"
-          description="Upload structured platform data with preview, validation, and audit logging. Imports never auto-approve investors or publish companies."
+          eyebrow={t("adminWorkspace")}
+          title={t("importExportCenter")}
+          description={t("uploadStructuredPlatformData")}
         />
         <AdminImportExportCenter initialBatches={batches} />
       </WorkspacePageContainer>

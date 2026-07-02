@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -16,6 +17,8 @@ export default async function AdminLearningCertificatesPage() {
   }
 
   const profile = await requireRole(["admin", "analyst"]);
+
+  const t = await getTranslations("learnAdmin");
   const supabase = createServiceRoleClient();
 
   const { data: certs } = await supabase
@@ -34,9 +37,9 @@ export default async function AdminLearningCertificatesPage() {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Admin Learning"
-          title="Certificates"
-          description="Certificates of Completion only. No investment qualification, no guarantees."
+          eyebrow={t("eyebrowAdmin")}
+          title={t("certificatesTitle")}
+          description={t("certificatesDesc")}
           metadata="Phase 1: manual issuance and listing"
         />
 

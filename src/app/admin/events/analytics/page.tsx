@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { requirePermissionPage } from "@/lib/api/permissions";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getEventAnalytics } from "@/lib/icfo-events/analytics";
@@ -16,6 +17,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 export default async function AdminEventAnalyticsPage() {
+  const t = await getTranslations("adminPages");
   const { profile } = await requirePermissionPage("manage_events");
   const admin = createServiceRoleClient();
   const { rows, totals } = await getEventAnalytics(admin).catch(() => ({
@@ -28,7 +30,7 @@ export default async function AdminEventAnalyticsPage() {
       role="ADMIN"
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
-      profileSubtitle="Event analytics"
+      profileSubtitle={t("eventAnalytics")}
     >
       <div className="mx-auto max-w-5xl px-4 py-6">
         <h1 className="text-xl font-semibold text-[var(--text-primary)]">Event analytics</h1>
@@ -37,10 +39,10 @@ export default async function AdminEventAnalyticsPage() {
         </p>
 
         <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <Stat label="Events" value={String(totals.events)} />
-          <Stat label="Registrations" value={String(totals.registrations)} />
-          <Stat label="Applications" value={String(totals.applications)} />
-          <Stat label="Acceptance rate" value={`${Math.round(totals.acceptanceRate * 100)}%`} />
+          <Stat label={t("events")} value={String(totals.events)} />
+          <Stat label={t("registrations")} value={String(totals.registrations)} />
+          <Stat label={t("applications")} value={String(totals.applications)} />
+          <Stat label={t("acceptanceRate")} value={`${Math.round(totals.acceptanceRate * 100)}%`} />
         </div>
 
         <div className="mt-6 overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white">

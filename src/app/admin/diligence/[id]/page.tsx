@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { DiligenceWorkspaceClient } from "@/components/diligence/DiligenceWorkspaceClient";
 import { requirePermissionPage } from "@/lib/api/permissions";
@@ -11,6 +12,7 @@ export default async function AdminDiligenceWorkspacePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const t = await getTranslations("adminPages");
   const { profile, supabase } = await requirePermissionPage("manage_diligence");
   const { id } = await params;
 
@@ -22,7 +24,7 @@ export default async function AdminDiligenceWorkspacePage({
       role="ADMIN"
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
-      profileSubtitle="Diligence workspace"
+      profileSubtitle={t("diligenceWorkspace")}
     >
       <DiligenceWorkspaceClient engagementId={engagement.id} />
     </AppShell>

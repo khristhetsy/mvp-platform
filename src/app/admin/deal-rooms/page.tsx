@@ -5,6 +5,7 @@ import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { requireRole } from "@/lib/supabase/auth";
+import { getTranslations } from "next-intl/server";
 import { AdminDealRoomCreatePanel } from "@/components/admin/deal-rooms/AdminDealRoomCreatePanel";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminDealRoomsPage() {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("irAdmin.dealRooms");
   const supabase = createServiceRoleClient();
 
   const [
@@ -55,9 +57,9 @@ export default async function AdminDealRoomsPage() {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Deal rooms"
-          title="Deal Room Operations"
-          description="Structured investor diligence collaboration. No public access. No legal or investment advice."
+          eyebrow={t("eyebrow")}
+          title={t("title")}
+          description={t("desc")}
           metadata="Admin oversight · structured questions · document requests · timeline"
         />
 

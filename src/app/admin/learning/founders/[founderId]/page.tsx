@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -54,6 +55,7 @@ export default async function AdminFounderLearningDetailPage({
 }) {
   const { founderId } = await params;
   const adminProfile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("learnAdmin");
   const admin = createServiceRoleClient();
 
   // Load founder profile
@@ -163,7 +165,7 @@ export default async function AdminFounderLearningDetailPage({
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Learning operations"
+          eyebrow={t("eyebrowOps")}
           title={founder.full_name ?? founder.email ?? founderId}
           description={`${companyName} · Rating: ${rating}/100 · ${completedKeys.size} lessons completed`}
           actions={

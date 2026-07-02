@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
@@ -16,6 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminLearningDashboardPage() {
   const profile = await requireRole(["admin", "analyst"]);
 
+  const t = await getTranslations("learnAdmin");
   if (isAdminModuleComingSoon("learning")) {
     return (
       <AppShell
@@ -27,9 +29,9 @@ export default async function AdminLearningDashboardPage() {
       >
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Learning operations"
-            title="Admin Learning"
-            description="Educational content only. No investment, legal, or tax advice."
+            eyebrow={t("eyebrowOps")}
+            title={t("homeTitle")}
+            description={t("homeDesc")}
           />
           <WorkspaceModulePlaceholder title="E-learning admin" />
         </WorkspacePageContainer>
@@ -98,9 +100,9 @@ export default async function AdminLearningDashboardPage() {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Learning operations"
-          title="Admin Learning"
-          description="Educational content only. No investment, legal, or tax advice. No guarantee of funding outcomes."
+          eyebrow={t("eyebrowOps")}
+          title={t("homeTitle")}
+          description={t("homeDescLong")}
           metadata="Staff only · curriculum approvals & progress analytics"
           actions={
             <div className="flex flex-wrap gap-2">

@@ -8,11 +8,13 @@ import { formatError } from "@/lib/errors/format-error";
 import { loadAdminMatchingCenterSnapshot } from "@/lib/matching/matching-center";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminMatchingPage() {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("irAdmin.matching");
 
   let setupError: string | null = null;
   let snapshot: Awaited<ReturnType<typeof loadAdminMatchingCenterSnapshot>> | null = null;
@@ -49,9 +51,9 @@ export default async function AdminMatchingPage() {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Admin workspace"
-          title="Matching Center"
-          description="Platform-wide investor–company matching intelligence using the existing iCapOS rules engine."
+          eyebrow={t("eyebrow")}
+          title={t("title")}
+          description={t("desc")}
         />
 
         {setupError ? (

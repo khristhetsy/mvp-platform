@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { AdminAuditCenter } from "@/components/admin/audit/AdminAuditCenter";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -20,6 +21,7 @@ type PageProps = {
 
 export default async function AdminAuditPage({ searchParams }: PageProps) {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("adminPages");
   const params = await searchParams;
   const urlParams = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -63,9 +65,9 @@ export default async function AdminAuditPage({ searchParams }: PageProps) {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Audit & compliance"
-          title="Enterprise audit center"
-          description="Audit-grade operational oversight across compliance, automation, orchestration, imports, and collaboration metadata. Not legal advice."
+          eyebrow={t("auditCompliance")}
+          title={t("enterpriseAuditCenter")}
+          description={t("auditGradeOperationalOversight")}
           metadata="Staff only · sanitized exports"
           actions={
             <a

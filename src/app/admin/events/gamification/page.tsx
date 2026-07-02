@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { requirePermissionPage } from "@/lib/api/permissions";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getPointRules } from "@/lib/icfo-events/gamification";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Gamification" };
 
 export default async function AdminGamificationPage() {
+  const t = await getTranslations("adminPages");
   const { profile } = await requirePermissionPage("manage_events");
   const admin = createServiceRoleClient();
   const [rules, missions] = await Promise.all([
@@ -22,7 +24,7 @@ export default async function AdminGamificationPage() {
       role="ADMIN"
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
-      profileSubtitle="Gamification"
+      profileSubtitle={t("gamification")}
     >
       <div className="mx-auto max-w-2xl px-4 py-6">
         <h1 className="text-xl font-semibold text-[var(--text-primary)]">Gamification points</h1>

@@ -6,6 +6,7 @@ import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { formatError } from "@/lib/errors/format-error";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export default async function AdminIntroRequestsPage({
   searchParams: Promise<{ filter?: string }>;
 }) {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("irAdmin.intro");
   const { filter: rawFilter } = await searchParams;
   const filter: IntroStatusFilter =
     rawFilter === "pending" || rawFilter === "facilitated" || rawFilter === "declined"
@@ -67,10 +69,10 @@ export default async function AdminIntroRequestsPage({
         : introRequests.filter((r) => r.status === filter);
 
   const FILTER_TABS: { key: IntroStatusFilter; label: string; count: number }[] = [
-    { key: "all",         label: "All",         count: totalCount      },
-    { key: "pending",     label: "Pending",      count: pendingCount    },
-    { key: "facilitated", label: "Facilitated",  count: facilitatedCount },
-    { key: "declined",    label: "Declined",     count: declinedCount   },
+    { key: "all",         label: t("all"),         count: totalCount      },
+    { key: "pending",     label: t("pending"),      count: pendingCount    },
+    { key: "facilitated", label: t("facilitated"),  count: facilitatedCount },
+    { key: "declined",    label: t("declined"),     count: declinedCount   },
   ];
 
   void profile;
@@ -84,12 +86,12 @@ export default async function AdminIntroRequestsPage({
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Investor Relations"
-          title="Intro requests"
-          description="Review, facilitate, or decline investor intro requests. Notifications are sent automatically on status change."
+          eyebrow={t("eyebrow")}
+          title={t("title")}
+          description={t("desc")}
         />
 
-        {loadError ? <PageErrorAlert message={`Failed to load intro requests: ${loadError}`} className="mb-6" /> : null}
+        {loadError ? <PageErrorAlert message={t("loadFailed", { error: loadError })} className="mb-6" /> : null}
 
         {/* Filter tabs */}
         <div className="mb-6 flex flex-wrap gap-2">

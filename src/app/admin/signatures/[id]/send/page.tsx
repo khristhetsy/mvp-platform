@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { SignatureSendClient } from "@/components/admin/signatures/SignatureSendClient";
 import { requirePermissionPage } from "@/lib/api/permissions";
@@ -11,6 +12,7 @@ export default async function AdminSignatureSendPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const t = await getTranslations("adminPages");
   const { profile, supabase, userId } = await requirePermissionPage("review_documents");
   const { id } = await params;
 
@@ -22,7 +24,7 @@ export default async function AdminSignatureSendPage({
       role="ADMIN"
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
-      profileSubtitle="Send for signature"
+      profileSubtitle={t("sendForSignature")}
     >
       <SignatureSendClient requestId={request.id} documentName={request.document_name} />
     </AppShell>

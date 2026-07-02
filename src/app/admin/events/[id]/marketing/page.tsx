@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Marketing Hub" };
 
 export default async function AdminEventMarketingPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await getTranslations("adminPages");
   const { profile } = await requirePermissionPage("manage_events");
   const { id } = await params;
   const admin = createServiceRoleClient();
@@ -27,7 +29,7 @@ export default async function AdminEventMarketingPage({ params }: { params: Prom
       role="ADMIN"
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
-      profileSubtitle="Marketing Hub"
+      profileSubtitle={t("marketingHub")}
     >
       <div className="mx-auto max-w-4xl px-4 py-6">
         <Link href={`/admin/events/${id}`} className="inline-flex items-center gap-1 text-sm text-[var(--text-muted)] hover:text-[var(--navy)]">

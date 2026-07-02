@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { AdminActionHealthProvider } from "@/components/AdminActionHealthProvider";
 import { AdminCompaniesModuleViews } from "@/components/admin/AdminCompaniesModuleViews";
 import { AdminPendingQuickReview } from "@/components/admin/AdminPendingQuickReview";
@@ -40,6 +41,7 @@ type FounderDocumentRow = {
 export default async function AdminCompaniesPage() {
   const profile = await requireRole(["admin", "analyst"]);
 
+  const t = await getTranslations("adminPages");
   const serviceRoleConfigured = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
   let loadError: string | null = null;
   let companyCards = mapAdminCompaniesToCardData([]);
@@ -148,9 +150,9 @@ export default async function AdminCompaniesPage() {
       >
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Admin workspace"
-            title="Companies"
-            description="Review submissions, manage publication, and control marketplace visibility."
+            eyebrow={t("adminWorkspace2")}
+            title={t("companies")}
+            description={t("reviewSubmissionsManagePublication")}
           />
 
           <AdminStageApprovalQueue founders={pendingFounders} />

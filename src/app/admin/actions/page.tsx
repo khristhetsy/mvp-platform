@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { ActionCenterPage } from "@/components/actions/ActionCenterPage";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -6,6 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminActionsPage() {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("adminPages");
   const adminRole = profile.role === "analyst" ? "analyst" : "admin";
 
   return (
@@ -18,8 +20,8 @@ export default async function AdminActionsPage() {
     >
       <ActionCenterPage
         role={adminRole}
-        title="Admin Action Center"
-        description="Company reviews, investor approvals, compliance escalations, SPV blockers, and operational follow-ups."
+        title={t("adminActionCenter")}
+        description={t("companyReviewsInvestorApprovals")}
       />
     </AppShell>
   );

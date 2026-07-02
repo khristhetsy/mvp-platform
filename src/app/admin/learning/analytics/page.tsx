@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { MetricCard } from "@/components/MetricCard";
@@ -17,6 +18,8 @@ export default async function AdminLearningAnalyticsPage() {
   }
 
   const profile = await requireRole(["admin", "analyst"]);
+
+  const t = await getTranslations("learnAdmin");
   const supabase = createServiceRoleClient();
 
   const [
@@ -64,9 +67,9 @@ export default async function AdminLearningAnalyticsPage() {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Admin Learning"
-          title="Analytics"
-          description="Educational analytics only. No private documents, messages, or tokens."
+          eyebrow={t("eyebrowAdmin")}
+          title={t("analyticsTitle")}
+          description={t("analyticsDesc")}
           actions={
             <Link
               href="/admin/learning"

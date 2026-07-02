@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
@@ -29,6 +30,7 @@ type OverrideRow = { founder_id: string; capital_stage: string; is_unlocked: boo
 
 export default async function AdminLearningFoundersPage() {
   const profile = await requireRole(["admin", "analyst"]);
+  const t = await getTranslations("learnAdmin");
   const admin = createServiceRoleClient();
 
   // Load all founders
@@ -162,9 +164,9 @@ export default async function AdminLearningFoundersPage() {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Learning operations"
-          title="Founder roster"
-          description="All founders — stage, progress, readiness rating, and risk flags."
+          eyebrow={t("eyebrowOps")}
+          title={t("foundersTitle")}
+          description={t("foundersDesc")}
           actions={
             <Link
               href="/admin/learning"

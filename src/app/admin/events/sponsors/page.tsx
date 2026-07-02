@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/AppShell";
+import { getTranslations } from "next-intl/server";
 import { requirePermissionPage } from "@/lib/api/permissions";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listSponsors } from "@/lib/icfo-events/sponsors";
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Sponsor catalog" };
 
 export default async function AdminSponsorsPage() {
+  const t = await getTranslations("adminPages");
   const { profile } = await requirePermissionPage("manage_events");
   const admin = createServiceRoleClient();
   const sponsors = await listSponsors(admin).catch(() => []);
@@ -17,7 +19,7 @@ export default async function AdminSponsorsPage() {
       role="ADMIN"
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
-      profileSubtitle="Sponsor catalog"
+      profileSubtitle={t("sponsorCatalog")}
     >
       <SponsorCatalog initialSponsors={sponsors} />
     </AppShell>

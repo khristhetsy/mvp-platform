@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { AdminAutomationConsole } from "@/components/admin/automation/AdminAutomationConsole";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -19,6 +20,7 @@ type PageProps = {
 export default async function AdminAutomationPage({ searchParams }: PageProps) {
   const profile = await requireRole(["admin", "analyst"]);
 
+  const t = await getTranslations("adminPages");
   if (isAdminModuleComingSoon("automation")) {
     return (
       <AppShell
@@ -30,11 +32,11 @@ export default async function AdminAutomationPage({ searchParams }: PageProps) {
       >
         <WorkspacePageContainer>
           <PageHeader
-            eyebrow="Admin Workspace"
-            title="Workflow automation"
-            description="Monitor rules-based automation runs, dependencies, guards, and bounded manual execution."
+            eyebrow={t("adminWorkspace")}
+            title={t("workflowAutomation")}
+            description={t("monitorRulesBasedAutomation")}
           />
-          <WorkspaceModulePlaceholder title="Automation engine" />
+          <WorkspaceModulePlaceholder title={t("automationEngine")} />
         </WorkspacePageContainer>
       </AppShell>
     );
@@ -71,9 +73,9 @@ export default async function AdminAutomationPage({ searchParams }: PageProps) {
     >
       <WorkspacePageContainer>
         <PageHeader
-          eyebrow="Admin Workspace"
-          title="Workflow automation"
-          description="Monitor rules-based automation runs, dependencies, guards, and bounded manual execution."
+          eyebrow={t("adminWorkspace")}
+          title={t("workflowAutomation")}
+          description={t("monitorRulesBasedAutomation")}
         />
         {loadError ? (
           <PageErrorAlert message={loadError} />

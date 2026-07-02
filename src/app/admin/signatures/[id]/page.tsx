@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/AppShell";
 import { SignaturePrepareClient } from "@/components/admin/signatures/SignaturePrepareClient";
 import { requirePermissionPage } from "@/lib/api/permissions";
@@ -11,6 +12,7 @@ export default async function AdminSignaturePreparePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const t = await getTranslations("adminPages");
   const { profile, supabase, userId } = await requirePermissionPage("review_documents");
   const { id } = await params;
 
@@ -22,7 +24,7 @@ export default async function AdminSignaturePreparePage({
       role="ADMIN"
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
-      profileSubtitle="Prepare document"
+      profileSubtitle={t("prepareDocument")}
     >
       <SignaturePrepareClient
         requestId={request.id}
