@@ -1,5 +1,5 @@
-import { useTranslations } from "next-intl";
 "use client";
+import { useTranslations } from "next-intl";
 
 export type GateRow = { founder_visible: boolean; investor_visible: boolean };
 export type GateMap = Record<string, GateRow>;
