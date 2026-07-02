@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Rocket, X, ArrowRight, LockOpen } from "lucide-react";
 
@@ -40,6 +41,7 @@ const UNLOCKS: Record<string, Unlock> = {
 
 /** Shows once when a founder reaches a new stage; dismiss persists server-side. */
 export function StageUnlockBanner() {
+  const t = useTranslations("founderCmp");
   const [stage, setStage] = useState<string | null>(null);
   const [hidden, setHidden] = useState(true);
 
@@ -89,7 +91,7 @@ export function StageUnlockBanner() {
             <Link href={u.cta.href} onClick={dismiss} className="inline-flex items-center gap-1.5 rounded-lg bg-[#534AB7] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3C3489]">
               {u.cta.label} <ArrowRight className="h-4 w-4" />
             </Link>
-            <button type="button" onClick={dismiss} className="text-sm text-slate-500 hover:text-slate-800">Got it</button>
+            <button type="button" onClick={dismiss} className="text-sm text-slate-500 hover:text-slate-800">{t("got_it")}</button>
           </div>
         </div>
         <button type="button" onClick={dismiss} aria-label="Dismiss" className="rounded p-1 text-slate-400 hover:bg-white/60 hover:text-slate-700"><X className="h-4 w-4" /></button>

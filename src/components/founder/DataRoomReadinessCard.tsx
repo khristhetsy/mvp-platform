@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { computeDataRoomState, DATA_ROOM_UNLOCKS } from "@/lib/data-room/completeness";
 import type { DocumentRecord } from "@/lib/supabase/types";
 
@@ -14,6 +15,7 @@ export function DataRoomReadinessCard({
   documents: DocumentRecord[];
   showAllItems?: boolean;
 }) {
+  const t = useTranslations("founderCmp");
   const state = computeDataRoomState(documents);
   const complete = state.fullComplete;
 
@@ -23,7 +25,7 @@ export function DataRoomReadinessCard({
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-panel)] sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Due diligence</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">{t("due_diligence")}</p>
           <h2 className="mt-1 text-xl font-semibold text-slate-950">
             {complete ? "Your data room is investor-ready" : "Get investor-ready"}
           </h2>

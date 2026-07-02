@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Sparkles, Check, Download, Pencil, Loader2, FileText, Info } from "lucide-react";
 import { REGCF_DOCS, type RegCfDocKey } from "@/lib/regcf/documents";
 
 type DocState = { content: string; ai_generated: boolean };
 
 export function RegCfGeneratorClient() {
+  const t = useTranslations("founderCmp");
   const [docs, setDocs] = useState<Record<string, DocState>>({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<RegCfDocKey | null>(null);
@@ -96,7 +98,7 @@ export function RegCfGeneratorClient() {
 
       <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
         {loading ? (
-          <p className="px-4 py-8 text-sm text-slate-400">Loading…</p>
+          <p className="px-4 py-8 text-sm text-slate-400">{t("loading")}</p>
         ) : (
           <ul>
             {REGCF_DOCS.map((d) => {
@@ -129,7 +131,7 @@ export function RegCfGeneratorClient() {
                       <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={12} className="w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs leading-relaxed focus:border-[#534AB7] focus:outline-none" />
                       <div className="mt-2 flex items-center gap-2">
                         <button type="button" disabled={busy === d.key} onClick={() => void save(d.key)} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50"><Check className="h-3.5 w-3.5" /> Save</button>
-                        <button type="button" onClick={() => setEditing(null)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50">Cancel</button>
+                        <button type="button" onClick={() => setEditing(null)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50">{t("cancel")}</button>
                       </div>
                     </div>
                   ) : has ? (

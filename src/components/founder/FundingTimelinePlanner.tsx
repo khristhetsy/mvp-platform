@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useToolkitSave, ToolkitSaveStatus } from "@/hooks/useToolkitSave";
 
 function SaveChip({ status }: { status: ToolkitSaveStatus }) {
@@ -176,6 +177,7 @@ function weeksBetween(a: Date, b: Date): number {
 // ---------------------------------------------------------------------------
 
 function PhaseCard({ phase, startDate, index }: { phase: PhaseConfig; startDate: Date; index: number }) {
+  const t = useTranslations("founderCmp");
   const [expanded, setExpanded] = useState(false);
   const endDate = addWeeks(startDate, phase.weeks);
 
@@ -204,7 +206,7 @@ function PhaseCard({ phase, startDate, index }: { phase: PhaseConfig; startDate:
       </button>
       {expanded ? (
         <div className="border-t border-slate-100 px-4 py-3">
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Key actions</p>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{t("key_actions")}</p>
           <div className="space-y-1">
             {phase.actions.map((a, i) => (
               <div key={i} className="flex items-start gap-2">
@@ -224,6 +226,7 @@ function PhaseCard({ phase, startDate, index }: { phase: PhaseConfig; startDate:
 // ---------------------------------------------------------------------------
 
 export function FundingTimelinePlanner() {
+  const t = useTranslations("founderCmp");
   const [roundType, setRoundType] = useState<RoundType>("seed");
   const [closeDate, setCloseDate] = useState<string>(() => {
     const d = new Date();
@@ -296,7 +299,7 @@ export function FundingTimelinePlanner() {
       {/* Controls */}
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <p className="mb-2 text-xs font-semibold text-slate-700">Round type</p>
+          <p className="mb-2 text-xs font-semibold text-slate-700">{t("round_type")}</p>
           <div className="flex flex-wrap gap-2">
             {(Object.keys(ROUND_PHASES) as RoundType[]).map((r) => (
               <button
@@ -312,7 +315,7 @@ export function FundingTimelinePlanner() {
           </div>
         </div>
         <div>
-          <label className="mb-2 block text-xs font-semibold text-slate-700">Target close date</label>
+          <label className="mb-2 block text-xs font-semibold text-slate-700">{t("target_close_date")}</label>
           <input
             type="date"
             value={closeDate}
@@ -328,17 +331,17 @@ export function FundingTimelinePlanner() {
           <p className="text-xl font-bold" style={{ color: weeksUntilStart < 0 ? "#dc2626" : "#534AB7" }}>
             {weeksUntilStart < 0 ? `${Math.abs(weeksUntilStart)}w ago` : `${weeksUntilStart}w`}
           </p>
-          <p className="text-[10px] text-slate-500">Until prep starts</p>
+          <p className="text-[10px] text-slate-500">{t("until_prep_starts")}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">
           <p className="text-xl font-bold" style={{ color: "#059669" }}>{totalWeeks}w</p>
-          <p className="text-[10px] text-slate-500">Total process</p>
+          <p className="text-[10px] text-slate-500">{t("total_process")}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">
           <p className="text-xl font-bold" style={{ color: weeksUntilClose < 8 ? "#d97706" : "#0ea5e9" }}>
             {weeksUntilClose}w
           </p>
-          <p className="text-[10px] text-slate-500">Until close</p>
+          <p className="text-[10px] text-slate-500">{t("until_close")}</p>
         </div>
       </div>
 
@@ -360,7 +363,7 @@ export function FundingTimelinePlanner() {
 
       {/* Visual timeline bar */}
       <div>
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Timeline overview</p>
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{t("timeline_overview")}</p>
         <div className="flex overflow-hidden rounded-xl">
           {phases.map((phase, i) => (
             <div
@@ -399,7 +402,7 @@ export function FundingTimelinePlanner() {
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-100 px-4 py-3">
           <p className="text-sm font-semibold text-slate-900">Pipeline math for {ROUND_TYPE_LABELS[roundType]}</p>
-          <p className="mt-0.5 text-[11px] text-slate-500">Typical funnel to close one lead investor.</p>
+          <p className="mt-0.5 text-[11px] text-slate-500">{t("typical_funnel_to_close_one_lead_investor")}</p>
         </div>
         <div className="px-4 py-3">
           <div className="space-y-2">
@@ -429,7 +432,7 @@ export function FundingTimelinePlanner() {
 
       {/* Key rules */}
       <div className="rounded-xl border border-indigo-100 bg-[#FAFAFF] px-4 py-3">
-        <p className="mb-2 text-xs font-semibold" style={{ color: "#534AB7" }}>Rules for a tight process</p>
+        <p className="mb-2 text-xs font-semibold" style={{ color: "#534AB7" }}>{t("rules_for_a_tight_process")}</p>
         <div className="space-y-1">
           {[
             "Run all meetings in parallel, not sequentially — momentum is your leverage",

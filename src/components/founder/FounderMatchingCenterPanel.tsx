@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { FounderInvestorMatchCard } from "@/components/founder/FounderInvestorMatchCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { ContentGrid, PageSection } from "@/components/ui/workspace-layout";
@@ -131,6 +132,7 @@ function MetricDrawerContent({
   filteredCount: number;
   onClose: () => void;
 }) {
+  const t = useTranslations("founderCmp");
   const closeBtn = (
     <button
       type="button"
@@ -169,22 +171,22 @@ function MetricDrawerContent({
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <p className="text-base font-semibold text-slate-900">Strong matches</p>
-            <p className="mt-0.5 text-xs text-slate-500">Approved investors scoring 70% or higher</p>
+            <p className="text-base font-semibold text-slate-900">{t("strong_matches")}</p>
+            <p className="mt-0.5 text-xs text-slate-500">{t("approved_investors_scoring_70_or_higher")}</p>
           </div>
           {closeBtn}
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Strong matches" value={String(snapshot.strongMatchCount)} />
-          <DStatBox label="Total investors" value={String(totalMatches)} />
-          <DStatBox label="% strong" value={totalMatches > 0 ? `${strongPct}%` : "—"} />
+          <DStatBox label={t("strong_matches")} value={String(snapshot.strongMatchCount)} />
+          <DStatBox label={t("total_investors")} value={String(totalMatches)} />
+          <DStatBox label={t("strong")} value={totalMatches > 0 ? `${strongPct}%` : "—"} />
         </div>
 
-        <p className="mt-5 text-xs font-semibold text-slate-900">Top strong matches</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("top_strong_matches")}</p>
         <div className="mt-2">
           {topStrong.length === 0 ? (
-            <p className="py-2 text-xs text-slate-400">No strong matches yet.</p>
+            <p className="py-2 text-xs text-slate-400">{t("no_strong_matches_yet")}</p>
           ) : (
             topStrong.map((m) => (
               <BRow
@@ -198,7 +200,7 @@ function MetricDrawerContent({
         </div>
 
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {snapshot.strongMatchCount === 0
               ? `No investors currently score 70%+ against your profile (${snapshot.industry ?? "industry not set"}, ${snapshot.companyGeography ?? "location not set"}). This typically means your company profile needs more detail, or your sector/stage isn't yet well-represented in the investor pool.`
@@ -231,29 +233,29 @@ function MetricDrawerContent({
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <p className="text-base font-semibold text-slate-900">Approved investors</p>
-            <p className="mt-0.5 text-xs text-slate-500">The iCapOS active matching pool</p>
+            <p className="text-base font-semibold text-slate-900">{t("approved_investors")}</p>
+            <p className="mt-0.5 text-xs text-slate-500">{t("the_icapos_active_matching_pool")}</p>
           </div>
           {closeBtn}
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Approved" value={String(snapshot.approvedInvestorCount)} />
-          <DStatBox label="Strong matches" value={String(snapshot.strongMatchCount)} />
-          <DStatBox label="Shown (filtered)" value={String(filteredCount)} />
+          <DStatBox label={t("approved")} value={String(snapshot.approvedInvestorCount)} />
+          <DStatBox label={t("strong_matches")} value={String(snapshot.strongMatchCount)} />
+          <DStatBox label={t("shown_filtered")} value={String(filteredCount)} />
         </div>
 
-        <p className="mt-5 text-xs font-semibold text-slate-900">Score distribution</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("score_distribution")}</p>
         <div className="mt-2">
           <BRow name="Strong (70%+)" badge={String(high)} variant={high > 0 ? "success" : "neutral"} />
           <BRow name="Moderate (50–69%)" badge={String(medium)} variant={medium > 0 ? "medium" : "neutral"} />
           <BRow name="Low (<50%)" badge={String(low)} variant="neutral" />
         </div>
 
-        <p className="mt-4 text-xs font-semibold text-slate-900">Investor type breakdown</p>
+        <p className="mt-4 text-xs font-semibold text-slate-900">{t("investor_type_breakdown")}</p>
         <div className="mt-2">
           {typeEntries.length === 0 ? (
-            <p className="py-2 text-xs text-slate-400">No type data available.</p>
+            <p className="py-2 text-xs text-slate-400">{t("no_type_data_available")}</p>
           ) : (
             typeEntries.slice(0, 5).map(([type, count]) => (
               <BRow key={type} name={type} badge={String(count)} variant="neutral" />
@@ -262,7 +264,7 @@ function MetricDrawerContent({
         </div>
 
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {`The iCapOS pool has ${snapshot.approvedInvestorCount} approved investor${snapshot.approvedInvestorCount === 1 ? "" : "s"} — these are verified, active investors with complete profiles. ${high > 0 ? `${high} of them score 70%+ against your company, giving you a concrete shortlist for outreach.` : "Currently none score 70%+ against your profile — complete your company profile to improve matching accuracy."}`}
           </p>
@@ -297,19 +299,19 @@ function MetricDrawerContent({
     <div className="px-5 pb-6 pt-5">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <p className="text-base font-semibold text-slate-900">Your company profile</p>
-          <p className="mt-0.5 text-xs text-slate-500">How your profile affects investor matching</p>
+          <p className="text-base font-semibold text-slate-900">{t("your_company_profile")}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{t("how_your_profile_affects_investor_matching")}</p>
         </div>
         {closeBtn}
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <DStatBox label="Industry" value={snapshot.industry ?? "Not set"} />
-        <DStatBox label="Geography" value={snapshot.companyGeography ?? "Not set"} />
-        <DStatBox label="Avg score" value={totalMatches > 0 ? `${avgScore}%` : "—"} />
+        <DStatBox label={t("industry")} value={snapshot.industry ?? "Not set"} />
+        <DStatBox label={t("geography")} value={snapshot.companyGeography ?? "Not set"} />
+        <DStatBox label={t("avg_score")} value={totalMatches > 0 ? `${avgScore}%` : "—"} />
       </div>
 
-      <p className="mt-5 text-xs font-semibold text-slate-900">Match profile details</p>
+      <p className="mt-5 text-xs font-semibold text-slate-900">{t("match_profile_details")}</p>
       <div className="mt-2">
         <BRow
           name="Industry / sector"
@@ -339,7 +341,7 @@ function MetricDrawerContent({
       </div>
 
       <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-        <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+        <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
         <p className="text-xs leading-relaxed text-slate-600">
           {!snapshot.industry && !snapshot.companyGeography
             ? "Your company profile is missing both industry and geography — these are the two most important matching signals. Without them, the algorithm cannot accurately rank investors by fit."
@@ -444,6 +446,7 @@ function OutreachKit({
   investor: FounderMatchingCenterRow;
   snapshot: FounderMatchingCenterSnapshot;
 }) {
+  const t = useTranslations("founderCmp");
   const [open, setOpen]           = useState(false);
   const [copiedSubject, setCopiedSubject] = useState(false);
   const [copiedBody, setCopiedBody]     = useState(false);
@@ -481,8 +484,8 @@ function OutreachKit({
             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="#534AB7" strokeWidth="2" />
             <polyline points="22,6 12,13 2,6" stroke="#534AB7" strokeWidth="2" />
           </svg>
-          <span className="text-xs font-semibold" style={{ color: "#534AB7" }}>Outreach Kit</span>
-          <span className="rounded-full px-2 py-0.5 text-[9px] font-bold" style={{ background: "#534AB7", color: "white" }}>NEW</span>
+          <span className="text-xs font-semibold" style={{ color: "#534AB7" }}>{t("outreach_kit")}</span>
+          <span className="rounded-full px-2 py-0.5 text-[9px] font-bold" style={{ background: "#534AB7", color: "white" }}>{t("new")}</span>
         </div>
         <svg
           width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"
@@ -506,7 +509,7 @@ function OutreachKit({
           {/* Subject line */}
           <div className="mb-3">
             <div className="mb-1 flex items-center justify-between">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Subject line</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">{t("subject_line")}</p>
               <button
                 type="button"
                 onClick={() => copy(subject, "subject")}
@@ -524,7 +527,7 @@ function OutreachKit({
           {/* Draft body */}
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Draft message</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">{t("draft_message")}</p>
               <button
                 type="button"
                 onClick={() => copy(editedBody, "body")}
@@ -633,6 +636,7 @@ function MeetingPrepKit({
   investor: FounderMatchingCenterRow;
   snapshot: FounderMatchingCenterSnapshot;
 }) {
+  const t = useTranslations("founderCmp");
   const [open, setOpen] = useState(false);
   const prep = useMemo(() => generateMeetingPrep(investor, snapshot), [investor, snapshot]);
 
@@ -649,7 +653,7 @@ function MeetingPrepKit({
             <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
               stroke="#16a34a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          <span className="text-xs font-semibold" style={{ color: "#16a34a" }}>Meeting Prep</span>
+          <span className="text-xs font-semibold" style={{ color: "#16a34a" }}>{t("meeting_prep")}</span>
         </div>
         <svg
           width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"
@@ -670,7 +674,7 @@ function MeetingPrepKit({
 
           {/* Likely questions */}
           <div>
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Likely questions</p>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t("likely_questions")}</p>
             <div className="space-y-1.5">
               {prep.likelyQuestions.map((q, i) => (
                 <div key={i} className="flex items-start gap-2 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100">
@@ -683,7 +687,7 @@ function MeetingPrepKit({
 
           {/* Talking points */}
           <div>
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Talking points</p>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t("talking_points")}</p>
             <div className="space-y-1.5">
               {prep.talkingPoints.map((p, i) => (
                 <div key={i} className="flex items-start gap-2 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-100">
@@ -701,7 +705,7 @@ function MeetingPrepKit({
 
           {/* Watch-outs */}
           <div>
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Watch-outs</p>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t("watch_outs")}</p>
             <div className="space-y-1.5">
               {prep.watchOuts.map((w, i) => (
                 <div key={i} className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 ring-1 ring-amber-100">
@@ -732,6 +736,7 @@ function InvestorDrawerContent({
   snapshot: FounderMatchingCenterSnapshot;
   onClose: () => void;
 }) {
+  const t = useTranslations("founderCmp");
   const checkSizeLabel = formatMatchingCheckSize(investor.checkSizeMin, investor.checkSizeMax);
   const scoreTier =
     investor.matchScore >= 70 ? "strong" : investor.matchScore >= 50 ? "moderate" : "low";
@@ -760,12 +765,12 @@ function InvestorDrawerContent({
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <DStatBox label="Match score" value={`${investor.matchScore}%`} />
-        <DStatBox label="Rank" value={rank > 0 ? `#${rank}` : "—"} />
-        <DStatBox label="Tier" value={scoreTierLabel} />
+        <DStatBox label={t("match_score")} value={`${investor.matchScore}%`} />
+        <DStatBox label={t("rank")} value={rank > 0 ? `#${rank}` : "—"} />
+        <DStatBox label={t("tier")} value={scoreTierLabel} />
       </div>
 
-      <p className="mt-5 text-xs font-semibold text-slate-900">Fit analysis</p>
+      <p className="mt-5 text-xs font-semibold text-slate-900">{t("fit_analysis")}</p>
       <div className="mt-2">
         <BRow
           name="Match score"
@@ -791,7 +796,7 @@ function InvestorDrawerContent({
 
       {investor.matchReasons.length > 0 && (
         <>
-          <p className="mt-4 text-xs font-semibold text-slate-900">Fit signals ✓</p>
+          <p className="mt-4 text-xs font-semibold text-slate-900">{t("fit_signals")}</p>
           <div className="mt-2">
             {investor.matchReasons.map((reason) => (
               <BRow key={reason} name={reason} badge="Match" variant="success" />
@@ -802,7 +807,7 @@ function InvestorDrawerContent({
 
       {investor.missingFitReasons.length > 0 && (
         <>
-          <p className="mt-4 text-xs font-semibold text-slate-900">Gaps to address</p>
+          <p className="mt-4 text-xs font-semibold text-slate-900">{t("gaps_to_address")}</p>
           <div className="mt-2">
             {investor.missingFitReasons.slice(0, 4).map((reason) => (
               <BRow key={reason} name={reason} badge="Gap" variant="high" />
@@ -812,7 +817,7 @@ function InvestorDrawerContent({
       )}
 
       <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-        <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+        <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
         <p className="text-xs leading-relaxed text-slate-600">
           {scoreTier === "strong"
             ? `${investor.investorName} is a strong match at ${investor.matchScore}% — ranked #${rank} across your full investor pool. ${investor.matchReasons.length > 0 ? `Key alignment: ${investor.matchReasons.slice(0, 2).join(", ")}.` : ""} ${investor.missingFitReasons.length > 0 ? `Remaining gap${investor.missingFitReasons.length > 1 ? "s" : ""}: ${investor.missingFitReasons[0]}.` : "No significant gaps identified."}`
@@ -852,6 +857,7 @@ function InvestorDrawerContent({
 // Main panel
 // ---------------------------------------------------------------------------
 export function FounderMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: FounderMatchingCenterSnapshot }>) {
+  const t = useTranslations("founderCmp");
   const [filters, setFilters] = useState(defaultFilters);
   const [openMetric, setOpenMetric] = useState<MetricDrawerKey | null>(null);
   const [openInvestor, setOpenInvestor] = useState<FounderMatchingCenterRow | null>(null);
@@ -875,21 +881,21 @@ export function FounderMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: Fo
       {/* Metric cards */}
       <ContentGrid columns={3} className="mb-6">
         <MatchMetricBtn
-          label="Strong matches"
+          label={t("strong_matches")}
           value={String(snapshot.strongMatchCount)}
           detail="Approved investors scoring 70% or higher"
           accent="indigo"
           onClick={() => setOpenMetric("strongMatches")}
         />
         <MatchMetricBtn
-          label="Approved investors"
+          label={t("approved_investors")}
           value={String(snapshot.approvedInvestorCount)}
           detail="In the iCapOS matching pool"
           accent="violet"
           onClick={() => setOpenMetric("approvedInvestors")}
         />
         <MatchMetricBtn
-          label="Your profile"
+          label={t("your_profile")}
           value={snapshot.industry ?? "Not set"}
           detail={[snapshot.companyGeography, `${filteredMatches.length} matches shown`].filter(Boolean).join(" · ")}
           accent="blue"
@@ -898,7 +904,7 @@ export function FounderMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: Fo
       </ContentGrid>
 
       {/* Filters */}
-      <WorkspacePanel title="Filters" subtitle="Industry, investor type, geography, and score range" className="mb-6">
+      <WorkspacePanel title={t("filters")} subtitle={t("industry_investor_type_geography_and_score_r")} className="mb-6">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="block text-xs font-medium text-slate-600">
             Industry
@@ -972,7 +978,7 @@ export function FounderMatchingCenterPanel({ snapshot }: Readonly<{ snapshot: Fo
 
       {/* Investor match cards */}
       <PageSection
-        title="Ranked investor matches"
+        title={t("ranked_investor_matches")}
         subtitle={`Sorted by iCapOS match score for ${snapshot.companyName}`}
       >
         {filteredMatches.length === 0 ? (

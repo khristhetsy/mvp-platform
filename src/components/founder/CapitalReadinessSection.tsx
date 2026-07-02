@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import type { FounderInvestorActivityResult } from "@/lib/data/investor-interests";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
 
@@ -212,6 +213,7 @@ export function CapitalReadinessSection({
   investorActivity: FounderInvestorActivityResult | null;
   documents: DocRecord[];
 }) {
+  const t = useTranslations("founderCmp");
   const [open, setOpen] = useState<DrawerKey | null>(null);
   const close = useCallback(() => setOpen(null), []);
 
@@ -305,7 +307,7 @@ export function CapitalReadinessSection({
       breakdown: (
         <div>
           {pledgeSummary.investorCount === 0 ? (
-            <p className="py-2 text-xs text-slate-500">No pledges yet. Publish your listing to start receiving interest.</p>
+            <p className="py-2 text-xs text-slate-500">{t("no_pledges_yet_publish_your_listing_to_start")}</p>
           ) : (
             <>
               <BRow name="Indicative pledge total" status={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)} variant="success" />
@@ -339,7 +341,7 @@ export function CapitalReadinessSection({
       breakdown: (
         <div>
           {interestCount === 0 && introCount === 0 && savedCount === 0 ? (
-            <p className="py-2 text-xs text-slate-500">No investor activity yet. Publish your listing to start receiving interactions.</p>
+            <p className="py-2 text-xs text-slate-500">{t("no_investor_activity_yet_publish_your_listin")}</p>
           ) : null}
           {investorActivity?.interests.slice(0, 4).map((i) => (
             <BRow key={i.id} name={investorName(i.profiles)} status="Expressed interest" variant="medium" />
@@ -385,7 +387,7 @@ export function CapitalReadinessSection({
       <section className="space-y-3">
         <div className="flex items-end justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-slate-950">Capital readiness</h3>
+            <h3 className="text-sm font-semibold text-slate-950">{t("capital_readiness")}</h3>
             <p className="mt-0.5 text-xs leading-5 text-slate-500">
               Operational indicators — not investment advice. Tap any card for details.
             </p>
@@ -395,7 +397,7 @@ export function CapitalReadinessSection({
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {/* Readiness Score */}
           <button type="button" className={cardClass} onClick={() => setOpen("readiness")} aria-label="View readiness score details">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-500">Readiness score</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-500">{t("readiness_score")}</p>
             <div className="mt-2 flex items-center justify-between gap-2">
               <div>
                 <p className="font-mono text-xl font-semibold text-slate-950">{readinessScore}/100</p>
@@ -403,12 +405,12 @@ export function CapitalReadinessSection({
               </div>
               <DonutChart pct={readinessScore / 100} color="#534AB7" />
             </div>
-            <p className="mt-3 text-[10px] font-medium text-[#534AB7]">Tap to explore →</p>
+            <p className="mt-3 text-[10px] font-medium text-[#534AB7]">{t("tap_to_explore")}</p>
           </button>
 
           {/* Raise Progress */}
           <button type="button" className={cardClass} onClick={() => setOpen("raise")} aria-label="View raise progress details">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-500">Raise progress</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-500">{t("raise_progress")}</p>
             <div className="mt-2 flex items-center justify-between gap-2">
               <div>
                 <p className="font-mono text-xl font-semibold text-slate-950">{raiseProgress}</p>
@@ -416,12 +418,12 @@ export function CapitalReadinessSection({
               </div>
               <DonutChart pct={raiseProgress === "Published" ? Math.max(0.2, fillPct) : 0.1} color="#7F77DD" />
             </div>
-            <p className="mt-3 text-[10px] font-medium text-[#534AB7]">Tap to explore →</p>
+            <p className="mt-3 text-[10px] font-medium text-[#534AB7]">{t("tap_to_explore")}</p>
           </button>
 
           {/* Indicative Interest */}
           <button type="button" className={cardClass} onClick={() => setOpen("interest")} aria-label="View indicative interest details">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-500">Indicative interest</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-500">{t("indicative_interest")}</p>
             <div className="mt-2 flex items-center justify-between gap-2">
               <div>
                 <p className="font-mono text-xl font-semibold text-slate-950">
@@ -433,16 +435,16 @@ export function CapitalReadinessSection({
               </div>
               <DonutChart pct={Math.max(0.05, fillPct)} color="#534AB7" />
             </div>
-            <p className="mt-3 text-[10px] font-medium text-[#534AB7]">Tap to explore →</p>
+            <p className="mt-3 text-[10px] font-medium text-[#534AB7]">{t("tap_to_explore")}</p>
           </button>
 
           {/* Investor Activity — two-segment donut */}
           <button type="button" className={cardClass} onClick={() => setOpen("activity")} aria-label="View investor activity details">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-500">Investor activity</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-500">{t("investor_activity")}</p>
             <div className="mt-2 flex items-center justify-between gap-2">
               <div>
                 <p className="font-mono text-xl font-semibold text-slate-950">{totalActivity}</p>
-                <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">Interests, intros &amp; saved</p>
+                <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">{t("interests_intros_saved")}</p>
               </div>
               <DonutChart
                 pct={totalActivity > 0 ? Math.max(0.05, interestCount / Math.max(1, totalActivity)) : 0.05}
@@ -451,7 +453,7 @@ export function CapitalReadinessSection({
                 color2="#AFA9EC"
               />
             </div>
-            <p className="mt-3 text-[10px] font-medium text-[#534AB7]">Tap to explore →</p>
+            <p className="mt-3 text-[10px] font-medium text-[#534AB7]">{t("tap_to_explore")}</p>
           </button>
         </div>
       </section>
@@ -487,12 +489,12 @@ export function CapitalReadinessSection({
               </div>
 
               {/* Data breakdown */}
-              <p className="mt-5 text-xs font-semibold text-slate-950">Data breakdown</p>
+              <p className="mt-5 text-xs font-semibold text-slate-950">{t("data_breakdown")}</p>
               <div className="mt-2">{cfg.breakdown}</div>
 
               {/* What this means */}
               <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-                <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+                <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
                 <p className="text-xs leading-relaxed text-slate-600">{cfg.meaning}</p>
               </div>
 

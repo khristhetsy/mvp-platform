@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useToolkitSave, ToolkitSaveStatus } from "@/hooks/useToolkitSave";
 
 function SaveChip({ status }: { status: ToolkitSaveStatus }) {
@@ -153,6 +154,7 @@ function SectionEditor({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const t = useTranslations("founderCmp");
   const [showTip, setShowTip] = useState(false);
 
   return (
@@ -161,7 +163,7 @@ function SectionEditor({
         <div className="mb-1 flex items-center gap-2">
           <p className="text-sm font-semibold text-slate-800">{section.label}</p>
           {section.required ? null : (
-            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold text-slate-400">Optional</span>
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold text-slate-400">{t("optional")}</span>
           )}
           <button
             type="button"
@@ -196,6 +198,7 @@ function SectionEditor({
 // ---------------------------------------------------------------------------
 
 export function InvestorUpdateBuilder() {
+  const t = useTranslations("founderCmp");
   const [stage, setStage] = useState<RaiseStage>("seed");
   const [frequency, setFrequency] = useState<UpdateFrequency>("monthly");
   const [values, setValues] = useState<Record<string, string>>(
@@ -277,7 +280,7 @@ export function InvestorUpdateBuilder() {
       {/* Stage & frequency */}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <p className="mb-2 text-xs font-semibold text-slate-700">Company stage</p>
+          <p className="mb-2 text-xs font-semibold text-slate-700">{t("company_stage")}</p>
           <div className="flex flex-wrap gap-2">
             {(Object.keys(STAGE_GUIDANCE) as RaiseStage[]).map((s) => (
               <button
@@ -293,7 +296,7 @@ export function InvestorUpdateBuilder() {
           </div>
         </div>
         <div>
-          <p className="mb-2 text-xs font-semibold text-slate-700">Frequency</p>
+          <p className="mb-2 text-xs font-semibold text-slate-700">{t("frequency")}</p>
           <div className="flex gap-2">
             {(["monthly", "quarterly"] as UpdateFrequency[]).map((f) => (
               <button
@@ -331,7 +334,7 @@ export function InvestorUpdateBuilder() {
 
       {/* Subject line templates */}
       <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <p className="mb-2 text-xs font-semibold text-slate-700">Subject line templates</p>
+        <p className="mb-2 text-xs font-semibold text-slate-700">{t("subject_line_templates")}</p>
         <div className="space-y-1.5">
           {SUBJECT_LINE_TEMPLATES.map((tpl, i) => (
             <div key={i} className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-1.5">
@@ -352,22 +355,22 @@ export function InvestorUpdateBuilder() {
       {/* Company & period */}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Company name</label>
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{t("company_name")}</label>
           <input
             type="text"
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
-            placeholder="Acme Inc."
+            placeholder={t("acme_inc")}
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-100"
           />
         </div>
         <div>
-          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Period</label>
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{t("period")}</label>
           <input
             type="text"
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
-            placeholder="January 2026"
+            placeholder={t("january_2026")}
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-100"
           />
         </div>
@@ -387,7 +390,7 @@ export function InvestorUpdateBuilder() {
           onClick={() => setShowPreview((o) => !o)}
           className="flex w-full items-center justify-between px-4 py-3 text-left"
         >
-          <p className="text-sm font-semibold text-slate-800">Preview update</p>
+          <p className="text-sm font-semibold text-slate-800">{t("preview_update")}</p>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="transition-transform" style={{ transform: showPreview ? "rotate(180deg)" : "rotate(0deg)" }}>
             <path d="M6 9l6 6 6-6" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -412,12 +415,12 @@ export function InvestorUpdateBuilder() {
           {copied ? "Copied!" : "Copy full update"}
         </button>
         {!filledRequired ? (
-          <p className="text-[11px] text-slate-400">Fill in all required sections to copy</p>
+          <p className="text-[11px] text-slate-400">{t("fill_in_all_required_sections_to_copy")}</p>
         ) : null}
       </div>
 
       <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
-        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-700">Sending best practices</p>
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-700">{t("sending_best_practices")}</p>
         <div className="space-y-1">
           {[
             "Send on the same day each period — consistency signals professionalism",

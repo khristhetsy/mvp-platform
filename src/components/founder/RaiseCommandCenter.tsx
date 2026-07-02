@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 // ---------------------------------------------------------------------------
@@ -290,6 +291,7 @@ export function RaiseCommandCenter({
   fundingTarget,
   companyName,
 }: CommandCenterProps) {
+  const t = useTranslations("founderCmp");
   const [tab, setTab] = useState<TabKey>("rooms");
 
   const urgentRooms   = rooms.filter((r) => daysSince(r.updatedAt) !== null && (daysSince(r.updatedAt) ?? 0) >= 4);
@@ -314,7 +316,7 @@ export function RaiseCommandCenter({
               stroke="#dc2626" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <div>
-            <p className="text-sm font-semibold text-red-900">Action required</p>
+            <p className="text-sm font-semibold text-red-900">{t("action_required")}</p>
             <p className="mt-0.5 text-xs text-red-700">
               {[
                 totalActions > 0 && `${totalActions} pending question${totalActions > 1 ? "s" : ""} or doc request${totalActions > 1 ? "s" : ""}`,

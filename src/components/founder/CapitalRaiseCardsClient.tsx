@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
 
 // ---------------------------------------------------------------------------
@@ -135,6 +136,7 @@ function DrawerContent({
   raiseStatus,
   onClose,
 }: Props & { drawerKey: DrawerKey; onClose: () => void }) {
+  const t = useTranslations("founderCmp");
   const target = company.funding_amount ?? 0;
   const fillPct = target > 0 ? Math.min(100, Math.round((pledgeSummary.totalPledged / target) * 100)) : 0;
   const avgPledge =
@@ -165,19 +167,19 @@ function DrawerContent({
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <p className="text-base font-semibold text-slate-900">Indicative interest</p>
-            <p className="mt-0.5 text-xs text-slate-500">Non-binding pledges from investors on the platform</p>
+            <p className="text-base font-semibold text-slate-900">{t("indicative_interest")}</p>
+            <p className="mt-0.5 text-xs text-slate-500">{t("non_binding_pledges_from_investors_on_the_pl")}</p>
           </div>
           {closeBtn}
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Total pledged" value={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)} />
-          <DStatBox label="Investors" value={String(pledgeSummary.investorCount)} />
-          <DStatBox label="Avg pledge" value={avgPledge > 0 ? formatPledgeTotal(avgPledge, pledgeSummary.currency) : "—"} />
+          <DStatBox label={t("total_pledged")} value={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)} />
+          <DStatBox label={t("investors")} value={String(pledgeSummary.investorCount)} />
+          <DStatBox label={t("avg_pledge")} value={avgPledge > 0 ? formatPledgeTotal(avgPledge, pledgeSummary.currency) : "—"} />
         </div>
 
-        <p className="mt-5 text-xs font-semibold text-slate-900">Interest breakdown</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("interest_breakdown")}</p>
         <div className="mt-2">
           <BRow
             name="Total indicative pledges"
@@ -207,7 +209,7 @@ function DrawerContent({
         </div>
 
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {pledgeSummary.totalPledged === 0
               ? "No indicative pledges yet. These appear once investors express formal interest in your listing on the marketplace — you need a published listing and complete data room to start receiving them."
@@ -245,19 +247,19 @@ function DrawerContent({
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <p className="text-base font-semibold text-slate-900">Raise status</p>
-            <p className="mt-0.5 text-xs text-slate-500">Your listing visibility and review progress</p>
+            <p className="text-base font-semibold text-slate-900">{t("raise_status")}</p>
+            <p className="mt-0.5 text-xs text-slate-500">{t("your_listing_visibility_and_review_progress")}</p>
           </div>
           {closeBtn}
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Status" value={raiseStatus} />
-          <DStatBox label="Published" value={isPublished ? "Yes" : "No"} />
-          <DStatBox label="Review" value={reviewStatus} />
+          <DStatBox label={t("status")} value={raiseStatus} />
+          <DStatBox label={t("published")} value={isPublished ? "Yes" : "No"} />
+          <DStatBox label={t("review")} value={reviewStatus} />
         </div>
 
-        <p className="mt-5 text-xs font-semibold text-slate-900">Status breakdown</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("status_breakdown")}</p>
         <div className="mt-2">
           <BRow
             name="Marketplace visibility"
@@ -292,7 +294,7 @@ function DrawerContent({
         </div>
 
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {isPublished
               ? `Your listing is live on the iCapOS marketplace. Investors can discover your company, review your data room, and express interest. You currently have ${interestCount + introCount + savedCount} total investor interactions.`
@@ -334,19 +336,19 @@ function DrawerContent({
     <div className="px-5 pb-6 pt-5">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <p className="text-base font-semibold text-slate-900">Funding target</p>
-          <p className="mt-0.5 text-xs text-slate-500">Your round size and progress toward it</p>
+          <p className="text-base font-semibold text-slate-900">{t("funding_target")}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{t("your_round_size_and_progress_toward_it")}</p>
         </div>
         {closeBtn}
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <DStatBox label="Target" value={target > 0 ? formatPledgeTotal(target, pledgeSummary.currency) : "TBD"} />
-        <DStatBox label="Pledged" value={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)} />
-        <DStatBox label="Filled" value={target > 0 ? `${fillPct}%` : "—"} />
+        <DStatBox label={t("target")} value={target > 0 ? formatPledgeTotal(target, pledgeSummary.currency) : "TBD"} />
+        <DStatBox label={t("pledged")} value={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)} />
+        <DStatBox label={t("filled")} value={target > 0 ? `${fillPct}%` : "—"} />
       </div>
 
-      <p className="mt-5 text-xs font-semibold text-slate-900">Target breakdown</p>
+      <p className="mt-5 text-xs font-semibold text-slate-900">{t("target_breakdown")}</p>
       <div className="mt-2">
         <BRow
           name="Funding target"
@@ -378,7 +380,7 @@ function DrawerContent({
       {target > 0 && (
         <div className="mt-4">
           <div className="mb-1 flex items-center justify-between text-[11px]">
-            <span className="text-slate-500">Raise progress</span>
+            <span className="text-slate-500">{t("raise_progress")}</span>
             <span className="font-semibold" style={{ color: "#534AB7" }}>{fillPct}%</span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
@@ -388,7 +390,7 @@ function DrawerContent({
       )}
 
       <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-        <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+        <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
         <p className="text-xs leading-relaxed text-slate-600">
           {target === 0
             ? "You haven't set a funding target yet. Investors use your target to decide whether your round fits their check size — a missing target reduces your discoverability and investor confidence."
@@ -434,6 +436,7 @@ export function CapitalRaiseCardsClient({
   investorActivity,
   raiseStatus,
 }: Props) {
+  const t = useTranslations("founderCmp");
   const [open, setOpen] = useState<DrawerKey | null>(null);
 
   useEffect(() => {
@@ -448,15 +451,15 @@ export function CapitalRaiseCardsClient({
     <>
       <section className="grid gap-3 md:grid-cols-3">
         <RaiseCard
-          label="Indicative interest"
+          label={t("indicative_interest")}
           value={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
           sub={`From ${pledgeSummary.investorCount} ${pledgeSummary.investorCount === 1 ? "investor" : "investors"}`}
-          cta="View breakdown"
+          cta={t("view_breakdown")}
           accentColor="#4338CA"
           onClick={() => setOpen("interest")}
         />
         <RaiseCard
-          label="Raise status"
+          label={t("raise_status")}
           value={raiseStatus}
           sub={company.is_published ? "Live on marketplace" : "Not yet published"}
           cta={company.is_published ? "Fully live" : "View details"}
@@ -464,10 +467,10 @@ export function CapitalRaiseCardsClient({
           onClick={() => setOpen("status")}
         />
         <RaiseCard
-          label="Funding target"
+          label={t("funding_target")}
           value={target > 0 ? formatPledgeTotal(target, pledgeSummary.currency) : "TBD"}
           sub={target > 0 ? `${fillPct}% filled` : "Company funding goal"}
-          cta="View breakdown"
+          cta={t("view_breakdown")}
           accentColor="#4338CA"
           onClick={() => setOpen("target")}
         />

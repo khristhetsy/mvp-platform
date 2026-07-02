@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import type { RoundCloseStats } from "@/app/api/founder/round-close-stats/route";
 
@@ -45,6 +46,7 @@ function Skeleton() {
 }
 
 export function RoundCloseTracker() {
+  const t = useTranslations("founderCmp");
   const [stats, setStats] = useState<RoundCloseStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -79,7 +81,7 @@ export function RoundCloseTracker() {
       {/* Header */}
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-slate-950">Round close tracker</h2>
+          <h2 className="text-sm font-semibold text-slate-950">{t("round_close_tracker")}</h2>
           {hasTarget ? (
             <p className="mt-0.5 text-xs text-slate-500">
               {stats.fillPct}% of{" "}

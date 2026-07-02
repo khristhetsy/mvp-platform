@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type { RoundHealthAdvisorResult, RoundHealthRecommendation } from "@/app/api/founder/round-health-advisor/route";
 
 const GRADE_STYLES: Record<string, { bg: string; text: string; ring: string }> = {
@@ -35,6 +36,7 @@ function RecommendationCard({ rec }: { rec: RoundHealthRecommendation }) {
 }
 
 export function RoundHealthAdvisor() {
+  const t = useTranslations("founderCmp");
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [result, setResult] = useState<RoundHealthAdvisorResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>("");
@@ -61,7 +63,7 @@ export function RoundHealthAdvisor() {
     return (
       <div className="flex items-center justify-between gap-4 rounded-xl border border-dashed border-indigo-200 bg-indigo-50/40 px-5 py-4">
         <div>
-          <p className="text-sm font-semibold text-indigo-900">AI Round Health Check</p>
+          <p className="text-sm font-semibold text-indigo-900">{t("ai_round_health_check")}</p>
           <p className="mt-0.5 text-xs text-indigo-600">
             Get a personalized assessment of your raise with specific next steps — powered by Claude AI.
           </p>
@@ -81,7 +83,7 @@ export function RoundHealthAdvisor() {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4">
         <div className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-        <p className="text-sm text-slate-600">Analyzing your round data…</p>
+        <p className="text-sm text-slate-600">{t("analyzing_your_round_data")}</p>
       </div>
     );
   }

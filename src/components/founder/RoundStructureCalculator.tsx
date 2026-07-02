@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -219,6 +220,7 @@ const DEFAULT_SHAREHOLDERS: Shareholder[] = [
 ];
 
 export function RoundStructureCalculator() {
+  const t = useTranslations("founderCmp");
   const [roundType, setRoundType] = useState<RoundType>("safe");
   const [safeType, setSafeType] = useState<SafeType>("post_money");
   const [preMoney, setPreMoney] = useState(5_000_000);
@@ -257,8 +259,8 @@ export function RoundStructureCalculator() {
             </svg>
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-900">Round structure calculator</p>
-            <p className="text-[11px] text-slate-400">See how your round affects founder ownership in real time</p>
+            <p className="text-sm font-semibold text-slate-900">{t("round_structure_calculator")}</p>
+            <p className="text-[11px] text-slate-400">{t("see_how_your_round_affects_founder_ownership")}</p>
           </div>
         </div>
 
@@ -267,7 +269,7 @@ export function RoundStructureCalculator() {
           <div className="space-y-5">
             {/* Round type toggle */}
             <div>
-              <p className="mb-2 text-xs font-semibold text-slate-700">Round type</p>
+              <p className="mb-2 text-xs font-semibold text-slate-700">{t("round_type")}</p>
               <div className="flex rounded-lg border border-slate-200 p-1">
                 {(["safe", "priced"] as RoundType[]).map((t) => (
                   <button
@@ -289,7 +291,7 @@ export function RoundStructureCalculator() {
             {/* SAFE type (only when safe selected) */}
             {roundType === "safe" ? (
               <div>
-                <p className="mb-2 text-xs font-semibold text-slate-700">SAFE type</p>
+                <p className="mb-2 text-xs font-semibold text-slate-700">{t("safe_type")}</p>
                 <div className="flex rounded-lg border border-slate-200 p-1">
                   {(["pre_money", "post_money"] as SafeType[]).map((t) => (
                     <button
@@ -310,7 +312,7 @@ export function RoundStructureCalculator() {
             ) : null}
 
             <SliderInput
-              label="Pre-money valuation"
+              label={t("pre_money_valuation")}
               value={preMoney}
               onChange={setPreMoney}
               min={500_000}
@@ -319,7 +321,7 @@ export function RoundStructureCalculator() {
               format={fmt}
             />
             <SliderInput
-              label="Raise amount"
+              label={t("raise_amount")}
               value={raiseAmount}
               onChange={setRaiseAmount}
               min={100_000}
@@ -328,7 +330,7 @@ export function RoundStructureCalculator() {
               format={fmt}
             />
             <SliderInput
-              label="Option pool expansion"
+              label={t("option_pool_expansion")}
               value={optionPoolPct}
               onChange={setOptionPoolPct}
               min={0}
@@ -362,7 +364,7 @@ export function RoundStructureCalculator() {
 
           {/* Right: ownership chart */}
           <div>
-            <p className="mb-3 text-xs font-semibold text-slate-700">Post-round ownership</p>
+            <p className="mb-3 text-xs font-semibold text-slate-700">{t("post_round_ownership")}</p>
             <OwnershipBar
               shareholders={result.post.map((s) => ({
                 ...s,
@@ -373,7 +375,7 @@ export function RoundStructureCalculator() {
             {/* Dilution warning */}
             {founderTotalPct < 50 ? (
               <div className="mt-4 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2.5">
-                <p className="text-[11px] font-semibold text-amber-800">Founders below 50%</p>
+                <p className="text-[11px] font-semibold text-amber-800">{t("founders_below_50")}</p>
                 <p className="mt-0.5 text-[11px] leading-relaxed text-amber-700">
                   Combined founder ownership will be {founderTotalPct.toFixed(1)}% post-round. This may affect control in future governance decisions — consider adjusting valuation or raise amount.
                 </p>

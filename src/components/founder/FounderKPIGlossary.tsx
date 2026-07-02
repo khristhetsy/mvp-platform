@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useToolkitSave, ToolkitSaveStatus } from "@/hooks/useToolkitSave";
 
 function SaveChip({ status }: { status: ToolkitSaveStatus }) {
@@ -324,6 +325,7 @@ const CATEGORY_COLORS: Record<KPICategory, string> = {
 // ---------------------------------------------------------------------------
 
 function KPICalculator({ kpi }: { kpi: KPIEntry }) {
+  const t = useTranslations("founderCmp");
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const calc = kpi.calculator;
   if (!calc) return null;
@@ -335,7 +337,7 @@ function KPICalculator({ kpi }: { kpi: KPIEntry }) {
 
   return (
     <div className="mt-3 rounded-lg border border-indigo-100 bg-[#FAFAFF] p-3">
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#534AB7" }}>Calculator</p>
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#534AB7" }}>{t("calculator")}</p>
       <div className="mb-3 grid gap-2 sm:grid-cols-2">
         {calc.inputs.map((inp) => (
           <div key={inp.id}>
@@ -373,6 +375,7 @@ function KPICalculator({ kpi }: { kpi: KPIEntry }) {
 // ---------------------------------------------------------------------------
 
 function KPICard({ kpi }: { kpi: KPIEntry }) {
+  const t = useTranslations("founderCmp");
   const [expanded, setExpanded] = useState(false);
   const [tab, setTab] = useState<"definition" | "calculator">("definition");
   const color = CATEGORY_COLORS[kpi.category];
@@ -432,27 +435,27 @@ function KPICard({ kpi }: { kpi: KPIEntry }) {
                 <p className="text-xs leading-relaxed text-slate-700">{kpi.definition}</p>
 
                 <div className="rounded-lg bg-slate-50 px-3 py-2">
-                  <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Formula</p>
+                  <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{t("formula")}</p>
                   <p className="font-mono text-[11px] text-slate-700">{kpi.formula}</p>
                 </div>
 
                 <div>
-                  <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Example</p>
+                  <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{t("example")}</p>
                   <p className="text-[11px] leading-relaxed text-slate-600">{kpi.example}</p>
                 </div>
 
                 <div>
-                  <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Why it matters</p>
+                  <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{t("why_it_matters")}</p>
                   <p className="text-[11px] leading-relaxed text-slate-600">{kpi.whyMatters}</p>
                 </div>
 
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div className="rounded-lg bg-emerald-50 px-3 py-2 ring-1 ring-emerald-100">
-                    <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">Good benchmark</p>
+                    <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">{t("good_benchmark")}</p>
                     <p className="text-[11px] leading-relaxed text-emerald-800">{kpi.goodBenchmark}</p>
                   </div>
                   <div className="rounded-lg bg-red-50 px-3 py-2 ring-1 ring-red-100">
-                    <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-red-700">Red flag</p>
+                    <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-red-700">{t("red_flag")}</p>
                     <p className="text-[11px] leading-relaxed text-red-800">{kpi.redFlag}</p>
                   </div>
                 </div>
@@ -472,6 +475,7 @@ function KPICard({ kpi }: { kpi: KPIEntry }) {
 // ---------------------------------------------------------------------------
 
 export function FounderKPIGlossary() {
+  const t = useTranslations("founderCmp");
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<KPICategory | null>(null);
 
@@ -509,7 +513,7 @@ export function FounderKPIGlossary() {
 
       {/* Intro */}
       <div className="rounded-xl border border-indigo-100 bg-[#FAFAFF] px-4 py-3">
-        <p className="text-xs font-semibold" style={{ color: "#534AB7" }}>How to use this</p>
+        <p className="text-xs font-semibold" style={{ color: "#534AB7" }}>{t("how_to_use_this")}</p>
         <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">
           Every definition includes a formula, a real example, good benchmarks, and a red flag to watch for. Open the Calculator tab on any metric to compute your own numbers.
         </p>
@@ -525,7 +529,7 @@ export function FounderKPIGlossary() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search metrics…"
+          placeholder={t("search_metrics")}
           className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-indigo-100"
         />
       </div>

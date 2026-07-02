@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { JOURNEY_STAGES } from "@/lib/founder-journey/types";
 import type { FounderJourneyState, JourneyStage } from "@/lib/founder-journey/types";
 
@@ -30,6 +31,7 @@ function requirementsToAdvance(state: FounderJourneyState): Requirement[] {
 }
 
 export function StageProgressCard({ state }: { state: FounderJourneyState }) {
+  const t = useTranslations("founderCmp");
   const nextStage: JourneyStage | null = JOURNEY_STAGES[state.stageIndex + 1] ?? null;
   const reqs = requirementsToAdvance(state);
   const metCount = reqs.filter((r) => r.met).length;
@@ -40,7 +42,7 @@ export function StageProgressCard({ state }: { state: FounderJourneyState }) {
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-panel)] sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">Your journey</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">{t("your_journey")}</p>
           <h2 className="mt-1 text-lg font-semibold text-slate-950">
             Stage {state.stageIndex + 1} of 4 — {STAGE_NAMES[state.stage]}
           </h2>

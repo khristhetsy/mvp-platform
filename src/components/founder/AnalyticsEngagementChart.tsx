@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { EngagementTrendResult, EngagementWeek } from "@/app/api/founder/analytics/engagement-trend/route";
 
 type Series = { key: keyof Omit<EngagementWeek, "label" | "weekStart">; label: string; color: string };
@@ -18,6 +19,7 @@ const GROUP_GAP = 16;// gap between week groups
 const CHART_H = 120; // chart area height
 
 export function AnalyticsEngagementChart() {
+  const t = useTranslations("founderCmp");
   const [data, setData] = useState<EngagementWeek[] | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -35,7 +37,7 @@ export function AnalyticsEngagementChart() {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-4">
-          <p className="text-sm font-semibold text-slate-900">Engagement trend</p>
+          <p className="text-sm font-semibold text-slate-900">{t("engagement_trend")}</p>
           <p className="mt-0.5 text-xs text-slate-500">8-week investor interaction history</p>
         </div>
         <div className="h-[160px] animate-pulse rounded-lg bg-slate-100" />
@@ -56,7 +58,7 @@ export function AnalyticsEngagementChart() {
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-start justify-between border-b border-slate-100 px-5 py-4">
         <div>
-          <p className="text-sm font-semibold text-slate-900">Engagement trend</p>
+          <p className="text-sm font-semibold text-slate-900">{t("engagement_trend")}</p>
           <p className="mt-0.5 text-xs text-slate-500">8-week investor interaction history</p>
         </div>
         {/* Legend */}

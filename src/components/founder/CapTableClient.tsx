@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { summarize, modelRound } from "@/lib/cap-table/compute";
 import type { Holder, HolderGroup, RoundModel } from "@/lib/cap-table/types";
 
@@ -17,6 +18,7 @@ function pct(n: number): string {
 }
 
 export function CapTableClient() {
+  const t = useTranslations("founderCmp");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState("Your company");
@@ -119,7 +121,7 @@ export function CapTableClient() {
     [sum.rows, circ],
   );
 
-  if (loading) return <p className="mt-6 text-sm text-[var(--text-muted)]">Loading your cap table…</p>;
+  if (loading) return <p className="mt-6 text-sm text-[var(--text-muted)]">{t("loading_your_cap_table")}</p>;
 
   return (
     <div className="mt-4 space-y-4">
@@ -146,7 +148,7 @@ export function CapTableClient() {
         {/* Holders editor */}
         <section className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-[var(--navy)]">Shareholders</h2>
+            <h2 className="text-sm font-semibold text-[var(--navy)]">{t("shareholders")}</h2>
             <button onClick={addHolder} className="inline-flex items-center gap-1 text-xs font-medium text-[var(--indigo)]">+ Add holder</button>
           </div>
           <div className="overflow-x-auto">
@@ -221,7 +223,7 @@ export function CapTableClient() {
             </div>
           </div>
           <div className="rounded-xl bg-[var(--surface-sunken)] p-3">
-            <div className="text-xs text-[var(--text-secondary)]">Founder ownership</div>
+            <div className="text-xs text-[var(--text-secondary)]">{t("founder_ownership")}</div>
             <div className="text-2xl font-medium">{pct(sum.founderPct)}</div>
           </div>
         </section>
@@ -230,7 +232,7 @@ export function CapTableClient() {
       {/* Round modeler */}
       <section className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-[var(--navy)]">Model your round</h2>
+          <h2 className="text-sm font-semibold text-[var(--navy)]">{t("model_your_round")}</h2>
           <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
             <input type="checkbox" checked={modelOn} onChange={(e) => setModelOn(e.target.checked)} />
             Include a round
@@ -241,11 +243,11 @@ export function CapTableClient() {
           <div className="mt-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
-                <span className="text-xs text-[var(--text-secondary)]">New investment ($)</span>
+                <span className="text-xs text-[var(--text-secondary)]">{t("new_investment")}</span>
                 <input type="number" min={0} value={round.newInvestment} onChange={(e) => setRound((r) => ({ ...r, newInvestment: Math.max(0, Number(e.target.value) || 0) }))} className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-sm" />
               </label>
               <label className="block">
-                <span className="text-xs text-[var(--text-secondary)]">Pre-money valuation ($)</span>
+                <span className="text-xs text-[var(--text-secondary)]">{t("pre_money_valuation_2")}</span>
                 <input type="number" min={0} value={round.preMoney} onChange={(e) => setRound((r) => ({ ...r, preMoney: Math.max(0, Number(e.target.value) || 0) }))} className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-2.5 py-1.5 text-sm" />
               </label>
             </div>

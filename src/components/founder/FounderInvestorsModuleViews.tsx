@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { ModuleEmptyState, PipelineBoard } from "@/components/ui/ViewToolbar";
 import { MetricGrid, PageSection } from "@/components/ui/workspace-layout";
@@ -33,6 +34,7 @@ const DONUT_COLORS = ["#534AB7", "#3B6D11", "#0369a1", "#854F0B"] as const;
 const DONUT_LABELS = ["Interested", "Pledged", "Intro Req.", "Follow-up"] as const;
 
 function PipelineDonut({ counts }: Readonly<{ counts: [number, number, number, number] }>) {
+  const t = useTranslations("founderCmp");
   const total = counts.reduce((s, v) => s + v, 0);
   if (total === 0) return null;
 
@@ -423,6 +425,7 @@ function FounderInvestorsModuleViewsInner({
   crmView,
   companyName,
 }: Readonly<{ crmView: FounderInvestorCrmView; companyName: string }>) {
+  const t = useTranslations("founderCmp");
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewMode>("kanban");
   const [drawerGroup, setDrawerGroup] = useState<DrawerGroup | null>(null);
@@ -501,7 +504,7 @@ function FounderInvestorsModuleViewsInner({
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search investors, status, or activity…"
+          placeholder={t("search_investors_status_or_activity")}
           className="min-w-[200px] flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
         <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
@@ -522,21 +525,21 @@ function FounderInvestorsModuleViewsInner({
         </div>
       </div>
 
-      <PageSection title="Pipeline summary" subtitle={companyName}>
+      <PageSection title={t("pipeline_summary")} subtitle={companyName}>
         <div className="flex flex-wrap items-start gap-5">
           {donutCounts[0] + donutCounts[1] + donutCounts[2] + donutCounts[3] > 0 && (
             <div
               className="shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4"
               style={{ boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)" }}
             >
-              <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Pipeline at a glance</p>
+              <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("pipeline_at_a_glance")}</p>
               <PipelineDonut counts={donutCounts} />
             </div>
           )}
           <div className="min-w-0 flex-1">
             <MetricGrid>
               <PipelineClickCard
-                label="Interested"
+                label={t("interested")}
                 value={String(donutCounts[0])}
                 sub={cardSubs.interested}
                 accentColor="#534AB7"
@@ -544,7 +547,7 @@ function FounderInvestorsModuleViewsInner({
                 onClick={() => setDrawerGroup("interested")}
               />
               <PipelineClickCard
-                label="Pledged"
+                label={t("pledged")}
                 value={crmView.summary.totalPledgedDisplay}
                 sub={cardSubs.pledged}
                 accentColor="#0F6E56"
@@ -552,7 +555,7 @@ function FounderInvestorsModuleViewsInner({
                 onClick={() => setDrawerGroup("pledged")}
               />
               <PipelineClickCard
-                label="Intro requested"
+                label={t("intro_requested")}
                 value={String(donutCounts[2])}
                 sub={cardSubs.intro}
                 accentColor="#185FA5"
@@ -560,7 +563,7 @@ function FounderInvestorsModuleViewsInner({
                 onClick={() => setDrawerGroup("intro")}
               />
               <PipelineClickCard
-                label="Follow-up"
+                label={t("follow_up")}
                 value={String(donutCounts[3])}
                 sub={cardSubs.followup}
                 accentColor="#854F0B"
@@ -574,7 +577,7 @@ function FounderInvestorsModuleViewsInner({
 
       <PageSection>
         {filteredRows.length === 0 ? (
-          <ModuleEmptyState title="No matching investors" description="Try adjusting your search or check back when platform activity arrives." />
+          <ModuleEmptyState title={t("no_matching_investors")} description={t("try_adjusting_your_search_or_check_back_when")} />
         ) : view === "kanban" ? (
           <PipelineBoard columns={pipelineColumns} density="comfortable" />
         ) : view === "grid" ? (
@@ -660,8 +663,9 @@ function FounderInvestorsModuleViewsInner({
 }
 
 export function FounderInvestorsModuleViews(props: Readonly<{ crmView: FounderInvestorCrmView; companyName: string }>) {
+  const t = useTranslations("founderCmp");
   return (
-    <Suspense fallback={<p className="text-sm text-slate-500">Loading view options…</p>}>
+    <Suspense fallback={<p className="text-sm text-slate-500">{t("loading_view_options")}</p>}>
       <FounderInvestorsModuleViewsInner {...props} />
     </Suspense>
   );

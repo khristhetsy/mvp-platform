@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { getTranslations } from "next-intl/server";
 
 type EventType = "viewed" | "saved" | "interested" | "intro_requested";
 
@@ -140,12 +141,13 @@ export async function FounderInvestorEngagementTimeline({
 }: {
   companyId: string;
 }) {
+  const t = await getTranslations("founderCmp");
   const events = await loadEngagementEvents(companyId);
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 px-5 py-4">
-        <h2 className="text-sm font-semibold text-slate-900">Investor engagement timeline</h2>
+        <h2 className="text-sm font-semibold text-slate-900">{t("investor_engagement_timeline")}</h2>
         <p className="mt-0.5 text-xs text-slate-500">
           All investor interactions — anonymized by type
         </p>
@@ -153,7 +155,7 @@ export async function FounderInvestorEngagementTimeline({
 
       {events.length === 0 ? (
         <div className="px-5 py-8 text-center">
-          <p className="text-sm font-medium text-slate-600">No investor activity yet</p>
+          <p className="text-sm font-medium text-slate-600">{t("no_investor_activity_yet")}</p>
           <p className="mt-1 text-xs text-slate-400">
             Events appear here once investors engage with your marketplace listing.
           </p>

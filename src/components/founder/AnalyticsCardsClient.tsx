@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import type { FounderAnalyticsSnapshot } from "@/lib/analytics/founder-analytics";
 
 // ---------------------------------------------------------------------------
@@ -64,6 +65,7 @@ function ACard({
   valColor: string;
   onClick: () => void;
 }) {
+  const t = useTranslations("founderCmp");
   return (
     <button
       type="button"
@@ -79,7 +81,7 @@ function ACard({
       </div>
       <p className="mt-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400">{label}</p>
       <p className="mt-0.5 text-xs text-slate-500">{detail}</p>
-      <p className="mt-3 text-xs font-semibold text-indigo-700">View breakdown →</p>
+      <p className="mt-3 text-xs font-semibold text-indigo-700">{t("view_breakdown_2")}</p>
     </button>
   );
 }
@@ -117,13 +119,14 @@ function BRow({ name, badge, variant = "neutral" }: { name: string; badge: strin
 }
 
 function AdviceBox({ lines }: { lines: string[] }) {
+  const t = useTranslations("founderCmp");
   return (
     <div className="mt-4 rounded-xl p-4" style={{ background: "#1e1b4b" }}>
       <div className="mb-3 flex items-center gap-2">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: "#534AB7" }}>
           AI
         </div>
-        <span className="text-sm font-medium" style={{ color: "#e0e7ff" }}>Founder Intelligence</span>
+        <span className="text-sm font-medium" style={{ color: "#e0e7ff" }}>{t("founder_intelligence")}</span>
       </div>
       <div className="space-y-2.5">
         {lines.map((line, i) => (
@@ -149,6 +152,7 @@ function DrawerContent({
   a: FounderAnalyticsSnapshot;
   onClose: () => void;
 }) {
+  const t = useTranslations("founderCmp");
   const closeBtn = (
     <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50" aria-label="Close">✕</button>
   );
@@ -161,19 +165,19 @@ function DrawerContent({
     return (
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
-          <div><p className="text-base font-semibold text-slate-900">Onboarding progress</p><p className="mt-0.5 text-xs text-slate-500">Steps completed toward a live listing</p></div>
+          <div><p className="text-base font-semibold text-slate-900">{t("onboarding_progress")}</p><p className="mt-0.5 text-xs text-slate-500">{t("steps_completed_toward_a_live_listing")}</p></div>
           {closeBtn}
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Progress" value={`${a.onboardingPercent}%`} />
-          <DStatBox label="Remaining" value={`${remaining}%`} />
-          <DStatBox label="Completed" value={a.onboardingCompletedAt ? "Yes" : "No"} />
+          <DStatBox label={t("progress")} value={`${a.onboardingPercent}%`} />
+          <DStatBox label={t("remaining")} value={`${remaining}%`} />
+          <DStatBox label={t("completed")} value={a.onboardingCompletedAt ? "Yes" : "No"} />
         </div>
         <div className="mt-4">
-          <div className="mb-1 flex justify-between text-[11px]"><span className="text-slate-500">Completion</span><span className="font-semibold" style={{ color: "#3B6D11" }}>{a.onboardingPercent}%</span></div>
+          <div className="mb-1 flex justify-between text-[11px]"><span className="text-slate-500">{t("completion")}</span><span className="font-semibold" style={{ color: "#3B6D11" }}>{a.onboardingPercent}%</span></div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full" style={{ width: `${a.onboardingPercent}%`, background: "#3B6D11" }} /></div>
         </div>
-        <p className="mt-5 text-xs font-semibold text-slate-900">Status breakdown</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("status_breakdown")}</p>
         <div className="mt-2">
           <BRow name="Onboarding completion" badge={`${a.onboardingPercent}%`} variant={a.onboardingPercent >= 80 ? "success" : a.onboardingPercent >= 50 ? "medium" : "high"} />
           <BRow name="Fully completed" badge={a.onboardingCompletedAt ? new Date(a.onboardingCompletedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Not yet"} variant={a.onboardingCompletedAt ? "success" : "neutral"} />
@@ -181,7 +185,7 @@ function DrawerContent({
           <BRow name="Learning modules" badge={`${a.learningModulesCompleted}/${a.learningModulesPublished}`} variant={a.learningModulesCompleted === a.learningModulesPublished && a.learningModulesPublished > 0 ? "success" : "neutral"} />
         </div>
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {a.onboardingPercent === 100 ? "Onboarding is fully complete. Your profile is ready for investor review and marketplace publishing." : `You're ${a.onboardingPercent}% through onboarding with ${remaining}% remaining. ${a.onboardingPercent < 50 ? "Early-stage onboarding limits your marketplace visibility — investors see incomplete profiles as higher risk." : "You're past the halfway point. The final steps typically involve uploading financial documents and submitting for review."}`}
           </p>
@@ -204,18 +208,18 @@ function DrawerContent({
     return (
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
-          <div><p className="text-base font-semibold text-slate-900">Readiness score</p><p className="mt-0.5 text-xs text-slate-500">Investor-readiness across all diligence factors</p></div>
+          <div><p className="text-base font-semibold text-slate-900">{t("readiness_score")}</p><p className="mt-0.5 text-xs text-slate-500">{t("investor_readiness_across_all_diligence_fact")}</p></div>
           {closeBtn}
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Current score" value={latestScore != null ? `${latestScore}/100` : "—"} />
-          <DStatBox label="Reports" value={String(snapshotCount)} />
-          <DStatBox label="Trend" value={trend != null ? (trend > 0 ? `+${trend}` : String(trend)) : "—"} />
+          <DStatBox label={t("current_score")} value={latestScore != null ? `${latestScore}/100` : "—"} />
+          <DStatBox label={t("reports")} value={String(snapshotCount)} />
+          <DStatBox label={t("trend")} value={trend != null ? (trend > 0 ? `+${trend}` : String(trend)) : "—"} />
         </div>
-        <p className="mt-5 text-xs font-semibold text-slate-900">Score history</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("score_history")}</p>
         <div className="mt-2">
           {snapshotCount === 0 ? (
-            <p className="py-2 text-xs text-slate-500">No diligence reports yet. Complete onboarding to generate your first report.</p>
+            <p className="py-2 text-xs text-slate-500">{t("no_diligence_reports_yet_complete_onboarding")}</p>
           ) : (
             a.readinessSnapshots.slice(0, 5).map((snap, i) => (
               <BRow
@@ -228,7 +232,7 @@ function DrawerContent({
           )}
         </div>
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {latestScore == null ? "No readiness score yet. Your score is generated from diligence reports which require a complete data room and company profile." : latestScore >= 80 ? `A score of ${latestScore}/100 places you in the top tier — institutional investors typically require 80+ before taking a first meeting.` : latestScore >= 60 ? `A score of ${latestScore}/100 means you have the core narrative in place but are missing verification documents. Closing document gaps is the fastest path to improving this score.` : `A score of ${latestScore}/100 indicates significant diligence gaps. Most institutional investors filter below 60, so improving this is a prerequisite to marketplace success.`}
           </p>
@@ -247,18 +251,18 @@ function DrawerContent({
     return (
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
-          <div><p className="text-base font-semibold text-slate-900">Private contacts</p><p className="mt-0.5 text-xs text-slate-500">Investors in your personal CRM</p></div>
+          <div><p className="text-base font-semibold text-slate-900">{t("private_contacts")}</p><p className="mt-0.5 text-xs text-slate-500">{t("investors_in_your_personal_crm")}</p></div>
           {closeBtn}
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Contacts" value={String(a.privateContactCount)} />
-          <DStatBox label="Outreach targets" value={String(totalOutreach)} />
-          <DStatBox label="Queued messages" value={String(a.queuedMessageCount)} />
+          <DStatBox label={t("contacts")} value={String(a.privateContactCount)} />
+          <DStatBox label={t("outreach_targets")} value={String(totalOutreach)} />
+          <DStatBox label={t("queued_messages")} value={String(a.queuedMessageCount)} />
         </div>
-        <p className="mt-5 text-xs font-semibold text-slate-900">Outreach by status</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("outreach_by_status")}</p>
         <div className="mt-2">
           {Object.keys(a.outreachByStatus).length === 0 ? (
-            <p className="py-2 text-xs text-slate-500">No outreach targets yet.</p>
+            <p className="py-2 text-xs text-slate-500">{t("no_outreach_targets_yet")}</p>
           ) : (
             Object.entries(a.outreachByStatus).map(([status, count]) => (
               <BRow
@@ -274,7 +278,7 @@ function DrawerContent({
           )}
         </div>
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {a.privateContactCount === 0 ? "No private contacts yet. Your personal CRM is separate from the platform marketplace — these are investors you've added directly for targeted outreach." : `You have ${a.privateContactCount} private contact${a.privateContactCount === 1 ? "" : "s"} in your CRM with ${totalOutreach} outreach target${totalOutreach === 1 ? "" : "s"} across ${Object.keys(a.outreachByStatus).length} status${Object.keys(a.outreachByStatus).length === 1 ? "" : "es"}. Private contacts enable personalised outreach that converts at higher rates than cold marketplace discovery.`}
           </p>
@@ -294,15 +298,15 @@ function DrawerContent({
     return (
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
-          <div><p className="text-base font-semibold text-slate-900">Investor pledges</p><p className="mt-0.5 text-xs text-slate-500">Indicative interest from platform investors</p></div>
+          <div><p className="text-base font-semibold text-slate-900">{t("investor_pledges")}</p><p className="mt-0.5 text-xs text-slate-500">{t("indicative_interest_from_platform_investors")}</p></div>
           {closeBtn}
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Total pledged" value={a.pledgeTotalDisplay} />
-          <DStatBox label="Investors" value={String(a.pledgeInvestorCount)} />
-          <DStatBox label="Activity" value={String(totalActivity)} />
+          <DStatBox label={t("total_pledged")} value={a.pledgeTotalDisplay} />
+          <DStatBox label={t("investors")} value={String(a.pledgeInvestorCount)} />
+          <DStatBox label={t("activity")} value={String(totalActivity)} />
         </div>
-        <p className="mt-5 text-xs font-semibold text-slate-900">Activity breakdown</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("activity_breakdown")}</p>
         <div className="mt-2">
           <BRow name="Indicative pledges" badge={a.pledgeTotalDisplay} variant={a.pledgeInvestorCount > 0 ? "success" : "neutral"} />
           <BRow name="Investors pledging" badge={`${a.pledgeInvestorCount} investor${a.pledgeInvestorCount === 1 ? "" : "s"}`} variant={a.pledgeInvestorCount > 0 ? "success" : "neutral"} />
@@ -311,7 +315,7 @@ function DrawerContent({
           <BRow name="Saved deals" badge={`${a.savedByInvestorsCount} investor${a.savedByInvestorsCount === 1 ? "" : "s"}`} variant="neutral" />
         </div>
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {a.pledgeInvestorCount === 0 ? "No pledges yet. Pledges are non-binding expressions of financial intent — they appear once investors formally signal interest in your listing after reviewing your data room." : `${a.pledgeTotalDisplay} in indicative pledges from ${a.pledgeInvestorCount} investor${a.pledgeInvestorCount === 1 ? "" : "s"}. You also have ${totalActivity} total platform interactions across interest, intros, and saves. These are non-binding signals — the next step is converting them to meetings and commitments.`}
           </p>
@@ -330,15 +334,15 @@ function DrawerContent({
     return (
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
-          <div><p className="text-base font-semibold text-slate-900">Remediation tasks</p><p className="mt-0.5 text-xs text-slate-500">Gaps identified and tracked for resolution</p></div>
+          <div><p className="text-base font-semibold text-slate-900">{t("remediation_tasks")}</p><p className="mt-0.5 text-xs text-slate-500">{t("gaps_identified_and_tracked_for_resolution")}</p></div>
           {closeBtn}
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Active" value={String(a.remediation.active)} />
-          <DStatBox label="Completed" value={String(a.remediation.completed)} />
-          <DStatBox label="Total" value={String(a.remediation.total)} />
+          <DStatBox label={t("active")} value={String(a.remediation.active)} />
+          <DStatBox label={t("completed")} value={String(a.remediation.completed)} />
+          <DStatBox label={t("total")} value={String(a.remediation.total)} />
         </div>
-        <p className="mt-5 text-xs font-semibold text-slate-900">Task breakdown</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("task_breakdown")}</p>
         <div className="mt-2">
           <BRow name="Open tasks" badge={String(a.remediation.open)} variant={a.remediation.open > 0 ? "critical" : "success"} />
           <BRow name="In progress" badge={String(a.remediation.inProgress)} variant={a.remediation.inProgress > 0 ? "high" : "neutral"} />
@@ -347,7 +351,7 @@ function DrawerContent({
           <BRow name="Active (open + in-progress)" badge={String(a.remediation.active)} variant={a.remediation.active > 0 ? "high" : "success"} />
         </div>
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {a.remediation.active === 0 ? "No active remediation tasks. These tasks appear when diligence reports or document reviews identify specific gaps that need addressing before investor meetings." : `You have ${a.remediation.active} active remediation task${a.remediation.active === 1 ? "" : "s"} (${a.remediation.open} open, ${a.remediation.inProgress} in progress). Each task represents a specific investor-readiness gap — completing them directly improves your readiness score.`}
           </p>
@@ -367,19 +371,19 @@ function DrawerContent({
     return (
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
-          <div><p className="text-base font-semibold text-slate-900">Learning progress</p><p className="mt-0.5 text-xs text-slate-500">Institutional readiness modules</p></div>
+          <div><p className="text-base font-semibold text-slate-900">{t("learning_progress")}</p><p className="mt-0.5 text-xs text-slate-500">{t("institutional_readiness_modules")}</p></div>
           {closeBtn}
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Progress" value={`${a.learningPercent}%`} />
-          <DStatBox label="Completed" value={String(a.learningModulesCompleted)} />
-          <DStatBox label="Remaining" value={String(remaining)} />
+          <DStatBox label={t("progress")} value={`${a.learningPercent}%`} />
+          <DStatBox label={t("completed")} value={String(a.learningModulesCompleted)} />
+          <DStatBox label={t("remaining")} value={String(remaining)} />
         </div>
         <div className="mt-4">
-          <div className="mb-1 flex justify-between text-[11px]"><span className="text-slate-500">Modules completed</span><span className="font-semibold" style={{ color: "#534AB7" }}>{a.learningModulesCompleted}/{a.learningModulesPublished}</span></div>
+          <div className="mb-1 flex justify-between text-[11px]"><span className="text-slate-500">{t("modules_completed")}</span><span className="font-semibold" style={{ color: "#534AB7" }}>{a.learningModulesCompleted}/{a.learningModulesPublished}</span></div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full" style={{ width: `${a.learningPercent}%`, background: "#534AB7" }} /></div>
         </div>
-        <p className="mt-5 text-xs font-semibold text-slate-900">Module breakdown</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("module_breakdown")}</p>
         <div className="mt-2">
           <BRow name="Modules completed" badge={String(a.learningModulesCompleted)} variant={a.learningModulesCompleted > 0 ? "success" : "neutral"} />
           <BRow name="Modules remaining" badge={String(remaining)} variant={remaining > 0 ? "medium" : "success"} />
@@ -387,7 +391,7 @@ function DrawerContent({
           <BRow name="Overall progress" badge={`${a.learningPercent}%`} variant={a.learningPercent >= 80 ? "success" : a.learningPercent >= 50 ? "medium" : "high"} />
         </div>
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {a.learningModulesPublished === 0 ? "No learning modules available yet. The learning track covers institutional fundraising, data room preparation, and investor communication." : a.learningPercent === 100 ? `All ${a.learningModulesCompleted} modules completed. You've built the full institutional fundraising knowledge base — apply it in your investor conversations.` : `You've completed ${a.learningModulesCompleted} of ${a.learningModulesPublished} module${a.learningModulesPublished === 1 ? "" : "s"} (${a.learningPercent}%). ${remaining} module${remaining === 1 ? " remains" : "s remain"} — each one builds knowledge that directly improves your investor conversation quality.`}
           </p>
@@ -406,15 +410,15 @@ function DrawerContent({
     return (
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
-          <div><p className="text-base font-semibold text-slate-900">Message threads</p><p className="mt-0.5 text-xs text-slate-500">Conversations and scheduled meetings</p></div>
+          <div><p className="text-base font-semibold text-slate-900">{t("message_threads")}</p><p className="mt-0.5 text-xs text-slate-500">{t("conversations_and_scheduled_meetings")}</p></div>
           {closeBtn}
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Threads" value={String(a.messageThreadCount)} />
-          <DStatBox label="Meetings" value={String(a.meetingsScheduled)} />
-          <DStatBox label="Contacts" value={String(a.privateContactCount)} />
+          <DStatBox label={t("threads")} value={String(a.messageThreadCount)} />
+          <DStatBox label={t("meetings")} value={String(a.meetingsScheduled)} />
+          <DStatBox label={t("contacts")} value={String(a.privateContactCount)} />
         </div>
-        <p className="mt-5 text-xs font-semibold text-slate-900">Communication breakdown</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("communication_breakdown")}</p>
         <div className="mt-2">
           <BRow name="Active message threads" badge={String(a.messageThreadCount)} variant={a.messageThreadCount > 0 ? "medium" : "neutral"} />
           <BRow name="Meetings scheduled" badge={String(a.meetingsScheduled)} variant={a.meetingsScheduled > 0 ? "success" : "neutral"} />
@@ -422,7 +426,7 @@ function DrawerContent({
           <BRow name="Queued outreach messages" badge={String(a.queuedMessageCount)} variant={a.queuedMessageCount > 0 ? "medium" : "neutral"} />
         </div>
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {a.messageThreadCount === 0 ? "No message threads yet. Conversations begin when investors request intros or when you initiate outreach through the platform." : `${a.messageThreadCount} active thread${a.messageThreadCount === 1 ? "" : "s"} with ${a.meetingsScheduled} meeting${a.meetingsScheduled === 1 ? "" : "s"} scheduled. Each thread represents an active investor relationship — response time and quality here are the biggest drivers of deal close.`}
           </p>
@@ -440,15 +444,15 @@ function DrawerContent({
   return (
     <div className="px-5 pb-6 pt-5">
       <div className="mb-4 flex items-start justify-between">
-        <div><p className="text-base font-semibold text-slate-900">Queued outreach</p><p className="mt-0.5 text-xs text-slate-500">Draft and scheduled messages to investors</p></div>
+        <div><p className="text-base font-semibold text-slate-900">{t("queued_outreach")}</p><p className="mt-0.5 text-xs text-slate-500">{t("draft_and_scheduled_messages_to_investors")}</p></div>
         {closeBtn}
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <DStatBox label="Queued" value={String(a.queuedMessageCount)} />
-        <DStatBox label="Drafts" value={String(a.campaignDraftCount)} />
-        <DStatBox label="Active" value={String(a.campaignQueuedCount)} />
+        <DStatBox label={t("queued")} value={String(a.queuedMessageCount)} />
+        <DStatBox label={t("drafts")} value={String(a.campaignDraftCount)} />
+        <DStatBox label={t("active")} value={String(a.campaignQueuedCount)} />
       </div>
-      <p className="mt-5 text-xs font-semibold text-slate-900">Outreach breakdown</p>
+      <p className="mt-5 text-xs font-semibold text-slate-900">{t("outreach_breakdown")}</p>
       <div className="mt-2">
         <BRow name="Queued messages" badge={String(a.queuedMessageCount)} variant={a.queuedMessageCount > 0 ? "medium" : "neutral"} />
         <BRow name="Campaign drafts" badge={String(a.campaignDraftCount)} variant={a.campaignDraftCount > 0 ? "neutral" : "neutral"} />
@@ -457,7 +461,7 @@ function DrawerContent({
         <BRow name="Social drafts copied" badge={String(a.socialDraftCopied)} variant={a.socialDraftCopied > 0 ? "success" : "neutral"} />
       </div>
       <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-        <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+        <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
         <p className="text-xs leading-relaxed text-slate-600">
           {a.queuedMessageCount === 0 && a.campaignDraftCount === 0 ? "No outreach queued yet. Use the outreach tools to create personalised messages to your private contacts or run campaigns to segments of your investor pipeline." : `${a.queuedMessageCount} message${a.queuedMessageCount === 1 ? "" : "s"} queued across ${a.campaignDraftCount} draft and ${a.campaignQueuedCount} active campaign${a.campaignQueuedCount === 1 ? "" : "s"}. Outreach at this stage directly drives new investor interest and meeting volume.`}
         </p>
@@ -475,6 +479,7 @@ function DrawerContent({
 // Main export
 // ---------------------------------------------------------------------------
 export function AnalyticsCardsClient({ analytics: a }: { analytics: FounderAnalyticsSnapshot }) {
+  const t = useTranslations("founderCmp");
   const [open, setOpen] = useState<DrawerKey | null>(null);
 
   useEffect(() => {
@@ -486,18 +491,18 @@ export function AnalyticsCardsClient({ analytics: a }: { analytics: FounderAnaly
     <>
       {/* Row 1 */}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <ACard label="Onboarding progress" value={`${a.onboardingPercent}%`} detail={a.onboardingCompletedAt ? `Completed ${new Date(a.onboardingCompletedAt).toLocaleDateString("en-US")}` : "Current snapshot"} icon={<IcoCheck />} iconBg="#E1F5EE" valColor="#3B6D11" onClick={() => setOpen("onboarding")} />
-        <ACard label="Readiness score" value={a.readinessScore != null ? `${a.readinessScore}` : "—"} detail="Latest diligence report" icon={<IcoShield />} iconBg="#EEEDFB" valColor="#3C3489" onClick={() => setOpen("readiness")} />
-        <ACard label="Private contacts" value={String(a.privateContactCount)} detail="Founder CRM contacts" icon={<IcoUsers />} iconBg="#E0F2FE" valColor="#0369a1" onClick={() => setOpen("contacts")} />
-        <ACard label="Investor pledges" value={a.pledgeTotalDisplay} detail={`${a.pledgeInvestorCount} investors · platform activity`} icon={<IcoDollar />} iconBg="#FEF3CD" valColor="#854F0B" onClick={() => setOpen("pledges")} />
+        <ACard label={t("onboarding_progress")} value={`${a.onboardingPercent}%`} detail={a.onboardingCompletedAt ? `Completed ${new Date(a.onboardingCompletedAt).toLocaleDateString("en-US")}` : "Current snapshot"} icon={<IcoCheck />} iconBg="#E1F5EE" valColor="#3B6D11" onClick={() => setOpen("onboarding")} />
+        <ACard label={t("readiness_score")} value={a.readinessScore != null ? `${a.readinessScore}` : "—"} detail="Latest diligence report" icon={<IcoShield />} iconBg="#EEEDFB" valColor="#3C3489" onClick={() => setOpen("readiness")} />
+        <ACard label={t("private_contacts")} value={String(a.privateContactCount)} detail="Founder CRM contacts" icon={<IcoUsers />} iconBg="#E0F2FE" valColor="#0369a1" onClick={() => setOpen("contacts")} />
+        <ACard label={t("investor_pledges")} value={a.pledgeTotalDisplay} detail={`${a.pledgeInvestorCount} investors · platform activity`} icon={<IcoDollar />} iconBg="#FEF3CD" valColor="#854F0B" onClick={() => setOpen("pledges")} />
       </section>
 
       {/* Row 2 */}
       <section className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <ACard label="Remediation active" value={String(a.remediation.active)} detail={`${a.remediation.completed} completed · ${a.remediation.open} open`} icon={<IcoWrench />} iconBg="#FCEBEB" valColor={a.remediation.active > 0 ? "#A32D2D" : "#0c2340"} onClick={() => setOpen("remediation")} />
-        <ACard label="Learning progress" value={`${a.learningPercent}%`} detail={`${a.learningModulesCompleted}/${a.learningModulesPublished} modules`} icon={<IcoBook />} iconBg="#EEEDFB" valColor="#3C3489" onClick={() => setOpen("learning")} />
-        <ACard label="Message threads" value={String(a.messageThreadCount)} detail={`${a.meetingsScheduled} meetings scheduled`} icon={<IcoMail />} iconBg="#E0F2FE" valColor="#0369a1" onClick={() => setOpen("messages")} />
-        <ACard label="Queued outreach" value={String(a.queuedMessageCount)} detail={`${a.campaignDraftCount} draft · ${a.campaignQueuedCount} queued`} icon={<IcoSend />} iconBg="#E1F5EE" valColor="#3B6D11" onClick={() => setOpen("outreach")} />
+        <ACard label={t("remediation_active")} value={String(a.remediation.active)} detail={`${a.remediation.completed} completed · ${a.remediation.open} open`} icon={<IcoWrench />} iconBg="#FCEBEB" valColor={a.remediation.active > 0 ? "#A32D2D" : "#0c2340"} onClick={() => setOpen("remediation")} />
+        <ACard label={t("learning_progress")} value={`${a.learningPercent}%`} detail={`${a.learningModulesCompleted}/${a.learningModulesPublished} modules`} icon={<IcoBook />} iconBg="#EEEDFB" valColor="#3C3489" onClick={() => setOpen("learning")} />
+        <ACard label={t("message_threads")} value={String(a.messageThreadCount)} detail={`${a.meetingsScheduled} meetings scheduled`} icon={<IcoMail />} iconBg="#E0F2FE" valColor="#0369a1" onClick={() => setOpen("messages")} />
+        <ACard label={t("queued_outreach")} value={String(a.queuedMessageCount)} detail={`${a.campaignDraftCount} draft · ${a.campaignQueuedCount} queued`} icon={<IcoSend />} iconBg="#E1F5EE" valColor="#3B6D11" onClick={() => setOpen("outreach")} />
       </section>
 
       {/* Centered slide-up drawer — 448 × 536 px */}

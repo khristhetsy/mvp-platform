@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useToolkitSave, ToolkitSaveStatus } from "@/hooks/useToolkitSave";
 
 function SaveChip({ status }: { status: ToolkitSaveStatus }) {
@@ -157,6 +158,7 @@ const DIFFICULTY_STYLES: Record<Difficulty, { bg: string; text: string; label: s
 // ---------------------------------------------------------------------------
 
 function QuestionCard({ q }: { q: PitchQuestion }) {
+  const t = useTranslations("founderCmp");
   const [answer, setAnswer] = useState("");
   const [showFeedback, setShowFeedback] = useState(false);
   const [tab, setTab] = useState<"framework" | "example" | "avoid">("framework");
@@ -215,7 +217,7 @@ function QuestionCard({ q }: { q: PitchQuestion }) {
           </div>
         ) : tab === "example" ? (
           <div className="rounded-lg bg-emerald-50 px-3 py-2.5 ring-1 ring-emerald-100">
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">Strong answer</p>
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">{t("strong_answer")}</p>
             <p className="text-[11px] italic leading-relaxed text-emerald-900">&ldquo;{q.goodAnswer}&rdquo;</p>
           </div>
         ) : (
@@ -235,7 +237,7 @@ function QuestionCard({ q }: { q: PitchQuestion }) {
       {/* Practice area */}
       <div className="border-t border-slate-100 px-4 py-3">
         <div className="mb-1.5 flex items-center justify-between">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Your answer</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{t("your_answer")}</p>
           <span className="text-[10px]" style={{ color: scoreColor }}>
             {wordCount} words · {pct}% of target length
           </span>
@@ -244,7 +246,7 @@ function QuestionCard({ q }: { q: PitchQuestion }) {
           rows={4}
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
-          placeholder="Type your answer here and use the framework above as a guide…"
+          placeholder={t("type_your_answer_here_and_use_the_framework")}
           className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-100"
         />
 
@@ -275,7 +277,7 @@ function QuestionCard({ q }: { q: PitchQuestion }) {
 
         {showFeedback && wordCount >= 10 ? (
           <div className="mt-3 space-y-2 rounded-xl border border-indigo-100 bg-[#FAFAFF] p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#534AB7" }}>Feedback</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#534AB7" }}>{t("feedback")}</p>
             {pct < 50 ? (
               <p className="text-xs text-slate-600">Your answer is shorter than ideal. Aim to cover all {q.framework.length} points in the framework — each one adds credibility.</p>
             ) : pct < 80 ? (
@@ -298,6 +300,7 @@ function QuestionCard({ q }: { q: PitchQuestion }) {
 // ---------------------------------------------------------------------------
 
 export function PitchPracticeSimulator() {
+  const t = useTranslations("founderCmp");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeDifficulty, setActiveDifficulty] = useState<Difficulty | null>(null);
 
@@ -333,7 +336,7 @@ export function PitchPracticeSimulator() {
 
       {/* Intro */}
       <div className="rounded-xl border border-indigo-100 bg-[#FAFAFF] px-4 py-3">
-        <p className="text-xs font-semibold" style={{ color: "#534AB7" }}>How to use this</p>
+        <p className="text-xs font-semibold" style={{ color: "#534AB7" }}>{t("how_to_use_this")}</p>
         <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">
           Read the framework, then write your answer before revealing the example. Aim to fill the length bar — investors notice when founders run out of things to say. Do hard questions repeatedly until your answer flows without notes.
         </p>

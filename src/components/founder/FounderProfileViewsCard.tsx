@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { getTranslations } from "next-intl/server";
 
 type InvestorTypeRow = {
   investor_type: string | null;
@@ -65,6 +66,7 @@ async function loadViewData(companyId: string) {
 }
 
 export async function FounderProfileViewsCard({ companyId }: { companyId: string }) {
+  const t = await getTranslations("founderCmp");
   const { total, recentCount, typeBreakdown } = await loadViewData(companyId);
 
   const typeEntries = Object.entries(typeBreakdown).sort((a, b) => b[1] - a[1]);
@@ -73,7 +75,7 @@ export async function FounderProfileViewsCard({ companyId }: { companyId: string
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 px-5 py-4">
-        <h2 className="text-sm font-semibold text-slate-900">Profile views</h2>
+        <h2 className="text-sm font-semibold text-slate-900">{t("profile_views")}</h2>
         <p className="mt-0.5 text-xs text-slate-500">
           Investors who opened your diligence report — anonymized by type
         </p>
@@ -84,11 +86,11 @@ export async function FounderProfileViewsCard({ companyId }: { companyId: string
         <div className="mb-5 grid grid-cols-2 gap-3">
           <div className="rounded-xl bg-indigo-50 px-4 py-3 text-center">
             <p className="text-2xl font-bold text-indigo-800">{total}</p>
-            <p className="mt-0.5 text-[11px] font-medium text-indigo-600">Total views</p>
+            <p className="mt-0.5 text-[11px] font-medium text-indigo-600">{t("total_views")}</p>
           </div>
           <div className="rounded-xl bg-emerald-50 px-4 py-3 text-center">
             <p className="text-2xl font-bold text-emerald-800">{recentCount}</p>
-            <p className="mt-0.5 text-[11px] font-medium text-emerald-600">Last 7 days</p>
+            <p className="mt-0.5 text-[11px] font-medium text-emerald-600">{t("last_7_days")}</p>
           </div>
         </div>
 

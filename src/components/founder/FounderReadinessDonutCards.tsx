@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type { DocumentChecklistItem, ProfileCompletionItem } from "@/lib/data/founder-readiness";
 
@@ -100,6 +101,7 @@ export function FounderReadinessDonutCards({
   isPublished,
   reviewFeedback,
 }: Props) {
+  const t = useTranslations("founderCmp");
   const [open, setOpen] = useState<DrawerKey | null>(null);
 
   const profileComplete = profileItems.filter((i) => i.complete).length;
@@ -469,7 +471,7 @@ export function FounderReadinessDonutCards({
               </div>
 
               {/* Breakdown */}
-              <p className="mb-2 text-[11px] font-semibold text-slate-950">Data breakdown</p>
+              <p className="mb-2 text-[11px] font-semibold text-slate-950">{t("data_breakdown")}</p>
               <div className="mb-4 divide-y divide-slate-100 rounded-xl border border-slate-100">
                 {config.breakdown.map((item) => (
                   <div
@@ -484,7 +486,7 @@ export function FounderReadinessDonutCards({
 
               {/* What this means */}
               <div className="mb-4 rounded-lg bg-slate-50 px-4 py-3">
-                <p className="mb-1 text-[10px] font-semibold text-slate-950">What this means</p>
+                <p className="mb-1 text-[10px] font-semibold text-slate-950">{t("what_this_means")}</p>
                 <p className="text-xs leading-[1.65] text-slate-600">{config.meaning}</p>
               </div>
 

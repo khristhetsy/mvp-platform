@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { formatApiError } from "@/lib/api/errors";
 
@@ -30,6 +31,7 @@ export function FounderAdminCourseQuizClient({
   questions: Question[];
   retryLimit: number | null;
 }) {
+  const t = useTranslations("founderCmp");
   const router = useRouter();
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
@@ -90,7 +92,7 @@ export function FounderAdminCourseQuizClient({
       {retryLimit != null ? (
         <p className="text-xs text-slate-500">Retry limit: {retryLimit}</p>
       ) : (
-        <p className="text-xs text-slate-500">No retry limit configured.</p>
+        <p className="text-xs text-slate-500">{t("no_retry_limit_configured")}</p>
       )}
 
       {error ? <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">{error}</div> : null}

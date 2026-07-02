@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 type Props = {
   moduleSlug: string;
@@ -11,6 +12,7 @@ type Props = {
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 export function LessonNotes({ moduleSlug, lessonId, initialContent = "" }: Props) {
+  const t = useTranslations("founderCmp");
   const [content, setContent] = useState(initialContent);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -68,10 +70,10 @@ export function LessonNotes({ moduleSlug, lessonId, initialContent = "" }: Props
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-sm font-semibold text-slate-800">Notes</p>
-        {saveStatus === "saving" ? <span className="text-xs text-slate-500">Saving…</span> : null}
-        {saveStatus === "saved" ? <span className="text-xs text-emerald-600">Saved ✓</span> : null}
-        {saveStatus === "error" ? <span className="text-xs text-red-600">Error saving</span> : null}
+        <p className="text-sm font-semibold text-slate-800">{t("notes")}</p>
+        {saveStatus === "saving" ? <span className="text-xs text-slate-500">{t("saving")}</span> : null}
+        {saveStatus === "saved" ? <span className="text-xs text-emerald-600">{t("saved_2")}</span> : null}
+        {saveStatus === "error" ? <span className="text-xs text-red-600">{t("error_saving")}</span> : null}
       </div>
       <textarea
         value={content}
@@ -79,7 +81,7 @@ export function LessonNotes({ moduleSlug, lessonId, initialContent = "" }: Props
           setContent(e.target.value);
           persist(e.target.value);
         }}
-        placeholder="Notes auto-save to your account…"
+        placeholder={t("notes_auto_save_to_your_account")}
         className="w-full rounded-lg border border-slate-200 p-3 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         rows={5}
       />

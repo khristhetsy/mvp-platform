@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { FounderAnalyticsSnapshot } from "@/lib/analytics/founder-analytics";
 
 type FunnelStep = {
@@ -26,6 +27,7 @@ export function FounderMarketplaceFunnelCard({
     | "introRequestCount"
   >;
 }) {
+  const t = useTranslations("founderCmp");
   const steps: FunnelStep[] = [
     {
       label: "Report views",
@@ -66,7 +68,7 @@ export function FounderMarketplaceFunnelCard({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 px-5 py-4">
-        <h2 className="text-sm font-semibold text-slate-900">Marketplace funnel</h2>
+        <h2 className="text-sm font-semibold text-slate-900">{t("marketplace_funnel")}</h2>
         <p className="mt-0.5 text-xs text-slate-500">
           How investors move from discovering your profile to requesting an introduction
         </p>

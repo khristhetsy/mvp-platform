@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 type Props = {
   moduleSlug: string;
@@ -17,6 +18,7 @@ type Submission = {
 type Status = "idle" | "submitting" | "submitted" | "error";
 
 export function LessonWorksheet({ moduleSlug, lessonId, worksheetPrompt }: Props) {
+  const t = useTranslations("founderCmp");
   const [content, setContent] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [existingSubmission, setExistingSubmission] = useState<Submission | null>(null);
@@ -61,7 +63,7 @@ export function LessonWorksheet({ moduleSlug, lessonId, worksheetPrompt }: Props
 
   return (
     <div className="rounded-xl border border-dashed border-indigo-200 bg-indigo-50/40 p-4">
-      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-indigo-700">Worksheet</p>
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-indigo-700">{t("worksheet")}</p>
       <p className="mb-3 text-sm text-indigo-900">{worksheetPrompt}</p>
 
       {showingSubmission ? (
@@ -74,7 +76,7 @@ export function LessonWorksheet({ moduleSlug, lessonId, worksheetPrompt }: Props
           </div>
           {existingSubmission.adminFeedback ? (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-              <p className="mb-1 text-xs font-semibold text-emerald-700">Coach feedback</p>
+              <p className="mb-1 text-xs font-semibold text-emerald-700">{t("coach_feedback")}</p>
               <p className="text-sm text-emerald-900">{existingSubmission.adminFeedback}</p>
             </div>
           ) : null}
@@ -95,7 +97,7 @@ export function LessonWorksheet({ moduleSlug, lessonId, worksheetPrompt }: Props
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Write your answer here…"
+            placeholder={t("write_your_answer_here")}
             rows={4}
             maxLength={5000}
             className="w-full rounded-lg border border-indigo-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
@@ -112,10 +114,10 @@ export function LessonWorksheet({ moduleSlug, lessonId, worksheetPrompt }: Props
             </button>
           </div>
           {status === "submitted" ? (
-            <p className="mt-2 text-xs text-emerald-700">Submitted — your coach will review this.</p>
+            <p className="mt-2 text-xs text-emerald-700">{t("submitted_your_coach_will_review_this")}</p>
           ) : null}
           {status === "error" ? (
-            <p className="mt-2 text-xs text-red-700">Unable to submit. Please try again.</p>
+            <p className="mt-2 text-xs text-red-700">{t("unable_to_submit_please_try_again")}</p>
           ) : null}
         </div>
       )}

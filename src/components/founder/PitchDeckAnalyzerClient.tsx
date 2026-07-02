@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type { PitchDeckAnalysis, PitchDeckSection } from "@/app/api/founder/pitch-deck-analyze/route";
 
@@ -36,6 +37,7 @@ function ScoreRing({ score, size = 72 }: { score: number; size?: number }) {
 }
 
 function SectionCard({ section }: { section: PitchDeckSection }) {
+  const t = useTranslations("founderCmp");
   const [expanded, setExpanded] = useState(false);
   const style = VERDICT_STYLES[section.verdict];
   return (
@@ -92,7 +94,7 @@ function SectionCard({ section }: { section: PitchDeckSection }) {
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#92400e" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="13" /><path d="M12 17h.01" />
               </svg>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "#92400e", margin: 0 }}>Quick fix</p>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#92400e", margin: 0 }}>{t("quick_fix")}</p>
             </div>
             <p style={{ fontSize: 12, color: "#78350f", margin: 0, lineHeight: 1.5 }}>{section.tip}</p>
           </div>

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 "use client";
 
 // ---------------------------------------------------------------------------
@@ -227,6 +228,7 @@ export function FounderFundraisingMilestoneTracker({
   isPublished,
   strongMatchCount,
 }: Props) {
+  const t = useTranslations("founderCmp");
   const currentIndex = deriveStageIndex({
     readinessScore,
     activeRoomCount,
@@ -257,7 +259,7 @@ export function FounderFundraisingMilestoneTracker({
               </svg>
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-900">Fundraising timeline</p>
+              <p className="text-sm font-semibold text-slate-900">{t("fundraising_timeline")}</p>
               <p className="text-[11px] text-slate-400">Stage {currentIndex + 1} of {STAGES.length}</p>
             </div>
           </div>

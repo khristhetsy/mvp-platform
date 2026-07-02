@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useToolkitSave, ToolkitSaveStatus } from "@/hooks/useToolkitSave";
 
 function SaveChip({ status }: { status: ToolkitSaveStatus }) {
@@ -372,6 +373,7 @@ function TouchCard({
   vars: TemplateVars;
   investorType: InvestorType;
 }) {
+  const t = useTranslations("founderCmp");
   const [copied, setCopied] = useState<"subject" | "body" | null>(null);
 
   const subject = touch.subject(vars);
@@ -403,7 +405,7 @@ function TouchCard({
       {/* Subject */}
       <div className="border-b border-slate-100 px-4 py-2.5">
         <div className="mb-1 flex items-center justify-between">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Subject line</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{t("subject_line")}</p>
           <button
             type="button"
             onClick={() => copy(subject, "subject")}
@@ -419,7 +421,7 @@ function TouchCard({
       {/* Body */}
       <div className="px-4 py-3">
         <div className="mb-1.5 flex items-center justify-between">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Email body</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{t("email_body")}</p>
           <button
             type="button"
             onClick={() => copy(body, "body")}
@@ -437,7 +439,7 @@ function TouchCard({
       {/* Notes */}
       {touch.notes.length > 0 ? (
         <div className="border-t border-slate-100 px-4 py-3">
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Tips for this touch</p>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{t("tips_for_this_touch")}</p>
           <div className="space-y-1">
             {touch.notes.map((n, i) => (
               <div key={i} className="flex items-start gap-2">
@@ -457,6 +459,7 @@ function TouchCard({
 // ---------------------------------------------------------------------------
 
 export function EmailSequenceBuilder() {
+  const t = useTranslations("founderCmp");
   const [investorType, setInvestorType] = useState<InvestorType>("vc");
   const [vars, setVars] = useState<TemplateVars>(DEFAULT_VARS);
   const [showCustomise, setShowCustomise] = useState(false);
@@ -491,7 +494,7 @@ export function EmailSequenceBuilder() {
 
       {/* Intro */}
       <div className="rounded-xl border border-indigo-100 bg-[#FAFAFF] px-4 py-3">
-        <p className="text-xs font-semibold" style={{ color: "#534AB7" }}>How to use this</p>
+        <p className="text-xs font-semibold" style={{ color: "#534AB7" }}>{t("how_to_use_this")}</p>
         <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">
           Select investor type, fill in your variables, then copy each email. Personalise the text in [brackets] before sending — the more specific those lines, the higher your reply rate.
         </p>
@@ -499,7 +502,7 @@ export function EmailSequenceBuilder() {
 
       {/* Investor type selector */}
       <div>
-        <p className="mb-2 text-xs font-semibold text-slate-700">Investor type</p>
+        <p className="mb-2 text-xs font-semibold text-slate-700">{t("investor_type")}</p>
         <div className="flex flex-wrap gap-2">
           {(Object.keys(SEQUENCES) as InvestorType[]).map((t) => (
             <button
@@ -525,7 +528,7 @@ export function EmailSequenceBuilder() {
           onClick={() => setShowCustomise((o) => !o)}
           className="flex w-full items-center justify-between px-4 py-3 text-left"
         >
-          <p className="text-sm font-semibold text-slate-800">Personalise your templates</p>
+          <p className="text-sm font-semibold text-slate-800">{t("personalise_your_templates")}</p>
           <svg
             width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"
             className="transition-transform"
@@ -579,7 +582,7 @@ export function EmailSequenceBuilder() {
 
       {/* General tips */}
       <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
-        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-700">Sequence best practices</p>
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-700">{t("sequence_best_practices")}</p>
         <div className="space-y-1">
           {[
             "Run 4 touches max — more than that hurts your reputation",

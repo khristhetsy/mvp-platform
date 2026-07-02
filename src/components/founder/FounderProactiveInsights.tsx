@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import {
   computeFounderInsights,
@@ -63,6 +64,7 @@ export function FounderProactiveInsights({
   readinessScore,
   strongMatchCount,
 }: Props) {
+  const t = useTranslations("founderCmp");
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   const allInsights = computeFounderInsights({
@@ -103,7 +105,7 @@ export function FounderProactiveInsights({
                 />
               </svg>
             </div>
-            <p className="text-sm font-semibold text-slate-900">Capital Intelligence</p>
+            <p className="text-sm font-semibold text-slate-900">{t("capital_intelligence")}</p>
             {urgentCount > 0 ? (
               <span
                 className="rounded-full px-2 py-0.5 text-[10px] font-bold"

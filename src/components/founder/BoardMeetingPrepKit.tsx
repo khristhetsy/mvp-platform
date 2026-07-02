@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useToolkitSave, ToolkitSaveStatus } from "@/hooks/useToolkitSave";
 
 function SaveChip({ status }: { status: ToolkitSaveStatus }) {
@@ -234,6 +235,7 @@ function AgendaCard({ item, index }: { item: AgendaItem; index: number }) {
 // ---------------------------------------------------------------------------
 
 export function BoardMeetingPrepKit() {
+  const t = useTranslations("founderCmp");
   const [stage, setStage] = useState<BoardStage>("seed");
   const [tab, setTab] = useState<"agenda" | "metrics" | "preread">("agenda");
   const [metrics, setMetrics] = useState<Record<string, string>>({});
@@ -282,7 +284,7 @@ export function BoardMeetingPrepKit() {
 
       {/* Stage selector */}
       <div className="flex items-center gap-3">
-        <p className="text-xs font-semibold text-slate-700">Board stage:</p>
+        <p className="text-xs font-semibold text-slate-700">{t("board_stage")}</p>
         {(["seed", "series_a"] as BoardStage[]).map((s) => (
           <button
             key={s}
@@ -320,7 +322,7 @@ export function BoardMeetingPrepKit() {
       {tab === "agenda" ? (
         <div className="space-y-3">
           <div className="rounded-xl border border-indigo-100 bg-[#FAFAFF] px-4 py-3">
-            <p className="text-xs font-semibold" style={{ color: "#534AB7" }}>How to run a great board meeting</p>
+            <p className="text-xs font-semibold" style={{ color: "#534AB7" }}>{t("how_to_run_a_great_board_meeting")}</p>
             <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">
               Send the pre-read 48h before. Start on time. Use the meeting to decide, not to inform — boards should read the materials in advance. Leave with clear action items and owners.
             </p>
@@ -336,12 +338,12 @@ export function BoardMeetingPrepKit() {
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Company name</label>
-              <input type="text" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Acme Inc." className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-100" />
+              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{t("company_name")}</label>
+              <input type="text" value={company} onChange={(e) => setCompany(e.target.value)} placeholder={t("acme_inc")} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-100" />
             </div>
             <div>
-              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Period</label>
-              <input type="text" value={period} onChange={(e) => setPeriod(e.target.value)} placeholder="Q1 2026" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-100" />
+              <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{t("period")}</label>
+              <input type="text" value={period} onChange={(e) => setPeriod(e.target.value)} placeholder={t("q1_2026")} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-100" />
             </div>
           </div>
           {[...new Set(METRIC_FIELDS.map((f) => f.category))].map((cat) => (
@@ -375,7 +377,7 @@ export function BoardMeetingPrepKit() {
           </div>
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Pre-read draft</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{t("pre_read_draft")}</p>
               <button
                 type="button"
                 onClick={copy}
@@ -394,7 +396,7 @@ export function BoardMeetingPrepKit() {
 
       {/* Best practices footer */}
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Board meeting best practices</p>
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{t("board_meeting_best_practices")}</p>
         <div className="space-y-1">
           {[
             "Send the pre-read 48 hours before — not the morning of",

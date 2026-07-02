@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type { FounderInvestorContactRecord } from "@/lib/founder-crm/types";
 import type { OutreachCoachResult } from "@/app/api/founder/outreach-coach/route";
 
@@ -49,6 +50,7 @@ function CopyButton({ text }: { text: string }) {
 // ---------------------------------------------------------------------------
 
 function CoachingResult({ result, onReset }: { result: OutreachCoachResult; onReset: () => void }) {
+  const t = useTranslations("founderCmp");
   const [emailDraft, setEmailDraft] = useState(result.emailDraft);
   const [showWhy, setShowWhy] = useState(false);
 
@@ -83,7 +85,7 @@ function CoachingResult({ result, onReset }: { result: OutreachCoachResult; onRe
       {/* Subject line */}
       <div style={{ background: "white", border: "0.5px solid #e0e7ff", borderRadius: 10, padding: "10px 14px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".07em" }}>Subject line</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".07em" }}>{t("subject_line")}</span>
           <CopyButton text={result.subjectLine} />
         </div>
         <p style={{ fontSize: 13, color: "#111827", margin: 0, fontWeight: 500 }}>{result.subjectLine}</p>
@@ -113,7 +115,7 @@ function CoachingResult({ result, onReset }: { result: OutreachCoachResult; onRe
       <div style={{ background: "#FAEEDA", borderRadius: 10, padding: "10px 14px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
           <span style={{ fontSize: 12 }} aria-hidden="true">⚠</span>
-          <span style={{ fontSize: 10, fontWeight: 700, color: "#854F0B", textTransform: "uppercase", letterSpacing: ".07em" }}>Watch out</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#854F0B", textTransform: "uppercase", letterSpacing: ".07em" }}>{t("watch_out")}</span>
         </div>
         <p style={{ fontSize: 12, color: "#633806", margin: 0, lineHeight: 1.5 }}>{result.watchOut}</p>
       </div>
@@ -121,7 +123,7 @@ function CoachingResult({ result, onReset }: { result: OutreachCoachResult; onRe
       {/* Email draft */}
       <div style={{ background: "white", border: "0.5px solid #e0e7ff", borderRadius: 10, padding: "10px 14px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".07em" }}>Email draft</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: ".07em" }}>{t("email_draft")}</span>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             {result.source === "claude" && (
               <span style={{ fontSize: 9, fontWeight: 600, background: "#EEEDFE", color: ACCENT, padding: "2px 7px", borderRadius: 20 }}>
@@ -174,6 +176,7 @@ export function InvestorOutreachCoach({
   contacts: FounderInvestorContactRecord[];
   companySnapshot: OutreachCoachSnapshot;
 }) {
+  const t = useTranslations("founderCmp");
   const [selectedId, setSelectedId] = useState<string>("");
   const [result, setResult] = useState<OutreachCoachResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -219,8 +222,8 @@ export function InvestorOutreachCoach({
   if (contacts.length === 0) {
     return (
       <div style={{ padding: "24px 0", textAlign: "center" }}>
-        <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 8px" }}>No contacts in your CRM yet.</p>
-        <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>Add investors to your CRM first, then come back for per-investor coaching.</p>
+        <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 8px" }}>{t("no_contacts_in_your_crm_yet")}</p>
+        <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>{t("add_investors_to_your_crm_first_then_come_ba")}</p>
       </div>
     );
   }
@@ -308,7 +311,7 @@ export function InvestorOutreachCoach({
           </div>
           {selected.notes && (
             <div style={{ marginTop: 8, paddingTop: 8, borderTop: "0.5px solid #f3f4f6" }}>
-              <p style={{ fontSize: 9, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", margin: "0 0 2px" }}>Your notes</p>
+              <p style={{ fontSize: 9, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", margin: "0 0 2px" }}>{t("your_notes")}</p>
               <p style={{ fontSize: 11, color: "#374151", margin: 0, lineHeight: 1.5 }}>{selected.notes}</p>
             </div>
           )}

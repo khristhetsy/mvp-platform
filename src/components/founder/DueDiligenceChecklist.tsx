@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useToolkitSave, ToolkitSaveStatus } from "@/hooks/useToolkitSave";
 
 function SaveChip({ status }: { status: ToolkitSaveStatus }) {
@@ -267,6 +268,7 @@ function CategorySection({
 // ---------------------------------------------------------------------------
 
 export function DueDiligenceChecklist() {
+  const t = useTranslations("founderCmp");
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [filterUrgency, setFilterUrgency] = useState<"all" | "always" | "often">("always");
 
@@ -318,21 +320,21 @@ export function DueDiligenceChecklist() {
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">
           <p className="text-xl font-bold" style={{ color: "#534AB7" }}>{alwaysDone}/{alwaysItems.length}</p>
-          <p className="text-[10px] text-slate-500">Critical items ready</p>
+          <p className="text-[10px] text-slate-500">{t("critical_items_ready")}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">
           <p className="text-xl font-bold" style={{ color: "#059669" }}>{totalDone}</p>
-          <p className="text-[10px] text-slate-500">Total items done</p>
+          <p className="text-[10px] text-slate-500">{t("total_items_done")}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-center shadow-sm">
           <p className="text-xl font-bold" style={{ color: "#d97706" }}>{allItems.length - totalDone}</p>
-          <p className="text-[10px] text-slate-500">Remaining</p>
+          <p className="text-[10px] text-slate-500">{t("remaining")}</p>
         </div>
       </div>
 
       {/* Intro */}
       <div className="rounded-xl border border-indigo-100 bg-[#FAFAFF] px-4 py-3">
-        <p className="text-xs font-semibold" style={{ color: "#534AB7" }}>What this covers</p>
+        <p className="text-xs font-semibold" style={{ color: "#534AB7" }}>{t("what_this_covers")}</p>
         <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">
           This checklist covers what institutional investors — VCs, family offices, and angels writing $500K+ — typically request during diligence. Start with &quot;Always requested&quot; items before your first LP meeting.
         </p>
@@ -340,7 +342,7 @@ export function DueDiligenceChecklist() {
 
       {/* Filter */}
       <div className="flex items-center gap-2">
-        <p className="text-[11px] font-semibold text-slate-500">Show:</p>
+        <p className="text-[11px] font-semibold text-slate-500">{t("show")}</p>
         {[
           { key: "always", label: "Critical only" },
           { key: "often", label: "Critical + common" },

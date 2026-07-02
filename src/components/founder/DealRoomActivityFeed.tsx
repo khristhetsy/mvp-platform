@@ -1,4 +1,5 @@
 import type { DealRoomActivityType } from "@/lib/deal-rooms/types";
+import { useTranslations } from "next-intl";
 
 export type ActivityEvent = {
   id: string;
@@ -81,10 +82,11 @@ function timeAgo(iso: string): string {
 }
 
 export function DealRoomActivityFeed({ events }: { events: ActivityEvent[] }) {
+  const t = useTranslations("founderCmp");
   if (events.length === 0) {
     return (
       <div className="py-6 text-center">
-        <p className="text-sm text-slate-400">No activity yet across your deal rooms.</p>
+        <p className="text-sm text-slate-400">{t("no_activity_yet_across_your_deal_rooms")}</p>
       </div>
     );
   }

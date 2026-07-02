@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import type { FounderAnalyticsSnapshot } from "@/lib/analytics/founder-analytics";
 
 type DrawerKey = "outreach" | "social" | "investors" | "readiness";
@@ -75,6 +76,7 @@ function DrawerContent({
   analytics: FounderAnalyticsSnapshot;
   onClose: () => void;
 }) {
+  const t = useTranslations("founderCmp");
   const closeBtn = (
     <button
       type="button"
@@ -97,22 +99,22 @@ function DrawerContent({
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <p className="text-base font-semibold text-slate-900">Outreach pipeline</p>
-            <p className="mt-0.5 text-xs text-slate-500">Investor outreach by current status</p>
+            <p className="text-base font-semibold text-slate-900">{t("outreach_pipeline")}</p>
+            <p className="mt-0.5 text-xs text-slate-500">{t("investor_outreach_by_current_status")}</p>
           </div>
           {closeBtn}
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Total targets" value={String(total)} />
-          <DStatBox label="Statuses" value={String(entries.length)} />
-          <DStatBox label="Top status" value={topEntry ? topEntry[0].replace(/_/g, " ") : "—"} />
+          <DStatBox label={t("total_targets")} value={String(total)} />
+          <DStatBox label={t("statuses")} value={String(entries.length)} />
+          <DStatBox label={t("top_status")} value={topEntry ? topEntry[0].replace(/_/g, " ") : "—"} />
         </div>
 
-        <p className="mt-5 text-xs font-semibold text-slate-900">Status breakdown</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("status_breakdown")}</p>
         <div className="mt-2">
           {entries.length === 0 ? (
-            <p className="text-xs text-slate-400 py-2">No outreach data yet.</p>
+            <p className="text-xs text-slate-400 py-2">{t("no_outreach_data_yet")}</p>
           ) : (
             entries
               .sort((a, b) => b[1] - a[1])
@@ -155,7 +157,7 @@ function DrawerContent({
         )}
 
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {total === 0
               ? "No outreach recorded yet. Start logging your investor conversations in the pipeline to track conversion rates and identify where prospects stall."
@@ -197,19 +199,19 @@ function DrawerContent({
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <p className="text-base font-semibold text-slate-900">Social drafts</p>
-            <p className="mt-0.5 text-xs text-slate-500">AI-generated content produced in iCapOS</p>
+            <p className="text-base font-semibold text-slate-900">{t("social_drafts")}</p>
+            <p className="mt-0.5 text-xs text-slate-500">{t("ai_generated_content_produced_in_icapos")}</p>
           </div>
           {closeBtn}
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Generated" value={String(analytics.socialDraftGenerated)} />
-          <DStatBox label="Copied" value={String(analytics.socialDraftCopied)} />
-          <DStatBox label="Copy rate" value={analytics.socialDraftGenerated > 0 ? `${copyRate}%` : "—"} />
+          <DStatBox label={t("generated")} value={String(analytics.socialDraftGenerated)} />
+          <DStatBox label={t("copied")} value={String(analytics.socialDraftCopied)} />
+          <DStatBox label={t("copy_rate")} value={analytics.socialDraftGenerated > 0 ? `${copyRate}%` : "—"} />
         </div>
 
-        <p className="mt-5 text-xs font-semibold text-slate-900">Content breakdown</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("content_breakdown")}</p>
         <div className="mt-2">
           <BRow
             name="Total drafts generated"
@@ -239,7 +241,7 @@ function DrawerContent({
         </div>
 
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {analytics.socialDraftGenerated === 0
               ? "No social drafts generated yet. Use the AI content tools to create LinkedIn posts, investor update emails, and pitch narrative drafts — consistent founder content builds trust with investors before your first meeting."
@@ -276,19 +278,19 @@ function DrawerContent({
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <p className="text-base font-semibold text-slate-900">Platform investor activity</p>
-            <p className="mt-0.5 text-xs text-slate-500">Inbound signals from registered investors</p>
+            <p className="text-base font-semibold text-slate-900">{t("platform_investor_activity")}</p>
+            <p className="mt-0.5 text-xs text-slate-500">{t("inbound_signals_from_registered_investors")}</p>
           </div>
           {closeBtn}
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Total signals" value={String(totalActivity)} />
-          <DStatBox label="Interested" value={String(analytics.investorInterestCount)} />
-          <DStatBox label="Intros" value={String(analytics.introRequestCount)} />
+          <DStatBox label={t("total_signals")} value={String(totalActivity)} />
+          <DStatBox label={t("interested")} value={String(analytics.investorInterestCount)} />
+          <DStatBox label={t("intros")} value={String(analytics.introRequestCount)} />
         </div>
 
-        <p className="mt-5 text-xs font-semibold text-slate-900">Activity breakdown</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("activity_breakdown")}</p>
         <div className="mt-2">
           <BRow
             name="Expressed interest"
@@ -336,7 +338,7 @@ function DrawerContent({
         )}
 
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {totalActivity === 0
               ? "No inbound investor activity yet. Make sure your listing is published with a complete data room — investors on the platform discover companies through marketplace search and curated match recommendations."
@@ -375,22 +377,22 @@ function DrawerContent({
     <div className="px-5 pb-6 pt-5">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <p className="text-base font-semibold text-slate-900">Readiness score history</p>
-          <p className="mt-0.5 text-xs text-slate-500">Diligence report snapshots over time</p>
+          <p className="text-base font-semibold text-slate-900">{t("readiness_score_history")}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{t("diligence_report_snapshots_over_time")}</p>
         </div>
         {closeBtn}
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <DStatBox label="Latest score" value={latestScore !== null ? `${latestScore}` : "—"} />
-        <DStatBox label="Trend" value={trend !== null ? (trend > 0 ? `+${trend}` : String(trend)) : "—"} />
-        <DStatBox label="Snapshots" value={String(snapshots.length)} />
+        <DStatBox label={t("latest_score")} value={latestScore !== null ? `${latestScore}` : "—"} />
+        <DStatBox label={t("trend")} value={trend !== null ? (trend > 0 ? `+${trend}` : String(trend)) : "—"} />
+        <DStatBox label={t("snapshots")} value={String(snapshots.length)} />
       </div>
 
-      <p className="mt-5 text-xs font-semibold text-slate-900">Score history</p>
+      <p className="mt-5 text-xs font-semibold text-slate-900">{t("score_history")}</p>
       <div className="mt-2">
         {snapshots.length === 0 ? (
-          <p className="py-2 text-xs text-slate-400">No diligence reports yet.</p>
+          <p className="py-2 text-xs text-slate-400">{t("no_diligence_reports_yet")}</p>
         ) : (
           [...snapshots]
             .reverse()
@@ -419,7 +421,7 @@ function DrawerContent({
       {snapshots.length > 0 && latestScore !== null && (
         <div className="mt-4">
           <div className="mb-1 flex items-center justify-between text-[11px]">
-            <span className="text-slate-500">Current readiness</span>
+            <span className="text-slate-500">{t("current_readiness")}</span>
             <span className="font-semibold" style={{ color: latestScore >= 80 ? "#3B6D11" : latestScore >= 50 ? "#534AB7" : "#854F0B" }}>
               {latestScore}%
             </span>
@@ -437,7 +439,7 @@ function DrawerContent({
       )}
 
       <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-        <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+        <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
         <p className="text-xs leading-relaxed text-slate-600">
           {snapshots.length === 0
             ? "No diligence reports generated yet. Run a readiness assessment from the Readiness section to get your baseline score — this is the first thing investors ask for when evaluating a company."
@@ -517,6 +519,7 @@ function PanelCard({
 // Main export
 // ---------------------------------------------------------------------------
 export function AnalyticsChartPanelsClient({ analytics }: { analytics: FounderAnalyticsSnapshot }) {
+  const t = useTranslations("founderCmp");
   const [open, setOpen] = useState<DrawerKey | null>(null);
 
   useEffect(() => {
@@ -546,13 +549,13 @@ export function AnalyticsChartPanelsClient({ analytics }: { analytics: FounderAn
     <>
       <section className="mt-6 grid gap-4 xl:grid-cols-2">
         {/* Outreach pipeline */}
-        <PanelCard title="Outreach pipeline" subtitle="By status · current snapshot" onClick={() => setOpen("outreach")}>
+        <PanelCard title={t("outreach_pipeline")} subtitle={t("by_status_current_snapshot")} onClick={() => setOpen("outreach")}>
           {outreachEntries.length === 0 ? (
-            <p className="text-sm text-slate-400">No outreach data yet.</p>
+            <p className="text-sm text-slate-400">{t("no_outreach_data_yet")}</p>
           ) : (
             <div className="space-y-3">
               <div className="mb-4 flex items-center justify-between">
-                <span className="text-xs text-slate-500">Total targets</span>
+                <span className="text-xs text-slate-500">{t("total_targets")}</span>
                 <span className="text-sm font-bold text-slate-900">{outreachTotal}</span>
               </div>
               {outreachEntries.map(([status, count]) => (
@@ -571,7 +574,7 @@ export function AnalyticsChartPanelsClient({ analytics }: { analytics: FounderAn
         </PanelCard>
 
         {/* Social drafts */}
-        <PanelCard title="Social drafts" subtitle="Generated in iCapOS" onClick={() => setOpen("social")}>
+        <PanelCard title={t("social_drafts")} subtitle={t("generated_in_icapos")} onClick={() => setOpen("social")}>
           <div className="space-y-3">
             {socialRows.map((row) => (
               <div key={row.label}>
@@ -588,7 +591,7 @@ export function AnalyticsChartPanelsClient({ analytics }: { analytics: FounderAn
         </PanelCard>
 
         {/* Platform investor activity */}
-        <PanelCard title="Platform investor activity" subtitle="Inbound from registered investors" onClick={() => setOpen("investors")}>
+        <PanelCard title={t("platform_investor_activity")} subtitle={t("inbound_from_registered_investors")} onClick={() => setOpen("investors")}>
           <div className="space-y-3">
             {activityRows.map((row) => (
               <div key={row.label}>
@@ -605,9 +608,9 @@ export function AnalyticsChartPanelsClient({ analytics }: { analytics: FounderAn
         </PanelCard>
 
         {/* Readiness score history */}
-        <PanelCard title="Readiness score history" subtitle="Report snapshots over time" onClick={() => setOpen("readiness")}>
+        <PanelCard title={t("readiness_score_history")} subtitle={t("report_snapshots_over_time")} onClick={() => setOpen("readiness")}>
           {analytics.readinessSnapshots.length === 0 ? (
-            <p className="text-sm text-slate-400">No diligence reports yet.</p>
+            <p className="text-sm text-slate-400">{t("no_diligence_reports_yet")}</p>
           ) : (
             <div className="space-y-3">
               {analytics.readinessSnapshots.map((row) => (

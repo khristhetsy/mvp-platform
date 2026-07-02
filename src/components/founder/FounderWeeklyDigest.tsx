@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { computeDataRoomState } from "@/lib/data-room/completeness";
 import type { DocumentRecord } from "@/lib/supabase/types";
@@ -163,6 +164,7 @@ export function FounderWeeklyDigest({
   companyCreatedAt,
   founderName,
 }: Props) {
+  const t = useTranslations("founderCmp");
   const [open, setOpen] = useState(true);
 
   const wk          = weekNumber(companyCreatedAt);
@@ -243,7 +245,7 @@ export function FounderWeeklyDigest({
                     : `Missing investor-access essentials: ${dataRoom.coreMissing.map((i) => i.label).join(", ")}.`}
                 </p>
               </div>
-              <span className="flex-none rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white">Finish →</span>
+              <span className="flex-none rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white">{t("finish")}</span>
             </Link>
           ) : null}
 

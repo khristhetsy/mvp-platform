@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
 
 // ---------------------------------------------------------------------------
@@ -40,6 +41,7 @@ function OverviewCard({
   accent: "indigo" | "slate";
   onClick: () => void;
 }) {
+  const t = useTranslations("founderCmp");
   const base =
     accent === "indigo"
       ? "rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 p-4 ring-1 ring-indigo-100 transition hover:shadow-sm hover:ring-indigo-300 cursor-pointer w-full text-left active:scale-[0.99]"
@@ -50,7 +52,7 @@ function OverviewCard({
     <button type="button" className={base} onClick={onClick}>
       <p className={labelCls}>{label}</p>
       <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
-      <p className="mt-2 text-[10px] font-semibold text-indigo-400">View breakdown →</p>
+      <p className="mt-2 text-[10px] font-semibold text-indigo-400">{t("view_breakdown_2")}</p>
     </button>
   );
 }
@@ -123,6 +125,7 @@ function DrawerContent({
   fundingAmount,
   onClose,
 }: Props & { drawerKey: DrawerKey; onClose: () => void }) {
+  const t = useTranslations("founderCmp");
   const target = fundingAmount ?? 0;
   const fillPct = target > 0 ? Math.min(100, Math.round((pledgeSummary.totalPledged / target) * 100)) : 0;
   const avgPledge =
@@ -155,19 +158,19 @@ function DrawerContent({
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <p className="text-base font-semibold text-slate-900">Total pledged</p>
-            <p className="mt-0.5 text-xs text-slate-500">Non-binding indicative interest from investors</p>
+            <p className="text-base font-semibold text-slate-900">{t("total_pledged")}</p>
+            <p className="mt-0.5 text-xs text-slate-500">{t("non_binding_indicative_interest_from_investo")}</p>
           </div>
           {closeBtn}
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <DStatBox label="Total pledged" value={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)} />
-          <DStatBox label="Avg pledge" value={avgPledge > 0 ? formatPledgeTotal(avgPledge, pledgeSummary.currency) : "—"} />
-          <DStatBox label="Round fill" value={target > 0 ? `${fillPct}%` : "—"} />
+          <DStatBox label={t("total_pledged")} value={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)} />
+          <DStatBox label={t("avg_pledge")} value={avgPledge > 0 ? formatPledgeTotal(avgPledge, pledgeSummary.currency) : "—"} />
+          <DStatBox label={t("round_fill")} value={target > 0 ? `${fillPct}%` : "—"} />
         </div>
 
-        <p className="mt-5 text-xs font-semibold text-slate-900">Pledge breakdown</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("pledge_breakdown")}</p>
         <div className="mt-2">
           <BRow
             name="Total indicative pledges"
@@ -199,7 +202,7 @@ function DrawerContent({
         {target > 0 && (
           <div className="mt-4">
             <div className="mb-1 flex items-center justify-between text-[11px]">
-              <span className="text-slate-500">Round progress</span>
+              <span className="text-slate-500">{t("round_progress")}</span>
               <span className="font-semibold" style={{ color: "#534AB7" }}>{fillPct}%</span>
             </div>
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
@@ -209,7 +212,7 @@ function DrawerContent({
         )}
 
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {pledgeSummary.totalPledged === 0
               ? "No indicative pledges yet. Pledges appear when investors formally express interest in your listing — you need a published listing and a complete data room to start receiving them."
@@ -243,19 +246,19 @@ function DrawerContent({
     <div className="px-5 pb-6 pt-5">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <p className="text-base font-semibold text-slate-900">Investor count</p>
-          <p className="mt-0.5 text-xs text-slate-500">All investors actively engaged with your raise</p>
+          <p className="text-base font-semibold text-slate-900">{t("investor_count")}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{t("all_investors_actively_engaged_with_your_rai")}</p>
         </div>
         {closeBtn}
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <DStatBox label="Total investors" value={String(pledgeSummary.investorCount + interestCount + introCount + savedCount)} />
-        <DStatBox label="Pledging" value={String(pledgeSummary.investorCount)} />
-        <DStatBox label="In pipeline" value={String(totalSignals)} />
+        <DStatBox label={t("total_investors")} value={String(pledgeSummary.investorCount + interestCount + introCount + savedCount)} />
+        <DStatBox label={t("pledging")} value={String(pledgeSummary.investorCount)} />
+        <DStatBox label={t("in_pipeline")} value={String(totalSignals)} />
       </div>
 
-      <p className="mt-5 text-xs font-semibold text-slate-900">Investor funnel</p>
+      <p className="mt-5 text-xs font-semibold text-slate-900">{t("investor_funnel")}</p>
       <div className="mt-2">
         <BRow
           name="Investors pledging"
@@ -285,7 +288,7 @@ function DrawerContent({
       </div>
 
       <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-        <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+        <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
         <p className="text-xs leading-relaxed text-slate-600">
           {pledgeSummary.investorCount + totalSignals === 0
             ? "No investor activity yet. Get your listing published and your data room complete — those are the two biggest drivers of investor discovery and engagement on the platform."
@@ -320,6 +323,7 @@ function DrawerContent({
 // Main export
 // ---------------------------------------------------------------------------
 export function CapitalRaiseOverviewClient({ pledgeSummary, investorActivity, fundingAmount }: Props) {
+  const t = useTranslations("founderCmp");
   const [open, setOpen] = useState<DrawerKey | null>(null);
 
   useEffect(() => {
@@ -331,13 +335,13 @@ export function CapitalRaiseOverviewClient({ pledgeSummary, investorActivity, fu
     <>
       <div className="grid gap-4 sm:grid-cols-2">
         <OverviewCard
-          label="Total pledged"
+          label={t("total_pledged")}
           value={formatPledgeTotal(pledgeSummary.totalPledged, pledgeSummary.currency)}
           accent="indigo"
           onClick={() => setOpen("pledged")}
         />
         <OverviewCard
-          label="Investor count"
+          label={t("investor_count")}
           value={String(pledgeSummary.investorCount)}
           accent="slate"
           onClick={() => setOpen("investors")}

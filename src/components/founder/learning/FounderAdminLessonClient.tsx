@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import type { VideoSlide } from "@/lib/learning/video/video-types";
 import { LessonNotes } from "@/components/founder/learning/LessonNotes";
@@ -33,6 +34,7 @@ export function FounderAdminLessonClient({
   initialPositionSeconds?: number;
   slides?: VideoSlide[];
 }) {
+  const t = useTranslations("founderCmp");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const defaultTab: Tab = videoUrl ? "video" : slideDeckUrl ? "slides" : "transcript";
@@ -103,7 +105,7 @@ export function FounderAdminLessonClient({
             src={slideDeckUrl}
             className="w-full rounded-xl border border-slate-200"
             style={{ height: "480px" }}
-            title="Lesson slides"
+            title={t("lesson_slides")}
           />
           <a href={slideDeckUrl} download className="mt-2 inline-block text-xs font-semibold text-indigo-600">
             Download slides

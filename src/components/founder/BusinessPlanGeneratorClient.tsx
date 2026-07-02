@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { BUSINESS_PLAN_SECTIONS, SECTION_GROUPS } from "@/lib/business-plan/sections";
 import { ASSUMPTION_DEFS } from "@/lib/business-plan/assumptions";
 import { computeProjections } from "@/lib/business-plan/projections";
@@ -18,6 +19,7 @@ function money(n: number): string {
 }
 
 export function BusinessPlanGeneratorClient() {
+  const t = useTranslations("founderCmp");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [active, setActive] = useState<string>(BUSINESS_PLAN_SECTIONS[0].id);
@@ -156,12 +158,12 @@ export function BusinessPlanGeneratorClient() {
     }
   }
 
-  if (loading) return <p className="mt-6 text-sm text-[var(--text-muted)]">Loading your plan…</p>;
+  if (loading) return <p className="mt-6 text-sm text-[var(--text-muted)]">{t("loading_your_plan")}</p>;
 
   if (finalized) {
     return (
       <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-6 text-center">
-        <p className="text-base font-semibold text-emerald-800">Plan finalized and saved to Documents</p>
+        <p className="text-base font-semibold text-emerald-800">{t("plan_finalized_and_saved_to_documents")}</p>
         <p className="mt-1 text-sm text-emerald-700">
           Your business plan PDF is in your Documents and counts toward your readiness score. Our team can now review it.
         </p>
@@ -188,8 +190,8 @@ export function BusinessPlanGeneratorClient() {
           <button onClick={() => save()} disabled={saving} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] disabled:opacity-50">
             {saving ? "Saving…" : "Save"}
           </button>
-          <button onClick={downloadPdf} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]">PDF</button>
-          <button onClick={shareLink} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]">Share link</button>
+          <button onClick={downloadPdf} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]">{t("pdf")}</button>
+          <button onClick={shareLink} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)]">{t("share_link")}</button>
           <button onClick={finalize} disabled={finalizing} className="cap-btn-primary rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50">
             {finalizing ? "Finalizing…" : "Finalize"}
           </button>
@@ -274,7 +276,7 @@ export function BusinessPlanGeneratorClient() {
                 <div className="mt-3 space-y-2">
                   {sanityNotes.map((n, i) => (
                     <div key={i} className={`rounded-md border px-3 py-2 text-xs ${n.level === "warn" ? "border-amber-200 bg-amber-50 text-amber-800" : "border-[var(--border-subtle)] bg-[var(--surface-sunken)] text-[var(--text-secondary)]"}`}>
-                      <span className="font-medium">AI check:</span> {n.text}
+                      <span className="font-medium">{t("ai_check")}</span> {n.text}
                     </div>
                   ))}
                 </div>
@@ -292,14 +294,14 @@ export function BusinessPlanGeneratorClient() {
                   {drafting === activeId ? "Drafting…" : activeId === "exec_summary" ? "Write from my plan" : "Draft with AI"}
                 </button>
                 {sections[activeId]?.aiGenerated && (
-                  <span className="text-xs text-[var(--text-muted)]">AI draft — edit to make it yours</span>
+                  <span className="text-xs text-[var(--text-muted)]">{t("ai_draft_edit_to_make_it_yours")}</span>
                 )}
               </div>
               <textarea
                 value={sections[activeId]?.content ?? ""}
                 onChange={(e) => setContent(activeId, e.target.value)}
                 rows={8}
-                placeholder="Write this section in your own words — or let AI draft it from your profile."
+                placeholder={t("write_this_section_in_your_own_words_or_let")}
                 className="mt-2 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
               />
             </>

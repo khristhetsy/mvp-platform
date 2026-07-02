@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type { CompanyUpdateRecord } from "@/lib/company-updates/types";
 
 const UPDATE_TYPES = [
@@ -44,6 +45,7 @@ export function FounderCompanyUpdatesClient({
 }: {
   initialUpdates: CompanyUpdateRecord[];
 }) {
+  const t = useTranslations("founderCmp");
   const [updates, setUpdates] = useState<CompanyUpdateRecord[]>(initialUpdates);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -131,7 +133,7 @@ export function FounderCompanyUpdatesClient({
           className="overflow-hidden rounded-2xl border border-indigo-200 bg-white shadow-sm"
         >
           <div className="border-b border-indigo-100 bg-indigo-50 px-5 py-3">
-            <p className="text-sm font-semibold text-indigo-900">New investor update</p>
+            <p className="text-sm font-semibold text-indigo-900">{t("new_investor_update")}</p>
           </div>
           <div className="space-y-4 p-5">
             {/* Title */}
@@ -146,7 +148,7 @@ export function FounderCompanyUpdatesClient({
                 maxLength={200}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. 'We crossed $100K ARR' or 'New enterprise customer signed'"
+                placeholder={t("e_g_we_crossed_100k_arr_or_new_enterprise_cu")}
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
               />
             </div>
@@ -164,7 +166,7 @@ export function FounderCompanyUpdatesClient({
                 rows={6}
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                placeholder="Share the details — what happened, what it means, what's next…"
+                placeholder={t("share_the_details_what_happened_what_it_mean")}
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
               />
               <p className="mt-1 text-right text-[10px] text-slate-400">{body.length} / 8000</p>
@@ -304,7 +306,7 @@ export function FounderCompanyUpdatesClient({
       {/* Empty state */}
       {updates.length === 0 && !showForm && (
         <div className="rounded-2xl border border-slate-200 bg-slate-50 py-12 text-center">
-          <p className="text-sm font-semibold text-slate-700">No updates yet</p>
+          <p className="text-sm font-semibold text-slate-700">{t("no_updates_yet")}</p>
           <p className="mt-1 text-xs text-slate-500">
             Published updates notify investors watching your company.
           </p>

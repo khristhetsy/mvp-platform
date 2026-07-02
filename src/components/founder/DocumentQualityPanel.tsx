@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 // ---------------------------------------------------------------------------
 // Document quality rubric — investor-expectation driven
@@ -191,6 +192,7 @@ function isUploaded(spec: DocSpec, docs: UploadedDoc[]): boolean {
 // ---------------------------------------------------------------------------
 
 function DocCard({ spec, uploaded }: { spec: DocSpec; uploaded: boolean }) {
+  const t = useTranslations("founderCmp");
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -241,7 +243,7 @@ function DocCard({ spec, uploaded }: { spec: DocSpec; uploaded: boolean }) {
 
         <div className="flex items-center gap-2">
           {!uploaded && spec.critical ? (
-            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-bold text-red-700">CRITICAL</span>
+            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-bold text-red-700">{t("critical")}</span>
           ) : null}
           <svg
             width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"
@@ -257,7 +259,7 @@ function DocCard({ spec, uploaded }: { spec: DocSpec; uploaded: boolean }) {
         <div className="border-t px-4 pb-4 pt-3" style={{ borderColor: "inherit" }}>
           <p className="mb-2 text-[11px] italic text-slate-500">{spec.investorExpectation}</p>
 
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">Key elements investors look for</p>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">{t("key_elements_investors_look_for")}</p>
           <div className="mb-3 space-y-1">
             {spec.keyElements.map((el, i) => (
               <div key={i} className="flex items-start gap-1.5">
@@ -272,7 +274,7 @@ function DocCard({ spec, uploaded }: { spec: DocSpec; uploaded: boolean }) {
 
           {!uploaded ? (
             <div className="rounded-lg bg-amber-50 px-3 py-2 ring-1 ring-amber-100">
-              <p className="text-[10px] font-semibold text-amber-700">Improvement tip</p>
+              <p className="text-[10px] font-semibold text-amber-700">{t("improvement_tip")}</p>
               <p className="mt-0.5 text-[11px] leading-relaxed text-amber-800">{spec.improvementTip}</p>
             </div>
           ) : (
@@ -295,6 +297,7 @@ type Props = Readonly<{
 }>;
 
 export function DocumentQualityPanel({ documents }: Props) {
+  const t = useTranslations("founderCmp");
   const score = computeOverallScore(documents);
   const uploadedCount = DOC_SPECS.filter((s) => isUploaded(s, documents)).length;
   const missingCritical = DOC_SPECS.filter((s) => s.critical && !isUploaded(s, documents)).length;
@@ -320,7 +323,7 @@ export function DocumentQualityPanel({ documents }: Props) {
               </svg>
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-900">Document quality</p>
+              <p className="text-sm font-semibold text-slate-900">{t("document_quality")}</p>
               <p className="text-[11px] text-slate-400">
                 {uploadedCount} of {DOC_SPECS.length} uploaded
                 {missingCritical > 0 ? ` · ${missingCritical} critical missing` : ""}

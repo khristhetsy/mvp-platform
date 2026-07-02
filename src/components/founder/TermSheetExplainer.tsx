@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useToolkitSave, ToolkitSaveStatus } from "@/hooks/useToolkitSave";
 
 function SaveChip({ status }: { status: ToolkitSaveStatus }) {
@@ -188,6 +189,7 @@ const RISK_STYLES: Record<RiskLevel, { bg: string; text: string; label: string }
 // ---------------------------------------------------------------------------
 
 function ClauseCard({ clause }: { clause: Clause }) {
+  const t = useTranslations("founderCmp");
   const [tab, setTab] = useState<"plain" | "flags" | "tips">("plain");
   const risk = RISK_STYLES[clause.risk];
 
@@ -233,11 +235,11 @@ function ClauseCard({ clause }: { clause: Clause }) {
           <div className="space-y-3">
             <p className="text-xs leading-relaxed text-slate-700">{clause.plainEnglish}</p>
             <div className="rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-slate-100">
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Example</p>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{t("example")}</p>
               <p className="text-[11px] italic leading-relaxed text-slate-600">{clause.example}</p>
             </div>
             <div className="rounded-lg px-3 py-2.5 ring-1 ring-slate-100" style={{ background: "#EEEDFE" }}>
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#534AB7" }}>Founder stance</p>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em]" style={{ color: "#534AB7" }}>{t("founder_stance")}</p>
               <p className="text-[11px] leading-relaxed" style={{ color: "#3C3489" }}>{clause.founderFriendly}</p>
             </div>
           </div>
@@ -272,6 +274,7 @@ function ClauseCard({ clause }: { clause: Clause }) {
 // ---------------------------------------------------------------------------
 
 export function TermSheetExplainer() {
+  const t = useTranslations("founderCmp");
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeRisk, setActiveRisk] = useState<RiskLevel | null>(null);
@@ -310,7 +313,7 @@ export function TermSheetExplainer() {
     <div className="space-y-5">
       {/* Header callout */}
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-        <p className="text-xs font-semibold text-amber-900">Educational only — not legal advice</p>
+        <p className="text-xs font-semibold text-amber-900">{t("educational_only_not_legal_advice")}</p>
         <p className="mt-0.5 text-[11px] text-amber-700">
           This explainer covers common term sheet provisions. Always review your specific terms with a qualified startup attorney before signing.
         </p>
@@ -339,7 +342,7 @@ export function TermSheetExplainer() {
       <div className="space-y-2">
         <input
           type="search"
-          placeholder="Search clauses (e.g. liquidation, vesting, board)…"
+          placeholder={t("search_clauses_e_g_liquidation_vesting_board")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-100"

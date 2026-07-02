@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { searchLessons, type LessonSearchResult } from "@/lib/learning/search";
 
 export function LessonSearch() {
+  const t = useTranslations("founderCmp");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<LessonSearchResult[]>([]);
 
@@ -29,7 +31,7 @@ export function LessonSearch() {
         </svg>
         <input
           type="search"
-          placeholder="Search lessons — cap table, term sheet, pitch deck…"
+          placeholder={t("search_lessons_cap_table_term_sheet_pitch_de")}
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           className="flex-1 text-sm outline-none"

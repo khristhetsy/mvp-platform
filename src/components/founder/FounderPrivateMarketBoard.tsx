@@ -1,4 +1,5 @@
 import { LayoutGrid } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { FounderInvestorRow } from "@/lib/founder/private-market";
 
 const SIGIL: Record<string, string> = {
@@ -31,6 +32,7 @@ function Pulse({ momentum }: { momentum: FounderInvestorRow["momentum"] }) {
 const COLS = "sm:grid-cols-[1.7fr_0.8fr_0.65fr_1.1fr_0.85fr_0.8fr]";
 
 export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInvestorRow[] }>) {
+  const t = useTranslations("founderCmp");
   if (rows.length === 0) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">
@@ -48,20 +50,20 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
             <LayoutGrid className="h-4 w-4" />
           </span>
           <div>
-            <h2 className="text-[15px] font-semibold text-[var(--navy)]">Investors</h2>
+            <h2 className="text-[15px] font-semibold text-[var(--navy)]">{t("investors")}</h2>
             <p className="font-mono text-[11px] text-slate-400">{rows.length} ranked to your company · best fit first</p>
           </div>
         </div>
-        <span className="font-mono text-[11px] text-slate-400">Identities hidden</span>
+        <span className="font-mono text-[11px] text-slate-400">{t("identities_hidden")}</span>
       </div>
 
       <div className={`hidden gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 font-mono text-[9.5px] uppercase tracking-wide text-slate-400 sm:grid ${COLS}`}>
-        <div>Investor</div>
-        <div className="text-right">Match</div>
-        <div className="text-right">Trend</div>
-        <div className="text-right">Pledge interest</div>
-        <div>Momentum</div>
-        <div>Sector</div>
+        <div>{t("investor")}</div>
+        <div className="text-right">{t("match")}</div>
+        <div className="text-right">{t("trend")}</div>
+        <div className="text-right">{t("pledge_interest")}</div>
+        <div>{t("momentum")}</div>
+        <div>{t("sector")}</div>
       </div>
 
       <div>
@@ -88,7 +90,7 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
             </div>
 
             {/* trend — no investor-side history yet */}
-            <div className="hidden text-right font-mono text-xs text-slate-300 sm:block" title="Investor trend needs score history (not collected yet)">
+            <div className="hidden text-right font-mono text-xs text-slate-300 sm:block" title={t("investor_trend_needs_score_history_not_colle")}>
               —
             </div>
 

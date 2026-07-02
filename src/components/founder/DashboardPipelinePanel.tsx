@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import type { FounderInvestorActivityResult } from "@/lib/data/investor-interests";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 
@@ -166,6 +167,7 @@ function DrawerContent({
   activity: FounderInvestorActivityResult;
   onClose: () => void;
 }) {
+  const t = useTranslations("founderCmp");
   const cfg = DRAWER_CFG[group];
   const interestCount = activity.interests.length;
   const introCount = activity.introRequests.length;
@@ -182,8 +184,8 @@ function DrawerContent({
         {/* Header */}
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <p className="text-base font-semibold text-slate-900">Expressed interest</p>
-            <p className="mt-0.5 text-xs text-slate-500">Investors who signalled intent on your listing</p>
+            <p className="text-base font-semibold text-slate-900">{t("expressed_interest")}</p>
+            <p className="mt-0.5 text-xs text-slate-500">{t("investors_who_signalled_intent_on_your_listi")}</p>
           </div>
           <button
             type="button"
@@ -197,16 +199,16 @@ function DrawerContent({
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
-          <DrawerStatBox label="Interested" value={String(interestCount)} />
-          <DrawerStatBox label="Intro requests" value={String(introCount)} />
-          <DrawerStatBox label="Saved deals" value={String(savedCount)} />
+          <DrawerStatBox label={t("interested")} value={String(interestCount)} />
+          <DrawerStatBox label={t("intro_requests")} value={String(introCount)} />
+          <DrawerStatBox label={t("saved_deals")} value={String(savedCount)} />
         </div>
 
         {/* Breakdown */}
-        <p className="mt-5 text-xs font-semibold text-slate-900">Investor breakdown</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("investor_breakdown")}</p>
         <div className="mt-2">
           {interestCount === 0 ? (
-            <p className="py-2 text-xs text-slate-500">No expressed interest yet.</p>
+            <p className="py-2 text-xs text-slate-500">{t("no_expressed_interest_yet")}</p>
           ) : (
             activity.interests.map((i) => (
               <BRow
@@ -221,7 +223,7 @@ function DrawerContent({
 
         {/* What this means */}
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {interestCount === 0
               ? "No investor has expressed interest yet. Make sure your listing is published and your pitch deck is current."
@@ -261,8 +263,8 @@ function DrawerContent({
       <div className="px-5 pb-6 pt-5">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <p className="text-base font-semibold text-slate-900">Intro requests</p>
-            <p className="mt-0.5 text-xs text-slate-500">Investors actively trying to connect with you</p>
+            <p className="text-base font-semibold text-slate-900">{t("intro_requests")}</p>
+            <p className="mt-0.5 text-xs text-slate-500">{t("investors_actively_trying_to_connect_with_yo")}</p>
           </div>
           <button
             type="button"
@@ -275,15 +277,15 @@ function DrawerContent({
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <DrawerStatBox label="Total requests" value={String(introCount)} />
-          <DrawerStatBox label="Awaiting reply" value={String(pending.length)} />
-          <DrawerStatBox label="Responded" value={String(responded.length)} />
+          <DrawerStatBox label={t("total_requests")} value={String(introCount)} />
+          <DrawerStatBox label={t("awaiting_reply")} value={String(pending.length)} />
+          <DrawerStatBox label={t("responded")} value={String(responded.length)} />
         </div>
 
-        <p className="mt-5 text-xs font-semibold text-slate-900">Request breakdown</p>
+        <p className="mt-5 text-xs font-semibold text-slate-900">{t("request_breakdown")}</p>
         <div className="mt-2">
           {introCount === 0 ? (
-            <p className="py-2 text-xs text-slate-500">No intro requests yet.</p>
+            <p className="py-2 text-xs text-slate-500">{t("no_intro_requests_yet")}</p>
           ) : (
             activity.introRequests.map((i) => (
               <BRow
@@ -303,7 +305,7 @@ function DrawerContent({
         </div>
 
         <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-          <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+          <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
           <p className="text-xs leading-relaxed text-slate-600">
             {introCount === 0
               ? "No intro requests yet. Investors who view your listing can request an intro — make sure your profile is published and compelling."
@@ -335,8 +337,8 @@ function DrawerContent({
     <div className="px-5 pb-6 pt-5">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <p className="text-base font-semibold text-slate-900">Saved deals</p>
-          <p className="mt-0.5 text-xs text-slate-500">Investors who bookmarked your listing to return later</p>
+          <p className="text-base font-semibold text-slate-900">{t("saved_deals")}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{t("investors_who_bookmarked_your_listing_to_ret")}</p>
         </div>
         <button
           type="button"
@@ -349,15 +351,15 @@ function DrawerContent({
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <DrawerStatBox label="Saved" value={String(savedCount)} />
-        <DrawerStatBox label="Also interested" value={String(interestCount)} />
-        <DrawerStatBox label="Intro requests" value={String(introCount)} />
+        <DrawerStatBox label={t("saved")} value={String(savedCount)} />
+        <DrawerStatBox label={t("also_interested")} value={String(interestCount)} />
+        <DrawerStatBox label={t("intro_requests")} value={String(introCount)} />
       </div>
 
-      <p className="mt-5 text-xs font-semibold text-slate-900">Investor breakdown</p>
+      <p className="mt-5 text-xs font-semibold text-slate-900">{t("investor_breakdown")}</p>
       <div className="mt-2">
         {savedCount === 0 ? (
-          <p className="py-2 text-xs text-slate-500">No saved deals yet.</p>
+          <p className="py-2 text-xs text-slate-500">{t("no_saved_deals_yet")}</p>
         ) : (
           activity.savedDeals.map((i) => (
             <BRow
@@ -371,7 +373,7 @@ function DrawerContent({
       </div>
 
       <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-        <p className="mb-1 text-[11px] font-semibold text-slate-700">What this means</p>
+        <p className="mb-1 text-[11px] font-semibold text-slate-700">{t("what_this_means")}</p>
         <p className="text-xs leading-relaxed text-slate-600">
           {savedCount === 0
             ? "No investors have saved your deal yet. Saving typically happens when an investor wants to track a deal but isn't ready to express interest — it's a soft signal worth nurturing."
@@ -404,6 +406,7 @@ export function DashboardPipelinePanel({
 }: {
   activity: FounderInvestorActivityResult;
 }) {
+  const t = useTranslations("founderCmp");
   const [drawerGroup, setDrawerGroup] = useState<DrawerGroup | null>(null);
 
   // Body scroll lock
@@ -419,10 +422,10 @@ export function DashboardPipelinePanel({
   const savedCount = activity.savedDeals.length;
 
   return (
-    <WorkspacePanel title="Investor pipeline" subtitle="Read-only activity on your listing">
+    <WorkspacePanel title={t("investor_pipeline")} subtitle={t("read_only_activity_on_your_listing")}>
       <div className="grid grid-cols-1 min-[360px]:grid-cols-3 gap-3">
         <PipelineClickCard
-          label="Expressed interest"
+          label={t("expressed_interest")}
           value={interestCount}
           sub={interestCount === 1 ? "1 investor interested" : `${interestCount} investors interested`}
           accentColor={DRAWER_CFG.interests.accent}
@@ -430,7 +433,7 @@ export function DashboardPipelinePanel({
           onClick={() => setDrawerGroup("interests")}
         />
         <PipelineClickCard
-          label="Intro requests"
+          label={t("intro_requests")}
           value={introCount}
           sub={introCount === 1 ? "1 request pending" : `${introCount} requests`}
           accentColor={DRAWER_CFG.introRequests.accent}
@@ -438,7 +441,7 @@ export function DashboardPipelinePanel({
           onClick={() => setDrawerGroup("introRequests")}
         />
         <PipelineClickCard
-          label="Saved deals"
+          label={t("saved_deals")}
           value={savedCount}
           sub={savedCount === 1 ? "1 investor saved" : `${savedCount} investors saved`}
           accentColor={DRAWER_CFG.savedDeals.accent}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 
 type Member = {
@@ -59,6 +60,7 @@ function Avatar({ name, email, avatarUrl }: { name: string | null; email: string
 }
 
 export function TeamManagementPanel({ currentUserId }: { currentUserId: string }) {
+  const t = useTranslations("founderCmp");
   const [members, setMembers] = useState<Member[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,7 +139,7 @@ export function TeamManagementPanel({ currentUserId }: { currentUserId: string }
         <form onSubmit={(e) => { void handleInvite(e); }} style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <input
             type="email"
-            placeholder="co-founder@example.com"
+            placeholder={t("co_founder_example_com")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -187,9 +189,9 @@ export function TeamManagementPanel({ currentUserId }: { currentUserId: string }
           Current members
         </h3>
         {loading ? (
-          <p style={{ fontSize: 13, color: "#9ca3af" }}>Loading…</p>
+          <p style={{ fontSize: 13, color: "#9ca3af" }}>{t("loading")}</p>
         ) : members.length === 0 ? (
-          <p style={{ fontSize: 13, color: "#9ca3af" }}>No members yet.</p>
+          <p style={{ fontSize: 13, color: "#9ca3af" }}>{t("no_members_yet")}</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {members.map((m) => {

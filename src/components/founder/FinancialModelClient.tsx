@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ASSUMPTION_DEFS } from "@/lib/business-plan/assumptions";
 import { computeProjections } from "@/lib/business-plan/projections";
@@ -17,6 +18,7 @@ function money(n: number): string {
 }
 
 export function FinancialModelClient() {
+  const t = useTranslations("founderCmp");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<Source>("fresh");
@@ -75,7 +77,7 @@ export function FinancialModelClient() {
     }
   }
 
-  if (loading) return <p className="mt-6 text-sm text-[var(--text-muted)]">Loading your model…</p>;
+  if (loading) return <p className="mt-6 text-sm text-[var(--text-muted)]">{t("loading_your_model")}</p>;
   if (!assumptions) return <p className="mt-6 text-sm text-rose-700">{error ?? "Could not load your model."}</p>;
 
   return (
@@ -83,14 +85,14 @@ export function FinancialModelClient() {
       {/* Source banner */}
       {source === "business-plan" ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-          <p className="text-sm font-semibold text-emerald-800">Imported from your AI Business Plan</p>
+          <p className="text-sm font-semibold text-emerald-800">{t("imported_from_your_ai_business_plan")}</p>
           <p className="mt-0.5 text-sm text-emerald-700">
             We pulled the drivers you set in your business plan. Tweak anything below, then generate the Excel model.
           </p>
         </div>
       ) : (
         <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
-          <p className="text-sm font-semibold text-indigo-800">Build your model below — or start from your business plan</p>
+          <p className="text-sm font-semibold text-indigo-800">{t("build_your_model_below_or_start_from_your_bu")}</p>
           <p className="mt-0.5 text-sm text-indigo-700">
             {hasBusinessPlan
               ? "Your business plan doesn’t have projection drivers yet."
@@ -108,8 +110,8 @@ export function FinancialModelClient() {
         {/* Drivers */}
         <section className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-[var(--navy)]">Your drivers</h2>
-            <button onClick={reset} className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)]">Reset</button>
+            <h2 className="text-sm font-semibold text-[var(--navy)]">{t("your_drivers")}</h2>
+            <button onClick={reset} className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)]">{t("reset")}</button>
           </div>
           <div className="mt-3 space-y-3">
             {ASSUMPTION_DEFS.map((d) => (

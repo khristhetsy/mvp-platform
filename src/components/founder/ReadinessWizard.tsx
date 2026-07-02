@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 // ---------------------------------------------------------------------------
@@ -165,6 +166,7 @@ export function ReadinessWizard({
   incompleteProfile,
   companyName,
 }: ReadinessWizardProps) {
+  const t = useTranslations("founderCmp");
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
 
   function markDone(id: string) {
@@ -323,7 +325,7 @@ export function ReadinessWizard({
         </div>
       ) : (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-center">
-          <p className="text-sm font-semibold text-emerald-900">All steps completed!</p>
+          <p className="text-sm font-semibold text-emerald-900">{t("all_steps_completed")}</p>
           <p className="mt-1 text-xs text-emerald-700">
             Reload the page to see your updated readiness score, then browse your investor matches.
           </p>

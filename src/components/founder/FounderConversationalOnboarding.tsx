@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import type { Company } from "@/lib/supabase/types";
 import { AIFieldHelper } from "@/components/ui/AIFieldHelper";
@@ -227,6 +228,7 @@ export function FounderConversationalOnboarding({
   company: Company;
   founderName: string;
 }>) {
+  const t = useTranslations("founderCmp");
   const router = useRouter();
   const [step, setStep]             = useState<StepNum>(1);
   const [saving, setSaving]         = useState(false);
@@ -355,7 +357,7 @@ export function FounderConversationalOnboarding({
           </div>
 
           <div className="mt-8">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Your next steps in Stage 2</p>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">{t("your_next_steps_in_stage_2")}</p>
             <div className="space-y-3">
               {actionPlan.map((action, i) => (
                 <div
@@ -432,11 +434,11 @@ export function FounderConversationalOnboarding({
               <p className="text-2xl font-semibold tracking-tight text-slate-900">
                 What&apos;s your company called?
               </p>
-              <p className="mt-1 text-sm text-slate-500">We&apos;ll use this to personalise your experience.</p>
+              <p className="mt-1 text-sm text-slate-500">{t("we_ll_use_this_to_personalise_your_experienc")}</p>
               <input
                 autoFocus
                 className="mt-5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                placeholder="e.g. Acme Labs"
+                placeholder={t("e_g_acme_labs")}
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
               />
@@ -448,14 +450,14 @@ export function FounderConversationalOnboarding({
                 type="tel"
                 inputMode="tel"
                 className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                placeholder="e.g. +1 (555) 123-4567"
+                placeholder={t("e_g_1_555_123_4567")}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && canAdvance()) void handleNext(); }}
                 aria-required="true"
               />
               {phone.trim().length > 0 && !isValidPhone(phone) ? (
-                <p className="mt-1.5 text-xs text-rose-600">Enter a valid phone number (7–15 digits).</p>
+                <p className="mt-1.5 text-xs text-rose-600">{t("enter_a_valid_phone_number_7_15_digits")}</p>
               ) : null}
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -465,27 +467,27 @@ export function FounderConversationalOnboarding({
                   </label>
                   <input
                     className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                    placeholder="e.g. United States"
+                    placeholder={t("e_g_united_states")}
                     value={country}
                     onChange={(e) => setCountry(e.target.value)}
                     aria-required="true"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">State / Province</label>
+                  <label className="block text-sm font-medium text-slate-700">{t("state_province")}</label>
                   <input
                     className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                    placeholder="e.g. California"
+                    placeholder={t("e_g_california")}
                     value={companyState}
                     onChange={(e) => setCompanyState(e.target.value)}
                   />
                 </div>
               </div>
 
-              <label className="mt-4 block text-sm font-medium text-slate-700">Country of incorporation</label>
+              <label className="mt-4 block text-sm font-medium text-slate-700">{t("country_of_incorporation")}</label>
               <input
                 className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                placeholder="e.g. Delaware C-Corp, UK Ltd, Singapore Pte"
+                placeholder={t("e_g_delaware_c_corp_uk_ltd_singapore_pte")}
                 value={jurisdiction}
                 onChange={(e) => setJurisdiction(e.target.value)}
               />
@@ -503,7 +505,7 @@ export function FounderConversationalOnboarding({
               <p className="text-2xl font-semibold tracking-tight text-slate-900">
                 What industry are you in?
               </p>
-              <p className="mt-1 text-sm text-slate-500">Select the closest match — we use this to target the right investors.</p>
+              <p className="mt-1 text-sm text-slate-500">{t("select_the_closest_match_we_use_this_to_targ")}</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 {INDUSTRIES.map((ind) => (
                   <Chip key={ind} selected={industry === ind} onClick={() => setIndustry(ind)}>
@@ -520,7 +522,7 @@ export function FounderConversationalOnboarding({
               <p className="text-2xl font-semibold tracking-tight text-slate-900">
                 What stage is your company at right now?
               </p>
-              <p className="mt-1 text-sm text-slate-500">This calibrates the benchmarks and investor matches we show you.</p>
+              <p className="mt-1 text-sm text-slate-500">{t("this_calibrates_the_benchmarks_and_investor")}</p>
               <div className="mt-5 space-y-2">
                 {STAGES.map((s) => (
                   <OptionCard
@@ -541,7 +543,7 @@ export function FounderConversationalOnboarding({
               <p className="text-2xl font-semibold tracking-tight text-slate-900">
                 How much are you looking to raise?
               </p>
-              <p className="mt-1 text-sm text-slate-500">Enter the total target for this round in USD.</p>
+              <p className="mt-1 text-sm text-slate-500">{t("enter_the_total_target_for_this_round_in_usd")}</p>
               <div className="mt-5 relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-base font-semibold text-slate-400">$</span>
                 <input
@@ -575,7 +577,7 @@ export function FounderConversationalOnboarding({
                 autoFocus
                 rows={4}
                 className="mt-5 w-full resize-none rounded-xl border border-slate-200 px-4 py-3.5 text-sm text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                placeholder="e.g. We help SMB operators cut payroll processing time by 70% using AI-powered automation. Unlike legacy providers, we integrate in 10 minutes with no IT required."
+                placeholder={t("e_g_we_help_smb_operators_cut_payroll_proces")}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -590,7 +592,7 @@ export function FounderConversationalOnboarding({
               <p className="text-2xl font-semibold tracking-tight text-slate-900">
                 What will you use this funding for?
               </p>
-              <p className="mt-1 text-sm text-slate-500">Select all that apply. Then tell us your timeline.</p>
+              <p className="mt-1 text-sm text-slate-500">{t("select_all_that_apply_then_tell_us_your_time")}</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 {FUND_USES.map((u) => (
                   <Chip key={u} selected={useOfFunds.includes(u)} onClick={() => toggleFund(u)}>
@@ -598,7 +600,7 @@ export function FounderConversationalOnboarding({
                   </Chip>
                 ))}
               </div>
-              <p className="mt-6 mb-3 text-sm font-semibold text-slate-700">When are you looking to close?</p>
+              <p className="mt-6 mb-3 text-sm font-semibold text-slate-700">{t("when_are_you_looking_to_close")}</p>
               <div className="space-y-2">
                 {TIMELINES.map((t) => (
                   <OptionCard
