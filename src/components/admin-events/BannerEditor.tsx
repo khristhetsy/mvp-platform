@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Bold, Italic, Underline, Link2, List, AlignLeft, AlignCenter } from "lucide-react";
 import type { EventRecord } from "@/lib/icfo-events/types";
@@ -19,6 +19,17 @@ function exec(cmd: string, value?: string) {
 export function BannerEditor({ event }: { event: EventRecord }) {
   const t = useTranslations("adminCmp");
   const bodyRef = useRef<HTMLDivElement>(null);
+
+  // Seed the editor once from saved content. The element is uncontrolled from
+  // here on — React never re-writes it, so re-renders (background swatch, save
+  // status) can't wipe what's being typed. We read innerHTML on save.
+  useEffect(() => {
+    if (bodyRef.current) bodyRef.current.innerHTML = event.bannerHtml ?? "";
+  }, [event.bannerHtml]);
+
+  // Keep clicks on toolbar buttons from blurring the editor so execCommand
+  // still applies to the current selection.
+  const keepFocus = (e: React.MouseEvent) => e.preventDefault();
 
   const [title, setTitle] = useState(event.bannerTitle ?? "");
   const [bg, setBg] = useState(event.bannerBg ?? "indigo");
@@ -79,13 +90,13 @@ export function BannerEditor({ event }: { event: EventRecord }) {
         <span className="text-xs font-medium text-[var(--text-muted)]">{t("banner_body_label")}</span>
         <div className="mt-1 overflow-hidden rounded-md border border-[var(--border-subtle)]">
           <div className="flex items-center gap-0.5 border-b border-[var(--border-subtle)] bg-slate-50 px-2 py-1">
-            <button type="button" aria-label={t("fmt_bold")} className={toolbarBtn} onClick={() => exec("bold")}><Bold className="h-4 w-4" /></button>
-            <button type="button" aria-label={t("fmt_italic")} className={toolbarBtn} onClick={() => exec("italic")}><Italic className="h-4 w-4" /></button>
-            <button type="button" aria-label={t("fmt_underline")} className={toolbarBtn} onClick={() => exec("underline")}><Underline className="h-4 w-4" /></button>
+            <button type="button" aria-label={t("fmt_bold")} className={toolbarBtn} onMouseDown={keepFocus} onClick={() => exec("bold")}><Bold className="h-4 w-4" /></button>
+            <button type="button" aria-label={t("fmt_italic")} className={toolbarBtn} onMouseDown={keepFocus} onClick={() => exec("italic")}><Italic className="h-4 w-4" /></button>
+            <button type="button" aria-label={t("fmt_underline")} className={toolbarBtn} onMouseDown={keepFocus} onClick={() => exec("underline")}><Underline className="h-4 w-4" /></button>
             <span className="mx-1 h-4 w-px bg-[var(--border-subtle)]" />
-            <button type="button" aria-label={t("fmt_align_left")} className={toolbarBtn} onClick={() => exec("justifyLeft")}><AlignLeft className="h-4 w-4" /></button>
-            <button type="button" aria-label={t("fmt_align_center")} className={toolbarBtn} onClick={() => exec("justifyCenter")}><AlignCenter className="h-4 w-4" /></button>
-            <button type="button" aria-label={t("fmt_bullet")} className={toolbarBtn} onClick={() => exec("insertUnorderedList")}><List className="h-4 w-4" /></button>
+            <button type="button" aria-label={t("fmt_align_left")} className={toolbarBtn} onMouseDown={keepFocus} onClick={() => exec("justifyLeft")}><AlignLeft className="h-4 w-4" /></button>
+            <button type="button" aria-label={t("fmt_align_center")} className={toolbarBtn} onMouseDown={keepFocus} onClick={() => exec("justifyCenter")}><AlignCenter className="h-4 w-4" /></button>
+            <button type="button" aria-label={t("fmt_bullet")} className={toolbarBtn} onMouseDown={keepFocus} onClick={() => exec("insertUnorderedList")}><List className="h-4 w-4" /></button>
             <button
               type="button"
               aria-label={t("fmt_link")}
@@ -102,9 +113,10 @@ export function BannerEditor({ event }: { event: EventRecord }) {
             ref={bodyRef}
             contentEditable
             suppressContentEditableWarning
-            className="min-h-[100px] px-3 py-2 text-sm text-[var(--navy)] focus:outline-none [&_a]:text-[var(--blue)] [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5"
-            dangerouslySetInnerHTML={{ __html: event.bannerHtml ?? "" }}
-            onInput={() => setMsg(null)}
+            role="textbox"
+            aria-multiline="true"
+            aria-label={t("banner_body_label")}
+            className="min-h-[100px] px-3 py-2 text-sm text-[var(--navy)] focus:outline-none [&_a]:text-[var(--blue)] [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
           />
         </div>
       </div>
