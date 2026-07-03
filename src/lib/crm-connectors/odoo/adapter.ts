@@ -1,12 +1,20 @@
 import type { ContactModule, ContactSource, CrmContact, SourcePage } from "@/lib/crm-connectors/source-types";
 import { executeKw, odooConfigured } from "@/lib/crm-connectors/odoo/client";
 
-// Which Odoo res.partner.category names mark founders vs investors. Configurable
-// so this works against any Odoo tagging scheme without code changes.
+// Primary signal: a member-type field on res.partner (e.g. the Studio field
+// `x_studio_membership_type` with values Entrepreneur / Investor / Advisor).
+// All env-configurable so this works against any Odoo scheme without code edits.
+const MEMBERSHIP_FIELD = process.env.ODOO_MEMBERSHIP_FIELD ?? "x_studio_membership_type";
+const FOUNDER_VALUES = (process.env.ODOO_FOUNDER_VALUES ?? "entrepreneur,founder")
+  .split(",").map((v) => v.trim().toLowerCase()).filter(Boolean);
+const INVESTOR_VALUES = (process.env.ODOO_INVESTOR_VALUES ?? "investor")
+  .split(",").map((v) => v.trim().toLowerCase()).filter(Boolean);
+
+// Fallback signal: res.partner.category (Tags) names.
 const FOUNDER_TAG = (process.env.ODOO_FOUNDER_TAG ?? "Founder").toLowerCase();
 const INVESTOR_TAG = (process.env.ODOO_INVESTOR_TAG ?? "Investor").toLowerCase();
 
-const PARTNER_FIELDS = ["id", "name", "email", "parent_id", "category_id", "user_id", "function", "write_date"];
+const PARTNER_FIELDS = ["id", "name", "email", "parent_id", "category_id", "user_id", "function", "write_date", MEMBERSHIP_FIELD];
 
 type PartnerRow = {
   id: number;
@@ -17,6 +25,7 @@ type PartnerRow = {
   user_id?: [number, string] | false;
   function?: string | false;
   write_date?: string | false;
+  [key: string]: unknown;
 };
 
 // Cache the category id → name map for the process lifetime.
@@ -33,7 +42,12 @@ async function loadCategories(): Promise<Map<number, string>> {
   return categoryMap;
 }
 
-function classify(catNames: string[]): ContactModule {
+function classify(membership: string | null, catNames: string[]): ContactModule {
+  // 1) Member-type field wins.
+  const m = (membership ?? "").toLowerCase();
+  if (m && FOUNDER_VALUES.some((v) => m.includes(v))) return "founder";
+  if (m && INVESTOR_VALUES.some((v) => m.includes(v))) return "investor";
+  // 2) Fall back to Tags.
   const lowered = catNames.map((c) => c.toLowerCase());
   if (lowered.some((c) => c.includes(FOUNDER_TAG))) return "founder";
   if (lowered.some((c) => c.includes(INVESTOR_TAG))) return "investor";
@@ -42,10 +56,12 @@ function classify(catNames: string[]): ContactModule {
 
 function mapPartner(row: PartnerRow, cats: Map<number, string>): CrmContact {
   const tagNames = (row.category_id ?? []).map((id) => cats.get(id)).filter((n): n is string => Boolean(n));
+  const membershipRaw = row[MEMBERSHIP_FIELD];
+  const membership = typeof membershipRaw === "string" ? membershipRaw : null;
   return {
     source: "odoo",
     externalId: String(row.id),
-    module: classify(tagNames),
+    module: classify(membership, tagNames),
     name: row.name || null,
     email: row.email || null,
     company: Array.isArray(row.parent_id) ? row.parent_id[1] : row.name || null,
