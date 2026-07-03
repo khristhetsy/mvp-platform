@@ -2,8 +2,8 @@
 
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Mail, Phone, Globe, Building2, MapPin, Briefcase, Download, Send, CalendarPlus } from "lucide-react";
-import type { ContactFull } from "@/lib/crm/types";
+import { ArrowLeft, Mail, Phone, Globe, Building2, MapPin, Briefcase, Download, Send, CalendarPlus, Loader2, Check } from "lucide-react";
+import { type ContactFull, type CrmAnnotation, CRM_INTERNAL_STATUSES } from "@/lib/crm/types";
 import { ComposeModal } from "@/components/email/ComposeModal";
 import type { ComposeDraft } from "@/components/email/types";
 import { ScheduleModal } from "@/components/crm/ScheduleModal";
@@ -41,6 +41,81 @@ function exportRecord(r: ContactFull) {
   URL.revokeObjectURL(url);
 }
 
+function InternalFields({ externalId, initial }: { externalId: string; initial: CrmAnnotation | null }) {
+  const [owner, setOwner] = useState(initial?.owner ?? "");
+  const [status, setStatus] = useState(initial?.status ?? "");
+  const [tags, setTags] = useState((initial?.tags ?? []).join(", "));
+  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+
+  const touch = <T,>(setter: (v: T) => void) => (v: T) => { setDirty(true); setSaved(false); setter(v); };
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/crm/annotations/${encodeURIComponent(externalId)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner: owner.trim() || null,
+          status: status || null,
+          tags: tags.split(",").map((t) => t.trim()).filter(Boolean),
+          notes: notes.trim() || null,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not save.");
+      setSaved(true);
+      setDirty(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Internal CRM</h2>
+        <span className="text-[10px] text-slate-400">Private to your team · survives Odoo syncs</span>
+      </div>
+      {error && <p className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p>}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block">
+          <span className="text-xs font-medium text-slate-500">Owner</span>
+          <input value={owner} onChange={(e) => touch(setOwner)(e.target.value)} placeholder="e.g. Khris" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none" />
+        </label>
+        <label className="block">
+          <span className="text-xs font-medium text-slate-500">Status</span>
+          <select value={status} onChange={(e) => touch(setStatus)(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none">
+            <option value="">—</option>
+            {CRM_INTERNAL_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
+      </div>
+      <label className="mt-3 block">
+        <span className="text-xs font-medium text-slate-500">Tags (comma-separated)</span>
+        <input value={tags} onChange={(e) => touch(setTags)(e.target.value)} placeholder="warm, priority, sector-fit" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none" />
+      </label>
+      <label className="mt-3 block">
+        <span className="text-xs font-medium text-slate-500">Private notes</span>
+        <textarea value={notes} onChange={(e) => touch(setNotes)(e.target.value)} rows={3} placeholder="Internal notes on this contact…" className="mt-1 w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none" />
+      </label>
+      <div className="mt-3 flex items-center justify-end gap-2">
+        {saved && <span className="inline-flex items-center gap-1 text-xs text-emerald-600"><Check className="h-3.5 w-3.5" /> Saved</span>}
+        <button onClick={save} disabled={saving || !dirty} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" style={{ background: BLUE }}>
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Save
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function Row({ icon: Icon, children }: { icon: typeof Mail; children: ReactNode }) {
   return (
     <div className="flex items-start gap-2.5 text-sm text-slate-700">
@@ -50,7 +125,7 @@ function Row({ icon: Icon, children }: { icon: typeof Mail; children: ReactNode 
   );
 }
 
-export function RecordView({ record: r }: { record: ContactFull }) {
+export function RecordView({ record: r, annotation }: { record: ContactFull; annotation?: CrmAnnotation | null }) {
   const router = useRouter();
   const d = r.details;
 
@@ -155,6 +230,9 @@ export function RecordView({ record: r }: { record: ContactFull }) {
           )}
         </section>
       </div>
+
+      {/* Internal CRM (editable, survives Odoo syncs) */}
+      <InternalFields externalId={r.externalId} initial={annotation ?? null} />
 
       {/* Profile */}
       {d.profile.length > 0 && (

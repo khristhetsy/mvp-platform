@@ -73,6 +73,24 @@ export interface MatchRow {
   interest: InterestLevel;
 }
 
+/** Internal CRM annotation, editable and stored separately from the Odoo mirror. */
+export interface CrmAnnotation {
+  owner: string | null;
+  status: string | null;
+  tags: string[];
+  notes: string | null;
+  updatedAt: string | null;
+}
+
+export const CRM_INTERNAL_STATUSES = [
+  "New",
+  "Contacted",
+  "Engaged",
+  "Qualified",
+  "Nurture",
+  "Archived",
+] as const;
+
 /** Full single-contact record for the expanded record page. */
 export interface ContactFull {
   externalId: string;
