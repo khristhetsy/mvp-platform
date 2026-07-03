@@ -73,6 +73,20 @@ export interface MatchRow {
   interest: InterestLevel;
 }
 
+/** Full single-contact record for the expanded record page. */
+export interface ContactFull {
+  externalId: string;
+  module: CrmModule | "unknown";
+  name: string;
+  subtitle: string;
+  score: number;
+  scoreKind: "crr" | "lead_prescore" | "fit";
+  ownerInitials: string;
+  lastActivity: string; // ISO
+  details: ContactDetails;
+  rawFields: { label: string; value: string }[];
+}
+
 /** A mirrored contact with no founder/investor membership yet. */
 export interface UnclassifiedRecord {
   id: string;

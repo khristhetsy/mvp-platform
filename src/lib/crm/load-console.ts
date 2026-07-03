@@ -396,6 +396,47 @@ export async function loadUnclassifiedRecords(opts: { limit?: number } = {}): Pr
   });
 }
 
+/** Full record for the expanded record page, by Odoo external id. */
+export async function loadContactRecord(externalId: string): Promise<import("@/lib/crm/types").ContactFull | null> {
+  const supabase = createServiceRoleClient();
+  const { data } = await raw(supabase)
+    .from("crm_contacts")
+    .select("*")
+    .eq("source", "odoo")
+    .eq("external_id", externalId)
+    .maybeSingle();
+  if (!data) return null;
+  const m = data as Record<string, unknown>;
+  const details = contactDetails(m);
+  const moduleRaw = String(m.module ?? "unknown");
+  const mod = (moduleRaw === "founder" || moduleRaw === "investor" ? moduleRaw : "unknown") as
+    | "founder" | "investor" | "unknown";
+
+  // Flatten remaining raw Odoo fields (skip internals + already-shown ones) for a full data view.
+  const skip = new Set(["__profile", "id", "name", "email", "phone", "mobile", "website", "comment", "function", "city", "country_id", "category_id", "user_id", "parent_id", "write_date", "create_date", "title"]);
+  const row = (m.raw as Record<string, unknown>) ?? {};
+  const rawFields: { label: string; value: string }[] = [];
+  for (const [k, v] of Object.entries(row)) {
+    if (skip.has(k) || k.startsWith("x_studio_")) continue; // studio fields already surfaced in details.profile
+    if (v === null || v === false || v === "" || (Array.isArray(v) && v.length === 0)) continue;
+    const value = Array.isArray(v) ? (v as unknown[]).map((x) => (Array.isArray(x) ? x[1] : x)).join(", ") : String(v);
+    if (value && value !== "null") rawFields.push({ label: k, value });
+  }
+
+  return {
+    externalId,
+    module: mod,
+    name: (m.name as string) ?? (m.email as string) ?? "Contact",
+    subtitle: details.title || details.company || (mod === "investor" ? "Investor" : mod === "founder" ? "Founder" : "Contact"),
+    score: 0,
+    scoreKind: mod === "investor" ? "fit" : "lead_prescore",
+    ownerInitials: initials((m.owner as string) ?? (m.name as string) ?? null),
+    lastActivity: String(m.synced_at ?? new Date().toISOString()),
+    details,
+    rawFields,
+  };
+}
+
 export async function countUnclassified(): Promise<number> {
   const supabase = createServiceRoleClient();
   const { count } = await raw(supabase)

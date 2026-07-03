@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { List, LayoutGrid, Columns, X, Loader2, Mail, Phone, Globe, Building2, MapPin, Briefcase } from "lucide-react";
+import { List, LayoutGrid, Columns, X, Loader2, Mail, Phone, Globe, Building2, MapPin, Briefcase, Maximize2, Download } from "lucide-react";
+import Link from "next/link";
 import {
   FOUNDER_STAGES,
   INVESTOR_RELS,
@@ -21,6 +22,33 @@ const BLUE = "#2E78F5";
 function fmtDate(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function csvEscape(v: string): string {
+  return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+}
+
+function exportListCsv(module: CrmModule, records: (FounderRecord | InvestorRecord)[]) {
+  const header = module === "founder"
+    ? ["Name", "Stage", "Capital readiness", "Title", "Company", "Email", "Phone", "Location"]
+    : ["Name", "Type", "Investor fit", "Mandate", "Email", "Phone", "Location", "KYC"];
+  const lines = records.map((r) => {
+    const d = r.details;
+    if (module === "founder") {
+      const f = r as FounderRecord;
+      return [f.name, f.stage, String(f.readiness.score), d?.title ?? "", d?.company ?? "", d?.email ?? "", d?.phone ?? "", d?.location ?? ""];
+    }
+    const inv = r as InvestorRecord;
+    return [inv.name, inv.kind, String(inv.fit), inv.mandate.join("; "), d?.email ?? "", d?.phone ?? "", d?.location ?? "", inv.kyc];
+  });
+  const csv = [header, ...lines].map((row) => row.map((c) => csvEscape(String(c))).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${module}-crm-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function ScoreBar({ value }: { value: number }) {
@@ -117,23 +145,32 @@ export function CrmConsole({ module, founders = [], investors = [] }: Props) {
     <div className="relative">
       {/* Toolbar */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1 rounded-lg border border-slate-200 p-1">
-          {([
-            { v: "list", Icon: List },
-            { v: "board", Icon: Columns },
-            { v: "cards", Icon: LayoutGrid },
-          ] as const).map(({ v, Icon }) => (
-            <button
-              key={v}
-              onClick={() => setParam("view", v)}
-              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold capitalize ${
-                view === v ? "text-white" : "text-slate-600 hover:bg-slate-50"
-              }`}
-              style={view === v ? { background: BLUE } : undefined}
-            >
-              <Icon className="h-3.5 w-3.5" /> {v}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 rounded-lg border border-slate-200 p-1">
+            {([
+              { v: "list", Icon: List },
+              { v: "board", Icon: Columns },
+              { v: "cards", Icon: LayoutGrid },
+            ] as const).map(({ v, Icon }) => (
+              <button
+                key={v}
+                onClick={() => setParam("view", v)}
+                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold capitalize ${
+                  view === v ? "text-white" : "text-slate-600 hover:bg-slate-50"
+                }`}
+                style={view === v ? { background: BLUE } : undefined}
+              >
+                <Icon className="h-3.5 w-3.5" /> {v}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => exportListCsv(module, filtered)}
+            disabled={filtered.length === 0}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            <Download className="h-3.5 w-3.5" /> Export CSV
+          </button>
         </div>
 
         {view !== "board" && (
@@ -496,9 +533,21 @@ function DetailDrawer({
           <p className="truncate text-sm font-semibold text-slate-900">{record.name}</p>
           <p className="text-xs text-slate-400">{isFounder ? (record as FounderRecord).raiseLabel : (record as InvestorRecord).kind}</p>
         </div>
-        <button onClick={onClose} aria-label="Close" className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          {record.id.startsWith("mirror:") && (
+            <Link
+              href={`/admin/crm/record/${encodeURIComponent(record.id)}`}
+              aria-label="Open full record"
+              title="Open full record"
+              className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Link>
+          )}
+          <button onClick={onClose} aria-label="Close" className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 space-y-5 overflow-y-auto px-4 py-4">
