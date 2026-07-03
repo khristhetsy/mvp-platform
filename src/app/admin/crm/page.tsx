@@ -44,7 +44,7 @@ export default async function AdminCrmPage() {
         </div>
       ) : null}
 
-      <AdminInvestorCrmTimeline activities={crmActivity} />
+      <AdminInvestorCrmTimeline activities={crmActivity} canDelete={profile.role === "admin"} />
     </AppShell>
   );
 }

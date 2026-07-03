@@ -303,6 +303,28 @@ export async function listRecentInvestorCrmActivity(
   });
 }
 
+/** Delete a single investor CRM activity row (admin cleanup). */
+export async function deleteInvestorCrmActivity(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase.from("investor_activity").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+/** Clear the entire investor CRM activity timeline. Returns the number removed. */
+export async function clearAllInvestorCrmActivity(
+  supabase: SupabaseClient<Database>,
+): Promise<number> {
+  const { count } = await supabase
+    .from("investor_activity")
+    .select("id", { count: "exact", head: true });
+  // Supabase requires a filter on delete; "id is not null" matches every row.
+  const { error } = await supabase.from("investor_activity").delete().not("id", "is", null);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
 type FounderInvestorProfile = {
   full_name: string | null;
   email: string | null;

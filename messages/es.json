@@ -3276,7 +3276,10 @@
     "investor_name_firm_name_email": "investor_name,firm_name,email,...",
     "investors_pending_kyc_intro_requests_pending": "investors_pending_kyc · intro_requests_pending · events_pending_applications",
     "slug_e_g_capital_readiness_rating": "slug (p. ej. capital-readiness-rating)",
-    "you_company_com": "tu@empresa.com"
+    "you_company_com": "tu@empresa.com",
+    "clear_all": "Borrar todo",
+    "delete_activity": "Eliminar actividad",
+    "confirm_clear_all_activity": "¿Eliminar toda la actividad del CRM? Esto no se puede deshacer."
   },
   "investorCmp": {
     "ai_analysis": "Análisis con IA",
