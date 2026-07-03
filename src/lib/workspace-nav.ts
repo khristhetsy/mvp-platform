@@ -133,8 +133,9 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         label: "Compliance",
         requiredPermission: "manage_compliance",
         children: [
-          { href: "/admin/compliance", label: "Compliance" },
-          { href: "/admin/audit",      label: "Audit"      },
+          { href: "/admin/compliance",             label: "Compliance"          },
+          { href: "/admin/audit",                  label: "Audit"               },
+          { href: "/admin/voice/consent-ledger",   label: "Voice Consent Ledger" },
         ],
       },
     ],
