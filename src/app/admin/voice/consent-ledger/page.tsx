@@ -4,6 +4,8 @@ import { loadConsentLedger } from "@/lib/voice/ledger";
 import { voiceOutboundEnabled } from "@/lib/voice/gate";
 import { vapiConfigured } from "@/lib/voice/vapi";
 import { TestCallButton } from "@/components/voice/TestCallButton";
+import { SegmentCallList } from "@/components/voice/SegmentCallList";
+import { BatchDialer } from "@/components/voice/BatchDialer";
 import type { ConsentRecord } from "@/lib/voice/types";
 
 export const dynamic = "force-dynamic";
@@ -65,6 +67,8 @@ export default async function VoiceConsentLedgerPage() {
           )}
         </div>
 
+        {profile.role === "admin" && <div className="mb-4"><SegmentCallList /></div>}
+        {canTestCall && <div className="mb-4"><BatchDialer /></div>}
         {canTestCall && <div className="mb-5"><TestCallButton /></div>}
 
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
