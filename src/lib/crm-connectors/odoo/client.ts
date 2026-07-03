@@ -1,7 +1,8 @@
 // Thin server-side Odoo external API client (JSON-RPC). Credentials come from
 // env and never reach the browser. Dormant until all four vars are set.
 
-const ODOO_URL = process.env.ODOO_URL;
+// Normalize: strip a trailing slash so we never build `…//jsonrpc`.
+const ODOO_URL = process.env.ODOO_URL?.replace(/\/+$/, "");
 const ODOO_DB = process.env.ODOO_DB;
 const ODOO_USERNAME = process.env.ODOO_USERNAME;
 const ODOO_API_KEY = process.env.ODOO_API_KEY;
@@ -11,17 +12,30 @@ export function odooConfigured(): boolean {
 }
 
 async function jsonRpc(service: string, method: string, args: unknown[]): Promise<unknown> {
-  const res = await fetch(`${ODOO_URL}/jsonrpc`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      method: "call",
-      params: { service, method, args },
-      id: Date.now(),
-    }),
-    signal: AbortSignal.timeout(20_000),
-  });
+  const endpoint = `${ODOO_URL}/jsonrpc`;
+  let res: Response;
+  try {
+    res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "call",
+        params: { service, method, args },
+        id: Date.now(),
+      }),
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (err) {
+    // undici surfaces network failures as a bare "fetch failed" — dig out the
+    // real cause (DNS, refused, TLS, timeout) so the admin can act on it.
+    const cause = (err as { cause?: { code?: string; message?: string } })?.cause;
+    const detail = cause?.code || cause?.message || (err instanceof Error ? err.message : "unknown");
+    throw new Error(`Could not reach ${endpoint} — ${detail}. Check ODOO_URL (must be the API host, e.g. https://<db>.odoo.com, reachable from the server).`);
+  }
+  if (res.status === 404) {
+    throw new Error(`${endpoint} returned 404 — this host has no JSON-RPC endpoint. Use your Odoo API host (often https://<database>.odoo.com), not the website/custom domain.`);
+  }
   const json = (await res.json()) as { result?: unknown; error?: { data?: { message?: string }; message?: string } };
   if (json.error) {
     throw new Error(json.error.data?.message ?? json.error.message ?? "Odoo RPC error");
