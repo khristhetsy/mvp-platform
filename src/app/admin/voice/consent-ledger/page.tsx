@@ -2,6 +2,8 @@ import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/supabase/auth";
 import { loadConsentLedger } from "@/lib/voice/ledger";
 import { voiceOutboundEnabled } from "@/lib/voice/gate";
+import { vapiConfigured } from "@/lib/voice/vapi";
+import { TestCallButton } from "@/components/voice/TestCallButton";
 import type { ConsentRecord } from "@/lib/voice/types";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +28,7 @@ export default async function VoiceConsentLedgerPage() {
     dnc: [] as { id: string; number: string; scope: string; reason: string | null; addedAt: string }[],
   }));
   const enabled = voiceOutboundEnabled();
+  const canTestCall = profile.role === "admin" && enabled && vapiConfigured();
 
   const cards = [
     { label: "Consent records", value: summary.consentRecords },
@@ -61,6 +64,8 @@ export default async function VoiceConsentLedgerPage() {
             <><strong>Dormant.</strong> Outbound calling is disabled (VOICE_OUTBOUND_ENABLED off) and no dialing is wired in. This is the compliance foundation only — safe to review before any vendor or legal step.</>
           )}
         </div>
+
+        {canTestCall && <div className="mb-5"><TestCallButton /></div>}
 
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
           {cards.map((c) => (
