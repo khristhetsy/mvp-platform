@@ -2,10 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import * as Sentry from "@sentry/nextjs";
 import { requireRole } from "@/lib/supabase/auth";
-import { updatePartner, archivePartner } from "@/lib/crm-connectors/odoo/write";
-import { patchMirrorContact, deleteMirrorContact } from "@/lib/crm-connectors/mirror";
+import { updatePartner, updatePartnerProfile, archivePartner } from "@/lib/crm-connectors/odoo/write";
+import { getEditableSchema } from "@/lib/crm-connectors/odoo/schema";
+import { fetchAndMapPartner } from "@/lib/crm-connectors/odoo/adapter";
+import { patchMirrorContact, deleteMirrorContact, upsertContacts } from "@/lib/crm-connectors/mirror";
 
 export const dynamic = "force-dynamic";
+
+/** Re-fetch a single partner from Odoo and refresh its mirror row. Best-effort. */
+async function refreshMirror(externalId: string): Promise<void> {
+  const contact = await fetchAndMapPartner(externalId).catch(() => null);
+  if (contact) await upsertContacts([contact]).catch(() => {});
+}
 
 // Write-back to Odoo is admin-only (analysts are read-only).
 const updateSchema = z.object({
@@ -20,7 +28,11 @@ const updateSchema = z.object({
   }),
 });
 const archiveSchema = z.object({ action: z.literal("archive") });
-const bodySchema = z.discriminatedUnion("action", [updateSchema, archiveSchema]);
+const profileSchema = z.object({
+  action: z.literal("updateProfile"),
+  values: z.record(z.string(), z.unknown()),
+});
+const bodySchema = z.discriminatedUnion("action", [updateSchema, archiveSchema, profileSchema]);
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const profile = await requireRole(["admin"]).catch(() => null);
@@ -36,6 +48,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       await archivePartner(externalId);
       await deleteMirrorContact(externalId);
       return NextResponse.json({ archived: true });
+    }
+
+    if (parsed.data.action === "updateProfile") {
+      const schema = await getEditableSchema();
+      await updatePartnerProfile(externalId, parsed.data.values, schema);
+      await refreshMirror(externalId);
+      return NextResponse.json({ updated: true });
     }
 
     const f = parsed.data.fields;

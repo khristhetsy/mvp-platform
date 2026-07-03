@@ -72,7 +72,7 @@ async function loadCategories(): Promise<Map<number, string>> {
 }
 
 let studioFields: StudioField[] | null = null;
-async function loadStudioFields(): Promise<StudioField[]> {
+export async function loadStudioFields(): Promise<StudioField[]> {
   if (studioFields) return studioFields;
   const rows = await executeKw<{ name: string; field_description?: string | false; ttype?: string | false; relation?: string | false }[]>(
     "ir.model.fields", "search_read",
@@ -207,6 +207,16 @@ async function prepare(): Promise<{ cats: Map<number, string>; fields: StudioFie
 
 function fieldList(fields: StudioField[]): string[] {
   return [...BASE_FIELDS, ...fields.map((f) => f.name)];
+}
+
+/** Fetch a single partner from Odoo and map it (used to refresh the mirror after a write). */
+export async function fetchAndMapPartner(externalId: string): Promise<CrmContact | null> {
+  const id = Number(externalId);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  const { cats, fields } = await prepare();
+  const rows = await executeKw<PartnerRow[]>("res.partner", "read", [[id], fieldList(fields)]);
+  if (!rows || rows.length === 0) return null;
+  return mapPartner(rows[0], cats, fields);
 }
 
 export const odooSource: ContactSource = {

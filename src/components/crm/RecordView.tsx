@@ -7,7 +7,7 @@ import { type ContactFull, type CrmAnnotation, CRM_INTERNAL_STATUSES } from "@/l
 import { ComposeModal } from "@/components/email/ComposeModal";
 import type { ComposeDraft } from "@/components/email/types";
 import { ScheduleModal } from "@/components/crm/ScheduleModal";
-import { EditContactModal } from "@/components/crm/EditContactModal";
+import { ProfileEditModal } from "@/components/crm/ProfileEditModal";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 
 const NAVY = "#0A1A40";
@@ -221,7 +221,7 @@ export function RecordView({ record: r, annotation, canWrite = false }: { record
         </div>
       </div>
 
-      {editOpen && <EditContactModal record={r} onClose={() => setEditOpen(false)} />}
+      {editOpen && <ProfileEditModal externalId={r.externalId} contactName={r.name} onClose={() => setEditOpen(false)} />}
 
       {emailOpen && (
         <ComposeModal
