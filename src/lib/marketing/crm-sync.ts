@@ -1,9 +1,8 @@
 // One-way sync: push imported CRM contacts (crm_contacts, the Odoo mirror) into
 // the Marketing Hub's contact list (marketing_contacts). Upserts on email, so
-// re-running is safe and additive. Batched for the ~22K set.
+// re-running is safe, additive, and cleans up bad values. Batched for the ~22K set.
 
 import { marketingDb } from "@/lib/marketing/db";
-import { importContacts } from "@/lib/marketing/contacts";
 
 function splitName(name: string | null): { first: string; last: string } {
   const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
@@ -30,6 +29,7 @@ export async function syncCrmToMarketing(offset: number, limit = 500): Promise<C
     .range(offset, offset + limit - 1);
 
   const source = (data ?? []) as { name: string | null; email: string | null; company: string | null; raw: Record<string, unknown> | null }[];
+
   // De-dupe by email within the batch — the upsert can't touch the same email twice in one statement.
   const seen = new Set<string>();
   const rows = source
@@ -41,28 +41,30 @@ export async function syncCrmToMarketing(offset: number, limit = 500): Promise<C
       return true;
     })
     .map((r) => {
-      const { first, last } = splitName(r.name);
-      const rawObj = r.raw ?? {};
+      const email = r.email as string;
+      // Don't let an email masquerade as a name or company (some Odoo rows store it that way).
+      const nameIsEmail = (r.name ?? "").includes("@");
+      const { first, last } = nameIsEmail ? { first: "", last: "" } : splitName(r.name);
+      const companyRaw = (r.company ?? "").trim();
+      const companyBad = !companyRaw || companyRaw.includes("@") || companyRaw.toLowerCase() === email.toLowerCase();
+      const title = ((r.raw ?? {}).function as string) || null;
       return {
-        email: r.email as string,
-        first_name: first || undefined,
-        last_name: last || undefined,
-        company: r.company ?? undefined,
-        title: (rawObj.function as string) || undefined,
+        email,
+        first_name: first || null,
+        last_name: last || null,
+        company: companyBad ? null : companyRaw,
+        title,
         source: "iCapOS CRM (Odoo)",
       };
     });
 
   let imported = 0;
   if (rows.length) {
-    try {
-      ({ imported } = await importContacts(rows));
-    } catch (e) {
-      // Surface the real Postgres message instead of a generic failure.
-      const msg = (e as { message?: string })?.message ?? "marketing upsert failed";
-      throw new Error(msg);
-    }
+    const { error } = await db.from("marketing_contacts").upsert(rows, { onConflict: "email" });
+    if (error) throw new Error(error.message);
+    imported = rows.length;
   }
+
   const total = count ?? 0;
   const advanced = source.length;
   const nextOffset = offset + advanced;

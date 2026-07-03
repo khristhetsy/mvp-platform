@@ -7,13 +7,18 @@ export async function getContacts(opts?: {
   tag?: string;
   limit?: number;
   offset?: number;
+  sort?: "name" | "company" | "created_at";
+  dir?: "asc" | "desc";
 }): Promise<{ contacts: MarketingContact[]; total: number }> {
   const db = await marketingDb();
+
+  const sortCol = opts?.sort === "name" ? "first_name" : opts?.sort === "company" ? "company" : "created_at";
+  const ascending = opts?.dir === "asc";
 
   let query = db
     .from("marketing_contacts")
     .select("*", { count: "exact" })
-    .order("created_at", { ascending: false });
+    .order(sortCol, { ascending, nullsFirst: false });
 
   if (opts?.search) {
     query = query.or(
