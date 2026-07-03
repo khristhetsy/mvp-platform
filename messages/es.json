@@ -3281,7 +3281,14 @@
     "you_company_com": "tu@empresa.com",
     "clear_all": "Borrar todo",
     "delete_activity": "Eliminar actividad",
-    "confirm_clear_all_activity": "¿Eliminar toda la actividad del CRM? Esto no se puede deshacer."
+    "confirm_clear_all_activity": "¿Eliminar toda la actividad del CRM? Esto no se puede deshacer.",
+    "pb_search_blocks": "Buscar bloques",
+    "pb_cat_layout": "Diseño",
+    "pb_cat_content": "Contenido",
+    "pb_cat_data": "Datos y evidencia",
+    "pb_no_blocks_match": "Ningún bloque coincide con tu búsqueda.",
+    "pb_sandbox": "Entorno de pruebas",
+    "pb_sandbox_footer": "Entorno de pruebas: los borradores e instantáneas son solo del laboratorio. Las páginas de producción no se ven afectadas hasta que publiques explícitamente."
   },
   "investorCmp": {
     "ai_analysis": "Análisis con IA",

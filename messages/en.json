@@ -3281,7 +3281,14 @@
     "you_company_com": "you@company.com",
     "clear_all": "Clear all",
     "delete_activity": "Delete activity",
-    "confirm_clear_all_activity": "Delete all CRM activity? This can't be undone."
+    "confirm_clear_all_activity": "Delete all CRM activity? This can't be undone.",
+    "pb_search_blocks": "Search blocks",
+    "pb_cat_layout": "Layout",
+    "pb_cat_content": "Content",
+    "pb_cat_data": "Data & proof",
+    "pb_no_blocks_match": "No blocks match your search.",
+    "pb_sandbox": "Sandbox",
+    "pb_sandbox_footer": "Sandbox — drafts and snapshots are lab-only. Production pages are never affected until you explicitly publish."
   },
   "investorCmp": {
     "ai_analysis": "AI Analysis",

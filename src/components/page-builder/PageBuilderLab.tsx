@@ -4,17 +4,22 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  BarChart3,
   ChevronDown,
   ChevronUp,
   Download,
   Eye,
   EyeOff,
   GripVertical,
+  LayoutGrid,
   Monitor,
   RotateCcw,
   Save,
+  Search,
+  ShieldCheck,
   Smartphone,
   Sparkles,
+  Type,
   Upload,
 } from "lucide-react";
 import { SortableDragHandle, SortableList } from "@/components/ui/SortableList";
@@ -54,6 +59,27 @@ function asString(value: unknown) {
   return typeof value === "string" ? value : "";
 }
 
+// Group the palette so admins scan by intent (layout vs content vs data),
+// not one flat list. Unknown/new types fall through to "Content".
+type PaletteCategory = "layout" | "content" | "data";
+const BLOCK_CATEGORY: Record<string, PaletteCategory> = {
+  spacer: "layout", columns_2: "layout", columns_3: "layout", sidebar_layout: "layout",
+  hero: "content", cta_band: "content", text_section: "content", image_banner: "content",
+  testimonial: "content", faq: "content", process_steps: "content", team: "content",
+  logo_cloud: "content", compliance_notice: "content",
+  trust_badges: "data", feature_grid: "data", metrics_row: "data", metric: "data",
+  metric_grid: "data", pricing_plan: "data", stats_comparison: "data",
+};
+const CATEGORY_ORDER: PaletteCategory[] = ["layout", "content", "data"];
+const CATEGORY_META: Record<PaletteCategory, { labelKey: string; Icon: typeof LayoutGrid; color: string }> = {
+  layout: { labelKey: "pb_cat_layout", Icon: LayoutGrid, color: "#2E78F5" },
+  content: { labelKey: "pb_cat_content", Icon: Type, color: "#0F6E56" },
+  data: { labelKey: "pb_cat_data", Icon: BarChart3, color: "#993556" },
+};
+function blockCategory(type: string): PaletteCategory {
+  return BLOCK_CATEGORY[type] ?? "content";
+}
+
 function updateBlockProp(blocks: PageBlock[], blockId: string, key: string, value: unknown) {
   return blocks.map((block) =>
     block.id === blockId ? { ...block, props: { ...block.props, [key]: value } } : block,
@@ -83,6 +109,7 @@ export function PageBuilderLab() {
   const [compareSnapshotId, setCompareSnapshotId] = useState<string | null>(null);
   const [restoreTarget, setRestoreTarget] = useState<PageBuilderSnapshotMeta | null>(null);
   const [restoring, setRestoring] = useState(false);
+  const [paletteSearch, setPaletteSearch] = useState("");
 
   const skipAutosaveRef = useRef(true);
   const savedFingerprintRef = useRef("");
@@ -373,7 +400,12 @@ export function PageBuilderLab() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">{t("page_builder_lab")}</p>
-          <h1 className="mt-1 text-2xl font-semibold text-slate-950">{t("sandbox_layout_editor")}</h1>
+          <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold text-slate-950">
+            {t("sandbox_layout_editor")}
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800">
+              <ShieldCheck className="h-3 w-3" aria-hidden /> {t("pb_sandbox")}
+            </span>
+          </h1>
           <p className="mt-1 max-w-3xl text-sm text-slate-600">
             Phase 1 drafts only. Preview at{" "}
             <Link href={`/preview/${pageSlug}`} className="font-medium text-slate-950 underline">
@@ -473,18 +505,58 @@ export function PageBuilderLab() {
       <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_320px_300px]">
         <section className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
           <h2 className="text-sm font-semibold text-slate-950">{t("approved_blocks")}</h2>
-          <div className="mt-3 space-y-2">
-            {BLOCK_DEFINITIONS.map((def) => (
-              <button
-                key={def.type}
-                type="button"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-left text-sm hover:border-slate-300 hover:bg-slate-50"
-                onClick={() => addBlock(def.type)}
-              >
-                <span className="font-medium text-slate-950">{def.label}</span>
-                <span className="mt-0.5 block text-xs text-slate-500">{def.description}</span>
-              </button>
-            ))}
+          <div className="relative mt-3">
+            <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" aria-hidden />
+            <input
+              value={paletteSearch}
+              onChange={(e) => setPaletteSearch(e.target.value)}
+              placeholder={t("pb_search_blocks")}
+              className="w-full rounded-lg border border-slate-200 py-1.5 pl-8 pr-2 text-xs"
+            />
+          </div>
+          <div className="mt-3 space-y-3">
+            {CATEGORY_ORDER.map((cat) => {
+              const q = paletteSearch.trim().toLowerCase();
+              const defs = BLOCK_DEFINITIONS.filter(
+                (d) =>
+                  blockCategory(d.type) === cat &&
+                  (q === "" ||
+                    d.label.toLowerCase().includes(q) ||
+                    (d.description ?? "").toLowerCase().includes(q)),
+              );
+              if (defs.length === 0) return null;
+              const meta = CATEGORY_META[cat];
+              return (
+                <div key={cat}>
+                  <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                    <meta.Icon className="h-3 w-3" style={{ color: meta.color }} aria-hidden />
+                    {t(meta.labelKey)}
+                  </p>
+                  <div className="space-y-1.5">
+                    {defs.map((def) => (
+                      <button
+                        key={def.type}
+                        type="button"
+                        className="flex w-full items-start gap-2 rounded-lg border border-slate-200 px-2.5 py-2 text-left text-sm hover:border-[var(--blue)] hover:bg-[var(--blue-muted)]"
+                        onClick={() => addBlock(def.type)}
+                      >
+                        <meta.Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: meta.color }} aria-hidden />
+                        <span className="min-w-0">
+                          <span className="block font-medium text-slate-950">{def.label}</span>
+                          <span className="mt-0.5 block truncate text-xs text-slate-500">{def.description}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            {BLOCK_DEFINITIONS.every(
+              (d) =>
+                paletteSearch.trim() !== "" &&
+                !d.label.toLowerCase().includes(paletteSearch.trim().toLowerCase()) &&
+                !(d.description ?? "").toLowerCase().includes(paletteSearch.trim().toLowerCase()),
+            ) && <p className="text-xs text-slate-400">{t("pb_no_blocks_match")}</p>}
           </div>
 
           <h3 className="mt-5 text-sm font-semibold text-slate-950">{t("block_order")}</h3>
@@ -643,6 +715,11 @@ export function PageBuilderLab() {
             </div>
           )}
         </section>
+      </div>
+
+      <div className="flex items-center gap-2 rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-2.5 text-xs text-slate-500">
+        <ShieldCheck className="h-4 w-4 shrink-0 text-[var(--teal)]" aria-hidden />
+        {t("pb_sandbox_footer")}
       </div>
     </div>
   );
