@@ -79,6 +79,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     title: "Operations",
     items: [
+      { href: "/admin/playbook",         label: "Daily Console",    requiredPermission: "view_admin_dashboard" },
       { href: "/admin/actions",          label: "Action Center",   requiredPermission: "view_actions"         },
       { href: "/admin/tasks",            label: "Tasks",           requiredPermission: "view_admin_dashboard" },
       { href: "/admin/portfolio",        label: "Portfolio",       requiredPermission: "view_admin_dashboard" },
@@ -107,7 +108,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         ],
       },
       { href: "/admin/manual",           label: "Operations Manual",requiredPermission: "view_admin_dashboard" },
-      { href: "/admin/playbook",         label: "Daily Console",    requiredPermission: "view_admin_dashboard" },
     ],
   },
   {
