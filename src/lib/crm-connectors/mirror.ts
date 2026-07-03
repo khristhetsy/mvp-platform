@@ -83,6 +83,33 @@ export async function countMirror(
   return { total, founders, investors, unclassified };
 }
 
+/** Patch a mirrored contact's top-level columns + merge raw fields after an Odoo write. */
+export async function patchMirrorContact(
+  externalId: string,
+  patch: { name?: string | null; email?: string | null; company?: string | null; rawPatch?: Record<string, unknown> },
+): Promise<void> {
+  const supabase = raw(createServiceRoleClient());
+  const { data } = await supabase
+    .from("crm_contacts")
+    .select("raw")
+    .eq("source", "odoo")
+    .eq("external_id", externalId)
+    .maybeSingle();
+  const existingRaw = ((data as { raw?: Record<string, unknown> } | null)?.raw ?? {}) as Record<string, unknown>;
+  const update: Record<string, unknown> = { synced_at: new Date().toISOString() };
+  if (patch.name !== undefined) update.name = patch.name;
+  if (patch.email !== undefined) update.email = patch.email;
+  if (patch.company !== undefined) update.company = patch.company;
+  if (patch.rawPatch) update.raw = { ...existingRaw, ...patch.rawPatch };
+  await supabase.from("crm_contacts").update(update).eq("source", "odoo").eq("external_id", externalId);
+}
+
+/** Remove a mirrored contact (e.g. after archiving in Odoo). */
+export async function deleteMirrorContact(externalId: string): Promise<void> {
+  const supabase = raw(createServiceRoleClient());
+  await supabase.from("crm_contacts").delete().eq("source", "odoo").eq("external_id", externalId);
+}
+
 export async function recentContacts(source: string, limit = 8) {
   const supabase = raw(createServiceRoleClient());
   const { data } = await supabase

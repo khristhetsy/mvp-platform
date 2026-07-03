@@ -26,7 +26,7 @@ export default async function AdminCrmRecordPage({ params }: { params: Promise<{
       profileEmail={profile.email ?? undefined}
     >
       <div className="mx-auto max-w-4xl px-4 py-6">
-        <RecordView record={record} annotation={annotation} />
+        <RecordView record={record} annotation={annotation} canWrite={profile.role === "admin"} />
       </div>
     </AppShell>
   );

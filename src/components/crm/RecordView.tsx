@@ -2,11 +2,13 @@
 
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Mail, Phone, Globe, Building2, MapPin, Briefcase, Download, Send, CalendarPlus, Loader2, Check } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Globe, Building2, MapPin, Briefcase, Download, Send, CalendarPlus, Loader2, Check, Pencil, Archive } from "lucide-react";
 import { type ContactFull, type CrmAnnotation, CRM_INTERNAL_STATUSES } from "@/lib/crm/types";
 import { ComposeModal } from "@/components/email/ComposeModal";
 import type { ComposeDraft } from "@/components/email/types";
 import { ScheduleModal } from "@/components/crm/ScheduleModal";
+import { EditContactModal } from "@/components/crm/EditContactModal";
+import { confirmDialog } from "@/components/ui/ConfirmDialog";
 
 const NAVY = "#0A1A40";
 const BLUE = "#2E78F5";
@@ -125,7 +127,7 @@ function Row({ icon: Icon, children }: { icon: typeof Mail; children: ReactNode 
   );
 }
 
-export function RecordView({ record: r, annotation }: { record: ContactFull; annotation?: CrmAnnotation | null }) {
+export function RecordView({ record: r, annotation, canWrite = false }: { record: ContactFull; annotation?: CrmAnnotation | null; canWrite?: boolean }) {
   const router = useRouter();
   const d = r.details;
 
@@ -133,6 +135,33 @@ export function RecordView({ record: r, annotation }: { record: ContactFull; ann
   const [sending, setSending] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+
+  async function archive() {
+    const ok = await confirmDialog({
+      message: `Archive ${r.name} in Odoo? This hides the contact from the CRM and from Odoo's active lists. It's reversible from Odoo.`,
+      danger: true,
+      confirmLabel: "Archive",
+    });
+    if (!ok) return;
+    setArchiving(true);
+    try {
+      const res = await fetch(`/api/admin/crm/contacts/${encodeURIComponent(r.externalId)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "archive" }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(typeof json.error === "string" ? json.error : "Could not archive.");
+      }
+      router.push(r.module === "investor" ? "/admin/crm/investors" : r.module === "founder" ? "/admin/crm/founders" : "/admin/crm/unclassified");
+    } catch (err) {
+      setArchiving(false);
+      await confirmDialog({ message: err instanceof Error ? err.message : "Could not archive.", confirmLabel: "OK" });
+    }
+  }
 
   async function sendEmail(draft: ComposeDraft) {
     setSending(true);
@@ -179,8 +208,20 @@ export function RecordView({ record: r, annotation }: { record: ContactFull; ann
           <button onClick={() => exportRecord(r)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
             <Download className="h-4 w-4" /> Export CSV
           </button>
+          {canWrite && (
+            <>
+              <button onClick={() => setEditOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                <Pencil className="h-4 w-4" /> Edit
+              </button>
+              <button onClick={archive} disabled={archiving} className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50">
+                {archiving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />} Archive
+              </button>
+            </>
+          )}
         </div>
       </div>
+
+      {editOpen && <EditContactModal record={r} onClose={() => setEditOpen(false)} />}
 
       {emailOpen && (
         <ComposeModal
