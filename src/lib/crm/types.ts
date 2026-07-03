@@ -56,3 +56,15 @@ export interface MatchRow {
   fit: number;
   interest: InterestLevel;
 }
+
+/** A mirrored contact with no founder/investor membership yet. */
+export interface UnclassifiedRecord {
+  id: string;
+  name: string;
+  email: string | null;
+  company: string | null;
+  membership: string | null; // raw Odoo member type, if any (e.g. "Advisor")
+  signals: string[]; // profile hints found (investor types, industries, etc.)
+  leadSource: string | null;
+  lastActivity: string; // ISO
+}

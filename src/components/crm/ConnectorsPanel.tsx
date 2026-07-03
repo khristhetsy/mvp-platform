@@ -13,7 +13,7 @@ type SourceStatus = {
     total_imported: number;
     last_error: string | null;
   } | null;
-  counts: { total: number; founders: number; investors: number };
+  counts: { total: number; founders: number; investors: number; unclassified: number };
   recent: { name: string | null; module: string; email: string | null; stage: string | null; synced_at: string }[];
   test: { ok: boolean; count: number; error?: string } | null;
 };
@@ -46,7 +46,6 @@ export function ConnectorsPanel() {
   }, []);
 
   useEffect(() => {
-    /* eslint-disable-next-line react-hooks/set-state-in-effect -- initial connector status load */
     void load();
   }, [load]);
 
@@ -185,11 +184,12 @@ export function ConnectorsPanel() {
                 </div>
               )}
 
-              <div className="mt-4 grid grid-cols-3 gap-2">
+              <div className="mt-4 grid grid-cols-4 gap-2">
                 {[
                   { label: "Mirrored", value: s.counts.total },
                   { label: "Founders", value: s.counts.founders },
                   { label: "Investors", value: s.counts.investors },
+                  { label: "Unclassified", value: s.counts.unclassified },
                 ].map((c) => (
                   <div key={c.label} className="rounded-lg bg-slate-50 p-3 text-center">
                     <div className="text-lg font-semibold" style={{ color: NAVY }}>{c.value.toLocaleString()}</div>

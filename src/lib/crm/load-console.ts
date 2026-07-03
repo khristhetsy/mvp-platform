@@ -13,7 +13,47 @@ import type {
   InvestorRecord,
   InvestorRel,
   MatchRow,
+  UnclassifiedRecord,
 } from "@/lib/crm/types";
+
+// Structured profile captured from Odoo Studio fields (see odoo/adapter.ts).
+type OdooProfile = {
+  membership?: string | null;
+  investorTypes?: string[];
+  industries?: string[];
+  capital?: string[];
+  fundingStages?: string[];
+  operatingStages?: string[];
+  plan?: string | null;
+  leadSource?: string | null;
+  extra?: Record<string, unknown>;
+};
+
+function odooProfile(m: Record<string, unknown>): OdooProfile | null {
+  const raw = m.raw as Record<string, unknown> | null | undefined;
+  const p = raw?.__profile as OdooProfile | undefined;
+  return p ?? null;
+}
+
+function asList(v: unknown): string[] {
+  return Array.isArray(v) ? (v as unknown[]).map(String) : [];
+}
+
+/** Investor mandate chips from the Odoo profile: type(s), sectors, capital, ticket sizes. */
+function mandateFromProfile(p: OdooProfile): string[] {
+  const out: string[] = [];
+  out.push(...asList(p.investorTypes).slice(0, 2));
+  out.push(...asList(p.industries).slice(0, 3));
+  out.push(...asList(p.capital).slice(0, 2));
+  // Surface any money/size-like extras (e.g. "Investment size", "Check size").
+  for (const [label, val] of Object.entries(p.extra ?? {})) {
+    if (/size|amount|ticket|check|invest|capital|aum/i.test(label)) {
+      const s = Array.isArray(val) ? val.join(", ") : String(val);
+      if (s && s !== "null") out.push(`${label}: ${s}`);
+    }
+  }
+  return out.slice(0, 8);
+}
 
 // Untyped raw client — several columns (investor_profiles.*) aren't in the
 // generated Database types yet.
@@ -199,16 +239,22 @@ async function investorsFromMirror(
     const pid = m.supabase_profile_id ? String(m.supabase_profile_id) : "";
     const prof = pid ? profByPid.get(pid) : undefined;
     const count = pid ? pipelineCount.get(pid) ?? 0 : 0;
-    const fit = prof ? investorFit(prof) : 0;
+    const oprof = odooProfile(m);
+    // Odoo-derived fit proxy when there's no Supabase investor profile.
+    const odooFit = oprof
+      ? Math.min(100, 30 + asList(oprof.investorTypes).length * 20 + asList(oprof.industries).length * 5 + asList(oprof.capital).length * 5)
+      : 0;
+    const fit = prof ? investorFit(prof) : odooFit;
     const kyc = prof ? investorKyc(prof) : "None";
+    const odooKind = oprof ? asList(oprof.investorTypes)[0] : undefined;
     return {
       id: prof ? pid : `mirror:${m.external_id}`,
       name: (m.name as string) ?? (m.email as string) ?? "Unknown investor",
-      kind: (prof?.investor_type as string) ?? (m.company as string) ?? "Investor",
+      kind: (prof?.investor_type as string) ?? odooKind ?? (m.company as string) ?? "Investor",
       fit,
       kyc,
       rel: investorRel(fit, kyc, count),
-      mandate: prof ? mandate(prof) : (m.company ? [String(m.company)] : []),
+      mandate: prof ? mandate(prof) : oprof ? mandateFromProfile(oprof) : (m.company ? [String(m.company)] : []),
       indicatedCount: count,
       ownerInitials: initials((m.owner as string) ?? (m.name as string) ?? null),
       lastActivity: String(m.synced_at ?? new Date().toISOString()),
@@ -266,6 +312,48 @@ export async function loadInvestorRecords(
   if (opts.kyc) out = out.filter((r) => r.kyc === opts.kyc);
   if (opts.rel) out = out.filter((r) => r.rel === opts.rel);
   return out;
+}
+
+// ── Unclassified bucket ────────────────────────────────────────────────────
+
+/** Mirrored contacts with no founder/investor membership (module = "unknown"). */
+export async function loadUnclassifiedRecords(opts: { limit?: number } = {}): Promise<UnclassifiedRecord[]> {
+  const supabase = createServiceRoleClient();
+  const { data } = await raw(supabase)
+    .from("crm_contacts")
+    .select("external_id, name, email, company, plan, raw, synced_at")
+    .eq("module", "unknown")
+    .order("synced_at", { ascending: false })
+    .limit(opts.limit ?? 300);
+
+  return ((data ?? []) as Record<string, unknown>[]).map((m): UnclassifiedRecord => {
+    const p = odooProfile(m);
+    const signals: string[] = [];
+    if (p) {
+      signals.push(...asList(p.investorTypes).slice(0, 3));
+      signals.push(...asList(p.industries).slice(0, 2));
+      signals.push(...asList(p.capital).slice(0, 1));
+    }
+    return {
+      id: `mirror:${m.external_id}`,
+      name: (m.name as string) ?? (m.email as string) ?? "Unnamed contact",
+      email: (m.email as string) ?? null,
+      company: (m.company as string) ?? null,
+      membership: p?.membership ?? (m.plan as string) ?? null,
+      signals,
+      leadSource: p?.leadSource ?? null,
+      lastActivity: String(m.synced_at ?? new Date().toISOString()),
+    };
+  });
+}
+
+export async function countUnclassified(): Promise<number> {
+  const supabase = createServiceRoleClient();
+  const { count } = await raw(supabase)
+    .from("crm_contacts")
+    .select("external_id", { count: "exact", head: true })
+    .eq("module", "unknown");
+  return count ?? 0;
 }
 
 // ── Match layer (platform-matching; indicated_interests deferred) ──────────────

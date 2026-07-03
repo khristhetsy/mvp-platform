@@ -67,7 +67,9 @@ export async function setSyncState(source: string, patch: Partial<SyncState>): P
     .upsert({ source, ...patch, updated_at: new Date().toISOString() }, { onConflict: "source" });
 }
 
-export async function countMirror(source: string): Promise<{ total: number; founders: number; investors: number }> {
+export async function countMirror(
+  source: string,
+): Promise<{ total: number; founders: number; investors: number; unclassified: number }> {
   const supabase = raw(createServiceRoleClient());
   const one = async (module?: string) => {
     let q = supabase.from("crm_contacts").select("id", { count: "exact", head: true }).eq("source", source);
@@ -75,8 +77,10 @@ export async function countMirror(source: string): Promise<{ total: number; foun
     const { count } = await q;
     return count ?? 0;
   };
-  const [total, founders, investors] = await Promise.all([one(), one("founder"), one("investor")]);
-  return { total, founders, investors };
+  const [total, founders, investors, unclassified] = await Promise.all([
+    one(), one("founder"), one("investor"), one("unknown"),
+  ]);
+  return { total, founders, investors, unclassified };
 }
 
 export async function recentContacts(source: string, limit = 8) {
