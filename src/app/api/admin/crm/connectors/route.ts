@@ -36,8 +36,21 @@ export async function POST(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = (await req.json().catch(() => ({}))) as { source?: string; restart?: boolean };
+  const body = (await req.json().catch(() => ({}))) as { source?: string; restart?: boolean; action?: string };
   if (!body.source) return NextResponse.json({ error: "source required" }, { status: 400 });
+
+  // On-demand connection test — surfaces the exact adapter/Odoo error.
+  if (body.action === "test") {
+    const source = getSource(body.source);
+    if (!source) return NextResponse.json({ error: "Unknown source" }, { status: 400 });
+    if (!source.isConfigured()) return NextResponse.json({ test: { ok: false, count: 0, error: "Not configured" } });
+    const test = await source.test().catch((err) => ({
+      ok: false,
+      count: 0,
+      error: err instanceof Error ? err.message : "Connection failed",
+    }));
+    return NextResponse.json({ test });
+  }
 
   try {
     const result = await importBatch(body.source, { restart: body.restart });

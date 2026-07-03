@@ -35,6 +35,8 @@ export function ConnectorsPanel() {
   const [importing, setImporting] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ imported: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [testing, setTesting] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<Record<string, { ok: boolean; count: number; error?: string }>>({});
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/crm/connectors");
@@ -47,6 +49,25 @@ export function ConnectorsPanel() {
     /* eslint-disable-next-line react-hooks/set-state-in-effect -- initial connector status load */
     void load();
   }, [load]);
+
+  async function runTest(sourceId: string) {
+    setTesting(sourceId);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/crm/connectors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: sourceId, action: "test" }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Test failed");
+      setTestResult((prev) => ({ ...prev, [sourceId]: json.test }));
+    } catch (err) {
+      setTestResult((prev) => ({ ...prev, [sourceId]: { ok: false, count: 0, error: err instanceof Error ? err.message : "Test failed" } }));
+    } finally {
+      setTesting(null);
+    }
+  }
 
   async function runImport(sourceId: string) {
     setImporting(sourceId);
@@ -101,17 +122,41 @@ export function ConnectorsPanel() {
               )}
             </div>
             {s.configured && (
-              <button
-                onClick={() => runImport(s.id)}
-                disabled={importing !== null}
-                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
-                style={{ background: BLUE }}
-              >
-                {importing === s.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                {importing === s.id ? "Importing…" : "Run full import"}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => runTest(s.id)}
+                  disabled={testing !== null || importing !== null}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {testing === s.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  Test connection
+                </button>
+                <button
+                  onClick={() => runImport(s.id)}
+                  disabled={importing !== null || testing !== null}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                  style={{ background: BLUE }}
+                >
+                  {importing === s.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                  {importing === s.id ? "Importing…" : "Run full import"}
+                </button>
+              </div>
             )}
           </div>
+
+          {testResult[s.id] && (
+            <div
+              className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
+                testResult[s.id].ok
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-rose-200 bg-rose-50 text-rose-700"
+              }`}
+            >
+              {testResult[s.id].ok
+                ? `✓ Connected — ${testResult[s.id].count.toLocaleString()} contacts visible in ${s.label}.`
+                : `Connection failed: ${testResult[s.id].error ?? "unknown error"}`}
+            </div>
+          )}
 
           {!s.configured ? (
             <p className="mt-3 text-sm text-slate-500">
