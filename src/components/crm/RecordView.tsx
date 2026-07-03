@@ -8,6 +8,7 @@ import { ComposeModal } from "@/components/email/ComposeModal";
 import type { ComposeDraft } from "@/components/email/types";
 import { ScheduleModal } from "@/components/crm/ScheduleModal";
 import { ProfileEditModal } from "@/components/crm/ProfileEditModal";
+import { EditableProfile } from "@/components/crm/EditableProfile";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 
 const NAVY = "#0A1A40";
@@ -238,79 +239,65 @@ export function RecordView({ record: r, annotation, canWrite = false }: { record
         <ScheduleModal contactName={r.name} contactEmail={d.email} onClose={() => setScheduleOpen(false)} />
       )}
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        {/* Contact */}
-        <section className="rounded-xl border border-slate-200 bg-white p-5">
-          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Contact</h2>
-          <div className="space-y-2.5">
-            {d.title && <Row icon={Briefcase}>{d.title}</Row>}
-            {d.company && <Row icon={Building2}>{d.company}</Row>}
-            {d.email && <Row icon={Mail}><a href={`mailto:${d.email}`} className="hover:underline" style={{ color: BLUE }}>{d.email}</a></Row>}
-            {d.phone && <Row icon={Phone}>{d.phone}</Row>}
-            {d.website && <Row icon={Globe}><a href={d.website.startsWith("http") ? d.website : `https://${d.website}`} target="_blank" rel="noreferrer" className="hover:underline" style={{ color: BLUE }}>{d.website.replace(/^https?:\/\//, "")}</a></Row>}
-            {d.location && <Row icon={MapPin}>{d.location}</Row>}
-            {!d.title && !d.company && !d.email && !d.phone && !d.website && !d.location && (
-              <p className="text-sm text-slate-400">No contact details in Odoo.</p>
-            )}
-          </div>
-          {(d.membership || d.leadSource) && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {d.membership && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">{d.membership}</span>}
-              {d.leadSource && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">via {d.leadSource}</span>}
-            </div>
-          )}
-        </section>
+      {canWrite ? (
+        <div className="mt-6">
+          <EditableProfile externalId={r.externalId} />
+        </div>
+      ) : (
+        <>
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <section className="rounded-xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Contact</h2>
+              <div className="space-y-2.5">
+                {d.title && <Row icon={Briefcase}>{d.title}</Row>}
+                {d.company && <Row icon={Building2}>{d.company}</Row>}
+                {d.email && <Row icon={Mail}><a href={`mailto:${d.email}`} className="hover:underline" style={{ color: BLUE }}>{d.email}</a></Row>}
+                {d.phone && <Row icon={Phone}>{d.phone}</Row>}
+                {d.website && <Row icon={Globe}><a href={d.website.startsWith("http") ? d.website : `https://${d.website}`} target="_blank" rel="noreferrer" className="hover:underline" style={{ color: BLUE }}>{d.website.replace(/^https?:\/\//, "")}</a></Row>}
+                {d.location && <Row icon={MapPin}>{d.location}</Row>}
+                {!d.title && !d.company && !d.email && !d.phone && !d.website && !d.location && (
+                  <p className="text-sm text-slate-400">No contact details in Odoo.</p>
+                )}
+              </div>
+              {(d.membership || d.leadSource) && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {d.membership && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">{d.membership}</span>}
+                  {d.leadSource && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">via {d.leadSource}</span>}
+                </div>
+              )}
+            </section>
 
-        {/* Notes */}
-        <section className="rounded-xl border border-slate-200 bg-white p-5">
-          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Notes</h2>
-          {d.description ? (
-            <p className="text-sm leading-relaxed text-slate-700">{d.description}</p>
-          ) : (
-            <p className="text-sm text-slate-400">No notes in Odoo.</p>
+            <section className="rounded-xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Notes</h2>
+              {d.description ? <p className="text-sm leading-relaxed text-slate-700">{d.description}</p> : <p className="text-sm text-slate-400">No notes in Odoo.</p>}
+            </section>
+          </div>
+
+          {d.profile.length > 0 && (
+            <section className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
+              <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Profile</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {d.profile.map((p, i) => (
+                  <div key={i}>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{p.label}</p>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {p.values.map((v, j) => <span key={j} className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{v}</span>)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
           )}
-        </section>
-      </div>
+        </>
+      )}
 
       {/* Internal CRM (editable, survives Odoo syncs) */}
-      <InternalFields externalId={r.externalId} initial={annotation ?? null} />
-
-      {/* Profile */}
-      {d.profile.length > 0 && (
-        <section className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
-          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Profile</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {d.profile.map((p, i) => (
-              <div key={i}>
-                <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{p.label}</p>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {p.values.map((v, j) => (
-                    <span key={j} className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{v}</span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Other Odoo fields */}
-      {r.rawFields.length > 0 && (
-        <section className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
-          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Other Odoo fields</h2>
-          <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
-            {r.rawFields.map((f, i) => (
-              <div key={i} className="flex justify-between gap-3 border-b border-slate-50 pb-1.5">
-                <dt className="text-xs text-slate-400">{f.label}</dt>
-                <dd className="text-right text-xs font-medium text-slate-700">{f.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      )}
+      <div className="mt-4">
+        <InternalFields externalId={r.externalId} initial={annotation ?? null} />
+      </div>
 
       <p className="mt-4 text-[11px] text-slate-400">
-        Source of record is Odoo. Editing and scheduling arrive in later phases. Indicated amounts are non-binding ranges — advisory only, not an offer, solicitation, or placement.
+        Odoo is the system of record — field edits write back to Odoo and refresh the CRM. Indicated amounts are non-binding ranges — advisory only, not an offer, solicitation, or placement.
       </p>
     </div>
   );
