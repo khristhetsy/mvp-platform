@@ -30,8 +30,16 @@ export async function syncCrmToMarketing(offset: number, limit = 500): Promise<C
     .range(offset, offset + limit - 1);
 
   const source = (data ?? []) as { name: string | null; email: string | null; company: string | null; raw: Record<string, unknown> | null }[];
+  // De-dupe by email within the batch — the upsert can't touch the same email twice in one statement.
+  const seen = new Set<string>();
   const rows = source
     .filter((r) => r.email && r.email.includes("@"))
+    .filter((r) => {
+      const key = (r.email as string).toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
     .map((r) => {
       const { first, last } = splitName(r.name);
       const rawObj = r.raw ?? {};
@@ -45,7 +53,16 @@ export async function syncCrmToMarketing(offset: number, limit = 500): Promise<C
       };
     });
 
-  const { imported } = rows.length ? await importContacts(rows) : { imported: 0 };
+  let imported = 0;
+  if (rows.length) {
+    try {
+      ({ imported } = await importContacts(rows));
+    } catch (e) {
+      // Surface the real Postgres message instead of a generic failure.
+      const msg = (e as { message?: string })?.message ?? "marketing upsert failed";
+      throw new Error(msg);
+    }
+  }
   const total = count ?? 0;
   const advanced = source.length;
   const nextOffset = offset + advanced;

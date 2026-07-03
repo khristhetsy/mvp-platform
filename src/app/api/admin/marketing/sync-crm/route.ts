@@ -22,6 +22,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json(page);
   } catch (err) {
     Sentry.captureException(err);
-    return NextResponse.json({ error: err instanceof Error ? err.message : "Sync failed." }, { status: 500 });
+    const msg = err instanceof Error ? err.message : (typeof err === "object" && err && "message" in err ? String((err as { message: unknown }).message) : "Sync failed.");
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
