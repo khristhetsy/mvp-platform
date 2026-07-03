@@ -2576,7 +2576,9 @@
     "fmt_link": "Insert link",
     "fmt_bullet": "Bullet list",
     "fmt_align_left": "Align left",
-    "fmt_align_center": "Align center"
+    "fmt_align_center": "Align center",
+    "delete_intro_request": "Delete intro request",
+    "confirm_delete_intro": "Delete this intro request? This can't be undone."
   },
   "sharedCmp": {
     "123_market_st_suite_400": "123 Market St, Suite 400",

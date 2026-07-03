@@ -2576,7 +2576,9 @@
     "fmt_link": "Insertar enlace",
     "fmt_bullet": "Lista con viñetas",
     "fmt_align_left": "Alinear a la izquierda",
-    "fmt_align_center": "Centrar"
+    "fmt_align_center": "Centrar",
+    "delete_intro_request": "Eliminar solicitud de presentación",
+    "confirm_delete_intro": "¿Eliminar esta solicitud de presentación? Esto no se puede deshacer."
   },
   "sharedCmp": {
     "123_market_st_suite_400": "123 Market St, Suite 400",

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createNotification } from "@/lib/notifications/notifications";
+import { writeAuditLog } from "@/lib/data/audit";
 
 type IntroStatus = "reviewing" | "facilitated" | "declined";
 
@@ -140,4 +141,37 @@ export async function PATCH(
   }
 
   return NextResponse.json({ updated: true, status: newStatus });
+}
+
+/**
+ * DELETE /api/admin/intro-requests/[id]
+ *
+ * Admin-only hard delete of an intro request (removes it from the queue).
+ * Analysts have review/decision access via PATCH but cannot delete records.
+ * Audit-logged.
+ */
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  let profile;
+  try {
+    profile = await requireRole(["admin"]);
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const admin = createServiceRoleClient();
+  const { error } = await admin.from("intro_requests").delete().eq("id", id);
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  await writeAuditLog(admin, {
+    userId: profile.id,
+    action: "intro_request_deleted",
+    entityType: "intro_request",
+    entityId: id,
+  });
+  return NextResponse.json({ deleted: true });
 }

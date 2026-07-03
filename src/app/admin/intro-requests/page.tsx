@@ -120,7 +120,7 @@ export default async function AdminIntroRequestsPage({
           })}
         </div>
 
-        <AdminIntroQueue introRequests={filtered} />
+        <AdminIntroQueue introRequests={filtered} canDelete={profile.role === "admin"} />
       </WorkspacePageContainer>
     </AppShell>
   );

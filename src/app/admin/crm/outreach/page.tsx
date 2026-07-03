@@ -73,7 +73,7 @@ export default async function AdminCrmOutreachPage() {
       {/* Intro request action queue — pending requests with Facilitate / Decline actions */}
       <div className="mb-10">
         <h2 className="mb-4 text-base font-semibold text-slate-900">Intro request queue</h2>
-        <AdminIntroQueue introRequests={investorActivity.introRequests} />
+        <AdminIntroQueue introRequests={investorActivity.introRequests} canDelete={profile.role === "admin"} />
       </div>
 
       <AdminInvestorActivity

@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useState, useCallback } from "react";
+import { Trash2, Loader2 } from "lucide-react";
 
 type IntroStatus = "requested" | "reviewing" | "facilitated" | "declined";
 
@@ -38,14 +39,34 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }>
   declined:    { bg: "#FEF2F2", text: "#dc2626", label: "Declined" },
 };
 
-type Props = { introRequests: Array<Record<string, unknown>> };
+type Props = { introRequests: Array<Record<string, unknown>>; canDelete?: boolean };
 
-export function AdminIntroQueue({ introRequests }: Props) {
+export function AdminIntroQueue({ introRequests, canDelete = false }: Props) {
   const t = useTranslations("adminCmp");
   const [statuses, setStatuses] = useState<Record<string, IntroStatus>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [removed, setRemoved] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState<Record<string, boolean>>({});
+
+  const remove = useCallback(async (id: string) => {
+    if (!window.confirm(t("confirm_delete_intro"))) return;
+    setDeleting((prev) => ({ ...prev, [id]: true }));
+    setErrors((prev) => ({ ...prev, [id]: "" }));
+    try {
+      const res = await fetch(`/api/admin/intro-requests/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
+      setRemoved((prev) => new Set(prev).add(id));
+    } catch (err) {
+      setErrors((prev) => ({ ...prev, [id]: err instanceof Error ? err.message : "Failed" }));
+    } finally {
+      setDeleting((prev) => ({ ...prev, [id]: false }));
+    }
+  }, [t]);
 
   const getStatus = (row: IntroRow): IntroStatus => {
     return (statuses[row.id] ?? row.status ?? "requested") as IntroStatus;
@@ -85,6 +106,7 @@ export function AdminIntroQueue({ introRequests }: Props) {
   // Sort: pending first
   const rows = [...introRequests]
     .map((r) => r as IntroRow)
+    .filter((r) => !removed.has(r.id))
     .sort((a, b) => {
       const statusOrder: Record<string, number> = { requested: 0, reviewing: 1, facilitated: 2, declined: 3 };
       const sa = statusOrder[getStatus(a)] ?? 0;
@@ -141,10 +163,10 @@ export function AdminIntroQueue({ introRequests }: Props) {
                 <p className="mt-0.5 text-[11px] text-slate-400">{formatDate(row.created_at)}</p>
               </div>
 
-              {/* Action buttons — only shown for pending */}
-              {isPending && (
-                <div className="flex shrink-0 flex-wrap gap-2">
-                  {status === "requested" && (
+              {/* Review/decision actions (pending only) + admin delete (any status) */}
+              {(isPending || canDelete) && (
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {isPending && status === "requested" && (
                     <button
                       type="button"
                       disabled={isBusy}
@@ -154,22 +176,38 @@ export function AdminIntroQueue({ introRequests }: Props) {
                       Start review
                     </button>
                   )}
-                  <button
-                    type="button"
-                    disabled={isBusy}
-                    onClick={() => void advance(row.id, "facilitated")}
-                    className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50 transition"
-                  >
-                    {isBusy ? "Saving…" : "Facilitate"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isBusy}
-                    onClick={() => void advance(row.id, "declined")}
-                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 transition"
-                  >
-                    Decline
-                  </button>
+                  {isPending && (
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => void advance(row.id, "facilitated")}
+                      className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50 transition"
+                    >
+                      {isBusy ? "Saving…" : "Facilitate"}
+                    </button>
+                  )}
+                  {isPending && (
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => void advance(row.id, "declined")}
+                      className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 transition"
+                    >
+                      Decline
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      type="button"
+                      disabled={deleting[row.id] ?? false}
+                      onClick={() => void remove(row.id)}
+                      aria-label={t("delete_intro_request")}
+                      title={t("delete_intro_request")}
+                      className="rounded-lg border border-slate-200 p-1.5 text-slate-400 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50 transition"
+                    >
+                      {(deleting[row.id] ?? false) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
