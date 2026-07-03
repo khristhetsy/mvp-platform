@@ -55,9 +55,53 @@ function raiseLabel(row: Record<string, unknown>): string {
   return [stage, amtLabel].filter(Boolean).join(" · ") || "Raise TBD";
 }
 
+/** Read the connector mirror for a module. Empty until an import has run. */
+async function loadMirror(module: "founder" | "investor", limit: number): Promise<Record<string, unknown>[]> {
+  const supabase = createServiceRoleClient();
+  const { data } = await raw(supabase)
+    .from("crm_contacts")
+    .select("*")
+    .eq("module", module)
+    .order("synced_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as Record<string, unknown>[];
+}
+
+/** Build founder records from mirrored contacts, enriched with company intelligence where linked. */
+async function foundersFromMirror(mirror: Record<string, unknown>[], stage?: FounderStage): Promise<FounderRecord[]> {
+  const supabase = createServiceRoleClient();
+  const profileIds = mirror.map((m) => m.supabase_profile_id).filter(Boolean) as string[];
+  const companyByFounder = new Map<string, Record<string, unknown>>();
+  if (profileIds.length) {
+    const { data } = await raw(supabase)
+      .from("companies")
+      .select("id, company_name, industry, country, business_description, funding_amount, use_of_funds, revenue_stage, team_summary, cap_table_summary, status, updated_at, founder_id")
+      .in("founder_id", profileIds);
+    for (const c of (data ?? []) as Record<string, unknown>[]) companyByFounder.set(String(c.founder_id), c);
+  }
+  const records = mirror.map((m): FounderRecord => {
+    const company = m.supabase_profile_id ? companyByFounder.get(String(m.supabase_profile_id)) : undefined;
+    const score = company ? readinessProxy(company) : 0;
+    return {
+      id: company ? String(company.id) : `mirror:${m.external_id}`,
+      name: (company?.company_name as string) ?? (m.company as string) ?? (m.name as string) ?? "Unnamed company",
+      raiseLabel: company ? raiseLabel(company) : "Raise TBD",
+      stage: company ? founderStage(score, (company.status as string | null) ?? "draft") : "onboard",
+      readiness: { score, scoreKind: company ? "crr" : "lead_prescore" },
+      plan: "—",
+      ownerInitials: initials((m.owner as string) ?? (m.name as string) ?? null),
+      lastActivity: String(m.synced_at ?? new Date().toISOString()),
+    };
+  });
+  return stage ? records.filter((r) => r.stage === stage) : records;
+}
+
 export async function loadFounderRecords(
   opts: { stage?: FounderStage; limit?: number } = {},
 ): Promise<FounderRecord[]> {
+  const mirror = await loadMirror("founder", opts.limit ?? 200).catch(() => []);
+  if (mirror.length > 0) return foundersFromMirror(mirror, opts.stage);
+
   const supabase = createServiceRoleClient();
   const { data } = await raw(supabase)
     .from("companies")
@@ -132,9 +176,56 @@ function mandate(row: Record<string, unknown>): string[] {
   return out;
 }
 
+/** Build investor records from mirrored contacts, enriched with profile intelligence where linked. */
+async function investorsFromMirror(
+  mirror: Record<string, unknown>[],
+  opts: { kyc?: InvestorRecord["kyc"]; rel?: InvestorRel },
+): Promise<InvestorRecord[]> {
+  const supabase = createServiceRoleClient();
+  const profileIds = mirror.map((m) => m.supabase_profile_id).filter(Boolean) as string[];
+  const profByPid = new Map<string, Record<string, unknown>>();
+  const pipelineCount = new Map<string, number>();
+  if (profileIds.length) {
+    const [{ data: profs }, { data: pipelines }] = await Promise.all([
+      raw(supabase).from("investor_profiles").select("*").in("profile_id", profileIds),
+      raw(supabase).from("investor_pipeline").select("investor_id").in("investor_id", profileIds),
+    ]);
+    for (const p of (profs ?? []) as Record<string, unknown>[]) profByPid.set(String(p.profile_id), p);
+    for (const p of (pipelines ?? []) as { investor_id: string }[]) {
+      pipelineCount.set(p.investor_id, (pipelineCount.get(p.investor_id) ?? 0) + 1);
+    }
+  }
+  const records = mirror.map((m): InvestorRecord => {
+    const pid = m.supabase_profile_id ? String(m.supabase_profile_id) : "";
+    const prof = pid ? profByPid.get(pid) : undefined;
+    const count = pid ? pipelineCount.get(pid) ?? 0 : 0;
+    const fit = prof ? investorFit(prof) : 0;
+    const kyc = prof ? investorKyc(prof) : "None";
+    return {
+      id: prof ? pid : `mirror:${m.external_id}`,
+      name: (m.name as string) ?? (m.email as string) ?? "Unknown investor",
+      kind: (prof?.investor_type as string) ?? (m.company as string) ?? "Investor",
+      fit,
+      kyc,
+      rel: investorRel(fit, kyc, count),
+      mandate: prof ? mandate(prof) : (m.company ? [String(m.company)] : []),
+      indicatedCount: count,
+      ownerInitials: initials((m.owner as string) ?? (m.name as string) ?? null),
+      lastActivity: String(m.synced_at ?? new Date().toISOString()),
+    };
+  });
+  let out = records;
+  if (opts.kyc) out = out.filter((r) => r.kyc === opts.kyc);
+  if (opts.rel) out = out.filter((r) => r.rel === opts.rel);
+  return out;
+}
+
 export async function loadInvestorRecords(
   opts: { kyc?: InvestorRecord["kyc"]; rel?: InvestorRel; limit?: number } = {},
 ): Promise<InvestorRecord[]> {
+  const mirror = await loadMirror("investor", opts.limit ?? 200).catch(() => []);
+  if (mirror.length > 0) return investorsFromMirror(mirror, opts);
+
   const supabase = createServiceRoleClient();
   const [{ data: profs }, { data: pipelines }] = await Promise.all([
     raw(supabase)
@@ -180,6 +271,7 @@ export async function loadInvestorRecords(
 // ── Match layer (platform-matching; indicated_interests deferred) ──────────────
 
 export async function loadFounderMatches(companyId: string, limit = 8): Promise<MatchRow[]> {
+  if (companyId.startsWith("mirror:")) return []; // un-linked lead — no company to match yet
   const supabase = createServiceRoleClient();
   const { data: company } = await raw(supabase).from("companies").select("*").eq("id", companyId).maybeSingle();
   if (!company) return [];
@@ -201,6 +293,7 @@ export async function loadFounderMatches(companyId: string, limit = 8): Promise<
 }
 
 export async function loadInvestorMatches(investorId: string, limit = 8): Promise<MatchRow[]> {
+  if (investorId.startsWith("mirror:")) return []; // un-linked lead — no profile to match yet
   const supabase = createServiceRoleClient();
   const { data: prof } = await raw(supabase)
     .from("investor_profiles")
