@@ -44,6 +44,8 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/crm/outreach",  label: "Outreach"  },
         ],
       },
+      { href: "/admin/crm/founders",   label: "Founder CRM",     requiredPermission: "manage_crm"         },
+      { href: "/admin/crm/investors",  label: "Investor CRM",    requiredPermission: "manage_crm"         },
       { href: "/admin/intro-requests", label: "Intro Requests",  requiredPermission: "manage_matching"    },
       { href: "/admin/deal-rooms",     label: "Deal Rooms",      requiredPermission: "manage_deal_rooms" },
       { href: "/admin/spvs",           label: "SPVs",            requiredPermission: "manage_spvs"       },
