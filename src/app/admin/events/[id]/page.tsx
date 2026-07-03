@@ -45,16 +45,16 @@ export default async function AdminEventDetailPage({ params }: { params: Promise
         sponsorCatalog={sponsorCatalog}
         initialEventSponsors={eventSponsors}
         liveVideoConfigured={isLiveVideoConfigured()}
+        bannerSlot={
+          <EventBannerEditor
+            eventId={id}
+            eventTitle={event.title}
+            initialUrl={bannerPublicUrl(admin, event.coverPath)}
+            initialOverlay={event.coverOverlay}
+            initialFocal={event.coverFocal}
+          />
+        }
       />
-      <div className="mx-auto max-w-4xl px-4">
-        <EventBannerEditor
-          eventId={id}
-          eventTitle={event.title}
-          initialUrl={bannerPublicUrl(admin, event.coverPath)}
-          initialOverlay={event.coverOverlay}
-          initialFocal={event.coverFocal}
-        />
-      </div>
       <div className="mx-auto max-w-4xl px-4 pb-8">
         <EventModeratorsManager
           eventId={id}

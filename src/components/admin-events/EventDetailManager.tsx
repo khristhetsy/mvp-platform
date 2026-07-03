@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -204,11 +204,13 @@ export function EventDetailManager({
   sponsorCatalog,
   initialEventSponsors,
   liveVideoConfigured,
+  bannerSlot,
 }: {
   event: EventWithDetail;
   sponsorCatalog: Sponsor[];
   initialEventSponsors: EventSponsor[];
   liveVideoConfigured: boolean;
+  bannerSlot?: ReactNode;
 }) {
   const t = useTranslations("eventsAdmin.manage");
   const [sessions, setSessions] = useState<EventSession[]>(event.sessions);
@@ -545,6 +547,9 @@ export function EventDetailManager({
           </div>
         </form>
       </section>
+
+      {/* Event banner (cover image) — sits directly under Event details */}
+      {bannerSlot ? <div className="mt-6">{bannerSlot}</div> : null}
 
       {/* Page banner, countdown & side rail */}
       <BannerEditor event={event} />
