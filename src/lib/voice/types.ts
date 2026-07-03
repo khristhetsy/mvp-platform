@@ -60,6 +60,27 @@ export interface DncEntry {
   addedAt: string;
 }
 
+export interface CampaignVariant {
+  id: string;
+  campaignId: string;
+  label: string;
+  openerScript: string | null;
+  cadenceConfig: Record<string, unknown>;
+  trafficWeight: number;
+  createdAt: string;
+}
+
+export interface VoiceCampaign {
+  id: string;
+  name: string;
+  audience: CampaignAudience;
+  status: CampaignStatus;
+  guardrailPromptVersion: string | null;
+  createdAt: string;
+  updatedAt: string;
+  variants: CampaignVariant[];
+}
+
 export interface ConsentLedgerSummary {
   consentRecords: number;
   liveConsents: number;

@@ -136,6 +136,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/compliance",             label: "Compliance"          },
           { href: "/admin/audit",                  label: "Audit"               },
           { href: "/admin/voice/consent-ledger",   label: "Voice Consent Ledger" },
+          { href: "/admin/voice/campaigns",        label: "Voice Campaigns"      },
         ],
       },
     ],
