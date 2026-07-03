@@ -1,9 +1,12 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Mail, Phone, Globe, Building2, MapPin, Briefcase, Download, Send } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Globe, Building2, MapPin, Briefcase, Download, Send, CalendarPlus } from "lucide-react";
 import type { ContactFull } from "@/lib/crm/types";
+import { ComposeModal } from "@/components/email/ComposeModal";
+import type { ComposeDraft } from "@/components/email/types";
+import { ScheduleModal } from "@/components/crm/ScheduleModal";
 
 const NAVY = "#0A1A40";
 const BLUE = "#2E78F5";
@@ -50,9 +53,30 @@ function Row({ icon: Icon, children }: { icon: typeof Mail; children: ReactNode 
 export function RecordView({ record: r }: { record: ContactFull }) {
   const router = useRouter();
   const d = r.details;
-  const mailto = d.email
-    ? `mailto:${d.email}?subject=${encodeURIComponent(`iCFO — ${r.name}`)}`
-    : null;
+
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+
+  async function sendEmail(draft: ComposeDraft) {
+    setSending(true);
+    setEmailError(null);
+    try {
+      const res = await fetch("/api/integrations/google/gmail/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: draft.to.trim(), subject: draft.subject.trim(), body: draft.body, html: draft.html, attachments: draft.attachments }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not send. Is Gmail connected in Settings → Integrations?");
+      setEmailOpen(false);
+    } catch (err) {
+      setEmailError(err instanceof Error ? err.message : "Could not send email.");
+    } finally {
+      setSending(false);
+    }
+  }
 
   return (
     <div>
@@ -69,16 +93,34 @@ export function RecordView({ record: r }: { record: ContactFull }) {
           {r.subtitle && <p className="mt-0.5 text-sm text-slate-500">{r.subtitle}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {mailto && (
-            <a href={mailto} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white" style={{ background: BLUE }}>
+          {d.email && (
+            <button onClick={() => { setEmailError(null); setEmailOpen(true); }} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white" style={{ background: BLUE }}>
               <Send className="h-4 w-4" /> Email
-            </a>
+            </button>
           )}
+          <button onClick={() => setScheduleOpen(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            <CalendarPlus className="h-4 w-4" /> Schedule
+          </button>
           <button onClick={() => exportRecord(r)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
             <Download className="h-4 w-4" /> Export CSV
           </button>
         </div>
       </div>
+
+      {emailOpen && (
+        <ComposeModal
+          open={emailOpen}
+          title={`Email ${r.name}`}
+          sending={sending}
+          error={emailError}
+          prefill={{ to: d.email ? [d.email] : [], cc: [], subject: "", body: "", mode: "new" }}
+          onSend={sendEmail}
+          onClose={() => setEmailOpen(false)}
+        />
+      )}
+      {scheduleOpen && (
+        <ScheduleModal contactName={r.name} contactEmail={d.email} onClose={() => setScheduleOpen(false)} />
+      )}
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         {/* Contact */}
