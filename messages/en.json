@@ -3288,7 +3288,9 @@
     "pb_cat_data": "Data & proof",
     "pb_no_blocks_match": "No blocks match your search.",
     "pb_sandbox": "Sandbox",
-    "pb_sandbox_footer": "Sandbox — drafts and snapshots are lab-only. Production pages are never affected until you explicitly publish."
+    "pb_sandbox_footer": "Sandbox — drafts and snapshots are lab-only. Production pages are never affected until you explicitly publish.",
+    "pb_tab_properties": "Properties",
+    "pb_tab_snapshots": "Snapshots"
   },
   "investorCmp": {
     "ai_analysis": "AI Analysis",

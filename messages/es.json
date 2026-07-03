@@ -3288,7 +3288,9 @@
     "pb_cat_data": "Datos y evidencia",
     "pb_no_blocks_match": "Ningún bloque coincide con tu búsqueda.",
     "pb_sandbox": "Entorno de pruebas",
-    "pb_sandbox_footer": "Entorno de pruebas: los borradores e instantáneas son solo del laboratorio. Las páginas de producción no se ven afectadas hasta que publiques explícitamente."
+    "pb_sandbox_footer": "Entorno de pruebas: los borradores e instantáneas son solo del laboratorio. Las páginas de producción no se ven afectadas hasta que publiques explícitamente.",
+    "pb_tab_properties": "Propiedades",
+    "pb_tab_snapshots": "Instantáneas"
   },
   "investorCmp": {
     "ai_analysis": "Análisis con IA",

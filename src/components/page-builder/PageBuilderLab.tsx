@@ -110,6 +110,7 @@ export function PageBuilderLab() {
   const [restoreTarget, setRestoreTarget] = useState<PageBuilderSnapshotMeta | null>(null);
   const [restoring, setRestoring] = useState(false);
   const [paletteSearch, setPaletteSearch] = useState("");
+  const [inspectorTab, setInspectorTab] = useState<"properties" | "snapshots">("properties");
 
   const skipAutosaveRef = useRef(true);
   const savedFingerprintRef = useRef("");
@@ -502,7 +503,7 @@ export function PageBuilderLab() {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_320px_300px]">
+      <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)_340px]">
         <section className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
           <h2 className="text-sm font-semibold text-slate-950">{t("approved_blocks")}</h2>
           <div className="relative mt-3">
@@ -639,80 +640,106 @@ export function PageBuilderLab() {
           )}
         </section>
 
-        <VersionHistorySidebar
-          draft={draftMeta}
-          snapshots={snapshots}
-          viewMode={viewMode}
-          activeSnapshotId={activeSnapshotId}
-          compareSnapshotId={compareSnapshotId}
-          loading={loading}
-          onSelectDraft={() => {
-            setViewMode("draft");
-            setActiveSnapshotId(null);
-            setCompareSnapshotId(null);
-          }}
-          onPreviewSnapshot={(snapshot) => {
-            setViewMode("snapshot-preview");
-            setActiveSnapshotId(snapshot.id);
-            setCompareSnapshotId(null);
-          }}
-          onCompareSnapshot={(snapshot) => {
-            setViewMode("compare");
-            setCompareSnapshotId(snapshot.id);
-            setActiveSnapshotId(null);
-          }}
-          onRestoreSnapshot={setRestoreTarget}
-          onDuplicateSnapshot={(snapshot) => void duplicateSnapshot(snapshot)}
-        />
-
-        <section className="space-y-4">
-          <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
-            <h2 className="text-sm font-semibold text-slate-950">{t("validation")}</h2>
-            <p className="mt-1 text-xs text-slate-500">
-              {errorCount > 0 ? `${errorCount} error(s)` : "No blocking errors"} · {warnings.length} total
-            </p>
-            <ul className="mt-3 max-h-40 space-y-2 overflow-y-auto text-xs">
-              {warnings.length === 0 ? (
-                <li className="text-slate-500">{t("no_warnings")}</li>
-              ) : (
-                warnings.map((warning) => (
-                  <li
-                    key={`${warning.code}-${warning.blockId ?? "global"}`}
-                    className={warning.severity === "error" ? "text-red-700" : "text-amber-800"}
-                  >
-                    {warning.message}
-                  </li>
-                ))
-              )}
-            </ul>
+        {/* Right inspector — tabbed Properties / Snapshots (mockup layout) */}
+        <section className="space-y-3">
+          <div className="flex gap-1 rounded-xl border border-slate-200/80 bg-white p-1 shadow-[var(--shadow-panel)]">
+            <button
+              type="button"
+              onClick={() => setInspectorTab("properties")}
+              className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                inspectorTab === "properties" ? "bg-[var(--blue)] text-white" : "text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              {t("pb_tab_properties")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setInspectorTab("snapshots")}
+              className={`flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                inspectorTab === "snapshots" ? "bg-[var(--blue)] text-white" : "text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              {t("pb_tab_snapshots")} · {snapshots.length}
+            </button>
           </div>
 
-          {selectedBlock ? (
-            <BlockEditor
-              block={selectedBlock}
-              selectedBlockId={selectedBlockId}
-              disabled={loading}
-              onSelectBlock={setSelectedBlockId}
-              onChange={(key, value) => {
-                updateLayout({
-                  ...layout,
-                  blocks: updateBlockById(layout.blocks, selectedBlock.id, (b) => ({
-                    ...b,
-                    props: { ...b.props, [key]: value },
-                  })),
-                });
-              }}
-              onLayoutChange={(updated) => {
-                updateLayout({
-                  ...layout,
-                  blocks: updateBlockById(layout.blocks, updated.id, () => updated),
-                });
-              }}
-            />
+          {inspectorTab === "properties" ? (
+            <>
+              {selectedBlock ? (
+                <BlockEditor
+                  block={selectedBlock}
+                  selectedBlockId={selectedBlockId}
+                  disabled={loading}
+                  onSelectBlock={setSelectedBlockId}
+                  onChange={(key, value) => {
+                    updateLayout({
+                      ...layout,
+                      blocks: updateBlockById(layout.blocks, selectedBlock.id, (b) => ({
+                        ...b,
+                        props: { ...b.props, [key]: value },
+                      })),
+                    });
+                  }}
+                  onLayoutChange={(updated) => {
+                    updateLayout({
+                      ...layout,
+                      blocks: updateBlockById(layout.blocks, updated.id, () => updated),
+                    });
+                  }}
+                />
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-500">
+                  Select a block to edit text, images, and CTAs.
+                </div>
+              )}
+
+              <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">
+                <h2 className="text-sm font-semibold text-slate-950">{t("validation")}</h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  {errorCount > 0 ? `${errorCount} error(s)` : "No blocking errors"} · {warnings.length} total
+                </p>
+                <ul className="mt-3 max-h-40 space-y-2 overflow-y-auto text-xs">
+                  {warnings.length === 0 ? (
+                    <li className="text-slate-500">{t("no_warnings")}</li>
+                  ) : (
+                    warnings.map((warning) => (
+                      <li
+                        key={`${warning.code}-${warning.blockId ?? "global"}`}
+                        className={warning.severity === "error" ? "text-red-700" : "text-amber-800"}
+                      >
+                        {warning.message}
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </div>
+            </>
           ) : (
-            <div className="rounded-xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-500">
-              Select a block to edit text, images, and CTAs.
-            </div>
+            <VersionHistorySidebar
+              draft={draftMeta}
+              snapshots={snapshots}
+              viewMode={viewMode}
+              activeSnapshotId={activeSnapshotId}
+              compareSnapshotId={compareSnapshotId}
+              loading={loading}
+              onSelectDraft={() => {
+                setViewMode("draft");
+                setActiveSnapshotId(null);
+                setCompareSnapshotId(null);
+              }}
+              onPreviewSnapshot={(snapshot) => {
+                setViewMode("snapshot-preview");
+                setActiveSnapshotId(snapshot.id);
+                setCompareSnapshotId(null);
+              }}
+              onCompareSnapshot={(snapshot) => {
+                setViewMode("compare");
+                setCompareSnapshotId(snapshot.id);
+                setActiveSnapshotId(null);
+              }}
+              onRestoreSnapshot={setRestoreTarget}
+              onDuplicateSnapshot={(snapshot) => void duplicateSnapshot(snapshot)}
+            />
           )}
         </section>
       </div>
