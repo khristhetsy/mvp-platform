@@ -56,10 +56,15 @@ export async function getEditableSchema(): Promise<EditableFieldDesc[]> {
   const relOptions = new Map<string, { value: string; label: string }[]>();
   await Promise.all([...relations].map(async (rel) => {
     try {
+      // No `order` clause: Studio relation models can't sort on the computed
+      // display_name and would error. Fetch unordered, then sort in JS.
       const rows = await executeKw<{ id: number; display_name?: string }[]>(
-        rel, "search_read", [[], ["display_name"]], { limit: 500, order: "display_name asc" },
+        rel, "search_read", [[], ["display_name"]], { limit: 1000 },
       );
-      relOptions.set(rel, rows.map((r) => ({ value: String(r.id), label: r.display_name || String(r.id) })));
+      const opts = rows
+        .map((r) => ({ value: String(r.id), label: r.display_name || String(r.id) }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+      relOptions.set(rel, opts);
     } catch {
       relOptions.set(rel, []);
     }
