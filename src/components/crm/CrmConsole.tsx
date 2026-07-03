@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { List, LayoutGrid, Columns, X, Loader2 } from "lucide-react";
+import { List, LayoutGrid, Columns, X, Loader2, Mail, Phone, Globe, Building2, MapPin, Briefcase } from "lucide-react";
 import {
   FOUNDER_STAGES,
   INVESTOR_RELS,
+  type ContactDetails,
   type CrmModule,
   type CrmView,
   type FounderRecord,
@@ -402,6 +403,77 @@ function BoardView({
   );
 }
 
+function DetailRow({ icon: Icon, children }: { icon: typeof Mail; children: ReactNode }) {
+  return (
+    <div className="flex items-start gap-2 text-xs text-slate-600">
+      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+      <span className="min-w-0 break-words">{children}</span>
+    </div>
+  );
+}
+
+function ContactDetailsBlock({ d }: { d: ContactDetails }) {
+  const hasContact = d.email || d.phone || d.website || d.title || d.company || d.location;
+  return (
+    <div className="space-y-4 border-t border-slate-100 pt-4">
+      {hasContact && (
+        <div>
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Contact</p>
+          <div className="space-y-1.5">
+            {d.title && <DetailRow icon={Briefcase}>{d.title}</DetailRow>}
+            {d.company && <DetailRow icon={Building2}>{d.company}</DetailRow>}
+            {d.email && (
+              <DetailRow icon={Mail}>
+                <a href={`mailto:${d.email}`} className="hover:underline" style={{ color: BLUE }}>{d.email}</a>
+              </DetailRow>
+            )}
+            {d.phone && <DetailRow icon={Phone}>{d.phone}</DetailRow>}
+            {d.website && (
+              <DetailRow icon={Globe}>
+                <a href={d.website.startsWith("http") ? d.website : `https://${d.website}`} target="_blank" rel="noreferrer" className="hover:underline" style={{ color: BLUE }}>
+                  {d.website.replace(/^https?:\/\//, "")}
+                </a>
+              </DetailRow>
+            )}
+            {d.location && <DetailRow icon={MapPin}>{d.location}</DetailRow>}
+          </div>
+          {(d.membership || d.leadSource) && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {d.membership && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">{d.membership}</span>}
+              {d.leadSource && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">via {d.leadSource}</span>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {d.description && (
+        <div>
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Notes</p>
+          <p className="text-xs leading-relaxed text-slate-600">{d.description}</p>
+        </div>
+      )}
+
+      {d.profile.length > 0 && (
+        <div>
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Profile</p>
+          <div className="space-y-2">
+            {d.profile.map((p, i) => (
+              <div key={i}>
+                <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">{p.label}</p>
+                <div className="mt-0.5 flex flex-wrap gap-1">
+                  {p.values.map((v, j) => (
+                    <span key={j} className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600">{v}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DetailDrawer({
   module,
   record,
@@ -458,6 +530,8 @@ function DetailDrawer({
         <div className="text-xs text-slate-500">
           Owner <span className="font-medium text-slate-700">{record.ownerInitials}</span> · last activity {fmtDate(record.lastActivity)}
         </div>
+
+        {record.details && <ContactDetailsBlock d={record.details} />}
 
         <div className="border-t border-slate-100 pt-4">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">

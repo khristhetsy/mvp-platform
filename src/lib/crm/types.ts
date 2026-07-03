@@ -23,6 +23,20 @@ export const INVESTOR_RELS: { key: InvestorRel; label: string }[] = [
   { key: "allocating", label: "Allocating" },
 ];
 
+/** Contact detail + Odoo profile, surfaced in the detail drawer. */
+export interface ContactDetails {
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  title: string | null; // job title / function
+  company: string | null;
+  location: string | null;
+  description: string | null; // notes
+  leadSource: string | null;
+  membership: string | null;
+  profile: { label: string; values: string[] }[];
+}
+
 export interface FounderRecord {
   id: string;
   name: string;
@@ -35,6 +49,7 @@ export interface FounderRecord {
   plan: string;
   ownerInitials: string;
   lastActivity: string; // ISO
+  details?: ContactDetails;
 }
 
 export interface InvestorRecord {
@@ -48,6 +63,7 @@ export interface InvestorRecord {
   indicatedCount: number;
   ownerInitials: string;
   lastActivity: string; // ISO
+  details?: ContactDetails;
 }
 
 export interface MatchRow {

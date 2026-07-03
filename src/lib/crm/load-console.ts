@@ -8,6 +8,7 @@ import type { Company, Database } from "@/lib/supabase/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadFounderPlatformInvestorMatches } from "@/lib/founder-crm/platform-matches";
 import type {
+  ContactDetails,
   FounderRecord,
   FounderStage,
   InvestorRecord,
@@ -24,10 +25,56 @@ type OdooProfile = {
   capital?: string[];
   fundingStages?: string[];
   operatingStages?: string[];
+  businessEntity?: string[];
   plan?: string | null;
   leadSource?: string | null;
   extra?: Record<string, unknown>;
 };
+
+function stripHtml(s: unknown): string | null {
+  if (!s || typeof s !== "string") return null;
+  const t = s.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+  return t || null;
+}
+
+/** Build the contact-detail + profile block shown in the drawer, from a mirrored row. */
+function contactDetails(m: Record<string, unknown>): ContactDetails {
+  const row = (m.raw as Record<string, unknown>) ?? {};
+  const p = odooProfile(m);
+  const country = Array.isArray(row.country_id) ? String((row.country_id as unknown[])[1]) : null;
+  const location = [row.city, country].filter(Boolean).map(String).join(", ") || null;
+
+  const profile: { label: string; values: string[] }[] = [];
+  if (p) {
+    const add = (label: string, vals: unknown) => {
+      const a = asList(vals);
+      if (a.length) profile.push({ label, values: a });
+    };
+    add("Investor type", p.investorTypes);
+    add("Industries", p.industries);
+    add("Capital", p.capital);
+    add("Funding stage", p.fundingStages);
+    add("Operating stage", p.operatingStages);
+    add("Business entity", p.businessEntity);
+    for (const [label, val] of Object.entries(p.extra ?? {})) {
+      const a = Array.isArray(val) ? val.map(String) : [String(val)];
+      if (a.length && a[0] && a[0] !== "null" && a[0] !== "false") profile.push({ label, values: a });
+    }
+  }
+
+  return {
+    email: (m.email as string) ?? null,
+    phone: (row.phone as string) || (row.mobile as string) || null,
+    website: (row.website as string) || null,
+    title: (row.function as string) || null,
+    company: (m.company as string) ?? null,
+    location,
+    description: stripHtml(row.comment),
+    leadSource: p?.leadSource ?? null,
+    membership: p?.membership ?? null,
+    profile,
+  };
+}
 
 function odooProfile(m: Record<string, unknown>): OdooProfile | null {
   const raw = m.raw as Record<string, unknown> | null | undefined;
@@ -131,6 +178,7 @@ async function foundersFromMirror(mirror: Record<string, unknown>[], stage?: Fou
       plan: "—",
       ownerInitials: initials((m.owner as string) ?? (m.name as string) ?? null),
       lastActivity: String(m.synced_at ?? new Date().toISOString()),
+      details: contactDetails(m),
     };
   });
   return stage ? records.filter((r) => r.stage === stage) : records;
@@ -258,6 +306,7 @@ async function investorsFromMirror(
       indicatedCount: count,
       ownerInitials: initials((m.owner as string) ?? (m.name as string) ?? null),
       lastActivity: String(m.synced_at ?? new Date().toISOString()),
+      details: contactDetails(m),
     };
   });
   let out = records;
