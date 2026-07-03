@@ -9,6 +9,7 @@ import type { ComposeDraft } from "@/components/email/types";
 import { ScheduleModal } from "@/components/crm/ScheduleModal";
 import { ProfileEditModal } from "@/components/crm/ProfileEditModal";
 import { EditableProfile } from "@/components/crm/EditableProfile";
+import { ActivityLog } from "@/components/crm/ActivityLog";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 
 const NAVY = "#0A1A40";
@@ -175,6 +176,11 @@ export function RecordView({ record: r, annotation, canWrite = false }: { record
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not send. Is Gmail connected in Settings → Integrations?");
+      // Log the sent email to the contact's activity timeline (best-effort).
+      void fetch(`/api/admin/crm/contacts/${encodeURIComponent(r.externalId)}/activity`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel: "email", direction: "outbound", summary: `Email: ${draft.subject?.trim() || "(no subject)"}` }),
+      }).catch(() => undefined);
       setEmailOpen(false);
     } catch (err) {
       setEmailError(err instanceof Error ? err.message : "Could not send email.");
@@ -290,6 +296,9 @@ export function RecordView({ record: r, annotation, canWrite = false }: { record
           )}
         </>
       )}
+
+      {/* Unified activity timeline — calls, emails, texts, manual logs */}
+      <ActivityLog externalId={r.externalId} />
 
       {/* Internal CRM (editable, survives Odoo syncs) */}
       <div className="mt-4">
