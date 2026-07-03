@@ -11,11 +11,32 @@ export function odooConfigured(): boolean {
   return Boolean(ODOO_URL && ODOO_DB && ODOO_USERNAME && ODOO_API_KEY);
 }
 
+// Opt-in escape hatch: connect even if the Odoo host's TLS certificate is
+// expired/self-signed. OFF by default. Only for a self-managed Odoo behind a
+// lapsed cert — a temporary bridge, not a permanent setting (traffic is no
+// longer certificate-verified). Renew the cert or use the .odoo.com host, then
+// remove ODOO_INSECURE_TLS.
+const INSECURE_TLS = /^(1|true|yes)$/i.test(process.env.ODOO_INSECURE_TLS ?? "");
+let insecureDispatcher: unknown;
+async function getDispatcher(): Promise<unknown> {
+  if (!INSECURE_TLS) return undefined;
+  if (insecureDispatcher === undefined) {
+    try {
+      const undiciSpecifier = "undici" as string; // avoid static module resolution; present at runtime
+      const undici = (await import(undiciSpecifier)) as { Agent: new (o: unknown) => unknown };
+      insecureDispatcher = new undici.Agent({ connect: { rejectUnauthorized: false } });
+    } catch {
+      insecureDispatcher = null;
+    }
+  }
+  return insecureDispatcher ?? undefined;
+}
+
 async function jsonRpc(service: string, method: string, args: unknown[]): Promise<unknown> {
   const endpoint = `${ODOO_URL}/jsonrpc`;
   let res: Response;
   try {
-    res = await fetch(endpoint, {
+    const opts: RequestInit & { dispatcher?: unknown } = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -25,7 +46,10 @@ async function jsonRpc(service: string, method: string, args: unknown[]): Promis
         id: Date.now(),
       }),
       signal: AbortSignal.timeout(20_000),
-    });
+    };
+    const dispatcher = await getDispatcher();
+    if (dispatcher) opts.dispatcher = dispatcher;
+    res = await fetch(endpoint, opts as RequestInit);
   } catch (err) {
     // undici surfaces network failures as a bare "fetch failed" — dig out the
     // real cause (DNS, refused, TLS, timeout) so the admin can act on it.
