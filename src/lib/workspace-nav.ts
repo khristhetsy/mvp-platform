@@ -137,6 +137,8 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/audit",                  label: "Audit"               },
           { href: "/admin/voice/consent-ledger",   label: "Voice Consent Ledger" },
           { href: "/admin/voice/campaigns",        label: "Voice Campaigns"      },
+          { href: "/admin/voice/performance",      label: "Voice Performance"    },
+          { href: "/admin/voice/calls",            label: "Voice Call Review"    },
         ],
       },
     ],
