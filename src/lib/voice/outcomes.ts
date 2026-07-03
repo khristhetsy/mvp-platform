@@ -7,6 +7,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { executeKw, odooConfigured } from "@/lib/crm-connectors/odoo/client";
+import { recordCallTouchInMarketing } from "@/lib/marketing/voice-sync";
 
 function raw(c: SupabaseClient<Database>): SupabaseClient {
   return c as unknown as SupabaseClient;
@@ -76,6 +77,9 @@ export async function recordCallOutcome(input: CallOutcomeInput): Promise<{ atte
 
   // Outcome sync + task suppression note back to Odoo (the source of record).
   await writeOdooNote(input.contactId, `${summary}. Suppress next outbound task for this contact.`);
+
+  // Reflect the call as a touch in the Marketing Hub (best-effort — one funnel).
+  await recordCallTouchInMarketing(input.contactId, input.disposition, input.booked ?? false).catch(() => undefined);
 
   return { attemptNo };
 }
