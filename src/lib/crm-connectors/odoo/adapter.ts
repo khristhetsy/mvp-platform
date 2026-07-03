@@ -36,6 +36,14 @@ const SEMANTIC_KEYS: Record<string, string> = {
   x_studio_lead_type: "leadSource",
 };
 
+// Import contacts that have an email OR a membership type — so no-email
+// members (investors/entrepreneurs/advisors without an address on file) are
+// still captured. Dedup is on the Odoo id, not email, so this is safe.
+const BASE_DOMAIN: unknown[] = ["|", ["email", "!=", false], [MEMBERSHIP_FIELD, "!=", false]];
+function deltaDomain(sinceIso: string): unknown[] {
+  return ["&", ["write_date", ">", sinceIso], "|", ["email", "!=", false], [MEMBERSHIP_FIELD, "!=", false]];
+}
+
 const BASE_FIELDS = [
   "id", "name", "email", "parent_id", "category_id", "user_id", "function", "write_date",
   // Standard contact detail fields, surfaced in the CRM drawer.
@@ -227,7 +235,7 @@ export const odooSource: ContactSource = {
   async test() {
     if (!odooConfigured()) return { ok: false, count: 0, error: "Not configured" };
     try {
-      const count = await executeKw<number>("res.partner", "search_count", [[["email", "!=", false]]]);
+      const count = await executeKw<number>("res.partner", "search_count", [BASE_DOMAIN]);
       return { ok: true, count };
     } catch (err) {
       return { ok: false, count: 0, error: err instanceof Error ? err.message : "Connection failed" };
@@ -239,7 +247,7 @@ export const odooSource: ContactSource = {
     const offset = Number(cursor ?? 0);
     const rows = await executeKw<PartnerRow[]>(
       "res.partner", "search_read",
-      [[["email", "!=", false]], fieldList(fields)],
+      [BASE_DOMAIN, fieldList(fields)],
       { offset, limit: pageSize, order: "write_date desc" },
     );
     return {
@@ -252,7 +260,7 @@ export const odooSource: ContactSource = {
     const { cats, fields } = await prepare();
     const rows = await executeKw<PartnerRow[]>(
       "res.partner", "search_read",
-      [[["email", "!=", false], ["write_date", ">", sinceIso]], fieldList(fields)],
+      [deltaDomain(sinceIso), fieldList(fields)],
       { limit: 5000, order: "write_date desc" },
     );
     return rows.map((r) => mapPartner(r, cats, fields));
