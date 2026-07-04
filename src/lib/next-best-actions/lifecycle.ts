@@ -395,6 +395,33 @@ export async function upsertComputedActions(
   return results;
 }
 
+/**
+ * Auto-complete active next-best-actions of a given type that reference any of
+ * the provided entity ids (matched against entity_id or investor_id). Used when
+ * a source condition is resolved (e.g. an investor is approved) so the related
+ * admin to-do clears from every admin's dashboard instead of lingering.
+ */
+export async function resolveActionsForEntity(
+  supabase: SupabaseClient<Database>,
+  actionType: string,
+  entityIds: Array<string | null | undefined>,
+): Promise<void> {
+  const ids = Array.from(new Set(entityIds.filter((v): v is string => Boolean(parseUuid(v ?? undefined)))));
+  if (ids.length === 0) return;
+
+  const orFilter = ids
+    .flatMap((id) => [`entity_id.eq.${id}`, `investor_id.eq.${id}`])
+    .join(",");
+
+  const now = new Date().toISOString();
+  await supabase
+    .from("next_best_actions")
+    .update({ status: "completed", completed_at: now, updated_at: now })
+    .eq("action_type", actionType)
+    .in("status", [...ACTIVE_STATUSES])
+    .or(orFilter);
+}
+
 export async function loadAndMergeNextBestActions(input: {
   profile: Profile;
   supabase: SupabaseClient<Database>;

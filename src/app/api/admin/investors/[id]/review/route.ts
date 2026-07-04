@@ -8,6 +8,8 @@ import { adminInvestorReviewActionSchema } from "@/lib/validation";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { sendViaGmail } from "@/lib/integrations/gmail-send";
 import { reviewMessageSubject } from "@/lib/investor/review-message";
+import { resolveActionsForEntity } from "@/lib/next-best-actions/lifecycle";
+import { buildActionId } from "@/lib/next-best-actions/action-catalog";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireStaffApi(["admin", "analyst"]);
@@ -40,6 +42,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       action,
       feedback: feedback?.trim(),
     });
+
+    // Clear the "Approve investor" to-do from every admin's dashboard now that
+    // this investor is decided. Best-effort — never fail the decision on this.
+    try {
+      await resolveActionsForEntity(
+        createServiceRoleClient(),
+        buildActionId(["admin", "investor_approvals"]),
+        [id, investorProfile.profile_id],
+      );
+    } catch (nbaError) {
+      console.error("resolve investor approval action failed", nbaError);
+    }
 
     // Audit logging must never fail the review action itself — the approval is
     // already committed above. Log best-effort and swallow logging errors.
