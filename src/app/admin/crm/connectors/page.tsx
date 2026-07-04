@@ -2,6 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/supabase/auth";
 import { ConnectorsPanel } from "@/components/crm/ConnectorsPanel";
 import { SyncCrmToMarketing } from "@/components/crm/SyncCrmToMarketing";
+import { AddContactsCard } from "@/components/crm/AddContactsCard";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export default async function CrmConnectorsPage() {
           </p>
         </div>
         <ConnectorsPanel />
+        <div className="mt-4"><AddContactsCard /></div>
         {profile.role === "admin" && <div className="mt-4"><SyncCrmToMarketing /></div>}
       </div>
     </AppShell>
