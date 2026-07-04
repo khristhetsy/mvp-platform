@@ -27,6 +27,10 @@ export default async function CrmConnectorsPage() {
         </div>
         <ConnectorsPanel />
         <div className="mt-4"><AddContactsCard /></div>
+        <div className="mt-4 rounded-2xl border border-slate-200/80 bg-white p-4 text-sm shadow-[var(--shadow-panel)]">
+          <a href="/admin/crm/classify" className="font-semibold text-[#1A6CE4] hover:underline">Classify contacts →</a>
+          <span className="ml-2 text-slate-600">Resolve unclassified contacts to a founder / investor side.</span>
+        </div>
         {profile.role === "admin" && <div className="mt-4"><SyncCrmToMarketing /></div>}
       </div>
     </AppShell>
