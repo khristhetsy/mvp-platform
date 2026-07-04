@@ -101,6 +101,7 @@
     "tabOverdue": "Overdue",
     "tabEscalated": "Escalated",
     "loading": "Loading suggested actions…",
+    "viewOnly": "View only",
     "caughtUp": "You are caught up on prioritized items. Check back as your workflow state changes.",
     "noneInTab": "No actions in this view right now.",
     "suggestedDue": "Suggested due: {date}",

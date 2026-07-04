@@ -12,8 +12,10 @@ import { AdminRecentActivityTimeline } from "@/components/admin/dashboard/AdminR
 import { AdminSystemHealthSection } from "@/components/admin/dashboard/AdminSystemHealthSection";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import type { AdminCommandCenterProps } from "@/components/admin/dashboard/types";
+import { canSeeCard, type DashboardCardId } from "@/lib/rbac/dashboard-cards";
 
 export function AdminDashboardShell({
+  permissions,
   userId,
   userRole,
   serviceRoleConfigured,
@@ -32,6 +34,7 @@ export function AdminDashboardShell({
   automationSummary,
 }: AdminCommandCenterProps) {
   const companyUpdateCount = companyCards.reduce((sum, company) => sum + company.company_updates_published_count, 0);
+  const can = (id: DashboardCardId) => canSeeCard(id, permissions);
 
   return (
     <AdminActionHealthProvider
@@ -42,11 +45,15 @@ export function AdminDashboardShell({
       <WorkspacePageContainer>
         <AdminCommandHeader pendingCount={pendingCount} loadedAt={loadedAt} />
 
-        <AdminOperationsControl queueSummary={queueSummary} serviceRoleOk={serviceRoleConfigured} />
+        {can("operations_control") ? (
+          <AdminOperationsControl queueSummary={queueSummary} serviceRoleOk={serviceRoleConfigured} />
+        ) : null}
 
-        <AdminKpiGrid metrics={metrics} snapshot={snapshot} serviceRoleConfigured={serviceRoleConfigured} />
+        {can("kpi_grid") ? (
+          <AdminKpiGrid metrics={metrics} snapshot={snapshot} serviceRoleConfigured={serviceRoleConfigured} />
+        ) : null}
 
-        {orchestrationCounts ? (
+        {orchestrationCounts && can("orchestration_visibility") ? (
           <AdminOrchestrationVisibility
             counts={orchestrationCounts}
             scheduledCounts={scheduledCounts}
@@ -56,19 +63,27 @@ export function AdminDashboardShell({
           />
         ) : null}
 
-        <AdminPlatformActivityGraph
-          crmActivity={crmActivity}
-          investorActivity={investorActivity}
-          companyUpdateCount={companyUpdateCount}
-        />
+        {can("activity_graph") ? (
+          <AdminPlatformActivityGraph
+            crmActivity={crmActivity}
+            investorActivity={investorActivity}
+            companyUpdateCount={companyUpdateCount}
+          />
+        ) : null}
 
-        <AdminInvestorActivityPanels investorActivity={investorActivity} />
+        {can("investor_activity") ? (
+          <AdminInvestorActivityPanels investorActivity={investorActivity} />
+        ) : null}
 
-        <AdminRecentActivityTimeline activities={operationalActivity} />
+        {can("recent_activity") ? (
+          <AdminRecentActivityTimeline activities={operationalActivity} />
+        ) : null}
 
-        <AdminPlatformOverview companyCards={companyCards} snapshot={snapshot} />
+        {can("platform_overview") ? (
+          <AdminPlatformOverview companyCards={companyCards} snapshot={snapshot} />
+        ) : null}
 
-        <AdminSystemHealthSection />
+        {can("system_health") ? <AdminSystemHealthSection /> : null}
       </WorkspacePageContainer>
     </AdminActionHealthProvider>
   );

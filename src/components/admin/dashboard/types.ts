@@ -13,6 +13,7 @@ export type AutomationDailySummary = {
   staleChains: number;
 };
 import type { AdminQueueSummaryItem } from "@/lib/queues/admin-queues";
+import type { InternalPermission } from "@/lib/rbac/constants";
 
 export type AdminDashboardMetrics = {
   founders: number;
@@ -40,6 +41,8 @@ export type AdminInvestorActivityData = {
 };
 
 export type AdminCommandCenterProps = {
+  /** Viewer's effective RBAC permissions; gates which cards render. */
+  permissions: InternalPermission[];
   userId: string;
   userRole: string;
   serviceRoleConfigured: boolean;

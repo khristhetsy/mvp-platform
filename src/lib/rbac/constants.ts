@@ -6,6 +6,7 @@ export const INTERNAL_PERMISSIONS = [
   // Core
   "view_admin_dashboard",
   "view_actions",
+  "manage_actions",
   // Operations
   "manage_companies",
   "manage_spvs",
@@ -43,6 +44,7 @@ export type InternalPermission = (typeof INTERNAL_PERMISSIONS)[number];
 export const INTERNAL_PERMISSION_LABELS: Record<InternalPermission, string> = {
   view_admin_dashboard: "View Admin Dashboard",
   view_actions: "View Actions",
+  manage_actions: "Act on Operational Priorities",
   manage_companies: "Manage Companies",
   manage_spvs: "Manage SPVs",
   manage_investors: "Manage Investors",

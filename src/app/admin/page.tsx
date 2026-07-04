@@ -22,6 +22,8 @@ import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 import { UpcomingMeetingsCard } from "@/components/calendar/UpcomingMeetingsCard";
 import { AdminPlatformHealthWidget } from "@/components/admin/AdminPlatformHealthWidget";
+import { getEffectivePermissions } from "@/lib/rbac/effective-permissions";
+import { canSeeCard, canActOnCard } from "@/lib/rbac/dashboard-cards";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,12 @@ export default async function AdminDashboardPage() {
   const supabase = createServiceRoleClient();
   const loadedAt = new Date().toISOString();
   const adminRole = profile.role === "analyst" ? "analyst" : "admin";
+
+  // Resolve the viewer's effective permissions (role defaults + per-user
+  // overrides + super-admin), then gate each dashboard card on them. This is
+  // controlled entirely from /admin/users/permissions — no separate config.
+  const { permissions } = await getEffectivePermissions(supabase, profile.id, profile);
+  const showCard = (id: Parameters<typeof canSeeCard>[0]) => canSeeCard(id, permissions);
 
   const [
     metrics,
@@ -129,20 +137,26 @@ export default async function AdminDashboardPage() {
           </span>
         </div>
       </div>
-      <AdminPlatformHealthWidget />
-      <div className="mb-6 px-1">
-        <NextBestActionsPanel
-          role={adminRole}
-          initialActions={nextBestActions.actions}
-          limit={5}
-          showEscalate
-          viewAllHref="/admin/actions?priority=critical"
-        />
-      </div>
-      <div className="mb-6 px-1">
-        <UpcomingMeetingsCard calendarHref="/admin/calendar" scheduleHref="/admin/schedule" />
-      </div>
+      {showCard("platform_health") ? <AdminPlatformHealthWidget /> : null}
+      {showCard("next_best_actions") ? (
+        <div className="mb-6 px-1">
+          <NextBestActionsPanel
+            role={adminRole}
+            initialActions={nextBestActions.actions}
+            limit={5}
+            showEscalate
+            readOnly={!canActOnCard("next_best_actions", permissions)}
+            viewAllHref="/admin/actions?priority=critical"
+          />
+        </div>
+      ) : null}
+      {showCard("upcoming_meetings") ? (
+        <div className="mb-6 px-1">
+          <UpcomingMeetingsCard calendarHref="/admin/calendar" scheduleHref="/admin/schedule" />
+        </div>
+      ) : null}
       <AdminDashboardShell
+        permissions={permissions}
         userId={profile.id}
         userRole={profile.role}
         serviceRoleConfigured={Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)}

@@ -101,6 +101,7 @@
     "tabOverdue": "Vencidas",
     "tabEscalated": "Escaladas",
     "loading": "Cargando acciones sugeridas…",
+    "viewOnly": "Solo lectura",
     "caughtUp": "Estás al día con los elementos priorizados. Vuelve cuando cambie el estado de tu flujo de trabajo.",
     "noneInTab": "No hay acciones en esta vista por ahora.",
     "suggestedDue": "Vencimiento sugerido: {date}",
