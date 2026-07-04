@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
+import { advanceLeadStatus } from "@/lib/prospects/lead-status";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,11 @@ export async function POST(req: NextRequest): Promise<Response> {
       resend_id: emailId,
       event: mapped,
     });
+
+    // Activity nudge: an open/click moves the lead → engaged (forward-only).
+    if ((mapped === "open" || mapped === "click") && origin.contact_id) {
+      await advanceLeadStatus(db, origin.contact_id, "engaged");
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

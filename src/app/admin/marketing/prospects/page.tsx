@@ -19,7 +19,7 @@ function parseStep(raw: string | undefined): Step {
 }
 
 interface Props {
-  searchParams: Promise<{ step?: string; side?: string; segment?: string; status?: string; search?: string }>;
+  searchParams: Promise<{ step?: string; side?: string; segment?: string; status?: string; leadStatus?: string; search?: string }>;
 }
 
 export default async function ProspectsPage({ searchParams }: Props) {
@@ -45,8 +45,8 @@ export default async function ProspectsPage({ searchParams }: Props) {
         {step === "approach" ? <AudienceClient stats={await getAudienceStats()} initialHot={await getHotQueue(50)} /> : null}
         {step === "list" ? (
           <ContactListStep
-            result={await getContactList({ side: params.side, segment: params.segment, status: params.status, search: params.search, limit: 50 })}
-            filters={{ side: params.side ?? "", segment: params.segment ?? "", status: params.status ?? "", search: params.search ?? "" }}
+            result={await getContactList({ side: params.side, segment: params.segment, status: params.status, leadStatus: params.leadStatus, search: params.search, limit: 50 })}
+            filters={{ side: params.side ?? "", segment: params.segment ?? "", status: params.status ?? "", leadStatus: params.leadStatus ?? "", search: params.search ?? "" }}
           />
         ) : null}
         {step === "export" ? <ExportStep /> : null}

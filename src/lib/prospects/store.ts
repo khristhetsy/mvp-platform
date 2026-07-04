@@ -91,6 +91,7 @@ export interface ListRow {
   side: string | null;
   segment: string | null;
   email_status: string | null;
+  lead_status: string | null;
   lead_prescore: number | null;
   source: string | null;
 }
@@ -104,6 +105,7 @@ export interface ListFilters {
   side?: string;
   segment?: string;
   status?: string;
+  leadStatus?: string;
   search?: string;
   limit?: number;
   offset?: number;
@@ -113,13 +115,14 @@ export async function getContactList(filters: ListFilters): Promise<ContactListR
   const db = serviceRoleClientUntyped();
   let q = db
     .from("crm_contacts")
-    .select("id, name, email, company, side, segment, email_status, lead_prescore, source", { count: "exact" })
+    .select("id, name, email, company, side, segment, email_status, lead_status, lead_prescore, source", { count: "exact" })
     .eq("suppressed", false)
     .order("lead_prescore", { ascending: false, nullsFirst: false });
 
   if (filters.side) q = q.eq("side", filters.side);
   if (filters.segment) q = q.eq("segment", filters.segment);
   if (filters.status) q = q.eq("email_status", filters.status);
+  if (filters.leadStatus) q = q.eq("lead_status", filters.leadStatus);
   if (filters.search) q = q.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,company.ilike.%${filters.search}%`);
 
   const limit = filters.limit ?? 50;

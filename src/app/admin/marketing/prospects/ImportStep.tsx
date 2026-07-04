@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ImportOverview } from "@/lib/prospects/store";
+import { FilterSaveList } from "./FilterSaveList";
 
 const card: React.CSSProperties = { background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, padding: 16, marginBottom: 12, boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)" };
 const srcCard: React.CSSProperties = { background: "var(--muted)", border: "0.5px solid var(--border)", borderRadius: 11, padding: 13 };
@@ -100,6 +101,9 @@ export function ImportStep({ overview }: { overview: ImportOverview }) {
 
       {msg ? <p style={{ background: "#ECFDF5", border: "0.5px solid #A7F3D0", color: "#065F46", fontSize: 12.5, borderRadius: 8, padding: "8px 12px", marginBottom: 12 }}>{msg}</p> : null}
       {error ? <p style={{ background: "#FEF2F2", border: "0.5px solid #FECACA", color: "#991B1B", fontSize: 12.5, borderRadius: 8, padding: "8px 12px", marginBottom: 12 }}>{error}</p> : null}
+
+      {/* Filter the pipeline, see the numbers, save/assign a contact list */}
+      <FilterSaveList />
 
       {/* Internal */}
       <div style={card}>

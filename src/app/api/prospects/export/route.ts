@@ -19,13 +19,14 @@ export async function GET(req: NextRequest): Promise<Response> {
     side: sp.get("side") || undefined,
     segment: sp.get("segment") || undefined,
     status: sp.get("status") || undefined,
+    leadStatus: sp.get("leadStatus") || undefined,
     search: sp.get("search") || undefined,
   });
 
-  const header = ["name", "email", "company", "side", "segment", "email_status", "lead_prescore", "source"];
+  const header = ["name", "email", "company", "side", "segment", "email_status", "lead_status", "lead_prescore", "source"];
   const lines = [header.join(",")];
   for (const r of rows) {
-    lines.push([r.name, r.email, r.company, r.side, r.segment, r.email_status, r.lead_prescore, r.source].map(csvCell).join(","));
+    lines.push([r.name, r.email, r.company, r.side, r.segment, r.email_status, r.lead_status, r.lead_prescore, r.source].map(csvCell).join(","));
   }
   const csv = lines.join("\n");
 

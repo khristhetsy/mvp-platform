@@ -8,6 +8,7 @@
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { sendMarketingEmail, makeUnsubscribeToken } from "@/lib/marketing/send";
 import { isUnsubscribed } from "@/lib/marketing/contacts";
+import { advanceLeadStatus } from "@/lib/prospects/lead-status";
 import { lintCopy, type LintResult, type PublishBody } from "./lint";
 
 const MAX_PER_APPROVE = 250;
@@ -184,7 +185,11 @@ export async function approveAndSend(itemId: string, adminId: string): Promise<S
       resend_id: res.resend_id,
       event: res.ok ? "sent" : "bounce",
     });
-    if (res.ok) sent++; else failed++;
+    if (res.ok) {
+      sent++;
+      // Activity nudge: a delivered send moves a new lead → contacted.
+      await advanceLeadStatus(db, c.id, "contacted");
+    } else failed++;
     await new Promise((r) => setTimeout(r, 120));
   }
 
