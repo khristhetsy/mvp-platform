@@ -32,6 +32,7 @@ export default async function CrmConnectorsPage() {
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             <a href="/admin/crm/classify" className="font-semibold text-[#1A6CE4] hover:underline">1 · Classify →</a>
             <a href="/admin/crm/audience" className="font-semibold text-[#1A6CE4] hover:underline">2 · Audience &amp; approach →</a>
+            <a href="/admin/crm/publish" className="font-semibold text-[#1A6CE4] hover:underline">3 · Publish →</a>
           </div>
         </div>
         {profile.role === "admin" && <div className="mt-4"><SyncCrmToMarketing /></div>}
