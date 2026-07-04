@@ -30,6 +30,18 @@ export interface VerifyBatchResult {
   remaining: number;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DB = any;
+
+async function remainingUnverified(db: DB): Promise<number> {
+  const { count } = await db
+    .from("crm_contacts")
+    .select("id", { count: "exact", head: true })
+    .or("email_status.eq.unverified,email.is.null");
+  return count ?? 0;
+}
+
+/** Run one verify + append batch over the next `limit` unverified contacts. */
 export async function verifyBatch(limit = 40): Promise<VerifyBatchResult> {
   const db = serviceRoleClientUntyped();
   const { data } = await db
@@ -37,8 +49,22 @@ export async function verifyBatch(limit = 40): Promise<VerifyBatchResult> {
     .select("id, name, email, phone, company_domain, email_status")
     .or("email_status.eq.unverified,email.is.null")
     .limit(limit);
+  return processRows(db, (data ?? []) as Row[]);
+}
 
-  const rows = (data ?? []) as Row[];
+/** Verify + append a specific set of contacts (a slice the user picked). */
+export async function verifyByIds(ids: string[]): Promise<VerifyBatchResult> {
+  const db = serviceRoleClientUntyped();
+  const capped = ids.slice(0, 100); // bounded to fit the serverless window
+  if (capped.length === 0) return { processed: 0, verified: 0, appended: 0, valid: 0, risky: 0, invalid: 0, remaining: await remainingUnverified(db) };
+  const { data } = await db
+    .from("crm_contacts")
+    .select("id, name, email, phone, company_domain, email_status")
+    .in("id", capped);
+  return processRows(db, (data ?? []) as Row[]);
+}
+
+async function processRows(db: DB, rows: Row[]): Promise<VerifyBatchResult> {
   const tally = { verified: 0, appended: 0, valid: 0, risky: 0, invalid: 0 };
   let scrapes = 0;
   const now = new Date().toISOString();

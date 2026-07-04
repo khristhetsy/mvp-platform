@@ -1,13 +1,14 @@
 import { requireRole } from "@/lib/supabase/auth";
-import { getImportOverview, getContactList } from "@/lib/prospects/store";
+import { getImportOverview } from "@/lib/prospects/store";
 import { getVerifyStats } from "@/lib/verify/store";
 import { providerConfigured } from "@/lib/append/provider";
 import { getAudienceStats, getHotQueue } from "@/lib/approach/store";
 import { ProspectsStepper } from "./ProspectsStepper";
 import { ImportStep } from "./ImportStep";
 import { VerifyClient } from "@/app/admin/crm/verify/VerifyClient";
+import { VerifyContactList } from "./VerifyContactList";
 import { AudienceClient } from "@/app/admin/crm/audience/AudienceClient";
-import { ContactListStep } from "./ContactListStep";
+import { SavedListsDirectory } from "./SavedListsDirectory";
 import { ExportStep } from "./ExportStep";
 
 export const dynamic = "force-dynamic";
@@ -41,14 +42,14 @@ export default async function ProspectsPage({ searchParams }: Props) {
 
       <div style={{ marginTop: 16 }}>
         {step === "import" ? <ImportStep overview={await getImportOverview()} /> : null}
-        {step === "verify" ? <VerifyClient stats={await getVerifyStats()} providerReady={providerConfigured()} /> : null}
-        {step === "approach" ? <AudienceClient stats={await getAudienceStats()} initialHot={await getHotQueue(50)} /> : null}
-        {step === "list" ? (
-          <ContactListStep
-            result={await getContactList({ side: params.side, segment: params.segment, status: params.status, leadStatus: params.leadStatus, search: params.search, limit: 50 })}
-            filters={{ side: params.side ?? "", segment: params.segment ?? "", status: params.status ?? "", leadStatus: params.leadStatus ?? "", search: params.search ?? "" }}
-          />
+        {step === "verify" ? (
+          <>
+            <VerifyClient stats={await getVerifyStats()} providerReady={providerConfigured()} />
+            <VerifyContactList />
+          </>
         ) : null}
+        {step === "approach" ? <AudienceClient stats={await getAudienceStats()} initialHot={await getHotQueue(50)} verifiedReady={(await getVerifyStats()).valid} /> : null}
+        {step === "list" ? <SavedListsDirectory /> : null}
         {step === "export" ? <ExportStep /> : null}
       </div>
     </div>

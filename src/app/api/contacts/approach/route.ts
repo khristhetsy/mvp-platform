@@ -5,8 +5,9 @@ import { requireRole } from "@/lib/supabase/auth";
 import { approachBatch } from "@/lib/approach/store";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60; // larger batches (up to 1000) need headroom
 
-const bodySchema = z.object({ limit: z.number().int().min(1).max(500).default(200) });
+const bodySchema = z.object({ limit: z.number().int().min(1).max(1000).default(200) });
 
 // POST /api/contacts/approach — compute approach + segment for classified rows.
 export async function POST(req: NextRequest): Promise<Response> {

@@ -10,11 +10,14 @@ const SEG_STYLE: Record<string, { bg: string; color: string }> = {
   cold: { bg: "#F1F5F9", color: "#475569" },
 };
 
-export function AudienceClient({ stats, initialHot }: { stats: AudienceStats; initialHot: HotRow[] }) {
+const BATCH_SIZES = [100, 250, 500, 1000];
+
+export function AudienceClient({ stats, initialHot, verifiedReady }: { stats: AudienceStats; initialHot: HotRow[]; verifiedReady?: number }) {
   const router = useRouter();
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [batch, setBatch] = useState(500);
 
   async function run() {
     setRunning(true); setError(null); setResult(null);
@@ -22,7 +25,7 @@ export function AudienceClient({ stats, initialHot }: { stats: AudienceStats; in
       const res = await fetch("/api/contacts/approach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ limit: 300 }),
+        body: JSON.stringify({ limit: batch }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Approach scoring failed.");
@@ -37,6 +40,12 @@ export function AudienceClient({ stats, initialHot }: { stats: AudienceStats; in
 
   return (
     <div className="space-y-4">
+      {typeof verifiedReady === "number" ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-2 text-sm text-[#1A4E9E]">
+          <span>↳</span>
+          <span><strong>{verifiedReady.toLocaleString()} verified contacts</strong> carried in from Verify &amp; Append — ready to score.</span>
+        </div>
+      ) : null}
       <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-panel)]">
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-6">
           {[
@@ -53,10 +62,19 @@ export function AudienceClient({ stats, initialHot }: { stats: AudienceStats; in
             </div>
           ))}
         </div>
-        <div className="mt-4 flex items-center gap-3">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Batch</span>
+            {BATCH_SIZES.map((n) => (
+              <button key={n} type="button" onClick={() => setBatch(n)} disabled={running}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${batch === n ? "bg-[#2E78F5] text-white" : "border border-slate-200 text-slate-600"}`}>
+                {n}
+              </button>
+            ))}
+          </div>
           <button type="button" onClick={run} disabled={running || stats.pending === 0}
             className="rounded-lg bg-[#2E78F5] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-            {running ? "Scoring…" : "Run approach scoring (next 300)"}
+            {running ? "Scoring…" : `Run AI approach (${batch})`}
           </button>
           {result ? <span className="text-sm text-slate-600">{result}</span> : null}
         </div>
