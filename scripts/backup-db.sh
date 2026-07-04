@@ -8,11 +8,25 @@ cd "$ROOT"
 BACKUP_DIR="${BACKUP_DIR:-$ROOT/backups}"
 mkdir -p "$BACKUP_DIR"
 
-if [[ -f "$ROOT/.env.local" ]]; then
-  set -a
-  # shellcheck disable=SC1091
-  source <(grep -v '^#' "$ROOT/.env.local" | sed '/^\s*$/d' | sed 's/\r$//')
-  set +a
+# Resolve DATABASE_URL. Prefer an already-exported value (e.g. passed inline on
+# the command line); otherwise read it LITERALLY from .env.local.
+#
+# We intentionally do NOT `source` the env file: sourcing evaluates each line as
+# shell, so a special character in the password (# $ & ! ' " | space, backtick,
+# etc.) breaks the assignment and silently leaves DATABASE_URL empty. Parsing the
+# single line by hand preserves the value exactly as written.
+if [[ -z "${DATABASE_URL:-}" && -f "$ROOT/.env.local" ]]; then
+  __db_line="$(grep -E '^[[:space:]]*(export[[:space:]]+)?DATABASE_URL=' "$ROOT/.env.local" | tail -n1 || true)"
+  if [[ -n "$__db_line" ]]; then
+    __db_val="${__db_line#*=}"          # everything after the first '='
+    __db_val="${__db_val%$'\r'}"        # strip trailing CR (CRLF files)
+    if [[ "$__db_val" == \"*\" ]]; then # strip one layer of surrounding quotes
+      __db_val="${__db_val#\"}"; __db_val="${__db_val%\"}"
+    elif [[ "$__db_val" == \'*\' ]]; then
+      __db_val="${__db_val#\'}"; __db_val="${__db_val%\'}"
+    fi
+    export DATABASE_URL="$__db_val"
+  fi
 fi
 
 DATABASE_URL="${DATABASE_URL:-}"
