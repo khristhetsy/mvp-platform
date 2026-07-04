@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { getVerifyStats } from "@/lib/verify/store";
 import { providerConfigured } from "@/lib/append/provider";
 import { ProspectsStepper } from "./ProspectsStepper";
+import { WizardShell } from "./WizardShell";
 import { CreateListWizard } from "./CreateListWizard";
 import { VerifyClient } from "@/app/admin/crm/verify/VerifyClient";
 import { VerifyContactList } from "./VerifyContactList";
@@ -43,13 +44,38 @@ export default async function ProspectsPage({ searchParams }: Props) {
       <div style={{ marginTop: 16 }}>
         {step === "create" ? <CreateListWizard /> : null}
         {step === "verify" ? (
-          <>
-            <VerifyClient stats={await getVerifyStats()} providerReady={providerConfigured()} />
-            <VerifyContactList />
-          </>
+          <WizardShell
+            completeHref="/admin/marketing/prospects?step=approach"
+            completeLabel="Complete stage → AI Approach"
+            steps={[
+              { label: "Overview & run", content: <VerifyClient stats={await getVerifyStats()} providerReady={providerConfigured()} /> },
+              { label: "Verify & correct", content: <VerifyContactList /> },
+              {
+                label: "Confirm",
+                content: (
+                  <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, padding: 16, boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)" }}>
+                    <h3 style={{ fontSize: 13, fontWeight: 800, marginBottom: 4 }}>Verified &amp; corrected</h3>
+                    <p style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Emails checked, gaps enriched where possible, phones flagged for consent. When you&rsquo;re happy with the list, move on to score how to approach it.</p>
+                  </div>
+                ),
+              },
+            ]}
+          />
         ) : null}
-        {step === "approach" ? <ApproachListView /> : null}
-        {step === "list" ? <SavedListsDirectory /> : null}
+        {step === "approach" ? (
+          <WizardShell
+            completeHref="/admin/marketing/prospects?step=list"
+            completeLabel="Complete stage → Contact Lists"
+            steps={[{ label: "Score & review", content: <ApproachListView /> }]}
+          />
+        ) : null}
+        {step === "list" ? (
+          <WizardShell
+            completeHref="/admin/marketing/lists"
+            completeLabel="Finish → open Contact Lists"
+            steps={[{ label: "Manage lists", content: <SavedListsDirectory /> }]}
+          />
+        ) : null}
       </div>
     </div>
   );

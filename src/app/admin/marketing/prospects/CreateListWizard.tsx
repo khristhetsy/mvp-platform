@@ -35,19 +35,29 @@ export function CreateListWizard() {
 
   // founder + pipeline filter state
   const [ff, setFf] = useState({ stage: "", sector: "", jurisdiction: "", minReadiness: "", minFunding: "", search: "" });
-  const [pf, setPf] = useState({ segment: "", status: "", leadStatus: "", minScore: "", search: "" });
+  const [pf, setPf] = useState({ side: "", segment: "", status: "", leadStatus: "", minScore: "", search: "" });
 
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [allMatching, setAllMatching] = useState(false);
   const [loading, setLoading] = useState(false);
   const [seldIds, setSeldIds] = useState<Set<string>>(new Set());
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isFounder = source === "founder";
+  const PAGE_SIZE = 100;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // reset paging/select-all when the source or filters change
+  function setFounder(patch: Partial<typeof ff>) { setFf({ ...ff, ...patch }); setPage(0); setAllMatching(false); }
+  function setPipe(patch: Partial<typeof pf>) { setPf({ ...pf, ...patch }); setPage(0); setAllMatching(false); }
+  function pickSource(s: Source) { setSource(s); setPage(0); setAllMatching(false); }
 
   const fetchRows = useCallback(async () => {
     setLoading(true); setError(null);
@@ -63,8 +73,9 @@ export function CreateListWizard() {
         if (ff.search) p.set("search", ff.search);
         url = `/api/prospects/founders?${p.toString()}`;
       } else {
-        const p = new URLSearchParams({ limit: "100" });
+        const p = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(page * PAGE_SIZE) });
         if (source !== "all") p.set("source", source);
+        if (pf.side) p.set("side", pf.side);
         if (pf.segment) p.set("segment", pf.segment);
         if (pf.status) p.set("status", pf.status);
         if (pf.leadStatus) p.set("leadStatus", pf.leadStatus);
@@ -76,12 +87,12 @@ export function CreateListWizard() {
       const rws = (data.rows ?? []) as Row[];
       setRows(rws);
       setTotal(data.total ?? rws.length);
-      setSeldIds(new Set(rws.map((r) => r.id)));
+      if (!allMatching) setSeldIds(new Set(rws.map((r) => r.id)));
     } catch {
       setRows([]); setTotal(0);
     }
     setLoading(false);
-  }, [isFounder, source, ff, pf]);
+  }, [isFounder, source, ff, pf, page, allMatching]);
 
   useEffect(() => {
     if (step < 1) return;
@@ -104,6 +115,7 @@ export function CreateListWizard() {
     }
     return {
       source: source !== "all" ? source : undefined,
+      side: pf.side || undefined,
       segment: pf.segment || undefined, status: pf.status || undefined, leadStatus: pf.leadStatus || undefined,
       minScore: pf.minScore ? Number(pf.minScore) : undefined, search: pf.search || undefined,
     };
@@ -115,12 +127,14 @@ export function CreateListWizard() {
     try {
       const endpoint = isFounder ? "/api/prospects/founders/save-list" : "/api/prospects/save-list";
       const body: Record<string, unknown> = { filters: filterBody(), name: name.trim() };
-      if (mode === "selected") body.contactIds = [...seldIds];
+      // "all matching" (or explicit all) saves by filters; otherwise by the ticked ids
+      if (mode === "selected" && !allMatching) body.contactIds = [...seldIds];
       const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Save failed.");
-      setMsg(`Created “${data.listName}” with ${data.added.toLocaleString()} contacts. Find it in Contact Lists.`);
+      setMsg(`Created “${data.listName}” with ${data.added.toLocaleString()} contacts.`);
       setName("");
+      setDone(true);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed.");
@@ -151,7 +165,7 @@ export function CreateListWizard() {
           <p style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 10 }}>Where should this list come from?</p>
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
             {SOURCES.map((s) => (
-              <button key={s.id} onClick={() => setSource(s.id)}
+              <button key={s.id} onClick={() => pickSource(s.id)}
                 style={{ fontSize: 12, fontWeight: 700, borderRadius: 8, padding: "9px 14px", cursor: "pointer",
                   border: source === s.id ? "1px solid #2E78F5" : "0.5px solid var(--border)",
                   background: source === s.id ? "#2E78F5" : "#fff", color: source === s.id ? "#fff" : "var(--muted-foreground)" }}>
@@ -170,20 +184,21 @@ export function CreateListWizard() {
         <div>
           {isFounder ? (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
-              <div><label style={label}>Journey stage</label><select value={ff.stage} onChange={(e) => setFf({ ...ff, stage: e.target.value })} style={sel}><option value="">Any</option>{STAGES.map((s) => <option key={s} value={s}>{cap(s)}</option>)}</select></div>
-              <div><label style={label}>Sector</label><select value={ff.sector} onChange={(e) => setFf({ ...ff, sector: e.target.value })} style={sel}><option value="">Any</option>{EVENT_SECTORS.map((s) => <option key={s.slug} value={s.label}>{s.label}</option>)}</select></div>
-              <div><label style={label}>Readiness ≥</label><select value={ff.minReadiness} onChange={(e) => setFf({ ...ff, minReadiness: e.target.value })} style={sel}><option value="">Any</option><option value="50">50</option><option value="60">60</option><option value="70">70</option><option value="80">80</option></select></div>
-              <div><label style={label}>Jurisdiction</label><input value={ff.jurisdiction} onChange={(e) => setFf({ ...ff, jurisdiction: e.target.value })} placeholder="e.g. Delaware" style={sel} /></div>
-              <div><label style={label}>Raise ≥ ($)</label><input value={ff.minFunding} onChange={(e) => setFf({ ...ff, minFunding: e.target.value.replace(/[^0-9]/g, "") })} placeholder="Any" style={sel} /></div>
-              <div><label style={label}>Search</label><input value={ff.search} onChange={(e) => setFf({ ...ff, search: e.target.value })} placeholder="name, email" style={sel} /></div>
+              <div><label style={label}>Journey stage</label><select value={ff.stage} onChange={(e) => setFounder({ stage: e.target.value })} style={sel}><option value="">Any</option>{STAGES.map((s) => <option key={s} value={s}>{cap(s)}</option>)}</select></div>
+              <div><label style={label}>Sector</label><select value={ff.sector} onChange={(e) => setFounder({ sector: e.target.value })} style={sel}><option value="">Any</option>{EVENT_SECTORS.map((s) => <option key={s.slug} value={s.label}>{s.label}</option>)}</select></div>
+              <div><label style={label}>Readiness ≥</label><select value={ff.minReadiness} onChange={(e) => setFounder({ minReadiness: e.target.value })} style={sel}><option value="">Any</option><option value="50">50</option><option value="60">60</option><option value="70">70</option><option value="80">80</option></select></div>
+              <div><label style={label}>Jurisdiction</label><input value={ff.jurisdiction} onChange={(e) => setFounder({ jurisdiction: e.target.value })} placeholder="e.g. Delaware" style={sel} /></div>
+              <div><label style={label}>Raise ≥ ($)</label><input value={ff.minFunding} onChange={(e) => setFounder({ minFunding: e.target.value.replace(/[^0-9]/g, "") })} placeholder="Any" style={sel} /></div>
+              <div><label style={label}>Search</label><input value={ff.search} onChange={(e) => setFounder({ search: e.target.value })} placeholder="name, email" style={sel} /></div>
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
-              <div><label style={label}>Segment</label><select value={pf.segment} onChange={(e) => setPf({ ...pf, segment: e.target.value })} style={sel}><option value="">Any</option><option value="hot">Hot</option><option value="warm">Warm</option><option value="cold">Cold</option></select></div>
-              <div><label style={{ ...label, color: "#1A6CE4" }}>Lead status</label><select value={pf.leadStatus} onChange={(e) => setPf({ ...pf, leadStatus: e.target.value })} style={sel}><option value="">Any</option>{LEAD_STATUSES.map((s) => <option key={s} value={s}>{cap(s)}</option>)}</select></div>
-              <div><label style={label}>Email status</label><select value={pf.status} onChange={(e) => setPf({ ...pf, status: e.target.value })} style={sel}><option value="">Any</option><option value="valid">Valid</option><option value="risky">Risky</option><option value="invalid">Invalid</option><option value="unverified">Unverified</option></select></div>
-              <div><label style={label}>Pre-score ≥</label><select value={pf.minScore} onChange={(e) => setPf({ ...pf, minScore: e.target.value })} style={sel}><option value="">Any</option><option value="40">40</option><option value="55">55</option><option value="65">65</option><option value="80">80</option></select></div>
-              <div style={{ gridColumn: "span 2" }}><label style={label}>Search</label><input value={pf.search} onChange={(e) => setPf({ ...pf, search: e.target.value })} placeholder="name, email, company" style={sel} /></div>
+              <div><label style={{ ...label, color: "#1A6CE4" }}>Side</label><select value={pf.side} onChange={(e) => setPipe({ side: e.target.value })} style={{ ...sel, borderColor: pf.side ? "#2E78F5" : "var(--border)" }}><option value="">Any</option><option value="founder">Founders</option><option value="investor">Investors</option></select></div>
+              <div><label style={label}>Segment</label><select value={pf.segment} onChange={(e) => setPipe({ segment: e.target.value })} style={sel}><option value="">Any</option><option value="hot">Hot</option><option value="warm">Warm</option><option value="cold">Cold</option></select></div>
+              <div><label style={{ ...label, color: "#1A6CE4" }}>Lead status</label><select value={pf.leadStatus} onChange={(e) => setPipe({ leadStatus: e.target.value })} style={sel}><option value="">Any</option>{LEAD_STATUSES.map((s) => <option key={s} value={s}>{cap(s)}</option>)}</select></div>
+              <div><label style={label}>Email status</label><select value={pf.status} onChange={(e) => setPipe({ status: e.target.value })} style={sel}><option value="">Any</option><option value="valid">Valid</option><option value="risky">Risky</option><option value="invalid">Invalid</option><option value="unverified">Unverified</option></select></div>
+              <div><label style={label}>Pre-score ≥</label><select value={pf.minScore} onChange={(e) => setPipe({ minScore: e.target.value })} style={sel}><option value="">Any</option><option value="40">40</option><option value="55">55</option><option value="65">65</option><option value="80">80</option></select></div>
+              <div><label style={label}>Search</label><input value={pf.search} onChange={(e) => setPipe({ search: e.target.value })} placeholder="name, email, company" style={sel} /></div>
             </div>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, borderTop: "0.5px solid var(--border)", paddingTop: 10 }}>
@@ -196,41 +211,76 @@ export function CreateListWizard() {
       {/* STEP 2 — Select */}
       {step === 2 && (
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <span style={{ fontSize: 11.5, fontWeight: 700, color: "#1A4E9E" }}>{seldIds.size} of {rows.length} shown selected</span>
-            <button onClick={() => setSeldIds(new Set(rows.map((r) => r.id)))} style={{ fontSize: 10.5, color: "#1A6CE4", background: "none", border: "none", cursor: "pointer" }}>Select all</button>
-            <button onClick={() => setSeldIds(new Set())} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Clear</button>
-            {total > rows.length ? <span style={{ marginLeft: "auto", fontSize: 10.5, color: "var(--muted-foreground)" }}>showing first {rows.length} of {total.toLocaleString()}</span> : null}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: "#1A4E9E" }}>
+              {allMatching ? `All ${total.toLocaleString()} matching selected` : `${seldIds.size} of ${rows.length} shown selected`}
+            </span>
+            {!allMatching && <button onClick={() => setSeldIds(new Set(rows.map((r) => r.id)))} style={{ fontSize: 10.5, color: "#1A6CE4", background: "none", border: "none", cursor: "pointer" }}>Select page</button>}
+            <button onClick={() => { setAllMatching(false); setSeldIds(new Set()); }} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Clear</button>
+            {total > rows.length ? (
+              <button onClick={() => setAllMatching(true)} style={{ fontSize: 10.5, fontWeight: 700, color: allMatching ? "#065F46" : "#fff", background: allMatching ? "#ECFDF5" : "#0F6E56", border: allMatching ? "0.5px solid #A7F3D0" : "none", borderRadius: 999, padding: "3px 10px", cursor: "pointer" }}>
+                {allMatching ? "✓ All matching" : `Select all ${total.toLocaleString()} matching`}
+              </button>
+            ) : null}
           </div>
           <div style={{ border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden", maxHeight: 320, overflowY: "auto" }}>
-            {rows.length === 0 ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>No matches.</p> : rows.map((r) => (
-              <div key={r.id} style={{ display: "grid", gridTemplateColumns: "26px 1.5fr 1.3fr auto", gap: 8, padding: "8px 11px", borderBottom: "0.5px solid var(--border)", alignItems: "center", fontSize: 11.5, background: seldIds.has(r.id) ? "#F5F9FF" : undefined }}>
-                <input type="checkbox" checked={seldIds.has(r.id)} onChange={() => toggle(r.id)} style={{ accentColor: "#2E78F5" }} />
-                <div style={{ minWidth: 0 }}><div style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name || r.email}</div><div style={{ fontSize: 10.5, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.email}</div></div>
-                <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.company ?? "—"}</div>
-                <div style={{ textAlign: "right", fontSize: 10.5, color: "var(--muted-foreground)" }}>{isFounder ? (r.readiness != null ? `${r.readiness}/100` : cap(r.journey_stage ?? "")) : cap(r.segment ?? r.email_status ?? "")}</div>
-              </div>
-            ))}
+            {loading ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>Loading…</p>
+            : rows.length === 0 ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>No matches.</p> : rows.map((r) => {
+              const checked = allMatching || seldIds.has(r.id);
+              return (
+                <div key={r.id} style={{ display: "grid", gridTemplateColumns: "26px 1.5fr 1.3fr auto", gap: 8, padding: "8px 11px", borderBottom: "0.5px solid var(--border)", alignItems: "center", fontSize: 11.5, background: checked ? "#F5F9FF" : undefined }}>
+                  <input type="checkbox" checked={checked} disabled={allMatching} onChange={() => toggle(r.id)} style={{ accentColor: "#2E78F5" }} />
+                  <div style={{ minWidth: 0 }}><div style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name || r.email}</div><div style={{ fontSize: 10.5, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.email}</div></div>
+                  <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.company ?? "—"}</div>
+                  <div style={{ textAlign: "right", fontSize: 10.5, color: "var(--muted-foreground)" }}>{isFounder ? (r.readiness != null ? `${r.readiness}/100` : cap(r.journey_stage ?? "")) : cap(r.segment ?? r.email_status ?? "")}</div>
+                </div>
+              );
+            })}
           </div>
+          {!isFounder && total > PAGE_SIZE ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 9 }}>
+              <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} style={{ fontSize: 11, border: "0.5px solid var(--border)", background: "#fff", borderRadius: 6, padding: "6px 11px", color: "var(--muted-foreground)", cursor: page === 0 ? "default" : "pointer", opacity: page === 0 ? 0.5 : 1 }}>‹ Prev</button>
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Page <b style={{ color: "var(--foreground)" }}>{page + 1}</b> of {pageCount.toLocaleString()} · {(page * PAGE_SIZE + 1).toLocaleString()}–{Math.min((page + 1) * PAGE_SIZE, total).toLocaleString()} of {total.toLocaleString()}</span>
+              <button onClick={() => setPage(Math.min(pageCount - 1, page + 1))} disabled={page + 1 >= pageCount} style={{ fontSize: 11, fontWeight: 700, border: "0.5px solid #93C5FD", background: "#EFF6FF", color: "#1A6CE4", borderRadius: 6, padding: "6px 11px", cursor: page + 1 >= pageCount ? "default" : "pointer", opacity: page + 1 >= pageCount ? 0.5 : 1 }}>Next page ›</button>
+            </div>
+          ) : null}
         </div>
       )}
 
       {/* STEP 3 — Save */}
       {step === 3 && (
         <div>
-          <label style={label}>Name this list</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={isFounder ? "e.g. Qualified FinTech founders" : "e.g. Odoo investors · valid"} style={{ ...sel, marginBottom: 12 }} />
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button onClick={() => save("selected")} disabled={saving || !name.trim() || seldIds.size === 0}
-              style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 15px", cursor: "pointer", opacity: saving || !name.trim() || seldIds.size === 0 ? 0.5 : 1 }}>
-              {saving ? "Creating…" : `Create from ${seldIds.size} selected`}
-            </button>
-            <button onClick={() => save("all")} disabled={saving || !name.trim() || total === 0}
-              style={{ fontSize: 12, fontWeight: 700, color: "#1A6CE4", background: "#fff", border: "0.5px solid #93C5FD", borderRadius: 8, padding: "9px 15px", cursor: "pointer", opacity: saving || !name.trim() || total === 0 ? 0.5 : 1 }}>
-              Create from all {total.toLocaleString()} matching
-            </button>
-          </div>
-          {msg ? <p style={{ marginTop: 12, background: "#ECFDF5", border: "0.5px solid #A7F3D0", color: "#065F46", fontSize: 12, borderRadius: 8, padding: "8px 12px" }}>{msg}</p> : null}
+          {done ? (
+            <div style={{ background: "#ECFDF5", border: "0.5px solid #A7F3D0", borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 16 }}>✓</span>
+              <div style={{ flex: 1, minWidth: 180 }}><div style={{ fontSize: 13, fontWeight: 700, color: "#065F46" }}>{msg}</div><div style={{ fontSize: 11.5, color: "#047857" }}>It&rsquo;s saved to your Contact Lists.</div></div>
+              <button onClick={() => router.push("/admin/marketing/prospects?step=list")} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 8, padding: "9px 16px", cursor: "pointer" }}>Go to Contact Lists →</button>
+            </div>
+          ) : (
+            <>
+              <label style={label}>Name this list</label>
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder={isFounder ? "e.g. Qualified FinTech founders" : "e.g. Odoo investors · valid"} style={{ ...sel, marginBottom: 12 }} />
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {allMatching ? (
+                  <button onClick={() => save("all")} disabled={saving || !name.trim() || total === 0}
+                    style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 15px", cursor: "pointer", opacity: saving || !name.trim() || total === 0 ? 0.5 : 1 }}>
+                    {saving ? "Creating…" : `Create from all ${total.toLocaleString()} matching`}
+                  </button>
+                ) : (
+                  <>
+                    <button onClick={() => save("selected")} disabled={saving || !name.trim() || seldIds.size === 0}
+                      style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 15px", cursor: "pointer", opacity: saving || !name.trim() || seldIds.size === 0 ? 0.5 : 1 }}>
+                      {saving ? "Creating…" : `Create from ${seldIds.size} selected`}
+                    </button>
+                    <button onClick={() => save("all")} disabled={saving || !name.trim() || total === 0}
+                      style={{ fontSize: 12, fontWeight: 700, color: "#1A6CE4", background: "#fff", border: "0.5px solid #93C5FD", borderRadius: 8, padding: "9px 15px", cursor: "pointer", opacity: saving || !name.trim() || total === 0 ? 0.5 : 1 }}>
+                      Create from all {total.toLocaleString()} matching
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 

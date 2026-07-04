@@ -11,6 +11,7 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const sp = req.nextUrl.searchParams;
   const limit = Math.min(Number(sp.get("limit") ?? 50) || 50, 200);
+  const offset = Math.max(Number(sp.get("offset") ?? 0) || 0, 0);
   try {
     const result = await getContactList({
       side: sp.get("side") || undefined,
@@ -19,6 +20,7 @@ export async function GET(req: NextRequest): Promise<Response> {
       leadStatus: sp.get("leadStatus") || undefined,
       search: sp.get("search") || undefined,
       limit,
+      offset,
     });
     return NextResponse.json(result);
   } catch (err) {
