@@ -37,6 +37,10 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
   const [drafting, setDrafting] = useState(false);
   const [draftIntent, setDraftIntent] = useState<"approve" | "changes_requested" | "reject">("approve");
   const [sendToInvestor, setSendToInvestor] = useState(true);
+  const [reopen, setReopen] = useState(false);
+  // Once a profile is decided, collapse the decision UI so it doesn't look
+  // like it still needs review. "changes_requested" stays open (awaiting resubmit).
+  const resolved = status === "approved" || status === "rejected";
 
   async function setAccreditation(verified: boolean) {
     setLoading("accreditation");
@@ -314,77 +318,96 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
         </div>
       ) : null}
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Message to investor</span>
-        <div className="flex items-center gap-2">
-          <select
-            className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
-            value={draftIntent}
-            disabled={drafting || Boolean(loading)}
-            onChange={(event) => setDraftIntent(event.target.value as "approve" | "changes_requested" | "reject")}
-            aria-label="Message tone"
-          >
-            <option value="approve">Approval — warm</option>
-            <option value="changes_requested">Request changes</option>
-            <option value="reject">Rejection</option>
-          </select>
+      {resolved && !reopen ? (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <p className="text-sm font-medium text-slate-800">
+            {status === "approved" ? "✓ Approved" : "Rejected"}
+            {status === "approved" && row.approved_at ? ` on ${formatDate(row.approved_at)}` : ""}
+            {" · no further review needed."}
+          </p>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
-            disabled={drafting || Boolean(loading)}
-            onClick={() => void generateDraft()}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+            onClick={() => setReopen(true)}
           >
-            {drafting ? "Drafting…" : "✦ Generate with AI"}
+            Change decision or send a message
           </button>
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Message to investor</span>
+            <div className="flex items-center gap-2">
+              <select
+                className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                value={draftIntent}
+                disabled={drafting || Boolean(loading)}
+                onChange={(event) => setDraftIntent(event.target.value as "approve" | "changes_requested" | "reject")}
+                aria-label="Message tone"
+              >
+                <option value="approve">Approval — warm</option>
+                <option value="changes_requested">Request changes</option>
+                <option value="reject">Rejection</option>
+              </select>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                disabled={drafting || Boolean(loading)}
+                onClick={() => void generateDraft()}
+              >
+                {drafting ? "Drafting…" : "✦ Generate with AI"}
+              </button>
+            </div>
+          </div>
 
-      <textarea
-        className="mt-2 min-h-24 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-        placeholder="Write a message, or generate one with AI. Required when rejecting or requesting changes."
-        value={feedback}
-        onChange={(event) => setFeedback(event.target.value)}
-      />
+          <textarea
+            className="mt-2 min-h-24 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+            placeholder="Write a message, or generate one with AI. Required when rejecting or requesting changes."
+            value={feedback}
+            onChange={(event) => setFeedback(event.target.value)}
+          />
 
-      <label className="mt-2 flex items-center gap-2 text-xs text-slate-600">
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-slate-300"
-          checked={sendToInvestor}
-          onChange={(event) => setSendToInvestor(event.target.checked)}
-        />
-        Email + notify the investor with this message when I record the decision
-      </label>
+          <label className="mt-2 flex items-center gap-2 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300"
+              checked={sendToInvestor}
+              onChange={(event) => setSendToInvestor(event.target.checked)}
+            />
+            Email + notify the investor with this message when I record the decision
+          </label>
 
-      {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
-      {success ? <p className="mt-3 text-sm text-emerald-700">{success}</p> : null}
+          {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
+          {success ? <p className="mt-3 text-sm text-emerald-700">{success}</p> : null}
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
-          disabled={Boolean(loading)}
-          onClick={() => review("approve")}
-        >
-          {loading === "approve" ? "Approving…" : sendToInvestor && feedback.trim() ? "Approve & send" : "Approve"}
-        </button>
-        <button
-          type="button"
-          className="rounded-full border border-amber-300 px-4 py-2 text-xs font-semibold text-amber-900 disabled:opacity-50"
-          disabled={Boolean(loading)}
-          onClick={() => review("changes_requested")}
-        >
-          Request changes
-        </button>
-        <button
-          type="button"
-          className="rounded-full border border-red-300 px-4 py-2 text-xs font-semibold text-red-800 disabled:opacity-50"
-          disabled={Boolean(loading)}
-          onClick={() => review("reject")}
-        >
-          Reject
-        </button>
-      </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+              disabled={Boolean(loading)}
+              onClick={() => review("approve")}
+            >
+              {loading === "approve" ? "Approving…" : sendToInvestor && feedback.trim() ? "Approve & send" : "Approve"}
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-amber-300 px-4 py-2 text-xs font-semibold text-amber-900 disabled:opacity-50"
+              disabled={Boolean(loading)}
+              onClick={() => review("changes_requested")}
+            >
+              Request changes
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-red-300 px-4 py-2 text-xs font-semibold text-red-800 disabled:opacity-50"
+              disabled={Boolean(loading)}
+              onClick={() => review("reject")}
+            >
+              Reject
+            </button>
+          </div>
+        </>
+      )}
     </article>
   );
 }
