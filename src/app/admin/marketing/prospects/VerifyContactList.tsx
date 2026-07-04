@@ -16,8 +16,14 @@ const LEAD_COLOR: Record<string, string> = {
   nurturing: "#92400E", converted: "#047857", disqualified: "#B91C1C",
 };
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const GRID = "30px 2fr 1.2fr 64px 92px 92px";
+const GRID = "26px 1.5fr 1fr 1fr 74px 74px 62px";
 const PAGE = 50;
+
+// LinkedIn = a people-search link (no scraping); opens the profile search in a new tab.
+function linkedinSearchUrl(name: string | null, company: string | null): string {
+  const q = [name, company].filter(Boolean).join(" ").trim();
+  return `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(q)}`;
+}
 
 export function VerifyContactList() {
   const router = useRouter();
@@ -112,7 +118,7 @@ export function VerifyContactList() {
 
       {/* header */}
       <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "8px 14px", background: "var(--muted)", borderBottom: "0.5px solid var(--border)", fontSize: 10.5, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-        <div></div><div>Contact</div><div>Company</div><div>Side</div><div>Email status</div><div>Lead status</div>
+        <div></div><div>Contact</div><div>Company</div><div>Phone</div><div>Email</div><div>Lead</div><div>LinkedIn</div>
       </div>
 
       {loading ? (
@@ -130,9 +136,10 @@ export function VerifyContactList() {
               {r.name ? <div style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.email}</div> : null}
             </div>
             <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.company ?? "—"}</div>
-            <div style={{ color: "var(--muted-foreground)", fontSize: 11 }}>{r.side ?? "—"}</div>
+            <div style={{ fontSize: 10.5, fontFamily: "monospace", color: r.phone ? "var(--foreground)" : "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.phone ?? "—"}</div>
             <div><span style={{ fontSize: 11, color: EMAIL_COLOR[es], fontWeight: 600 }}>{cap(es)}</span></div>
-            <div><span style={{ fontSize: 10.5, fontWeight: 700, color: LEAD_COLOR[ls] ?? "var(--foreground)", border: "0.5px solid var(--border)", borderRadius: 6, padding: "2px 7px" }}>{cap(ls)}</span></div>
+            <div><span style={{ fontSize: 10, fontWeight: 700, color: LEAD_COLOR[ls] ?? "var(--foreground)", border: "0.5px solid var(--border)", borderRadius: 6, padding: "1px 6px" }}>{cap(ls)}</span></div>
+            <div><a href={linkedinSearchUrl(r.name, r.company)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10.5, fontWeight: 700, color: "#0369A1", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 3 }}><span style={{ background: "#0A66C2", color: "#fff", borderRadius: 3, padding: "0 3px", fontSize: 9 }}>in</span>Find</a></div>
           </div>
         );
       })}

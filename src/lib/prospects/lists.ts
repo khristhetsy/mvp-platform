@@ -15,6 +15,7 @@ export interface ProspectFilters {
   minScore?: number;    // lead_prescore >=
   sector?: string;      // signals->>sector ilike
   search?: string;
+  ids?: string[];       // restrict to an explicit contact-id subset
 }
 
 // The untyped service client yields loosely-typed builders; keep it simple.
@@ -23,6 +24,7 @@ type FB = any;
 
 function applyFilters(q: FB, f: ProspectFilters, opts?: { skipSegment?: boolean; skipStatus?: boolean }): FB {
   let out = q.eq("suppressed", false).not("email", "is", null);
+  if (f.ids && f.ids.length > 0) out = out.in("id", f.ids);
   if (f.side) out = out.eq("side", f.side);
   if (f.segment && !opts?.skipSegment) out = out.eq("segment", f.segment);
   if (f.status && !opts?.skipStatus) out = out.eq("email_status", f.status);

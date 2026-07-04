@@ -1,11 +1,10 @@
 import Link from "next/link";
 
 const STEPS = [
-  { id: "import", n: 1, label: "Import" },
-  { id: "verify", n: 2, label: "Verify & Append" },
+  { id: "create", n: 1, label: "Create List" },
+  { id: "verify", n: 2, label: "Verify & Correct" },
   { id: "approach", n: 3, label: "AI Approach" },
-  { id: "list", n: 4, label: "Contact List" },
-  { id: "export", n: 5, label: "Export" },
+  { id: "list", n: 4, label: "Contact Lists" },
 ] as const;
 
 export function ProspectsStepper({ active }: { active: string }) {

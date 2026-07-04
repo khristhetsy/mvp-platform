@@ -94,6 +94,7 @@ export interface ListRow {
   lead_status: string | null;
   lead_prescore: number | null;
   source: string | null;
+  phone: string | null;
 }
 
 export interface ContactListResult {
@@ -115,7 +116,7 @@ export async function getContactList(filters: ListFilters): Promise<ContactListR
   const db = serviceRoleClientUntyped();
   let q = db
     .from("crm_contacts")
-    .select("id, name, email, company, side, segment, email_status, lead_status, lead_prescore, source", { count: "exact" })
+    .select("id, name, email, company, side, segment, email_status, lead_status, lead_prescore, source, phone", { count: "exact" })
     .eq("suppressed", false)
     .order("lead_prescore", { ascending: false, nullsFirst: false });
 

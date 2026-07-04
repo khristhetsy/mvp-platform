@@ -117,7 +117,7 @@ export function SavedListsDirectory() {
                 </div>
 
                 <div style={{ display: "flex", gap: 7, flexWrap: "wrap", padding: "12px 15px", borderBottom: "0.5px solid var(--border)" }}>
-                  <a href={`/admin/marketing/campaigns?list=${detail.id}`} style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: "#2E78F5", borderRadius: 6, padding: "7px 12px", textDecoration: "none" }}>Open in Campaigns</a>
+                  <a href={`/admin/marketing/lists?list=${detail.id}`} style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: "#2E78F5", borderRadius: 6, padding: "7px 12px", textDecoration: "none" }}>→ Send to Contact Lists</a>
                   <a href={`/api/prospects/lists/${detail.id}/export?format=csv&cols=name,email,company,lead_status`} style={{ fontSize: 11, fontWeight: 700, color: "#1A6CE4", background: "#fff", border: "0.5px solid #93C5FD", borderRadius: 6, padding: "7px 12px", textDecoration: "none" }}>Export CSV ↓</a>
                   <button onClick={() => { setNameDraft(detail.name); setRenaming(true); }} style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 6, padding: "7px 12px", cursor: "pointer" }}>Rename</button>
                   <button onClick={archive} disabled={busy} style={{ fontSize: 11, fontWeight: 600, color: "#B91C1C", background: "#fff", border: "0.5px solid #FECACA", borderRadius: 6, padding: "7px 12px", cursor: "pointer" }}>Archive</button>

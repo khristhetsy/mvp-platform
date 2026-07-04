@@ -2,20 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import * as Sentry from "@sentry/nextjs";
 import { requireRole } from "@/lib/supabase/auth";
-import { saveMatchesToList } from "@/lib/prospects/lists";
+import { saveFoundersToList } from "@/lib/prospects/founder-source";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const bodySchema = z.object({
   filters: z.object({
-    side: z.string().optional(),
-    segment: z.string().optional(),
-    status: z.string().optional(),
-    leadStatus: z.string().optional(),
-    source: z.string().optional(),
-    minScore: z.number().optional(),
+    stage: z.string().optional(),
     sector: z.string().optional(),
+    jurisdiction: z.string().optional(),
+    minReadiness: z.number().optional(),
+    minFunding: z.number().optional(),
     search: z.string().optional(),
   }),
   name: z.string().max(120).optional(),
@@ -23,7 +21,7 @@ const bodySchema = z.object({
   contactIds: z.array(z.string().uuid()).max(20000).optional(),
 });
 
-// POST /api/prospects/save-list — snapshot the filtered matches into a list.
+// POST /api/prospects/founders/save-list — snapshot filtered/selected founders into a list.
 export async function POST(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
@@ -35,10 +33,11 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   try {
-    const filters = parsed.data.contactIds && parsed.data.contactIds.length > 0
-      ? { ...parsed.data.filters, ids: parsed.data.contactIds }
-      : parsed.data.filters;
-    const result = await saveMatchesToList(filters, { listId: parsed.data.listId, name: parsed.data.name });
+    const result = await saveFoundersToList(parsed.data.filters, {
+      name: parsed.data.name,
+      listId: parsed.data.listId,
+      contactIds: parsed.data.contactIds,
+    });
     return NextResponse.json(result);
   } catch (err) {
     Sentry.captureException(err);

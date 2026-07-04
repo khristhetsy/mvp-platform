@@ -1,26 +1,27 @@
 import { requireRole } from "@/lib/supabase/auth";
-import { getImportOverview } from "@/lib/prospects/store";
 import { getVerifyStats } from "@/lib/verify/store";
 import { providerConfigured } from "@/lib/append/provider";
 import { getAudienceStats, getHotQueue } from "@/lib/approach/store";
 import { ProspectsStepper } from "./ProspectsStepper";
-import { ImportStep } from "./ImportStep";
+import { CreateListWizard } from "./CreateListWizard";
 import { VerifyClient } from "@/app/admin/crm/verify/VerifyClient";
 import { VerifyContactList } from "./VerifyContactList";
 import { AudienceClient } from "@/app/admin/crm/audience/AudienceClient";
 import { SavedListsDirectory } from "./SavedListsDirectory";
-import { ExportStep } from "./ExportStep";
 
 export const dynamic = "force-dynamic";
 
-type Step = "import" | "verify" | "approach" | "list" | "export";
+type Step = "create" | "verify" | "approach" | "list";
 
 function parseStep(raw: string | undefined): Step {
-  return (["import", "verify", "approach", "list", "export"].includes(raw ?? "") ? raw : "import") as Step;
+  // legacy step ids (import/export) fold into create/list
+  if (raw === "import") return "create";
+  if (raw === "export") return "list";
+  return (["create", "verify", "approach", "list"].includes(raw ?? "") ? raw : "create") as Step;
 }
 
 interface Props {
-  searchParams: Promise<{ step?: string; side?: string; segment?: string; status?: string; leadStatus?: string; search?: string }>;
+  searchParams: Promise<{ step?: string }>;
 }
 
 export default async function ProspectsPage({ searchParams }: Props) {
@@ -34,14 +35,14 @@ export default async function ProspectsPage({ searchParams }: Props) {
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#1A6CE4" }}>Prospect Intelligence</p>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)", margin: "2px 0 2px" }}>Prospects</h1>
         <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", maxWidth: "66ch" }}>
-          One pipeline for every prospect: import from any source, verify &amp; enrich, score how to approach, build the list, and export.
+          Everything runs on contact lists: create a list from any source, verify &amp; correct it, score how to approach, then manage &amp; export from the lists directory.
         </p>
       </div>
 
       <ProspectsStepper active={step} />
 
       <div style={{ marginTop: 16 }}>
-        {step === "import" ? <ImportStep overview={await getImportOverview()} /> : null}
+        {step === "create" ? <CreateListWizard /> : null}
         {step === "verify" ? (
           <>
             <VerifyClient stats={await getVerifyStats()} providerReady={providerConfigured()} />
@@ -50,7 +51,6 @@ export default async function ProspectsPage({ searchParams }: Props) {
         ) : null}
         {step === "approach" ? <AudienceClient stats={await getAudienceStats()} initialHot={await getHotQueue(50)} verifiedReady={(await getVerifyStats()).valid} /> : null}
         {step === "list" ? <SavedListsDirectory /> : null}
-        {step === "export" ? <ExportStep /> : null}
       </div>
     </div>
   );
