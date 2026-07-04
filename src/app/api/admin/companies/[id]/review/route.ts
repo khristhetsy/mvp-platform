@@ -6,6 +6,9 @@ import { applyCompanyReview } from "@/lib/data/admin-reviews";
 import { writeAuditLog } from "@/lib/data/audit";
 import { notifyCompanyFounder } from "@/lib/notifications/notifications";
 import { adminReviewActionSchema } from "@/lib/validation";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { resolveActionsForEntity } from "@/lib/next-best-actions/lifecycle";
+import { buildActionId } from "@/lib/next-best-actions/action-catalog";
 
 export async function POST(
   request: Request,
@@ -81,6 +84,18 @@ export async function POST(
       response: { error: message },
     });
     return NextResponse.json({ error: message }, { status: 400 });
+  }
+
+  // Clear the "Review company" to-do from every admin's dashboard now that this
+  // company is decided. Best-effort — never fail the decision on this.
+  try {
+    await resolveActionsForEntity(
+      createServiceRoleClient(),
+      buildActionId(["admin", "company_reviews"]),
+      [id],
+    );
+  } catch (nbaError) {
+    console.error("resolve company review action failed", nbaError);
   }
 
   await writeAuditLog(auth.supabase, {

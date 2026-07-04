@@ -397,9 +397,10 @@ export async function upsertComputedActions(
 
 /**
  * Auto-complete active next-best-actions of a given type that reference any of
- * the provided entity ids (matched against entity_id or investor_id). Used when
- * a source condition is resolved (e.g. an investor is approved) so the related
- * admin to-do clears from every admin's dashboard instead of lingering.
+ * the provided entity ids (matched against entity_id, investor_id, or
+ * company_id). Used when a source condition is resolved (e.g. an investor is
+ * approved or a company is reviewed) so the related admin to-do clears from
+ * every admin's dashboard instead of lingering.
  */
 export async function resolveActionsForEntity(
   supabase: SupabaseClient<Database>,
@@ -410,7 +411,7 @@ export async function resolveActionsForEntity(
   if (ids.length === 0) return;
 
   const orFilter = ids
-    .flatMap((id) => [`entity_id.eq.${id}`, `investor_id.eq.${id}`])
+    .flatMap((id) => [`entity_id.eq.${id}`, `investor_id.eq.${id}`, `company_id.eq.${id}`])
     .join(",");
 
   const now = new Date().toISOString();
