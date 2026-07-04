@@ -30,6 +30,7 @@ export default async function CrmConnectorsPage() {
         <div className="mt-4 rounded-2xl border border-slate-200/80 bg-white p-4 text-sm shadow-[var(--shadow-panel)]">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Pipeline</p>
           <div className="flex flex-wrap gap-x-4 gap-y-1">
+            <a href="/admin/crm/brief" className="font-semibold text-[#1A6CE4] hover:underline">Brief →</a>
             <a href="/admin/crm/classify" className="font-semibold text-[#1A6CE4] hover:underline">1 · Classify →</a>
             <a href="/admin/crm/audience" className="font-semibold text-[#1A6CE4] hover:underline">2 · Audience &amp; approach →</a>
             <a href="/admin/crm/publish" className="font-semibold text-[#1A6CE4] hover:underline">3 · Publish →</a>
