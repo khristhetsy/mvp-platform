@@ -49,19 +49,32 @@ export interface ApproachBatchResult {
   remaining: number;
 }
 
+const ROW_COLS = "id, name, email, company, company_domain, phone, side, email_status, signals, raw";
+
 /** Compute + write approach for up to `limit` classified rows that lack one. */
 export async function approachBatch(limit = 100): Promise<ApproachBatchResult> {
   const db = serviceRoleClientUntyped();
-  const hotCtx = await getHotFounderContext();
-
   const { data } = await db
     .from("crm_contacts")
-    .select("id, name, email, company, company_domain, phone, side, email_status, signals, raw")
+    .select(ROW_COLS)
     .not("side", "is", null)
     .is("approach", null)
     .limit(limit);
+  return scoreRows(db, (data ?? []) as Row[]);
+}
 
-  const rows = (data ?? []) as Row[];
+/** (Re)score a specific set of classified contacts — used by the list-scoped Step 3. */
+export async function approachByIds(ids: string[]): Promise<ApproachBatchResult> {
+  const db = serviceRoleClientUntyped();
+  const capped = ids.slice(0, 1000);
+  if (capped.length === 0) return { processed: 0, founders: 0, investors: 0, hot: 0, warm: 0, cold: 0, remaining: 0 };
+  const { data } = await db.from("crm_contacts").select(ROW_COLS).in("id", capped).not("side", "is", null);
+  return scoreRows(db, (data ?? []) as Row[]);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function scoreRows(db: any, rows: Row[]): Promise<ApproachBatchResult> {
+  const hotCtx = await getHotFounderContext();
   const tally = { founders: 0, investors: 0, hot: 0, warm: 0, cold: 0 };
   const now = new Date().toISOString();
 

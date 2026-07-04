@@ -65,6 +65,58 @@ export async function getListDetail(listId: string, previewLimit = 25): Promise<
   return { id: list.id, name: list.name, description: list.description ?? null, created_at: list.created_at, archived: !!list.archived, contact_count: count ?? 0, preview };
 }
 
+export interface ApproachRow {
+  id: string;                 // crm_contacts.id (for scoring)
+  name: string | null;
+  email: string | null;
+  company: string | null;
+  side: string | null;
+  segment: string | null;
+  lead_prescore: number | null;
+  lead_status: string | null;
+  email_status: string | null;
+  phone: string | null;
+  approach: Record<string, unknown> | null;
+}
+
+/** A saved list's contacts joined to crm_contacts (for Step 3 AI Approach). Bounded. */
+export async function getListApproachRows(listId: string, limit = 200): Promise<ApproachRow[]> {
+  const db = serviceRoleClientUntyped();
+  const { data: mem } = await db.from("marketing_list_contacts").select("contact_id").eq("list_id", listId).limit(limit);
+  const ids = ((mem ?? []) as Row[]).map((m) => m.contact_id);
+  if (ids.length === 0) return [];
+
+  // marketing_contacts → emails
+  const emails: string[] = [];
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data } = await db.from("marketing_contacts").select("email").in("id", ids.slice(i, i + 200));
+    for (const r of (data ?? []) as Row[]) if (r.email) emails.push(String(r.email).toLowerCase());
+  }
+  if (emails.length === 0) return [];
+
+  // crm_contacts by email
+  const out: ApproachRow[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < emails.length; i += 200) {
+    const { data } = await db
+      .from("crm_contacts")
+      .select("id, name, email, company, side, segment, lead_prescore, lead_status, email_status, phone, approach")
+      .in("email", emails.slice(i, i + 200));
+    for (const r of (data ?? []) as Row[]) {
+      if (seen.has(r.id)) continue;
+      seen.add(r.id);
+      out.push({
+        id: r.id, name: r.name ?? null, email: r.email ?? null, company: r.company ?? null,
+        side: r.side ?? null, segment: r.segment ?? null, lead_prescore: r.lead_prescore ?? null,
+        lead_status: r.lead_status ?? null, email_status: r.email_status ?? null, phone: r.phone ?? null,
+        approach: (r.approach ?? null) as Record<string, unknown> | null,
+      });
+    }
+  }
+  out.sort((a, b) => (b.lead_prescore ?? -1) - (a.lead_prescore ?? -1));
+  return out;
+}
+
 export async function renameList(listId: string, name: string): Promise<void> {
   const clean = name.trim();
   if (!clean) throw new Error("A name is required.");

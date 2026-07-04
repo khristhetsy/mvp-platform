@@ -1,12 +1,11 @@
 import { requireRole } from "@/lib/supabase/auth";
 import { getVerifyStats } from "@/lib/verify/store";
 import { providerConfigured } from "@/lib/append/provider";
-import { getAudienceStats, getHotQueue } from "@/lib/approach/store";
 import { ProspectsStepper } from "./ProspectsStepper";
 import { CreateListWizard } from "./CreateListWizard";
 import { VerifyClient } from "@/app/admin/crm/verify/VerifyClient";
 import { VerifyContactList } from "./VerifyContactList";
-import { AudienceClient } from "@/app/admin/crm/audience/AudienceClient";
+import { ApproachListView } from "./ApproachListView";
 import { SavedListsDirectory } from "./SavedListsDirectory";
 
 export const dynamic = "force-dynamic";
@@ -49,7 +48,7 @@ export default async function ProspectsPage({ searchParams }: Props) {
             <VerifyContactList />
           </>
         ) : null}
-        {step === "approach" ? <AudienceClient stats={await getAudienceStats()} initialHot={await getHotQueue(50)} verifiedReady={(await getVerifyStats()).valid} /> : null}
+        {step === "approach" ? <ApproachListView /> : null}
         {step === "list" ? <SavedListsDirectory /> : null}
       </div>
     </div>
