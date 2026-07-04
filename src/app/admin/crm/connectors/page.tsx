@@ -2,7 +2,6 @@ import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/supabase/auth";
 import { ConnectorsPanel } from "@/components/crm/ConnectorsPanel";
 import { SyncCrmToMarketing } from "@/components/crm/SyncCrmToMarketing";
-import { AddContactsCard } from "@/components/crm/AddContactsCard";
 
 export const dynamic = "force-dynamic";
 
@@ -26,16 +25,9 @@ export default async function CrmConnectorsPage() {
           </p>
         </div>
         <ConnectorsPanel />
-        <div className="mt-4"><AddContactsCard /></div>
         <div className="mt-4 rounded-2xl border border-slate-200/80 bg-white p-4 text-sm shadow-[var(--shadow-panel)]">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Pipeline</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-1">
-            <a href="/admin/crm/brief" className="font-semibold text-[#1A6CE4] hover:underline">Brief →</a>
-            <a href="/admin/crm/classify" className="font-semibold text-[#1A6CE4] hover:underline">1 · Classify →</a>
-            <a href="/admin/crm/verify" className="font-semibold text-[#1A6CE4] hover:underline">2 · Verify &amp; append →</a>
-            <a href="/admin/crm/audience" className="font-semibold text-[#1A6CE4] hover:underline">3 · Audience &amp; approach →</a>
-            <a href="/admin/crm/publish" className="font-semibold text-[#1A6CE4] hover:underline">4 · Publish →</a>
-          </div>
+          <a href="/admin/marketing/prospects" className="font-semibold text-[#1A6CE4] hover:underline">Prospects pipeline →</a>
+          <span className="ml-2 text-slate-600">Import, verify, score, build the list &amp; export — now in the Marketing Hub.</span>
         </div>
         {profile.role === "admin" && <div className="mt-4"><SyncCrmToMarketing /></div>}
       </div>

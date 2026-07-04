@@ -6,6 +6,7 @@ import { MarketingBell } from "@/components/marketing/notifications/MarketingBel
 
 const NAV = [
   { label: "Dashboard",    href: "/admin/marketing" },
+  { label: "Prospects",    href: "/admin/marketing/prospects" },
   { label: "Console",      href: "/admin/marketing/console" },
   { label: "Plan",         href: "/admin/marketing/plan" },
   { label: "Contacts",     href: "/admin/marketing/contacts" },

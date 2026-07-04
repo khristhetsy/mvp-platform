@@ -15,7 +15,7 @@ export interface ParsedContact {
   note?: string | null;
 }
 
-export type ImportSource = "csv" | "xlsx" | "vcard" | "manual";
+export type ImportSource = "csv" | "xlsx" | "vcard" | "manual" | "icapos";
 
 export interface ImportResult {
   inserted: number;
