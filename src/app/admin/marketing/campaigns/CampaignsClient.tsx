@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { MarketingCampaign, MarketingList, MarketingTemplate } from "@/lib/marketing/types";
 
@@ -97,8 +98,9 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
     }
   }
 
-  const rate = (num: number, denom: number) =>
-    denom > 0 ? `${((num / denom) * 100).toFixed(1)}%` : "—";
+  const rate = (num: number | null | undefined, denom: number | null | undefined) =>
+    denom && denom > 0 ? `${(((num ?? 0) / denom) * 100).toFixed(1)}%` : "—";
+  const n = (v: number | null | undefined) => (v ?? 0);
 
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
@@ -218,7 +220,7 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
                 {/* Stats strip */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", borderBottom: "0.5px solid var(--border)" }}>
                   {[
-                    { label: "Sent",      value: c.stat_sent.toLocaleString(),            color: "var(--foreground)" },
+                    { label: "Sent",      value: n(c.stat_sent).toLocaleString(),          color: "var(--foreground)" },
                     { label: "Opened",    value: rate(c.stat_opened, c.stat_sent),        color: "#2E78F5" },
                     { label: "Clicked",   value: rate(c.stat_clicked, c.stat_sent),       color: "#1D9E75" },
                     { label: "Bounced",   value: rate(c.stat_bounced, c.stat_sent),       color: "#854F0B" },
@@ -270,8 +272,8 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
         </div>
       )}
 
-      {/* Analytics drill-down drawer */}
-      {analyticsId && (
+      {/* Analytics drill-down drawer — portalled to body so it isn't trapped by overflow ancestors */}
+      {analyticsId && typeof document !== "undefined" && createPortal(
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 200, display: "flex", justifyContent: "flex-end" }}
           onClick={() => setAnalyticsId(null)}>
           <div style={{ width: 520, height: "100%", background: "var(--card)", borderLeft: "1px solid var(--border)", overflowY: "auto", padding: 24 }}
@@ -284,7 +286,8 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
             {loadingAnalytics && <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Loading…</div>}
             {analyticsData && <AnalyticsPanel data={analyticsData} />}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -319,14 +322,15 @@ function ScheduleButton({ campaignId, onSchedule, acting }: { campaignId: string
 }
 
 function AnalyticsPanel({ data }: { data: CampaignDetail }) {
-  const totalSent = data.stat_sent;
+  const num = (v: number | null | undefined) => v ?? 0;
+  const totalSent = num(data.stat_sent);
   const stats = [
-    { label: "Sent",          value: data.stat_sent,          color: "var(--foreground)" },
-    { label: "Delivered",     value: data.stat_delivered,     color: "#0F6E56" },
-    { label: "Opened",        value: data.stat_opened,        color: "#2E78F5" },
-    { label: "Clicked",       value: data.stat_clicked,       color: "#1D9E75" },
-    { label: "Bounced",       value: data.stat_bounced,       color: "#854F0B" },
-    { label: "Unsubscribed",  value: data.stat_unsubscribed,  color: "#A32D2D" },
+    { label: "Sent",          value: num(data.stat_sent),          color: "var(--foreground)" },
+    { label: "Delivered",     value: num(data.stat_delivered),     color: "#0F6E56" },
+    { label: "Opened",        value: num(data.stat_opened),        color: "#2E78F5" },
+    { label: "Clicked",       value: num(data.stat_clicked),       color: "#1D9E75" },
+    { label: "Bounced",       value: num(data.stat_bounced),       color: "#854F0B" },
+    { label: "Unsubscribed",  value: num(data.stat_unsubscribed),  color: "#A32D2D" },
   ];
 
   const sc = { bg: "#E1F5EE", color: "#0F6E56", label: data.status };

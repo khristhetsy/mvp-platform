@@ -10,10 +10,12 @@ export const dynamic = "force-dynamic";
 export default async function MarketingCampaignsPage() {
   const t = await getTranslations("adminPages");
   await requireRole(["admin"]);
+  // Load resiliently: a transient blip loading lists/templates (secondary data)
+  // shouldn't take down the whole Campaigns page.
   const [campaigns, lists, templates] = await Promise.all([
     getCampaigns(),
-    getLists(),
-    getTemplates(),
+    getLists().catch(() => []),
+    getTemplates().catch(() => []),
   ]);
   return (
     <div style={{ padding: 24 }}>
