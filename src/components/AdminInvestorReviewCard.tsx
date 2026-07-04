@@ -34,6 +34,9 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
   const [status, setStatus] = useState(row.approval_status);
   const [kycStatus, setKycStatus] = useState<InvestorKycStatus>(row.kyc_status);
   const [accredited, setAccredited] = useState(row.accreditation_verified);
+  const [drafting, setDrafting] = useState(false);
+  const [draftIntent, setDraftIntent] = useState<"approve" | "changes_requested" | "reject">("approve");
+  const [sendToInvestor, setSendToInvestor] = useState(true);
 
   async function setAccreditation(verified: boolean) {
     setLoading("accreditation");
@@ -90,18 +93,48 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
     router.refresh();
   }
 
+  async function generateDraft() {
+    setDrafting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/investors/${row.id}/message-draft`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: draftIntent, feedback: feedback.trim() || undefined }),
+      });
+      const body = (await res.json().catch(() => null)) as { error?: string; message?: string } | null;
+      if (!res.ok) {
+        setError(body?.error ?? "Could not draft a message.");
+        return;
+      }
+      if (body?.message) setFeedback(body.message);
+    } catch {
+      setError("Could not draft a message.");
+    } finally {
+      setDrafting(false);
+    }
+  }
+
   async function review(action: "approve" | "reject" | "changes_requested") {
     setLoading(action);
     setError(null);
     setSuccess(null);
 
+    const trimmed = feedback.trim();
     const response = await fetch(`/api/admin/investors/${row.id}/review`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, feedback: feedback.trim() || undefined }),
+      body: JSON.stringify({
+        action,
+        feedback: trimmed || undefined,
+        message: trimmed || undefined,
+        send: sendToInvestor && Boolean(trimmed),
+      }),
     });
 
-    const body = (await response.json().catch(() => null)) as { error?: string; investorProfile?: Row } | null;
+    const body = (await response.json().catch(() => null)) as
+      | { error?: string; investorProfile?: Row; emailSent?: boolean; emailError?: string | null; notified?: boolean }
+      | null;
     setLoading(null);
 
     if (!response.ok) {
@@ -113,7 +146,13 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
       setStatus(body.investorProfile.approval_status);
     }
 
-    setSuccess(`Investor ${action.replaceAll("_", " ")} recorded.`);
+    let sentNote = "";
+    if (body?.notified) {
+      sentNote = body.emailSent
+        ? " Email + in-app notification sent."
+        : ` Notified in-app${body.emailError ? ` (email not sent: ${body.emailError})` : ""}.`;
+    }
+    setSuccess(`Investor ${action.replaceAll("_", " ")} recorded.${sentNote}`);
     router.refresh();
   }
 
@@ -275,12 +314,47 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
         </div>
       ) : null}
 
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Message to investor</span>
+        <div className="flex items-center gap-2">
+          <select
+            className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+            value={draftIntent}
+            disabled={drafting || Boolean(loading)}
+            onChange={(event) => setDraftIntent(event.target.value as "approve" | "changes_requested" | "reject")}
+            aria-label="Message tone"
+          >
+            <option value="approve">Approval — warm</option>
+            <option value="changes_requested">Request changes</option>
+            <option value="reject">Rejection</option>
+          </select>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+            disabled={drafting || Boolean(loading)}
+            onClick={() => void generateDraft()}
+          >
+            {drafting ? "Drafting…" : "✦ Generate with AI"}
+          </button>
+        </div>
+      </div>
+
       <textarea
-        className="mt-4 min-h-20 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-        placeholder={t("admin_feedback_required_for_reject_changes_r")}
+        className="mt-2 min-h-24 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+        placeholder="Write a message, or generate one with AI. Required when rejecting or requesting changes."
         value={feedback}
         onChange={(event) => setFeedback(event.target.value)}
       />
+
+      <label className="mt-2 flex items-center gap-2 text-xs text-slate-600">
+        <input
+          type="checkbox"
+          className="h-4 w-4 rounded border-slate-300"
+          checked={sendToInvestor}
+          onChange={(event) => setSendToInvestor(event.target.checked)}
+        />
+        Email + notify the investor with this message when I record the decision
+      </label>
 
       {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
       {success ? <p className="mt-3 text-sm text-emerald-700">{success}</p> : null}
@@ -292,7 +366,7 @@ export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {
           disabled={Boolean(loading)}
           onClick={() => review("approve")}
         >
-          Approve
+          {loading === "approve" ? "Approving…" : sendToInvestor && feedback.trim() ? "Approve & send" : "Approve"}
         </button>
         <button
           type="button"

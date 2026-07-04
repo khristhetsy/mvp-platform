@@ -172,7 +172,11 @@ export const investorOnboardingSchema = z
     }
   });
 
-export const adminInvestorReviewActionSchema = adminReviewActionSchema;
+export const adminInvestorReviewActionSchema = adminReviewActionSchema.extend({
+  // Optional message to email + notify the investor alongside the decision.
+  message: z.string().max(8000).optional(),
+  send: z.boolean().optional(),
+});
 
 export const adminInvestorPipelineUpdateSchema = z.object({
   stage: z.enum(["interested", "meeting_requested", "follow_up"]).optional(),

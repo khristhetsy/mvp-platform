@@ -5,6 +5,9 @@ import { applyInvestorReview } from "@/lib/investor/profile";
 import { recordComplianceEvent } from "@/lib/compliance/events";
 import { notifyInvestorReview } from "@/lib/notifications/investor-events";
 import { adminInvestorReviewActionSchema } from "@/lib/validation";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { sendViaGmail } from "@/lib/integrations/gmail-send";
+import { reviewMessageSubject } from "@/lib/investor/review-message";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireStaffApi(["admin", "analyst"]);
@@ -18,7 +21,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Invalid review request." }, { status: 400 });
   }
 
-  const { action, feedback } = parsed.data;
+  const { action, feedback, message, send } = parsed.data;
 
   if ((action === "reject" || action === "changes_requested") && !feedback?.trim()) {
     return NextResponse.json(
@@ -26,6 +29,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       { status: 400 },
     );
   }
+
+  const messageBody = message?.trim() || null;
+  const shouldSend = Boolean(send && messageBody);
 
   try {
     const investorProfile = await applyInvestorReview({
@@ -35,21 +41,57 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       feedback: feedback?.trim(),
     });
 
-    await writeAuditLog(auth.supabase, {
-      userId: auth.profile.id,
-      action: `investor.${action}`,
-      entityType: "investor_profile",
-      entityId: id,
-      metadata: { feedback: feedback?.trim() ?? null, profile_id: investorProfile.profile_id },
-    });
+    // Audit logging must never fail the review action itself — the approval is
+    // already committed above. Log best-effort and swallow logging errors.
+    try {
+      await writeAuditLog(auth.supabase, {
+        userId: auth.profile.id,
+        action: `investor.${action}`,
+        entityType: "investor_profile",
+        entityId: id,
+        metadata: { feedback: feedback?.trim() ?? null, profile_id: investorProfile.profile_id },
+      });
+    } catch (auditError) {
+      console.error("investor review audit log failed", auditError);
+    }
 
+    // In-app notification — use the drafted message verbatim when sending.
     void notifyInvestorReview({
       profileId: investorProfile.profile_id,
       action,
       adminId: auth.profile.id,
       entityId: id,
       feedback: feedback?.trim(),
+      customMessage: shouldSend ? messageBody : null,
     });
+
+    // Email the message via the reviewer's connected Gmail (best-effort).
+    let emailSent = false;
+    let emailError: string | null = null;
+    if (shouldSend && messageBody) {
+      const admin = createServiceRoleClient();
+      const { data: recipient } = await admin
+        .from("profiles")
+        .select("email")
+        .eq("id", investorProfile.profile_id)
+        .single();
+      const to = recipient?.email ?? null;
+      if (!to) {
+        emailError = "No email on file for this investor; sent in-app only.";
+      } else {
+        const result = await sendViaGmail({
+          userId: auth.profile.id,
+          to,
+          subject: reviewMessageSubject(action),
+          body: messageBody,
+        });
+        if ("error" in result) {
+          emailError = result.error.message;
+        } else {
+          emailSent = true;
+        }
+      }
+    }
 
     if (action === "reject") {
       void recordComplianceEvent({
@@ -64,7 +106,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       });
     }
 
-    return NextResponse.json({ investorProfile });
+    return NextResponse.json({ investorProfile, emailSent, emailError, notified: shouldSend });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to update investor review.";
     return NextResponse.json({ error: message }, { status: 400 });

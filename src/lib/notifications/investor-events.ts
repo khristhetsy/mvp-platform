@@ -91,6 +91,8 @@ export async function notifyInvestorReview(input: {
   adminId: string;
   entityId: string;
   feedback?: string | null;
+  /** When provided, used verbatim as the in-app message body (e.g. an AI-drafted note). */
+  customMessage?: string | null;
 }) {
   const type =
     input.action === "approve"
@@ -106,12 +108,14 @@ export async function notifyInvestorReview(input: {
         ? "Investor account rejected"
         : "Changes requested on investor profile";
 
-  const message =
+  const defaultMessage =
     input.action === "approve"
       ? "Your investor profile was approved. Full workspace access is now enabled."
       : input.action === "reject"
         ? `Your investor submission was rejected.${input.feedback ? ` Feedback: ${input.feedback}` : ""}`
         : `Please update your investor onboarding.${input.feedback ? ` Feedback: ${input.feedback}` : ""}`;
+
+  const message = input.customMessage?.trim() || defaultMessage;
 
   return createNotification({
     recipientUserId: input.profileId,
