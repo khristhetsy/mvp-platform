@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { MarketingContact, MarketingList } from "@/lib/marketing/types";
@@ -232,7 +233,8 @@ function ManageContactsDrawer({ list, onClose, onCountChange }: { list: ListWith
 
   const rowStyle: React.CSSProperties = { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderBottom: "0.5px solid var(--border)", gap: 8 };
 
-  return (
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 300, display: "flex", justifyContent: "flex-end" }} onClick={onClose}>
       <div style={{ width: 470, maxWidth: "92vw", height: "100%", background: "#fff", borderLeft: "1px solid #e2e6ed", overflowY: "auto", padding: 22 }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
@@ -284,6 +286,7 @@ function ManageContactsDrawer({ list, onClose, onCountChange }: { list: ListWith
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

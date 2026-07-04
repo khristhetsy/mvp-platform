@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Eye, Mail, Pencil, Trash2, ArrowUp, ArrowDown, Columns3, Check, X } from "lucide-react";
 import type { MarketingContact, MarketingList } from "@/lib/marketing/types";
@@ -249,8 +250,8 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
 
       {editContact && <EditContactModal contact={editContact} onClose={() => setEditContact(null)} onSaved={() => { setEditContact(null); router.refresh(); }} />}
 
-      {/* Activity drawer */}
-      {activityId && (
+      {/* Activity drawer — portalled to body so it isn't trapped by scroll/overflow ancestors */}
+      {activityId && typeof document !== "undefined" && createPortal(
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 200, display: "flex", justifyContent: "flex-end" }} onClick={() => setActivityId(null)}>
           <div style={{ width: 480, height: "100%", background: "var(--card)", borderLeft: "1px solid var(--border)", overflowY: "auto", padding: 24 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -283,7 +284,8 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -310,7 +312,8 @@ function EditContactModal({ contact, onClose, onSaved }: { contact: MarketingCon
     if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.error ?? "Failed"); setSaving(false); }
     else onSaved();
   }
-  return (
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 210, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
       <form onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()} style={{ width: 440, background: "var(--card)", borderRadius: 12, padding: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -337,7 +340,8 @@ function EditContactModal({ contact, onClose, onSaved }: { contact: MarketingCon
           <button type="submit" disabled={saving} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>{saving ? "Saving…" : "Save"}</button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
