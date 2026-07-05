@@ -703,9 +703,12 @@ function AnalyticsPanel({ data }: { data: CampaignDetail }) {
                 <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 12, background: badge.bg, color: badge.color, fontWeight: 500, whiteSpace: "nowrap", marginTop: 1 }}>
                   {ev.event_type}
                 </span>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   {ev.contact_email && <div style={{ fontSize: 12, color: "var(--foreground)" }}>{ev.contact_email}</div>}
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{new Date(ev.occurred_at).toLocaleString()}</div>
+                  {ev.metadata && typeof ev.metadata.error === "string" && ev.metadata.error ? (
+                    <div style={{ fontSize: 11, color: "#A32D2D", background: "#FCEBEB", border: "0.5px solid #F09595", borderRadius: 6, padding: "4px 8px", marginTop: 4, wordBreak: "break-word" }}>{ev.metadata.error}</div>
+                  ) : null}
                 </div>
               </div>
             );
