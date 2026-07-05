@@ -93,8 +93,9 @@ export async function sendCampaign(campaignId: string): Promise<{
       from_name: campaign.from_name,
       from_email: campaign.from_email,
       reply_to: campaign.reply_to,
-      subject: template.subject,
-      html_body: template.html_body,
+      // Per-campaign edits override the shared template when present.
+      subject: campaign.subject_override || template.subject,
+      html_body: campaign.body_override || template.html_body,
       text_body: template.text_body,
       unsubscribe_token: token,
     });

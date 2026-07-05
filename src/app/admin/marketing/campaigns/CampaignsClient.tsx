@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { MarketingCampaign, MarketingList, MarketingTemplate } from "@/lib/marketing/types";
@@ -60,10 +60,41 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
     scheduled_at: "",
   });
 
+  // Editable email preview for the campaign being composed.
+  const selectedTemplate = templates.find((t) => t.id === form.template_id) ?? null;
+  const [subjectDraft, setSubjectDraft] = useState("");
+  const [previewSaved, setPreviewSaved] = useState(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  // Re-seed the preview whenever the picked template changes.
+  useEffect(() => {
+    if (!selectedTemplate) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync draft to the newly picked template
+    setSubjectDraft(selectedTemplate.subject ?? "");
+    setPreviewSaved(false);
+    if (bodyRef.current) bodyRef.current.innerHTML = selectedTemplate.html_body ?? "";
+  }, [selectedTemplate?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function savePreview() {
+    setPreviewSaved(true);
+  }
+  function undoPreview() {
+    if (!selectedTemplate) return;
+    setSubjectDraft(selectedTemplate.subject ?? "");
+    if (bodyRef.current) bodyRef.current.innerHTML = selectedTemplate.html_body ?? "";
+    setPreviewSaved(false);
+  }
+
   async function handleCreate(sendNow = false) {
     setSaving(true);
     try {
       const body: Record<string, string> = { ...form, status: "draft" };
+      // Attach per-campaign overrides only when the preview diverges from the template.
+      if (selectedTemplate) {
+        const bodyHtml = bodyRef.current?.innerHTML ?? "";
+        body.subject_override = subjectDraft && subjectDraft !== selectedTemplate.subject ? subjectDraft : "";
+        body.body_override = bodyHtml && bodyHtml !== selectedTemplate.html_body ? bodyHtml : "";
+      }
       if (sendNow) body.action = "send";
       else if (form.scheduled_at) body.action = "schedule";
       await fetch("/api/marketing/campaigns", {
@@ -225,6 +256,38 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
               </select>
             </div>
           </div>
+          {/* Editable email preview */}
+          {selectedTemplate && (
+            <div style={{ marginTop: 16, border: "0.5px solid #e2e6ed", borderRadius: 10, overflow: "hidden" }}>
+              <div style={{ padding: "10px 14px", borderBottom: "0.5px solid #e2e6ed", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", background: "var(--muted)" }}>
+                <span style={{ fontSize: 12.5, fontWeight: 600 }}>Preview &amp; edit</span>
+                <span style={{ fontSize: 10.5, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "1px 7px" }}>Editing this campaign only</span>
+                {previewSaved && <span style={{ fontSize: 10.5, color: "#0F6E56" }}>✓ Saved</span>}
+                <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                  <button onClick={undoPreview} style={{ fontSize: 11.5, fontWeight: 600, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 6, padding: "5px 11px", cursor: "pointer" }}>↩ Undo</button>
+                  <button onClick={savePreview} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 6, padding: "5px 11px", cursor: "pointer" }}>Save changes</button>
+                </div>
+              </div>
+              <div style={{ padding: "10px 14px", background: "#FAFBFC", borderBottom: "0.5px solid #e2e6ed", fontSize: 11.5, color: "var(--muted-foreground)", display: "flex", flexDirection: "column", gap: 3 }}>
+                <div><span style={{ display: "inline-block", width: 42 }}>From</span> <span style={{ color: "var(--foreground)" }}>{form.from_name} &lt;{form.from_email}&gt;</span></div>
+                <div><span style={{ display: "inline-block", width: 42 }}>To</span> <span style={{ color: "var(--foreground)" }}>{lists.find((l) => l.id === form.list_id)?.name ?? "— no list —"}</span></div>
+              </div>
+              <div style={{ padding: "12px 14px" }}>
+                <label style={{ display: "block", fontSize: 10.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted-foreground)", marginBottom: 5 }}>Subject</label>
+                <input value={subjectDraft} onChange={(e) => { setSubjectDraft(e.target.value); setPreviewSaved(false); }}
+                  style={{ width: "100%", boxSizing: "border-box", fontSize: 13.5, fontWeight: 500, padding: "8px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }} />
+                <label style={{ display: "block", fontSize: 10.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--muted-foreground)", margin: "12px 0 5px" }}>Body <span style={{ textTransform: "none", fontWeight: 400 }}>· click to edit</span></label>
+                <div ref={bodyRef} contentEditable suppressContentEditableWarning onInput={() => setPreviewSaved(false)}
+                  style={{ border: "0.5px solid var(--border)", borderRadius: 8, padding: "12px 14px", fontSize: 13, lineHeight: 1.7, color: "var(--foreground)", minHeight: 140, outline: "none", background: "var(--background)" }} />
+                <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 10, color: "var(--muted-foreground)", background: "var(--muted)", borderRadius: 5, padding: "2px 7px" }}>{"{{first_name}}"}</span>
+                  <span style={{ fontSize: 10, color: "var(--muted-foreground)", background: "var(--muted)", borderRadius: 5, padding: "2px 7px" }}>{"{{company}}"}</span>
+                  <span style={{ fontSize: 10, color: "var(--muted-foreground)", background: "var(--muted)", borderRadius: 5, padding: "2px 7px" }}>unsubscribe link auto-added</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {form.scheduled_at && (
             <div style={{ marginTop: 10, fontSize: 12, color: "#185FA5", padding: "6px 10px", background: "#E6F1FB", borderRadius: 6 }}>
               📅 Will be scheduled to send at {new Date(form.scheduled_at).toLocaleString()}

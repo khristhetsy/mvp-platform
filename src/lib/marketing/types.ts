@@ -45,6 +45,8 @@ export type MarketingCampaign = {
   from_name: string;
   from_email: string;
   reply_to: string | null;
+  subject_override: string | null;
+  body_override: string | null;
   stat_sent: number;
   stat_delivered: number;
   stat_opened: number;
