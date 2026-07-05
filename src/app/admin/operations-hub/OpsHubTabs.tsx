@@ -15,6 +15,7 @@ const TABS: { label: string; href: string }[] = [
   { label: "Diligence", href: "/admin/diligence" },
   { label: "Deals", href: "/admin/matching" },
   { label: "Compliance", href: "/admin/compliance" },
+  { label: "Settings & Tools", href: "/admin/operations-hub/settings" },
 ];
 
 export function OpsHubTabs() {

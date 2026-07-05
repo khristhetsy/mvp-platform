@@ -5,8 +5,10 @@
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listEngagements } from "@/lib/diligence/data";
-import { notifyStaffIfNotRecent } from "@/lib/notifications/notifications";
+import { notifyStaffIfNotRecent, createNotification } from "@/lib/notifications/notifications";
+import { getOpsSettings } from "@/lib/operations/settings";
 
+// Defaults used by the hub badges; the escalation scan reads live settings.
 export const ONBOARDING_SLA_DAYS = 7;
 export const DILIGENCE_SLA_DAYS = 3;
 const DD_ACTIVE = ["sent_to_founder", "responding", "admin_review", "consent_requested", "consented_locked"];
@@ -24,9 +26,19 @@ export interface EscalationResult { onboarding: number; diligence: number; scann
 /** Scan and escalate any past-due onboarding / diligence items. Idempotent per day. */
 export async function runOperationsEscalations(): Promise<EscalationResult> {
   const admin = createServiceRoleClient();
+  const settings = await getOpsSettings();
   let onboarding = 0;
   let diligence = 0;
   let scanned = 0;
+
+  // Route to the configured default manager, else the whole staff pool (deduped).
+  async function escalate(p: { title: string; message: string; entityType: string; entityId: string; deepLink: string }) {
+    if (settings.defaultManagerId) {
+      await createNotification({ recipientUserId: settings.defaultManagerId, type: "operations.escalation", severity: "high", ...p });
+    } else {
+      await notifyStaffIfNotRecent({ type: "operations.escalation", severity: "high", withinHours: 24, ...p });
+    }
+  }
 
   // --- Onboarding overdue (incomplete for > SLA days) ---
   const { data: companies } = await admin
@@ -37,16 +49,13 @@ export async function runOperationsEscalations(): Promise<EscalationResult> {
   for (const c of (companies ?? []) as Array<{ id: string; company_name: string | null; onboarding_progress_percent: number | null; onboarding_completed_at: string | null; updated_at: string | null }>) {
     scanned++;
     const overdue = daysSince(c.updated_at);
-    if (overdue < ONBOARDING_SLA_DAYS) continue;
-    await notifyStaffIfNotRecent({
-      type: "operations.escalation",
-      severity: "high",
+    if (overdue < settings.onboardingSlaDays) continue;
+    await escalate({
       title: `Onboarding overdue — ${c.company_name ?? "Company"}`,
-      message: `Onboarding is ${overdue} days past the ${ONBOARDING_SLA_DAYS}-day SLA (stuck at ${Math.round(c.onboarding_progress_percent ?? 0)}%). A manager needs to unblock it.`,
+      message: `Onboarding is ${overdue} days past the ${settings.onboardingSlaDays}-day SLA (stuck at ${Math.round(c.onboarding_progress_percent ?? 0)}%). A manager needs to unblock it.`,
       entityType: "company",
       entityId: c.id,
       deepLink: `/admin/companies/${c.id}`,
-      withinHours: 24,
     });
     onboarding++;
   }
@@ -57,16 +66,13 @@ export async function runOperationsEscalations(): Promise<EscalationResult> {
     if (!DD_ACTIVE.includes(e.lifecycle_stage)) continue;
     scanned++;
     const overdue = daysSince(e.updated_at);
-    if (overdue < DILIGENCE_SLA_DAYS) continue;
-    await notifyStaffIfNotRecent({
-      type: "operations.escalation",
-      severity: "high",
+    if (overdue < settings.diligenceSlaDays) continue;
+    await escalate({
       title: `Diligence stalled — ${e.company_name ?? "Engagement"}`,
-      message: `Sat in "${e.lifecycle_stage}" for ${overdue} days (SLA ${DILIGENCE_SLA_DAYS}). Confidence ${e.confidence_pct ?? 0}%. A manager needs to move it forward.`,
+      message: `Sat in "${e.lifecycle_stage}" for ${overdue} days (SLA ${settings.diligenceSlaDays}). Confidence ${e.confidence_pct ?? 0}%. A manager needs to move it forward.`,
       entityType: "dd_engagement",
       entityId: e.id,
       deepLink: `/admin/diligence`,
-      withinHours: 24,
     });
     diligence++;
   }
