@@ -79,6 +79,18 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/marketing/settings/notifications", label: "Settings"  },
         ],
       },
+      {
+        href: "/admin/sales",
+        label: "Sales Hub",
+        requiredPermission: "manage_crm",
+        children: [
+          { href: "/admin/sales",               label: "Dashboard"     },
+          { href: "/admin/sales/contacts",      label: "Contacts"      },
+          { href: "/admin/sales/opportunities", label: "Opportunities" },
+          { href: "/admin/sales/pipeline",      label: "Pipeline"      },
+          { href: "/admin/sales/settings",      label: "Settings"      },
+        ],
+      },
     ],
   },
   {
