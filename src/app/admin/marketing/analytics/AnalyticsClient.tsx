@@ -19,7 +19,8 @@ interface Metrics {
 }
 
 interface DailyOpen { date: string; count: number; }
-interface Props { metrics: Metrics; dailyOpens: DailyOpen[]; }
+interface CompletedCampaign { id: string; name: string; sent: number; opened: number; clicked: number; date: string; }
+interface Props { metrics: Metrics; dailyOpens: DailyOpen[]; completedCampaigns?: CompletedCampaign[]; }
 interface ChatMessage { role: "user" | "assistant"; content: string; }
 
 const card = {
@@ -74,7 +75,9 @@ const QUICK_PROMPTS = [
   "What email sequences should I build for warming up investors?",
 ];
 
-export default function AnalyticsClient({ metrics, dailyOpens }: Props) {
+export default function AnalyticsClient({ metrics, dailyOpens, completedCampaigns = [] }: Props) {
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>(completedCampaigns[0]?.id ?? "");
+  const selectedCampaign = completedCampaigns.find((c) => c.id === selectedCampaignId) ?? null;
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
@@ -144,6 +147,35 @@ export default function AnalyticsClient({ metrics, dailyOpens }: Props) {
           <span style={{ fontSize: 12, color: "#1A6CE4", fontWeight: 500 }}>CMO assistant active</span>
         </div>
       </div>
+
+      {/* Campaign results — pick a completed campaign */}
+      {completedCampaigns.length > 0 && (
+        <div style={{ ...card, padding: "14px 16px", marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: selectedCampaign ? 12 : 0 }}>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>Campaign results</span>
+            <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>completed campaign:</span>
+            <select value={selectedCampaignId} onChange={(e) => setSelectedCampaignId(e.target.value)}
+              style={{ fontSize: 12, fontWeight: 600, border: "1px solid #2E78F5", background: "#EFF6FF", color: "#1A6CE4", borderRadius: 7, padding: "6px 10px" }}>
+              {completedCampaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          {selectedCampaign && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 10 }}>
+              {[
+                { label: "Sent", value: selectedCampaign.sent.toLocaleString(), color: "var(--foreground)" },
+                { label: "Open rate", value: selectedCampaign.sent > 0 ? `${((selectedCampaign.opened / selectedCampaign.sent) * 100).toFixed(1)}%` : "—", color: "#0F6E56" },
+                { label: "Click rate", value: selectedCampaign.sent > 0 ? `${((selectedCampaign.clicked / selectedCampaign.sent) * 100).toFixed(1)}%` : "—", color: "#0369A1" },
+                { label: "Clicks", value: selectedCampaign.clicked.toLocaleString(), color: "var(--foreground)" },
+              ].map((s) => (
+                <div key={s.label} style={{ border: "0.5px solid var(--border)", borderRadius: 9, padding: "11px 13px", background: "var(--muted)" }}>
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>{s.label}</div>
+                  <div style={{ fontSize: 20, fontWeight: 600, color: s.color }}>{s.value}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Stat cards — white cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10, marginBottom: 16 }}>

@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { marketingDb } from "@/lib/marketing/db";
 import Link from "next/link";
 import { MarketingStatCards } from "@/components/marketing/MarketingStatCards";
+import { GuidedBanner } from "@/components/marketing/GuidedBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -105,6 +106,9 @@ export default async function MarketingDashboardPage() {
           + New campaign
         </Link>
       </div>
+
+      {/* Dismissible guided flow */}
+      <GuidedBanner />
 
       {/* Clickable stat cards */}
       <MarketingStatCards data={statCardData} />

@@ -71,5 +71,21 @@ export default async function MarketingAnalyticsPage() {
     bounceRate:     sent > 0 ? ((bounced / sent) * 100).toFixed(1) : "0",
   };
 
-  return <AnalyticsClient metrics={metrics} dailyOpens={dailyOpens} />;
+  // Completed campaigns — for the per-campaign results selector.
+  const { data: completedRows } = await supabase
+    .from("marketing_campaigns")
+    .select("id, name, stat_sent, stat_opened, stat_clicked, created_at")
+    .in("status", ["sent", "completed"])
+    .order("created_at", { ascending: false })
+    .limit(50);
+  const completedCampaigns = ((completedRows ?? []) as Array<Record<string, unknown>>).map((c) => ({
+    id: String(c.id),
+    name: (c.name as string) ?? "Campaign",
+    sent: (c.stat_sent as number) ?? 0,
+    opened: (c.stat_opened as number) ?? 0,
+    clicked: (c.stat_clicked as number) ?? 0,
+    date: (c.created_at as string) ?? "",
+  }));
+
+  return <AnalyticsClient metrics={metrics} dailyOpens={dailyOpens} completedCampaigns={completedCampaigns} />;
 }
