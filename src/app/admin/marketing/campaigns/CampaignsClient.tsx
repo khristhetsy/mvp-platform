@@ -60,6 +60,16 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
     scheduled_at: "",
   });
 
+  // Deep-link from the Prospects wizard: ?new=<listId> opens the composer with
+  // that list pre-filled as the audience (?new=1 just opens the composer).
+  useEffect(() => {
+    const nv = new URLSearchParams(window.location.search).get("new");
+    if (!nv) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- open composer from deep link on mount
+    setShowCreate(true);
+    if (nv !== "1" && lists.some((l) => l.id === nv)) setForm((f) => ({ ...f, list_id: nv }));
+  }, [lists]);
+
   // Editable email preview for the campaign being composed.
   const selectedTemplate = templates.find((t) => t.id === form.template_id) ?? null;
   const [subjectDraft, setSubjectDraft] = useState("");

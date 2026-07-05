@@ -71,8 +71,8 @@ export default async function ProspectsPage({ searchParams }: Props) {
         ) : null}
         {step === "list" ? (
           <WizardShell
-            completeHref="/admin/marketing/lists"
-            completeLabel="Finish → open Contact Lists"
+            completeHref="/admin/marketing/campaigns?new=1"
+            completeLabel="Create campaign →"
             steps={[{ label: "Manage lists", content: <SavedListsDirectory /> }]}
           />
         ) : null}
