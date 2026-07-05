@@ -21,6 +21,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     items: [
       { href: "/admin", label: "Dashboard", requiredPermission: "view_admin_dashboard" },
+      { href: "/admin/operations-hub", label: "Operations Hub", requiredPermission: "view_admin_dashboard" },
     ],
   },
   {
