@@ -17,7 +17,7 @@ export async function GET(
     const [{ data: rawCampaign }, { data: rawEvents }] = await Promise.all([
       db
         .from("marketing_campaigns")
-        .select("*, marketing_lists(name), marketing_templates(name,subject)")
+        .select("*, marketing_lists(name), marketing_templates(name,subject,html_body)")
         .eq("id", id)
         .maybeSingle(),
       db

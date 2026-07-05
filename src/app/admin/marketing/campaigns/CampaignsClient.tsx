@@ -23,6 +23,8 @@ const STATUS_MAP: Record<string, { bg: string; color: string; label: string }> =
 type CampaignDetail = {
   id: string; name: string; status: string; from_name: string; from_email: string;
   reply_to: string | null; list_id: string | null; template_id: string | null;
+  subject_override: string | null; body_override: string | null;
+  list_name: string | null; template_name: string | null; template_subject: string | null; template_html: string | null;
   scheduled_at: string | null; sent_at: string | null;
   stat_sent: number; stat_delivered: number; stat_opened: number; stat_clicked: number; stat_bounced: number; stat_unsubscribed: number;
   breakdown: Record<string, number>;
@@ -47,6 +49,7 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
   const [analyticsData, setAnalyticsData] = useState<CampaignDetail | null>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [drawerTab, setDrawerTab] = useState<"analytics" | "preview">("analytics");
   const [editing, setEditing] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", from_name: "", from_email: "", reply_to: "", list_id: "", template_id: "", scheduled_at: "" });
@@ -142,6 +145,7 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
   async function openAnalytics(campaignId: string) {
     setAnalyticsId(campaignId);
     setEditing(false);
+    setDrawerTab("analytics");
     setLoadingAnalytics(true);
     setAnalyticsData(null);
     try {
@@ -151,11 +155,20 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
         // panel's flat field reads (data.name, data.stat_*, …) resolve.
         const j = await res.json();
         const c = (j.campaign ?? j) as Record<string, unknown>;
+        const tpl = (c.marketing_templates ?? {}) as Record<string, unknown>;
+        const lst = (c.marketing_lists ?? {}) as Record<string, unknown>;
         const events = ((j.events ?? []) as Array<Record<string, unknown>>).map((e) => ({
           id: String(e.id), event_type: String(e.event_type), occurred_at: String(e.occurred_at),
           contact_email: (e.email as string) ?? undefined, metadata: (e.metadata as Record<string, unknown>) ?? {},
         }));
-        setAnalyticsData({ ...(c as unknown as CampaignDetail), breakdown: (j.breakdown ?? {}) as Record<string, number>, events });
+        setAnalyticsData({
+          ...(c as unknown as CampaignDetail),
+          list_name: (lst.name as string) ?? null,
+          template_name: (tpl.name as string) ?? null,
+          template_subject: (tpl.subject as string) ?? null,
+          template_html: (tpl.html_body as string) ?? null,
+          breakdown: (j.breakdown ?? {}) as Record<string, number>, events,
+        });
       }
     } catch (err) {
       console.error("Failed to load campaign analytics:", err);
@@ -420,7 +433,7 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
           <div style={{ width: expanded ? "min(1000px, 96vw)" : 520, height: "100%", background: "#fff", borderLeft: "0.5px solid #e2e6ed", boxShadow: "-8px 0 24px rgb(12 35 64 / 0.12)", overflowY: "auto", padding: 24, transition: "width 0.2s" }}
             onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{editing ? "Edit campaign" : "Campaign analytics"}</h3>
+              <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{editing ? "Edit campaign" : drawerTab === "preview" ? "Email preview" : "Campaign analytics"}</h3>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 {analyticsData && !editing && EDITABLE_STATUSES.includes(analyticsData.status) && (
                   <button onClick={startEdit} style={{ fontSize: 12, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}>✎ Edit</button>
@@ -434,10 +447,19 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
             </div>
 
             {loadingAnalytics && <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Loading…</div>}
+            {analyticsData && !editing && (
+              <div style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden", marginBottom: 16 }}>
+                <button onClick={() => setDrawerTab("analytics")}
+                  style={{ fontSize: 12, padding: "6px 14px", border: "none", background: drawerTab === "analytics" ? "#EFF6FF" : "#fff", color: drawerTab === "analytics" ? "#1A6CE4" : "var(--muted-foreground)", fontWeight: drawerTab === "analytics" ? 600 : 400, cursor: "pointer" }}>Analytics</button>
+                <button onClick={() => setDrawerTab("preview")}
+                  style={{ fontSize: 12, padding: "6px 14px", border: "none", borderLeft: "0.5px solid var(--border)", background: drawerTab === "preview" ? "#EFF6FF" : "#fff", color: drawerTab === "preview" ? "#1A6CE4" : "var(--muted-foreground)", fontWeight: drawerTab === "preview" ? 600 : 400, cursor: "pointer" }}>Preview</button>
+              </div>
+            )}
             {analyticsData && editing && (
               <CampaignEditForm form={editForm} setForm={setEditForm} lists={lists} templates={templates} saving={savingEdit} onSave={saveEdit} onCancel={() => setEditing(false)} />
             )}
-            {analyticsData && !editing && <AnalyticsPanel data={analyticsData} />}
+            {analyticsData && !editing && drawerTab === "analytics" && <AnalyticsPanel data={analyticsData} />}
+            {analyticsData && !editing && drawerTab === "preview" && <CampaignPreview data={analyticsData} />}
           </div>
         </div>,
         document.body,
@@ -531,6 +553,35 @@ function CampaignEditForm({ form, setForm, lists, templates, saving, onSave, onC
         </button>
       </div>
       <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: "12px 0 0" }}>Editing is available while a campaign is draft, scheduled, or paused. Sent campaigns are read-only.</p>
+    </div>
+  );
+}
+
+function CampaignPreview({ data }: { data: CampaignDetail }) {
+  // Show the campaign's own edited content when present, else the template's.
+  const subject = data.subject_override || data.template_subject || "(no subject)";
+  const html = data.body_override || data.template_html || "";
+  const meta: React.CSSProperties = { display: "inline-block", width: 54, color: "var(--muted-foreground)" };
+  return (
+    <div>
+      <div style={{ border: "0.5px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ padding: "11px 14px", background: "var(--muted)", borderBottom: "0.5px solid var(--border)", fontSize: 11.5, color: "var(--muted-foreground)", display: "flex", flexDirection: "column", gap: 4 }}>
+          <div><span style={meta}>From</span> <span style={{ color: "var(--foreground)" }}>{data.from_name} &lt;{data.from_email}&gt;</span></div>
+          <div><span style={meta}>To</span> <span style={{ color: "var(--foreground)" }}>{data.list_name ?? "— no list —"}</span></div>
+          {data.reply_to ? <div><span style={meta}>Reply-to</span> <span style={{ color: "var(--foreground)" }}>{data.reply_to}</span></div> : null}
+          <div><span style={meta}>Subject</span> <span style={{ color: "var(--foreground)", fontWeight: 500 }}>{subject}</span></div>
+        </div>
+        {html ? (
+          <div style={{ padding: 16, fontSize: 13.5, lineHeight: 1.7, color: "var(--foreground)" }} dangerouslySetInnerHTML={{ __html: html }} />
+        ) : (
+          <div style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>No template content to preview.</div>
+        )}
+      </div>
+      <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+        {data.template_name ? <span style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "var(--muted)", borderRadius: 5, padding: "2px 8px" }}>Template: {data.template_name}</span> : null}
+        {data.body_override || data.subject_override ? <span style={{ fontSize: 10.5, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 5, padding: "2px 8px" }}>Edited for this campaign</span> : null}
+        <span style={{ fontSize: 10.5, color: "#0F6E56", background: "#ECFDF5", border: "0.5px solid #A7F3D0", borderRadius: 5, padding: "2px 8px" }}>Merge fields fill per recipient · unsubscribe auto-added</span>
+      </div>
     </div>
   );
 }
