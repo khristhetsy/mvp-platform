@@ -38,7 +38,24 @@ export function VerifyContactList() {
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sugg, setSugg] = useState<Record<string, SuggState>>({});
+  const [scopeIds, setScopeIds] = useState<string[] | null>(null);
+  const [carried, setCarried] = useState<{ name: string; count: number; hadIds: boolean } | null>(null);
+  const pendingCarryRef = useRef<string[] | null>(null);
+  const carryAppliedRef = useRef(false);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // One-time: pick up the selection carried over from the Create List step.
+  useEffect(() => {
+    let raw: string | null = null;
+    try { raw = sessionStorage.getItem("mh_verify_handoff"); if (raw) sessionStorage.removeItem("mh_verify_handoff"); } catch { raw = null; }
+    if (!raw) return;
+    try {
+      const h = JSON.parse(raw) as { name: string; ids: string[] | null; count: number };
+      const hasIds = Array.isArray(h.ids) && h.ids.length > 0;
+      if (hasIds) { pendingCarryRef.current = h.ids as string[]; setScopeIds(h.ids as string[]); }
+      setCarried({ name: h.name, count: h.count, hadIds: hasIds });
+    } catch { /* ignore malformed handoff */ }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -46,22 +63,38 @@ export function VerifyContactList() {
     if (f.status) p.set("status", f.status);
     if (f.side) p.set("side", f.side);
     if (f.search) p.set("search", f.search);
+    if (scopeIds && scopeIds.length > 0) p.set("ids", scopeIds.slice(0, 1000).join(","));
     try {
       const res = await fetch(`/api/prospects/list?${p.toString()}`);
       const data = res.ok ? await res.json() : { rows: [], total: 0 };
       setRows(data.rows ?? []);
       setTotal(data.total ?? 0);
     } catch { setRows([]); setTotal(0); }
-    setSel(new Set());
+    // Seed the selection from the carried ids on the first load; clear otherwise.
+    if (pendingCarryRef.current && !carryAppliedRef.current) {
+      setSel(new Set(pendingCarryRef.current));
+      carryAppliedRef.current = true;
+    } else {
+      setSel(new Set());
+    }
     setSugg({});
     setLoading(false);
-  }, [f]);
+  }, [f, scopeIds]);
 
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(() => { void load(); }, 300);
     return () => { if (debounce.current) clearTimeout(debounce.current); };
   }, [load]);
+
+  // Drop the carry-over scope and verify across the whole unverified queue.
+  function clearCarry() {
+    pendingCarryRef.current = null;
+    carryAppliedRef.current = true;
+    setCarried(null);
+    setSel(new Set());
+    setScopeIds(null);
+  }
 
   function toggle(id: string) {
     setSel((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -203,6 +236,19 @@ export function VerifyContactList() {
         </select>
         <select value={f.side} onChange={(e) => setF({ ...f, side: e.target.value })} style={selStyle}><option value="">All sides</option><option value="founder">Founders</option><option value="investor">Investors</option></select>
       </div>
+
+      {/* carry-over banner — the selection brought over from Create List */}
+      {carried ? (
+        <div style={{ padding: "9px 14px", background: "#EEF2FF", borderBottom: "0.5px solid #C7D2FE", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span style={{ color: "#4338CA", fontSize: 13 }}>🗂</span>
+          <span style={{ fontSize: 12, color: "#3730A3" }}>
+            {carried.hadIds
+              ? <>Verifying <b>“{carried.name}”</b> — {carried.count.toLocaleString()} contacts carried over and pre-selected.</>
+              : <>Just created <b>“{carried.name}”</b> ({carried.count.toLocaleString()} contacts). Use <b>Verify all contacts</b> to run the whole set.</>}
+          </span>
+          <button onClick={clearCarry} style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 6, padding: "4px 10px", cursor: "pointer" }}>Verify whole queue instead</button>
+        </div>
+      ) : null}
 
       {/* selection bar */}
       <div style={{ padding: "8px 14px", background: sel.size > 0 ? "#EFF6FF" : "var(--muted)", borderBottom: sel.size > 0 ? "0.5px solid #BFDBFE" : "0.5px solid var(--border)", display: "flex", alignItems: "center", gap: 10 }}>

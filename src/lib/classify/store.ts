@@ -37,7 +37,6 @@ export async function classifyBatch(limit = 100): Promise<ClassifyBatchResult> {
   const rows = (data ?? []) as Row[];
   let resolved = 0;
   let ambiguous = 0;
-  const now = new Date().toISOString();
 
   for (const r of rows) {
     const res = await classifyContact({
@@ -56,7 +55,6 @@ export async function classifyBatch(limit = 100): Promise<ClassifyBatchResult> {
           side: res.side,
           side_confidence: res.confidence,
           module: res.side,
-          updated_at: now,
           signals: { ...baseSignals, classify: { attempted: true, method: res.method, reason: res.reason, confidence: res.confidence } },
         })
         .eq("id", r.id);
@@ -66,7 +64,6 @@ export async function classifyBatch(limit = 100): Promise<ClassifyBatchResult> {
         .from("crm_contacts")
         .update({
           side_confidence: res.confidence,
-          updated_at: now,
           signals: { ...baseSignals, classify: { attempted: true, method: res.method, reason: res.reason, confidence: res.confidence, ambiguous: true } },
         })
         .eq("id", r.id);
@@ -142,7 +139,6 @@ export async function applyOverride(contactId: string, side: Side, adminId: stri
       side,
       side_confidence: 100,
       module: side,
-      updated_at: new Date().toISOString(),
       signals: { ...baseSignals, classify: { ...(baseSignals.classify as object ?? {}), override: true, override_by: adminId, ambiguous: false } },
     })
     .eq("id", contactId);

@@ -47,6 +47,7 @@ export function CreateListWizard() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [savedInfo, setSavedInfo] = useState<{ name: string; ids: string[] | null; count: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -134,12 +135,23 @@ export function CreateListWizard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Save failed.");
       setMsg(`Created “${data.listName}” with ${data.added.toLocaleString()} contacts.`);
+      // Remember what to carry into Verify & Correct: the ticked ids (or null =
+      // the whole matching set) plus the list name + count.
+      setSavedInfo({ name: data.listName as string, ids: mode === "selected" && !allMatching ? [...seldIds] : null, count: data.added as number });
       setName("");
       setDone(true);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed.");
     } finally { setSaving(false); }
+  }
+
+  // Hand the just-created list's selection to the Verify & Correct step.
+  function goVerify() {
+    try {
+      if (savedInfo) sessionStorage.setItem("mh_verify_handoff", JSON.stringify(savedInfo));
+    } catch { /* ignore */ }
+    router.push("/admin/marketing/prospects?step=verify");
   }
 
   const chips = SUB_STEPS.map((t, i) => {
@@ -256,7 +268,7 @@ export function CreateListWizard() {
               <span style={{ fontSize: 16 }}>✓</span>
               <div style={{ flex: 1, minWidth: 180 }}><div style={{ fontSize: 13, fontWeight: 700, color: "#065F46" }}>{msg}</div><div style={{ fontSize: 11.5, color: "#047857" }}>It&rsquo;s saved to your Contact Lists. Next: verify emails and fill missing details.</div></div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button onClick={() => router.push("/admin/marketing/prospects?step=verify")} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 16px", cursor: "pointer" }}>Verify &amp; Correct →</button>
+                <button onClick={goVerify} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 16px", cursor: "pointer" }}>Verify &amp; Correct →</button>
                 <button onClick={() => router.push("/admin/marketing/prospects?step=list")} style={{ fontSize: 12, fontWeight: 700, color: "#0F6E56", background: "#fff", border: "0.5px solid #A7F3D0", borderRadius: 8, padding: "9px 16px", cursor: "pointer" }}>Go to Contact Lists</button>
               </div>
             </div>

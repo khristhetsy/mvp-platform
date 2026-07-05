@@ -68,7 +68,6 @@ export async function verifyByIds(ids: string[]): Promise<VerifyBatchResult> {
 async function processRows(db: DB, rows: Row[]): Promise<VerifyBatchResult> {
   const tally = { verified: 0, appended: 0, valid: 0, risky: 0, invalid: 0 };
   let scrapes = 0;
-  const now = new Date().toISOString();
 
   for (const r of rows) {
     let status: EmailStatus = "unverified";
@@ -131,7 +130,6 @@ async function processRows(db: DB, rows: Row[]): Promise<VerifyBatchResult> {
     else if (status === "invalid") tally.invalid++;
 
     const patch: Record<string, unknown> = {
-      updated_at: now,
       email_status: status,
       email_source: emailSource,
       contact_confidence: confidence,

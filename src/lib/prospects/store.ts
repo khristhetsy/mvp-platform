@@ -108,6 +108,7 @@ export interface ListFilters {
   status?: string;
   leadStatus?: string;
   search?: string;
+  ids?: string[];
   limit?: number;
   offset?: number;
 }
@@ -120,6 +121,8 @@ export async function getContactList(filters: ListFilters): Promise<ContactListR
     .eq("suppressed", false)
     .order("lead_prescore", { ascending: false, nullsFirst: false });
 
+  // Scope to a specific set of contacts (e.g. the selection carried from Create List).
+  if (filters.ids && filters.ids.length > 0) q = q.in("id", filters.ids.slice(0, 1000));
   if (filters.side) q = q.eq("side", filters.side);
   if (filters.segment) q = q.eq("segment", filters.segment);
   if (filters.status) q = q.eq("email_status", filters.status);

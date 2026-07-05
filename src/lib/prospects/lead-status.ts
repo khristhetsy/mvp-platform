@@ -62,7 +62,7 @@ export async function advanceLeadStatus(db: DB, contactId: string, target: LeadS
   if (RANK[target] <= RANK[current]) return;
   await db
     .from("crm_contacts")
-    .update({ lead_status: target, updated_at: new Date().toISOString() })
+    .update({ lead_status: target })
     .eq("id", contactId);
 }
 
@@ -70,6 +70,6 @@ export async function advanceLeadStatus(db: DB, contactId: string, target: LeadS
 export async function setLeadStatus(db: DB, contactId: string, status: LeadStatus): Promise<void> {
   await db
     .from("crm_contacts")
-    .update({ lead_status: status, updated_at: new Date().toISOString() })
+    .update({ lead_status: status })
     .eq("id", contactId);
 }

@@ -108,8 +108,7 @@ export async function suggestForContact(contactId: string): Promise<{ suggestion
 /** Write an accepted suggestion to the contact. Pattern guesses land as "risky". */
 export async function acceptSuggestion(input: { contactId: string; field: "email" | "phone"; value: string; source: Suggestion["source"] }): Promise<void> {
   const db = serviceRoleClientUntyped();
-  const now = new Date().toISOString();
-  const patch: Record<string, unknown> = { updated_at: now };
+  const patch: Record<string, unknown> = {};
 
   if (input.field === "email") {
     patch.email = input.value;
