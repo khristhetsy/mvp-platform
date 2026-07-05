@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string };
 
@@ -10,6 +11,8 @@ const SOURCE_BADGE: Record<string, { text: string; color: string; bg: string }> 
 };
 
 export function SalesContactsClient() {
+  const router = useRouter();
+  const [converting, setConverting] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [contacts, setContacts] = useState<SalesContact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +48,14 @@ export function SalesContactsClient() {
       setAdding(false); setDraft({ name: "", email: "", company: "", phone: "" });
       await load(q);
     } catch (e) { setErr(e instanceof Error ? e.message : "Add failed."); } finally { setBusy(false); }
+  }
+
+  async function convert(c: SalesContact) {
+    setConverting(c.id);
+    try {
+      const res = await fetch("/api/sales/opportunities", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: c.name, email: c.email, company: c.company }) });
+      if (res.ok) router.push("/admin/sales/opportunities");
+    } finally { setConverting(null); }
   }
 
   const inp: React.CSSProperties = { fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" };
@@ -89,7 +100,9 @@ export function SalesContactsClient() {
               <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.company || "—"}</div>
               <div style={{ fontSize: 11.5, fontFamily: "var(--font-mono)", color: c.phone ? "var(--foreground)" : "var(--muted-foreground)" }}>{c.phone || "—"}</div>
               <div><span style={{ fontSize: 10, fontWeight: 600, color: sb.color, background: sb.bg, borderRadius: 10, padding: "2px 8px" }}>{sb.text}</span></div>
-              <div style={{ textAlign: "right" }}><span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Convert · soon</span></div>
+              <div style={{ textAlign: "right" }}>
+                <button onClick={() => convert(c)} disabled={converting === c.id} style={{ fontSize: 11, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 6, padding: "5px 11px", cursor: "pointer", opacity: converting === c.id ? 0.5 : 1 }}>{converting === c.id ? "Converting…" : "Convert →"}</button>
+              </div>
             </div>
           );
         })}

@@ -1,0 +1,31 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { requireRole } from "@/lib/supabase/auth";
+import { listOpportunities, createOpportunity, getDefaultPipeline } from "@/lib/sales/opportunities";
+
+export const dynamic = "force-dynamic";
+
+// GET /api/sales/opportunities?archived= — list + stages for the default pipeline.
+export async function GET(req: NextRequest): Promise<Response> {
+  const profile = await requireRole(["admin", "analyst"]).catch(() => null);
+  if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
+  const includeArchived = req.nextUrl.searchParams.get("archived") === "1";
+  const [opportunities, pipeline] = await Promise.all([listOpportunities(includeArchived), getDefaultPipeline()]);
+  return NextResponse.json({ opportunities, stages: pipeline?.stages ?? [] });
+}
+
+const createSchema = z.object({
+  name: z.string().min(1).max(200),
+  email: z.string().optional().nullable(),
+  company: z.string().optional().nullable(),
+});
+
+// POST /api/sales/opportunities — convert a contact into an opportunity.
+export async function POST(req: NextRequest): Promise<Response> {
+  const profile = await requireRole(["admin", "analyst"]).catch(() => null);
+  if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
+  const parsed = createSchema.safeParse(await req.json().catch(() => ({})));
+  if (!parsed.success) return NextResponse.json({ error: "A contact name is required." }, { status: 400 });
+  const opportunity = await createOpportunity({ ...parsed.data, createdBy: profile.id });
+  return NextResponse.json({ opportunity });
+}
