@@ -6,6 +6,11 @@ function getApiKey(): string | null {
   return process.env.RESEND_API_KEY?.trim() ?? null;
 }
 
+/** True when the email provider (Resend) is configured and can actually deliver. */
+export function emailConfigured(): boolean {
+  return Boolean(getApiKey());
+}
+
 /** Replace {{first_name}}, {{company}}, etc. in subject/body */
 function interpolate(text: string, vars: Record<string, string>): string {
   return text.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");

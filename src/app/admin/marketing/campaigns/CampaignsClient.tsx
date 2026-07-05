@@ -45,6 +45,8 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [acting, setActing] = useState<string | null>(null);
+  const [sendingDue, setSendingDue] = useState(false);
+  const [dueMsg, setDueMsg] = useState<string | null>(null);
   const [analyticsId, setAnalyticsId] = useState<string | null>(null);
   const [analyticsData, setAnalyticsData] = useState<CampaignDetail | null>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
@@ -122,6 +124,20 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function sendDueNow() {
+    setSendingDue(true); setDueMsg(null);
+    try {
+      const res = await fetch("/api/marketing/process-scheduled", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to process scheduled campaigns.");
+      const n = data.processed ?? 0;
+      setDueMsg(n > 0 ? `Sent ${n} due campaign${n === 1 ? "" : "s"}.` : "No campaigns are due right now.");
+      router.refresh();
+    } catch (err) {
+      setDueMsg(err instanceof Error ? err.message : "Failed to process scheduled campaigns.");
+    } finally { setSendingDue(false); }
   }
 
   async function handleAction(campaignId: string, action: "send" | "pause" | "cancel" | "schedule", scheduledAt?: string) {
@@ -232,13 +248,23 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
           <h1 style={{ fontSize: 16, fontWeight: 500, color: "var(--foreground)", marginBottom: 2 }}>Campaigns</h1>
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{campaigns.length} total</div>
         </div>
-        <button
-          onClick={() => setShowCreate(!showCreate)}
-          style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}
-        >
-          <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> New campaign
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={sendDueNow} disabled={sendingDue}
+            title="Send any scheduled campaigns whose time has passed"
+            style={{ fontSize: 12, padding: "6px 12px", borderRadius: 8, border: "0.5px solid var(--border-strong, #cbd5e1)", background: "#fff", color: "var(--foreground)", cursor: "pointer", opacity: sendingDue ? 0.5 : 1 }}>
+            {sendingDue ? "Sending…" : "Send due now"}
+          </button>
+          <button
+            onClick={() => setShowCreate(!showCreate)}
+            style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}
+          >
+            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> New campaign
+          </button>
+        </div>
       </div>
+      {dueMsg && (
+        <div style={{ marginBottom: 16, fontSize: 12, color: "#1A4E9E", background: "#EFF6FF", border: "0.5px solid #BFDBFE", borderRadius: 8, padding: "8px 12px" }}>{dueMsg}</div>
+      )}
 
       {/* Create form */}
       {showCreate && (

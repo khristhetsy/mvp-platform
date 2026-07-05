@@ -1,5 +1,5 @@
 import { marketingDb } from "./db";
-import { makeUnsubscribeToken, sendMarketingEmail } from "./send";
+import { makeUnsubscribeToken, sendMarketingEmail, emailConfigured } from "./send";
 import { isUnsubscribed } from "./contacts";
 import { emitNotification } from "./notifications/emit";
 import { listAdminIds } from "./notifications/store";
@@ -62,6 +62,13 @@ export async function sendCampaign(campaignId: string): Promise<{
   const template = campaign.template;
   if (!template) throw new Error("Template not attached");
 
+  // Don't pretend to send when the provider isn't configured — leave the
+  // campaign as-is (scheduled/draft) so it retries once RESEND_API_KEY is set,
+  // and surface a clear error to the caller / cron log.
+  if (!emailConfigured()) {
+    throw new Error("Email provider not configured — set RESEND_API_KEY in the environment before sending.");
+  }
+
   const { data: members } = await db
     .from("marketing_list_contacts")
     .select("contact_id")
@@ -118,9 +125,12 @@ export async function sendCampaign(campaignId: string): Promise<{
     await new Promise((r) => setTimeout(r, 200));
   }
 
+  // If every recipient failed (e.g. sender domain not verified), don't mark it
+  // "sent" — pause it so the failure is visible and can be retried after a fix.
+  const finalStatus = sent === 0 && failed > 0 ? "paused" : "sent";
   await db
     .from("marketing_campaigns")
-    .update({ status: "sent", sent_at: new Date().toISOString(), stat_sent: sent })
+    .update({ status: finalStatus, sent_at: sent > 0 ? new Date().toISOString() : null, stat_sent: sent })
     .eq("id", campaignId);
 
   // Notify — "batch send complete". Goes to the campaign owner, or all admins if
