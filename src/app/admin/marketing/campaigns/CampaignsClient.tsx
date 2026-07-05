@@ -22,11 +22,21 @@ const STATUS_MAP: Record<string, { bg: string; color: string; label: string }> =
 
 type CampaignDetail = {
   id: string; name: string; status: string; from_name: string; from_email: string;
+  reply_to: string | null; list_id: string | null; template_id: string | null;
   scheduled_at: string | null; sent_at: string | null;
   stat_sent: number; stat_delivered: number; stat_opened: number; stat_clicked: number; stat_bounced: number; stat_unsubscribed: number;
-  breakdown: Array<{ event_type: string; count: number }>;
+  breakdown: Record<string, number>;
   events: Array<{ id: string; event_type: string; occurred_at: string; contact_email?: string; metadata: Record<string, unknown> }>;
 };
+
+const EDITABLE_STATUSES = ["draft", "scheduled", "paused"];
+// ISO → value for <input type="datetime-local"> (local time, no seconds/zone).
+function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 export function CampaignsClient({ campaigns, lists, templates }: Props) {
   const router = useRouter();
@@ -36,6 +46,10 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
   const [analyticsId, setAnalyticsId] = useState<string | null>(null);
   const [analyticsData, setAnalyticsData] = useState<CampaignDetail | null>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", from_name: "", from_email: "", reply_to: "", list_id: "", template_id: "", scheduled_at: "" });
   const [form, setForm] = useState({
     name: "",
     list_id: lists[0]?.id ?? "",
@@ -86,15 +100,69 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
 
   async function openAnalytics(campaignId: string) {
     setAnalyticsId(campaignId);
+    setEditing(false);
     setLoadingAnalytics(true);
     setAnalyticsData(null);
     try {
       const res = await fetch(`/api/marketing/campaigns/${campaignId}`);
-      if (res.ok) setAnalyticsData(await res.json());
+      if (res.ok) {
+        // The detail endpoint nests the row under `campaign`; flatten it so the
+        // panel's flat field reads (data.name, data.stat_*, …) resolve.
+        const j = await res.json();
+        const c = (j.campaign ?? j) as Record<string, unknown>;
+        const events = ((j.events ?? []) as Array<Record<string, unknown>>).map((e) => ({
+          id: String(e.id), event_type: String(e.event_type), occurred_at: String(e.occurred_at),
+          contact_email: (e.email as string) ?? undefined, metadata: (e.metadata as Record<string, unknown>) ?? {},
+        }));
+        setAnalyticsData({ ...(c as unknown as CampaignDetail), breakdown: (j.breakdown ?? {}) as Record<string, number>, events });
+      }
     } catch (err) {
       console.error("Failed to load campaign analytics:", err);
     } finally {
       setLoadingAnalytics(false);
+    }
+  }
+
+  function closeDrawer() { setAnalyticsId(null); setEditing(false); setExpanded(false); }
+
+  function startEdit() {
+    if (!analyticsData) return;
+    setEditForm({
+      name: analyticsData.name ?? "",
+      from_name: analyticsData.from_name ?? "",
+      from_email: analyticsData.from_email ?? "",
+      reply_to: analyticsData.reply_to ?? "",
+      list_id: analyticsData.list_id ?? "",
+      template_id: analyticsData.template_id ?? "",
+      scheduled_at: analyticsData.scheduled_at ? toLocalInput(analyticsData.scheduled_at) : "",
+    });
+    setEditing(true);
+  }
+
+  async function saveEdit() {
+    if (!analyticsId) return;
+    setSavingEdit(true);
+    try {
+      const body = {
+        name: editForm.name.trim(),
+        from_name: editForm.from_name.trim(),
+        from_email: editForm.from_email.trim(),
+        reply_to: editForm.reply_to.trim() || null,
+        list_id: editForm.list_id || null,
+        template_id: editForm.template_id || null,
+        scheduled_at: editForm.scheduled_at ? new Date(editForm.scheduled_at).toISOString() : null,
+      };
+      const res = await fetch(`/api/marketing/campaigns/${analyticsId}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error("Save failed");
+      setEditing(false);
+      await openAnalytics(analyticsId);
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to save campaign:", err);
+    } finally {
+      setSavingEdit(false);
     }
   }
 
@@ -275,16 +343,28 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
       {/* Analytics drill-down drawer — portalled to body so it isn't trapped by overflow ancestors */}
       {analyticsId && typeof document !== "undefined" && createPortal(
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 200, display: "flex", justifyContent: "flex-end" }}
-          onClick={() => setAnalyticsId(null)}>
-          <div style={{ width: 520, height: "100%", background: "#fff", borderLeft: "0.5px solid #e2e6ed", boxShadow: "-8px 0 24px rgb(12 35 64 / 0.12)", overflowY: "auto", padding: 24 }}
+          onClick={closeDrawer}>
+          <div style={{ width: expanded ? "min(1000px, 96vw)" : 520, height: "100%", background: "#fff", borderLeft: "0.5px solid #e2e6ed", boxShadow: "-8px 0 24px rgb(12 35 64 / 0.12)", overflowY: "auto", padding: 24, transition: "width 0.2s" }}
             onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>Campaign analytics</h3>
-              <button onClick={() => setAnalyticsId(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--muted-foreground)" }}>×</button>
+              <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>{editing ? "Edit campaign" : "Campaign analytics"}</h3>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {analyticsData && !editing && EDITABLE_STATUSES.includes(analyticsData.status) && (
+                  <button onClick={startEdit} style={{ fontSize: 12, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}>✎ Edit</button>
+                )}
+                <button onClick={() => setExpanded((v) => !v)} title={expanded ? "Collapse" : "Expand"}
+                  style={{ fontSize: 12, color: "var(--muted-foreground)", background: "var(--background)", border: "0.5px solid var(--border)", borderRadius: 7, padding: "5px 10px", cursor: "pointer" }}>
+                  {expanded ? "⤡ Collapse" : "⤢ Expand"}
+                </button>
+                <button onClick={closeDrawer} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--muted-foreground)", paddingLeft: 2 }}>×</button>
+              </div>
             </div>
 
             {loadingAnalytics && <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Loading…</div>}
-            {analyticsData && <AnalyticsPanel data={analyticsData} />}
+            {analyticsData && editing && (
+              <CampaignEditForm form={editForm} setForm={setEditForm} lists={lists} templates={templates} saving={savingEdit} onSave={saveEdit} onCancel={() => setEditing(false)} />
+            )}
+            {analyticsData && !editing && <AnalyticsPanel data={analyticsData} />}
           </div>
         </div>,
         document.body,
@@ -317,6 +397,67 @@ function ScheduleButton({ campaignId, onSchedule, acting }: { campaignId: string
         style={{ fontSize: 11, padding: "4px 6px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
         ×
       </button>
+    </div>
+  );
+}
+
+type EditForm = { name: string; from_name: string; from_email: string; reply_to: string; list_id: string; template_id: string; scheduled_at: string };
+
+function CampaignEditForm({ form, setForm, lists, templates, saving, onSave, onCancel }: {
+  form: EditForm; setForm: (f: EditForm) => void; lists: MarketingList[]; templates: MarketingTemplate[];
+  saving: boolean; onSave: () => void; onCancel: () => void;
+}) {
+  const lbl: React.CSSProperties = { display: "block", fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 5 };
+  const inp: React.CSSProperties = { width: "100%", boxSizing: "border-box", fontSize: 13, padding: "8px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" };
+  const set = (patch: Partial<EditForm>) => setForm({ ...form, ...patch });
+  const canSave = form.name.trim().length > 0 && form.from_email.trim().length > 0 && !saving;
+  return (
+    <div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div>
+          <label style={lbl}>Campaign name</label>
+          <input value={form.name} onChange={(e) => set({ name: e.target.value })} style={inp} placeholder="Q3 investor outreach" />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div><label style={lbl}>From name</label><input value={form.from_name} onChange={(e) => set({ from_name: e.target.value })} style={inp} /></div>
+          <div><label style={lbl}>From email</label><input value={form.from_email} onChange={(e) => set({ from_email: e.target.value })} style={inp} /></div>
+        </div>
+        <div>
+          <label style={lbl}>Reply-to</label>
+          <input value={form.reply_to} onChange={(e) => set({ reply_to: e.target.value })} style={inp} placeholder="replies@myicfos.com" />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <label style={lbl}>Contact list</label>
+            <select value={form.list_id} onChange={(e) => set({ list_id: e.target.value })} style={inp}>
+              <option value="">— none —</option>
+              {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={lbl}>Template</label>
+            <select value={form.template_id} onChange={(e) => set({ template_id: e.target.value })} style={inp}>
+              <option value="">— none —</option>
+              {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+        </div>
+        <div>
+          <label style={lbl}>Scheduled send</label>
+          <input type="datetime-local" value={form.scheduled_at} onChange={(e) => set({ scheduled_at: e.target.value })} style={inp} />
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 8, marginTop: 18, paddingTop: 16, borderTop: "0.5px solid var(--border)" }}>
+        <button onClick={onSave} disabled={!canSave}
+          style={{ fontSize: 13, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 18px", cursor: "pointer", opacity: canSave ? 1 : 0.5 }}>
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+        <button onClick={onCancel} disabled={saving}
+          style={{ fontSize: 13, fontWeight: 600, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 8, padding: "9px 18px", cursor: "pointer" }}>
+          Cancel
+        </button>
+      </div>
+      <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: "12px 0 0" }}>Editing is available while a campaign is draft, scheduled, or paused. Sent campaigns are read-only.</p>
     </div>
   );
 }
