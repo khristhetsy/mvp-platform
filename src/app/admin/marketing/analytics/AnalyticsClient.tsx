@@ -20,7 +20,9 @@ interface Metrics {
 
 interface DailyOpen { date: string; count: number; }
 interface CompletedCampaign { id: string; name: string; sent: number; opened: number; clicked: number; date: string; }
-interface Props { metrics: Metrics; dailyOpens: DailyOpen[]; completedCampaigns?: CompletedCampaign[]; }
+interface ListSummary { id: string; name: string; count: number; }
+interface ListCampaign { id: string; name: string; list_id: string; sent: number; opened: number; clicked: number; }
+interface Props { metrics: Metrics; dailyOpens: DailyOpen[]; completedCampaigns?: CompletedCampaign[]; lists?: ListSummary[]; listCampaigns?: ListCampaign[]; }
 interface ChatMessage { role: "user" | "assistant"; content: string; }
 
 const card = {
@@ -75,9 +77,16 @@ const QUICK_PROMPTS = [
   "What email sequences should I build for warming up investors?",
 ];
 
-export default function AnalyticsClient({ metrics, dailyOpens, completedCampaigns = [] }: Props) {
+export default function AnalyticsClient({ metrics, dailyOpens, completedCampaigns = [], lists = [], listCampaigns = [] }: Props) {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>(completedCampaigns[0]?.id ?? "");
   const selectedCampaign = completedCampaigns.find((c) => c.id === selectedCampaignId) ?? null;
+
+  const [selectedListId, setSelectedListId] = useState<string>(lists[0]?.id ?? "");
+  const selectedList = lists.find((l) => l.id === selectedListId) ?? null;
+  const listCamps = listCampaigns.filter((c) => c.list_id === selectedListId);
+  const listSent = listCamps.reduce((a, c) => a + c.sent, 0);
+  const listOpened = listCamps.reduce((a, c) => a + c.opened, 0);
+  const listClicked = listCamps.reduce((a, c) => a + c.clicked, 0);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
@@ -173,6 +182,54 @@ export default function AnalyticsClient({ metrics, dailyOpens, completedCampaign
                 </div>
               ))}
             </div>
+          )}
+        </div>
+      )}
+
+      {/* By contact list — pick a saved list to see how it performed */}
+      {lists.length > 0 && (
+        <div style={{ ...card, padding: "14px 16px", marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: selectedList ? 12 : 0 }}>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>By contact list</span>
+            <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>saved list:</span>
+            <select value={selectedListId} onChange={(e) => setSelectedListId(e.target.value)}
+              style={{ fontSize: 12, fontWeight: 600, border: "1px solid #2E78F5", background: "#EFF6FF", color: "#1A6CE4", borderRadius: 7, padding: "6px 10px" }}>
+              {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+          </div>
+          {selectedList && (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 10 }}>
+                {[
+                  { label: "Contacts in list", value: selectedList.count.toLocaleString(), color: "var(--foreground)" },
+                  { label: "Campaigns run", value: listCamps.length.toLocaleString(), color: "var(--foreground)" },
+                  { label: "Avg open rate", value: listSent > 0 ? `${((listOpened / listSent) * 100).toFixed(1)}%` : "—", color: "#0F6E56" },
+                  { label: "Avg click rate", value: listSent > 0 ? `${((listClicked / listSent) * 100).toFixed(1)}%` : "—", color: "#0369A1" },
+                ].map((s) => (
+                  <div key={s.label} style={{ border: "0.5px solid var(--border)", borderRadius: 9, padding: "11px 13px", background: "var(--muted)" }}>
+                    <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 4 }}>{s.label}</div>
+                    <div style={{ fontSize: 20, fontWeight: 600, color: s.color }}>{s.value}</div>
+                  </div>
+                ))}
+              </div>
+              {listCamps.length > 0 ? (
+                <div style={{ marginTop: 12, border: "0.5px solid var(--border)", borderRadius: 9, overflow: "hidden" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr", padding: "7px 12px", background: "var(--muted)", fontSize: 10.5, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    <div>Campaign</div><div style={{ textAlign: "right" }}>Sent</div><div style={{ textAlign: "right" }}>Open</div><div style={{ textAlign: "right" }}>Click</div>
+                  </div>
+                  {listCamps.map((c) => (
+                    <div key={c.id} style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 1fr 1fr", padding: "8px 12px", borderTop: "0.5px solid var(--border)", fontSize: 12, alignItems: "center" }}>
+                      <div style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.name}</div>
+                      <div style={{ textAlign: "right", color: "var(--muted-foreground)" }}>{c.sent.toLocaleString()}</div>
+                      <div style={{ textAlign: "right", color: "#0F6E56" }}>{c.sent > 0 ? `${((c.opened / c.sent) * 100).toFixed(1)}%` : "—"}</div>
+                      <div style={{ textAlign: "right", color: "#0369A1" }}>{c.sent > 0 ? `${((c.clicked / c.sent) * 100).toFixed(1)}%` : "—"}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ marginTop: 12, fontSize: 12, color: "var(--muted-foreground)" }}>No campaigns have targeted this list yet.</p>
+              )}
+            </>
           )}
         </div>
       )}

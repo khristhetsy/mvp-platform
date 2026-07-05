@@ -31,7 +31,7 @@ export function GuidedBanner() {
     <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", border: "0.5px solid #BFDBFE", background: "#EFF6FF", borderRadius: 12, padding: "11px 14px", marginBottom: 16 }}>
       <span style={{ fontSize: 15 }}>✨</span>
       <div style={{ flex: 1, minWidth: 220 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 700, color: "#1A4E9E" }}>Set up your first campaign</div>
+        <div style={{ fontSize: 12.5, fontWeight: 700, color: "#1A4E9E" }}>Set up your campaign</div>
         <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", marginTop: 3 }}>
           {STEPS.map((s, i) => (
             <span key={s} style={{ display: "flex", alignItems: "center", gap: 5 }}>

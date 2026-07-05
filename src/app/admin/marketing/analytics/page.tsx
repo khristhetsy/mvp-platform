@@ -87,5 +87,23 @@ export default async function MarketingAnalyticsPage() {
     date: (c.created_at as string) ?? "",
   }));
 
-  return <AnalyticsClient metrics={metrics} dailyOpens={dailyOpens} completedCampaigns={completedCampaigns} />;
+  // Saved contact lists + campaigns that used them — for the "By contact list" view.
+  const { data: listRows } = await supabase
+    .from("marketing_lists").select("id, name").eq("archived", false)
+    .order("created_at", { ascending: false }).limit(100);
+  const lists = await Promise.all(((listRows ?? []) as Array<Record<string, unknown>>).map(async (l) => {
+    const { count } = await supabase.from("marketing_list_contacts").select("contact_id", { count: "exact", head: true }).eq("list_id", l.id as string);
+    return { id: String(l.id), name: (l.name as string) ?? "List", count: count ?? 0 };
+  }));
+
+  const { data: listCampRows } = await supabase
+    .from("marketing_campaigns")
+    .select("id, name, list_id, stat_sent, stat_opened, stat_clicked")
+    .not("list_id", "is", null).limit(300);
+  const listCampaigns = ((listCampRows ?? []) as Array<Record<string, unknown>>).map((c) => ({
+    id: String(c.id), name: (c.name as string) ?? "Campaign", list_id: String(c.list_id),
+    sent: (c.stat_sent as number) ?? 0, opened: (c.stat_opened as number) ?? 0, clicked: (c.stat_clicked as number) ?? 0,
+  }));
+
+  return <AnalyticsClient metrics={metrics} dailyOpens={dailyOpens} completedCampaigns={completedCampaigns} lists={lists} listCampaigns={listCampaigns} />;
 }

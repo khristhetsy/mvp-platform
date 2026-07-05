@@ -55,9 +55,9 @@ export function CreateListWizard() {
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   // reset paging/select-all when the source or filters change
-  function setFounder(patch: Partial<typeof ff>) { setFf({ ...ff, ...patch }); setPage(0); setAllMatching(false); }
-  function setPipe(patch: Partial<typeof pf>) { setPf({ ...pf, ...patch }); setPage(0); setAllMatching(false); }
-  function pickSource(s: Source) { setSource(s); setPage(0); setAllMatching(false); }
+  function setFounder(patch: Partial<typeof ff>) { setFf({ ...ff, ...patch }); setPage(0); setAllMatching(false); setSeldIds(new Set()); }
+  function setPipe(patch: Partial<typeof pf>) { setPf({ ...pf, ...patch }); setPage(0); setAllMatching(false); setSeldIds(new Set()); }
+  function pickSource(s: Source) { setSource(s); setPage(0); setAllMatching(false); setSeldIds(new Set()); }
 
   const fetchRows = useCallback(async () => {
     setLoading(true); setError(null);
@@ -87,12 +87,13 @@ export function CreateListWizard() {
       const rws = (data.rows ?? []) as Row[];
       setRows(rws);
       setTotal(data.total ?? rws.length);
-      if (!allMatching) setSeldIds(new Set(rws.map((r) => r.id)));
+      // NB: selection is NOT reset here — ticks persist across pages. Filter/source
+      // changes clear it (setFounder/setPipe/pickSource).
     } catch {
       setRows([]); setTotal(0);
     }
     setLoading(false);
-  }, [isFounder, source, ff, pf, page, allMatching]);
+  }, [isFounder, source, ff, pf, page]);
 
   useEffect(() => {
     if (step < 1) return;
@@ -213,15 +214,15 @@ export function CreateListWizard() {
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
             <span style={{ fontSize: 11.5, fontWeight: 700, color: "#1A4E9E" }}>
-              {allMatching ? `All ${total.toLocaleString()} matching selected` : `${seldIds.size} of ${rows.length} shown selected`}
+              {allMatching ? `All ${total.toLocaleString()} matching selected` : `${seldIds.size.toLocaleString()} of ${total.toLocaleString()} selected`}
             </span>
-            {!allMatching && <button onClick={() => setSeldIds(new Set(rows.map((r) => r.id)))} style={{ fontSize: 10.5, color: "#1A6CE4", background: "none", border: "none", cursor: "pointer" }}>Select page</button>}
-            <button onClick={() => { setAllMatching(false); setSeldIds(new Set()); }} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Clear</button>
             {total > rows.length ? (
               <button onClick={() => setAllMatching(true)} style={{ fontSize: 10.5, fontWeight: 700, color: allMatching ? "#065F46" : "#fff", background: allMatching ? "#ECFDF5" : "#0F6E56", border: allMatching ? "0.5px solid #A7F3D0" : "none", borderRadius: 999, padding: "3px 10px", cursor: "pointer" }}>
-                {allMatching ? "✓ All matching" : `Select all ${total.toLocaleString()} matching`}
+                {allMatching ? `✓ All ${total.toLocaleString()}` : `Select all ${total.toLocaleString()}`}
               </button>
             ) : null}
+            {!allMatching && <button onClick={() => setSeldIds((prev) => new Set([...prev, ...rows.map((r) => r.id)]))} style={{ fontSize: 10.5, color: "#1A6CE4", background: "none", border: "none", cursor: "pointer" }}>Select page</button>}
+            <button onClick={() => { setAllMatching(false); setSeldIds(new Set()); }} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Unselect all</button>
           </div>
           <div style={{ border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden", maxHeight: 320, overflowY: "auto" }}>
             {loading ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>Loading…</p>
