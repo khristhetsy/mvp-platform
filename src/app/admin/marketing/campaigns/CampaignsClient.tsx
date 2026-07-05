@@ -173,6 +173,19 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
     } finally { setSendingDue(false); }
   }
 
+  const [showArchived, setShowArchived] = useState(false);
+  async function setArchived(campaignId: string, archived: boolean) {
+    setActing(campaignId + "archive");
+    try {
+      await fetch(`/api/marketing/campaigns/${campaignId}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ archived }),
+      });
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to archive campaign:", err);
+    } finally { setActing(null); }
+  }
+
   async function handleAction(campaignId: string, action: "send" | "pause" | "cancel" | "schedule", scheduledAt?: string) {
     setActing(campaignId + action);
     try {
@@ -411,14 +424,24 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
         </div>
       )}
 
+      {/* Archived toggle */}
+      {campaigns.some((c) => c.archived) && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
+          <button onClick={() => setShowArchived((v) => !v)}
+            style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+            {showArchived ? "Hide archived" : `Show archived (${campaigns.filter((c) => c.archived).length})`}
+          </button>
+        </div>
+      )}
+
       {/* Campaign cards */}
-      {campaigns.length === 0 ? (
+      {(() => { const visible = campaigns.filter((c) => showArchived || !c.archived); return visible.length === 0 ? (
         <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--muted-foreground)", fontSize: 13 }}>
-          No campaigns yet. Create your first one above.
+          {campaigns.length === 0 ? "No campaigns yet. Create your first one above." : "No active campaigns. Toggle “Show archived” to see archived ones."}
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          {campaigns.map((c) => {
+          {visible.map((c) => {
             const sc = STATUS_MAP[c.status] ?? STATUS_MAP.draft;
             const scheduledAt = (c as Record<string, unknown>).scheduled_at as string | null | undefined;
             return (
@@ -487,6 +510,10 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 4 }}>
                     ↗ Details
                   </button>
+                  <button onClick={() => setArchived(c.id, !c.archived)} disabled={acting === c.id + "archive"}
+                    style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
+                    {c.archived ? "Unarchive" : "Archive"}
+                  </button>
                   {["draft", "paused", "scheduled"].includes(c.status) && (
                     <button onClick={() => handleAction(c.id, "cancel")} disabled={acting === c.id + "cancel"}
                       style={{ marginLeft: "auto", fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>
@@ -498,7 +525,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
             );
           })}
         </div>
-      )}
+      ); })()}
 
       {/* Analytics drill-down drawer — portalled to body so it isn't trapped by overflow ancestors */}
       {analyticsId && typeof document !== "undefined" && createPortal(
