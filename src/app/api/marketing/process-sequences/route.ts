@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { processDueSequenceSteps } from "@/lib/marketing/sequences";
+import { collectDueSequenceBatches } from "@/lib/marketing/sequences";
 
-// Called by a Vercel cron job every 15 minutes:
+// Called by a Vercel cron job every 15 minutes. GATED: this no longer sends —
+// it collects due contacts into pending batches for a human to review & release.
 // vercel.json: { "crons": [{ "path": "/api/marketing/process-sequences", "schedule": "*/15 * * * *" }] }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -14,6 +15,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { processed } = await processDueSequenceSteps();
-  return NextResponse.json({ ok: true, processed });
+  const { batches, queued } = await collectDueSequenceBatches();
+  return NextResponse.json({ ok: true, batches, queued });
 }

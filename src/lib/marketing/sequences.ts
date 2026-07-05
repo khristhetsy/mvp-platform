@@ -115,111 +115,161 @@ export async function enrollList(
   return { enrolled: rows.length };
 }
 
-export async function processDueSequenceSteps(): Promise<{ processed: number }> {
+const CONDITION_EVENT: Record<string, string> = { no_open: "opened", no_click: "clicked", no_reply: "replied" };
+
+/**
+ * GATED: when steps come due, collect eligible contacts into PENDING BATCHES for
+ * a human to review & release — no auto-send. Suppressed/condition-skipped
+ * enrollments still advance automatically (nothing is sent for them).
+ */
+export async function collectDueSequenceBatches(): Promise<{ batches: number; queued: number }> {
   const db = await marketingDb();
 
   const { data: due } = await db
     .from("marketing_sequence_enrollments")
-    .select(`
-      *,
-      contact:marketing_contacts(*),
-      sequence:marketing_sequences(*)
-    `)
+    .select(`*, contact:marketing_contacts(*)`)
     .eq("status", "active")
     .lte("next_send_at", new Date().toISOString())
-    .limit(100);
+    .limit(500);
 
-  if (!due || due.length === 0) return { processed: 0 };
+  if (!due || due.length === 0) return { batches: 0, queued: 0 };
 
-  let processed = 0;
+  // group due enrollments by sequence + current step
+  const groups = new Map<string, typeof due>();
+  for (const e of due) {
+    const key = `${e.sequence_id}:${e.current_step}`;
+    (groups.get(key) ?? groups.set(key, []).get(key)!).push(e);
+  }
 
-  for (const enrollment of due) {
-    const contact = enrollment.contact;
-    if (!contact) continue;
+  let batches = 0, queued = 0;
 
-    const unsub = await isUnsubscribed(contact.email);
-    if (unsub) {
-      await db
-        .from("marketing_sequence_enrollments")
-        .update({ status: "unsubscribed" })
-        .eq("id", enrollment.id);
-      continue;
-    }
-
+  for (const group of groups.values()) {
+    const first = group[0];
     const { data: step } = await db
       .from("marketing_sequence_steps")
       .select(`*, template:marketing_templates(*)`)
-      .eq("sequence_id", enrollment.sequence_id)
-      .eq("step_order", enrollment.current_step)
+      .eq("sequence_id", first.sequence_id)
+      .eq("step_order", first.current_step)
       .maybeSingle();
 
     if (!step) {
-      await db
-        .from("marketing_sequence_enrollments")
-        .update({ status: "completed" })
-        .eq("id", enrollment.id);
+      await db.from("marketing_sequence_enrollments").update({ status: "completed" }).in("id", group.map((e) => e.id));
       continue;
     }
 
-    if (step.condition !== "always") {
-      const eventMap: Record<string, string> = {
-        no_open: "opened",
-        no_click: "clicked",
-        no_reply: "replied",
-      };
-      const requiredAbsence = eventMap[step.condition];
-      if (requiredAbsence) {
-        const { data: priorEvent } = await db
-          .from("marketing_events")
-          .select("id")
-          .eq("contact_id", contact.id)
-          .eq("sequence_id", enrollment.sequence_id)
-          .eq("event_type", requiredAbsence)
-          .maybeSingle();
+    const willSend: string[] = [];
+    let suppressed = 0, skipped = 0;
 
-        if (priorEvent) {
-          await advanceEnrollment(db, enrollment, step);
-          continue;
-        }
+    for (const e of group) {
+      const contact = e.contact;
+      if (!contact) { skipped++; continue; }
+      if (await isUnsubscribed(contact.email)) {
+        await db.from("marketing_sequence_enrollments").update({ status: "unsubscribed" }).eq("id", e.id);
+        suppressed++; continue;
       }
+      // condition (e.g. "only if not opened") — if the required absence is violated, skip + advance
+      const req = step.condition !== "always" ? CONDITION_EVENT[step.condition] : null;
+      if (req) {
+        const { data: prior } = await db.from("marketing_events").select("id")
+          .eq("contact_id", contact.id).eq("sequence_id", e.sequence_id).eq("event_type", req).maybeSingle();
+        if (prior) { await advanceEnrollment(db, e, step); skipped++; continue; }
+      }
+      if (!step.template) { await advanceEnrollment(db, e, step); skipped++; continue; }
+      willSend.push(e.id);
     }
 
-    const template = step.template;
-    if (!template) {
-      await advanceEnrollment(db, enrollment, step);
-      continue;
+    if (willSend.length === 0) continue;
+
+    const { data: batch } = await db.from("marketing_sequence_batches").insert({
+      sequence_id: first.sequence_id, step_id: step.id, step_order: first.current_step,
+      eligible_count: group.length, will_send_count: willSend.length,
+      suppressed_count: suppressed, skipped_count: skipped,
+    }).select("id").single();
+
+    if (batch) {
+      await db.from("marketing_sequence_enrollments").update({ status: "awaiting_approval", batch_id: batch.id }).in("id", willSend);
+      batches++; queued += willSend.length;
     }
-
-    const token = makeUnsubscribeToken(contact.email);
-    const result = await sendMarketingEmail({
-      to: contact.email,
-      first_name: contact.first_name,
-      company: contact.company,
-      from_name: step.from_name,
-      from_email: step.from_email,
-      subject: template.subject,
-      html_body: template.html_body,
-      text_body: template.text_body,
-      unsubscribe_token: token,
-    });
-
-    await db.from("marketing_events").insert({
-      sequence_id: enrollment.sequence_id,
-      step_id: step.id,
-      contact_id: contact.id,
-      email: contact.email,
-      resend_id: result.resend_id,
-      event_type: result.ok ? "sent" : "failed",
-      metadata: result.error ? { error: result.error } : {},
-    });
-
-    await advanceEnrollment(db, enrollment, step);
-    processed++;
-
-    await new Promise((r) => setTimeout(r, 200));
   }
 
-  return { processed };
+  return { batches, queued };
+}
+
+export interface PendingBatch {
+  id: string;
+  sequence_id: string;
+  sequence_name: string;
+  step_order: number;
+  step_name: string | null;
+  will_send_count: number;
+  suppressed_count: number;
+  skipped_count: number;
+  created_at: string;
+}
+
+export async function getPendingBatches(): Promise<PendingBatch[]> {
+  const db = await marketingDb();
+  const { data } = await db
+    .from("marketing_sequence_batches")
+    .select(`id, sequence_id, step_order, will_send_count, suppressed_count, skipped_count, created_at,
+             sequence:marketing_sequences(name), step:marketing_sequence_steps(template:marketing_templates(name, subject))`)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return ((data ?? []) as any[]).map((b) => ({
+    id: b.id,
+    sequence_id: b.sequence_id,
+    sequence_name: b.sequence?.name ?? "Sequence",
+    step_order: b.step_order,
+    step_name: b.step?.template?.name ?? b.step?.template?.subject ?? null,
+    will_send_count: b.will_send_count ?? 0,
+    suppressed_count: b.suppressed_count ?? 0,
+    skipped_count: b.skipped_count ?? 0,
+    created_at: b.created_at,
+  }));
+}
+
+/** Human release: actually send the batch's queued emails, then advance enrollments. */
+export async function releaseSequenceBatch(batchId: string, releasedBy: string): Promise<{ sent: number; failed: number }> {
+  const db = await marketingDb();
+  const { data: batch } = await db.from("marketing_sequence_batches").select("*").eq("id", batchId).maybeSingle();
+  if (!batch) throw new Error("Batch not found.");
+  if (batch.status !== "pending") throw new Error("Batch already processed.");
+
+  const { data: step } = await db.from("marketing_sequence_steps").select(`*, template:marketing_templates(*)`).eq("id", batch.step_id).maybeSingle();
+  const { data: enrollments } = await db
+    .from("marketing_sequence_enrollments")
+    .select(`*, contact:marketing_contacts(*)`)
+    .eq("batch_id", batchId)
+    .eq("status", "awaiting_approval");
+
+  let sent = 0, failed = 0;
+  for (const e of (enrollments ?? [])) {
+    const contact = e.contact;
+    if (!contact || !step?.template) { await advanceEnrollment(db, e, step ?? { step_order: e.current_step }); continue; }
+    if (await isUnsubscribed(contact.email)) {
+      await db.from("marketing_sequence_enrollments").update({ status: "unsubscribed", batch_id: null }).eq("id", e.id);
+      continue;
+    }
+    const token = makeUnsubscribeToken(contact.email);
+    const result = await sendMarketingEmail({
+      to: contact.email, first_name: contact.first_name, company: contact.company,
+      from_name: step.from_name, from_email: step.from_email,
+      subject: step.template.subject, html_body: step.template.html_body, text_body: step.template.text_body,
+      unsubscribe_token: token,
+    });
+    await db.from("marketing_events").insert({
+      sequence_id: e.sequence_id, step_id: step.id, contact_id: contact.id, email: contact.email,
+      resend_id: result.resend_id, event_type: result.ok ? "sent" : "failed",
+      metadata: result.error ? { error: result.error } : {},
+    });
+    if (result.ok) sent++; else failed++;
+    await advanceEnrollment(db, e, step);
+    await new Promise((r) => setTimeout(r, 150));
+  }
+
+  await db.from("marketing_sequence_batches").update({ status: "released", released_by: releasedBy, released_at: new Date().toISOString() }).eq("id", batchId);
+  return { sent, failed };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -236,7 +286,7 @@ async function advanceEnrollment(db: any, enrollment: { id: string; sequence_id:
   if (!nextStep) {
     await db
       .from("marketing_sequence_enrollments")
-      .update({ status: "completed" })
+      .update({ status: "completed", batch_id: null })
       .eq("id", enrollment.id);
     return;
   }
@@ -246,6 +296,6 @@ async function advanceEnrollment(db: any, enrollment: { id: string; sequence_id:
 
   await db
     .from("marketing_sequence_enrollments")
-    .update({ current_step: nextStepOrder, next_send_at: nextSendAt })
+    .update({ current_step: nextStepOrder, next_send_at: nextSendAt, status: "active", batch_id: null })
     .eq("id", enrollment.id);
 }
