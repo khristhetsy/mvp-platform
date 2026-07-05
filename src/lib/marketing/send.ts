@@ -3,7 +3,17 @@ import type { SendResult } from "./types";
 const RESEND_API_URL = "https://api.resend.com/emails";
 
 function getApiKey(): string | null {
-  return process.env.RESEND_API_KEY?.trim() ?? null;
+  const raw = process.env.RESEND_API_KEY;
+  if (!raw) return null;
+  // Be tolerant of common copy/paste artifacts that make Resend reject the token
+  // as "malformed": surrounding quotes, a stray "Bearer " prefix, and any
+  // embedded whitespace/newlines (a valid Resend key contains none of these).
+  const cleaned = raw
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .replace(/^bearer\s+/i, "")
+    .replace(/\s+/g, "");
+  return cleaned || null;
 }
 
 /** True when the email provider (Resend) is configured and can actually deliver. */
