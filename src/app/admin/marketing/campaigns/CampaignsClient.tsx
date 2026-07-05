@@ -105,6 +105,9 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
     setSaving(true);
     try {
       const body: Record<string, string> = { ...form, status: "draft" };
+      // Convert the local datetime-picker value to an absolute UTC instant so the
+      // scheduled send fires at the intended local time (not misread as UTC).
+      if (form.scheduled_at) body.scheduled_at = new Date(form.scheduled_at).toISOString();
       // Attach per-campaign overrides only when the preview diverges from the template.
       if (selectedTemplate) {
         const bodyHtml = bodyRef.current?.innerHTML ?? "";
