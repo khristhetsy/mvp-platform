@@ -10,7 +10,7 @@ const bodySchema = z.object({
   contactId: z.string().uuid(),
   field: z.enum(["email", "phone"]),
   value: z.string().min(1).max(320),
-  source: z.enum(["site", "profile", "web"]),
+  source: z.enum(["site", "email", "profile", "web"]),
 });
 
 // POST /api/prospects/accept-suggestion — write a human-approved suggestion.

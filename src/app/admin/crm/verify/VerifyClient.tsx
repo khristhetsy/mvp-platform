@@ -1,34 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import type { VerifyStats } from "@/lib/verify/store";
 
 export function VerifyClient({ stats, searchReady }: { stats: VerifyStats; searchReady: boolean }) {
-  const router = useRouter();
-  const [running, setRunning] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function run() {
-    setRunning(true); setError(null); setResult(null);
-    try {
-      const res = await fetch("/api/contacts/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ limit: 40 }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Verification failed.");
-      setResult(`${data.processed} processed · ${data.valid} valid, ${data.risky} risky, ${data.invalid} invalid · ${data.appended} appended · ${data.remaining.toLocaleString()} remaining.`);
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Verification failed.");
-    } finally {
-      setRunning(false);
-    }
-  }
-
   const cards = [
     { label: "Valid", value: stats.valid, color: "#0F6E56" },
     { label: "Risky", value: stats.risky, color: "#92400E" },
@@ -47,12 +21,8 @@ export function VerifyClient({ stats, searchReady }: { stats: VerifyStats; searc
             </div>
           ))}
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <button type="button" onClick={run} disabled={running || stats.unverified === 0}
-            className="rounded-lg bg-[#2E78F5] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-            {running ? "Verifying…" : "Run verify + append (next 40)"}
-          </button>
-          {result ? <span className="text-sm text-slate-600">{result}</span> : null}
+        <div className="mt-4 rounded-lg bg-slate-50 px-3.5 py-3 text-xs text-slate-600">
+          Verification runs on the <span className="font-medium text-slate-800">Verify &amp; correct</span> step — pick contacts there and use <span className="font-medium text-slate-800">Verify selected</span> or <span className="font-medium text-slate-800">Verify all contacts</span>. The tallies above update as you go.
         </div>
         <p className="mt-3 text-xs text-slate-500">
           Internet search:{" "}
@@ -60,7 +30,6 @@ export function VerifyClient({ stats, searchReady }: { stats: VerifyStats; searc
             ? <span className="font-medium text-emerald-700">connected — the cascade can search the web for a company&apos;s site to fill genuine gaps.</span>
             : <span className="text-slate-600">not connected — running the company-website + pattern cascade only. Add a SERPER_API_KEY in Vercel to enable internet search.</span>}
         </p>
-        {error ? <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
       </section>
 
       <p className="text-[11px] leading-relaxed text-slate-500">

@@ -3,6 +3,25 @@
 // marked risky and must never be cold-sent — they only become sendable after a
 // provider verifies them.
 
+// Free / personal email providers — an address here tells us nothing about a
+// company website, so we never treat its domain as a company domain.
+const FREE_EMAIL_DOMAINS = new Set([
+  "gmail.com", "googlemail.com", "yahoo.com", "ymail.com", "yahoo.co.uk", "hotmail.com",
+  "hotmail.co.uk", "outlook.com", "live.com", "msn.com", "aol.com", "icloud.com", "me.com",
+  "mac.com", "proton.me", "protonmail.com", "pm.me", "gmx.com", "gmx.net", "mail.com",
+  "yandex.com", "yandex.ru", "zoho.com", "fastmail.com", "hey.com", "qq.com", "163.com", "126.com",
+]);
+
+/** Company domain implied by a business email address, or null for free providers. */
+export function domainFromEmail(email: string | null | undefined): string | null {
+  const e = (email ?? "").trim().toLowerCase();
+  const at = e.lastIndexOf("@");
+  if (at < 0) return null;
+  const d = e.slice(at + 1).replace(/^www\./, "").trim();
+  if (!d || !d.includes(".") || FREE_EMAIL_DOMAINS.has(d)) return null;
+  return d;
+}
+
 export function inferEmails(name: string | null | undefined, domain: string | null | undefined): string[] {
   const parts = (name ?? "").trim().toLowerCase().replace(/[^a-z\s'-]/g, "").split(/\s+/).filter(Boolean);
   const d = (domain ?? "").trim().toLowerCase().replace(/^www\./, "");

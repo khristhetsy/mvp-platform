@@ -6,7 +6,7 @@
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { verifyEmail, type EmailStatus } from "./email";
 import { scrapeSiteContacts } from "@/lib/append/site";
-import { inferEmails } from "@/lib/append/pattern";
+import { inferEmails, domainFromEmail } from "@/lib/append/pattern";
 import { searchConfigured, searchCompanyContacts } from "@/lib/append/websearch";
 
 type Row = {
@@ -89,19 +89,21 @@ async function processRows(db: DB, rows: Row[]): Promise<VerifyBatchResult> {
 
     const needsEmail = !r.email || status === "invalid";
     const needsPhone = !r.phone;
+    // Use the stored company domain, else derive it from a business email.
+    const domain = r.company_domain || domainFromEmail(r.email);
 
-    if ((needsEmail || needsPhone) && (r.company_domain || r.company) && scrapes < MAX_SITE_SCRAPES) {
+    if ((needsEmail || needsPhone) && (domain || r.company) && scrapes < MAX_SITE_SCRAPES) {
       scrapes++;
-      // (2) scrape the company site (when we have the domain)
-      if (r.company_domain) {
-        const site = await scrapeSiteContacts(r.company_domain);
+      // (2) scrape the company site (from the stored or email-derived domain)
+      if (domain) {
+        const site = await scrapeSiteContacts(domain);
         if (needsEmail && site.emails[0]) { newEmail = site.emails[0]; emailSource = "site"; }
         if (needsPhone && site.phones[0]) { newPhone = site.phones[0]; phoneSource = "site"; }
       }
 
       // (3) pattern inference → verify (kept risky: must be verified before send)
-      if (needsEmail && !newEmail && r.name && r.company_domain) {
-        for (const cand of inferEmails(r.name, r.company_domain)) {
+      if (needsEmail && !newEmail && r.name && domain) {
+        for (const cand of inferEmails(r.name, domain)) {
           const v = await verifyEmail(cand);
           if (v.mx) { newEmail = cand; emailSource = "profile"; break; }
         }
@@ -109,9 +111,10 @@ async function processRows(db: DB, rows: Row[]): Promise<VerifyBatchResult> {
 
       // (4) internet search → company's own contact pages (last resort)
       if (((needsEmail && !newEmail) || (needsPhone && !newPhone)) && searchConfigured()) {
-        const web = await searchCompanyContacts({ name: r.name, company: r.company, domain: r.company_domain });
-        if (needsEmail && !newEmail && web.email) { newEmail = web.email; emailSource = "web"; }
-        if (needsPhone && !newPhone && web.phone) { newPhone = web.phone; phoneSource = "web"; }
+        const web = await searchCompanyContacts({ name: r.name, company: r.company, domain });
+        // web results are extracted from the company's own site → store as "site"
+        if (needsEmail && !newEmail && web.email) { newEmail = web.email; emailSource = "site"; }
+        if (needsPhone && !newPhone && web.phone) { newPhone = web.phone; phoneSource = "site"; }
       }
 
       if (newEmail) {
@@ -132,12 +135,15 @@ async function processRows(db: DB, rows: Row[]): Promise<VerifyBatchResult> {
       email_status: status,
       email_source: emailSource,
       contact_confidence: confidence,
-      enrichment_status: r.company_domain || newEmail ? "enriched" : "no_website",
+      enrichment_status: domain || newEmail ? "enriched" : "no_website",
     };
     if (newEmail && !r.email) patch.email = newEmail;
     if (newPhone && newPhone !== r.phone) { patch.phone = newPhone; patch.phone_source = phoneSource; }
 
-    await db.from("crm_contacts").update(patch).eq("id", r.id);
+    // Surface write failures instead of dropping them silently (a bad column or
+    // constraint would otherwise make verification look like a no-op).
+    const { error: upErr } = await db.from("crm_contacts").update(patch).eq("id", r.id);
+    if (upErr) throw new Error(`Failed to persist verification for ${r.id}: ${upErr.message}`);
   }
 
   const { count: remaining } = await db
