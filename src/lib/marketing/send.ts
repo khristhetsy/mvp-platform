@@ -58,7 +58,7 @@ export async function sendMarketingEmail(
   const htmlBody = interpolate(input.html_body, vars);
   const textBody = input.text_body ? interpolate(input.text_body, vars) : undefined;
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://myicfos.com";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
   const unsubscribeUrl = `${appUrl}/unsubscribe?token=${input.unsubscribe_token}`;
 
   const htmlWithFooter = `${htmlBody}

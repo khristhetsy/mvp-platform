@@ -46,7 +46,7 @@ function LetterPreview({ template, compact = false }: { template: Partial<Market
       {/* Letterhead */}
       <div style={{ borderBottom: "2px solid #2E78F5", paddingBottom: 12, marginBottom: 20 }}>
         <div style={{ fontSize: 15, fontWeight: 700, color: "#2E78F5", letterSpacing: "0.04em" }}>iCapOS</div>
-        <div style={{ fontSize: 11, color: "#888780", marginTop: 2 }}>outreach@mail.myicfos.com · icapos.com</div>
+        <div style={{ fontSize: 11, color: "#888780", marginTop: 2 }}>outreach@icfocap.com · icapos.com</div>
       </div>
 
       {/* Date */}

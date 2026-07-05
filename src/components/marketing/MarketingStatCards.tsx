@@ -256,7 +256,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
                   actions={[
                     "<strong style='color:#fff'>Set up automatic hard-bounce suppression.</strong> Any email that hard-bounces should never receive another send. This protects your domain score and avoids spam flags.",
                     "<strong style='color:#fff'>Warm new lists with a 3-email drip before full sends.</strong> Adding cold contacts directly to campaign blasts dilutes your open rate average and signals spam to ISPs.",
-                    "<strong style='color:#fff'>Cap volume growth at 20% per month.</strong> Sudden spikes in send volume (even to opt-in lists) trigger spam filters. Ramp up gradually to protect your sender reputation at mail.myicfos.com.",
+                    "<strong style='color:#fff'>Cap volume growth at 20% per month.</strong> Sudden spikes in send volume (even to opt-in lists) trigger spam filters. Ramp up gradually to protect your sender reputation at icfocap.com.",
                   ]}
                 />
               </div>

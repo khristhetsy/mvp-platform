@@ -149,7 +149,7 @@ export default function AnalyticsClient({ metrics, dailyOpens, completedCampaign
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 16, fontWeight: 500, marginBottom: 2 }}>Analytics</h1>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Last 30 days · mail.myicfos.com</div>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Last 30 days · icfocap.com</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#EEEDFE", border: "0.5px solid #AFA9EC", borderRadius: 10, padding: "6px 12px" }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2E78F5" }} />
@@ -321,7 +321,7 @@ export default function AnalyticsClient({ metrics, dailyOpens, completedCampaign
 
         <div style={{ ...card, padding: "16px 18px" }}>
           <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>Domain reputation</div>
-          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 14 }}>mail.myicfos.com</div>
+          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 14 }}>icfocap.com</div>
           {[
             { label: "Spam rate",      value: metrics.spamRate + "%",       pct: Math.min(parseFloat(metrics.spamRate) / 0.1, 1),         good: parseFloat(metrics.spamRate) < 0.08 },
             { label: "Bounce rate",    value: metrics.bounceRate + "%",     pct: Math.min(parseFloat(metrics.bounceRate) / 5, 1),          good: parseFloat(metrics.bounceRate) < 2 },

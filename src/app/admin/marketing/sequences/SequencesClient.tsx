@@ -68,7 +68,7 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
     delay_days: "0",
     condition: "always",
     from_name: "iCapOS",
-    from_email: "outreach@mail.myicfos.com",
+    from_email: "outreach@icfocap.com",
   });
 
   async function handleCreateSequence() {
