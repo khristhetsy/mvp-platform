@@ -132,6 +132,35 @@ export function VerifyContactList() {
     }
   }
 
+  // Bulk AI intelligence — run find-missing across the selected contacts that
+  // are missing a phone or email. Populates the same inline suggestion rows.
+  async function findMissingBulk() {
+    const targets = rows.filter((r) => sel.has(r.id) && (!r.phone || !r.email || (r.email_status ?? "unverified") === "invalid")).slice(0, 25);
+    if (targets.length === 0) { setError(null); setMsg("None of the selected contacts are missing a phone or email."); return; }
+    setRunning(true); setError(null); setMsg(null);
+    let done = 0, found = 0;
+    try {
+      for (const t of targets) {
+        setSugg((p) => ({ ...p, [t.id]: { loading: true, done: false, suggestions: [] } }));
+        try {
+          const res = await fetch("/api/prospects/suggest", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contactId: t.id }),
+          });
+          const data = await res.json();
+          const suggestions: Suggestion[] = res.ok ? (data.suggestions ?? []) : [];
+          found += suggestions.length;
+          setSugg((p) => ({ ...p, [t.id]: { loading: false, done: true, suggestions, reason: res.ok ? data.reason : (data.error ?? "Suggestion failed.") } }));
+        } catch {
+          setSugg((p) => ({ ...p, [t.id]: { loading: false, done: true, suggestions: [], reason: "Suggestion failed." } }));
+        }
+        done++;
+        setMsg(`Searching… ${done} of ${targets.length} · ${found} suggestion${found === 1 ? "" : "s"} found`);
+      }
+      setMsg(`Done — searched ${targets.length}, ${found} suggestion${found === 1 ? "" : "s"} found. Review and Accept below.`);
+    } finally { setRunning(false); }
+  }
+
   // Accept one suggestion → write it back, then drop it from the panel.
   async function acceptSugg(id: string, s: Suggestion) {
     try {
@@ -181,8 +210,13 @@ export function VerifyContactList() {
         <span style={{ fontSize: 11.5, color: sel.size > 0 ? "#1A4E9E" : "var(--muted-foreground)", fontWeight: 600 }}>
           {sel.size > 0 ? `${sel.size} selected` : `Select contacts to verify`}
         </span>
+        <button onClick={findMissingBulk} disabled={running || sel.size === 0}
+          style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: "#fff", background: "#4F46E5", border: "none", borderRadius: 6, padding: "6px 12px", cursor: "pointer", opacity: running || sel.size === 0 ? 0.5 : 1 }}
+          title="Search the internet + company website for missing phone/email on the selected contacts">
+          {`✨ Find missing info (${sel.size})`}
+        </button>
         <button onClick={verifyAll} disabled={running}
-          style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 6, padding: "6px 12px", cursor: "pointer", opacity: running ? 0.5 : 1 }}>
+          style={{ fontSize: 11.5, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 6, padding: "6px 12px", cursor: "pointer", opacity: running ? 0.5 : 1 }}>
           {running ? "Verifying…" : "✨ Verify all contacts"}
         </button>
         <button onClick={verifySelected} disabled={running || sel.size === 0}
