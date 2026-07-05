@@ -23,13 +23,6 @@ export interface MarketingStatCardData {
 
 type MetricKey = "contacts" | "sent" | "open-rate" | "click-rate";
 
-const card: React.CSSProperties = {
-  background: "#ffffff",
-  border: "0.5px solid #e2e6ed",
-  borderRadius: 12,
-  boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)",
-};
-
 function CmoBox({ title, text, actions }: { title: string; text: string; actions: string[] }) {
   return (
     <div style={{ background: "linear-gradient(135deg,#0c2340 0%,#1a3a60 100%)", borderRadius: 12, padding: "14px 16px" }}>
@@ -82,7 +75,6 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
   const { totalContacts, newContacts7d, sent, opened, clicked, openRate, clickRate, activeCampaigns, campaigns } = data;
 
   // TODO: replace with real webhook-tracked values once email tracking is wired
-  const unsubRate = 0.48; // estimated — not yet live-tracked
   const deliverability = 97.2; // estimated — not yet live-tracked
 
   const cards = [
@@ -92,7 +84,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
       value: totalContacts.toLocaleString(),
       delta: `+${newContacts7d} this week`,
       good: newContacts7d > 0,
-      valueColor: "#0c2340",
+      tile: { bg: "#E6F1FB", accent: "#185FA5", text: "#0C447C", icon: "ti-users" },
     },
     {
       key: "sent" as MetricKey,
@@ -100,7 +92,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
       value: sent.toLocaleString(),
       delta: `${activeCampaigns} active campaigns`,
       good: true,
-      valueColor: "#378ADD",
+      tile: { bg: "#EEF2FF", accent: "#4338CA", text: "#3730A3", icon: "ti-send" },
     },
     {
       key: "open-rate" as MetricKey,
@@ -108,7 +100,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
       value: `${openRate.toFixed(1)}%`,
       delta: openRate >= 21 ? "Above 21% benchmark" : `${(21 - openRate).toFixed(1)}pts below benchmark`,
       good: openRate >= 21,
-      valueColor: "#2E78F5",
+      tile: { bg: "#E1F5EE", accent: "#0F6E56", text: "#085041", icon: "ti-mail-opened" },
     },
     {
       key: "click-rate" as MetricKey,
@@ -116,7 +108,7 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
       value: `${clickRate.toFixed(1)}%`,
       delta: clickRate >= 3.5 ? "Above 3.5% target" : `${(3.5 - clickRate).toFixed(1)}pts below target`,
       good: clickRate >= 3.5,
-      valueColor: "#1D9E75",
+      tile: { bg: "#FAEEDA", accent: "#854F0B", text: "#633806", icon: "ti-cursor-text" },
     },
   ];
 
@@ -142,23 +134,25 @@ export function MarketingStatCards({ data }: { data: MarketingStatCardData }) {
             key={s.key}
             onClick={() => setOpen(s.key)}
             style={{
-              ...card,
-              padding: "14px 16px",
+              background: s.tile.bg,
+              borderRadius: 14,
+              padding: "16px",
               cursor: "pointer",
               textAlign: "left",
               width: "100%",
-              border: open === s.key ? "1.5px solid #2E78F5" : "0.5px solid #e2e6ed",
-              transition: "border-color .15s, box-shadow .15s",
+              border: open === s.key ? `1.5px solid ${s.tile.accent}` : "1.5px solid transparent",
+              transition: "border-color .15s, box-shadow .15s, transform .1s",
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 2px 12px rgba(83,74,183,.15)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#2E78F5"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 1px 3px rgb(12 35 64 / 0.06)"; (e.currentTarget as HTMLButtonElement).style.borderColor = open === s.key ? "#2E78F5" : "#e2e6ed"; }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 16px rgb(12 35 64 / 0.10)"; (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-1px)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.boxShadow = "none"; (e.currentTarget as HTMLButtonElement).style.transform = "none"; }}
           >
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 6 }}>{s.label}</div>
-            <div style={{ fontSize: 24, fontWeight: 500, color: s.valueColor }}>{s.value}</div>
-            <div style={{ fontSize: 11, marginTop: 4, color: s.good ? "#0F6E56" : "#993C1D" }}>
+            <div style={{ fontSize: 20, color: s.tile.accent, lineHeight: 1 }}><i className={`ti ${s.tile.icon}`} aria-hidden="true" /></div>
+            <div style={{ fontSize: 28, fontWeight: 500, color: s.tile.text, marginTop: 8 }}>{s.value}</div>
+            <div style={{ fontSize: 11.5, color: s.tile.accent, marginTop: 2 }}>{s.label}</div>
+            <div style={{ fontSize: 10.5, marginTop: 6, color: s.good ? "#0F6E56" : "#993C1D" }}>
               {s.good ? "↑" : "↓"} {s.delta}
             </div>
-            <div style={{ fontSize: 10, color: "#2E78F5", marginTop: 6, opacity: 0.7 }}>{t("click_for_full_report")}</div>
+            <div style={{ fontSize: 10, color: s.tile.accent, marginTop: 6, opacity: 0.75 }}>{t("click_for_full_report")}</div>
           </button>
         ))}
       </div>
