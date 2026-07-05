@@ -76,11 +76,10 @@ export async function approachByIds(ids: string[]): Promise<ApproachBatchResult>
 async function scoreRows(db: any, rows: Row[]): Promise<ApproachBatchResult> {
   const hotCtx = await getHotFounderContext();
   const tally = { founders: 0, investors: 0, hot: 0, warm: 0, cold: 0 };
-  const now = new Date().toISOString();
 
   for (const r of rows) {
     let segment: Segment;
-    const patch: Record<string, unknown> = { updated_at: now };
+    const patch: Record<string, unknown> = {};
 
     if (r.side === "founder") {
       const { approach, prescore } = founderApproach({
@@ -106,7 +105,9 @@ async function scoreRows(db: any, rows: Row[]): Promise<ApproachBatchResult> {
     }
 
     tally[segment]++;
-    await db.from("crm_contacts").update(patch).eq("id", r.id);
+    // Surface write failures instead of silently dropping the score.
+    const { error: upErr } = await db.from("crm_contacts").update(patch).eq("id", r.id);
+    if (upErr) throw new Error(`Failed to persist score for ${r.id}: ${upErr.message}`);
   }
 
   const { count: remaining } = await db
