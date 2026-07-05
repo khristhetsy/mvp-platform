@@ -3,7 +3,14 @@ import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listAdminCompanies } from "@/lib/data/admin";
 import { listEngagements } from "@/lib/diligence/data";
+import { daysSince, ONBOARDING_SLA_DAYS, DILIGENCE_SLA_DAYS } from "@/lib/operations/escalations";
 import { OperationsHubClient, type Tile, type FunnelSeg, type QueueRow } from "./OperationsHubClient";
+
+function slaBadge(overdue: number, sla: number): QueueRow["badge"] | undefined {
+  if (overdue >= sla) return { text: `Past due ${overdue}d`, color: "#A32D2D", bg: "#FCEBEB", border: "#F09595" };
+  if (overdue >= sla - 2) return { text: "Due soon", color: "#854F0B", bg: "#FAEEDA", border: "#F0B65E" };
+  return undefined;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +33,8 @@ export default async function OperationsHubPage() {
     listAdminCompanies(admin).catch(() => []),
     listEngagements(admin).catch(() => []),
   ]);
+  const { data: tsData } = await admin.from("companies").select("id, updated_at");
+  const updatedAt = new Map(((tsData ?? []) as Array<{ id: string; updated_at: string | null }>).map((r) => [r.id, r.updated_at]));
 
   // ---- Onboarding ----
   const onboardingComplete = companies.filter((c) => c.onboarding_completed_at).length;
@@ -63,6 +72,7 @@ export default async function OperationsHubPage() {
       subtitle: c.founder?.full_name ? `${c.founder.full_name}${c.founder.email ? ` · ${c.founder.email}` : ""}` : (c.founder?.email ?? "—"),
       href: `/admin/companies/${c.id}`,
       percent: Math.round(c.onboarding_progress_percent ?? 0),
+      badge: slaBadge(daysSince(updatedAt.get(c.id)), ONBOARDING_SLA_DAYS),
     }));
 
   // ---- Attention: diligence needing action (your review first, then founder) ----
@@ -73,15 +83,19 @@ export default async function OperationsHubPage() {
     .sort((a, b) => (priority[a.lifecycle_stage] ?? 9) - (priority[b.lifecycle_stage] ?? 9))
     .slice(0, 8)
     .map((e) => {
+      const overdue = daysSince(e.updated_at);
       const yourMove = e.lifecycle_stage === "admin_review" || e.lifecycle_stage === "consent_requested";
+      const pastDue = overdue >= DILIGENCE_SLA_DAYS;
       return {
         id: e.id,
         title: e.company_name || "Engagement",
-        subtitle: `${STAGE_LABEL[e.lifecycle_stage] ?? e.lifecycle_stage} · ${e.confidence_pct ?? 0}% confidence`,
+        subtitle: `${STAGE_LABEL[e.lifecycle_stage] ?? e.lifecycle_stage} · ${overdue}d · ${e.confidence_pct ?? 0}% confidence`,
         href: "/admin/diligence",
-        badge: yourMove
-          ? { text: "Your review", color: "#3730A3", bg: "#EEF2FF", border: "#C7D2FE" }
-          : { text: "Waiting on founder", color: "#854F0B", bg: "#FAEEDA", border: "#F0B65E" },
+        badge: pastDue
+          ? { text: `Past due ${overdue}d`, color: "#A32D2D", bg: "#FCEBEB", border: "#F09595" }
+          : yourMove
+            ? { text: "Your review", color: "#3730A3", bg: "#EEF2FF", border: "#C7D2FE" }
+            : { text: "Waiting on founder", color: "#854F0B", bg: "#FAEEDA", border: "#F0B65E" },
       } as QueueRow;
     });
 
