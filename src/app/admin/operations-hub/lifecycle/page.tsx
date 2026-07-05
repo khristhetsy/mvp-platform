@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listAdminCompanies } from "@/lib/data/admin";
 import { daysSince, ONBOARDING_SLA_DAYS } from "@/lib/operations/escalations";
 import { OpsHubTabs } from "../OpsHubTabs";
+import { OnboardQueue, type OnboardRow } from "../OnboardQueue";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,19 @@ export default async function OperationsLifecyclePage() {
     .filter((c) => !c.onboarding_completed_at)
     .slice()
     .sort((a, b) => (b.onboarding_progress_percent ?? 0) - (a.onboarding_progress_percent ?? 0));
+
+  const onboardRows: OnboardRow[] = incomplete.slice(0, 40).map((c) => {
+    const overdue = daysSince(updatedAt.get(c.id));
+    return {
+      id: c.id,
+      founderName: c.founder?.full_name ?? c.company_name ?? "Founder",
+      founderEmail: c.founder?.email ?? "—",
+      company: c.company_name ?? "—",
+      percent: Math.round(c.onboarding_progress_percent ?? 0),
+      sla: badge(overdue),
+      pastDue: overdue >= ONBOARDING_SLA_DAYS,
+    };
+  });
 
   return (
     <AppShell
@@ -79,40 +93,8 @@ export default async function OperationsLifecyclePage() {
         ))}
       </div>
 
-      {/* Onboard stage queue */}
-      <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
-        <div style={{ padding: "11px 14px", borderBottom: "0.5px solid #e2e6ed", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 12.5, fontWeight: 600 }}>Onboard · queue</span>
-          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{incomplete.length} founders in progress</span>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1.2fr 1fr 100px 120px", padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-          <div>Founder</div><div>Company</div><div>Progress</div><div>SLA</div><div></div>
-        </div>
-        {incomplete.length === 0 ? (
-          <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>Every founder has completed onboarding. 🎉</p>
-        ) : incomplete.slice(0, 40).map((c) => {
-          const overdue = daysSince(updatedAt.get(c.id));
-          const b = badge(overdue);
-          const pct = Math.round(c.onboarding_progress_percent ?? 0);
-          return (
-            <div key={c.id} style={{ display: "grid", gridTemplateColumns: "1.6fr 1.2fr 1fr 100px 120px", padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, background: overdue >= ONBOARDING_SLA_DAYS ? "#FEF6F6" : undefined }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.founder?.full_name ?? c.company_name ?? "Founder"}</div>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.founder?.email ?? "—"}</div>
-              </div>
-              <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.company_name ?? "—"}</div>
-              <div>
-                <div style={{ height: 6, background: "var(--muted)", borderRadius: 3, overflow: "hidden" }}><div style={{ height: "100%", width: `${pct}%`, background: pct >= 90 ? "#0F6E56" : "#2E78F5" }} /></div>
-                <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 3 }}>{pct}%</div>
-              </div>
-              <div><span style={{ fontSize: 10, fontWeight: 700, color: b.color, background: b.bg, borderRadius: 6, padding: "2px 7px" }}>{b.text}</span></div>
-              <div style={{ textAlign: "right" }}>
-                <Link href={`/admin/companies/${c.id}`} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", borderRadius: 6, padding: "5px 12px", textDecoration: "none" }}>Continue →</Link>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* Onboard stage queue — expand a row to manage its tasks */}
+      <OnboardQueue rows={onboardRows} />
     </AppShell>
   );
 }
