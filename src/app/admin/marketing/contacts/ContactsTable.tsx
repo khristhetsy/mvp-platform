@@ -55,6 +55,8 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
   const [activityId, setActivityId] = useState<string | null>(null);
   const [activity, setActivity] = useState<ActivityData | null>(null);
   const [loadingActivity, setLoadingActivity] = useState(false);
+  const [activityExpanded, setActivityExpanded] = useState(false);
+  const [activityContact, setActivityContact] = useState<MarketingContact | null>(null);
   const [editContact, setEditContact] = useState<MarketingContact | null>(null);
   const [cols, setCols] = useState({ company: true, tags: true, source: true });
   const [showCols, setShowCols] = useState(false);
@@ -111,7 +113,7 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
   function removeTag(contact: MarketingContact, tag: string) { void saveTag(contact.id, getContactTags(contact).filter((t) => t !== tag)); }
 
   async function openActivity(contact: MarketingContact) {
-    setActivityId(contact.id); setLoadingActivity(true); setActivity(null);
+    setActivityId(contact.id); setActivityContact(contact); setLoadingActivity(true); setActivity(null);
     const res = await fetch(`/api/marketing/contacts/${contact.id}/activity`);
     if (res.ok) setActivity(await res.json());
     setLoadingActivity(false);
@@ -169,7 +171,7 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
         <div style={{ position: "relative" }}>
           <button onClick={() => setShowCols((v) => !v)} style={{ ...ICON_BTN, width: "auto", padding: "0 10px", gap: 5, height: 32 }} title="Columns"><Columns3 size={14} /> <span style={{ fontSize: 12 }}>Columns</span></button>
           {showCols && (
-            <div style={{ position: "absolute", right: 0, top: 36, zIndex: 20, background: "var(--card)", border: "0.5px solid var(--border)", borderRadius: 8, padding: 8, boxShadow: "0 8px 24px rgb(12 35 64 / 0.12)", minWidth: 150 }}>
+            <div style={{ position: "absolute", right: 0, top: 36, zIndex: 20, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 8, padding: 8, boxShadow: "0 8px 24px rgb(12 35 64 / 0.12)", minWidth: 150 }}>
               {(["company", "tags", "source"] as const).map((k) => (
                 <label key={k} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, padding: "5px 6px", cursor: "pointer", textTransform: "capitalize" }}>
                   <input type="checkbox" checked={cols[k]} onChange={() => setCols((c) => ({ ...c, [k]: !c[k] }))} /> {k}
@@ -253,10 +255,13 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
       {/* Activity drawer — portalled to body so it isn't trapped by scroll/overflow ancestors */}
       {activityId && typeof document !== "undefined" && createPortal(
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 200, display: "flex", justifyContent: "flex-end" }} onClick={() => setActivityId(null)}>
-          <div style={{ width: 480, height: "100%", background: "var(--card)", borderLeft: "1px solid var(--border)", overflowY: "auto", padding: 24 }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ width: activityExpanded ? "min(1000px, 94vw)" : 480, maxWidth: "100vw", height: "100%", background: "#fff", borderLeft: "1px solid var(--border)", boxShadow: "-8px 0 24px rgb(12 35 64 / 0.14)", overflowY: "auto", padding: 24, transition: "width 0.15s ease" }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>Contact activity</h3>
-              <button onClick={() => setActivityId(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--muted-foreground)" }}>×</button>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <button onClick={() => setActivityExpanded((v) => !v)} title={activityExpanded ? "Collapse" : "Expand"} style={{ background: "none", border: "0.5px solid var(--border)", borderRadius: 6, cursor: "pointer", fontSize: 12, color: "var(--muted-foreground)", padding: "4px 8px" }}>{activityExpanded ? "⤢ Collapse" : "⤢ Expand"}</button>
+                <button onClick={() => setActivityId(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--muted-foreground)" }}>×</button>
+              </div>
             </div>
             {loadingActivity && <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Loading…</div>}
             {activity && (
@@ -269,6 +274,11 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
                   {activity.unsubscribed && <div style={{ marginTop: 8, fontSize: 11, padding: "4px 8px", borderRadius: 6, background: "#FCEBEB", color: "#A32D2D" }}>Unsubscribed · {new Date(activity.unsubscribed.unsubscribed_at).toLocaleDateString()}</div>}
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 500, color: "var(--muted-foreground)", marginBottom: 10 }}>{activity.events.length} events</div>
+                {/* actions */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                  <a href={`mailto:${activity.contact.email}`} style={{ flex: 1, textAlign: "center", fontSize: 12, fontWeight: 700, color: "#fff", background: "#2E78F5", borderRadius: 8, padding: "9px 12px", textDecoration: "none" }}>Send email</a>
+                  <button onClick={() => { if (activityContact) { setEditContact(activityContact); setActivityId(null); } }} disabled={!activityContact} style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 8, padding: "9px 15px", cursor: activityContact ? "pointer" : "default", opacity: activityContact ? 1 : 0.5 }}>Edit</button>
+                </div>
                 {activity.events.length === 0 ? <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>No email events yet.</div> : activity.events.map((ev) => {
                   const ec = EVENT_COLOR[ev.event_type] ?? { bg: "#F1EFE8", color: "#5F5E5A" };
                   return (
@@ -315,7 +325,7 @@ function EditContactModal({ contact, onClose, onSaved }: { contact: MarketingCon
   if (typeof document === "undefined") return null;
   return createPortal(
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 210, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
-      <form onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()} style={{ width: 440, background: "var(--card)", borderRadius: 12, padding: 20 }}>
+      <form onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()} style={{ width: 440, background: "#fff", borderRadius: 12, padding: 20, boxShadow: "0 12px 40px rgb(12 35 64 / 0.2)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <div style={{ fontSize: 14, fontWeight: 600 }}>Edit contact</div>
           <button type="button" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)" }}><X size={16} /></button>
