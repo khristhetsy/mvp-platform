@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { VerifyStats } from "@/lib/verify/store";
 
-export function VerifyClient({ stats, providerReady }: { stats: VerifyStats; providerReady: boolean }) {
+export function VerifyClient({ stats, searchReady }: { stats: VerifyStats; searchReady: boolean }) {
   const router = useRouter();
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -55,10 +55,10 @@ export function VerifyClient({ stats, providerReady }: { stats: VerifyStats; pro
           {result ? <span className="text-sm text-slate-600">{result}</span> : null}
         </div>
         <p className="mt-3 text-xs text-slate-500">
-          Discovery provider:{" "}
-          {providerReady
-            ? <span className="font-medium text-emerald-700">connected — paid fill enabled for genuine gaps.</span>
-            : <span className="text-slate-600">not connected — running the free cascade only. Add a HUNTER_API_KEY / APOLLO_API_KEY in Vercel to enable paid fill.</span>}
+          Internet search:{" "}
+          {searchReady
+            ? <span className="font-medium text-emerald-700">connected — the cascade can search the web for a company&apos;s site to fill genuine gaps.</span>
+            : <span className="text-slate-600">not connected — running the company-website + pattern cascade only. Add a SERPER_API_KEY in Vercel to enable internet search.</span>}
         </p>
         {error ? <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
       </section>

@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/supabase/auth";
 import { getVerifyStats } from "@/lib/verify/store";
-import { providerConfigured } from "@/lib/append/provider";
+import { searchConfigured } from "@/lib/append/websearch";
 import { ProspectsStepper } from "./ProspectsStepper";
 import { WizardShell } from "./WizardShell";
 import { CreateListWizard } from "./CreateListWizard";
@@ -48,7 +48,7 @@ export default async function ProspectsPage({ searchParams }: Props) {
             completeHref="/admin/marketing/prospects?step=approach"
             completeLabel="Complete stage → AI Approach"
             steps={[
-              { label: "Overview & run", content: <VerifyClient stats={await getVerifyStats()} providerReady={providerConfigured()} /> },
+              { label: "Overview & run", content: <VerifyClient stats={await getVerifyStats()} searchReady={searchConfigured()} /> },
               { label: "Verify & correct", content: <VerifyContactList /> },
               {
                 label: "Confirm",

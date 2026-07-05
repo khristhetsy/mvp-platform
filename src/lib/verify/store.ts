@@ -7,13 +7,14 @@ import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { verifyEmail, type EmailStatus } from "./email";
 import { scrapeSiteContacts } from "@/lib/append/site";
 import { inferEmails } from "@/lib/append/pattern";
-import { providerConfigured, providerLookup } from "@/lib/append/provider";
+import { searchConfigured, searchCompanyContacts } from "@/lib/append/websearch";
 
 type Row = {
   id: string;
   name: string | null;
   email: string | null;
   phone: string | null;
+  company: string | null;
   company_domain: string | null;
   email_status: string | null;
 };
@@ -46,7 +47,7 @@ export async function verifyBatch(limit = 40): Promise<VerifyBatchResult> {
   const db = serviceRoleClientUntyped();
   const { data } = await db
     .from("crm_contacts")
-    .select("id, name, email, phone, company_domain, email_status")
+    .select("id, name, email, phone, company, company_domain, email_status")
     .or("email_status.eq.unverified,email.is.null")
     .limit(limit);
   return processRows(db, (data ?? []) as Row[]);
@@ -59,7 +60,7 @@ export async function verifyByIds(ids: string[]): Promise<VerifyBatchResult> {
   if (capped.length === 0) return { processed: 0, verified: 0, appended: 0, valid: 0, risky: 0, invalid: 0, remaining: await remainingUnverified(db) };
   const { data } = await db
     .from("crm_contacts")
-    .select("id, name, email, phone, company_domain, email_status")
+    .select("id, name, email, phone, company, company_domain, email_status")
     .in("id", capped);
   return processRows(db, (data ?? []) as Row[]);
 }
@@ -89,28 +90,28 @@ async function processRows(db: DB, rows: Row[]): Promise<VerifyBatchResult> {
     const needsEmail = !r.email || status === "invalid";
     const needsPhone = !r.phone;
 
-    if ((needsEmail || needsPhone) && r.company_domain && scrapes < MAX_SITE_SCRAPES) {
+    if ((needsEmail || needsPhone) && (r.company_domain || r.company) && scrapes < MAX_SITE_SCRAPES) {
       scrapes++;
-      // (2) scrape the company site
-      const site = await scrapeSiteContacts(r.company_domain);
-      if (needsEmail && site.emails[0]) { newEmail = site.emails[0]; emailSource = "site"; }
-      if (needsPhone && site.phones[0]) { newPhone = site.phones[0]; phoneSource = "site"; }
+      // (2) scrape the company site (when we have the domain)
+      if (r.company_domain) {
+        const site = await scrapeSiteContacts(r.company_domain);
+        if (needsEmail && site.emails[0]) { newEmail = site.emails[0]; emailSource = "site"; }
+        if (needsPhone && site.phones[0]) { newPhone = site.phones[0]; phoneSource = "site"; }
+      }
 
-      // (3) pattern inference → verify (kept risky: must be provider-verified before send)
-      if (needsEmail && !newEmail && r.name) {
+      // (3) pattern inference → verify (kept risky: must be verified before send)
+      if (needsEmail && !newEmail && r.name && r.company_domain) {
         for (const cand of inferEmails(r.name, r.company_domain)) {
           const v = await verifyEmail(cand);
           if (v.mx) { newEmail = cand; emailSource = "profile"; break; }
         }
       }
 
-      // (4) paid provider — last resort only
-      if ((needsEmail && !newEmail) || (needsPhone && !newPhone)) {
-        if (providerConfigured()) {
-          const p = await providerLookup({ name: r.name, domain: r.company_domain });
-          if (needsEmail && !newEmail && p?.email) { newEmail = p.email; emailSource = "provider"; }
-          if (needsPhone && !newPhone && p?.phone) { newPhone = p.phone; phoneSource = "provider"; }
-        }
+      // (4) internet search → company's own contact pages (last resort)
+      if (((needsEmail && !newEmail) || (needsPhone && !newPhone)) && searchConfigured()) {
+        const web = await searchCompanyContacts({ name: r.name, company: r.company, domain: r.company_domain });
+        if (needsEmail && !newEmail && web.email) { newEmail = web.email; emailSource = "web"; }
+        if (needsPhone && !newPhone && web.phone) { newPhone = web.phone; phoneSource = "web"; }
       }
 
       if (newEmail) {

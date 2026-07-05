@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import type { ListRow } from "@/lib/prospects/store";
 
 type Filters = { status: string; side: string; search: string };
-type Suggestion = { field: "email" | "phone"; value: string; source: "site" | "profile" | "provider"; confident: boolean; note: string };
+type Suggestion = { field: "email" | "phone"; value: string; source: "site" | "profile" | "web"; confident: boolean; note: string };
 type SuggState = { loading: boolean; done: boolean; suggestions: Suggestion[]; reason?: string };
 
 const EMAIL_COLOR: Record<string, string> = { valid: "#0F6E56", risky: "#92400E", invalid: "#B91C1C", unverified: "#475569" };
