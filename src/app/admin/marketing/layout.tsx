@@ -85,7 +85,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#1D9E75" }} />
             <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-              Sending via <span style={{ color: "#2E78F5", fontWeight: 500 }}>icfocap.com</span>
+              Sending via <span style={{ color: "#2E78F5", fontWeight: 500 }}>icapos.com</span>
             </span>
           </div>
           <MarketingBell />

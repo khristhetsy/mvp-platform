@@ -63,7 +63,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
     list_id: lists[0]?.id ?? "",
     template_id: templates[0]?.id ?? "",
     from_name: "iCapOS",
-    from_email: "outreach@icfocap.com",
+    from_email: "outreach@icapos.com",
     reply_to: "",
     scheduled_at: "",
   });
@@ -310,7 +310,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
       )}
       {!resendReady && (
         <div style={{ marginBottom: 16, fontSize: 12, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F0B65E", borderRadius: 8, padding: "9px 12px" }}>
-          <b>Email provider not connected.</b> Campaigns won&rsquo;t deliver until <code>RESEND_API_KEY</code> is set in the environment and your sending domain (e.g. icfocap.com) is verified in Resend. Sends are held rather than marked delivered.
+          <b>Email provider not connected.</b> Campaigns won&rsquo;t deliver until <code>RESEND_API_KEY</code> is set in the environment and your sending domain (e.g. icapos.com) is verified in Resend. Sends are held rather than marked delivered.
         </div>
       )}
 
@@ -593,7 +593,7 @@ function CampaignEditForm({ form, setForm, lists, templates, saving, onSave, onC
         </div>
         <div>
           <label style={lbl}>Reply-to</label>
-          <input value={form.reply_to} onChange={(e) => set({ reply_to: e.target.value })} style={inp} placeholder="replies@icfocap.com" />
+          <input value={form.reply_to} onChange={(e) => set({ reply_to: e.target.value })} style={inp} placeholder="replies@icapos.com" />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div>
