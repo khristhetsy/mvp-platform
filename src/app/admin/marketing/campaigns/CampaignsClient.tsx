@@ -9,6 +9,7 @@ interface Props {
   campaigns: MarketingCampaign[];
   lists: MarketingList[];
   templates: MarketingTemplate[];
+  resendReady?: boolean;
 }
 
 const STATUS_MAP: Record<string, { bg: string; color: string; label: string }> = {
@@ -40,7 +41,7 @@ function toLocalInput(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function CampaignsClient({ campaigns, lists, templates }: Props) {
+export function CampaignsClient({ campaigns, lists, templates, resendReady = true }: Props) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -264,6 +265,11 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
       </div>
       {dueMsg && (
         <div style={{ marginBottom: 16, fontSize: 12, color: "#1A4E9E", background: "#EFF6FF", border: "0.5px solid #BFDBFE", borderRadius: 8, padding: "8px 12px" }}>{dueMsg}</div>
+      )}
+      {!resendReady && (
+        <div style={{ marginBottom: 16, fontSize: 12, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F0B65E", borderRadius: 8, padding: "9px 12px" }}>
+          <b>Email provider not connected.</b> Campaigns won&rsquo;t deliver until <code>RESEND_API_KEY</code> is set in the environment and your sending domain (e.g. mail.myicfos.com) is verified in Resend. Sends are held rather than marked delivered.
+        </div>
       )}
 
       {/* Create form */}
