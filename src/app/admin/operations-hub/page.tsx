@@ -5,6 +5,7 @@ import { listAdminCompanies } from "@/lib/data/admin";
 import { listEngagements } from "@/lib/diligence/data";
 import { daysSince, ONBOARDING_SLA_DAYS, DILIGENCE_SLA_DAYS } from "@/lib/operations/escalations";
 import { OperationsHubClient, type Tile, type FunnelSeg, type QueueRow } from "./OperationsHubClient";
+import { OpsHubTabs } from "./OpsHubTabs";
 
 function slaBadge(overdue: number, sla: number): QueueRow["badge"] | undefined {
   if (overdue >= sla) return { text: `Past due ${overdue}d`, color: "#A32D2D", bg: "#FCEBEB", border: "#F09595" };
@@ -107,13 +108,14 @@ export default async function OperationsHubPage() {
       profileSubtitle={profile.role}
       profileEmail={profile.email ?? undefined}
     >
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 14 }}>
         <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: "#4338CA" }}>Admin Workspace</p>
         <h1 style={{ marginTop: 6, fontSize: 26, fontWeight: 600, letterSpacing: "-0.01em", color: "var(--foreground)" }}>Operations hub</h1>
-        <p style={{ marginTop: 6, maxWidth: 640, fontSize: 13, lineHeight: 1.6, color: "var(--muted-foreground)" }}>
-          Onboarding and due diligence in one view. Every card, bar, and row links straight to the record — so nothing stalls unnoticed.
-        </p>
       </div>
+      <OpsHubTabs />
+      <p style={{ margin: "0 0 20px", maxWidth: 640, fontSize: 13, lineHeight: 1.6, color: "var(--muted-foreground)" }}>
+        Onboarding and due diligence in one view. Every card, bar, and row links straight to the record — so nothing stalls unnoticed.
+      </p>
 
       <OperationsHubClient
         tiles={tiles}
