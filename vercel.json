@@ -13,6 +13,10 @@
       "schedule": "*/15 * * * *"
     },
     {
+      "path": "/api/marketing/process-scheduled",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/cron/meeting-reminders",
       "schedule": "*/15 * * * *"
     },
