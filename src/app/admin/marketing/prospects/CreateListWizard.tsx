@@ -254,8 +254,11 @@ export function CreateListWizard() {
           {done ? (
             <div style={{ background: "#ECFDF5", border: "0.5px solid #A7F3D0", borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
               <span style={{ fontSize: 16 }}>✓</span>
-              <div style={{ flex: 1, minWidth: 180 }}><div style={{ fontSize: 13, fontWeight: 700, color: "#065F46" }}>{msg}</div><div style={{ fontSize: 11.5, color: "#047857" }}>It&rsquo;s saved to your Contact Lists.</div></div>
-              <button onClick={() => router.push("/admin/marketing/prospects?step=list")} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 8, padding: "9px 16px", cursor: "pointer" }}>Go to Contact Lists →</button>
+              <div style={{ flex: 1, minWidth: 180 }}><div style={{ fontSize: 13, fontWeight: 700, color: "#065F46" }}>{msg}</div><div style={{ fontSize: 11.5, color: "#047857" }}>It&rsquo;s saved to your Contact Lists. Next: verify emails and fill missing details.</div></div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button onClick={() => router.push("/admin/marketing/prospects?step=verify")} style={{ fontSize: 12, fontWeight: 700, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "9px 16px", cursor: "pointer" }}>Verify &amp; Correct →</button>
+                <button onClick={() => router.push("/admin/marketing/prospects?step=list")} style={{ fontSize: 12, fontWeight: 700, color: "#0F6E56", background: "#fff", border: "0.5px solid #A7F3D0", borderRadius: 8, padding: "9px 16px", cursor: "pointer" }}>Go to Contact Lists</button>
+              </div>
             </div>
           ) : (
             <>
