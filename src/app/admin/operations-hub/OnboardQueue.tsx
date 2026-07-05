@@ -3,6 +3,7 @@
 import { Fragment, useState } from "react";
 import Link from "next/link";
 import { RecordTasks } from "./RecordTasks";
+import { OperationsAssistant } from "./OperationsAssistant";
 
 export type OnboardRow = { id: string; founderName: string; founderEmail: string; company: string; percent: number; sla: { text: string; color: string; bg: string }; pastDue: boolean };
 
@@ -42,8 +43,9 @@ export function OnboardQueue({ rows }: { rows: OnboardRow[] }) {
             </div>
           </div>
           {open === r.id && (
-            <div style={{ padding: "10px 14px 14px 40px", borderTop: "0.5px solid #eef1f5", background: "#FBFCFE" }}>
+            <div style={{ padding: "10px 14px 14px 40px", borderTop: "0.5px solid #eef1f5", background: "#FBFCFE", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, alignItems: "start" }}>
               <RecordTasks entityType="company" entityId={r.id} />
+              <OperationsAssistant entityType="company" entityId={r.id} />
             </div>
           )}
         </Fragment>
