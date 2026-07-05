@@ -48,6 +48,8 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
   const [acting, setActing] = useState<string | null>(null);
   const [sendingDue, setSendingDue] = useState(false);
   const [dueMsg, setDueMsg] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [healthMsg, setHealthMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [analyticsId, setAnalyticsId] = useState<string | null>(null);
   const [analyticsData, setAnalyticsData] = useState<CampaignDetail | null>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
@@ -128,6 +130,33 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
     } finally {
       setSaving(false);
     }
+  }
+
+  async function testEmailConnection() {
+    setTesting(true); setHealthMsg(null);
+    try {
+      const res = await fetch("/api/marketing/email-health");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Check failed.");
+      const { shape, live } = data as {
+        shape: { present: boolean; startsWithRe: boolean; cleanedLength: number; hadSurroundingQuotes: boolean; hadWhitespace: boolean; hadBearerPrefix: boolean };
+        live: { ok: boolean; status: number | null; message: string };
+      };
+      let text: string;
+      if (!shape.present) {
+        text = "No RESEND_API_KEY is set in the environment. Add it in Vercel and redeploy.";
+      } else if (!shape.startsWithRe) {
+        text = `The stored value doesn't start with "re_" (length ${shape.cleanedLength}) — it isn't a Resend API key. Re-copy the key from Resend → API Keys.`;
+      } else if (live.ok) {
+        const artifacts = [shape.hadSurroundingQuotes && "quotes", shape.hadWhitespace && "whitespace", shape.hadBearerPrefix && "a Bearer prefix"].filter(Boolean);
+        text = `Connected to Resend.${artifacts.length ? ` (Cleaned ${artifacts.join(" + ")} from the stored value — consider fixing it in Vercel.)` : ""}`;
+      } else {
+        text = `Resend rejected the key: ${live.message}${live.status ? ` (HTTP ${live.status})` : ""}. Generate a fresh key in Resend and re-paste it in Vercel (no quotes/spaces), then redeploy.`;
+      }
+      setHealthMsg({ ok: live.ok, text });
+    } catch (err) {
+      setHealthMsg({ ok: false, text: err instanceof Error ? err.message : "Check failed." });
+    } finally { setTesting(false); }
   }
 
   async function sendDueNow() {
@@ -253,6 +282,11 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{campaigns.length} total</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={testEmailConnection} disabled={testing}
+            title="Check whether the Resend email provider is connected"
+            style={{ fontSize: 12, padding: "6px 12px", borderRadius: 8, border: "0.5px solid var(--border-strong, #cbd5e1)", background: "#fff", color: "var(--foreground)", cursor: "pointer", opacity: testing ? 0.5 : 1 }}>
+            {testing ? "Testing…" : "Test email connection"}
+          </button>
           <button onClick={sendDueNow} disabled={sendingDue}
             title="Send any scheduled campaigns whose time has passed"
             style={{ fontSize: 12, padding: "6px 12px", borderRadius: 8, border: "0.5px solid var(--border-strong, #cbd5e1)", background: "#fff", color: "var(--foreground)", cursor: "pointer", opacity: sendingDue ? 0.5 : 1 }}>
@@ -268,6 +302,11 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
       </div>
       {dueMsg && (
         <div style={{ marginBottom: 16, fontSize: 12, color: "#1A4E9E", background: "#EFF6FF", border: "0.5px solid #BFDBFE", borderRadius: 8, padding: "8px 12px" }}>{dueMsg}</div>
+      )}
+      {healthMsg && (
+        <div style={{ marginBottom: 16, fontSize: 12, color: healthMsg.ok ? "#065F46" : "#991B1B", background: healthMsg.ok ? "#ECFDF5" : "#FEF2F2", border: `0.5px solid ${healthMsg.ok ? "#A7F3D0" : "#FECACA"}`, borderRadius: 8, padding: "9px 12px" }}>
+          {healthMsg.ok ? "✓ " : "⚠ "}{healthMsg.text}
+        </div>
       )}
       {!resendReady && (
         <div style={{ marginBottom: 16, fontSize: 12, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F0B65E", borderRadius: 8, padding: "9px 12px" }}>
