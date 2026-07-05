@@ -276,7 +276,7 @@ export function CampaignsClient({ campaigns, lists, templates }: Props) {
       {analyticsId && typeof document !== "undefined" && createPortal(
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 200, display: "flex", justifyContent: "flex-end" }}
           onClick={() => setAnalyticsId(null)}>
-          <div style={{ width: 520, height: "100%", background: "var(--card)", borderLeft: "1px solid var(--border)", overflowY: "auto", padding: 24 }}
+          <div style={{ width: 520, height: "100%", background: "#fff", borderLeft: "0.5px solid #e2e6ed", boxShadow: "-8px 0 24px rgb(12 35 64 / 0.12)", overflowY: "auto", padding: 24 }}
             onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>Campaign analytics</h3>
