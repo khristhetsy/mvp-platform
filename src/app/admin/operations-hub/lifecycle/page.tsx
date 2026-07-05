@@ -6,6 +6,7 @@ import { listAdminCompanies } from "@/lib/data/admin";
 import { daysSince, ONBOARDING_SLA_DAYS } from "@/lib/operations/escalations";
 import { OpsHubTabs } from "../OpsHubTabs";
 import { OnboardQueue, type OnboardRow } from "../OnboardQueue";
+import { OpsAdvicePopup } from "../OpsAdvicePopup";
 
 export const dynamic = "force-dynamic";
 
@@ -95,6 +96,7 @@ export default async function OperationsLifecyclePage() {
 
       {/* Onboard stage queue — expand a row to manage its tasks */}
       <OnboardQueue rows={onboardRows} />
+      <OpsAdvicePopup />
     </AppShell>
   );
 }

@@ -6,6 +6,7 @@ import { listEngagements } from "@/lib/diligence/data";
 import { daysSince, ONBOARDING_SLA_DAYS, DILIGENCE_SLA_DAYS } from "@/lib/operations/escalations";
 import { OperationsHubClient, type Tile, type FunnelSeg, type QueueRow } from "./OperationsHubClient";
 import { OpsHubTabs } from "./OpsHubTabs";
+import { OpsAdvicePopup } from "./OpsAdvicePopup";
 
 function slaBadge(overdue: number, sla: number): QueueRow["badge"] | undefined {
   if (overdue >= sla) return { text: `Past due ${overdue}d`, color: "#A32D2D", bg: "#FCEBEB", border: "#F09595" };
@@ -125,6 +126,7 @@ export default async function OperationsHubPage() {
         diligenceQueue={diligenceQueue}
         diligenceRemaining={active.length}
       />
+      <OpsAdvicePopup />
     </AppShell>
   );
 }
