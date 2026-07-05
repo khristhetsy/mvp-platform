@@ -64,7 +64,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
     template_id: templates[0]?.id ?? "",
     from_name: "iCapOS",
     from_email: "outreach@icapos.com",
-    reply_to: "kthetsy@myicfos.com",
+    reply_to: "admin@myicfos.com",
     scheduled_at: "",
   });
 
