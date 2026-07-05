@@ -156,6 +156,7 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
           <option value="">All lists</option>
           {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
         </select>
+        <a href="/admin/marketing/lists" title="Create a new contact list" style={{ fontSize: 12, fontWeight: 700, padding: "7px 11px", borderRadius: 8, border: "0.5px solid #93C5FD", background: "#EFF6FF", color: "#1A6CE4", textDecoration: "none", whiteSpace: "nowrap" }}>＋ Create list</a>
         <select value={tagFilter} onChange={(e) => { setTagFilter(e.target.value); navTo({ tag: e.target.value }); }} style={{ fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--muted-foreground)" }}>
           <option value="">All tags</option>
           {allTags.map((t) => <option key={t} value={t}>{t}</option>)}
