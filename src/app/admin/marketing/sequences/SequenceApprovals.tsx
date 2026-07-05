@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 interface PendingBatch {
   id: string; sequence_name: string; step_order: number; step_name: string | null;
   will_send_count: number; suppressed_count: number; skipped_count: number; created_at: string;
+  approver_name: string | null;
 }
 
 export function SequenceApprovals({ canApprove }: { canApprove: boolean }) {
@@ -63,6 +64,7 @@ export function SequenceApprovals({ canApprove }: { canApprove: boolean }) {
                 {b.skipped_count ? ` · ${b.skipped_count} skipped` : ""}
               </div>
             </div>
+            {b.approver_name ? <span style={{ fontSize: 10.5, fontWeight: 700, color: "#1A6CE4", background: "#EFF6FF", border: "0.5px solid #93C5FD", borderRadius: 999, padding: "3px 9px", whiteSpace: "nowrap" }}>Assigned: {b.approver_name}</span> : null}
             {canApprove ? (
               <button onClick={() => release(b.id)} disabled={busy === b.id}
                 style={{ fontSize: 11.5, fontWeight: 700, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "8px 14px", cursor: "pointer", opacity: busy === b.id ? 0.5 : 1 }}>

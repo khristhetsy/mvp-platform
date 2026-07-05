@@ -39,6 +39,29 @@ export async function updateSequenceStatus(
   if (error) throw error;
 }
 
+export async function setSequenceApprover(sequenceId: string, approverId: string | null): Promise<void> {
+  const db = await marketingDb();
+  const { error } = await db
+    .from("marketing_sequences")
+    .update({ approver_id: approverId, updated_at: new Date().toISOString() })
+    .eq("id", sequenceId);
+  if (error) throw error;
+}
+
+export interface Approver { id: string; name: string }
+
+/** Eligible approvers = internal staff + super admins (release stays permission-gated). */
+export async function listApprovers(): Promise<Approver[]> {
+  const db = await marketingDb();
+  const { data } = await db
+    .from("profiles")
+    .select("id, full_name, email, role, is_super_admin")
+    .or("role.in.(admin,analyst),is_super_admin.eq.true")
+    .order("full_name");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return ((data ?? []) as any[]).map((p) => ({ id: p.id, name: p.full_name || p.email || "User" }));
+}
+
 export async function addSequenceStep(
   input: Omit<MarketingSequenceStep, "id" | "created_at" | "template">
 ): Promise<MarketingSequenceStep> {
@@ -180,10 +203,13 @@ export async function collectDueSequenceBatches(): Promise<{ batches: number; qu
 
     if (willSend.length === 0) continue;
 
+    const { data: seq } = await db.from("marketing_sequences").select("approver_id").eq("id", first.sequence_id).maybeSingle();
+
     const { data: batch } = await db.from("marketing_sequence_batches").insert({
       sequence_id: first.sequence_id, step_id: step.id, step_order: first.current_step,
       eligible_count: group.length, will_send_count: willSend.length,
       suppressed_count: suppressed, skipped_count: skipped,
+      approver_id: seq?.approver_id ?? null,
     }).select("id").single();
 
     if (batch) {
@@ -205,14 +231,17 @@ export interface PendingBatch {
   suppressed_count: number;
   skipped_count: number;
   created_at: string;
+  approver_id: string | null;
+  approver_name: string | null;
 }
 
 export async function getPendingBatches(): Promise<PendingBatch[]> {
   const db = await marketingDb();
   const { data } = await db
     .from("marketing_sequence_batches")
-    .select(`id, sequence_id, step_order, will_send_count, suppressed_count, skipped_count, created_at,
-             sequence:marketing_sequences(name), step:marketing_sequence_steps(template:marketing_templates(name, subject))`)
+    .select(`id, sequence_id, step_order, will_send_count, suppressed_count, skipped_count, created_at, approver_id,
+             sequence:marketing_sequences(name), step:marketing_sequence_steps(template:marketing_templates(name, subject)),
+             approver:profiles!marketing_sequence_batches_approver_id_fkey(full_name, email)`)
     .eq("status", "pending")
     .order("created_at", { ascending: false });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -226,6 +255,8 @@ export async function getPendingBatches(): Promise<PendingBatch[]> {
     suppressed_count: b.suppressed_count ?? 0,
     skipped_count: b.skipped_count ?? 0,
     created_at: b.created_at,
+    approver_id: b.approver_id ?? null,
+    approver_name: b.approver?.full_name ?? b.approver?.email ?? null,
   }));
 }
 

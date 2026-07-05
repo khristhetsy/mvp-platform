@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MarketingSequence, MarketingTemplate, MarketingList } from "@/lib/marketing/types";
+import { ApproverPicker } from "./ApproverPicker";
 
 interface Props { sequences: MarketingSequence[]; templates: MarketingTemplate[]; lists: MarketingList[]; }
 
@@ -164,11 +165,14 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
             return (
               <div key={seq.id} style={{ ...card, padding: "16px 18px" }}>
                 {/* Header */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
                   <div style={{ fontWeight: 500, fontSize: 14, color: "var(--foreground)" }}>{seq.name}</div>
-                  <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500 }}>
-                    {seq.status.charAt(0).toUpperCase() + seq.status.slice(1)}
-                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <ApproverPicker sequenceId={seq.id} initialApproverId={(seq as { approver_id?: string | null }).approver_id ?? null} />
+                    <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500 }}>
+                      {seq.status.charAt(0).toUpperCase() + seq.status.slice(1)}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Steps */}
