@@ -4,6 +4,7 @@ import { gateBusinessPlanApi } from "@/lib/business-plan/gate";
 import { getBusinessPlan } from "@/lib/business-plan/store";
 import { getPitchDeck, upsertPitchDeck } from "@/lib/pitch-deck/store";
 import { prefillSlides } from "@/lib/pitch-deck/prefill";
+import { deckChartData } from "@/lib/pitch-deck/chart-data";
 import type { PitchDeck } from "@/lib/pitch-deck/types";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ export async function GET(): Promise<Response> {
     const [deck, plan] = await Promise.all([getPitchDeck(g.supabase, g.company.id), getBusinessPlan(g.supabase, g.company.id)]);
     const company = companyCtx(g.company);
     const slides = prefillSlides(company, plan, deck?.slides ?? {});
-    return NextResponse.json({ deck: deck ? { ...deck, slides } : { slides, theme: "navy", status: "draft", shareToken: null }, company });
+    return NextResponse.json({ deck: deck ? { ...deck, slides } : { slides, theme: "navy", status: "draft", shareToken: null }, company, chartData: deckChartData(plan) });
   } catch (err) {
     Sentry.captureException(err);
     return NextResponse.json({ error: "Failed to load pitch deck." }, { status: 500 });

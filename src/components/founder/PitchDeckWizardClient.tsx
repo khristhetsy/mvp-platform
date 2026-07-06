@@ -5,12 +5,19 @@ import { DECK_SLIDES, DECK_GROUPS } from "@/lib/pitch-deck/slides";
 
 type SlideContent = { headline: string; body: string; aiGenerated: boolean };
 type Deck = { slides: Record<string, SlideContent>; theme: string; status: string; shareToken: string | null };
+type ChartData = { projections: { revenue: number; grossProfit: number }[]; allocation: { label: string; pct: number }[]; market: { tam: number | null; sam: number | null; som: number | null } };
 
 const NAVY = "#0C2340";
 const INDIGO = "#2E78F5";
+const CHART_HEX = ["#85B7EB", "#5DCAA5", "#EF9F27", "#9085e9"];
+function chMoney(n: number): string {
+  const a = Math.abs(n);
+  return a >= 1e9 ? `$${(a / 1e9).toFixed(1)}B` : a >= 1e6 ? `$${(a / 1e6).toFixed(1)}M` : a >= 1e3 ? `$${Math.round(a / 1e3)}k` : `$${Math.round(a)}`;
+}
 
 export function PitchDeckWizardClient() {
   const [deck, setDeck] = useState<Deck | null>(null);
+  const [chartData, setChartData] = useState<ChartData | null>(null);
   const [activeId, setActiveId] = useState("title");
   const [view, setView] = useState<"edit" | "preview">("edit");
   const [busy, setBusy] = useState(false);
@@ -19,7 +26,7 @@ export function PitchDeckWizardClient() {
 
   const load = useCallback(async () => {
     const res = await fetch("/api/founder/pitch-deck");
-    if (res.ok) { const d = await res.json(); setDeck(d.deck); setShareUrl(null); }
+    if (res.ok) { const d = await res.json(); setDeck(d.deck); setChartData(d.chartData ?? null); setShareUrl(null); }
   }, []);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- load on mount
   useEffect(() => { void load(); }, [load]);
@@ -135,11 +142,12 @@ export function PitchDeckWizardClient() {
                 <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Body / bullets</label>
                 <textarea value={active.body} onChange={(e) => setSlide(activeId, { body: e.target.value })} style={{ ...inp, minHeight: 160, marginTop: 4, lineHeight: 1.55, resize: "vertical" }} />
               </div>
-              <SlidePreview headline={active.headline} body={active.body} eyebrow={activeDef.title} />
+              <SlidePreview headline={active.headline} body={active.body} eyebrow={activeDef.title} chart={activeDef.chart} data={chartData} />
             </div>
           ) : (
-            <SlidePreview headline={active.headline} body={active.body} eyebrow={activeDef.title} big />
+            <SlidePreview headline={active.headline} body={active.body} eyebrow={activeDef.title} chart={activeDef.chart} data={chartData} big />
           )}
+          {activeDef.chart && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 8 }}><i className="ti ti-sparkles" aria-hidden="true" /> This slide auto-draws a chart from your business plan{activeDef.chart === "projections" ? " projections" : activeDef.chart === "market" ? " market size" : " use of funds"}. Edit those numbers on the Business plan page.</div>}
 
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, paddingTop: 12, borderTop: "0.5px solid #eef1f5" }}>
             <button onClick={() => setActiveId(DECK_SLIDES[Math.max(0, activeIdx - 1)].id)} disabled={activeIdx === 0} style={btn}><i className="ti ti-arrow-left" aria-hidden="true" /> Prev</button>
@@ -153,16 +161,74 @@ export function PitchDeckWizardClient() {
   );
 }
 
-function SlidePreview({ headline, body, eyebrow, big }: { headline: string; body: string; eyebrow: string; big?: boolean }) {
+function SlidePreview({ headline, body, eyebrow, big, chart, data }: { headline: string; body: string; eyebrow: string; big?: boolean; chart?: "projections" | "market" | "funds"; data?: ChartData | null }) {
   const bullets = body.split("\n").map((l) => l.replace(/^•\s*/, "").trim()).filter(Boolean);
+  const hasChart = chart && data && (chart === "projections" ? data.projections.length > 0 : chart === "market" ? (data.market.tam || data.market.sam || data.market.som) : data.allocation.length > 0);
   return (
     <div>
       {!big && <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Live preview</label>}
       <div style={{ marginTop: 4, aspectRatio: "16 / 9", background: NAVY, borderRadius: 8, padding: big ? 32 : 18, color: "#fff", display: "flex", flexDirection: "column", justifyContent: "center", maxWidth: big ? 640 : undefined }}>
         <div style={{ fontSize: big ? 11 : 9, opacity: 0.7, letterSpacing: ".08em", textTransform: "uppercase" }}>{eyebrow}</div>
         <div style={{ fontSize: big ? 24 : 15, fontWeight: 600, margin: "4px 0 8px", lineHeight: 1.25 }}>{headline || eyebrow}</div>
-        <div style={{ fontSize: big ? 13 : 9.5, opacity: 0.9, lineHeight: 1.5 }}>{bullets.slice(0, 5).map((b, i) => <div key={i}>• {b}</div>)}</div>
+        {hasChart ? (
+          <div style={{ display: "flex", gap: big ? 20 : 10, alignItems: "center" }}>
+            <div style={{ flex: 1, fontSize: big ? 12 : 8.5, opacity: 0.9, lineHeight: 1.5 }}>{bullets.slice(0, 4).map((b, i) => <div key={i}>• {b}</div>)}</div>
+            <div style={{ flex: 1 }}><DeckChart chart={chart!} data={data!} big={!!big} /></div>
+          </div>
+        ) : (
+          <div style={{ fontSize: big ? 13 : 9.5, opacity: 0.9, lineHeight: 1.5 }}>{bullets.slice(0, 5).map((b, i) => <div key={i}>• {b}</div>)}</div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function DeckChart({ chart, data, big }: { chart: "projections" | "market" | "funds"; data: ChartData; big: boolean }) {
+  if (chart === "projections") {
+    const yrs = data.projections;
+    const max = Math.max(...yrs.flatMap((y) => [y.revenue, y.grossProfit]), 1);
+    const W = 200, H = big ? 130 : 96, base = H - 16;
+    return (
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Projections">
+        {yrs.map((y, i) => {
+          const gx = 20 + i * ((W - 30) / yrs.length) + ((W - 30) / yrs.length) / 2;
+          const rh = (y.revenue / max) * (base - 6), gh = (y.grossProfit / max) * (base - 6);
+          return (<g key={i}>
+            <rect x={gx - 15} y={base - rh} width={13} height={rh} rx={2} fill="#85B7EB" />
+            <rect x={gx + 2} y={base - gh} width={13} height={gh} rx={2} fill="#5DCAA5" />
+            <text x={gx} y={H - 3} fontSize={7.5} fill="#9fb2d6" textAnchor="middle">Y{i + 1}</text>
+          </g>);
+        })}
+      </svg>
+    );
+  }
+  if (chart === "market") {
+    const rows = [["TAM", data.market.tam], ["SAM", data.market.sam], ["SOM", data.market.som]] as const;
+    const max = Math.max(...rows.map(([, v]) => v ?? 0), 1);
+    return (
+      <svg viewBox="0 0 200 96" width="100%" role="img" aria-label="Market size">
+        {rows.map(([label, v], i) => {
+          const y = 6 + i * 28, w = ((v ?? 0) / max) * 120;
+          return (<g key={label}>
+            <text x={0} y={y + 11} fontSize={8} fill="#9fb2d6">{label}</text>
+            <rect x={30} y={y} width={Math.max(w, 2)} height={15} rx={2} fill={CHART_HEX[i]} />
+            <text x={30 + Math.max(w, 2) + 4} y={y + 11} fontSize={7.5} fill="#dce6f5">{v != null ? chMoney(v) : "—"}</text>
+          </g>);
+        })}
+      </svg>
+    );
+  }
+  const total = data.allocation.reduce((a, s) => a + (s.pct || 0), 0) || 1;
+  const fracs = data.allocation.map((s) => (s.pct || 0) / total);
+  const r = 30, cx = 34, cy = 34, sw = 13, circ = 2 * Math.PI * r;
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <svg viewBox="0 0 68 68" width={big ? 80 : 60} role="img" aria-label="Use of funds">
+        {fracs.map((frac, i) => (
+          <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={CHART_HEX[i % CHART_HEX.length]} strokeWidth={sw} strokeDasharray={`${frac * circ} ${circ - frac * circ}`} strokeDashoffset={-fracs.slice(0, i).reduce((a, b) => a + b, 0) * circ} transform={`rotate(-90 ${cx} ${cy})`} />
+        ))}
+      </svg>
+      <div style={{ fontSize: big ? 9 : 7.5, opacity: 0.9, lineHeight: 1.5 }}>{data.allocation.slice(0, 4).map((a, i) => <div key={i}><span style={{ color: CHART_HEX[i % CHART_HEX.length] }}>■</span> {a.label} {a.pct}%</div>)}</div>
     </div>
   );
 }
