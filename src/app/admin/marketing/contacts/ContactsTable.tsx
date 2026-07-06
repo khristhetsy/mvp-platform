@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { Eye, Mail, Pencil, Trash2, ArrowUp, ArrowDown, Columns3, Check, X, ChevronDown, ChevronRight, ListPlus, Tag as TagIcon } from "lucide-react";
 import type { MarketingContact, MarketingList } from "@/lib/marketing/types";
 
@@ -23,11 +24,6 @@ const AVATAR_COLORS = [
   { bg: "#EEEDFE", color: "#1A6CE4" }, { bg: "#E1F5EE", color: "#085041" }, { bg: "#E6F1FB", color: "#0C447C" },
   { bg: "#FAEEDA", color: "#633806" }, { bg: "#FBEAF0", color: "#72243E" },
 ];
-const EVENT_COLOR: Record<string, { bg: string; color: string }> = {
-  sent: { bg: "#F1EFE8", color: "#5F5E5A" }, delivered: { bg: "#E1F5EE", color: "#0F6E56" },
-  opened: { bg: "#E6F1FB", color: "#185FA5" }, clicked: { bg: "#EEEDFE", color: "#1A6CE4" },
-  bounced: { bg: "#FAEEDA", color: "#854F0B" }, unsubscribed: { bg: "#FCEBEB", color: "#A32D2D" }, spam_complaint: { bg: "#FCEBEB", color: "#A32D2D" },
-};
 function avatarColor(email: string) { return AVATAR_COLORS[email.charCodeAt(0) % AVATAR_COLORS.length]; }
 function initials(c: MarketingContact) {
   const fn = (c.first_name?.[0] ?? "").toUpperCase();
@@ -36,11 +32,10 @@ function initials(c: MarketingContact) {
 }
 const ICON_BTN: React.CSSProperties = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer" };
 
-type ActivityEvent = { id: string; event_type: string; occurred_at: string; campaign_name: string | null; sequence_name: string | null; metadata: Record<string, unknown> };
-type ActivityData = { contact: MarketingContact & { created_at: string }; events: ActivityEvent[]; unsubscribed: { email: string; reason: string | null; unsubscribed_at: string } | null };
 type GroupState = { rows: MarketingContact[]; total: number; loading: boolean };
 
 export function ContactsTable({ contacts, lists: initialLists, total, currentSearch, currentTag, currentSort, currentDir }: Props) {
+  const router = useRouter();
   const [lists, setLists] = useState<MarketingList[]>(initialLists);
   const [groupBy, setGroupBy] = useState<"none" | "list">("none");
 
@@ -75,12 +70,9 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
   const [editTagsId, setEditTagsId] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState("");
   const [localTags, setLocalTags] = useState<Record<string, string[]>>({});
-  const [activityId, setActivityId] = useState<string | null>(null);
-  const [activity, setActivity] = useState<ActivityData | null>(null);
-  const [loadingActivity, setLoadingActivity] = useState(false);
-  const [activityExpanded, setActivityExpanded] = useState(false);
-  const [activityContact, setActivityContact] = useState<MarketingContact | null>(null);
   const [editContact, setEditContact] = useState<MarketingContact | null>(null);
+
+  function openProfile(id: string) { router.push(`/admin/marketing/contacts/${id}`); }
 
   const base = useCallback((extra: Record<string, string | number>) => {
     const p = new URLSearchParams();
@@ -178,13 +170,6 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
   }
   function removeTag(contact: MarketingContact, tag: string) { void saveTag(contact.id, getContactTags(contact).filter((t) => t !== tag)); }
 
-  async function openActivity(contact: MarketingContact) {
-    setActivityId(contact.id); setActivityContact(contact); setLoadingActivity(true); setActivity(null);
-    const res = await fetch(`/api/marketing/contacts/${contact.id}/activity`);
-    if (res.ok) setActivity(await res.json());
-    setLoadingActivity(false);
-  }
-
   // Selection helpers.
   function toggleSelect(id: string) { setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
   function selectMany(ids: string[], on: boolean) { setSelected((s) => { const n = new Set(s); ids.forEach((id) => on ? n.add(id) : n.delete(id)); return n; }); }
@@ -210,8 +195,8 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
     return (
       <div key={c.id} style={{ display: "grid", gridTemplateColumns: template, padding: "10px 16px", borderBottom: "0.5px solid var(--border)", alignItems: "center", background: isSel ? "#F5F9FF" : undefined }}>
         <input type="checkbox" checked={isSel} onChange={() => toggleSelect(c.id)} aria-label="Select contact" style={{ width: 14, height: 14 }} />
-        <button onClick={() => openActivity(c)} title="Open contact" style={{ width: 28, height: 28, borderRadius: "50%", background: av.bg, color: av.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 500, border: "none", cursor: "pointer", padding: 0 }}>{initials(c)}</button>
-        <div onClick={() => openActivity(c)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openActivity(c); } }} title="Open contact" style={{ minWidth: 0, cursor: "pointer" }}>
+        <button onClick={() => openProfile(c.id)} title="Open contact" style={{ width: 28, height: 28, borderRadius: "50%", background: av.bg, color: av.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 500, border: "none", cursor: "pointer", padding: 0 }}>{initials(c)}</button>
+        <div onClick={() => openProfile(c.id)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openProfile(c.id); } }} title="Open contact" style={{ minWidth: 0, cursor: "pointer" }}>
           <div style={{ fontSize: 13, fontWeight: 500, color: "#1A6CE4", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName || c.email}</div>
           {displayName && <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.email}</div>}
         </div>
@@ -232,7 +217,7 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
         )}
         {cols.source && <div>{c.source ? <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "#F1EFE8", color: "#5F5E5A", fontWeight: 500 }}>{c.source}</span> : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}</div>}
         <div style={{ display: "flex", gap: 5, justifyContent: "flex-end" }}>
-          <button onClick={() => openActivity(c)} style={ICON_BTN} title="View activity"><Eye size={14} /></button>
+          <button onClick={() => openProfile(c.id)} style={ICON_BTN} title="Open contact"><Eye size={14} /></button>
           <a href={`mailto:${c.email}`} style={{ ...ICON_BTN, textDecoration: "none" }} title="Email"><Mail size={14} /></a>
           <button onClick={() => setEditContact(c)} style={ICON_BTN} title="Edit"><Pencil size={14} /></button>
           <DeleteContactButton contactId={c.id} onDeleted={() => { reloadView(); void refreshLists(); }} />
@@ -389,50 +374,6 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
       </div>
 
       {editContact && <EditContactModal contact={editContact} onClose={() => setEditContact(null)} onSaved={() => { setEditContact(null); reloadView(); }} />}
-
-      {activityId && typeof document !== "undefined" && createPortal(
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 200, display: "flex", justifyContent: "flex-end" }} onClick={() => setActivityId(null)}>
-          <div style={{ width: activityExpanded ? "min(1000px, 94vw)" : 480, maxWidth: "100vw", height: "100%", background: "#fff", borderLeft: "1px solid var(--border)", boxShadow: "-8px 0 24px rgb(12 35 64 / 0.14)", overflowY: "auto", padding: 24, transition: "width 0.15s ease" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>Contact activity</h3>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <button onClick={() => setActivityExpanded((v) => !v)} title={activityExpanded ? "Collapse" : "Expand"} style={{ background: "none", border: "0.5px solid var(--border)", borderRadius: 6, cursor: "pointer", fontSize: 12, color: "var(--muted-foreground)", padding: "4px 8px" }}>{activityExpanded ? "⤢ Collapse" : "⤢ Expand"}</button>
-                <button onClick={() => setActivityId(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--muted-foreground)" }}>×</button>
-              </div>
-            </div>
-            {loadingActivity && <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Loading…</div>}
-            {activity && (
-              <>
-                <div style={{ marginBottom: 20, padding: "12px 14px", background: "var(--muted)", borderRadius: 8 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500 }}>{[activity.contact.first_name, activity.contact.last_name].filter(Boolean).join(" ") || activity.contact.email}</div>
-                  <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{activity.contact.email}</div>
-                  {activity.contact.company && <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{activity.contact.company}</div>}
-                  <div style={{ marginTop: 8, display: "flex", gap: 4, flexWrap: "wrap" }}>{(activity.contact.tags ?? []).map((t) => <span key={t} style={{ fontSize: 10, padding: "2px 6px", borderRadius: 12, background: "#EEEDFE", color: "#1A6CE4" }}>{t}</span>)}</div>
-                  {activity.unsubscribed && <div style={{ marginTop: 8, fontSize: 11, padding: "4px 8px", borderRadius: 6, background: "#FCEBEB", color: "#A32D2D" }}>Unsubscribed · {new Date(activity.unsubscribed.unsubscribed_at).toLocaleDateString()}</div>}
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 500, color: "var(--muted-foreground)", marginBottom: 10 }}>{activity.events.length} events</div>
-                <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                  <a href={`mailto:${activity.contact.email}`} style={{ flex: 1, textAlign: "center", fontSize: 12, fontWeight: 700, color: "#fff", background: "#2E78F5", borderRadius: 8, padding: "9px 12px", textDecoration: "none" }}>Send email</a>
-                  <button onClick={() => { if (activityContact) { setEditContact(activityContact); setActivityId(null); } }} disabled={!activityContact} style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 8, padding: "9px 15px", cursor: activityContact ? "pointer" : "default", opacity: activityContact ? 1 : 0.5 }}>Edit</button>
-                </div>
-                {activity.events.length === 0 ? <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>No email events yet.</div> : activity.events.map((ev) => {
-                  const ec = EVENT_COLOR[ev.event_type] ?? { bg: "#F1EFE8", color: "#5F5E5A" };
-                  return (
-                    <div key={ev.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10, paddingBottom: 10, borderBottom: "0.5px solid var(--border)" }}>
-                      <span style={{ fontSize: 10, padding: "3px 8px", borderRadius: 12, background: ec.bg, color: ec.color, fontWeight: 500, whiteSpace: "nowrap", marginTop: 1 }}>{ev.event_type}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12, color: "var(--foreground)" }}>{ev.campaign_name ?? ev.sequence_name ?? "—"}</div>
-                        <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{new Date(ev.occurred_at).toLocaleString()}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </>
-            )}
-          </div>
-        </div>,
-        document.body,
-      )}
     </div>
   );
 }
