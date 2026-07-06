@@ -5,6 +5,7 @@ export async function getContacts(opts?: {
   search?: string;
   list_id?: string;
   tag?: string;
+  source?: string;
   limit?: number;
   offset?: number;
   sort?: "name" | "company" | "created_at";
@@ -38,6 +39,10 @@ export async function getContacts(opts?: {
 
   if (opts?.tag) {
     query = query.contains("tags", [opts.tag]);
+  }
+
+  if (opts?.source) {
+    query = query.eq("source", opts.source);
   }
 
   query = query.range(opts?.offset ?? 0, (opts?.offset ?? 0) + (opts?.limit ?? 50) - 1);

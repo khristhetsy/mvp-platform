@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
-import { Eye, Mail, Pencil, Trash2, ArrowUp, ArrowDown, Columns3, Check, X } from "lucide-react";
+import { Eye, Mail, Pencil, Trash2, ArrowUp, ArrowDown, Columns3, Check, X, ChevronDown, ChevronRight, ListPlus, Tag as TagIcon } from "lucide-react";
 import type { MarketingContact, MarketingList } from "@/lib/marketing/types";
 
 interface Props {
@@ -19,6 +18,7 @@ interface Props {
   currentDir: "asc" | "desc";
 }
 
+const PAGE = 50;
 const AVATAR_COLORS = [
   { bg: "#EEEDFE", color: "#1A6CE4" }, { bg: "#E1F5EE", color: "#085041" }, { bg: "#E6F1FB", color: "#0C447C" },
   { bg: "#FAEEDA", color: "#633806" }, { bg: "#FBEAF0", color: "#72243E" },
@@ -38,13 +38,36 @@ const ICON_BTN: React.CSSProperties = { display: "inline-flex", alignItems: "cen
 
 type ActivityEvent = { id: string; event_type: string; occurred_at: string; campaign_name: string | null; sequence_name: string | null; metadata: Record<string, unknown> };
 type ActivityData = { contact: MarketingContact & { created_at: string }; events: ActivityEvent[]; unsubscribed: { email: string; reason: string | null; unsubscribed_at: string } | null };
+type GroupState = { rows: MarketingContact[]; total: number; loading: boolean };
 
-export function ContactsTable({ contacts, lists, total, page, limit, currentSearch, currentListId, currentTag, currentSort, currentDir }: Props) {
-  const router = useRouter();
-  const [, startTransition] = useTransition();
+export function ContactsTable({ contacts, lists: initialLists, total, currentSearch, currentTag, currentSort, currentDir }: Props) {
+  const [lists, setLists] = useState<MarketingList[]>(initialLists);
+  const [groupBy, setGroupBy] = useState<"none" | "list">("none");
+
   const [search, setSearch] = useState(currentSearch);
-  const [listId, setListId] = useState(currentListId);
   const [tagFilter, setTagFilter] = useState(currentTag);
+  const [sort, setSort] = useState<"name" | "company" | "created_at">(currentSort);
+  const [dir, setDir] = useState<"asc" | "desc">(currentDir);
+  const [cols, setCols] = useState({ company: true, tags: true, source: true });
+  const [showCols, setShowCols] = useState(false);
+
+  // None-mode data (seeded from server props).
+  const [noneState, setNoneState] = useState<GroupState>({ rows: contacts, total, loading: false });
+  // List-mode data, keyed by list id.
+  const [listData, setListData] = useState<Record<string, GroupState>>({});
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(initialLists[0] ? [initialLists[0].id] : []));
+  const expandedRef = useRef(expanded);
+  useEffect(() => { expandedRef.current = expanded; }, [expanded]);
+
+  // Selection.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkMode, setBulkMode] = useState<null | "list" | "tag">(null);
+  const [bulkListId, setBulkListId] = useState("");
+  const [bulkTag, setBulkTag] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Sub-features preserved from the original table.
   const [showImport, setShowImport] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -58,27 +81,70 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
   const [activityExpanded, setActivityExpanded] = useState(false);
   const [activityContact, setActivityContact] = useState<MarketingContact | null>(null);
   const [editContact, setEditContact] = useState<MarketingContact | null>(null);
-  const [cols, setCols] = useState({ company: true, tags: true, source: true });
-  const [showCols, setShowCols] = useState(false);
 
-  const totalPages = Math.ceil(total / limit);
-  const allTags = [...new Set(contacts.flatMap((c) => c.tags ?? []))].sort();
+  const base = useCallback((extra: Record<string, string | number>) => {
+    const p = new URLSearchParams();
+    if (search.trim()) p.set("search", search.trim());
+    if (tagFilter) p.set("tag", tagFilter);
+    p.set("sort", sort); p.set("dir", dir);
+    for (const [k, v] of Object.entries(extra)) p.set(k, String(v));
+    return p.toString();
+  }, [search, tagFilter, sort, dir]);
 
-  function navTo(over: Partial<{ search: string; list: string; tag: string; sort: string; dir: string }>) {
-    const s = over.search ?? search, l = over.list ?? listId, t = over.tag ?? tagFilter;
-    const so = over.sort ?? currentSort, di = over.dir ?? currentDir;
-    const params = new URLSearchParams();
-    if (s) params.set("search", s);
-    if (l) params.set("list_id", l);
-    if (t) params.set("tag", t);
-    if (so && so !== "created_at") params.set("sort", so);
-    if (di && di !== "desc") params.set("dir", di);
-    startTransition(() => router.push(`/admin/marketing/contacts?${params.toString()}`));
+  const fetchGrid = useCallback(async (extra: Record<string, string | number>): Promise<GroupState> => {
+    try {
+      const res = await fetch(`/api/marketing/contacts/grid?${base(extra)}`);
+      if (!res.ok) return { rows: [], total: 0, loading: false };
+      const d = await res.json();
+      return { rows: d.contacts ?? [], total: d.total ?? 0, loading: false };
+    } catch { return { rows: [], total: 0, loading: false }; }
+  }, [base]);
+
+  const loadNone = useCallback(async (reset: boolean) => {
+    setNoneState((s) => ({ ...s, loading: true }));
+    const offset = reset ? 0 : noneState.rows.length;
+    const g = await fetchGrid({ offset, limit: PAGE });
+    setNoneState((s) => reset ? g : { rows: [...s.rows, ...g.rows], total: g.total, loading: false });
+  }, [fetchGrid, noneState.rows.length]);
+
+  const loadList = useCallback(async (listId: string, reset: boolean) => {
+    setListData((d) => ({ ...d, [listId]: { rows: d[listId]?.rows ?? [], total: d[listId]?.total ?? 0, loading: true } }));
+    const offset = reset ? 0 : (listData[listId]?.rows.length ?? 0);
+    const g = await fetchGrid({ list_id: listId, offset, limit: PAGE });
+    setListData((d) => ({ ...d, [listId]: reset ? g : { rows: [...(d[listId]?.rows ?? []), ...g.rows], total: g.total, loading: false } }));
+  }, [fetchGrid, listData]);
+
+  // Reload the current view whenever filters/sort/grouping change (debounced).
+  const queryKey = `${groupBy}|${search}|${tagFilter}|${sort}|${dir}`;
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (groupBy === "none") { void loadNone(true); }
+      else { setListData({}); for (const id of expandedRef.current) void loadList(id, true); }
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on queryKey; loaders read fresh state
+  }, [queryKey]);
+
+  async function refreshLists() {
+    try { const res = await fetch("/api/marketing/lists"); if (res.ok) setLists(await res.json()); } catch { /* ignore */ }
+  }
+  function reloadView() {
+    if (groupBy === "none") void loadNone(true);
+    else for (const id of expandedRef.current) void loadList(id, true);
+  }
+
+  function toggleList(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else { next.add(id); if (!listData[id]) void loadList(id, true); }
+      return next;
+    });
   }
 
   function toggleSort(col: "name" | "company") {
-    if (currentSort === col) navTo({ sort: col, dir: currentDir === "asc" ? "desc" : "asc" });
-    else navTo({ sort: col, dir: "asc" });
+    if (sort === col) setDir((d) => d === "asc" ? "desc" : "asc");
+    else { setSort(col); setDir("asc"); }
   }
 
   async function handleCsvImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -92,10 +158,10 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
       const vals = line.split(",").map((v) => v.trim().replace(/"/g, ""));
       return Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? ""]));
     });
-    const res = await fetch("/api/marketing/import-contacts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rows, list_id: listId || null }) });
+    const res = await fetch("/api/marketing/import-contacts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rows, list_id: null }) });
     const data = await res.json();
     setImportResult({ ok: true, msg: `Imported ${data.imported} contacts. Skipped ${data.skipped} invalid rows.` });
-    setImporting(false); router.refresh();
+    setImporting(false); reloadView(); void refreshLists();
   }
 
   function getContactTags(c: MarketingContact): string[] { return localTags[c.id] !== undefined ? localTags[c.id] : (c.tags ?? []); }
@@ -103,12 +169,12 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
     setLocalTags((prev) => ({ ...prev, [contactId]: tags }));
     await fetch(`/api/marketing/contacts/${contactId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tags }) });
   }
-  function addTag(contactId: string, tag: string) {
+  function addTag(contact: MarketingContact, tag: string) {
     const clean = tag.trim().toLowerCase().replace(/\s+/g, "-");
     if (!clean) return;
-    const current = getContactTags(contacts.find((c) => c.id === contactId)!);
+    const current = getContactTags(contact);
     if (current.includes(clean)) return;
-    void saveTag(contactId, [...current, clean]); setTagInput("");
+    void saveTag(contact.id, [...current, clean]); setTagInput("");
   }
   function removeTag(contact: MarketingContact, tag: string) { void saveTag(contact.id, getContactTags(contact).filter((t) => t !== tag)); }
 
@@ -119,9 +185,78 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
     setLoadingActivity(false);
   }
 
-  // Dynamic grid template from visible columns.
-  const template = ["36px", "2fr", cols.company ? "1.3fr" : null, cols.tags ? "1.2fr" : null, cols.source ? "90px" : null, "128px"].filter(Boolean).join(" ");
-  const sortArrow = (col: "name" | "company") => currentSort === col ? (currentDir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : null;
+  // Selection helpers.
+  function toggleSelect(id: string) { setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
+  function selectMany(ids: string[], on: boolean) { setSelected((s) => { const n = new Set(s); ids.forEach((id) => on ? n.add(id) : n.delete(id)); return n; }); }
+  function clearSelection() { setSelected(new Set()); setBulkMode(null); setConfirmDelete(false); }
+
+  async function runBulk(bodyExtra: Record<string, unknown>) {
+    setBulkBusy(true);
+    try {
+      const res = await fetch("/api/marketing/contacts/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: [...selected], ...bodyExtra }) });
+      if (res.ok) { clearSelection(); reloadView(); void refreshLists(); }
+    } finally { setBulkBusy(false); }
+  }
+
+  const template = ["30px", "30px", "2fr", cols.company ? "1.3fr" : null, cols.tags ? "1.2fr" : null, cols.source ? "90px" : null, "128px"].filter(Boolean).join(" ");
+  const sortArrow = (col: "name" | "company") => sort === col ? (dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : null;
+
+  function renderRow(c: MarketingContact) {
+    const av = avatarColor(c.email);
+    const tags = getContactTags(c);
+    const isEditingTags = editTagsId === c.id;
+    const displayName = [c.first_name, c.last_name].filter(Boolean).join(" ");
+    const isSel = selected.has(c.id);
+    return (
+      <div key={c.id} style={{ display: "grid", gridTemplateColumns: template, padding: "10px 16px", borderBottom: "0.5px solid var(--border)", alignItems: "center", background: isSel ? "#F5F9FF" : undefined }}>
+        <input type="checkbox" checked={isSel} onChange={() => toggleSelect(c.id)} aria-label="Select contact" style={{ width: 14, height: 14 }} />
+        <button onClick={() => openActivity(c)} title="Open contact" style={{ width: 28, height: 28, borderRadius: "50%", background: av.bg, color: av.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 500, border: "none", cursor: "pointer", padding: 0 }}>{initials(c)}</button>
+        <div onClick={() => openActivity(c)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openActivity(c); } }} title="Open contact" style={{ minWidth: 0, cursor: "pointer" }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: "#1A6CE4", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName || c.email}</div>
+          {displayName && <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.email}</div>}
+        </div>
+        {cols.company && <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.company ?? "—"}</div>}
+        {cols.tags && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
+            {tags.map((tag) => (
+              <span key={tag} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10, padding: "2px 6px", borderRadius: 12, background: "#EEEDFE", color: "#1A6CE4", fontWeight: 500 }}>
+                {tag}{isEditingTags && <button onClick={() => removeTag(c, tag)} style={{ background: "none", border: "none", cursor: "pointer", color: "#1A6CE4", padding: 0, lineHeight: 1, fontSize: 11 }}>×</button>}
+              </span>
+            ))}
+            {isEditingTags ? (
+              <input autoFocus value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(c, tagInput); } if (e.key === "Escape") setEditTagsId(null); }} placeholder="add tag…" style={{ fontSize: 10, width: 70, border: "1px solid #2E78F5", borderRadius: 8, padding: "2px 5px", outline: "none", background: "var(--input)" }} />
+            ) : (
+              <button onClick={() => { setEditTagsId(c.id); setTagInput(""); }} style={{ fontSize: 10, padding: "2px 6px", borderRadius: 12, border: "1px dashed var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer" }}>+ tag</button>
+            )}
+          </div>
+        )}
+        {cols.source && <div>{c.source ? <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "#F1EFE8", color: "#5F5E5A", fontWeight: 500 }}>{c.source}</span> : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}</div>}
+        <div style={{ display: "flex", gap: 5, justifyContent: "flex-end" }}>
+          <button onClick={() => openActivity(c)} style={ICON_BTN} title="View activity"><Eye size={14} /></button>
+          <a href={`mailto:${c.email}`} style={{ ...ICON_BTN, textDecoration: "none" }} title="Email"><Mail size={14} /></a>
+          <button onClick={() => setEditContact(c)} style={ICON_BTN} title="Edit"><Pencil size={14} /></button>
+          <DeleteContactButton contactId={c.id} onDeleted={() => { reloadView(); void refreshLists(); }} />
+        </div>
+      </div>
+    );
+  }
+
+  function renderRows(gs: GroupState | undefined) {
+    if (!gs || (gs.loading && gs.rows.length === 0)) return <div style={{ padding: 20, fontSize: 12.5, color: "var(--muted-foreground)" }}>Loading…</div>;
+    if (gs.rows.length === 0) return <div style={{ padding: 20, fontSize: 12.5, color: "var(--muted-foreground)" }}>No contacts here.</div>;
+    return (
+      <>
+        {gs.rows.map(renderRow)}
+        {gs.rows.length < gs.total && (
+          <button onClick={() => (groupBy === "none" ? loadNone(false) : null)} disabled={gs.loading} style={{ width: "100%", padding: 9, fontSize: 11.5, color: "#185FA5", background: "transparent", border: "none", borderBottom: "0.5px solid var(--border)", cursor: "pointer" }}>
+            {gs.loading ? "Loading…" : `Load ${Math.min(PAGE, gs.total - gs.rows.length)} more of ${gs.total.toLocaleString()}`}
+          </button>
+        )}
+      </>
+    );
+  }
+
+  const allTagsInView = [...new Set(noneState.rows.flatMap((c) => c.tags ?? []))].sort();
 
   return (
     <div style={{ padding: 24, maxWidth: 1140 }}>
@@ -145,23 +280,23 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
           {importResult && <div style={{ marginTop: 8, fontSize: 12, color: "#0F6E56" }}>{importResult.msg}</div>}
         </div>
       )}
-      {showAdd && <AddContactForm lists={lists} onDone={() => { setShowAdd(false); router.refresh(); }} />}
+      {showAdd && <AddContactForm lists={lists} onDone={() => { setShowAdd(false); reloadView(); void refreshLists(); }} />}
 
-      {/* Filters + sort + columns */}
+      {/* Filters + group + sort + columns */}
       <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 200, display: "flex", alignItems: "center", gap: 8, background: "var(--background)", border: "0.5px solid var(--border)", borderRadius: 8, padding: "7px 12px" }}>
-          <input type="text" placeholder="Search name, email, company…" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && navTo({ search })} style={{ flex: 1, border: "none", outline: "none", fontSize: 13, background: "transparent", color: "var(--foreground)" }} />
+          <input type="text" placeholder="Search name, email, company…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ flex: 1, border: "none", outline: "none", fontSize: 13, background: "transparent", color: "var(--foreground)" }} />
         </div>
-        <select value={listId} onChange={(e) => { setListId(e.target.value); navTo({ list: e.target.value }); }} style={{ fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--muted-foreground)" }}>
-          <option value="">All lists</option>
-          {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+        <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as "none" | "list")} style={{ fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--muted-foreground)" }} title="Group by">
+          <option value="none">No grouping</option>
+          <option value="list">Group by list</option>
         </select>
         <a href="/admin/marketing/lists" title="Create a new contact list" style={{ fontSize: 12, fontWeight: 700, padding: "7px 11px", borderRadius: 8, border: "0.5px solid #93C5FD", background: "#EFF6FF", color: "#1A6CE4", textDecoration: "none", whiteSpace: "nowrap" }}>＋ Create list</a>
-        <select value={tagFilter} onChange={(e) => { setTagFilter(e.target.value); navTo({ tag: e.target.value }); }} style={{ fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--muted-foreground)" }}>
+        <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} style={{ fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--muted-foreground)" }}>
           <option value="">All tags</option>
-          {allTags.map((t) => <option key={t} value={t}>{t}</option>)}
+          {allTagsInView.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
-        <select value={`${currentSort}:${currentDir}`} onChange={(e) => { const [s, d] = e.target.value.split(":"); navTo({ sort: s, dir: d }); }} style={{ fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--muted-foreground)" }} title="Sort">
+        <select value={`${sort}:${dir}`} onChange={(e) => { const [s, d] = e.target.value.split(":"); setSort(s as "name" | "company" | "created_at"); setDir(d as "asc" | "desc"); }} style={{ fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--muted-foreground)" }} title="Sort">
           <option value="created_at:desc">Newest first</option>
           <option value="created_at:asc">Oldest first</option>
           <option value="name:asc">Name A–Z</option>
@@ -181,14 +316,51 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
             </div>
           )}
         </div>
-        {(search || listId || tagFilter) && (
-          <button onClick={() => { setSearch(""); setListId(""); setTagFilter(""); navTo({ search: "", list: "", tag: "" }); }} style={{ fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "none", background: "var(--muted)", color: "var(--muted-foreground)", cursor: "pointer" }}>Clear</button>
-        )}
       </div>
+
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 10, padding: "8px 12px", marginBottom: 10, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, color: "#0C447C", fontWeight: 500 }}>{selected.size} selected</span>
+          <button onClick={clearSelection} style={{ fontSize: 11.5, color: "#185FA5", background: "transparent", border: "none", cursor: "pointer" }}>Clear</button>
+          <div style={{ flex: 1 }} />
+          {bulkMode === "list" ? (
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <select value={bulkListId} onChange={(e) => setBulkListId(e.target.value)} style={{ fontSize: 12, padding: "6px 8px", borderRadius: 7, border: "0.5px solid var(--border)", background: "#fff" }}>
+                <option value="">Choose list…</option>
+                {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+              <button disabled={!bulkListId || bulkBusy} onClick={() => runBulk({ action: "add_to_list", list_id: bulkListId })} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 11px", cursor: "pointer", opacity: !bulkListId || bulkBusy ? 0.5 : 1 }}>Add</button>
+              <button onClick={() => setBulkMode(null)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "none", cursor: "pointer" }}>Cancel</button>
+            </div>
+          ) : bulkMode === "tag" ? (
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <input value={bulkTag} onChange={(e) => setBulkTag(e.target.value)} onKeyDown={(e) => e.key === "Enter" && bulkTag.trim() && runBulk({ action: "tag", tag: bulkTag })} autoFocus placeholder="tag name…" style={{ fontSize: 12, padding: "6px 8px", borderRadius: 7, border: "0.5px solid var(--border)", background: "#fff" }} />
+              <button disabled={!bulkTag.trim() || bulkBusy} onClick={() => runBulk({ action: "tag", tag: bulkTag })} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 11px", cursor: "pointer", opacity: !bulkTag.trim() || bulkBusy ? 0.5 : 1 }}>Apply</button>
+              <button onClick={() => setBulkMode(null)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "none", cursor: "pointer" }}>Cancel</button>
+            </div>
+          ) : confirmDelete ? (
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <span style={{ fontSize: 11.5, color: "#A32D2D" }}>Delete {selected.size} contacts?</span>
+              <button disabled={bulkBusy} onClick={() => runBulk({ action: "delete" })} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 7, padding: "6px 11px", cursor: "pointer" }}>Delete</button>
+              <button onClick={() => setConfirmDelete(false)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "none", cursor: "pointer" }}>Cancel</button>
+            </div>
+          ) : (
+            <>
+              <button onClick={() => { setBulkMode("list"); setBulkListId(""); }} style={{ fontSize: 11.5, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px 11px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}><ListPlus size={13} /> Add to list</button>
+              <button onClick={() => { setBulkMode("tag"); setBulkTag(""); }} style={{ fontSize: 11.5, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 7, padding: "6px 11px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}><TagIcon size={13} /> Tag</button>
+              <button onClick={() => setConfirmDelete(true)} style={{ fontSize: 11.5, background: "#fff", border: "0.5px solid #F09595", color: "#A32D2D", borderRadius: 7, padding: "6px 11px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}><Trash2 size={13} /> Delete</button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Table */}
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)" }}>
         <div style={{ display: "grid", gridTemplateColumns: template, padding: "8px 16px", background: "var(--muted)", borderBottom: "0.5px solid #e2e6ed", alignItems: "center" }}>
+          <div>
+            <input type="checkbox" aria-label="Select all in view" checked={noneState.rows.length > 0 && groupBy === "none" && noneState.rows.every((c) => selected.has(c.id))} onChange={(e) => { if (groupBy === "none") selectMany(noneState.rows.map((c) => c.id), e.target.checked); }} style={{ width: 14, height: 14 }} />
+          </div>
           <div />
           <button onClick={() => toggleSort("name")} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Contact {sortArrow("name")}</button>
           {cols.company && <button onClick={() => toggleSort("company")} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Company {sortArrow("company")}</button>}
@@ -197,63 +369,27 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
           <div style={{ fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)", textAlign: "right" }}>Actions</div>
         </div>
 
-        {contacts.length === 0 ? (
-          <div style={{ padding: 32, textAlign: "center", fontSize: 13, color: "var(--muted-foreground)" }}>No contacts match your filters.</div>
-        ) : (
-          contacts.map((c) => {
-            const av = avatarColor(c.email);
-            const tags = getContactTags(c);
-            const isEditingTags = editTagsId === c.id;
-            const displayName = [c.first_name, c.last_name].filter(Boolean).join(" ");
+        {groupBy === "none" ? renderRows(noneState) : (
+          lists.length === 0 ? <div style={{ padding: 24, textAlign: "center", fontSize: 13, color: "var(--muted-foreground)" }}>No lists yet. Create a list to group contacts.</div> :
+          lists.map((l) => {
+            const gs = listData[l.id];
+            const isOpen = expanded.has(l.id);
             return (
-              <div key={c.id} style={{ display: "grid", gridTemplateColumns: template, padding: "10px 16px", borderBottom: "0.5px solid var(--border)", alignItems: "center" }}>
-                <button onClick={() => openActivity(c)} title="Open contact" style={{ width: 28, height: 28, borderRadius: "50%", background: av.bg, color: av.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 500, border: "none", cursor: "pointer", padding: 0 }}>{initials(c)}</button>
-                <div onClick={() => openActivity(c)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openActivity(c); } }} title="Open contact" style={{ minWidth: 0, cursor: "pointer" }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: "#1A6CE4", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName || c.email}</div>
-                  {displayName && <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.email}</div>}
-                </div>
-                {cols.company && <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.company ?? "—"}</div>}
-                {cols.tags && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
-                    {tags.map((tag) => (
-                      <span key={tag} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10, padding: "2px 6px", borderRadius: 12, background: "#EEEDFE", color: "#1A6CE4", fontWeight: 500 }}>
-                        {tag}{isEditingTags && <button onClick={() => removeTag(c, tag)} style={{ background: "none", border: "none", cursor: "pointer", color: "#1A6CE4", padding: 0, lineHeight: 1, fontSize: 11 }}>×</button>}
-                      </span>
-                    ))}
-                    {isEditingTags ? (
-                      <input autoFocus value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(c.id, tagInput); } if (e.key === "Escape") setEditTagsId(null); }} placeholder="add tag…" style={{ fontSize: 10, width: 70, border: "1px solid #2E78F5", borderRadius: 8, padding: "2px 5px", outline: "none", background: "var(--input)" }} />
-                    ) : (
-                      <button onClick={() => { setEditTagsId(c.id); setTagInput(""); }} style={{ fontSize: 10, padding: "2px 6px", borderRadius: 12, border: "1px dashed var(--border)", background: "transparent", color: "var(--muted-foreground)", cursor: "pointer" }}>+ tag</button>
-                    )}
-                  </div>
-                )}
-                {cols.source && <div>{c.source ? <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "#F1EFE8", color: "#5F5E5A", fontWeight: 500 }}>{c.source}</span> : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}</div>}
-                <div style={{ display: "flex", gap: 5, justifyContent: "flex-end" }}>
-                  <button onClick={() => openActivity(c)} style={ICON_BTN} title="View activity"><Eye size={14} /></button>
-                  <a href={`mailto:${c.email}`} style={{ ...ICON_BTN, textDecoration: "none" }} title="Email"><Mail size={14} /></a>
-                  <button onClick={() => setEditContact(c)} style={ICON_BTN} title="Edit"><Pencil size={14} /></button>
-                  <DeleteContactButton contactId={c.id} />
-                </div>
+              <div key={l.id}>
+                <button onClick={() => toggleList(l.id)} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", background: "#E6F1FB", border: "none", borderBottom: "0.5px solid var(--border)", cursor: "pointer" }}>
+                  {isOpen ? <ChevronDown size={15} color="#0C447C" /> : <ChevronRight size={15} color="#0C447C" />}
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: "#0C447C" }}>{l.name}</span>
+                  <span style={{ fontSize: 11, color: "#185FA5", background: "#B5D4F4", borderRadius: 10, padding: "1px 8px" }}>{(gs?.total ?? l.contact_count ?? 0).toLocaleString()}</span>
+                </button>
+                {isOpen && renderRows(gs)}
               </div>
             );
           })
         )}
       </div>
 
-      {/* Pagination */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
-        <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{total.toLocaleString()} contacts · page {page} of {Math.max(totalPages, 1)}</span>
-        {totalPages > 1 && (
-          <div style={{ display: "flex", gap: 4 }}>
-            {page > 1 && <a href={`/admin/marketing/contacts?page=${page - 1}&search=${search}&list_id=${listId}&tag=${tagFilter}&sort=${currentSort}&dir=${currentDir}`} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", textDecoration: "none" }}>← Prev</a>}
-            {page < totalPages && <a href={`/admin/marketing/contacts?page=${page + 1}&search=${search}&list_id=${listId}&tag=${tagFilter}&sort=${currentSort}&dir=${currentDir}`} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", textDecoration: "none" }}>Next →</a>}
-          </div>
-        )}
-      </div>
+      {editContact && <EditContactModal contact={editContact} onClose={() => setEditContact(null)} onSaved={() => { setEditContact(null); reloadView(); }} />}
 
-      {editContact && <EditContactModal contact={editContact} onClose={() => setEditContact(null)} onSaved={() => { setEditContact(null); router.refresh(); }} />}
-
-      {/* Activity drawer — portalled to body so it isn't trapped by scroll/overflow ancestors */}
       {activityId && typeof document !== "undefined" && createPortal(
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 200, display: "flex", justifyContent: "flex-end" }} onClick={() => setActivityId(null)}>
           <div style={{ width: activityExpanded ? "min(1000px, 94vw)" : 480, maxWidth: "100vw", height: "100%", background: "#fff", borderLeft: "1px solid var(--border)", boxShadow: "-8px 0 24px rgb(12 35 64 / 0.14)", overflowY: "auto", padding: 24, transition: "width 0.15s ease" }} onClick={(e) => e.stopPropagation()}>
@@ -275,7 +411,6 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
                   {activity.unsubscribed && <div style={{ marginTop: 8, fontSize: 11, padding: "4px 8px", borderRadius: 6, background: "#FCEBEB", color: "#A32D2D" }}>Unsubscribed · {new Date(activity.unsubscribed.unsubscribed_at).toLocaleDateString()}</div>}
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 500, color: "var(--muted-foreground)", marginBottom: 10 }}>{activity.events.length} events</div>
-                {/* actions */}
                 <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
                   <a href={`mailto:${activity.contact.email}`} style={{ flex: 1, textAlign: "center", fontSize: 12, fontWeight: 700, color: "#fff", background: "#2E78F5", borderRadius: 8, padding: "9px 12px", textDecoration: "none" }}>Send email</a>
                   <button onClick={() => { if (activityContact) { setEditContact(activityContact); setActivityId(null); } }} disabled={!activityContact} style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)", background: "#fff", border: "0.5px solid var(--border)", borderRadius: 8, padding: "9px 15px", cursor: activityContact ? "pointer" : "default", opacity: activityContact ? 1 : 0.5 }}>Edit</button>
@@ -302,10 +437,9 @@ export function ContactsTable({ contacts, lists, total, page, limit, currentSear
   );
 }
 
-function DeleteContactButton({ contactId }: { contactId: string }) {
-  const router = useRouter();
+function DeleteContactButton({ contactId, onDeleted }: { contactId: string; onDeleted: () => void }) {
   const [confirming, setConfirming] = useState(false);
-  async function handleDelete() { await fetch(`/api/marketing/contacts?id=${contactId}`, { method: "DELETE" }); router.refresh(); }
+  async function handleDelete() { await fetch(`/api/marketing/contacts?id=${contactId}`, { method: "DELETE" }); onDeleted(); }
   if (confirming) {
     return <button onClick={handleDelete} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }} title="Confirm delete"><Check size={14} /></button>;
   }
