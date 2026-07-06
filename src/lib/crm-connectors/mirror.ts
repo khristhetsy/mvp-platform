@@ -31,6 +31,8 @@ export async function upsertContacts(contacts: CrmContact[]): Promise<number> {
     name: c.name,
     email: c.email,
     company: c.company,
+    phone: c.phone,
+    website: c.website,
     stage: c.stage,
     owner: c.owner,
     plan: c.plan,

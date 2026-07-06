@@ -199,6 +199,8 @@ function mapPartner(row: PartnerRow, cats: Map<number, string>, fields: StudioFi
     name: row.name || null,
     email: row.email || null,
     company: Array.isArray(row.parent_id) ? row.parent_id[1] : row.name || null,
+    phone: (typeof row.phone === "string" && row.phone) || (typeof row.mobile === "string" && row.mobile) || null,
+    website: (typeof row.website === "string" && row.website) || null,
     stage: null,
     owner: Array.isArray(row.user_id) ? row.user_id[1] : null,
     plan: (typeof profile.plan === "string" ? profile.plan : null) ?? profile.membership,

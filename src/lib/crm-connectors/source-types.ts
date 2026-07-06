@@ -13,6 +13,8 @@ export interface CrmContact {
   name: string | null;
   email: string | null;
   company: string | null;
+  phone: string | null;
+  website: string | null;
   stage: string | null;
   owner: string | null;
   plan: string | null;

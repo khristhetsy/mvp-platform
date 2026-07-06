@@ -42,7 +42,8 @@ export async function getContactProfile(id: string): Promise<{ contact: ContactP
 
   const contact: ContactProfile = {
     id: String(c.id), source: c.source, external_id: c.external_id, name: c.name ?? c.email ?? "Contact",
-    email: c.email ?? null, company: c.company ?? null, phone: c.phone ?? null, website: c.website ?? null,
+    email: c.email ?? null, company: c.company ?? null,
+    phone: c.phone ?? pickRaw(raw, ["phone", "mobile"]), website: c.website ?? pickRaw(raw, ["website"]),
     lead_status: c.lead_status ?? null, tags: Array.isArray(c.tags) ? c.tags : [], owner: c.owner ?? null,
     membership: (c.plan as string) ?? pickRaw(raw, ["membership_type", "membership"]),
     job_position: pickRaw(raw, ["function", "job_position", "title"]),
