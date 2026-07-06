@@ -258,6 +258,7 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
         label: "Docs & models",
         children: [
           { href: "/founder/business-plan", label: "Business plan", minStage: "qualify" },
+          { href: "/founder/pitch-deck", label: "Pitch deck", minStage: "qualify" },
           { href: "/founder/financial-model", label: "Financial model", minStage: "qualify" },
           { href: "/founder/cap-table", label: "Cap table", minStage: "qualify" },
           { href: "/founder/reg-cf", label: "Reg CF materials", minStage: "deploy" },
