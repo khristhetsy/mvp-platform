@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
-export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string; type: string; country: string };
+export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string; type: string; country: string; createdOn: string };
 type GroupState = { rows: SalesContact[]; total: number; loading: boolean };
 type Facets = { counts: Record<string, number>; countries: { value: string; n: number }[] };
 type TextFilters = { name: string; company: string; email: string; phone: string };
+type Sort = { key: string; dir: "asc" | "desc" };
 
 const GROUP_DEFS = [
   { id: "founder", label: "Founders" },
@@ -16,7 +17,18 @@ const GROUP_DEFS = [
 ] as const;
 
 const PAGE = 50;
-const GRID = "1.6fr 1.4fr 88px 1.1fr 1.5fr 110px";
+
+type ColKind = "text" | "country" | "none";
+type ColMeta = { key: string; label: string; width: string; kind: ColKind; sortable: boolean; always?: boolean };
+const ALL_COLUMNS: ColMeta[] = [
+  { key: "name", label: "Name", width: "1.5fr", kind: "text", sortable: true, always: true },
+  { key: "company", label: "Company", width: "1.3fr", kind: "text", sortable: true },
+  { key: "type", label: "Type", width: "88px", kind: "none", sortable: false },
+  { key: "phone", label: "Phone", width: "1fr", kind: "text", sortable: false },
+  { key: "email", label: "Email", width: "1.4fr", kind: "text", sortable: true },
+  { key: "country", label: "Country", width: "100px", kind: "country", sortable: true },
+  { key: "created_on", label: "Created on", width: "104px", kind: "none", sortable: true },
+];
 
 const TYPE_BADGE: Record<string, { t: string; c: string; bg: string }> = {
   founder: { t: "Founder", c: "#712B13", bg: "#FAECE7" },
@@ -25,11 +37,17 @@ const TYPE_BADGE: Record<string, { t: string; c: string; bg: string }> = {
   other: { t: "Other", c: "#444441", bg: "#F1EFE8" },
 };
 
-function buildParams(q: string, tf: TextFilters, countries: string[]): string {
+function loadLS<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try { const v = window.localStorage.getItem(key); return v ? (JSON.parse(v) as T) : fallback; } catch { return fallback; }
+}
+
+function buildParams(q: string, tf: TextFilters, countries: string[], sort: Sort): string {
   const sp = new URLSearchParams();
   if (q.trim()) sp.set("q", q.trim());
   (["name", "company", "email", "phone"] as const).forEach((k) => { if (tf[k].trim()) sp.set(k, tf[k].trim()); });
   if (countries.length) sp.set("country", countries.join(","));
+  if (sort.key !== "name" || sort.dir !== "asc") { sp.set("sort", sort.key); sp.set("dir", sort.dir); }
   return sp.toString();
 }
 
@@ -37,11 +55,15 @@ export function SalesContactsClient() {
   const [q, setQ] = useState("");
   const [textFilters, setTextFilters] = useState<TextFilters>({ name: "", company: "", email: "", phone: "" });
   const [countries, setCountries] = useState<string[]>([]);
+  const [sort, setSort] = useState<Sort>(() => loadLS<Sort>("salesContacts.sort", { key: "name", dir: "asc" }));
+  const [visibleCols, setVisibleCols] = useState<string[]>(() => loadLS<string[]>("salesContacts.cols", ALL_COLUMNS.map((c) => c.key)));
+
   const [facets, setFacets] = useState<Facets>({ counts: {}, countries: [] });
   const [groups, setGroups] = useState<Record<string, GroupState>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ founder: true, investor: true, advisor: true });
 
   const [openFilter, setOpenFilter] = useState<string | null>(null);
+  const [openColPicker, setOpenColPicker] = useState(false);
   const [draft, setDraft] = useState("");
   const [countrySearch, setCountrySearch] = useState("");
 
@@ -50,7 +72,12 @@ export function SalesContactsClient() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const paramsStr = useMemo(() => buildParams(q, textFilters, countries), [q, textFilters, countries]);
+  const paramsStr = useMemo(() => buildParams(q, textFilters, countries, sort), [q, textFilters, countries, sort]);
+  const visibleColumns = useMemo(() => ALL_COLUMNS.filter((c) => c.always || visibleCols.includes(c.key)), [visibleCols]);
+  const gridCols = useMemo(() => visibleColumns.map((c) => c.width).join(" "), [visibleColumns]);
+
+  useEffect(() => { try { window.localStorage.setItem("salesContacts.cols", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
+  useEffect(() => { try { window.localStorage.setItem("salesContacts.sort", JSON.stringify(sort)); } catch { /* ignore */ } }, [sort]);
 
   const loadAll = useCallback(async (params: string) => {
     setGroups((prev) => {
@@ -107,19 +134,25 @@ export function SalesContactsClient() {
   function applyText(col: string) { setTextFilters((f) => ({ ...f, [col]: draft })); setOpenFilter(null); }
   function clearText(col: string) { setTextFilters((f) => ({ ...f, [col]: "" })); setOpenFilter(null); }
   function toggleCountry(v: string) { setCountries((c) => c.includes(v) ? c.filter((x) => x !== v) : [...c, v]); }
+  function toggleSort(key: string) { setSort((s) => s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }); }
+  function toggleCol(key: string) { setVisibleCols((v) => v.includes(key) ? v.filter((x) => x !== key) : [...v, key]); }
 
   const inp: React.CSSProperties = { fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" };
   const activeFilters = countries.length + (["name", "company", "email", "phone"] as const).filter((k) => textFilters[k]).length;
-
-  const HEADERS: { key: string; label: string; kind: "text" | "country" | "none" }[] = [
-    { key: "name", label: "Name", kind: "text" },
-    { key: "company", label: "Company", kind: "text" },
-    { key: "type", label: "Type", kind: "none" },
-    { key: "phone", label: "Phone", kind: "text" },
-    { key: "email", label: "Email", kind: "text" },
-    { key: "country", label: "Country", kind: "country" },
-  ];
   const visibleCountries = facets.countries.filter((c) => c.value.toLowerCase().includes(countrySearch.toLowerCase()));
+
+  function renderCell(key: string, c: SalesContact) {
+    switch (key) {
+      case "name": return <div style={{ fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.name}</div>;
+      case "company": return <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.company || "—"}</div>;
+      case "type": { const tb = TYPE_BADGE[c.type] ?? TYPE_BADGE.other; return <div><span style={{ fontSize: 10, fontWeight: 600, color: tb.c, background: tb.bg, borderRadius: 10, padding: "2px 8px" }}>{tb.t}</span></div>; }
+      case "phone": return <div style={{ fontSize: 11.5, fontFamily: "var(--font-mono)", color: c.phone ? "var(--foreground)" : "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.phone || "—"}</div>;
+      case "email": return <div style={{ color: "#185FA5", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.email || "—"}</div>;
+      case "country": return <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.country || "—"}</div>;
+      case "created_on": return <div style={{ color: "var(--muted-foreground)", fontSize: 11.5, whiteSpace: "nowrap" }}>{c.createdOn ? c.createdOn.slice(0, 10) : "—"}</div>;
+      default: return null;
+    }
+  }
 
   return (
     <div>
@@ -128,6 +161,20 @@ export function SalesContactsClient() {
         {activeFilters > 0 && (
           <button onClick={() => { setTextFilters({ name: "", company: "", email: "", phone: "" }); setCountries([]); }} style={{ fontSize: 12, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "8px 12px", cursor: "pointer" }}>Clear {activeFilters} filter{activeFilters > 1 ? "s" : ""}</button>
         )}
+        <div style={{ position: "relative" }}>
+          <button onClick={() => { setOpenColPicker((v) => !v); setOpenFilter(null); }} style={{ fontSize: 12, color: "var(--foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}><i className="ti ti-columns-3" style={{ fontSize: 15 }} aria-hidden="true" /> Columns</button>
+          {openColPicker && (
+            <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, width: 190, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", padding: 8 }}>
+              <div style={{ fontSize: 10.5, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".04em", padding: "2px 4px 6px" }}>Show columns</div>
+              {ALL_COLUMNS.map((col) => (
+                <label key={col.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 4px", fontSize: 12, cursor: col.always ? "default" : "pointer", opacity: col.always ? 0.55 : 1 }}>
+                  <input type="checkbox" checked={col.always || visibleCols.includes(col.key)} disabled={col.always} onChange={() => toggleCol(col.key)} style={{ width: 14, height: 14 }} />
+                  {col.label}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
         <button onClick={() => setAdding((v) => !v)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>+ Add contact</button>
       </div>
 
@@ -145,19 +192,22 @@ export function SalesContactsClient() {
         </div>
       )}
 
-      {openFilter && <div onClick={() => setOpenFilter(null)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
+      {(openFilter || openColPicker) && <div onClick={() => { setOpenFilter(null); setOpenColPicker(false); }} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
 
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, position: "relative" }}>
-        {/* Column header row with per-column filters */}
-        <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "9px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em", borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
-          {HEADERS.map((h) => {
-            const active = h.kind === "country" ? countries.length > 0 : h.kind === "text" ? !!textFilters[h.key as keyof TextFilters] : false;
+        <div style={{ display: "grid", gridTemplateColumns: gridCols, padding: "9px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em", borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
+          {visibleColumns.map((h) => {
+            const filterActive = h.kind === "country" ? countries.length > 0 : h.kind === "text" ? !!textFilters[h.key as keyof TextFilters] : false;
+            const sortActive = sort.key === h.key;
             return (
               <div key={h.key} style={{ position: "relative", display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ color: active ? "#185FA5" : "inherit" }}>{h.label}</span>
+                <span onClick={h.sortable ? () => toggleSort(h.key) : undefined} style={{ cursor: h.sortable ? "pointer" : "default", color: filterActive || sortActive ? "#185FA5" : "inherit", display: "inline-flex", alignItems: "center", gap: 3 }}>
+                  {h.label}
+                  {h.sortable && sortActive && <i className={sort.dir === "asc" ? "ti ti-arrow-up" : "ti ti-arrow-down"} style={{ fontSize: 12 }} aria-hidden="true" />}
+                </span>
                 {h.kind !== "none" && (
-                  <button onClick={() => (h.kind === "country" ? setOpenFilter(openFilter === "country" ? null : "country") : openText(h.key))} aria-label={`Filter ${h.label}`} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: active ? "#185FA5" : "var(--muted-foreground)", display: "inline-flex" }}>
-                    <i className={active ? "ti ti-filter-filled" : "ti ti-filter"} style={{ fontSize: 13 }} aria-hidden="true" />
+                  <button onClick={() => (h.kind === "country" ? (setOpenFilter(openFilter === "country" ? null : "country"), setOpenColPicker(false)) : openText(h.key))} aria-label={`Filter ${h.label}`} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: filterActive ? "#185FA5" : "var(--muted-foreground)", display: "inline-flex" }}>
+                    <i className={filterActive ? "ti ti-filter-filled" : "ti ti-filter"} style={{ fontSize: 13 }} aria-hidden="true" />
                   </button>
                 )}
                 {openFilter === h.key && h.kind === "text" && (
@@ -192,7 +242,6 @@ export function SalesContactsClient() {
           })}
         </div>
 
-        {/* Groups */}
         {GROUP_DEFS.map((g) => {
           const gs = groups[g.id];
           const count = facets.counts[g.id] ?? gs?.total ?? 0;
@@ -212,21 +261,11 @@ export function SalesContactsClient() {
                     <p style={{ padding: "14px", fontSize: 12.5, color: "var(--muted-foreground)" }}>No matching contacts in this group.</p>
                   ) : (
                     <>
-                      {gs!.rows.map((c) => {
-                        const tb = TYPE_BADGE[c.type] ?? TYPE_BADGE.other;
-                        return (
-                          <Link key={c.id} href={`/admin/sales/contacts/${c.id}`} style={{ display: "grid", gridTemplateColumns: GRID, padding: "10px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, textDecoration: "none", color: "var(--foreground)" }}>
-                            <div style={{ minWidth: 0 }}>
-                              <div style={{ fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.name}</div>
-                            </div>
-                            <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.company || "—"}</div>
-                            <div><span style={{ fontSize: 10, fontWeight: 600, color: tb.c, background: tb.bg, borderRadius: 10, padding: "2px 8px" }}>{tb.t}</span></div>
-                            <div style={{ fontSize: 11.5, fontFamily: "var(--font-mono)", color: c.phone ? "var(--foreground)" : "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.phone || "—"}</div>
-                            <div style={{ color: "#185FA5", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.email || "—"}</div>
-                            <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.country || "—"}</div>
-                          </Link>
-                        );
-                      })}
+                      {gs!.rows.map((c) => (
+                        <Link key={c.id} href={`/admin/sales/contacts/${c.id}`} style={{ display: "grid", gridTemplateColumns: gridCols, padding: "10px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, textDecoration: "none", color: "var(--foreground)" }}>
+                          {visibleColumns.map((col) => <div key={col.key} style={{ minWidth: 0 }}>{renderCell(col.key, c)}</div>)}
+                        </Link>
+                      ))}
                       {gs!.rows.length < gs!.total && (
                         <button onClick={() => loadMore(g.id)} disabled={gs!.loading} style={{ width: "100%", padding: "9px", fontSize: 11.5, color: "#185FA5", background: "transparent", border: "none", borderTop: "0.5px solid #eef1f5", cursor: "pointer" }}>
                           {gs!.loading ? "Loading…" : `Load ${Math.min(PAGE, gs!.total - gs!.rows.length)} more of ${gs!.total.toLocaleString()}`}
@@ -240,7 +279,7 @@ export function SalesContactsClient() {
           );
         })}
       </div>
-      <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: "10px 2px 0" }}>Grouped by membership type from Odoo (Entrepreneur shows as Founders). Counts and filters run across all synced contacts. Click a column&apos;s filter icon to narrow by value; open a contact to view the profile or convert it.</p>
+      <p style={{ fontSize: 11, color: "var(--muted-foreground)", margin: "10px 2px 0" }}>Grouped by membership type from Odoo (Entrepreneur shows as Founders). Click a column heading to sort, the filter icon to narrow by value, or Columns to choose what shows. Counts and filters run across all synced contacts.</p>
     </div>
   );
 }

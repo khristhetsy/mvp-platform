@@ -219,6 +219,11 @@ create or replace view public.crm_country_facets as
   where country is not null and country <> ''
   group by source, contact_type, country;
 
+-- 13) CRM contact "Created on" (Odoo create_date) — for the admin list display + sorting.
+alter table public.crm_contacts
+  add column if not exists created_on text generated always as (raw ->> 'create_date') stored;
+create index if not exists idx_crm_contacts_created_on on public.crm_contacts (created_on);
+
 -- Done. Verify all Sales tables exist with:
 --   select table_name from information_schema.tables
 --   where table_schema='public' and table_name like 'sales_%';

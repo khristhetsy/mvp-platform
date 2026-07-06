@@ -5,7 +5,9 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-type Row = { id: string; name: string | null; email: string | null; company: string | null; phone: string | null; source: string | null; contact_type: string | null; country: string | null };
+type Row = { id: string; name: string | null; email: string | null; company: string | null; phone: string | null; source: string | null; contact_type: string | null; country: string | null; created_on: string | null };
+
+const SORTABLE = new Set(["name", "company", "email", "country", "created_on"]);
 
 // crm_contacts has columns not all in the generated types — use a loose client.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -45,11 +47,14 @@ export async function GET(req: NextRequest): Promise<Response> {
   const offset = Math.max(0, Number(p.get("offset") ?? 0) || 0);
   const limit = Math.min(200, Math.max(1, Number(p.get("limit") ?? 50) || 50));
 
-  const cols = "id, name, email, company, phone, source, contact_type, country, raw";
+  const sort = p.get("sort") && SORTABLE.has(p.get("sort")!) ? p.get("sort")! : "name";
+  const dir = p.get("dir") === "desc" ? false : true;
+
+  const cols = "id, name, email, company, phone, source, contact_type, country, created_on, raw";
   let query = db().from("crm_contacts").select(cols, { count: "exact" });
   if (group && (GROUPS as readonly string[]).includes(group)) query = query.eq("contact_type", group);
   query = applyFilters(query, p);
-  query = query.order("name", { ascending: true }).range(offset, offset + limit - 1);
+  query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);
 
   const { data, count } = await query;
   const rows = ((data ?? []) as Array<Row & { raw?: unknown }>).map((r) => ({
@@ -61,6 +66,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     source: r.source ?? "crm",
     type: r.contact_type ?? "other",
     country: r.country ?? "",
+    createdOn: r.created_on ?? "",
   }));
   return NextResponse.json({ contacts: rows, total: count ?? rows.length });
 }
