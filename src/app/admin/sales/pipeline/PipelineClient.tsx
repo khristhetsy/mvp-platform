@@ -1,12 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 
 type Stage = { id: string; pipeline_id: string; name: string; sort_order: number; is_won: boolean };
 type Pipeline = { id: string; name: string; is_default: boolean; stages: Stage[] };
-type BoardOpp = { id: string; title: string; value_cents: number | null; stage_id: string | null; pipeline_id: string | null; contact_name: string | null };
+type BoardOpp = { id: string; title: string; value_cents: number | null; billing: "yearly" | "monthly"; probability: number | null; priority: number; stage_id: string | null; pipeline_id: string | null; contact_name: string | null; updated_at: string | null };
 
 const money = (c: number | null) => (c == null ? "" : `$${(c / 100).toLocaleString()}`);
+const moneyShort = (c: number) => (c >= 1000 ? `$${Math.round(c / 100000)}k` : `$${Math.round(c / 100)}`);
+const STAGE_ACCENTS = ["#2E78F5", "#EF9F27", "#639922", "#888780", "#4338CA", "#0F6E56"];
+const isStalled = (o: BoardOpp) => o.updated_at != null && Date.now() - new Date(o.updated_at).getTime() > 14 * 86400000;
 
 export function PipelineClient() {
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
@@ -85,20 +89,29 @@ export function PipelineClient() {
 
       {view === "board" ? (
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 }}>
-          {stages.map((s) => {
+          {stages.map((s, si) => {
             const cards = board.filter((o) => o.stage_id === s.id);
+            const total = cards.reduce((a, o) => a + (o.value_cents ?? 0), 0);
+            const accent = s.is_won ? "#0F6E56" : STAGE_ACCENTS[si % STAGE_ACCENTS.length];
             return (
               <div key={s.id} style={{ minWidth: 220, flex: "0 0 220px", background: "var(--muted)", borderRadius: 12, padding: 10 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                   <span style={{ fontSize: 12, fontWeight: 600 }}>{s.name}</span>
                   {s.is_won && <span style={{ fontSize: 9, color: "#0F6E56", background: "#E1F5EE", borderRadius: 4, padding: "0 5px" }}>won</span>}
-                  <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)" }}>{cards.length}</span>
+                  <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)" }}>{cards.length}{total > 0 ? ` · ${moneyShort(total)}` : ""}</span>
                 </div>
+                <div style={{ height: 3, background: accent, borderRadius: 2, marginBottom: 10 }} />
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {cards.map((o) => (
                     <div key={o.id} style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 9, padding: "9px 11px" }}>
-                      <div style={{ fontSize: 12, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o.title}</div>
-                      <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{o.contact_name ?? ""}{o.value_cents != null ? ` · ${money(o.value_cents)}` : ""}</div>
+                      <Link href={`/admin/sales/opportunities/${o.id}`} style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>{o.title}</Link>
+                      <div style={{ fontSize: 11, color: "#185FA5", marginTop: 2 }}>{o.value_cents != null ? money(o.value_cents) : ""}{o.contact_name ? <span style={{ color: "var(--muted-foreground)" }}> · {o.contact_name}</span> : ""}</div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
+                        {isStalled(o) ? <span style={{ fontSize: 10, color: "#A32D2D" }}><i className="ti ti-clock" aria-hidden="true" /> stalled</span>
+                          : o.priority > 0 ? <span style={{ fontSize: 11, color: "#EF9F27" }}>{"★".repeat(o.priority)}</span>
+                          : <span />}
+                        {o.probability != null && <span style={{ fontSize: 10, color: "#3B6D11" }}>{o.probability}%</span>}
+                      </div>
                       <select value={s.id} onChange={(e) => moveOpp(o.id, e.target.value)} disabled={busy} style={{ marginTop: 7, width: "100%", fontSize: 10.5, padding: "3px 5px", borderRadius: 6, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--muted-foreground)" }}>
                         {stages.map((st) => <option key={st.id} value={st.id}>Move → {st.name}</option>)}
                       </select>

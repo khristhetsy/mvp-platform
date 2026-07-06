@@ -6,7 +6,7 @@ function db(): any { return createServiceRoleClient(); }
 
 export type Stage = { id: string; pipeline_id: string; name: string; sort_order: number; is_won: boolean };
 export type Pipeline = { id: string; name: string; is_default: boolean; stages: Stage[] };
-export type BoardOpp = { id: string; title: string; value_cents: number | null; stage_id: string | null; pipeline_id: string | null; contact_name: string | null };
+export type BoardOpp = { id: string; title: string; value_cents: number | null; billing: "yearly" | "monthly"; probability: number | null; priority: number; stage_id: string | null; pipeline_id: string | null; contact_name: string | null; updated_at: string | null };
 
 export async function listPipelines(): Promise<Pipeline[]> {
   const { data: ps } = await db().from("sales_pipelines").select("id, name, is_default").eq("archived", false).order("created_at", { ascending: true });
@@ -18,10 +18,11 @@ export async function listPipelines(): Promise<Pipeline[]> {
 }
 
 export async function listBoardOpportunities(): Promise<BoardOpp[]> {
-  const { data } = await db().from("sales_opportunities").select("id, title, value_cents, stage_id, pipeline_id, contact_name").eq("status", "open");
+  const { data } = await db().from("sales_opportunities").select("id, title, value_cents, billing, probability, priority, stage_id, pipeline_id, contact_name, updated_at").eq("status", "open");
   return ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
     id: String(r.id), title: String(r.title), value_cents: (r.value_cents as number) ?? null,
-    stage_id: (r.stage_id as string) ?? null, pipeline_id: (r.pipeline_id as string) ?? null, contact_name: (r.contact_name as string) ?? null,
+    billing: (r.billing as "yearly" | "monthly") ?? "yearly", probability: (r.probability as number) ?? null, priority: (r.priority as number) ?? 0,
+    stage_id: (r.stage_id as string) ?? null, pipeline_id: (r.pipeline_id as string) ?? null, contact_name: (r.contact_name as string) ?? null, updated_at: (r.updated_at as string) ?? null,
   }));
 }
 

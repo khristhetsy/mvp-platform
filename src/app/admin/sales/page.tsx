@@ -13,12 +13,24 @@ export default async function SalesDashboardPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin: any = createServiceRoleClient();
 
-  const { data: oppRows } = await admin.from("sales_opportunities").select("status, value_cents, stage_id");
-  const opps = (oppRows ?? []) as Array<{ status: string; value_cents: number | null; stage_id: string | null }>;
+  const { data: oppRows } = await admin.from("sales_opportunities").select("status, value_cents, stage_id, billing, probability, updated_at");
+  const opps = (oppRows ?? []) as Array<{ status: string; value_cents: number | null; stage_id: string | null; billing: string | null; probability: number | null; updated_at: string | null }>;
   const open = opps.filter((o) => o.status === "open");
   const won = opps.filter((o) => o.status === "won");
+  const mrrCents = (o: { value_cents: number | null; billing: string | null }) => (o.value_cents == null ? 0 : o.billing === "monthly" ? o.value_cents : Math.round(o.value_cents / 12));
   const pipelineValue = Math.round(open.reduce((a, o) => a + (o.value_cents ?? 0), 0) / 100);
-  const { count: contactsCount } = await admin.from("crm_contacts").select("id", { count: "exact", head: true });
+  const weightedValue = Math.round(open.reduce((a, o) => a + (o.value_cents ?? 0) * ((o.probability ?? 0) / 100), 0) / 100);
+  const expectedMrr = Math.round(open.reduce((a, o) => a + mrrCents(o), 0) / 100);
+
+  // Stalled + overdue callouts (settings-driven stalled window).
+  const { data: settingsRow } = await admin.from("sales_settings").select("stalled_days").eq("id", "default").maybeSingle();
+  const stalledDays = (settingsRow?.stalled_days as number | undefined) ?? 14;
+  // eslint-disable-next-line react-hooks/purity -- server component; single render, real request time
+  const nowMs = Date.now();
+  const staleBefore = nowMs - stalledDays * 86400000;
+  const stalledCount = open.filter((o) => o.updated_at && new Date(o.updated_at).getTime() < staleBefore).length;
+  const today = new Date(nowMs).toISOString().slice(0, 10);
+  const { count: overdueCount } = await admin.from("sales_tasks").select("id", { count: "exact", head: true }).eq("status", "open").lt("due_date", today);
 
   const pipelines = await listPipelines();
   const stages = (pipelines.find((p) => p.is_default) ?? pipelines[0])?.stages ?? [];
@@ -27,9 +39,9 @@ export default async function SalesDashboardPage() {
 
   const tiles = [
     { label: "Open opportunities", value: open.length.toLocaleString(), href: "/admin/sales/opportunities", bg: "#E6F1FB", accent: "#185FA5", text: "#0C447C", icon: "ti-briefcase" },
-    { label: "Won", value: won.length.toLocaleString(), href: "/admin/sales/opportunities", bg: "#E1F5EE", accent: "#0F6E56", text: "#085041", icon: "ti-trophy" },
-    { label: "Pipeline value", value: `$${pipelineValue.toLocaleString()}`, href: "/admin/sales/pipeline", bg: "#FAEEDA", accent: "#854F0B", text: "#633806", icon: "ti-coin" },
-    { label: "Contacts", value: (contactsCount ?? 0).toLocaleString(), href: "/admin/sales/contacts", bg: "#EEF2FF", accent: "#4338CA", text: "#3730A3", icon: "ti-users" },
+    { label: "Pipeline value", value: `$${pipelineValue.toLocaleString()}`, sub: `weighted $${weightedValue.toLocaleString()}`, href: "/admin/sales/pipeline", bg: "#FAEEDA", accent: "#854F0B", text: "#633806", icon: "ti-coin" },
+    { label: "Expected MRR", value: `$${expectedMrr.toLocaleString()}`, href: "/admin/sales/opportunities", bg: "#E1F5EE", accent: "#0F6E56", text: "#085041", icon: "ti-repeat" },
+    { label: "Won", value: won.length.toLocaleString(), href: "/admin/sales/opportunities", bg: "#EEF2FF", accent: "#4338CA", text: "#3730A3", icon: "ti-trophy" },
   ];
 
   return (
@@ -42,6 +54,7 @@ export default async function SalesDashboardPage() {
             <div style={{ fontSize: 20, color: t.accent, lineHeight: 1 }}><i className={`ti ${t.icon}`} aria-hidden="true" /></div>
             <div style={{ fontSize: 26, fontWeight: 500, color: t.text, marginTop: 8 }}>{t.value}</div>
             <div style={{ fontSize: 11.5, color: t.accent, marginTop: 2 }}>{t.label} →</div>
+            {"sub" in t && t.sub ? <div style={{ fontSize: 10.5, color: t.accent, marginTop: 1, opacity: 0.85 }}>{t.sub}</div> : null}
           </Link>
         ))}
       </div>
@@ -57,6 +70,12 @@ export default async function SalesDashboardPage() {
               </div>
             </Link>
           ))}
+          {(stalledCount > 0 || (overdueCount ?? 0) > 0) && (
+            <div style={{ display: "flex", gap: 8, marginTop: 14, paddingTop: 12, borderTop: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
+              {stalledCount > 0 && <Link href="/admin/sales/opportunities" style={{ fontSize: 11, color: "#A32D2D", background: "#FCEBEB", borderRadius: 8, padding: "4px 9px", textDecoration: "none" }}><i className="ti ti-clock" aria-hidden="true" /> {stalledCount} stalled {stalledDays}d+</Link>}
+              {(overdueCount ?? 0) > 0 && <Link href="/admin/sales/tasks" style={{ fontSize: 11, color: "#854F0B", background: "#FAEEDA", borderRadius: 8, padding: "4px 9px", textDecoration: "none" }}><i className="ti ti-calendar-exclamation" aria-hidden="true" /> {overdueCount} task{overdueCount === 1 ? "" : "s"} overdue</Link>}
+            </div>
+          )}
         </div>
         <SalesAdvisor />
       </div>

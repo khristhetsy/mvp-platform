@@ -1,42 +1,47 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 type Stage = { id: string; name: string; sort_order: number; is_won: boolean };
-type Opp = { id: string; title: string; contact_name: string | null; contact_email: string | null; stage_id: string | null; stage_name: string | null; value_cents: number | null; status: "open" | "won" | "lost" | "archived"; notes: string | null; created_at: string };
-
-const STATUS: Record<string, { text: string; color: string; bg: string }> = {
-  open: { text: "Open", color: "#185FA5", bg: "#E6F1FB" },
-  won: { text: "Won", color: "#0F6E56", bg: "#E1F5EE" },
-  lost: { text: "Lost", color: "#A32D2D", bg: "#FCEBEB" },
-  archived: { text: "Archived", color: "#5F5E5A", bg: "#F1EFE8" },
+type Opp = {
+  id: string; title: string; contact_name: string | null; contact_email: string | null;
+  stage_id: string | null; stage_name: string | null; value_cents: number | null;
+  billing: "yearly" | "monthly"; probability: number | null; priority: number;
+  status: "open" | "won" | "lost" | "archived"; notes: string | null; created_at: string;
 };
+
 const money = (c: number | null) => (c == null ? "—" : `$${(c / 100).toLocaleString()}`);
-const GRID = "1.6fr 1.2fr 1fr 90px 300px";
+function mrr(o: Pick<Opp, "value_cents" | "billing">): string {
+  if (o.value_cents == null) return "—";
+  const cents = o.billing === "monthly" ? o.value_cents : Math.round(o.value_cents / 12);
+  return `$${Math.round(cents / 100).toLocaleString()}`;
+}
+const GRID = "1.9fr 1.1fr 0.8fr 0.7fr 0.9fr 190px";
+
+type Filter = "open" | "won" | "lost" | "all";
+type View = "list" | "stage";
 
 export function OpportunitiesClient() {
   const [opps, setOpps] = useState<Opp[]>([]);
   const [stages, setStages] = useState<Stage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showArchived, setShowArchived] = useState(false);
-  const [editing, setEditing] = useState<string | null>(null);
-  const [draft, setDraft] = useState({ title: "", value: "", notes: "" });
-  const [emailFor, setEmailFor] = useState<string | null>(null);
-  const [email, setEmail] = useState({ subject: "", body: "" });
+  const [view, setView] = useState<View>("list");
+  const [filter, setFilter] = useState<Filter>("open");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/sales/opportunities${showArchived ? "?archived=1" : ""}`);
+      const res = await fetch(`/api/sales/opportunities?archived=1`);
       const data = res.ok ? await res.json() : { opportunities: [], stages: [] };
       setOpps(data.opportunities ?? []);
       setStages(data.stages ?? []);
     } catch { setOpps([]); }
     setLoading(false);
-  }, [showArchived]);
+  }, []);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- load on mount / toggle
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- load on mount
   useEffect(() => { void load(); }, [load]);
 
   async function patch(id: string, body: Record<string, unknown>) {
@@ -50,83 +55,83 @@ export function OpportunitiesClient() {
     try { await fetch(`/api/sales/opportunities/${id}`, { method: "DELETE" }); await load(); }
     finally { setBusy(false); }
   }
-  function startEdit(o: Opp) { setEditing(o.id); setDraft({ title: o.title, value: o.value_cents != null ? String(o.value_cents / 100) : "", notes: o.notes ?? "" }); }
-  async function saveEdit(id: string) {
-    await patch(id, { title: draft.title, valueCents: draft.value ? Math.round(Number(draft.value) * 100) : null, notes: draft.notes });
-    setEditing(null);
-  }
-  function openEmail(o: Opp) { setEmailFor(o.id); setEmail({ subject: `Following up — ${o.title}`, body: `Hi ${o.contact_name ?? "there"},\n\n` }); }
-  async function saveDraftEmail(o: Opp) {
-    const stamp = `\n\n[Email draft ${new Date().toLocaleDateString()}] ${email.subject}\n${email.body}`;
-    await patch(o.id, { notes: (o.notes ?? "") + stamp });
-    setEmailFor(null);
-  }
+
+  const filtered = useMemo(() => opps.filter((o) => {
+    if (filter === "all") return true;
+    if (filter === "open") return o.status === "open";
+    if (filter === "won") return o.status === "won";
+    if (filter === "lost") return o.status === "lost" || o.status === "archived";
+    return true;
+  }), [opps, filter]);
 
   const inp: React.CSSProperties = { fontSize: 12, padding: "6px 9px", borderRadius: 7, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" };
   const btn = (bg: string, color = "#fff"): React.CSSProperties => ({ fontSize: 11, fontWeight: 600, color, background: bg, border: bg === "#fff" ? "0.5px solid var(--border-strong, #cbd5e1)" : "none", borderRadius: 6, padding: "4px 9px", cursor: "pointer" });
+  const viewTab = (active: boolean): React.CSSProperties => ({ fontSize: 11, color: active ? "#fff" : "var(--muted-foreground)", background: active ? "#2E78F5" : "transparent", borderRadius: 5, padding: "5px 10px", cursor: "pointer", border: "none" });
+
+  function Row({ o }: { o: Opp }) {
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5 }}>
+        <div style={{ minWidth: 0 }}>
+          <Link href={`/admin/sales/opportunities/${o.id}`} style={{ fontWeight: 500, color: "var(--foreground)", textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>{o.title}</Link>
+          <div style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o.contact_email ?? o.contact_name ?? "—"}</div>
+        </div>
+        <div>
+          <select value={o.stage_id ?? ""} onChange={(e) => patch(o.id, { stageId: e.target.value })} disabled={busy || o.status === "archived"} style={{ ...inp, maxWidth: 140 }}>
+            {stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+        <div style={{ color: "#185FA5" }}>{money(o.value_cents)}</div>
+        <div style={{ color: "#3B6D11" }}>{o.probability != null ? `${o.probability}%` : "—"}</div>
+        <div style={{ color: "var(--muted-foreground)" }}>{mrr(o)}</div>
+        <div style={{ display: "flex", gap: 5, justifyContent: "flex-end", flexWrap: "wrap" }}>
+          {o.status === "open" && <button onClick={() => patch(o.id, { status: "won" })} disabled={busy} style={btn("#0F6E56")}>Mark sold</button>}
+          <Link href={`/admin/sales/opportunities/${o.id}`} style={{ ...btn("#fff", "#185FA5"), textDecoration: "none" }}>Open</Link>
+          {o.status !== "archived" && <button onClick={() => patch(o.id, { status: "archived" })} disabled={busy} style={btn("#fff", "var(--muted-foreground)")}>Archive</button>}
+          <button onClick={() => del(o.id)} disabled={busy} style={btn("#fff", "#A32D2D")}>Delete</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-        <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{opps.length} opportunit{opps.length === 1 ? "y" : "ies"}</span>
-        <button onClick={() => setShowArchived((v) => !v)} style={{ marginLeft: "auto", fontSize: 11.5, color: "var(--muted-foreground)", background: "none", border: "none", textDecoration: "underline", cursor: "pointer" }}>{showArchived ? "Hide archived" : "Show archived"}</button>
-      </div>
-
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-          <div>Opportunity</div><div>Stage</div><div>Value</div><div>Status</div><div></div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12.5, fontWeight: 600 }}>Opportunities</span>
+          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{filtered.length}</span>
+          <div style={{ flex: 1 }} />
+          <div style={{ display: "flex", background: "var(--muted)", borderRadius: 7, padding: 2 }}>
+            <button onClick={() => setView("list")} style={viewTab(view === "list")}>List</button>
+            <Link href="/admin/sales/pipeline" style={{ ...viewTab(false), textDecoration: "none" }}>Kanban</Link>
+            <button onClick={() => setView("stage")} style={viewTab(view === "stage")}>By stage</button>
+          </div>
+          <select value={filter} onChange={(e) => setFilter(e.target.value as Filter)} style={inp}>
+            <option value="open">All open</option>
+            <option value="won">Won</option>
+            <option value="lost">Lost / archived</option>
+            <option value="all">All</option>
+          </select>
         </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "8px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          <div>Opportunity</div><div>Stage</div><div>Value</div><div>Prob.</div><div>MRR</div><div></div>
+        </div>
+
         {loading ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>Loading…</p>
-          : opps.length === 0 ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>No opportunities yet. Convert a contact from the Contacts tab.</p>
-          : opps.map((o) => (
-            <Fragment key={o.id}>
-              <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "11px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o.title}</div>
-                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o.contact_email ?? o.contact_name ?? "—"}</div>
-                </div>
-                <div>
-                  <select value={o.stage_id ?? ""} onChange={(e) => patch(o.id, { stageId: e.target.value })} disabled={busy || o.status === "archived"} style={{ ...inp, maxWidth: 150 }}>
-                    {stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
-                </div>
-                <div style={{ color: "var(--muted-foreground)" }}>{money(o.value_cents)}</div>
-                <div><span style={{ fontSize: 10, fontWeight: 600, color: STATUS[o.status].color, background: STATUS[o.status].bg, borderRadius: 10, padding: "2px 8px" }}>{STATUS[o.status].text}</span></div>
-                <div style={{ display: "flex", gap: 5, justifyContent: "flex-end", flexWrap: "wrap" }}>
-                  {o.status === "open" && <button onClick={() => patch(o.id, { status: "won" })} disabled={busy} style={btn("#0F6E56")}>Mark sold</button>}
-                  <button onClick={() => openEmail(o)} style={btn("#fff", "#185FA5")}>Email</button>
-                  <button onClick={() => startEdit(o)} style={btn("#fff", "var(--muted-foreground)")}>Edit</button>
-                  {o.status !== "archived" && <button onClick={() => patch(o.id, { status: "archived" })} disabled={busy} style={btn("#fff", "var(--muted-foreground)")}>Archive</button>}
-                  <button onClick={() => del(o.id)} disabled={busy} style={btn("#fff", "#A32D2D")}>Delete</button>
-                </div>
-              </div>
-
-              {editing === o.id && (
-                <div style={{ padding: "12px 14px", borderTop: "0.5px solid #eef1f5", background: "#F5F9FF", display: "grid", gridTemplateColumns: "2fr 1fr auto", gap: 8, alignItems: "start" }}>
-                  <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Title" style={inp} />
-                  <input value={draft.value} onChange={(e) => setDraft({ ...draft, value: e.target.value })} placeholder="Value ($)" inputMode="decimal" style={inp} />
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={() => saveEdit(o.id)} disabled={busy} style={btn("#0F6E56")}>Save</button>
-                    <button onClick={() => setEditing(null)} style={{ ...btn("#fff", "var(--muted-foreground)") }}>Cancel</button>
+          : filtered.length === 0 ? <p style={{ padding: 24, textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>No opportunities. Convert a contact from the Contacts tab.</p>
+          : view === "list" ? filtered.map((o) => <Row key={o.id} o={o} />)
+          : stages.map((s) => {
+              const inStage = filtered.filter((o) => o.stage_id === s.id);
+              if (inStage.length === 0) return null;
+              return (
+                <Fragment key={s.id}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", background: "var(--muted)", borderTop: "0.5px solid #eef1f5", fontSize: 11.5, fontWeight: 600 }}>
+                    {s.name} <span style={{ color: "var(--muted-foreground)", fontWeight: 400 }}>{inStage.length} · {money(inStage.reduce((a, o) => a + (o.value_cents ?? 0), 0))}</span>
                   </div>
-                  <textarea value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} placeholder="Notes" rows={2} style={{ ...inp, gridColumn: "1 / -1", resize: "vertical" }} />
-                </div>
-              )}
-
-              {emailFor === o.id && (
-                <div style={{ padding: "12px 14px", borderTop: "0.5px solid #eef1f5", background: "#FBFCFE" }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", color: "var(--muted-foreground)", marginBottom: 6 }}>Draft email · to {o.contact_email ?? o.contact_name}</div>
-                  <input value={email.subject} onChange={(e) => setEmail({ ...email, subject: e.target.value })} placeholder="Subject" style={{ ...inp, width: "100%", boxSizing: "border-box", marginBottom: 6 }} />
-                  <textarea value={email.body} onChange={(e) => setEmail({ ...email, body: e.target.value })} rows={4} style={{ ...inp, width: "100%", boxSizing: "border-box", resize: "vertical" }} />
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
-                    <button onClick={() => saveDraftEmail(o)} disabled={busy} style={btn("#2E78F5")}>Save draft</button>
-                    <button onClick={() => setEmailFor(null)} style={btn("#fff", "var(--muted-foreground)")}>Cancel</button>
-                    <span style={{ fontSize: 10.5, color: "var(--muted-foreground)" }}>Drafts don&rsquo;t send — sending routes through the approved pipeline.</span>
-                  </div>
-                </div>
-              )}
-            </Fragment>
-          ))}
+                  {inStage.map((o) => <Row key={o.id} o={o} />)}
+                </Fragment>
+              );
+            })}
       </div>
     </div>
   );
