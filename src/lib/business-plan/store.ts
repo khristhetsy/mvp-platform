@@ -19,6 +19,7 @@ function mapPlan(r: Row): BusinessPlan {
     assumptions: (r.assumptions as BusinessPlan["assumptions"]) ?? {},
     projections: (r.projections as BusinessPlan["projections"]) ?? null,
     execSummary: (r.exec_summary as string | null) ?? null,
+    charts: (r.charts as Record<string, unknown>) ?? {},
     status: (r.status as BusinessPlan["status"]) ?? "draft",
     aiAssisted: Boolean(r.ai_assisted),
     generatedAt: (r.generated_at as string | null) ?? null,
@@ -45,6 +46,7 @@ export interface BusinessPlanPatch {
   assumptions?: BusinessPlan["assumptions"];
   projections?: BusinessPlan["projections"];
   execSummary?: string | null;
+  charts?: Record<string, unknown>;
   status?: BusinessPlan["status"];
   aiAssisted?: boolean;
 }
@@ -60,6 +62,7 @@ export async function upsertBusinessPlan(
   if (patch.assumptions !== undefined) record.assumptions = patch.assumptions;
   if (patch.projections !== undefined) record.projections = patch.projections;
   if (patch.execSummary !== undefined) record.exec_summary = patch.execSummary;
+  if (patch.charts !== undefined) record.charts = patch.charts;
   if (patch.aiAssisted !== undefined) record.ai_assisted = patch.aiAssisted;
   if (patch.status !== undefined) {
     record.status = patch.status;

@@ -15,6 +15,7 @@ export interface BusinessPlan {
   assumptions: Partial<ProjectionAssumptions>;
   projections: ProjectionResult | null;
   execSummary: string | null;
+  charts: Record<string, unknown>;
   status: BusinessPlanStatus;
   aiAssisted: boolean;
   generatedAt: string | null;

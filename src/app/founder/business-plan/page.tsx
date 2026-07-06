@@ -5,6 +5,7 @@ import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { BusinessPlanGeneratorClient } from "@/components/founder/BusinessPlanGeneratorClient";
+import { BusinessPlanCharts } from "@/components/founder/BusinessPlanCharts";
 import { loadFeatureFlags, isFeatureEnabled } from "@/lib/feature-controls";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -31,6 +32,7 @@ export default async function FounderBusinessPlanPage() {
           description={t("build_an_investor_ready_plan_in_minutes_most_o")}
         />
         <BusinessPlanGeneratorClient />
+        <BusinessPlanCharts />
       </FounderJourneyGate>
     </FounderAppShell>
   );

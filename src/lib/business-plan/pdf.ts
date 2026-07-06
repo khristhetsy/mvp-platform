@@ -3,11 +3,17 @@
 
 import PDFDocument from "pdfkit";
 import { BUSINESS_PLAN_SECTIONS } from "./sections";
+import { normalizeCharts } from "./charts";
 import type { BusinessPlan } from "./types";
 
 const NAVY = "#0c2340";
 const INDIGO = "#2E78F5";
 const MUTED = "#64748b";
+const ALLOC_HEX = ["#2a78d6", "#1baf7a", "#eda100", "#4a3aa7", "#e34948", "#e87ba4", "#eb6834", "#008300"];
+function moneyShort(n: number): string {
+  const a = Math.abs(n);
+  return a >= 1e9 ? `$${(a / 1e9).toFixed(1)}B` : a >= 1e6 ? `$${(a / 1e6).toFixed(1)}M` : a >= 1e3 ? `$${Math.round(a / 1e3)}k` : `$${Math.round(a)}`;
+}
 
 function money(n: number): string {
   const abs = Math.abs(n);
@@ -65,6 +71,33 @@ export function renderBusinessPlanPdf(
         doc.moveDown(0.3).font("Helvetica-Oblique").fontSize(9).fillColor(MUTED).text(
           plan.projections.runwayMonths ? `Runway ~${plan.projections.runwayMonths} months` : "Cash-flow positive within 3 years",
         );
+      }
+
+      // Charts: market size + use of funds (drawn natively).
+      const charts = normalizeCharts(plan.charts);
+      const marketRows = ([["TAM", charts.market.tam], ["SAM", charts.market.sam], ["SOM", charts.market.som]] as const).filter(([, v]) => v != null) as Array<[string, number]>;
+      if (marketRows.length) {
+        h2("Market size");
+        const maxV = Math.max(...marketRows.map(([, v]) => v), 1);
+        const x0 = 56 + 44;
+        for (const [label, v] of marketRows) {
+          const y = doc.y;
+          const w = Math.max((v / maxV) * 280, 3);
+          doc.font("Helvetica").fontSize(9).fillColor("#334155").text(label, 56, y + 2, { width: 40 });
+          doc.rect(x0, y, w, 12).fill(INDIGO);
+          doc.font("Helvetica").fontSize(8.5).fillColor(MUTED).text(moneyShort(v), x0 + w + 5, y + 2);
+          doc.y = y + 18;
+        }
+      }
+      if (charts.allocation.length) {
+        h2("Use of funds");
+        for (let i = 0; i < charts.allocation.length; i++) {
+          const a = charts.allocation[i];
+          const y = doc.y;
+          doc.rect(56, y + 1, 9, 9).fill(ALLOC_HEX[i % ALLOC_HEX.length]);
+          doc.font("Helvetica").fontSize(9.5).fillColor("#334155").text(`${a.label}  —  ${a.pct}%`, 72, y);
+          doc.y = y + 15;
+        }
       }
 
       doc.moveDown(1.2);

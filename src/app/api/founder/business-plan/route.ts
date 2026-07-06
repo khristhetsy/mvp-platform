@@ -39,6 +39,7 @@ export async function PUT(request: Request): Promise<Response> {
       assumptions?: BusinessPlan["assumptions"];
       projections?: BusinessPlan["projections"];
       execSummary?: string | null;
+      charts?: Record<string, unknown>;
       status?: BusinessPlan["status"];
       aiAssisted?: boolean;
     };
@@ -47,6 +48,7 @@ export async function PUT(request: Request): Promise<Response> {
       assumptions: body.assumptions,
       projections: body.projections,
       execSummary: body.execSummary,
+      charts: body.charts,
       status: body.status,
       aiAssisted: body.aiAssisted,
     });

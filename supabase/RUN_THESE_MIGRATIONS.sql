@@ -187,6 +187,9 @@ create table if not exists public.pitch_decks (
 create index if not exists idx_pitch_decks_token on public.pitch_decks (share_token) where share_token is not null;
 alter table public.pitch_decks enable row level security;
 
+-- 11) Business plan AI charts (structured allocation + market figures).
+alter table public.business_plans add column if not exists charts jsonb not null default '{}'::jsonb;
+
 -- Done. Verify all Sales tables exist with:
 --   select table_name from information_schema.tables
 --   where table_schema='public' and table_name like 'sales_%';
