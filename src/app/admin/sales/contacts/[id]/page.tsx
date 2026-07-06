@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/supabase/auth";
 import { getContactProfile } from "@/lib/sales/contacts";
 import { listAssignableStaff } from "@/lib/sales/settings";
+import { listContactActivity } from "@/lib/sales/activity";
 import { SalesHubHeader } from "../../SalesHubHeader";
 import { ContactProfileClient } from "./ContactProfileClient";
 
@@ -13,10 +14,11 @@ export default async function ContactProfilePage({ params }: { params: Promise<{
   const { id } = await params;
   const [data, staff] = await Promise.all([getContactProfile(id), listAssignableStaff()]);
   if (!data) notFound();
+  const activity = await listContactActivity(id);
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>
       <SalesHubHeader />
-      <ContactProfileClient contact={data.contact} opportunities={data.opportunities} staff={staff} />
+      <ContactProfileClient contact={data.contact} opportunities={data.opportunities} staff={staff} activity={activity} />
     </AppShell>
   );
 }

@@ -1,5 +1,6 @@
 // Sales contact profile — reads the CRM mirror + annotations + linked opportunities.
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/sales/activity";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
@@ -55,7 +56,7 @@ export async function getContactProfile(id: string): Promise<{ contact: ContactP
 export type ContactPatch = { lead_status?: string | null; phone?: string | null; website?: string | null; owner?: string | null; tags?: string[] };
 
 // Edit user-owned contact fields on the mirror. Note: an Odoo re-sync may overwrite these.
-export async function updateContact(id: string, patch: ContactPatch): Promise<void> {
+export async function updateContact(id: string, patch: ContactPatch, actorId?: string | null): Promise<void> {
   const update: Record<string, unknown> = {};
   if (patch.lead_status !== undefined) update.lead_status = patch.lead_status || "new";
   if (patch.phone !== undefined) update.phone = patch.phone || null;
@@ -65,6 +66,8 @@ export async function updateContact(id: string, patch: ContactPatch): Promise<vo
   if (Object.keys(update).length === 0) return;
   const { error } = await db().from("crm_contacts").update(update).eq("id", id);
   if (error) throw new Error(error.message);
+  const fields = Object.keys(patch).join(", ");
+  await logActivity({ kind: "contact_edit", summary: `Edited contact fields: ${fields}`, actorId, contactCrmId: id });
 }
 
 export async function appendContactNote(id: string, text: string, userId: string | null): Promise<void> {
@@ -78,4 +81,5 @@ export async function appendContactNote(id: string, text: string, userId: string
     { onConflict: "source,external_id" },
   );
   if (error) throw new Error(error.message);
+  await logActivity({ kind: "note", summary: text.trim().slice(0, 200), actorId: userId, contactCrmId: id });
 }

@@ -38,7 +38,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
   try {
-    await updateOpportunity(id, parsed.data);
+    await updateOpportunity(id, parsed.data, profile.id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Update failed." }, { status: 500 });

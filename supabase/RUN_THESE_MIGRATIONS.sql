@@ -152,6 +152,23 @@ alter table public.sales_tasks enable row level security;
 alter table public.sales_settings add column if not exists default_assignee_id uuid references public.profiles(id) on delete set null;
 alter table public.sales_settings add column if not exists remind_close_passed boolean not null default false;
 
+-- 9) Sales activity log + rename Demo stage to Meeting.
+create table if not exists public.sales_activity_log (
+  id uuid primary key default gen_random_uuid(),
+  contact_crm_id text,
+  opportunity_id uuid references public.sales_opportunities(id) on delete cascade,
+  actor_id uuid references public.profiles(id) on delete set null,
+  kind text not null,
+  summary text not null,
+  meta jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_sales_activity_contact on public.sales_activity_log (contact_crm_id, created_at desc);
+create index if not exists idx_sales_activity_opp on public.sales_activity_log (opportunity_id, created_at desc);
+alter table public.sales_activity_log enable row level security;
+
+update public.sales_stages set name = 'Meeting' where name = 'Demo';
+
 -- Done. Verify all Sales tables exist with:
 --   select table_name from information_schema.tables
 --   where table_schema='public' and table_name like 'sales_%';

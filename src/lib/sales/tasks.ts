@@ -1,5 +1,6 @@
 // Sales tasks / activities — standalone. Loose client (sales_* not in gen types).
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/sales/activity";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
@@ -48,11 +49,12 @@ export async function createTask(input: CreateTaskInput): Promise<SalesTask | nu
     created_by: input.createdBy || null,
   }).select("id").single();
   if (error || !data) throw new Error(error?.message ?? "Create failed.");
+  await logActivity({ kind: "task_created", summary: `Task created: ${input.title.trim()} (${input.taskType || "Call"})`, actorId: input.createdBy, contactCrmId: input.contactCrmId ?? null, opportunityId: input.opportunityId ?? null });
   const { data: row } = await db().from("sales_tasks").select(SELECT).eq("id", data.id).maybeSingle();
   return row ? mapRow(row as Record<string, unknown>) : null;
 }
 
-export async function updateTask(id: string, patch: { status?: SalesTask["status"]; title?: string; taskType?: string; summary?: string | null; dueDate?: string | null; assigneeId?: string | null }): Promise<void> {
+export async function updateTask(id: string, patch: { status?: SalesTask["status"]; title?: string; taskType?: string; summary?: string | null; dueDate?: string | null; assigneeId?: string | null }, actorId?: string | null): Promise<void> {
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (patch.status !== undefined) { update.status = patch.status; update.done_at = patch.status === "done" ? new Date().toISOString() : null; }
   if (patch.title !== undefined) update.title = patch.title.trim();
@@ -62,6 +64,10 @@ export async function updateTask(id: string, patch: { status?: SalesTask["status
   if (patch.assigneeId !== undefined) update.assignee_id = patch.assigneeId || null;
   const { error } = await db().from("sales_tasks").update(update).eq("id", id);
   if (error) throw new Error(error.message);
+  if (patch.status === "done") {
+    const { data: t } = await db().from("sales_tasks").select("title, contact_crm_id, opportunity_id").eq("id", id).maybeSingle();
+    await logActivity({ kind: "task_done", summary: `Task completed: ${t?.title ?? ""}`, actorId, contactCrmId: (t?.contact_crm_id as string) ?? null, opportunityId: (t?.opportunity_id as string) ?? null });
+  }
 }
 
 export async function deleteTask(id: string): Promise<void> {

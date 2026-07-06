@@ -12,7 +12,24 @@ type Contact = {
 };
 type LinkedOpp = { id: string; title: string; stage_name: string | null; value_cents: number | null; probability: number | null; status: string };
 type Staff = { id: string; name: string };
+type Activity = { id: string; kind: string; summary: string; actor_name: string | null; created_at: string };
 const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not interested", "won", "lost"];
+const ACT_ICON: Record<string, { icon: string; color: string; bg: string }> = {
+  note: { icon: "ti-note", color: "#185FA5", bg: "#E6F1FB" },
+  opp_note: { icon: "ti-note", color: "#185FA5", bg: "#E6F1FB" },
+  contact_edit: { icon: "ti-edit", color: "#5F5E5A", bg: "#F1EFE8" },
+  task_created: { icon: "ti-calendar-plus", color: "#854F0B", bg: "#FAEEDA" },
+  task_done: { icon: "ti-check", color: "#0F6E56", bg: "#E1F5EE" },
+  converted: { icon: "ti-arrow-right", color: "#185FA5", bg: "#E6F1FB" },
+  stage_changed: { icon: "ti-arrow-right", color: "#854F0B", bg: "#FAEEDA" },
+  won: { icon: "ti-trophy", color: "#3B6D11", bg: "#EAF3DE" },
+  lost: { icon: "ti-x", color: "#A32D2D", bg: "#FCEBEB" },
+  email_draft: { icon: "ti-mail", color: "#4338CA", bg: "#EEF2FF" },
+};
+function actWhen(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + ", " + d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
 
 const money = (c: number | null) => (c == null ? "—" : `$${(c / 100).toLocaleString()}`);
 const inp: React.CSSProperties = { fontSize: 12, padding: "7px 9px", borderRadius: 7, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", boxSizing: "border-box" };
@@ -27,7 +44,7 @@ function Field({ k, v, link }: { k: string; v: string | null; link?: boolean }) 
   );
 }
 
-export function ContactProfileClient({ contact: initialContact, opportunities, staff }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[] }) {
+export function ContactProfileClient({ contact: initialContact, opportunities, staff, activity }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; activity: Activity[] }) {
   const router = useRouter();
   const [contact, setContact] = useState<Contact>(initialContact);
   const [note, setNote] = useState("");
@@ -157,6 +174,28 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Notes</div>
             <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "var(--muted)", borderRadius: 8, padding: 10, minHeight: 56 }}>{savedNotes || "No notes yet."}</div>
           </div>
+        </div>
+
+        {/* Activity timeline */}
+        <div style={{ padding: "0 16px 16px" }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 10 }}>Activity</div>
+          {activity.length === 0 ? (
+            <div style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>No activity yet. Notes, tasks, stage changes, and conversions will appear here.</div>
+          ) : (
+            <div style={{ position: "relative", paddingLeft: 26 }}>
+              <div style={{ position: "absolute", left: 9, top: 4, bottom: 4, width: 1.5, background: "var(--border)" }} />
+              {activity.map((a) => {
+                const ic = ACT_ICON[a.kind] ?? { icon: "ti-point", color: "#5F5E5A", bg: "#F1EFE8" };
+                return (
+                  <div key={a.id} style={{ position: "relative", marginBottom: 14 }}>
+                    <span style={{ position: "absolute", left: -24, top: 1, width: 18, height: 18, borderRadius: "50%", background: ic.bg, color: ic.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}><i className={`ti ${ic.icon}`} aria-hidden="true" /></span>
+                    <div style={{ fontSize: 12 }}>{a.summary}</div>
+                    <div style={{ fontSize: 10.5, color: "var(--muted-foreground)" }}>{a.actor_name ?? "System"} · {actWhen(a.created_at)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Linked opportunities */}

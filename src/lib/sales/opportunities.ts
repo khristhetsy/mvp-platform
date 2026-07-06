@@ -1,5 +1,6 @@
 // Sales opportunities — standalone (no Odoo). Keyed loosely to a CRM contact.
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/sales/activity";
 
 // sales_* tables aren't in the generated Supabase types — use a loose client.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -97,6 +98,7 @@ export async function createOpportunity(input: CreateOpportunityInput): Promise<
     .select("id")
     .single();
   if (error || !data) return null;
+  await logActivity({ kind: "converted", summary: `Converted to opportunity: ${title}`, actorId: input.createdBy, contactCrmId: input.contactCrmId ?? null, opportunityId: String(data.id) });
   return getOpportunity(String(data.id));
 }
 
@@ -106,7 +108,7 @@ export type UpdateOpportunityPatch = {
   source?: string | null; leadStatus?: string | null; status?: Opportunity["status"]; notes?: string | null;
 };
 
-export async function updateOpportunity(id: string, patch: UpdateOpportunityPatch): Promise<void> {
+export async function updateOpportunity(id: string, patch: UpdateOpportunityPatch, actorId?: string | null): Promise<void> {
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (patch.title !== undefined) update.title = patch.title.trim();
   if (patch.stageId !== undefined) update.stage_id = patch.stageId || null;
@@ -122,6 +124,17 @@ export async function updateOpportunity(id: string, patch: UpdateOpportunityPatc
   if (patch.notes !== undefined) update.notes = patch.notes;
   const { error } = await db().from("sales_opportunities").update(update).eq("id", id);
   if (error) throw new Error(error.message);
+
+  if (patch.status === "won") await logActivity({ kind: "won", summary: "Opportunity marked won", actorId, opportunityId: id });
+  else if (patch.status === "lost") await logActivity({ kind: "lost", summary: "Opportunity marked lost", actorId, opportunityId: id });
+  else if (patch.status === "archived") await logActivity({ kind: "stage_changed", summary: "Opportunity archived", actorId, opportunityId: id });
+  if (patch.stageId !== undefined && patch.status === undefined) {
+    const { data: st } = await db().from("sales_stages").select("name").eq("id", patch.stageId).maybeSingle();
+    await logActivity({ kind: "stage_changed", summary: `Stage changed to ${st?.name ?? "—"}`, actorId, opportunityId: id });
+  }
+  if (patch.notes !== undefined && patch.status === undefined && patch.stageId === undefined) {
+    await logActivity({ kind: "opp_note", summary: "Note added to opportunity", actorId, opportunityId: id });
+  }
 }
 
 export async function deleteOpportunity(id: string): Promise<void> {
