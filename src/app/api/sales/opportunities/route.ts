@@ -18,6 +18,15 @@ const createSchema = z.object({
   name: z.string().min(1).max(200),
   email: z.string().optional().nullable(),
   company: z.string().optional().nullable(),
+  contactCrmId: z.string().max(120).optional().nullable(),
+  valueCents: z.number().int().min(0).optional().nullable(),
+  billing: z.enum(["yearly", "monthly"]).optional(),
+  pipelineId: z.string().uuid().optional().nullable(),
+  stageId: z.string().uuid().optional().nullable(),
+  probability: z.number().int().min(0).max(100).optional().nullable(),
+  expectedClose: z.string().max(20).optional().nullable(),
+  source: z.string().max(80).optional().nullable(),
+  leadStatus: z.string().max(80).optional().nullable(),
 });
 
 // POST /api/sales/opportunities — convert a contact into an opportunity.
