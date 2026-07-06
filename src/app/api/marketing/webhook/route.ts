@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { timingSafeEqual } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import { marketingDb } from "@/lib/marketing/db";
+
+// Verify a Resend (Svix) webhook signature. The signed content is
+// `${id}.${timestamp}.${rawBody}`, HMAC-SHA256'd with the base64 secret that
+// follows the `whsec_` prefix; `svix-signature` is a space-separated list of
+// `v1,<base64sig>` entries. See https://docs.svix.com/receiving/verifying-payloads.
+function verifySvixSignature(secret: string, id: string, timestamp: string, signature: string, rawBody: string): boolean {
+  if (!id || !timestamp || !signature) return false;
+  // Reject stale deliveries (>5 min skew) to blunt replay attacks.
+  const ts = Number(timestamp);
+  if (Number.isFinite(ts) && Math.abs(Math.floor(Date.now() / 1000) - ts) > 60 * 5) return false;
+  const key = secret.startsWith("whsec_") ? Buffer.from(secret.slice(6), "base64") : Buffer.from(secret, "utf8");
+  const expected = createHmac("sha256", key).update(`${id}.${timestamp}.${rawBody}`).digest("base64");
+  const expectedBuf = Buffer.from(expected);
+  return signature.split(" ").some((part) => {
+    const sig = part.split(",")[1];
+    if (!sig) return false;
+    const sigBuf = Buffer.from(sig);
+    return sigBuf.length === expectedBuf.length && timingSafeEqual(sigBuf, expectedBuf);
+  });
+}
 
 type ResendWebhookEvent = {
   type:
@@ -24,24 +44,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!webhookSecret) {
     return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
   }
-  const signature = req.headers.get("svix-signature") ?? "";
-  // Constant-time comparison to prevent timing attacks
-  try {
-    const sigBuf = Buffer.from(signature);
-    const secretBuf = Buffer.from(webhookSecret);
-    const valid =
-      sigBuf.length === secretBuf.length &&
-      timingSafeEqual(sigBuf, secretBuf);
-    if (!valid) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  } catch {
+  // Read the raw body — the signature is computed over the exact bytes.
+  const rawBody = await req.text();
+  const svixId = req.headers.get("svix-id") ?? "";
+  const svixTimestamp = req.headers.get("svix-timestamp") ?? "";
+  const svixSignature = req.headers.get("svix-signature") ?? "";
+  if (!verifySvixSignature(webhookSecret, svixId, svixTimestamp, svixSignature, rawBody)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let event: ResendWebhookEvent;
   try {
-    event = await req.json();
+    event = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
