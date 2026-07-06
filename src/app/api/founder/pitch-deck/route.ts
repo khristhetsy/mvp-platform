@@ -31,8 +31,9 @@ export async function PUT(request: Request): Promise<Response> {
   const g = await gateBusinessPlanApi();
   if ("error" in g) return g.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    const body = (await request.json().catch(() => ({}))) as { slides?: PitchDeck["slides"]; theme?: string; aiAssisted?: boolean };
-    const deck = await upsertPitchDeck(g.supabase, g.company.id, g.profile.id, { slides: body.slides, theme: body.theme, aiAssisted: body.aiAssisted });
+    const body = (await request.json().catch(() => ({}))) as { slides?: PitchDeck["slides"]; theme?: string; aiAssisted?: boolean; status?: PitchDeck["status"] };
+    const status = body.status === "draft" || body.status === "finalized" ? body.status : undefined;
+    const deck = await upsertPitchDeck(g.supabase, g.company.id, g.profile.id, { slides: body.slides, theme: body.theme, aiAssisted: body.aiAssisted, status });
     return NextResponse.json({ deck });
   } catch (err) {
     Sentry.captureException(err);
