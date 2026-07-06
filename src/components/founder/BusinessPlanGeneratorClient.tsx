@@ -8,9 +8,14 @@ import { computeProjections } from "@/lib/business-plan/projections";
 import { checkAssumptions } from "@/lib/business-plan/sanity";
 import type { ProjectionAssumptions, ProjectionResult } from "@/lib/business-plan/projections";
 import type { BusinessPlan } from "@/lib/business-plan/types";
+import type { AllocationSlice, MarketSize } from "@/lib/business-plan/charts";
+import { ProjectionsChart, MarketChart, FundsChart } from "./BusinessPlanSectionChart";
 
 type SectionMap = BusinessPlan["sections"];
 const PROJ_ID = "projections";
+const DEFAULT_ALLOC: AllocationSlice[] = [
+  { label: "Engineering", pct: 45 }, { label: "Go-to-market", pct: 30 }, { label: "Operations", pct: 15 }, { label: "Reserve", pct: 10 },
+];
 
 function money(n: number): string {
   const abs = Math.abs(n);
@@ -33,6 +38,9 @@ export function BusinessPlanGeneratorClient() {
   const [stage, setStage] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
+  const [allocation, setAllocation] = useState<AllocationSlice[]>(DEFAULT_ALLOC);
+  const [market, setMarket] = useState<MarketSize>({ tam: null, sam: null, som: null });
+  const [filling, setFilling] = useState(false);
 
   useEffect(() => {
     let on = true;
@@ -45,6 +53,9 @@ export function BusinessPlanGeneratorClient() {
         setSections((j.plan?.sections as SectionMap) ?? {});
         const a = (j.plan?.assumptions && Object.keys(j.plan.assumptions).length ? j.plan.assumptions : j.defaultAssumptions) as ProjectionAssumptions;
         setAssumptions(a);
+        const ch = (j.plan?.charts ?? {}) as { allocation?: AllocationSlice[]; market?: MarketSize };
+        if (Array.isArray(ch.allocation) && ch.allocation.length) setAllocation(ch.allocation);
+        if (ch.market) setMarket({ tam: ch.market.tam ?? null, sam: ch.market.sam ?? null, som: ch.market.som ?? null });
       })
       .catch(() => on && setError("Could not load your business plan."))
       .finally(() => on && setLoading(false));
@@ -111,7 +122,7 @@ export function BusinessPlanGeneratorClient() {
       const res = await fetch("/api/founder/business-plan", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sections, assumptions, projections, ...(status ? { status } : {}) }),
+        body: JSON.stringify({ sections, assumptions, projections, charts: { allocation, market }, ...(status ? { status } : {}) }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(typeof j.error === "string" ? j.error : "Could not save.");
@@ -126,6 +137,18 @@ export function BusinessPlanGeneratorClient() {
   async function downloadPdf() {
     await save();
     window.open("/api/founder/business-plan/pdf", "_blank", "noopener");
+  }
+
+  async function fillCharts() {
+    setFilling(true);
+    try {
+      const res = await fetch("/api/founder/business-plan/charts", { method: "POST" });
+      const j = await res.json();
+      if (j.charts) {
+        if (Array.isArray(j.charts.allocation) && j.charts.allocation.length) setAllocation(j.charts.allocation);
+        if (j.charts.market) setMarket({ tam: j.charts.market.tam ?? null, sam: j.charts.market.sam ?? null, som: j.charts.market.som ?? null });
+      }
+    } finally { setFilling(false); }
   }
 
   async function shareLink() {
@@ -281,6 +304,7 @@ export function BusinessPlanGeneratorClient() {
                   ))}
                 </div>
               )}
+              {projections && <ProjectionsChart years={projections.years} />}
               <p className="mt-3 text-xs text-[var(--text-muted)]">Illustrative projections based on your assumptions. Not a forecast, guarantee, or investment advice.</p>
             </div>
           ) : (
@@ -304,6 +328,8 @@ export function BusinessPlanGeneratorClient() {
                 placeholder={t("write_this_section_in_your_own_words_or_let")}
                 className="mt-2 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
               />
+              {activeId === "market" && <MarketChart market={market} setMarket={setMarket} onFill={fillCharts} filling={filling} />}
+              {activeId === "use_of_funds" && <FundsChart allocation={allocation} setAllocation={setAllocation} onFill={fillCharts} filling={filling} />}
             </>
           )}
         </section>
