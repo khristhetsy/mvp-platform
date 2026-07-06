@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 type Stage = { id: string; name: string; sort_order: number; is_won: boolean };
 type Opp = {
-  id: string; title: string; contact_name: string | null; contact_email: string | null;
+  id: string; title: string; contact_name: string | null; contact_email: string | null; contact_phone: string | null;
   stage_id: string | null; stage_name: string | null; value_cents: number | null;
   billing: "yearly" | "monthly"; probability: number | null; expected_close: string | null;
   priority: number; tags: string[]; source: string | null; lead_status: string | null;
@@ -71,6 +71,9 @@ export function OpportunityDetailClient({ initial, stages }: { initial: Opp; sta
     await fetch(`/api/sales/opportunities/${o.id}`, { method: "DELETE" });
     router.push("/admin/sales/opportunities");
   }
+  function logTouch(channel: "call" | "email" | "message") {
+    void fetch(`/api/sales/opportunities/${o.id}/touch`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channel }) });
+  }
 
   const currentSort = stages.find((s) => s.id === o.stage_id)?.sort_order ?? -1;
   const wonStage = stages.find((s) => s.is_won);
@@ -90,6 +93,10 @@ export function OpportunityDetailClient({ initial, stages }: { initial: Opp; sta
           {wonStage && o.status === "open" && <button onClick={() => patch({ status: "won", stageId: wonStage.id })} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer" }}>✓ Won</button>}
           {o.status === "open" && <button onClick={() => patch({ status: "lost" })} disabled={busy} style={{ fontSize: 12, color: "#A32D2D", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 14px", cursor: "pointer" }}>Lost</button>}
           {o.status !== "open" && <span style={{ fontSize: 11.5, fontWeight: 600, color: statusColor, background: "var(--muted)", borderRadius: 10, padding: "5px 12px" }}>{o.status.toUpperCase()}</span>}
+          <div style={{ width: 8 }} />
+          {o.contact_phone && <a href={`tel:${o.contact_phone.replace(/[^+\d]/g, "")}`} onClick={() => logTouch("call")} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", textDecoration: "none" }}><i className="ti ti-phone" aria-hidden="true" /> Call</a>}
+          {o.contact_email && <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(o.contact_email)}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("email")} style={{ fontSize: 11.5, fontWeight: 600, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "7px 12px", textDecoration: "none" }}><i className="ti ti-mail" aria-hidden="true" /> Email</a>}
+          {o.contact_phone && <a href={`sms:${o.contact_phone.replace(/[^+\d]/g, "")}`} onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "7px 12px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Message</a>}
           <div style={{ flex: 1 }} />
           <button onClick={() => setEditing((v) => !v)} disabled={busy} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", cursor: "pointer" }}>{editing ? "Close edit" : "Edit"}</button>
           {nextStage && o.status === "open" && <button onClick={() => patch({ stageId: nextStage.id })} disabled={busy} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", cursor: "pointer" }}>Advance →</button>}

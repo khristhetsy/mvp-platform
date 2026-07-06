@@ -9,7 +9,7 @@ function db(): any { return createServiceRoleClient(); }
 export type Stage = { id: string; name: string; sort_order: number; is_won: boolean };
 export type Opportunity = {
   id: string; title: string; contact_name: string | null; contact_email: string | null;
-  contact_crm_id: string | null;
+  contact_crm_id: string | null; contact_phone: string | null;
   stage_id: string | null; stage_name: string | null; value_cents: number | null;
   billing: "yearly" | "monthly"; probability: number | null; expected_close: string | null;
   priority: number; tags: string[]; source: string | null; lead_status: string | null;
@@ -27,6 +27,7 @@ function mapRow(r: Record<string, unknown>): Opportunity {
     contact_name: (r.contact_name as string) ?? null,
     contact_email: (r.contact_email as string) ?? null,
     contact_crm_id: (r.contact_crm_id as string) ?? null,
+    contact_phone: null,
     stage_id: (r.stage_id as string) ?? null,
     stage_name: ((r.stage as { name?: string } | null)?.name) ?? null,
     value_cents: (r.value_cents as number) ?? null,
@@ -67,7 +68,14 @@ export async function listOpportunities(includeArchived = false): Promise<Opport
 
 export async function getOpportunity(id: string): Promise<Opportunity | null> {
   const { data } = await db().from("sales_opportunities").select(SELECT).eq("id", id).maybeSingle();
-  return data ? mapRow(data as Record<string, unknown>) : null;
+  if (!data) return null;
+  const opp = mapRow(data as Record<string, unknown>);
+  // Pull the linked contact's phone (not stored on the opp) for click-to-call/message.
+  if (opp.contact_crm_id) {
+    const { data: c } = await db().from("crm_contacts").select("phone").eq("id", opp.contact_crm_id).maybeSingle();
+    opp.contact_phone = (c?.phone as string) ?? null;
+  }
+  return opp;
 }
 
 export type CreateOpportunityInput = {
