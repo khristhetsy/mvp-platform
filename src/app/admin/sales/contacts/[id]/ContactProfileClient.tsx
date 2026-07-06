@@ -17,6 +17,8 @@ const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not intereste
 const ACT_ICON: Record<string, { icon: string; color: string; bg: string }> = {
   note: { icon: "ti-note", color: "#185FA5", bg: "#E6F1FB" },
   call: { icon: "ti-phone", color: "#0F6E56", bg: "#E1F5EE" },
+  email: { icon: "ti-mail", color: "#4338CA", bg: "#EEF2FF" },
+  message: { icon: "ti-message", color: "#854F0B", bg: "#FAEEDA" },
   opp_note: { icon: "ti-note", color: "#185FA5", bg: "#E6F1FB" },
   contact_edit: { icon: "ti-edit", color: "#5F5E5A", bg: "#F1EFE8" },
   task_created: { icon: "ti-calendar-plus", color: "#854F0B", bg: "#FAEEDA" },
@@ -60,6 +62,14 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [actFilter, setActFilter] = useState<"all" | "call" | "note" | "task" | "stage">("all");
   const [acts, setActs] = useState<Activity[]>(activity);
   const [call, setCall] = useState({ outcome: "connected", duration: "", notes: "" });
+
+  async function logTouch(channel: "email" | "message") {
+    try {
+      await fetch(`/api/sales/contacts/${contact.id}/touch`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channel }) });
+      const summary = channel === "email" ? "Email opened" : "Text message opened";
+      setActs((p) => [{ id: `tmp-${Date.now()}`, kind: channel, summary, actor_name: "You", created_at: new Date().toISOString() }, ...p]);
+    } catch { /* ignore */ }
+  }
 
   async function logCall() {
     setBusy(true);
@@ -125,7 +135,15 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             <div style={{ fontSize: 10, color: "#185FA5" }}><i className="ti ti-target" aria-hidden="true" /> Opportunities</div>
             <div style={{ fontSize: 13, fontWeight: 600 }}>{opportunities.length}</div>
           </div>
-          {contact.phone && <a href={`tel:${contact.phone.replace(/[^+\d]/g, "")}`} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-phone" aria-hidden="true" /> Call</a>}
+          {contact.phone
+            ? <a href={`tel:${contact.phone.replace(/[^+\d]/g, "")}`} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-phone" aria-hidden="true" /> Call</a>
+            : <span title="No phone number on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-phone" aria-hidden="true" /> Call</span>}
+          {contact.email
+            ? <a href={`mailto:${contact.email}`} onClick={() => logTouch("email")} style={{ fontSize: 11.5, fontWeight: 600, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-mail" aria-hidden="true" /> Email</a>
+            : <span title="No email on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-mail" aria-hidden="true" /> Email</span>}
+          {contact.phone
+            ? <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Message</a>
+            : <span title="No phone number on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-message" aria-hidden="true" /> Message</span>}
           {!editing && <button onClick={() => setEditing(true)} style={outlineBtn}><i className="ti ti-edit" aria-hidden="true" /> Edit</button>}
         </div>
 

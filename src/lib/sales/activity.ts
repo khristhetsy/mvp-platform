@@ -4,7 +4,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
 
-export type ActivityKind = "note" | "call" | "contact_edit" | "task_created" | "task_done" | "converted" | "stage_changed" | "won" | "lost" | "opp_note" | "email_draft";
+export type ActivityKind = "note" | "call" | "email" | "message" | "contact_edit" | "task_created" | "task_done" | "converted" | "stage_changed" | "won" | "lost" | "opp_note" | "email_draft";
 export type Activity = { id: string; kind: ActivityKind; summary: string; actor_name: string | null; created_at: string };
 
 export async function logActivity(input: {
