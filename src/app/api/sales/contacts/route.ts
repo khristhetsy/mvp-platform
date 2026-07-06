@@ -17,11 +17,16 @@ export async function GET(req: NextRequest): Promise<Response> {
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   const q = req.nextUrl.searchParams.get("q")?.trim();
 
-  let query = db().from("crm_contacts").select("id, name, email, company, phone, source").order("name", { ascending: true }).limit(100);
+  let query = db().from("crm_contacts").select("id, name, email, company, phone, source, raw").order("name", { ascending: true }).limit(100);
   if (q) query = query.or(`name.ilike.%${q}%,email.ilike.%${q}%,company.ilike.%${q}%,phone.ilike.%${q}%`);
   const { data } = await query;
-  const rows = ((data ?? []) as Row[]).map((r) => ({
-    id: r.id, name: r.name ?? r.email ?? "Contact", email: r.email ?? "", company: r.company ?? "", phone: r.phone ?? "", source: r.source ?? "crm",
+  const rawPhone = (raw: unknown): string => {
+    const r = raw as Record<string, unknown> | null;
+    const v = (typeof r?.phone === "string" && r.phone) || (typeof r?.mobile === "string" && r.mobile);
+    return v || "";
+  };
+  const rows = ((data ?? []) as Array<Row & { raw?: unknown }>).map((r) => ({
+    id: r.id, name: r.name ?? r.email ?? "Contact", email: r.email ?? "", company: r.company ?? "", phone: r.phone ?? rawPhone(r.raw), source: r.source ?? "crm",
   }));
   return NextResponse.json({ contacts: rows });
 }

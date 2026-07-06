@@ -5,10 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 type Contact = {
-  id: string; source: string; name: string; email: string | null; company: string | null; phone: string | null;
-  website: string | null; lead_status: string | null; tags: string[]; owner: string | null; membership: string | null;
-  job_position: string | null; city: string | null; state: string | null; country: string | null; language: string | null;
-  created_on: string | null; note: string | null;
+  id: string; source: string; name: string; email: string | null; company: string | null; phone: string | null; phone2: string | null;
+  website: string | null; lead_status: string | null; lead_source: string | null; tags: string[]; owner: string | null; membership: string | null;
+  job_position: string | null; street: string | null; street2: string | null; city: string | null; state: string | null; zip: string | null;
+  country: string | null; language: string | null; created_on: string | null; note: string | null;
 };
 type LinkedOpp = { id: string; title: string; stage_name: string | null; value_cents: number | null; probability: number | null; status: string };
 type Staff = { id: string; name: string };
@@ -114,7 +114,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     } finally { setBusy(false); }
   }
 
-  const location = [contact.city, contact.state, contact.country].filter(Boolean).join(", ") || null;
+  const address = [contact.street, contact.street2, contact.city, contact.state, contact.zip, contact.country].filter(Boolean).join(", ") || null;
 
   return (
     <div>
@@ -169,20 +169,28 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             </div>
           </div>
         ) : (
-          <div style={{ padding: "14px 16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 28px" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <Field k="Membership" v={contact.membership} />
-              <Field k="Lead status" v={contact.lead_status} />
-              <Field k="Location" v={location} />
-              <Field k="Owner" v={contact.owner} />
-              <Field k="Source" v={contact.source} />
+          <div style={{ padding: "14px 16px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 28px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <Field k="Membership" v={contact.membership} />
+                <Field k="Job position" v={contact.job_position} />
+                <Field k="Lead status" v={contact.lead_status} />
+                <Field k="Lead source" v={contact.lead_source} />
+                <Field k="Owner" v={contact.owner} />
+                <Field k="Source" v={contact.source} />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <Field k="Phone" v={contact.phone} />
+                <Field k="Phone 2" v={contact.phone2} />
+                <Field k="Email" v={contact.email} link />
+                <Field k="Website" v={contact.website} link />
+                <Field k="Language" v={contact.language} />
+                <Field k="Tags" v={contact.tags.length ? contact.tags.join(", ") : null} />
+              </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <Field k="Phone" v={contact.phone} />
-              <Field k="Email" v={contact.email} link />
-              <Field k="Website" v={contact.website} link />
-              <Field k="Language" v={contact.language} />
-              <Field k="Tags" v={contact.tags.length ? contact.tags.join(", ") : null} />
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "0.5px solid #eef1f5" }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Address</div>
+              {address ? <div style={{ fontSize: 12, lineHeight: 1.6 }}>{address}</div> : <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</div>}
             </div>
           </div>
         )}

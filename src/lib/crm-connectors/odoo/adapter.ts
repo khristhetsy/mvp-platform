@@ -48,6 +48,8 @@ const BASE_FIELDS = [
   "id", "name", "email", "parent_id", "category_id", "user_id", "function", "write_date",
   // Standard contact detail fields, surfaced in the CRM drawer.
   "phone", "mobile", "website", "comment", "city", "country_id", "create_date", "title",
+  // Full mailing address.
+  "street", "street2", "state_id", "zip",
 ];
 // Studio field ttypes worth mirroring (skip binary/html/text blobs).
 const CAPTURE_TTYPES = new Set([
