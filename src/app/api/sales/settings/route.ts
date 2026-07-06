@@ -13,8 +13,10 @@ export async function GET(): Promise<Response> {
 
 const schema = z.object({
   taskTypes: z.array(z.string().min(1).max(40)).max(30).optional(),
+  defaultAssigneeId: z.string().uuid().nullable().optional(),
   remindTaskDue: z.boolean().optional(),
   remindStalled: z.boolean().optional(),
+  remindClosePassed: z.boolean().optional(),
   stalledDays: z.number().int().min(1).max(90).optional(),
 });
 

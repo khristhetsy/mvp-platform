@@ -1,21 +1,19 @@
 import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/supabase/auth";
-import { listAssignableStaff } from "@/lib/sales/settings";
-import { SalesHubHeader } from "../SalesHubHeader";
-import { SettingsSubNav } from "./SettingsSubNav";
-import { SettingsTasksClient } from "./SettingsTasksClient";
+import { SalesHubHeader } from "../../SalesHubHeader";
+import { SettingsSubNav } from "../SettingsSubNav";
+import { SettingsNotificationsClient } from "./SettingsNotificationsClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function SalesSettingsTasksPage() {
+export default async function SalesSettingsNotificationsPage() {
   const profile = await requireRole(["admin", "analyst"]);
-  const staff = await listAssignableStaff();
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>
       <SalesHubHeader />
       <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
         <SettingsSubNav />
-        <SettingsTasksClient staff={staff} />
+        <SettingsNotificationsClient />
       </div>
     </AppShell>
   );
