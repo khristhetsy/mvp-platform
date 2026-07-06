@@ -16,6 +16,7 @@ type Activity = { id: string; kind: string; summary: string; actor_name: string 
 const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not interested", "won", "lost"];
 const ACT_ICON: Record<string, { icon: string; color: string; bg: string }> = {
   note: { icon: "ti-note", color: "#185FA5", bg: "#E6F1FB" },
+  call: { icon: "ti-phone", color: "#0F6E56", bg: "#E1F5EE" },
   opp_note: { icon: "ti-note", color: "#185FA5", bg: "#E6F1FB" },
   contact_edit: { icon: "ti-edit", color: "#5F5E5A", bg: "#F1EFE8" },
   task_created: { icon: "ti-calendar-plus", color: "#854F0B", bg: "#FAEEDA" },
@@ -55,6 +56,25 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [savedNotes, setSavedNotes] = useState<string | null>(initialContact.note);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ lead_status: initialContact.lead_status ?? "new", phone: initialContact.phone ?? "", website: initialContact.website ?? "", owner: initialContact.owner ?? "", tags: initialContact.tags.join(", ") });
+  const [section, setSection] = useState<"details" | "activity">("details");
+  const [actFilter, setActFilter] = useState<"all" | "call" | "note" | "task" | "stage">("all");
+  const [acts, setActs] = useState<Activity[]>(activity);
+  const [call, setCall] = useState({ outcome: "connected", duration: "", notes: "" });
+
+  async function logCall() {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/sales/contacts/${contact.id}/call`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(call) });
+      if (res.ok) {
+        const label: Record<string, string> = { connected: "connected", voicemail: "voicemail", no_answer: "no answer", wrong_number: "wrong number" };
+        const parts = [`Call — ${label[call.outcome]}`];
+        if (call.duration) parts.push(call.duration);
+        if (call.notes) parts.push(`"${call.notes.trim()}"`);
+        setActs((p) => [{ id: `tmp-${Date.now()}`, kind: "call", summary: parts.join(" · "), actor_name: "You", created_at: new Date().toISOString() }, ...p]);
+        setCall({ outcome: "connected", duration: "", notes: "" });
+      }
+    } finally { setBusy(false); }
+  }
 
   async function saveEdit() {
     setBusy(true);
@@ -105,9 +125,17 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             <div style={{ fontSize: 10, color: "#185FA5" }}><i className="ti ti-target" aria-hidden="true" /> Opportunities</div>
             <div style={{ fontSize: 13, fontWeight: 600 }}>{opportunities.length}</div>
           </div>
+          {contact.phone && <a href={`tel:${contact.phone.replace(/[^+\d]/g, "")}`} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-phone" aria-hidden="true" /> Call</a>}
           {!editing && <button onClick={() => setEditing(true)} style={outlineBtn}><i className="ti ti-edit" aria-hidden="true" /> Edit</button>}
         </div>
 
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: 0, padding: "0 16px", borderBottom: "0.5px solid #eef1f5" }}>
+          <button onClick={() => setSection("details")} style={{ fontSize: 12.5, fontWeight: section === "details" ? 600 : 400, color: section === "details" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === "details" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Details</button>
+          <button onClick={() => setSection("activity")} style={{ fontSize: 12.5, fontWeight: section === "activity" ? 600 : 400, color: section === "activity" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === "activity" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Activity {acts.length ? `· ${acts.length}` : ""}</button>
+        </div>
+
+        {section === "details" && (<>
         {/* Field grid */}
         {editing ? (
           <div style={{ padding: "14px 16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px" }}>
@@ -176,30 +204,51 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
           </div>
         </div>
 
-        {/* Activity timeline */}
-        <div style={{ padding: "0 16px 16px" }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 10 }}>Activity</div>
-          {activity.length === 0 ? (
-            <div style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>No activity yet. Notes, tasks, stage changes, and conversions will appear here.</div>
-          ) : (
-            <div style={{ position: "relative", paddingLeft: 26 }}>
-              <div style={{ position: "absolute", left: 9, top: 4, bottom: 4, width: 1.5, background: "var(--border)" }} />
-              {activity.map((a) => {
-                const ic = ACT_ICON[a.kind] ?? { icon: "ti-point", color: "#5F5E5A", bg: "#F1EFE8" };
-                return (
-                  <div key={a.id} style={{ position: "relative", marginBottom: 14 }}>
-                    <span style={{ position: "absolute", left: -24, top: 1, width: 18, height: 18, borderRadius: "50%", background: ic.bg, color: ic.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}><i className={`ti ${ic.icon}`} aria-hidden="true" /></span>
-                    <div style={{ fontSize: 12 }}>{a.summary}</div>
-                    <div style={{ fontSize: 10.5, color: "var(--muted-foreground)" }}>{a.actor_name ?? "System"} · {actWhen(a.created_at)}</div>
-                  </div>
-                );
-              })}
+        </>)}
+
+        {section === "activity" && (
+        <div style={{ padding: "14px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+            {([["all", "All"], ["call", "Calls"], ["note", "Notes"], ["task", "Tasks"], ["stage", "Stage changes"]] as const).map(([f, label]) => (
+              <button key={f} onClick={() => setActFilter(f)} style={{ fontSize: 11, cursor: "pointer", border: "none", borderRadius: 14, padding: "3px 11px", background: actFilter === f ? "#2E78F5" : "var(--muted)", color: actFilter === f ? "#fff" : "var(--muted-foreground)" }}>{label}</button>
+            ))}
+          </div>
+
+          {/* Log a call */}
+          <div style={{ background: "#F5F9FF", borderRadius: 10, padding: 12, marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}><i className="ti ti-phone" aria-hidden="true" style={{ color: "#0F6E56" }} /><span style={{ fontSize: 12, fontWeight: 600 }}>Log a call</span><span style={{ fontSize: 10.5, color: "var(--muted-foreground)" }}>after your Nextiva call</span></div>
+            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.9fr 2fr auto", gap: 8, alignItems: "center" }}>
+              <select value={call.outcome} onChange={(e) => setCall({ ...call, outcome: e.target.value })} style={inp}><option value="connected">Connected</option><option value="voicemail">Voicemail</option><option value="no_answer">No answer</option><option value="wrong_number">Wrong number</option></select>
+              <input value={call.duration} onChange={(e) => setCall({ ...call, duration: e.target.value })} placeholder="Duration" style={inp} />
+              <input value={call.notes} onChange={(e) => setCall({ ...call, notes: e.target.value })} placeholder="Call notes / outcome…" style={inp} />
+              <button onClick={logCall} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 13px", cursor: "pointer", opacity: busy ? 0.5 : 1 }}>Log</button>
             </div>
-          )}
+          </div>
+
+          {(() => {
+            const shown = acts.filter((a) => actFilter === "all" || (actFilter === "task" ? a.kind.startsWith("task") : actFilter === "stage" ? (a.kind === "stage_changed" || a.kind === "won" || a.kind === "lost") : actFilter === "note" ? (a.kind === "note" || a.kind === "opp_note") : a.kind === actFilter));
+            if (shown.length === 0) return <div style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>No activity yet. Calls, notes, tasks, stage changes, and conversions appear here.</div>;
+            return (
+              <div style={{ position: "relative", paddingLeft: 26 }}>
+                <div style={{ position: "absolute", left: 9, top: 4, bottom: 4, width: 1.5, background: "var(--border)" }} />
+                {shown.map((a) => {
+                  const ic = ACT_ICON[a.kind] ?? { icon: "ti-point", color: "#5F5E5A", bg: "#F1EFE8" };
+                  return (
+                    <div key={a.id} style={{ position: "relative", marginBottom: 14 }}>
+                      <span style={{ position: "absolute", left: -24, top: 1, width: 18, height: 18, borderRadius: "50%", background: ic.bg, color: ic.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}><i className={`ti ${ic.icon}`} aria-hidden="true" /></span>
+                      <div style={{ fontSize: 12 }}>{a.summary}</div>
+                      <div style={{ fontSize: 10.5, color: "var(--muted-foreground)" }}>{a.actor_name ?? "System"} · {actWhen(a.created_at)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
+        )}
 
         {/* Linked opportunities */}
-        {opportunities.length > 0 && (
+        {section === "details" && opportunities.length > 0 && (
           <div style={{ padding: "0 16px 16px" }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Linked opportunities</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
