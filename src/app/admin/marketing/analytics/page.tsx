@@ -105,5 +105,19 @@ export default async function MarketingAnalyticsPage() {
     sent: (c.stat_sent as number) ?? 0, opened: (c.stat_opened as number) ?? 0, clicked: (c.stat_clicked as number) ?? 0,
   }));
 
-  return <AnalyticsClient metrics={metrics} dailyOpens={dailyOpens} completedCampaigns={completedCampaigns} lists={lists} listCampaigns={listCampaigns} />;
+  // Webhook health — the most recent event that can only arrive via the Resend webhook.
+  // (sent/replied are created in-app; delivered/opened/clicked/etc. come from Resend.)
+  const { data: lastHook } = await supabase
+    .from("marketing_events")
+    .select("occurred_at")
+    .in("event_type", ["delivered", "opened", "clicked", "bounced", "spam_complaint", "unsubscribed"])
+    .order("occurred_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const webhookHealth = {
+    configured: Boolean(process.env.RESEND_WEBHOOK_SECRET),
+    lastEventAt: (lastHook as { occurred_at: string } | null)?.occurred_at ?? null,
+  };
+
+  return <AnalyticsClient metrics={metrics} dailyOpens={dailyOpens} completedCampaigns={completedCampaigns} lists={lists} listCampaigns={listCampaigns} webhookHealth={webhookHealth} />;
 }

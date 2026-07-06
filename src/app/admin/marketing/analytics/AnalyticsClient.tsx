@@ -22,7 +22,8 @@ interface DailyOpen { date: string; count: number; }
 interface CompletedCampaign { id: string; name: string; sent: number; opened: number; clicked: number; date: string; }
 interface ListSummary { id: string; name: string; count: number; }
 interface ListCampaign { id: string; name: string; list_id: string; sent: number; opened: number; clicked: number; }
-interface Props { metrics: Metrics; dailyOpens: DailyOpen[]; completedCampaigns?: CompletedCampaign[]; lists?: ListSummary[]; listCampaigns?: ListCampaign[]; }
+interface WebhookHealth { configured: boolean; lastEventAt: string | null; }
+interface Props { metrics: Metrics; dailyOpens: DailyOpen[]; completedCampaigns?: CompletedCampaign[]; lists?: ListSummary[]; listCampaigns?: ListCampaign[]; webhookHealth?: WebhookHealth; }
 interface ChatMessage { role: "user" | "assistant"; content: string; }
 
 const card = {
@@ -77,7 +78,18 @@ const QUICK_PROMPTS = [
   "What email sequences should I build for warming up investors?",
 ];
 
-export default function AnalyticsClient({ metrics, dailyOpens, completedCampaigns = [], lists = [], listCampaigns = [] }: Props) {
+function webhookStatus(h: WebhookHealth | undefined, nowMs: number): { dot: string; bg: string; border: string; color: string; label: string } {
+  if (!h || !h.configured) return { dot: "#A32D2D", bg: "#FCEBEB", border: "#F09595", color: "#A32D2D", label: "Tracking webhook not configured" };
+  if (!h.lastEventAt) return { dot: "#A32D2D", bg: "#FCEBEB", border: "#F09595", color: "#A32D2D", label: "No tracking events received yet" };
+  const mins = Math.floor((nowMs - new Date(h.lastEventAt).getTime()) / 60000);
+  const ago = mins < 60 ? `${Math.max(mins, 0)}m ago` : mins < 1440 ? `${Math.floor(mins / 60)}h ago` : `${Math.floor(mins / 1440)}d ago`;
+  if (mins > 7 * 1440) return { dot: "#854F0B", bg: "#FAEEDA", border: "#F4D9A0", color: "#854F0B", label: `No tracking events in a while · last ${ago}` };
+  return { dot: "#0F6E56", bg: "#E1F5EE", border: "#9FE1CB", color: "#0F6E56", label: `Tracking live · last event ${ago}` };
+}
+
+export default function AnalyticsClient({ metrics, dailyOpens, completedCampaigns = [], lists = [], listCampaigns = [], webhookHealth }: Props) {
+  const [nowMs] = useState(() => Date.now());
+  const hook = webhookStatus(webhookHealth, nowMs);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>(completedCampaigns[0]?.id ?? "");
   const selectedCampaign = completedCampaigns.find((c) => c.id === selectedCampaignId) ?? null;
 
@@ -151,9 +163,15 @@ export default function AnalyticsClient({ metrics, dailyOpens, completedCampaign
           <h1 style={{ fontSize: 16, fontWeight: 500, marginBottom: 2 }}>Analytics</h1>
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Last 30 days · icapos.com</div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#EEEDFE", border: "0.5px solid #AFA9EC", borderRadius: 10, padding: "6px 12px" }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2E78F5" }} />
-          <span style={{ fontSize: 12, color: "#1A6CE4", fontWeight: 500 }}>CMO assistant active</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div title="Whether Resend is delivering open/click events to your app. Needs the webhook configured in Resend and RESEND_WEBHOOK_SECRET set." style={{ display: "flex", alignItems: "center", gap: 7, background: hook.bg, border: `0.5px solid ${hook.border}`, borderRadius: 10, padding: "6px 12px" }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: hook.dot }} />
+            <span style={{ fontSize: 12, color: hook.color, fontWeight: 500 }}>{hook.label}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#EEEDFE", border: "0.5px solid #AFA9EC", borderRadius: 10, padding: "6px 12px" }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2E78F5" }} />
+            <span style={{ fontSize: 12, color: "#1A6CE4", fontWeight: 500 }}>CMO assistant active</span>
+          </div>
         </div>
       </div>
 
