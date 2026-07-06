@@ -23,7 +23,9 @@ function pickRaw(raw: Record<string, unknown> | null, keys: string[]): string | 
 }
 
 export async function getContactProfile(id: string): Promise<{ contact: ContactProfile; opportunities: LinkedOpp[] } | null> {
-  const { data: c } = await db().from("crm_contacts").select("id, source, external_id, name, email, company, phone, website, lead_status, tags, owner, plan, raw, synced_at").eq("id", id).maybeSingle();
+  // select("*") so a column-name mismatch on the mirror can never null the whole profile.
+  const { data: c, error } = await db().from("crm_contacts").select("*").eq("id", id).maybeSingle();
+  if (error) { console.error("[sales/contacts] getContactProfile query failed:", error.message); return null; }
   if (!c) return null;
   const raw = (c.raw as Record<string, unknown> | null) ?? null;
 
