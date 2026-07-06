@@ -8,9 +8,22 @@ export const dynamic = "force-dynamic";
 const patchSchema = z.object({
   lead_status: z.string().max(40).nullable().optional(),
   phone: z.string().max(60).nullable().optional(),
+  email: z.string().max(200).nullable().optional(),
+  company: z.string().max(200).nullable().optional(),
   website: z.string().max(200).nullable().optional(),
   owner: z.string().max(120).nullable().optional(),
   tags: z.array(z.string().min(1).max(40)).max(20).optional(),
+  phone2: z.string().max(60).nullable().optional(),
+  lead_source: z.string().max(120).nullable().optional(),
+  membership: z.string().max(120).nullable().optional(),
+  job_position: z.string().max(120).nullable().optional(),
+  language: z.string().max(60).nullable().optional(),
+  street: z.string().max(200).nullable().optional(),
+  street2: z.string().max(200).nullable().optional(),
+  city: z.string().max(120).nullable().optional(),
+  state: z.string().max(120).nullable().optional(),
+  zip: z.string().max(40).nullable().optional(),
+  country: z.string().max(120).nullable().optional(),
 });
 
 // PATCH /api/sales/contacts/[id] — edit user-owned contact fields.

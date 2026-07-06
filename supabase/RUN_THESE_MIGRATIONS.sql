@@ -224,6 +224,10 @@ alter table public.crm_contacts
   add column if not exists created_on text generated always as (raw ->> 'create_date') stored;
 create index if not exists idx_crm_contacts_created_on on public.crm_contacts (created_on);
 
+-- 14) CRM contact profile edit overrides — persist user edits to Odoo-sourced fields.
+alter table public.crm_contacts
+  add column if not exists overrides jsonb not null default '{}'::jsonb;
+
 -- Done. Verify all Sales tables exist with:
 --   select table_name from information_schema.tables
 --   where table_schema='public' and table_name like 'sales_%';

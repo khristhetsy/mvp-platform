@@ -55,37 +55,69 @@ export async function getContactProfile(id: string): Promise<{ contact: ContactP
     value_cents: (o.value_cents as number) ?? null, probability: (o.probability as number) ?? null, status: String(o.status ?? "open"),
   }));
 
+  // User edits to Odoo-sourced fields live in `overrides` and win over raw when present.
+  const ov = (c.overrides ?? {}) as Record<string, unknown>;
+  const pref = (key: string, fallback: string | null): string | null => {
+    const v = ov[key];
+    return v != null && v !== "" ? String(v) : fallback;
+  };
+
   const contact: ContactProfile = {
     id: String(c.id), source: c.source, external_id: c.external_id, name: c.name ?? c.email ?? "Contact",
     email: c.email ?? null, company: c.company ?? null,
     phone: c.phone ?? pickRaw(raw, ["phone"]) ?? pickRaw(raw, ["mobile"]),
-    phone2: pickRaw(raw, ["mobile", "phone2", "x_studio_phone_2"]),
+    phone2: pref("phone2", pickRaw(raw, ["mobile", "phone2", "x_studio_phone_2"])),
     website: c.website ?? pickRaw(raw, ["website"]),
-    lead_status: pickExtra(raw, ["Lead Status"]) ?? pickRaw(raw, ["x_studio_lead_status"]) ?? (c.lead_status as string) ?? null,
-    lead_source: ((raw?.__profile as { leadSource?: unknown } | undefined)?.leadSource as string) ?? pickExtra(raw, ["Lead Source"]) ?? pickRaw(raw, ["x_studio_lead_type"]),
+    lead_status: pref("lead_status", (c.lead_status as string) ?? pickExtra(raw, ["Lead Status"]) ?? pickRaw(raw, ["x_studio_lead_status"]) ?? null),
+    lead_source: pref("lead_source", ((raw?.__profile as { leadSource?: unknown } | undefined)?.leadSource as string) ?? pickExtra(raw, ["Lead Source"]) ?? pickRaw(raw, ["x_studio_lead_type"])),
     tags: Array.isArray(c.tags) ? c.tags : [], owner: c.owner ?? null,
-    membership: (c.plan as string) ?? pickRaw(raw, ["membership_type", "membership"]),
-    job_position: pickRaw(raw, ["function", "job_position", "title"]),
-    street: pickRaw(raw, ["street"]), street2: pickRaw(raw, ["street2"]),
-    city: pickRaw(raw, ["city"]), state: pickRaw(raw, ["state_id", "state"]), zip: pickRaw(raw, ["zip", "postal_code"]),
-    country: pickRaw(raw, ["country_id", "country"]),
-    language: pickRaw(raw, ["lang", "language"]), created_on: pickRaw(raw, ["create_date", "created_on"]) ?? (c.synced_at as string) ?? null,
+    membership: pref("membership", (c.plan as string) ?? pickRaw(raw, ["membership_type", "membership"])),
+    job_position: pref("job_position", pickRaw(raw, ["function", "job_position", "title"])),
+    street: pref("street", pickRaw(raw, ["street"])), street2: pref("street2", pickRaw(raw, ["street2"])),
+    city: pref("city", pickRaw(raw, ["city"])), state: pref("state", pickRaw(raw, ["state_id", "state"])), zip: pref("zip", pickRaw(raw, ["zip", "postal_code"])),
+    country: pref("country", pickRaw(raw, ["country_id", "country"])),
+    language: pref("language", pickRaw(raw, ["lang", "language"])), created_on: pickRaw(raw, ["create_date", "created_on"]) ?? (c.synced_at as string) ?? null,
     note,
   };
   return { contact, opportunities };
 }
 
-export type ContactPatch = { lead_status?: string | null; phone?: string | null; website?: string | null; owner?: string | null; tags?: string[] };
+export type ContactPatch = {
+  lead_status?: string | null; phone?: string | null; email?: string | null; company?: string | null;
+  website?: string | null; owner?: string | null; tags?: string[];
+  phone2?: string | null; lead_source?: string | null; membership?: string | null; job_position?: string | null;
+  language?: string | null; street?: string | null; street2?: string | null; city?: string | null;
+  state?: string | null; zip?: string | null; country?: string | null;
+};
 
-// Edit user-owned contact fields on the mirror. Note: an Odoo re-sync may overwrite these.
+// Fields stored in the `overrides` jsonb (Odoo-sourced; no dedicated column).
+const OVERRIDE_KEYS = ["phone2", "lead_source", "membership", "job_position", "language", "street", "street2", "city", "state", "zip", "country"] as const;
+
+// Edit user-owned contact fields on the mirror. Odoo-sourced fields go to `overrides` so a
+// re-sync of `raw` won't clobber them; top-level columns are written directly.
 export async function updateContact(id: string, patch: ContactPatch, actorId?: string | null): Promise<void> {
   const update: Record<string, unknown> = {};
   if (patch.lead_status !== undefined) update.lead_status = patch.lead_status || "new";
   if (patch.phone !== undefined) update.phone = patch.phone || null;
+  if (patch.email !== undefined) update.email = patch.email || null;
+  if (patch.company !== undefined) update.company = patch.company || null;
   if (patch.website !== undefined) update.website = patch.website || null;
   if (patch.owner !== undefined) update.owner = patch.owner || null;
   if (patch.tags !== undefined) update.tags = patch.tags.map((t) => t.trim()).filter(Boolean).slice(0, 20);
-  if (Object.keys(update).length === 0) return;
+
+  const ovPatch: Record<string, string | null> = {};
+  for (const k of OVERRIDE_KEYS) {
+    const v = patch[k];
+    if (v !== undefined) ovPatch[k] = (v as string) || null;
+  }
+  if (Object.keys(update).length === 0 && Object.keys(ovPatch).length === 0) return;
+
+  if (Object.keys(ovPatch).length > 0) {
+    const { data: existing } = await db().from("crm_contacts").select("overrides").eq("id", id).maybeSingle();
+    const current = (existing?.overrides ?? {}) as Record<string, unknown>;
+    update.overrides = { ...current, ...ovPatch };
+  }
+
   const { error } = await db().from("crm_contacts").update(update).eq("id", id);
   if (error) throw new Error(error.message);
   const fields = Object.keys(patch).join(", ");

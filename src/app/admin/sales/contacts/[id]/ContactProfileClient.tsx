@@ -57,7 +57,17 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [task, setTask] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
   const [savedNotes, setSavedNotes] = useState<string | null>(initialContact.note);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ lead_status: initialContact.lead_status ?? "new", phone: initialContact.phone ?? "", website: initialContact.website ?? "", owner: initialContact.owner ?? "", tags: initialContact.tags.join(", ") });
+  const [form, setForm] = useState({
+    lead_status: initialContact.lead_status ?? "new",
+    email: initialContact.email ?? "", company: initialContact.company ?? "",
+    phone: initialContact.phone ?? "", phone2: initialContact.phone2 ?? "",
+    website: initialContact.website ?? "", owner: initialContact.owner ?? "",
+    membership: initialContact.membership ?? "", job_position: initialContact.job_position ?? "",
+    lead_source: initialContact.lead_source ?? "", language: initialContact.language ?? "",
+    street: initialContact.street ?? "", street2: initialContact.street2 ?? "",
+    city: initialContact.city ?? "", state: initialContact.state ?? "", zip: initialContact.zip ?? "", country: initialContact.country ?? "",
+    tags: initialContact.tags.join(", "),
+  });
   const [section, setSection] = useState<"details" | "activity">("details");
   const [actFilter, setActFilter] = useState<"all" | "call" | "note" | "task" | "stage">("all");
   const [acts, setActs] = useState<Activity[]>(activity);
@@ -89,7 +99,17 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   async function saveEdit() {
     setBusy(true);
     try {
-      const body = { lead_status: form.lead_status, phone: form.phone || null, website: form.website || null, owner: form.owner || null, tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean) };
+      const body = {
+        lead_status: form.lead_status,
+        email: form.email || null, company: form.company || null,
+        phone: form.phone || null, phone2: form.phone2 || null,
+        website: form.website || null, owner: form.owner || null,
+        membership: form.membership || null, job_position: form.job_position || null,
+        lead_source: form.lead_source || null, language: form.language || null,
+        street: form.street || null, street2: form.street2 || null,
+        city: form.city || null, state: form.state || null, zip: form.zip || null, country: form.country || null,
+        tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+      };
       const res = await fetch(`/api/sales/contacts/${contact.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (res.ok) { setContact({ ...contact, ...body }); setEditing(false); }
     } finally { setBusy(false); }
@@ -156,16 +176,52 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
         {section === "details" && (<>
         {/* Field grid */}
         {editing ? (
-          <div style={{ padding: "14px 16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px" }}>
-            <div><label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Lead status</label><select value={form.lead_status} onChange={(e) => setForm({ ...form, lead_status: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }}>{LEAD_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
-            <div><label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Phone</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+1 …" style={{ ...inp, width: "100%", marginTop: 4 }} /></div>
-            <div><label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Owner</label><input value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }} /></div>
-            <div><label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Website</label><input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="example.com" style={{ ...inp, width: "100%", marginTop: 4 }} /></div>
-            <div style={{ gridColumn: "1 / -1" }}><label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Tags (comma-separated)</label><input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }} /></div>
-            <div style={{ gridColumn: "1 / -1", display: "flex", gap: 6 }}>
+          <div style={{ padding: "14px 16px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px" }}>
+              <div>
+                <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Lead status</label>
+                <select value={form.lead_status} onChange={(e) => setForm({ ...form, lead_status: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }}>
+                  {(LEAD_STATUSES.includes(form.lead_status) || !form.lead_status ? LEAD_STATUSES : [form.lead_status, ...LEAD_STATUSES]).map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              {([
+                ["email", "Email", "name@company.com"], ["company", "Company", ""],
+                ["phone", "Phone", "+1 …"], ["phone2", "Phone 2", ""],
+                ["website", "Website", "example.com"], ["owner", "Owner", ""],
+                ["membership", "Membership", ""], ["job_position", "Job position", ""],
+                ["lead_source", "Lead source", ""], ["language", "Language", ""],
+              ] as const).map(([key, label, ph]) => (
+                <div key={key}>
+                  <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{label}</label>
+                  <input value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} placeholder={ph} style={{ ...inp, width: "100%", marginTop: 4 }} />
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "0.5px solid #eef1f5" }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 8 }}>Address</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px 16px" }}>
+                {([
+                  ["street", "Street", "1 / -1"], ["street2", "Street 2", "1 / -1"],
+                  ["city", "City", "auto"], ["state", "State", "auto"], ["zip", "ZIP", "auto"], ["country", "Country", "auto"],
+                ] as const).map(([key, label, span]) => (
+                  <div key={key} style={span === "1 / -1" ? { gridColumn: "1 / -1" } : undefined}>
+                    <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{label}</label>
+                    <input value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Tags (comma-separated)</label>
+              <input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }} />
+            </div>
+
+            <div style={{ marginTop: 12, display: "flex", gap: 6 }}>
               <button onClick={saveEdit} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "8px 16px", cursor: "pointer" }}>Save</button>
               <button onClick={() => setEditing(false)} style={{ ...outlineBtn, padding: "8px 16px" }}>Cancel</button>
-              <span style={{ fontSize: 10.5, color: "var(--muted-foreground)", alignSelf: "center" }}>Edits save to your CRM mirror; an Odoo re-sync may overwrite them.</span>
+              <span style={{ fontSize: 10.5, color: "var(--muted-foreground)", alignSelf: "center" }}>Edits save to your CRM mirror and persist across Odoo re-syncs.</span>
             </div>
           </div>
         ) : (
