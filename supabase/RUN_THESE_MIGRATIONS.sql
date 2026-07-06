@@ -190,6 +190,35 @@ alter table public.pitch_decks enable row level security;
 -- 11) Business plan AI charts (structured allocation + market figures).
 alter table public.business_plans add column if not exists charts jsonb not null default '{}'::jsonb;
 
+-- 12) CRM contact facets — derived Founder/Investor/Advisor/Other type + country for the grouped admin list.
+alter table public.crm_contacts
+  add column if not exists contact_type text generated always as (
+    case
+      when module = 'founder' then 'founder'
+      when module = 'investor' then 'investor'
+      when lower(coalesce(plan, '')) like '%advis%'
+        or lower(coalesce(raw -> '__profile' ->> 'membership', '')) like '%advis%' then 'advisor'
+      when lower(coalesce(raw -> '__profile' ->> 'membership', '')) like '%entrepreneur%'
+        or lower(coalesce(raw -> '__profile' ->> 'membership', '')) like '%founder%' then 'founder'
+      when lower(coalesce(raw -> '__profile' ->> 'membership', '')) like '%investor%' then 'investor'
+      else 'other'
+    end
+  ) stored;
+
+alter table public.crm_contacts
+  add column if not exists country text generated always as (
+    nullif(raw -> 'country_id' ->> 1, '')
+  ) stored;
+
+create index if not exists idx_crm_contacts_contact_type on public.crm_contacts (contact_type);
+create index if not exists idx_crm_contacts_country on public.crm_contacts (country);
+
+create or replace view public.crm_country_facets as
+  select source, contact_type, country, count(*)::int as n
+  from public.crm_contacts
+  where country is not null and country <> ''
+  group by source, contact_type, country;
+
 -- Done. Verify all Sales tables exist with:
 --   select table_name from information_schema.tables
 --   where table_schema='public' and table_name like 'sales_%';

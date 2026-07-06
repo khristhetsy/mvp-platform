@@ -5,30 +5,64 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-type Row = { id: string; name: string | null; email: string | null; company: string | null; phone: string | null; source: string | null };
+type Row = { id: string; name: string | null; email: string | null; company: string | null; phone: string | null; source: string | null; contact_type: string | null; country: string | null };
 
 // crm_contacts has columns not all in the generated types — use a loose client.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
 
-// GET /api/sales/contacts?q= — search the CRM contact mirror (Odoo-synced + manual + other).
+const GROUPS = ["founder", "investor", "advisor", "other"] as const;
+
+function rawPhone(raw: unknown): string {
+  const r = raw as Record<string, unknown> | null;
+  const v = (typeof r?.phone === "string" && r.phone) || (typeof r?.mobile === "string" && r.mobile);
+  return v || "";
+}
+
+// Apply the shared column filters (global search + per-column contains + country).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyFilters(query: any, p: URLSearchParams): any {
+  const q = p.get("q")?.trim();
+  if (q) query = query.or(`name.ilike.%${q}%,email.ilike.%${q}%,company.ilike.%${q}%,phone.ilike.%${q}%`);
+  for (const col of ["name", "company", "email", "phone"]) {
+    const v = p.get(col)?.trim();
+    if (v) query = query.ilike(col, `%${v}%`);
+  }
+  const countries = p.get("country")?.split(",").map((s) => s.trim()).filter(Boolean);
+  if (countries && countries.length) query = query.in("country", countries);
+  return query;
+}
+
+// GET /api/sales/contacts — grouped, filtered, paginated contact list.
+//   ?group=founder|investor|advisor|other &offset=0&limit=50
+//   filters: q, name, company, email, phone, country (csv)
 export async function GET(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
-  const q = req.nextUrl.searchParams.get("q")?.trim();
+  const p = req.nextUrl.searchParams;
 
-  let query = db().from("crm_contacts").select("id, name, email, company, phone, source, raw").order("name", { ascending: true }).limit(100);
-  if (q) query = query.or(`name.ilike.%${q}%,email.ilike.%${q}%,company.ilike.%${q}%,phone.ilike.%${q}%`);
-  const { data } = await query;
-  const rawPhone = (raw: unknown): string => {
-    const r = raw as Record<string, unknown> | null;
-    const v = (typeof r?.phone === "string" && r.phone) || (typeof r?.mobile === "string" && r.mobile);
-    return v || "";
-  };
+  const group = p.get("group");
+  const offset = Math.max(0, Number(p.get("offset") ?? 0) || 0);
+  const limit = Math.min(200, Math.max(1, Number(p.get("limit") ?? 50) || 50));
+
+  const cols = "id, name, email, company, phone, source, contact_type, country, raw";
+  let query = db().from("crm_contacts").select(cols, { count: "exact" });
+  if (group && (GROUPS as readonly string[]).includes(group)) query = query.eq("contact_type", group);
+  query = applyFilters(query, p);
+  query = query.order("name", { ascending: true }).range(offset, offset + limit - 1);
+
+  const { data, count } = await query;
   const rows = ((data ?? []) as Array<Row & { raw?: unknown }>).map((r) => ({
-    id: r.id, name: r.name ?? r.email ?? "Contact", email: r.email ?? "", company: r.company ?? "", phone: r.phone ?? rawPhone(r.raw), source: r.source ?? "crm",
+    id: r.id,
+    name: r.name ?? r.email ?? "Contact",
+    email: r.email ?? "",
+    company: r.company ?? "",
+    phone: r.phone ?? rawPhone(r.raw),
+    source: r.source ?? "crm",
+    type: r.contact_type ?? "other",
+    country: r.country ?? "",
   }));
-  return NextResponse.json({ contacts: rows });
+  return NextResponse.json({ contacts: rows, total: count ?? rows.length });
 }
 
 const addSchema = z.object({
