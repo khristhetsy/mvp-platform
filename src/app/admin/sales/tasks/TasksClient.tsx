@@ -5,10 +5,12 @@ import Link from "next/link";
 
 type Task = {
   id: string; title: string; task_type: string; summary: string | null; due_date: string | null;
-  status: "open" | "done" | "snoozed"; assignee_name: string | null; opportunity_id: string | null;
+  status: "open" | "done" | "snoozed"; assignee_id: string | null; assignee_name: string | null; opportunity_id: string | null;
   contact_crm_id: string | null; contact_name: string | null;
 };
 type Scope = "my" | "all" | "overdue";
+type Staff = { id: string; name: string };
+const TASK_TYPES = ["Call", "Email", "Demo", "Follow-up", "Proposal"];
 
 const TYPE_COLOR: Record<string, { color: string; bg: string }> = {
   Call: { color: "#185FA5", bg: "#E6F1FB" }, Email: { color: "#4338CA", bg: "#EEF2FF" },
@@ -24,13 +26,15 @@ function dueLabel(d: string | null): { text: string; color: string } {
   return { text: d, color: "var(--muted-foreground)" };
 }
 
-export function TasksClient() {
+export function TasksClient({ staff }: { staff: Staff[] }) {
   const [scope, setScope] = useState<Scope>("my");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState({ title: "", taskType: "Call", dueDate: "" });
+  const [draft, setDraft] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
+  const [editId, setEditId] = useState<string | null>(null);
+  const [edit, setEdit] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
 
   const load = useCallback(async (s: Scope) => {
     setLoading(true);
@@ -59,10 +63,16 @@ export function TasksClient() {
     if (!draft.title.trim()) return;
     setBusy(true);
     try {
-      await fetch("/api/sales/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(draft) });
-      setAdding(false); setDraft({ title: "", taskType: "Call", dueDate: "" });
+      await fetch("/api/sales/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: draft.title, taskType: draft.taskType, dueDate: draft.dueDate || null, assigneeId: draft.assigneeId || null }) });
+      setAdding(false); setDraft({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
       await load(scope);
     } finally { setBusy(false); }
+  }
+  function startEdit(t: Task) { setEditId(t.id); setEdit({ title: t.title, taskType: t.task_type, dueDate: t.due_date ?? "", assigneeId: t.assignee_id ?? "" }); }
+  async function saveEdit(id: string) {
+    if (!edit.title.trim()) return;
+    await patch(id, { title: edit.title, taskType: edit.taskType, dueDate: edit.dueDate || null, assigneeId: edit.assigneeId || null });
+    setEditId(null);
   }
 
   const overdueCount = tasks.filter((t) => t.status === "open" && t.due_date && t.due_date < new Date().toISOString().slice(0, 10)).length;
@@ -83,10 +93,11 @@ export function TasksClient() {
         </div>
 
         {adding && (
-          <div style={{ padding: "12px 14px", borderBottom: "0.5px solid #eef1f5", background: "#F5F9FF", display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 8, alignItems: "center" }}>
+          <div style={{ padding: "12px 14px", borderBottom: "0.5px solid #eef1f5", background: "#F5F9FF", display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.2fr auto", gap: 8, alignItems: "center" }}>
             <input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Task title" autoFocus style={inp} />
-            <select value={draft.taskType} onChange={(e) => setDraft({ ...draft, taskType: e.target.value })} style={inp}>{["Call", "Email", "Demo", "Follow-up", "Proposal"].map((t) => <option key={t}>{t}</option>)}</select>
+            <select value={draft.taskType} onChange={(e) => setDraft({ ...draft, taskType: e.target.value })} style={inp}>{TASK_TYPES.map((t) => <option key={t}>{t}</option>)}</select>
             <input type="date" value={draft.dueDate} onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })} style={inp} />
+            <select value={draft.assigneeId} onChange={(e) => setDraft({ ...draft, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
             <div style={{ display: "flex", gap: 6 }}>
               <button onClick={add} disabled={busy || !draft.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !draft.title.trim() ? 0.5 : 1 }}>Add</button>
               <button onClick={() => setAdding(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>✕</button>
@@ -100,6 +111,20 @@ export function TasksClient() {
               const due = dueLabel(t.due_date);
               const tc = TYPE_COLOR[t.task_type] ?? { color: "#5F5E5A", bg: "#F1EFE8" };
               const done = t.status === "done";
+              if (editId === t.id) {
+                return (
+                  <div key={t.id} style={{ padding: "12px 14px", borderTop: "0.5px solid #eef1f5", background: "#F5F9FF", display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.2fr auto", gap: 8, alignItems: "center" }}>
+                    <input value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} style={inp} />
+                    <select value={edit.taskType} onChange={(e) => setEdit({ ...edit, taskType: e.target.value })} style={inp}>{TASK_TYPES.map((x) => <option key={x}>{x}</option>)}</select>
+                    <input type="date" value={edit.dueDate} onChange={(e) => setEdit({ ...edit, dueDate: e.target.value })} style={inp} />
+                    <select value={edit.assigneeId} onChange={(e) => setEdit({ ...edit, assigneeId: e.target.value })} style={inp}><option value="">Unassigned</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => saveEdit(t.id)} disabled={busy || !edit.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer" }}>Save</button>
+                      <button onClick={() => setEditId(null)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>✕</button>
+                    </div>
+                  </div>
+                );
+              }
               return (
                 <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderTop: "0.5px solid #eef1f5", fontSize: 12.5 }}>
                   <span style={{ width: 7, height: 7, borderRadius: "50%", background: done ? "var(--muted-foreground)" : due.color, flexShrink: 0 }} />
@@ -112,6 +137,7 @@ export function TasksClient() {
                   </div>
                   <span style={{ fontSize: 10.5, color: tc.color, background: tc.bg, borderRadius: 8, padding: "2px 8px" }}>{t.task_type}</span>
                   <span style={{ fontSize: 11, color: due.color, width: 78, textAlign: "right" }}>{done ? "Done" : due.text}</span>
+                  <button onClick={() => startEdit(t)} disabled={busy} style={{ fontSize: 10.5, color: "#185FA5", background: "none", border: "none", cursor: "pointer" }}>Edit</button>
                   {!done && <button onClick={() => patch(t.id, { status: "done" })} disabled={busy} style={{ fontSize: 10.5, color: "#0F6E56", background: "none", border: "none", cursor: "pointer" }}>✓ Done</button>}
                   {!done && <button onClick={() => patch(t.id, { status: "snoozed", dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) })} disabled={busy} style={{ fontSize: 10.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Snooze</button>}
                   <button onClick={() => del(t.id)} disabled={busy} style={{ fontSize: 10.5, color: "#A32D2D", background: "none", border: "none", cursor: "pointer" }}>✕</button>

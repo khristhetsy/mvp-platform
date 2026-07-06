@@ -11,6 +11,8 @@ type Contact = {
   created_on: string | null; note: string | null;
 };
 type LinkedOpp = { id: string; title: string; stage_name: string | null; value_cents: number | null; probability: number | null; status: string };
+type Staff = { id: string; name: string };
+const LEAD_STATUSES = ["new", "contacted", "qualified", "paused", "not interested", "won", "lost"];
 
 const money = (c: number | null) => (c == null ? "—" : `$${(c / 100).toLocaleString()}`);
 const inp: React.CSSProperties = { fontSize: 12, padding: "7px 9px", borderRadius: 7, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", boxSizing: "border-box" };
@@ -25,14 +27,26 @@ function Field({ k, v, link }: { k: string; v: string | null; link?: boolean }) 
   );
 }
 
-export function ContactProfileClient({ contact, opportunities }: { contact: Contact; opportunities: LinkedOpp[] }) {
+export function ContactProfileClient({ contact: initialContact, opportunities, staff }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[] }) {
   const router = useRouter();
+  const [contact, setContact] = useState<Contact>(initialContact);
   const [note, setNote] = useState("");
   const [noteMsg, setNoteMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showTask, setShowTask] = useState(false);
-  const [task, setTask] = useState({ title: "", taskType: "Call", dueDate: "" });
-  const [savedNotes, setSavedNotes] = useState<string | null>(contact.note);
+  const [task, setTask] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
+  const [savedNotes, setSavedNotes] = useState<string | null>(initialContact.note);
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ lead_status: initialContact.lead_status ?? "new", phone: initialContact.phone ?? "", website: initialContact.website ?? "", owner: initialContact.owner ?? "", tags: initialContact.tags.join(", ") });
+
+  async function saveEdit() {
+    setBusy(true);
+    try {
+      const body = { lead_status: form.lead_status, phone: form.phone || null, website: form.website || null, owner: form.owner || null, tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean) };
+      const res = await fetch(`/api/sales/contacts/${contact.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (res.ok) { setContact({ ...contact, ...body }); setEditing(false); }
+    } finally { setBusy(false); }
+  }
 
   async function saveNote() {
     if (!note.trim()) return;
@@ -48,8 +62,8 @@ export function ContactProfileClient({ contact, opportunities }: { contact: Cont
     if (!task.title.trim()) return;
     setBusy(true);
     try {
-      await fetch("/api/sales/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...task, contactCrmId: contact.id, contactName: contact.name }) });
-      setShowTask(false); setTask({ title: "", taskType: "Call", dueDate: "" });
+      await fetch("/api/sales/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: task.title, taskType: task.taskType, dueDate: task.dueDate || null, assigneeId: task.assigneeId || null, contactCrmId: contact.id, contactName: contact.name }) });
+      setShowTask(false); setTask({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
     } finally { setBusy(false); }
   }
 
@@ -74,25 +88,41 @@ export function ContactProfileClient({ contact, opportunities }: { contact: Cont
             <div style={{ fontSize: 10, color: "#185FA5" }}><i className="ti ti-target" aria-hidden="true" /> Opportunities</div>
             <div style={{ fontSize: 13, fontWeight: 600 }}>{opportunities.length}</div>
           </div>
+          {!editing && <button onClick={() => setEditing(true)} style={outlineBtn}><i className="ti ti-edit" aria-hidden="true" /> Edit</button>}
         </div>
 
         {/* Field grid */}
-        <div style={{ padding: "14px 16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 28px" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <Field k="Membership" v={contact.membership} />
-            <Field k="Lead status" v={contact.lead_status} />
-            <Field k="Location" v={location} />
-            <Field k="Owner" v={contact.owner} />
-            <Field k="Source" v={contact.source} />
+        {editing ? (
+          <div style={{ padding: "14px 16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px" }}>
+            <div><label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Lead status</label><select value={form.lead_status} onChange={(e) => setForm({ ...form, lead_status: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }}>{LEAD_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
+            <div><label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Phone</label><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+1 …" style={{ ...inp, width: "100%", marginTop: 4 }} /></div>
+            <div><label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Owner</label><input value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }} /></div>
+            <div><label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Website</label><input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="example.com" style={{ ...inp, width: "100%", marginTop: 4 }} /></div>
+            <div style={{ gridColumn: "1 / -1" }}><label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Tags (comma-separated)</label><input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }} /></div>
+            <div style={{ gridColumn: "1 / -1", display: "flex", gap: 6 }}>
+              <button onClick={saveEdit} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "8px 16px", cursor: "pointer" }}>Save</button>
+              <button onClick={() => setEditing(false)} style={{ ...outlineBtn, padding: "8px 16px" }}>Cancel</button>
+              <span style={{ fontSize: 10.5, color: "var(--muted-foreground)", alignSelf: "center" }}>Edits save to your CRM mirror; an Odoo re-sync may overwrite them.</span>
+            </div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <Field k="Phone" v={contact.phone} />
-            <Field k="Email" v={contact.email} link />
-            <Field k="Website" v={contact.website} link />
-            <Field k="Language" v={contact.language} />
-            <Field k="Tags" v={contact.tags.length ? contact.tags.join(", ") : null} />
+        ) : (
+          <div style={{ padding: "14px 16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 28px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <Field k="Membership" v={contact.membership} />
+              <Field k="Lead status" v={contact.lead_status} />
+              <Field k="Location" v={location} />
+              <Field k="Owner" v={contact.owner} />
+              <Field k="Source" v={contact.source} />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <Field k="Phone" v={contact.phone} />
+              <Field k="Email" v={contact.email} link />
+              <Field k="Website" v={contact.website} link />
+              <Field k="Language" v={contact.language} />
+              <Field k="Tags" v={contact.tags.length ? contact.tags.join(", ") : null} />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Actions */}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", padding: "12px 16px", borderTop: "0.5px solid #eef1f5", borderBottom: "0.5px solid #eef1f5" }}>
@@ -101,10 +131,11 @@ export function ContactProfileClient({ contact, opportunities }: { contact: Cont
         </div>
 
         {showTask && (
-          <div style={{ padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", background: "#F5F9FF", display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 8, alignItems: "center" }}>
+          <div style={{ padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", background: "#F5F9FF", display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.2fr auto", gap: 8, alignItems: "center" }}>
             <input value={task.title} onChange={(e) => setTask({ ...task, title: e.target.value })} placeholder="Task title" autoFocus style={inp} />
             <select value={task.taskType} onChange={(e) => setTask({ ...task, taskType: e.target.value })} style={inp}>{["Call", "Email", "Demo", "Follow-up", "Proposal"].map((t) => <option key={t}>{t}</option>)}</select>
             <input type="date" value={task.dueDate} onChange={(e) => setTask({ ...task, dueDate: e.target.value })} style={inp} />
+            <select value={task.assigneeId} onChange={(e) => setTask({ ...task, assigneeId: e.target.value })} style={inp}><option value="">Assign to me</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
             <div style={{ display: "flex", gap: 6 }}>
               <button onClick={createTask} disabled={busy || !task.title.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 12px", cursor: "pointer", opacity: busy || !task.title.trim() ? 0.5 : 1 }}>Add</button>
               <button onClick={() => setShowTask(false)} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>✕</button>

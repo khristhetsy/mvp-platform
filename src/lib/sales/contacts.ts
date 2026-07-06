@@ -52,6 +52,21 @@ export async function getContactProfile(id: string): Promise<{ contact: ContactP
   return { contact, opportunities };
 }
 
+export type ContactPatch = { lead_status?: string | null; phone?: string | null; website?: string | null; owner?: string | null; tags?: string[] };
+
+// Edit user-owned contact fields on the mirror. Note: an Odoo re-sync may overwrite these.
+export async function updateContact(id: string, patch: ContactPatch): Promise<void> {
+  const update: Record<string, unknown> = {};
+  if (patch.lead_status !== undefined) update.lead_status = patch.lead_status || "new";
+  if (patch.phone !== undefined) update.phone = patch.phone || null;
+  if (patch.website !== undefined) update.website = patch.website || null;
+  if (patch.owner !== undefined) update.owner = patch.owner || null;
+  if (patch.tags !== undefined) update.tags = patch.tags.map((t) => t.trim()).filter(Boolean).slice(0, 20);
+  if (Object.keys(update).length === 0) return;
+  const { error } = await db().from("crm_contacts").update(update).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
 export async function appendContactNote(id: string, text: string, userId: string | null): Promise<void> {
   const { data: c } = await db().from("crm_contacts").select("source, external_id").eq("id", id).maybeSingle();
   if (!c) throw new Error("Contact not found.");

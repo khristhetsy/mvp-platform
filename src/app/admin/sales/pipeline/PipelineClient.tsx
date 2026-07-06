@@ -17,6 +17,7 @@ export function PipelineClient() {
   const [board, setBoard] = useState<BoardOpp[]>([]);
   const [selId, setSelId] = useState<string>("");
   const [view, setView] = useState<"board" | "stages">("board");
+  const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -81,6 +82,12 @@ export function PipelineClient() {
         </select>
         <button onClick={newPipeline} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "6px 11px", cursor: "pointer" }}>+ New pipeline</button>
         {pipeline && <button onClick={renamePipeline} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Rename</button>}
+        {view === "board" && (
+          <div style={{ position: "relative", marginLeft: 4 }}>
+            <i className="ti ti-search" aria-hidden="true" style={{ position: "absolute", left: 8, top: 8, fontSize: 13, color: "var(--muted-foreground)" }} />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search cards…" style={{ fontSize: 12, padding: "6px 9px 6px 26px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", width: 170 }} />
+          </div>
+        )}
         <div style={{ marginLeft: "auto", display: "inline-flex", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, overflow: "hidden" }}>
           <button onClick={() => setView("board")} style={{ fontSize: 12, padding: "6px 12px", border: "none", background: view === "board" ? "#EFF6FF" : "#fff", color: view === "board" ? "#1A6CE4" : "var(--muted-foreground)", fontWeight: view === "board" ? 600 : 400, cursor: "pointer" }}>Board</button>
           <button onClick={() => setView("stages")} style={{ fontSize: 12, padding: "6px 12px", border: "none", borderLeft: "0.5px solid var(--border-strong, #cbd5e1)", background: view === "stages" ? "#EFF6FF" : "#fff", color: view === "stages" ? "#1A6CE4" : "var(--muted-foreground)", fontWeight: view === "stages" ? 600 : 400, cursor: "pointer" }}>Edit stages</button>
@@ -90,7 +97,8 @@ export function PipelineClient() {
       {view === "board" ? (
         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 }}>
           {stages.map((s, si) => {
-            const cards = board.filter((o) => o.stage_id === s.id);
+            const q = search.trim().toLowerCase();
+            const cards = board.filter((o) => o.stage_id === s.id && (!q || o.title.toLowerCase().includes(q) || (o.contact_name ?? "").toLowerCase().includes(q)));
             const total = cards.reduce((a, o) => a + (o.value_cents ?? 0), 0);
             const accent = s.is_won ? "#0F6E56" : STAGE_ACCENTS[si % STAGE_ACCENTS.length];
             return (
@@ -112,9 +120,12 @@ export function PipelineClient() {
                           : <span />}
                         {o.probability != null && <span style={{ fontSize: 10, color: "#3B6D11" }}>{o.probability}%</span>}
                       </div>
-                      <select value={s.id} onChange={(e) => moveOpp(o.id, e.target.value)} disabled={busy} style={{ marginTop: 7, width: "100%", fontSize: 10.5, padding: "3px 5px", borderRadius: 6, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--muted-foreground)" }}>
-                        {stages.map((st) => <option key={st.id} value={st.id}>Move → {st.name}</option>)}
-                      </select>
+                      <div style={{ display: "flex", gap: 6, marginTop: 7, alignItems: "center" }}>
+                        <Link href={`/admin/sales/opportunities/${o.id}`} style={{ fontSize: 10, color: "#185FA5", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 6, padding: "3px 8px", textDecoration: "none", whiteSpace: "nowrap" }}><i className="ti ti-external-link" aria-hidden="true" /> Open</Link>
+                        <select value={s.id} onChange={(e) => moveOpp(o.id, e.target.value)} disabled={busy} style={{ flex: 1, minWidth: 0, fontSize: 10.5, padding: "3px 5px", borderRadius: 6, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--muted-foreground)" }}>
+                          {stages.map((st) => <option key={st.id} value={st.id}>Move → {st.name}</option>)}
+                        </select>
+                      </div>
                     </div>
                   ))}
                   {cards.length === 0 && <div style={{ fontSize: 11, color: "var(--muted-foreground)", textAlign: "center", padding: "10px 0" }}>—</div>}

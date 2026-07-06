@@ -29,6 +29,16 @@ export function OpportunityDetailClient({ initial, stages }: { initial: Opp; sta
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [tab, setTab] = useState<"notes" | "extra">("notes");
+  const [noteInput, setNoteInput] = useState("");
+
+  async function saveNote() {
+    const text = noteInput.trim();
+    if (!text) return;
+    const stamp = `[${new Date().toISOString().slice(0, 10)}] ${text}`;
+    const next = o.notes ? `${o.notes}\n${stamp}` : stamp;
+    await patch({ notes: next });
+    setNoteInput("");
+  }
   const [draft, setDraft] = useState({
     title: initial.title, value: initial.value_cents != null ? String(initial.value_cents / 100) : "",
     billing: initial.billing, probability: initial.probability != null ? String(initial.probability) : "",
@@ -155,7 +165,13 @@ export function OpportunityDetailClient({ initial, stages }: { initial: Opp; sta
             <button onClick={() => setTab("extra")} style={{ fontSize: 12, fontWeight: tab === "extra" ? 600 : 400, color: tab === "extra" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "8px 12px", borderBottom: tab === "extra" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Extra info</button>
           </div>
           {tab === "notes" ? (
-            <div style={{ fontSize: 12, color: "var(--muted-foreground)", background: "var(--muted)", borderRadius: 8, padding: 11, whiteSpace: "pre-wrap", lineHeight: 1.6, minHeight: 40 }}>{o.notes || "No notes yet. Use Edit to add internal notes."}</div>
+            <div>
+              <textarea value={noteInput} onChange={(e) => setNoteInput(e.target.value)} placeholder="Add an internal note…" style={{ ...inp, width: "100%", minHeight: 48, resize: "vertical" }} />
+              <div style={{ margin: "6px 0 12px" }}>
+                <button onClick={saveNote} disabled={busy || !noteInput.trim()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 14px", cursor: "pointer", opacity: busy || !noteInput.trim() ? 0.5 : 1 }}>Save note</button>
+              </div>
+              <div style={{ fontSize: 12, color: "var(--muted-foreground)", background: "var(--muted)", borderRadius: 8, padding: 11, whiteSpace: "pre-wrap", lineHeight: 1.6, minHeight: 40 }}>{o.notes || "No notes yet."}</div>
+            </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 24px", fontSize: 12 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "var(--muted-foreground)" }}>Tags</span><span>{o.tags.length ? o.tags.join(", ") : "—"}</span></div>
