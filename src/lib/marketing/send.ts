@@ -65,10 +65,13 @@ export async function sendMarketingEmail(
 <p style="margin-top:32px;font-size:12px;color:#888;">
   You're receiving this because you're in our network.
   <a href="${unsubscribeUrl}">Unsubscribe</a>
+</p>
+<p style="margin-top:8px;font-size:11px;color:#aaa;">
+  iCapOS — Powered by iCFO Capital Global, Inc.
 </p>`;
 
   const textWithFooter = textBody
-    ? `${textBody}\n\nTo unsubscribe: ${unsubscribeUrl}`
+    ? `${textBody}\n\nTo unsubscribe: ${unsubscribeUrl}\n\niCapOS — Powered by iCFO Capital Global, Inc.`
     : undefined;
 
   try {

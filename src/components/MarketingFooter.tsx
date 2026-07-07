@@ -10,6 +10,7 @@ export function MarketingFooter() {
           <p className="font-semibold text-[var(--navy)]">iCapOS</p>
           <p className="mt-1">{t("the_operating_system_for_capital_ready_compa")}</p>
           <p className="mt-0.5 text-xs text-slate-400">{t("capital_readiness_and_private_market_infrast")}</p>
+          <p className="mt-2 text-xs text-slate-400">Powered by iCFO Capital Global, Inc.</p>
         </div>
         <div className="flex flex-wrap gap-5">
           <Link href="/deals" className="hover:text-slate-950">
