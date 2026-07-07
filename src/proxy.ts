@@ -166,12 +166,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // ── Department-scoped access (admin PAGE routes, internal non-admin users) ──
-  // Additive on top of role gating. Legacy admins (role 'admin') and unassigned
-  // users bypass. Assigned analysts are scoped to their granted feature paths.
-  // Fails OPEN on any error so a registry gap never locks staff out. Landing and
-  // profile are always reachable to avoid redirect loops.
-  if (zone === "admin" && !apiRequest && role === "analyst") {
+  // ── Department-scoped access (admin PAGE routes, all internal users) ──
+  // Scoping is by DEPARTMENT membership, not role. Admin-department members and
+  // unassigned users bypass (the RPC returns all features for admin-dept members;
+  // unassigned users are skipped by the count check below). Anyone assigned to a
+  // non-admin department is scoped to their granted feature paths. Fails OPEN on
+  // any error so a registry gap never locks staff out. Landing/profile always OK.
+  if (zone === "admin" && !apiRequest) {
     const p = pathname;
     const exempt =
       p === "/admin" ||

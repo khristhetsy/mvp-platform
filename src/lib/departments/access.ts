@@ -28,23 +28,20 @@ function db(): any { return createServiceRoleClient(); }
 
 export async function loadUserAccess(userId: string): Promise<UserAccess> {
   try {
-    const [{ data: prof }, { data: mem }] = await Promise.all([
-      db().from("profiles").select("role").eq("id", userId).maybeSingle(),
-      db().from("department_members").select("department_id").eq("user_id", userId),
-    ]);
+    const { data: mem } = await db().from("department_members").select("department_id").eq("user_id", userId);
     const memberships = (mem ?? []).map((m: { department_id: string }) => m.department_id);
 
+    // Bypass is the ADMIN DEPARTMENT (not a role). Membership is the source of truth.
     let inAdminDept = false;
     if (memberships.length) {
       const { data: adminDepts } = await db().from("departments").select("id").eq("is_admin", true).in("id", memberships);
       inAdminDept = (adminDepts ?? []).length > 0;
     }
-    const isAdmin = prof?.role === "admin" || inAdminDept;
 
-    // Rollout-safe rule: admins and *unassigned* internal users are unrestricted.
-    // Only users assigned to at least one non-admin department are scoped.
-    if (isAdmin || memberships.length === 0) {
-      return { isAdmin, unrestricted: true, features: [], paths: [], hubs: [] };
+    // Rollout-safe rule: admin-department members and *unassigned* internal users
+    // are unrestricted. Anyone assigned to a non-admin department is scoped.
+    if (inAdminDept || memberships.length === 0) {
+      return { isAdmin: inAdminDept, unrestricted: true, features: [], paths: [], hubs: [] };
     }
 
     const { data, error } = await db().rpc("get_user_features", { p_user_id: userId });
