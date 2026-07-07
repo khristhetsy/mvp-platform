@@ -4,10 +4,9 @@ import { getTranslations } from "next-intl/server";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingScoredBoard, type ScoredBoardRow } from "@/components/marketing/MarketingScoredBoard";
-import { MarketingCompanySpec } from "@/components/marketing/MarketingCompanySpec";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { IcapOSLogo } from "@/components/IcapOSLogo";
-import { loadPublicMarketStats } from "@/lib/marketing/market-stats";
+import { loadPublicMarketStats, type PublicMarketStats } from "@/lib/marketing/market-stats";
 import { JsonLd } from "@/components/seo/JsonLd";
 import {
   ORGANIZATION_JSONLD,
@@ -53,8 +52,24 @@ function band(readiness: number | null): "high" | "mid" | "low" {
   return "low";
 }
 
+// Illustrative marketplace data shown only while no companies have published yet.
+// Replaced automatically by live figures once loadPublicMarketStats returns deals.
+const SAMPLE_STATS: PublicMarketStats = {
+  indicated30d: 2_820_000,
+  activeInvestors: 14,
+  diligenceReady: 3,
+  avgReadiness: 69.5,
+  deals: [
+    { symbol: "MEDQ", name: "MedQ Health", sector: "HealthTech", readiness: 74.8, fillPct: 40, totalIndicated: 800_000, fundingTarget: 2_000_000, trendDelta: 5 },
+    { symbol: "SUMMIT", name: "Summit Quantum Labs, Inc.", sector: "HealthTech", readiness: 72.4, fillPct: 36, totalIndicated: 1_800_000, fundingTarget: 5_000_000, trendDelta: 6 },
+    { symbol: "ROY", name: "Roy Company", sector: "Hardware", readiness: 61.2, fillPct: 22, totalIndicated: 220_000, fundingTarget: 1_000_000, trendDelta: 3 },
+  ],
+};
+
 export default async function Home() {
-  const stats = await loadPublicMarketStats();
+  const liveStats = await loadPublicMarketStats();
+  const usingSample = liveStats.deals.length === 0;
+  const stats = usingSample ? SAMPLE_STATS : liveStats;
   const t = await getTranslations("appPages");
 
   const statCells = [
@@ -99,7 +114,7 @@ export default async function Home() {
             <IcapOSLogo height={52} tagline priority className="mb-6" />
             <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--indigo-soft)] bg-[var(--indigo-soft)] px-3.5 py-1.5 font-mono text-[11.5px] text-[var(--indigo)]">
               <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--indigo)] text-[var(--indigo)]" />
-              Live · {money(stats.indicated30d)} indicated · 30d
+              {usingSample ? "Sample" : "Live"} · {money(stats.indicated30d)} indicated · 30d
             </span>
             <h1 className="mt-5 max-w-2xl text-4xl font-semibold leading-tight tracking-tight text-[var(--navy)] md:text-5xl lg:text-[3.25rem]">
               The operating system for <span className="text-[var(--indigo)]">capital-ready</span> companies.
@@ -203,7 +218,7 @@ export default async function Home() {
                 </ul>
                 <span className="z-10 flex h-full items-center gap-2 border-r border-slate-200 bg-white px-4 font-mono text-[10.5px] uppercase tracking-[0.1em] text-[var(--teal)]">
                   <span className="cap-ping inline-block h-1.5 w-1.5 rounded-full bg-[var(--teal)] text-[var(--teal)]" />
-                  Live
+                  {usingSample ? "Sample" : "Live"}
                 </span>
                 <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-white to-transparent" aria-hidden />
                 <div className="cap-marquee flex w-max items-center whitespace-nowrap" aria-hidden="true">
@@ -240,11 +255,11 @@ export default async function Home() {
             {dealRows.length > 0 ? (
               <MarketingScoredBoard
                 title={t("diligence_ready_deals")}
-                meta={`${dealRows.length} live · ranked by readiness`}
+                meta={`${dealRows.length} ${usingSample ? "sample" : "live"} · ranked by readiness`}
                 scoreLabel="Readiness"
                 metricLabel="Indicated"
                 rows={dealRows}
-                note="Live"
+                note={usingSample ? "Illustrative" : "Live"}
                 bare
                 showTrend
               />
@@ -255,11 +270,11 @@ export default async function Home() {
               </p>
             )}
           </div>
-
-          {/* Featured deal spotlight — company spec + readiness chart */}
-          <div className="mt-6">
-            <MarketingCompanySpec />
-          </div>
+          {usingSample && (
+            <p className="mt-3 text-center font-mono text-[10px] text-slate-400">
+              Illustrative preview — sample figures shown until companies report; replaced by live data automatically.
+            </p>
+          )}
         </div>
       </section>
 
