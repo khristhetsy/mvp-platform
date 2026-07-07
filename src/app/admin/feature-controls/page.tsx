@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { getTranslations } from "next-intl/server";
-import { FeatureControlsClient } from "@/components/admin/FeatureControlsClient";
+import { DepartmentsControls } from "@/components/admin/DepartmentsControls";
 import { requirePermissionPage } from "@/lib/api/permissions";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ export default async function AdminFeatureControlsPage() {
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={t("featureControls")}
     >
-      <FeatureControlsClient />
+      <DepartmentsControls />
     </AppShell>
   );
 }
