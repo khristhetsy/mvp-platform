@@ -5,6 +5,7 @@ import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { WorkspaceSidebar } from "@/components/WorkspaceSidebar";
 import { IcapOSAssistant } from "@/components/assistant/IcapOSAssistant";
 import { GlobalSearchModal } from "@/components/GlobalSearchModal";
+import { OpsHubBackBar } from "@/components/admin/OpsHubBackBar";
 import type { WorkspaceId } from "@/lib/workspace-nav";
 
 export function WorkspaceShell({
@@ -41,6 +42,7 @@ export function WorkspaceShell({
           onMenuClick={() => setMobileNavOpen(true)}
         />
         <main className="mx-auto w-full max-w-[1600px] flex-1 overflow-x-hidden overflow-y-auto bg-[var(--background)] px-4 py-5 lg:px-6 lg:py-6">
+          {workspace === "admin" && <OpsHubBackBar />}
           {children}
         </main>
         <IcapOSAssistant />

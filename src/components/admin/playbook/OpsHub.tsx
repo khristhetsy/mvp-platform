@@ -294,9 +294,14 @@ function SurfaceCard({ surface: s, isAdmin, onToggle, onRefresh }: { surface: Hu
             </ol>
           )}
           {s.state === "undocumented" && <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginTop: 6, fontStyle: "italic" }}>Not documented yet.</div>}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, paddingTop: 8, borderTop: "0.5px solid #f1f5f9" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, paddingTop: 8, borderTop: "0.5px solid #f1f5f9" }}>
             <Link href={s.href} style={{ fontSize: 11.5, fontWeight: 600, color: "#185FA5", textDecoration: "none" }}>Open →</Link>
-            {isAdmin && <button onClick={() => setEditing(true)} style={{ marginLeft: "auto", fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "4px 10px", cursor: "pointer" }}>Edit</button>}
+            {isAdmin && (
+              <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                <button onClick={async () => { if (await api("/api/admin/playbook/drift/ignore", "POST", { navIds: [s.navId], ignored: true })) onRefresh(); }} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "4px 10px", cursor: "pointer" }} title="Hide this surface from the hub (reversible)">Remove</button>
+                <button onClick={() => setEditing(true)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "4px 10px", cursor: "pointer" }}>Edit</button>
+              </div>
+            )}
           </div>
         </>
       ) : (
@@ -357,6 +362,20 @@ function SettingsTab({ settings, isAdmin, onRefresh }: { settings: HubSettings; 
       </div>
       {msg && <div style={{ fontSize: 11.5, color: msg === "Saved." ? "#0F6E56" : "#A32D2D", marginTop: 8 }}>{msg}</div>}
       {!isAdmin && <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", marginTop: 8 }}>Read-only role — settings can only be changed by an admin.</div>}
+
+      {s.driftIgnored.length > 0 && (
+        <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden", marginTop: 16 }}>
+          <div style={{ padding: "12px 16px", borderBottom: "0.5px solid #f1f5f9", fontSize: 13, fontWeight: 500 }}>Hidden surfaces <span style={{ fontWeight: 400, fontSize: 11.5, color: "var(--muted-foreground)" }}>· removed from the hub</span></div>
+          {s.driftIgnored.map((navId) => (
+            <div key={navId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderTop: "0.5px solid #f1f5f9" }}>
+              <code style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>{navId}</code>
+              {isAdmin && (
+                <button onClick={async () => { if (await api("/api/admin/playbook/drift/ignore", "POST", { navIds: [navId], ignored: false })) { setS({ ...s, driftIgnored: s.driftIgnored.filter((x) => x !== navId) }); onRefresh(); } }} style={{ marginLeft: "auto", fontSize: 11.5, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "4px 10px", cursor: "pointer" }}>Restore</button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

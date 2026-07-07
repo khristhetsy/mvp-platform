@@ -111,7 +111,8 @@ export async function loadHubPayload(adminId: string): Promise<HubPayload> {
     complianceCritical(),
   ]);
 
-  const surfaces: HubSurface[] = assembled.cards.map((c) => {
+  const ignoredSet = new Set(settings.driftIgnored);
+  const allSurfaces: HubSurface[] = assembled.cards.map((c) => {
     const moduleId = idMap.get(c.navId) ?? null;
     const isGate = (c.content?.flags ?? []).some((f) => f.kind === "hard_gate");
     return {
@@ -134,12 +135,14 @@ export async function loadHubPayload(adminId: string): Promise<HubPayload> {
     };
   });
 
-  const ignored = new Set(settings.driftIgnored);
+  // Hidden surfaces (drift_ignored) are removed from the hub entirely — blocks,
+  // today's run, drift strip, and counts — but their playbook content is preserved.
+  const surfaces = allSurfaces.filter((s) => !ignoredSet.has(s.navId));
   const documented = surfaces.filter((s) => s.block != null);
   const missingInPlaybook = surfaces
-    .filter((s) => s.state === "undocumented" && !ignored.has(s.navId))
+    .filter((s) => s.state === "undocumented")
     .map((s) => ({ navId: s.navId, label: s.label, href: s.href, group: s.group }));
-  const orphaned = assembled.orphaned.filter((o) => !ignored.has(o.navId));
+  const orphaned = assembled.orphaned.filter((o) => !ignoredSet.has(o.navId));
 
   const queuePending = Object.values(counts).reduce((a, b) => a + b, 0);
   const queuesClear = sources.filter((s) => (counts[s] ?? 0) === 0);
