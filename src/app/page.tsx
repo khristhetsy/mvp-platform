@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { ComplianceBlock } from "@/components/ComplianceBlock";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { MarketingScoredBoard, type ScoredBoardRow } from "@/components/marketing/MarketingScoredBoard";
+import { MarketingCompanySpec } from "@/components/marketing/MarketingCompanySpec";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { IcapOSLogo } from "@/components/IcapOSLogo";
 import { loadPublicMarketStats } from "@/lib/marketing/market-stats";
@@ -253,6 +254,11 @@ export default async function Home() {
                 are complete.
               </p>
             )}
+          </div>
+
+          {/* Featured deal spotlight — company spec + readiness chart */}
+          <div className="mt-6">
+            <MarketingCompanySpec />
           </div>
         </div>
       </section>
