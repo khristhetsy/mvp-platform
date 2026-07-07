@@ -166,6 +166,45 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // ── Department-scoped access (admin PAGE routes, internal non-admin users) ──
+  // Additive on top of role gating. Legacy admins (role 'admin') and unassigned
+  // users bypass. Assigned analysts are scoped to their granted feature paths.
+  // Fails OPEN on any error so a registry gap never locks staff out. Landing and
+  // profile are always reachable to avoid redirect loops.
+  if (zone === "admin" && !apiRequest && role === "analyst") {
+    const p = pathname;
+    const exempt =
+      p === "/admin" ||
+      p === "/admin/dashboard" || p.startsWith("/admin/dashboard/") ||
+      p === "/admin/profile" || p.startsWith("/admin/profile/");
+    if (!exempt) {
+      try {
+        const { count } = await supabase
+          .from("department_members")
+          .select("user_id", { count: "exact", head: true })
+          .eq("user_id", user.id);
+        if ((count ?? 0) > 0) {
+          // get_user_features is not in the generated types yet → loose call.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: feats, error } = await (supabase.rpc as any)("get_user_features", { p_user_id: user.id });
+          if (!error && Array.isArray(feats)) {
+            const paths = (feats as Array<{ path: string }>).map((f) => f.path);
+            const allowed = paths.some((fp) => (fp === "/admin" ? p === "/admin" : p === fp || p.startsWith(`${fp}/`)));
+            if (!allowed) {
+              const url = request.nextUrl.clone();
+              url.pathname = "/admin/dashboard";
+              url.search = "";
+              url.searchParams.set("denied", "1");
+              return NextResponse.redirect(url);
+            }
+          }
+        }
+      } catch {
+        /* fail open — never lock out on a transient error or missing tables */
+      }
+    }
+  }
+
   return response;
 }
 

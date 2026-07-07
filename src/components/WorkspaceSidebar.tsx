@@ -217,6 +217,23 @@ function useAdminNavPermissions(workspace: WorkspaceId) {
   return state;
 }
 
+// Department-scoped access for internal users. Additive on top of role permissions:
+// non-admin departments only see nav whose href falls under a granted feature path.
+// `unrestricted` (admin/legacy or pre-migration fail-open) shows everything.
+function useDepartmentAccess(workspace: WorkspaceId) {
+  const [access, setAccess] = useState<{ unrestricted: boolean; paths: string[] } | null>(null);
+  useEffect(() => {
+    if (workspace !== "admin") return;
+    let cancelled = false;
+    void fetch("/api/admin/departments/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((d) => { if (!cancelled) setAccess(d ? { unrestricted: Boolean(d.unrestricted ?? d.isAdmin), paths: d.paths ?? [] } : { unrestricted: true, paths: [] }); })
+      .catch(() => { if (!cancelled) setAccess({ unrestricted: true, paths: [] }); });
+    return () => { cancelled = true; };
+  }, [workspace]);
+  return access;
+}
+
 export function WorkspaceSidebar({
   workspace,
   planBadge,
@@ -231,6 +248,7 @@ export function WorkspaceSidebar({
   const pathname = usePathname();
   const locale = useLocale();
   const adminNav = useAdminNavPermissions(workspace);
+  const deptAccess = useDepartmentAccess(workspace);
   const founderStage = useFounderStage(workspace);
 
   // Live unread-email count for the Inbox nav badge (polled), plus a toast when
@@ -303,23 +321,34 @@ export function WorkspaceSidebar({
     };
   }, [adminNav, workspace]);
 
+  // Department-path allow check (longest-prefix, additive to permissions).
+  const deptAllows = useMemo(() => {
+    return (href: string) => {
+      if (workspace !== "admin") return true;
+      if (!deptAccess || deptAccess.unrestricted) return true;
+      return deptAccess.paths.some((p) =>
+        p === "/admin" ? href === "/admin" : href === p || href.startsWith(`${p}/`) || p.startsWith(`${href}/`),
+      );
+    };
+  }, [deptAccess, workspace]);
+
   const items = useMemo(() => {
     const hidden = new Set(disabledHrefs);
     return getWorkspaceNav(workspace)
       .filter(canShowNavItem)
       .map((item) => {
         if (item.children?.length) {
-          return { ...item, children: item.children.filter((c) => !hidden.has(c.href)) };
+          return { ...item, children: item.children.filter((c) => !hidden.has(c.href) && deptAllows(c.href)) };
         }
         return item;
       })
       .filter((item) => {
-        // Drop leaf items whose href is hidden, and groups whose children are all hidden.
+        // Drop leaf items whose href is hidden/out-of-department, and groups whose children are all gone.
         if (item.children?.length === 0) return false;
-        if (!item.children?.length && hidden.has(item.href)) return false;
+        if (!item.children?.length && (hidden.has(item.href) || !deptAllows(item.href))) return false;
         return true;
       });
-  }, [canShowNavItem, workspace, disabledHrefs]);
+  }, [canShowNavItem, deptAllows, workspace, disabledHrefs]);
 
   const sections = useMemo(() => {
     const source =
@@ -335,16 +364,16 @@ export function WorkspaceSidebar({
         ...section,
         items: section.items
           .filter(canShowNavItem)
-          .map((item) => (item.children?.length ? { ...item, children: item.children.filter((c) => !hidden.has(c.href)) } : item))
+          .map((item) => (item.children?.length ? { ...item, children: item.children.filter((c) => !hidden.has(c.href) && deptAllows(c.href)) } : item))
           .filter((item) => {
-            // Drop groups whose children are all hidden, and hidden leaf items.
+            // Drop groups whose children are all gone, and hidden/out-of-department leaf items.
             if (item.children?.length === 0) return false;
-            if (!item.children?.length && hidden.has(item.href)) return false;
+            if (!item.children?.length && (hidden.has(item.href) || !deptAllows(item.href))) return false;
             return true;
           }),
       }))
       .filter((section) => section.items.length > 0);
-  }, [canShowNavItem, workspace, disabledHrefs]);
+  }, [canShowNavItem, deptAllows, workspace, disabledHrefs]);
 
   const label = workspaceLabel(workspace);
 

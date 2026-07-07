@@ -26,30 +26,34 @@ const FULL_ACCESS: UserAccess = { isAdmin: true, unrestricted: true, features: [
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
 
-async function isDeptAdmin(userId: string): Promise<boolean> {
-  try {
-    const { data: prof } = await db().from("profiles").select("role").eq("id", userId).maybeSingle();
-    if (prof?.role === "admin") return true;
-    const { data: mem } = await db().from("department_members").select("department_id").eq("user_id", userId);
-    const ids = (mem ?? []).map((m: { department_id: string }) => m.department_id);
-    if (!ids.length) return false;
-    const { data: adminDepts } = await db().from("departments").select("id").eq("is_admin", true).in("id", ids);
-    return (adminDepts ?? []).length > 0;
-  } catch {
-    return false;
-  }
-}
-
 export async function loadUserAccess(userId: string): Promise<UserAccess> {
   try {
+    const [{ data: prof }, { data: mem }] = await Promise.all([
+      db().from("profiles").select("role").eq("id", userId).maybeSingle(),
+      db().from("department_members").select("department_id").eq("user_id", userId),
+    ]);
+    const memberships = (mem ?? []).map((m: { department_id: string }) => m.department_id);
+
+    let inAdminDept = false;
+    if (memberships.length) {
+      const { data: adminDepts } = await db().from("departments").select("id").eq("is_admin", true).in("id", memberships);
+      inAdminDept = (adminDepts ?? []).length > 0;
+    }
+    const isAdmin = prof?.role === "admin" || inAdminDept;
+
+    // Rollout-safe rule: admins and *unassigned* internal users are unrestricted.
+    // Only users assigned to at least one non-admin department are scoped.
+    if (isAdmin || memberships.length === 0) {
+      return { isAdmin, unrestricted: true, features: [], paths: [], hubs: [] };
+    }
+
     const { data, error } = await db().rpc("get_user_features", { p_user_id: userId });
-    if (error) return FULL_ACCESS; // migration not applied → don't restrict anything yet
-    const isAdmin = await isDeptAdmin(userId);
+    if (error) return FULL_ACCESS; // migration not applied → don't restrict yet
     const features: UserFeature[] = ((data ?? []) as Array<{ feature_key: string; label: string; hub_key: string; path: string; sort_order: number }>)
       .map((r) => ({ key: r.feature_key, label: r.label, hubKey: r.hub_key, path: r.path, sortOrder: r.sort_order }));
     return {
-      isAdmin,
-      unrestricted: isAdmin,
+      isAdmin: false,
+      unrestricted: false,
       features,
       paths: [...new Set(features.map((f) => f.path))],
       hubs: [...new Set(features.map((f) => f.hubKey))],
