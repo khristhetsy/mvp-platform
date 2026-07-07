@@ -151,20 +151,33 @@ function DriftStrip({ payload, onRefresh, isAdmin }: { payload: HubPayload; onRe
     await api("/api/admin/playbook/module", "PATCH", { navId, block: "core", cadence: "daily", sort_order: 500 });
     setBusy(false); onRefresh();
   }
+  async function ignore(navIds: string[]) {
+    setBusy(true);
+    await api("/api/admin/playbook/drift/ignore", "POST", { navIds, ignored: true });
+    setBusy(false); onRefresh();
+  }
 
   return (
     <div style={{ background: "#FFF8EC", border: "0.5px solid #F4D9A0", borderRadius: 12, padding: "10px 14px" }}>
-      <div style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", marginBottom: items.length ? 6 : 0 }}>
-        <i className="ti ti-alert-triangle" aria-hidden="true" /> Menu drift — {items.length} item{items.length === 1 ? "" : "s"}
-        {settings.driftAutoAdd && <span style={{ fontWeight: 400, marginLeft: 6 }}>· auto-add is on; new surfaces land in Core automatically.</span>}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, fontWeight: 600, color: "#854F0B", marginBottom: items.length ? 6 : 0 }}>
+        <span><i className="ti ti-alert-triangle" aria-hidden="true" /> Menu drift — {items.length} item{items.length === 1 ? "" : "s"}</span>
+        {settings.driftAutoAdd && <span style={{ fontWeight: 400 }}>· auto-add is on; new surfaces land in Core automatically.</span>}
+        {isAdmin && items.length > 2 && (
+          <button disabled={busy} onClick={() => ignore(items.map((i) => i.navId))} style={{ marginLeft: "auto", fontSize: 10.5, color: "#854F0B", background: "transparent", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "3px 10px", cursor: "pointer" }}>Ignore all</button>
+        )}
       </div>
-      {items.slice(0, 6).map((it) => (
+      {items.slice(0, 8).map((it) => (
         <div key={`${it.kind}:${it.navId}`} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, padding: "3px 0" }}>
           <span style={{ fontSize: 10, color: "#854F0B", background: "#FAEEDA", borderRadius: 8, padding: "1px 7px" }}>{it.kind === "missing" ? "not in playbook" : "removed from menu"}</span>
           <span style={{ color: "var(--foreground)" }}>{it.label}</span>
           <code style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{it.navId}</code>
-          {isAdmin && it.kind === "missing" && !settings.driftAutoAdd && (
-            <button disabled={busy} onClick={() => addToCore(it.navId)} style={{ marginLeft: "auto", fontSize: 11, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "3px 10px", cursor: "pointer" }}>Add to Core</button>
+          {isAdmin && (
+            <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+              {it.kind === "missing" && !settings.driftAutoAdd && (
+                <button disabled={busy} onClick={() => addToCore(it.navId)} style={{ fontSize: 11, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "3px 10px", cursor: "pointer" }}>Add to Core</button>
+              )}
+              <button disabled={busy} onClick={() => ignore([it.navId])} style={{ fontSize: 11, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "3px 10px", cursor: "pointer" }}>Ignore</button>
+            </div>
           )}
         </div>
       ))}

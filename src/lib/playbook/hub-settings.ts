@@ -11,6 +11,7 @@ export interface HubSettings {
   runResetTz: string;
   escalationPastDueDays: number;
   playbookEditScope: HubEditScope;
+  driftIgnored: string[];
 }
 
 export const HUB_DEFAULTS: HubSettings = {
@@ -20,6 +21,7 @@ export const HUB_DEFAULTS: HubSettings = {
   runResetTz: "Europe/Paris",
   escalationPastDueDays: 21,
   playbookEditScope: "all_admins",
+  driftIgnored: [],
 };
 
 export async function getHubSettings(): Promise<HubSettings> {
@@ -33,6 +35,7 @@ export async function getHubSettings(): Promise<HubSettings> {
       runResetTz: data.run_reset_tz ?? "Europe/Paris",
       escalationPastDueDays: data.escalation_past_due_days ?? 21,
       playbookEditScope: (data.playbook_edit_scope as HubEditScope) ?? "all_admins",
+      driftIgnored: Array.isArray(data.drift_ignored) ? (data.drift_ignored as string[]) : [],
     };
   } catch {
     return HUB_DEFAULTS;
@@ -47,6 +50,7 @@ export async function updateHubSettings(patch: Partial<HubSettings>): Promise<vo
   if (patch.runResetTz !== undefined) u.run_reset_tz = patch.runResetTz;
   if (patch.escalationPastDueDays !== undefined) u.escalation_past_due_days = Math.max(7, Math.min(60, Math.round(patch.escalationPastDueDays)));
   if (patch.playbookEditScope !== undefined) u.playbook_edit_scope = patch.playbookEditScope;
+  if (patch.driftIgnored !== undefined) u.drift_ignored = patch.driftIgnored;
   const { error } = await db().from("ops_hub_settings").upsert(u, { onConflict: "id" });
   if (error) throw new Error(error.message);
 }

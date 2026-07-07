@@ -295,3 +295,19 @@ create policy ops_hub_settings_write on public.ops_hub_settings for all to authe
 create policy ops_advisory_own on public.ops_advisory_actions for all to authenticated
   using (admin_id = auth.uid() and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin','analyst')))
   with check (admin_id = auth.uid() and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin','analyst')));
+
+-- 16) Operations Hub drift ignore list.
+-- Operations Hub: let operators permanently dismiss menu-drift surfaces they don't
+-- want in the playbook. Seeds the CRM / SPV / Partner surfaces the operator excluded.
+alter table public.ops_hub_settings add column if not exists drift_ignored text[] not null default '{}';
+
+update public.ops_hub_settings
+  set drift_ignored = array[
+    '/admin/crm/founders',
+    '/admin/crm/investors',
+    '/admin/crm/unclassified',
+    '/admin/crm/connectors',
+    '/admin/spvs',
+    '/admin/partner-scores'
+  ]
+  where id = 1 and (drift_ignored is null or cardinality(drift_ignored) = 0);

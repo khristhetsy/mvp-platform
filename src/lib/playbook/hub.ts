@@ -134,10 +134,12 @@ export async function loadHubPayload(adminId: string): Promise<HubPayload> {
     };
   });
 
+  const ignored = new Set(settings.driftIgnored);
   const documented = surfaces.filter((s) => s.block != null);
   const missingInPlaybook = surfaces
-    .filter((s) => s.state === "undocumented")
+    .filter((s) => s.state === "undocumented" && !ignored.has(s.navId))
     .map((s) => ({ navId: s.navId, label: s.label, href: s.href, group: s.group }));
+  const orphaned = assembled.orphaned.filter((o) => !ignored.has(o.navId));
 
   const queuePending = Object.values(counts).reduce((a, b) => a + b, 0);
   const queuesClear = sources.filter((s) => (counts[s] ?? 0) === 0);
@@ -167,7 +169,7 @@ export async function loadHubPayload(adminId: string): Promise<HubPayload> {
 
   return {
     surfaces,
-    orphaned: assembled.orphaned,
+    orphaned,
     missingInPlaybook,
     counts,
     settings,
