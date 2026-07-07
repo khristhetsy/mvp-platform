@@ -10,6 +10,7 @@ import {
   type InternalRoleSlug,
 } from "@/lib/rbac/constants";
 import type { InternalUserSummary } from "@/lib/rbac/types";
+import { DeptChips, type DeptOption } from "@/components/admin/DeptChips";
 
 type CatalogRole = {
   id: string;
@@ -45,6 +46,8 @@ export function UserPermissionsManager() {
   const t = useTranslations("usersAdmin.permissions");
   const [payload, setPayload] = useState<PermissionsPayload | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [departments, setDepartments] = useState<DeptOption[]>([]);
+  const [memberMap, setMemberMap] = useState<Record<string, string[]>>({});
   const [roleSlug, setRoleSlug] = useState<InternalRoleSlug>("regular_user");
   const [isActive, setIsActive] = useState(true);
   const [overrideState, setOverrideState] = useState<Record<InternalPermission, "inherit" | "grant" | "revoke">>(
@@ -63,6 +66,26 @@ export function UserPermissionsManager() {
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const inviteEmailRef = useRef<HTMLInputElement>(null);
+
+  const loadDepartments = useCallback(async () => {
+    try {
+      const [mx, mem] = await Promise.all([fetch("/api/admin/departments/matrix"), fetch("/api/admin/departments/members")]);
+      if (mx.ok) setDepartments(((await mx.json()).departments ?? []).map((d: { id: string; name: string; isAdmin: boolean }) => ({ id: d.id, name: d.name, isAdmin: d.isAdmin })));
+      if (mem.ok) {
+        const map: Record<string, string[]> = {};
+        for (const m of (await mem.json()).members ?? []) map[m.userId] = m.departmentIds ?? [];
+        setMemberMap(map);
+      }
+    } catch { /* not migrated yet */ }
+  }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- load departments on mount
+  useEffect(() => { void loadDepartments(); }, [loadDepartments]);
+
+  const toggleDept = useCallback(async (userId: string, departmentId: string, member: boolean) => {
+    setMemberMap((prev) => ({ ...prev, [userId]: member ? [...(prev[userId] ?? []), departmentId] : (prev[userId] ?? []).filter((x) => x !== departmentId) }));
+    const res = await fetch("/api/admin/departments/members", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId, departmentId, member }) });
+    if (!res.ok) void loadDepartments();
+  }, [loadDepartments]);
 
   const selectedUser = useMemo(
     () => payload?.users.find((u) => u.id === selectedUserId) ?? null,
@@ -433,6 +456,16 @@ export function UserPermissionsManager() {
                   {t("accessActive")}
                 </label>
               </div>
+
+              {departments.length > 0 && (
+                <div className="mt-4 border-t border-slate-100 pt-3">
+                  <p className="text-xs font-medium text-slate-700">Departments <span className="font-normal text-slate-400">— feature access, from Feature Controls</span></p>
+                  <div className="mt-2">
+                    <DeptChips departments={departments} memberIds={memberMap[selectedUser.id] ?? []} onToggle={(deptId, member) => void toggleDept(selectedUser.id, deptId, member)} disabled={!canEditSelected} />
+                  </div>
+                  <p className="mt-2 text-[11px] text-slate-500">Level sets internal permissions; departments control which hubs this person sees. Unassigned staff keep full access.</p>
+                </div>
+              )}
             </div>
 
             <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-panel)]">

@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Users, Trash2, UserMinus, AlertTriangle, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { EmailContactButton } from "@/components/email/EmailContactButton";
+import { DeptChips, type DeptOption } from "@/components/admin/DeptChips";
 import type { UserRole } from "@/lib/supabase/types";
+
+const INTERNAL_ROLES = new Set<UserRole>(["admin", "analyst"]);
 
 type T = (key: string, values?: Record<string, string | number>) => string;
 const ROLE_SLUGS = ["founder", "investor", "admin", "analyst"];
@@ -115,6 +118,28 @@ export function UserManagementClient() {
   const [confirmEmail, setConfirmEmail] = useState("");
   const [deps, setDeps] = useState<Dependents | null>(null);
   const [depsLoading, setDepsLoading] = useState(false);
+  const [departments, setDepartments] = useState<DeptOption[]>([]);
+  const [memberMap, setMemberMap] = useState<Record<string, string[]>>({});
+
+  const loadDepartments = useCallback(async () => {
+    try {
+      const [mx, mem] = await Promise.all([fetch("/api/admin/departments/matrix"), fetch("/api/admin/departments/members")]);
+      if (mx.ok) setDepartments(((await mx.json()).departments ?? []).map((d: { id: string; name: string; isAdmin: boolean }) => ({ id: d.id, name: d.name, isAdmin: d.isAdmin })));
+      if (mem.ok) {
+        const map: Record<string, string[]> = {};
+        for (const m of (await mem.json()).members ?? []) map[m.userId] = m.departmentIds ?? [];
+        setMemberMap(map);
+      }
+    } catch { /* departments not migrated yet → hide the column */ }
+  }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- load departments on mount
+  useEffect(() => { void loadDepartments(); }, [loadDepartments]);
+
+  const toggleDept = useCallback(async (userId: string, departmentId: string, member: boolean) => {
+    setMemberMap((prev) => ({ ...prev, [userId]: member ? [...(prev[userId] ?? []), departmentId] : (prev[userId] ?? []).filter((x) => x !== departmentId) }));
+    const res = await fetch("/api/admin/departments/members", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId, departmentId, member }) });
+    if (!res.ok) { setStatusMsg(`${t("errorPrefix")}${(await res.json().catch(() => ({}))).error ?? "Failed."}`); void loadDepartments(); }
+  }, [loadDepartments, t]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -320,6 +345,7 @@ export function UserManagementClient() {
           <span className="flex-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("colUser")}</span>
           <span className="w-20 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("colRole")}</span>
           <span className="w-20 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("colStatus")}</span>
+          {departments.length > 0 && <span className="hidden w-44 text-[11px] font-semibold uppercase tracking-wide text-slate-400 xl:block">Departments</span>}
           <span className="w-24 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("colLastSeen")}</span>
           <span className="w-52"></span>
         </div>
@@ -368,6 +394,17 @@ export function UserManagementClient() {
                     {t(`status.${user.status}`)}
                   </span>
                 </div>
+
+                {/* Departments (internal users only) */}
+                {departments.length > 0 && (
+                  <div className="hidden w-44 xl:block">
+                    {INTERNAL_ROLES.has(user.role) ? (
+                      <DeptChips departments={departments} memberIds={memberMap[user.id] ?? []} onToggle={(deptId, member) => void toggleDept(user.id, deptId, member)} disabled={isInactive} />
+                    ) : (
+                      <span className="text-[11px] text-slate-400" title="Departments apply to internal staff only">—</span>
+                    )}
+                  </div>
+                )}
 
                 {/* Last seen */}
                 <div className="w-24 text-xs text-slate-500">{user.last_seen_label}</div>
