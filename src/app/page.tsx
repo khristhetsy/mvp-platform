@@ -68,7 +68,9 @@ const SAMPLE_STATS: PublicMarketStats = {
 
 export default async function Home() {
   const liveStats = await loadPublicMarketStats();
-  const usingSample = liveStats.deals.length === 0;
+  // Show illustrative figures until there's real signal — i.e. no company is scored
+  // yet and no indicated interest exists (companies may exist but sit at 0.0 / $0).
+  const usingSample = liveStats.avgReadiness <= 0 && liveStats.indicated30d <= 0;
   const stats = usingSample ? SAMPLE_STATS : liveStats;
   const t = await getTranslations("appPages");
 
