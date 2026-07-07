@@ -1,33 +1,28 @@
 import { AppShell } from "@/components/AppShell";
-import { getTranslations } from "next-intl/server";
 import { requireRole } from "@/lib/supabase/auth";
-import { assemblePlaybook } from "@/lib/playbook/assemble";
-import { PlaybookConsole } from "@/components/playbook/PlaybookConsole";
+import { loadHubPayload } from "@/lib/playbook/hub";
+import { OpsHub } from "@/components/admin/playbook/OpsHub";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Operations Hub" };
 
-export default async function AdminPlaybookPage() {
+const TABS = ["dash", "open", "core", "close", "settings"];
+
+export default async function AdminPlaybookPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const profile = await requireRole(["admin", "analyst"]);
-  const t = await getTranslations("adminPages");
-  const assembled = await assemblePlaybook();
-  const isAdmin = profile.role === "admin";
+  const sp = await searchParams;
+  const initialTab = TABS.includes(sp.tab ?? "") ? (sp.tab as string) : "dash";
+  const payload = await loadHubPayload(profile.id);
 
   return (
     <AppShell
       role="ADMIN"
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
-      profileSubtitle={t("dailyOperatingConsole")}
+      profileSubtitle="Operations Hub"
       profileEmail={profile.email ?? undefined}
     >
-      <div style={{ marginBottom: 18 }}>
-        <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".16em", color: "#2E78F5", margin: 0 }}>Operations</p>
-        <h1 style={{ fontSize: 24, fontWeight: 600, color: "#0f2147", margin: "6px 0 4px", letterSpacing: "-0.01em" }}>Daily Operating Console</h1>
-        <p style={{ fontSize: 13, color: "#5f5e5a", margin: 0, maxWidth: 680 }}>
-          The operating playbook, rendered from the live admin menu plus editable steps. New surfaces appear here automatically; renamed ones update; removed ones are flagged for cleanup — so the doc can never quietly drift from the product.
-        </p>
-      </div>
-      <PlaybookConsole initial={assembled} isAdmin={isAdmin} />
+      <OpsHub initial={payload} initialTab={initialTab} isAdmin={profile.role === "admin"} />
     </AppShell>
   );
 }
