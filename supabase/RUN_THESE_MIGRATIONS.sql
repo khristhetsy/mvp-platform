@@ -582,3 +582,223 @@ language sql stable security definer set search_path = public as $$
   join public.departments d on d.id = df.department_id and d.is_active
   where f.is_active;
 $$;
+
+-- 21) CEO Hub — schema + RLS.
+-- CEO Hub — read-only roll-up over Sales / Marketing / Operations, weekly-grain KPI
+-- snapshots, AI Chief-of-Staff content, meetings + journals. iCapOS single-business
+-- (ceo_business enum retained for later iCFO SPV). Admin-only; ceo_* tables gated by
+-- the existing is_staff() helper, and accessed through service-role admin API routes.
+
+do $$ begin
+  if not exists (select 1 from pg_type where typname = 'ceo_business') then
+    create type ceo_business as enum ('icapos', 'icfo_spv');
+  end if;
+end $$;
+
+-- ========== KPI SYSTEM ==========
+create table if not exists public.ceo_kpi_registry (
+  key text primary key,
+  dept text not null check (dept in ('sales','marketing','operations')),
+  business ceo_business not null default 'icapos',
+  label text not null,
+  definition text not null default '',
+  owner text not null,
+  fmt text not null check (fmt in ('n','%','$','x','h','d')),
+  direction text not null check (direction in ('up_good','down_good')),
+  scales_with_period boolean not null default false,
+  target numeric not null,
+  red_line numeric not null,
+  weight numeric not null default 1,
+  benchmark text,
+  source_view text not null,
+  sort_order int not null,
+  active boolean not null default true
+);
+
+create table if not exists public.ceo_kpi_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  kpi_key text not null references public.ceo_kpi_registry(key) on delete cascade,
+  week_start date not null,
+  value numeric not null,
+  created_at timestamptz default now(),
+  unique (kpi_key, week_start)
+);
+
+create table if not exists public.ceo_kpi_ai (
+  id uuid primary key default gen_random_uuid(),
+  kpi_key text not null references public.ceo_kpi_registry(key) on delete cascade,
+  week_start date not null,
+  diagnosis text not null,
+  solutions jsonb not null,
+  mentorship text not null,
+  coach_prompt text not null,
+  model text not null,
+  created_at timestamptz default now(),
+  unique (kpi_key, week_start)
+);
+
+-- ========== MEETINGS ==========
+create table if not exists public.ceo_meetings (
+  key text primary key,
+  name text not null,
+  dept text not null,
+  cadence text not null default 'weekly',
+  day_of_week int not null,
+  time_local time not null,
+  timezone text not null default 'America/Los_Angeles',
+  duration_min int not null,
+  attendees jsonb not null default '[]',
+  agenda jsonb not null default '[]',
+  workflow jsonb not null default '{}',
+  gcal_event_id text,
+  active boolean default true
+);
+
+create table if not exists public.ceo_meeting_sessions (
+  id uuid primary key default gen_random_uuid(),
+  meeting_key text not null references public.ceo_meetings(key) on delete cascade,
+  session_date date not null,
+  gcal_instance_id text,
+  attendance text,
+  note text,
+  decisions jsonb not null default '[]',
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique (meeting_key, session_date)
+);
+
+-- Journal tasks write through to the Admin Tasks board, tagged with their session.
+alter table public.admin_tasks add column if not exists source_meeting_session_id uuid references public.ceo_meeting_sessions(id) on delete set null;
+
+-- ========== BRIEFS / RECS / GOALS / PREFS ==========
+create table if not exists public.ceo_briefs (
+  id uuid primary key default gen_random_uuid(),
+  business ceo_business not null default 'icapos',
+  brief_date date not null,
+  headline text not null default '',
+  sections jsonb not null default '[]',
+  model text,
+  created_at timestamptz default now(),
+  unique (business, brief_date)
+);
+
+create table if not exists public.ceo_recommendations (
+  id uuid primary key default gen_random_uuid(),
+  business ceo_business not null default 'icapos',
+  title text not null,
+  detail text not null default '',
+  hub text,
+  priority text not null default 'medium' check (priority in ('high','medium','low')),
+  status text not null default 'open' check (status in ('open','accepted','dismissed','done')),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table if not exists public.ceo_goals (
+  id uuid primary key default gen_random_uuid(),
+  business ceo_business not null default 'icapos',
+  title text not null,
+  metric text,
+  target numeric,
+  current numeric default 0,
+  period text,
+  due_date date,
+  sort_order int not null default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table if not exists public.ceo_notification_prefs (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  email_daily boolean not null default false,
+  email_weekly boolean not null default true,
+  updated_at timestamptz default now()
+);
+
+create table if not exists public.ceo_user_prefs (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  business ceo_business not null default 'icapos',
+  prefs jsonb not null default '{}',
+  updated_at timestamptz default now()
+);
+
+-- ========== RLS (reuse is_staff() — admin/analyst) ==========
+alter table public.ceo_kpi_registry     enable row level security;
+alter table public.ceo_kpi_snapshots    enable row level security;
+alter table public.ceo_kpi_ai           enable row level security;
+alter table public.ceo_meetings         enable row level security;
+alter table public.ceo_meeting_sessions enable row level security;
+alter table public.ceo_briefs           enable row level security;
+alter table public.ceo_recommendations  enable row level security;
+alter table public.ceo_goals            enable row level security;
+alter table public.ceo_notification_prefs enable row level security;
+alter table public.ceo_user_prefs       enable row level security;
+
+do $$
+declare tbl text;
+begin
+  foreach tbl in array array[
+    'ceo_kpi_registry','ceo_kpi_snapshots','ceo_kpi_ai','ceo_meetings','ceo_meeting_sessions',
+    'ceo_briefs','ceo_recommendations','ceo_goals','ceo_notification_prefs','ceo_user_prefs'
+  ] loop
+    execute format('drop policy if exists %I_staff on public.%I', tbl, tbl);
+    execute format('create policy %I_staff on public.%I for all to authenticated using (public.is_staff()) with check (public.is_staff())', tbl, tbl);
+  end loop;
+end $$;
+
+-- 22) CEO Hub — 24-KPI registry + 4 meetings seed.
+-- CEO Hub seed — the 24-KPI registry and 4 meeting workflows (from the mockup data).
+-- Values (actuals) are computed by the snapshot job, not seeded. AI diagnosis/solutions
+-- are generated by the cron, not seeded. Weights: founder_activation=3, trial_to_paid=2,
+-- commitment_completion=2, all others 1.
+
+insert into public.ceo_kpi_registry (key, dept, label, owner, fmt, direction, scales_with_period, target, red_line, weight, benchmark, source_view, sort_order) values
+-- Sales
+('sales_new_leads','sales','New leads','Sales lead','n','up_good',true,400,300,1,'No universal norm — volume target sized to feed 90 meetings at current conversion.','v_ceo_sales_rollup',10),
+('sales_lead_to_meeting','sales','Lead → meeting rate','Sales lead','%','up_good',false,25,18,1,'Early-stage B2B SaaS peer norm ~25–30% with warm sources dominant.','v_ceo_sales_rollup',20),
+('sales_meetings_held','sales','Meetings held','Sales lead','n','up_good',true,90,65,1,'Function of leads × conversion — benchmark internally against the 90/wk plan.','v_ceo_sales_rollup',30),
+('sales_meeting_to_trial','sales','Meeting → trial rate','Sales lead','%','up_good',false,65,50,1,'Demo→trial for product-led B2B ~50–65%.','v_ceo_sales_rollup',40),
+('sales_trial_to_paid','sales','Trial → paid rate','Sales lead','%','up_good',false,20,12,2,'Opt-in free-trial SaaS norm ~15–25%.','v_ceo_sales_rollup',50),
+('sales_new_paid','sales','New paid founders','Sales lead','n','up_good',true,12,7,1,'Pace check: 12/wk sustains the 200-active-founder Q3 goal with churn <=2%.','v_ceo_sales_rollup',60),
+('sales_first_response','sales','First-response time','Sales ops','h','down_good',false,24,48,1,'Lead-response research: contact within 24h multiplies qualification; within 1h is elite.','v_ceo_sales_rollup',70),
+('sales_investor_walkthroughs','sales','Investor walkthroughs ≤ 24h','Sales lead','%','up_good',false,80,50,1,'New KPI — norm not established. Target set from concierge-onboarding best practice.','v_ceo_sales_rollup',80),
+-- Marketing
+('mktg_sourced_leads','marketing','Marketing-sourced leads','Marketing','n','up_good',true,300,200,1,'Internal pace metric — sized to feed the sales plan at current conversion.','v_ceo_marketing_rollup',10),
+('mktg_lead_to_meeting','marketing','Lead → meeting (mktg-sourced)','Marketing','%','up_good',false,22,15,1,'B2B SaaS marketing-sourced norm ~20–25% for warm content-led motions.','v_ceo_marketing_rollup',20),
+('mktg_blended_cpl','marketing','Blended CPL','Marketing','$','down_good',false,15,30,1,'B2B SaaS blended CPL norm ~$30–60. Under band when organic mix is strong.','v_ceo_marketing_rollup',30),
+('mktg_campaign_roi','marketing','Campaign ROI','Marketing','x','up_good',false,3,1,1,'Common B2B threshold >=3× attributed pipeline to cost.','v_ceo_marketing_rollup',40),
+('mktg_site_to_signup','marketing','Site → signup conversion','Marketing','%','up_good',false,4,2,1,'B2B SaaS visitor→trial norm ~2–5%.','v_ceo_marketing_rollup',50),
+('mktg_investor_signups','marketing','Investor-side signups','Marketing','n','up_good',true,20,10,1,'Internal pace metric — two-sided balance: >=1 active investor per 8 founders.','v_ceo_marketing_rollup',60),
+('mktg_email_ctr','marketing','Email engagement (CTR)','Marketing','%','up_good',false,3.5,2,1,'B2B norm ~2–3% unique CTR; internal Q2 baseline was 3.6%.','v_ceo_marketing_rollup',70),
+('mktg_targets_compliance','marketing','Targets-at-launch compliance','Marketing','%','up_good',false,100,99,1,'Process KPI — the norm is whatever you enforce. Binary by design.','v_ceo_marketing_rollup',80),
+-- Operations
+('ops_tasks_completed','operations','Tasks completed','Khris','n','up_good',true,30,18,1,'Internal throughput baseline — benchmark against your own 4-week average.','v_ceo_ops_rollup',10),
+('ops_cycle_time','operations','Cycle time','Khris','d','down_good',false,2.5,4,1,'Small-team norm 2–4 days create→done for well-scoped tasks.','v_ceo_ops_rollup',20),
+('ops_overdue_tasks','operations','Overdue tasks','Khris','n','down_good',false,3,8,1,'Target <=3 — sized so every overdue item can be discussed by name in one meeting.','v_ceo_ops_rollup',30),
+('ops_blocked_7d','operations','Blocked > 7 days','Khris','n','down_good',false,0,3,1,'Target zero — a week-old blocker is a decision hiding as a dependency.','v_ceo_ops_rollup',40),
+('ops_commitment_completion','operations','Commitment completion','All leads','%','up_good',false,85,60,2,'High-accountability team norm >=85% of meeting commitments done by due date.','v_ceo_ops_rollup',50),
+('ops_recap_discipline','operations','Recap discipline (≤ 2h)','Meeting owners','%','up_good',false,100,75,1,'Binary process KPI — recap + journal entry within 2h of every meeting.','v_ceo_ops_rollup',60),
+('ops_founder_activation','operations','Founder activation (≤ 7d)','Platform','%','up_good',false,70,45,3,'SaaS aha-within-a-week norms ~40–60%; the bar is set high deliberately.','v_ceo_ops_rollup',70),
+('ops_stale_escalations','operations','Stale-item escalations resolved','Khris','%','up_good',false,100,70,1,'Process KPI — items escalated after 2 unchanged meetings must resolve same week.','v_ceo_ops_rollup',80)
+on conflict (key) do nothing;
+
+-- Meetings (agenda = during-blocks; workflow = before/after/rules)
+insert into public.ceo_meetings (key, name, dept, day_of_week, time_local, timezone, duration_min, attendees, agenda, workflow) values
+('sales','Sales meeting','sales',2,'10:00','America/Los_Angeles',60,
+  '[{"name":"Sales team"},{"name":"Khris"}]',
+  '[{"title":"Log note opened from the calendar event — attendance, decisions, tasks captured live","minutes":0},{"title":"KPI vs goal — discuss misses only","minutes":5},{"title":"Pipeline walkthrough — exceptions first (stalled trials, hot leads)","minutes":20},{"title":"Training block — current sales program module","minutes":25},{"title":"Assignments & decisions — owner + due date required","minutes":10}]',
+  '{"before":["Recurring Google Calendar invite with Meet link — agenda + AI pre-brief attached to the event","Pipeline & task statuses updated by EOD Monday — no verbal recitation in the meeting","AI pre-brief: stale deals, funnel exceptions, commitments from last week"],"after":["Log note saved to the meeting log — searchable by date, decision, and owner","Recap posted within 2 hours: decisions, new tasks, escalations","Tasks sync to the task board; KPI numbers land in the weekly snapshot → Dashboard","AI compares commitments vs completions and flags slippage in next pre-brief"],"rules":"No task without an owner and due date · any item untouched for 2 consecutive meetings is escalated to Management or killed · training tracked in the program log, not the meeting notes."}'),
+('mktg','Marketing meeting','marketing',3,'10:00','America/Los_Angeles',30,
+  '[{"name":"Marketing"},{"name":"Khris"}]',
+  '[{"title":"Log note opened from the calendar event — decisions and tasks captured live","minutes":0},{"title":"KPI vs goal — leads, conversion, CPL vs target","minutes":5},{"title":"Campaign walkthrough — exceptions first","minutes":15},{"title":"New assignments — owner + due date","minutes":5},{"title":"Escalations to Management agenda","minutes":5}]',
+  '{"before":["Recurring Google Calendar invite with Meet link — agenda + AI pre-brief attached to the event","Campaign metrics pre-filled by EOD Tuesday","AI pre-brief: lead→meeting deltas by source, underperforming variants"],"after":["Log note saved to the meeting log — searchable by date, decision, and owner","Recap within 2 hours; tasks sync to board","Snapshot feeds Dashboard lead-conversion metrics","Losing variants paused same day — not next cycle"],"rules":"Every campaign gets a numeric target at launch · a variant losing 2 consecutive weeks is pulled · no new campaign while a red KPI is unowned."}'),
+('mgmt','Management meeting','operations',1,'09:00','America/Los_Angeles',45,
+  '[{"name":"Khris"},{"name":"Dept leads"}]',
+  '[{"title":"Log note opened from the calendar event — attendance, decisions, tasks captured live","minutes":0},{"title":"Announcements — company, personnel, partnerships","minutes":5},{"title":"Company outlook — quarter position, one headline","minutes":5},{"title":"Department reporting — exceptions only, 3 min per lead","minutes":15},{"title":"Decisions needed — max 2 topics, each ends with a recorded decision + owner","minutes":15},{"title":"Assignments recap — read back owner, due date, priority","minutes":5}]',
+  '{"before":["Recurring Google Calendar invite with Meet link — AI weekly brief attached as the pre-read","Dept leads update statuses & KPIs by EOD Friday","Meeting opens on exceptions — pre-read is assumed"],"after":["Log note saved to the meeting log — decision records logged separately from tasks","Escalated items assigned and dated","Recap posted within 2 hours"],"rules":"Pre-read is assumed — status updates are never given verbally · decisions are captured as records (what, who, when), not buried in notes."}'),
+('staff','Staff meeting','operations',1,'10:00','America/Los_Angeles',30,
+  '[{"name":"All staff"}]',
+  '[{"title":"Log note opened from the calendar event","minutes":0},{"title":"Company announcements","minutes":10},{"title":"Event & conference assignments — MC, opening, networking roles","minutes":10},{"title":"Recognition + open Q&A","minutes":10}]',
+  '{"before":["Recurring Google Calendar invite with Meet link — all staff","Announcements and event/role items collected in advance"],"after":["Log note saved to the meeting log","Role assignments sync to the task board with dates","Recap posted to the team channel"],"rules":"Follows Management same morning — decisions flow down, never re-litigated · every assigned role has a named backup."}')
+on conflict (key) do nothing;
