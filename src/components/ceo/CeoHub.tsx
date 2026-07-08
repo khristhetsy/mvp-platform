@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { HubShell, type HubTab } from "@/components/admin/hub/HubShell";
 import { status as kpiStatus, compare, formatKpi, deptScore, type KpiStatus, type Period } from "@/lib/ceo/kpi";
 import type { CeoPayload, CeoKpi } from "@/lib/ceo/hub-data";
+import type { CeoMeeting, CeoSession } from "@/lib/ceo/meetings";
+import { MeetingWorkflowCard, MeetingLog } from "@/components/ceo/Meetings";
 
 const ST = { g: { c: "#0E9F6E", bg: "#E6F6EC", l: "On target" }, y: { c: "#B7791F", bg: "#FDF3E3", l: "Watch" }, r: { c: "#D6455D", bg: "#FCE9EC", l: "Off track" } };
 const DEPT_LABEL: Record<string, string> = { sales: "Sales", marketing: "Marketing", operations: "Operations" };
@@ -32,6 +34,13 @@ function computeView(kpi: CeoKpi, period: Period, cmp: Cmp): KpiView {
 
 export function CeoHub({ initial, initialTab }: { initial: CeoPayload; initialTab: string }) {
   const [tab, setTab] = useState(initialTab);
+  const [meetings, setMeetings] = useState<CeoMeeting[]>([]);
+  const [sessions, setSessions] = useState<CeoSession[]>([]);
+  const loadMeetings = useCallback(async () => {
+    try { const r = await fetch("/api/ceo/meetings"); if (r.ok) { const d = await r.json(); setMeetings(d.meetings ?? []); setSessions(d.sessions ?? []); } } catch { /* ignore */ }
+  }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch meetings on mount
+  useEffect(() => { void loadMeetings(); }, [loadMeetings]);
   function changeTab(k: string) { setTab(k); try { window.history.replaceState(null, "", `?tab=${k}`); } catch { /* ignore */ } }
 
   const tabs: HubTab[] = [
@@ -42,9 +51,11 @@ export function CeoHub({ initial, initialTab }: { initial: CeoPayload; initialTa
   return (
     <HubShell title="CEO Hub" subtitle="iCapOS — your operating cockpit" tabs={tabs} activeTab={tab} onTabChange={changeTab}>
       {tab === "dash" && <Dashboard payload={initial} onJump={changeTab} />}
-      {(tab === "sales" || tab === "marketing" || tab === "operations") && <DeptTab dept={tab} kpis={initial.kpis.filter((k) => k.dept === tab)} />}
+      {(tab === "sales" || tab === "marketing" || tab === "operations") && (
+        <DeptTab dept={tab} kpis={initial.kpis.filter((k) => k.dept === tab)} meetings={meetings.filter((m) => m.dept === tab)} sessions={sessions} onRefresh={loadMeetings} />
+      )}
       {tab === "planning" && <Planning payload={initial} />}
-      {tab === "log" && <Placeholder title="Meeting Log" note="Meeting workflows, session journals, and the calendar-linked log land in the next step." />}
+      {tab === "log" && <MeetingLog meetings={meetings} sessions={sessions} />}
       {tab === "settings" && <Placeholder title="Settings" note="Notification preferences and the meeting schedule editor land in a later step." />}
     </HubShell>
   );
@@ -112,7 +123,7 @@ function Dashboard({ payload, onJump }: { payload: CeoPayload; onJump: (k: strin
 
 /* ── Department KPI tab: scorecard + graphs + drawer ───────────────────────── */
 
-function DeptTab({ dept, kpis }: { dept: string; kpis: CeoKpi[] }) {
+function DeptTab({ dept, kpis, meetings, sessions, onRefresh }: { dept: string; kpis: CeoKpi[]; meetings: CeoMeeting[]; sessions: CeoSession[]; onRefresh: () => void }) {
   const [period, setPeriod] = useState<Period>("wk");
   const [cmp, setCmp] = useState<Cmp>("lw");
   const [view, setView] = useState<"table" | "graphs">("table");
@@ -167,6 +178,13 @@ function DeptTab({ dept, kpis }: { dept: string; kpis: CeoKpi[] }) {
               <TrendBars kpi={kpi} st={v.na ? "r" : v.st} />
             </button>
           ))}
+        </div>
+      )}
+
+      {meetings.length > 0 && (
+        <div style={{ marginTop: 24 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: navy, marginBottom: 12, textTransform: "uppercase", letterSpacing: ".05em" }}>Meetings</div>
+          {meetings.map((m) => <MeetingWorkflowCard key={m.key} meeting={m} sessions={sessions} onRefresh={onRefresh} />)}
         </div>
       )}
 
