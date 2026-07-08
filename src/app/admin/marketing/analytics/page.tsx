@@ -133,5 +133,14 @@ export default async function MarketingAnalyticsPage() {
     rejected30d: rejected30d ?? 0,
   };
 
-  return <AnalyticsClient metrics={metrics} dailyOpens={dailyOpens} completedCampaigns={completedCampaigns} lists={lists} listCampaigns={listCampaigns} webhookHealth={webhookHealth} />;
+  // Raw recent webhook attempts so the admin can see exactly what Resend sends
+  // and how each event is handled (recorded / no_match / bad_signature / …).
+  const { data: recentHooks } = await supabase
+    .from("marketing_webhook_log")
+    .select("received_at, verified, outcome, event_type")
+    .order("received_at", { ascending: false })
+    .limit(12);
+  const recentWebhookLog = (recentHooks ?? []) as Array<{ received_at: string; verified: boolean; outcome: string; event_type: string | null }>;
+
+  return <AnalyticsClient metrics={metrics} dailyOpens={dailyOpens} completedCampaigns={completedCampaigns} lists={lists} listCampaigns={listCampaigns} webhookHealth={webhookHealth} recentWebhookLog={recentWebhookLog} />;
 }

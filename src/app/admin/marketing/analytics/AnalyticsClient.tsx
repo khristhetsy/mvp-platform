@@ -23,7 +23,17 @@ interface CompletedCampaign { id: string; name: string; sent: number; opened: nu
 interface ListSummary { id: string; name: string; count: number; }
 interface ListCampaign { id: string; name: string; list_id: string; sent: number; opened: number; clicked: number; }
 interface WebhookHealth { configured: boolean; lastEventAt: string | null; lastAttemptAt?: string | null; lastOutcome?: string | null; attempts30d?: number; rejected30d?: number; }
-interface Props { metrics: Metrics; dailyOpens: DailyOpen[]; completedCampaigns?: CompletedCampaign[]; lists?: ListSummary[]; listCampaigns?: ListCampaign[]; webhookHealth?: WebhookHealth; }
+interface WebhookLogRow { received_at: string; verified: boolean; outcome: string; event_type: string | null; }
+interface Props { metrics: Metrics; dailyOpens: DailyOpen[]; completedCampaigns?: CompletedCampaign[]; lists?: ListSummary[]; listCampaigns?: ListCampaign[]; webhookHealth?: WebhookHealth; recentWebhookLog?: WebhookLogRow[]; }
+
+const OUTCOME_LABEL: Record<string, { text: string; color: string; bg: string }> = {
+  recorded: { text: "recorded", color: "#0F6E56", bg: "#E1F5EE" },
+  no_match: { text: "no match (send lacked resend_id)", color: "#854F0B", bg: "#FAEEDA" },
+  bad_signature: { text: "rejected (secret mismatch)", color: "#A32D2D", bg: "#FCEBEB" },
+  ignored_type: { text: "ignored (untracked type)", color: "#5F5E5A", bg: "#F1EFE8" },
+  bad_json: { text: "bad payload", color: "#A32D2D", bg: "#FCEBEB" },
+  unconfigured: { text: "no secret set", color: "#A32D2D", bg: "#FCEBEB" },
+};
 interface ChatMessage { role: "user" | "assistant"; content: string; }
 
 const card = {
@@ -109,8 +119,9 @@ function webhookStatus(h: WebhookHealth | undefined, nowMs: number): { dot: stri
   return { ...AMBER, label: `Webhook received ${attempts} call${attempts === 1 ? "" : "s"} — awaiting tracking events` };
 }
 
-export default function AnalyticsClient({ metrics, dailyOpens, completedCampaigns = [], lists = [], listCampaigns = [], webhookHealth }: Props) {
+export default function AnalyticsClient({ metrics, dailyOpens, completedCampaigns = [], lists = [], listCampaigns = [], webhookHealth, recentWebhookLog = [] }: Props) {
   const [nowMs] = useState(() => Date.now());
+  const [showLog, setShowLog] = useState(false);
   const hook = webhookStatus(webhookHealth, nowMs);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>(completedCampaigns[0]?.id ?? "");
   const selectedCampaign = completedCampaigns.find((c) => c.id === selectedCampaignId) ?? null;
@@ -186,16 +197,41 @@ export default function AnalyticsClient({ metrics, dailyOpens, completedCampaign
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Last 30 days · icapos.com</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div title="Whether Resend is delivering open/click events to your app. Needs the webhook configured in Resend and RESEND_WEBHOOK_SECRET set." style={{ display: "flex", alignItems: "center", gap: 7, background: hook.bg, border: `0.5px solid ${hook.border}`, borderRadius: 10, padding: "6px 12px" }}>
+          <button type="button" onClick={() => setShowLog((v) => !v)} title="Click to see the raw webhook activity from Resend." style={{ display: "flex", alignItems: "center", gap: 7, background: hook.bg, border: `0.5px solid ${hook.border}`, borderRadius: 10, padding: "6px 12px", cursor: "pointer" }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: hook.dot }} />
             <span style={{ fontSize: 12, color: hook.color, fontWeight: 500 }}>{hook.label}</span>
-          </div>
+            <span style={{ fontSize: 10, color: hook.color, opacity: 0.7 }}>{showLog ? "▲" : "▼"}</span>
+          </button>
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#EEEDFE", border: "0.5px solid #AFA9EC", borderRadius: 10, padding: "6px 12px" }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2E78F5" }} />
             <span style={{ fontSize: 12, color: "#1A6CE4", fontWeight: 500 }}>CMO assistant active</span>
           </div>
         </div>
       </div>
+
+      {showLog && (
+        <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, padding: "12px 16px", marginBottom: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Recent webhook activity <span style={{ fontSize: 11.5, color: "var(--muted-foreground)", fontWeight: 400 }}>· last {recentWebhookLog.length} calls from Resend</span></div>
+          {recentWebhookLog.length === 0 ? (
+            <div style={{ fontSize: 12.5, color: "var(--muted-foreground)" }}>No webhook calls recorded yet. If Resend shows deliveries but nothing appears here, the endpoint domain or signing secret is wrong.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {recentWebhookLog.map((r, i) => {
+                const o = OUTCOME_LABEL[r.outcome] ?? { text: r.outcome, color: "#5F5E5A", bg: "#F1EFE8" };
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, padding: "5px 0", borderTop: i ? "0.5px solid #f1f5f9" : "none" }}>
+                    <span style={{ color: "var(--muted-foreground)", minWidth: 66, fontFamily: "var(--font-mono)", fontSize: 11 }}>{new Date(r.received_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+                    <span style={{ minWidth: 110, fontWeight: 500 }}>{r.event_type ?? "—"}</span>
+                    <span style={{ fontSize: 10.5, color: o.color, background: o.bg, borderRadius: 8, padding: "1px 8px" }}>{o.text}</span>
+                    {!r.verified && <span style={{ fontSize: 10, color: "#A32D2D" }}>unverified</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 8, lineHeight: 1.5 }}>Want <code>delivered</code>/<code>opened</code> to say <b>recorded</b>. If they say <b>no match</b>, the fix isn&apos;t deployed yet. If <b>rejected</b>, the signing secret doesn&apos;t match.</div>
+        </div>
+      )}
 
       {/* Campaign results — pick a completed campaign */}
       {completedCampaigns.length > 0 && (
