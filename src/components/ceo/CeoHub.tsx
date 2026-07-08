@@ -10,7 +10,7 @@ import { CalendarView } from "@/components/ceo/Calendar";
 import { PlanningTab, SettingsTab } from "@/components/ceo/PlanningSettings";
 
 const ST = { g: { c: "#0E9F6E", bg: "#E6F6EC", l: "On target" }, y: { c: "#B7791F", bg: "#FDF3E3", l: "Watch" }, r: { c: "#D6455D", bg: "#FCE9EC", l: "Off track" } };
-const DEPT_LABEL: Record<string, string> = { sales: "Sales", marketing: "Marketing", operations: "Operations" };
+const DEPT_LABEL: Record<string, string> = { sales: "Sales", marketing: "Marketing", operations: "Investor Relations" };
 const P_LABEL: Record<Period, string> = { wk: "Week", mo: "Month", qtr: "Quarter", ytd: "Year" };
 const C_LABEL: Record<string, string> = { lw: "last week", lm: "last month", ly: "last year" };
 const navy = "#0A1A40", royal = "#1A6CE4";
@@ -48,7 +48,7 @@ export function CeoHub({ initial, initialTab }: { initial: CeoPayload; initialTa
 
   const tabs: HubTab[] = [
     { key: "dash", label: "Dashboard" }, { key: "sales", label: "Sales" }, { key: "marketing", label: "Marketing" },
-    { key: "operations", label: "Operations" }, { key: "planning", label: "Planning" }, { key: "calendar", label: "Calendar" }, { key: "log", label: "Meeting Log" }, { key: "settings", label: "Settings" },
+    { key: "operations", label: "Investor Relations" }, { key: "planning", label: "Planning" }, { key: "calendar", label: "Calendar" }, { key: "log", label: "Meeting Log" }, { key: "settings", label: "Settings" },
   ];
 
   return (
