@@ -9,6 +9,7 @@ import { claudeComplete, CLAUDE_SONNET, isClaudeConfigured } from "@/lib/claude"
 import { sendEmail } from "@/lib/email/send-email";
 import { computeWeekSnapshots } from "./snapshot";
 import { loadCeoPayload } from "./hub-data";
+import { ensureTodayPhrase } from "./phrase";
 import { status as kpiStatus, deptScore } from "./kpi";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -124,6 +125,9 @@ export async function runBriefing(mode: "weekly" | "daily" = "daily"): Promise<B
       }
     } catch { /* fail soft */ }
   }
+
+  // Refresh the metric-aware phrase of the day (best-effort).
+  await ensureTodayPhrase(true).catch(() => {});
 
   return { week, snapshots: snap.computed.length, briefWritten, kpiAiWritten, emailsSent, briefError };
 }

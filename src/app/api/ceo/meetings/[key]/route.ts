@@ -7,6 +7,7 @@ import { updateRecurringMeeting } from "@/lib/ceo/calendar";
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
+  cadence: z.enum(["weekly", "biweekly", "monthly"]).optional(),
   dayOfWeek: z.number().int().min(1).max(7).optional(),
   timeLocal: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional(),
   durationMin: z.number().int().min(5).max(480).optional(),

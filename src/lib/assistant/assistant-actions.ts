@@ -212,6 +212,8 @@ export function suggestedPromptChips(ctx: SanitizedAssistantContext): string[] {
       return ["Where do I start fundraising?", "How do I set a valuation?", "What materials do investors need?", "How long does a raise take?"];
     case "cmo_marketing":
       return ["Draft a campaign email", "Best subject line tips", "Plan a drip sequence", "Analyze my open rates"];
+    case "ceo_hub":
+      return ["What matters most this week?", "Which KPIs are off track?", "Which department needs attention?", "Help me prep for the sales meeting"];
     case "investor_pipeline":
       return ["Summarize my pipeline", "Which deals to prioritize?", "What's in my watchlist?", "How do I track deal stages?"];
     case "investor_portfolio":

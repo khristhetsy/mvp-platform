@@ -29,6 +29,9 @@ export function inferAssistantMode(input: {
   if (path.startsWith("/admin/compliance")) return "compliance_guidance";
   if (path.startsWith("/admin/reports")) return "reports_guidance";
 
+  // CEO Hub → Chief of Staff
+  if (path.startsWith("/admin/ceo")) return "ceo_hub";
+
   // Admin marketing → CMO AI
   if (path.startsWith("/admin/marketing")) return "cmo_marketing";
 

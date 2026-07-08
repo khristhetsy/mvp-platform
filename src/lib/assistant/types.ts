@@ -13,6 +13,7 @@ export const ASSISTANT_MODES = [
   "deal_room",
   "capital_raise",
   "cmo_marketing",
+  "ceo_hub",
   "investor_pipeline",
   "investor_portfolio",
   "investor_matching",

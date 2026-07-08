@@ -9,8 +9,9 @@ function db(): any { return serviceRoleClientUntyped(); }
 
 export interface AgendaBlock { title: string; minutes: number }
 export interface MeetingWorkflow { before: string[]; after: string[]; rules: string }
+export type MeetingCadence = "weekly" | "biweekly" | "monthly";
 export interface CeoMeeting {
-  key: string; name: string; dept: string; dayOfWeek: number; timeLocal: string; timezone: string;
+  key: string; name: string; dept: string; cadence: MeetingCadence; dayOfWeek: number; timeLocal: string; timezone: string;
   durationMin: number; attendees: Array<{ name?: string; email?: string }>; agenda: AgendaBlock[];
   workflow: MeetingWorkflow; gcalEventId: string | null; active: boolean;
 }
@@ -18,15 +19,28 @@ export interface CeoSession {
   id: string; meetingKey: string; sessionDate: string; attendance: string | null; note: string | null;
   decisions: string[]; createdAt: string;
 }
+export interface CeoOccurrence {
+  id: string; meetingKey: string; occursOn: string; timeLocal: string | null; durationMin: number | null; note: string | null; gcalEventId: string | null;
+}
 
+function normalizeCadence(v: unknown): MeetingCadence {
+  return v === "biweekly" || v === "monthly" ? v : "weekly";
+}
 function mapMeeting(r: Record<string, unknown>): CeoMeeting {
   return {
-    key: String(r.key), name: String(r.name), dept: String(r.dept), dayOfWeek: Number(r.day_of_week),
+    key: String(r.key), name: String(r.name), dept: String(r.dept), cadence: normalizeCadence(r.cadence), dayOfWeek: Number(r.day_of_week),
     timeLocal: String(r.time_local), timezone: String(r.timezone), durationMin: Number(r.duration_min),
     attendees: Array.isArray(r.attendees) ? (r.attendees as Array<{ name?: string; email?: string }>) : [],
     agenda: Array.isArray(r.agenda) ? (r.agenda as AgendaBlock[]) : [],
     workflow: (r.workflow as MeetingWorkflow) ?? { before: [], after: [], rules: "" },
     gcalEventId: (r.gcal_event_id as string) ?? null, active: r.active !== false,
+  };
+}
+function mapOccurrence(r: Record<string, unknown>): CeoOccurrence {
+  return {
+    id: String(r.id), meetingKey: String(r.meeting_key), occursOn: String(r.occurs_on),
+    timeLocal: (r.time_local as string) ?? null, durationMin: r.duration_min != null ? Number(r.duration_min) : null,
+    note: (r.note as string) ?? null, gcalEventId: (r.gcal_event_id as string) ?? null,
   };
 }
 function mapSession(r: Record<string, unknown>): CeoSession {
@@ -37,15 +51,33 @@ function mapSession(r: Record<string, unknown>): CeoSession {
   };
 }
 
-export async function loadMeetings(): Promise<{ meetings: CeoMeeting[]; sessions: CeoSession[] }> {
-  const [{ data: m }, { data: s }] = await Promise.all([
+export async function loadMeetings(): Promise<{ meetings: CeoMeeting[]; sessions: CeoSession[]; occurrences: CeoOccurrence[] }> {
+  const [{ data: m }, { data: s }, { data: o }] = await Promise.all([
     db().from("ceo_meetings").select("*").eq("active", true).order("day_of_week"),
     db().from("ceo_meeting_sessions").select("*").order("session_date", { ascending: false }).limit(200),
+    db().from("ceo_meeting_occurrences").select("*").order("occurs_on", { ascending: true }),
   ]);
   return {
     meetings: ((m ?? []) as Array<Record<string, unknown>>).map(mapMeeting),
     sessions: ((s ?? []) as Array<Record<string, unknown>>).map(mapSession),
+    occurrences: ((o ?? []) as Array<Record<string, unknown>>).map(mapOccurrence),
   };
+}
+
+export interface NewOccurrenceInput { occursOn: string; timeLocal?: string | null; durationMin?: number | null; note?: string | null }
+
+export async function createOccurrence(meetingKey: string, input: NewOccurrenceInput, adminId: string): Promise<{ id: string }> {
+  const { data, error } = await db().from("ceo_meeting_occurrences").upsert({
+    meeting_key: meetingKey, occurs_on: input.occursOn, time_local: input.timeLocal ?? null,
+    duration_min: input.durationMin ?? null, note: input.note ?? null, created_by: adminId,
+  }, { onConflict: "meeting_key,occurs_on" }).select("id").single();
+  if (error) throw new Error(error.message);
+  return { id: String(data.id) };
+}
+
+export async function deleteOccurrence(id: string): Promise<void> {
+  const { error } = await db().from("ceo_meeting_occurrences").delete().eq("id", id);
+  if (error) throw new Error(error.message);
 }
 
 export interface NewSessionInput { sessionDate: string; attendance?: string | null; note?: string | null; decisions?: string[]; tasks?: string[] }
@@ -88,10 +120,11 @@ export async function setMeetingEvent(meetingKey: string, gcalEventId: string): 
   await db().from("ceo_meetings").update({ gcal_event_id: gcalEventId }).eq("key", meetingKey);
 }
 
-export interface MeetingSchedulePatch { dayOfWeek?: number; timeLocal?: string; durationMin?: number; timezone?: string; attendees?: Array<{ name?: string; email?: string }> }
+export interface MeetingSchedulePatch { cadence?: MeetingCadence; dayOfWeek?: number; timeLocal?: string; durationMin?: number; timezone?: string; attendees?: Array<{ name?: string; email?: string }> }
 
 export async function updateMeeting(key: string, patch: MeetingSchedulePatch): Promise<CeoMeeting> {
   const u: Record<string, unknown> = {};
+  if (patch.cadence !== undefined) u.cadence = patch.cadence;
   if (patch.dayOfWeek !== undefined) u.day_of_week = patch.dayOfWeek;
   if (patch.timeLocal !== undefined) u.time_local = patch.timeLocal;
   if (patch.durationMin !== undefined) u.duration_min = patch.durationMin;

@@ -164,8 +164,13 @@ function SessionEntry({ session, open, onToggle, editing, onEdit, onRefresh }: {
 
 /* ── Meeting Log (all sessions, filters) ── */
 
+interface MeetingAnalysis { headline: string; themes: string[]; risks: string[]; suggestions: string[] }
+
 export function MeetingLog({ meetings, sessions }: { meetings: CeoMeeting[]; sessions: CeoSession[] }) {
   const [filter, setFilter] = useState("all");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysis, setAnalysis] = useState<MeetingAnalysis | null>(null);
+  const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null);
   const nameByKey = useMemo(() => new Map(meetings.map((m) => [m.key, m.name])), [meetings]);
   const filters: [string, string][] = [["all", "All"], ["sales", "Sales"], ["mktg", "Marketing"], ["operations", "Operations"], ["mgmt", "Management"], ["staff", "Staff"]];
 
@@ -175,11 +180,27 @@ export function MeetingLog({ meetings, sessions }: { meetings: CeoMeeting[]; ses
     return s.meetingKey === filter;
   });
 
+  async function analyze() {
+    setAnalyzing(true); setAnalyzeMsg(null); setAnalysis(null);
+    const { ok, data } = await api(`/api/ceo/meetings/analyze?filter=${filter}`, "POST");
+    setAnalyzing(false);
+    const d = data as { analysis?: MeetingAnalysis | null; skippedReason?: string; error?: string };
+    if (ok && d.analysis) { setAnalysis(d.analysis); }
+    else setAnalyzeMsg(
+      d.skippedReason === "no_sessions" ? "No sessions to analyze yet."
+      : d.skippedReason === "claude_not_configured" ? "AI is off — set ANTHROPIC_API_KEY to enable analysis."
+      : d.error ?? "Analysis unavailable right now.");
+  }
+
   return (
     <div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
         {filters.map(([k, l]) => <button key={k} onClick={() => setFilter(k)} style={{ fontSize: 11.5, fontWeight: 600, padding: "5px 12px", borderRadius: 99, border: "none", cursor: "pointer", background: filter === k ? royal : "#EEF1F7", color: filter === k ? "#fff" : "#6B7690" }}>{l}</button>)}
+        <button onClick={analyze} disabled={analyzing} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: "#fff", background: navy, border: "none", borderRadius: 8, padding: "7px 13px", cursor: analyzing ? "default" : "pointer", opacity: analyzing ? 0.7 : 1 }}>{analyzing ? "Analyzing…" : "✦ Analyze with AI"}</button>
       </div>
+
+      {analyzeMsg && <div style={{ fontSize: 12, color: "#D6455D", marginBottom: 12 }}>{analyzeMsg}</div>}
+      {analysis && <AnalysisPanel a={analysis} onClose={() => setAnalysis(null)} />}
       {shown.length === 0 ? <div style={{ fontSize: 12.5, color: "#6B7690" }}>No sessions logged yet.</div> : (
         <div style={{ position: "relative", paddingLeft: 24 }}>
           <div style={{ position: "absolute", left: 8, top: 4, bottom: 4, width: 1.5, background: "#E4E8F0" }} />
@@ -193,6 +214,27 @@ export function MeetingLog({ meetings, sessions }: { meetings: CeoMeeting[]; ses
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function AnalysisPanel({ a, onClose }: { a: MeetingAnalysis; onClose: () => void }) {
+  const block = (title: string, items: string[], color: string) => items.length > 0 && (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".7px", textTransform: "uppercase", color, marginBottom: 5 }}>{title}</div>
+      <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12.5, lineHeight: 1.6, color: navy }}>{items.map((x, i) => <li key={i}>{x}</li>)}</ul>
+    </div>
+  );
+  return (
+    <div style={{ background: "#fff", border: "1px solid #E4E8F0", borderRadius: 12, padding: 16, marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".8px", textTransform: "uppercase", color: royal }}>AI Chief of Staff · meeting-log analysis</div>
+        <button onClick={onClose} style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 16, color: "#98A2B3", cursor: "pointer", lineHeight: 1 }} aria-label="Dismiss">✕</button>
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: navy, marginTop: 6, lineHeight: 1.5 }}>{a.headline}</div>
+      {block("Recurring themes", a.themes, "#1A6CE4")}
+      {block("Risks & open items", a.risks, "#D6455D")}
+      {block("Suggested next steps", a.suggestions, "#0E9F6E")}
     </div>
   );
 }

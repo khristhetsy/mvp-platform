@@ -4,8 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { HubShell, type HubTab } from "@/components/admin/hub/HubShell";
 import { status as kpiStatus, compare, formatKpi, deptScore, type KpiStatus, type Period } from "@/lib/ceo/kpi";
 import type { CeoPayload, CeoKpi } from "@/lib/ceo/hub-data";
-import type { CeoMeeting, CeoSession } from "@/lib/ceo/meetings";
+import type { CeoMeeting, CeoSession, CeoOccurrence } from "@/lib/ceo/meetings";
 import { MeetingWorkflowCard, MeetingLog } from "@/components/ceo/Meetings";
+import { CalendarView } from "@/components/ceo/Calendar";
 import { PlanningTab, SettingsTab } from "@/components/ceo/PlanningSettings";
 
 const ST = { g: { c: "#0E9F6E", bg: "#E6F6EC", l: "On target" }, y: { c: "#B7791F", bg: "#FDF3E3", l: "Watch" }, r: { c: "#D6455D", bg: "#FCE9EC", l: "Off track" } };
@@ -37,8 +38,9 @@ export function CeoHub({ initial, initialTab }: { initial: CeoPayload; initialTa
   const [tab, setTab] = useState(initialTab);
   const [meetings, setMeetings] = useState<CeoMeeting[]>([]);
   const [sessions, setSessions] = useState<CeoSession[]>([]);
+  const [occurrences, setOccurrences] = useState<CeoOccurrence[]>([]);
   const loadMeetings = useCallback(async () => {
-    try { const r = await fetch("/api/ceo/meetings"); if (r.ok) { const d = await r.json(); setMeetings(d.meetings ?? []); setSessions(d.sessions ?? []); } } catch { /* ignore */ }
+    try { const r = await fetch("/api/ceo/meetings"); if (r.ok) { const d = await r.json(); setMeetings(d.meetings ?? []); setSessions(d.sessions ?? []); setOccurrences(d.occurrences ?? []); } } catch { /* ignore */ }
   }, []);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch meetings on mount
   useEffect(() => { void loadMeetings(); }, [loadMeetings]);
@@ -46,7 +48,7 @@ export function CeoHub({ initial, initialTab }: { initial: CeoPayload; initialTa
 
   const tabs: HubTab[] = [
     { key: "dash", label: "Dashboard" }, { key: "sales", label: "Sales" }, { key: "marketing", label: "Marketing" },
-    { key: "operations", label: "Operations" }, { key: "planning", label: "Planning" }, { key: "log", label: "Meeting Log" }, { key: "settings", label: "Settings" },
+    { key: "operations", label: "Operations" }, { key: "planning", label: "Planning" }, { key: "calendar", label: "Calendar" }, { key: "log", label: "Meeting Log" }, { key: "settings", label: "Settings" },
   ];
 
   return (
@@ -56,6 +58,7 @@ export function CeoHub({ initial, initialTab }: { initial: CeoPayload; initialTa
         <DeptTab dept={tab} kpis={initial.kpis.filter((k) => k.dept === tab)} meetings={meetings.filter((m) => m.dept === tab)} sessions={sessions} onRefresh={loadMeetings} />
       )}
       {tab === "planning" && <PlanningTab />}
+      {tab === "calendar" && <CalendarView meetings={meetings} occurrences={occurrences} onRefresh={loadMeetings} />}
       {tab === "log" && <MeetingLog meetings={meetings} sessions={sessions} />}
       {tab === "settings" && <SettingsTab meetings={meetings} onRefreshMeetings={loadMeetings} />}
     </HubShell>
@@ -65,6 +68,13 @@ export function CeoHub({ initial, initialTab }: { initial: CeoPayload; initialTa
 /* ── Dashboard ─────────────────────────────────────────────────────────────── */
 
 function Dashboard({ payload, onJump }: { payload: CeoPayload; onJump: (k: string) => void }) {
+  const [phrase, setPhrase] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/ceo/phrase").then((r) => r.ok ? r.json() : null).then((d) => { if (alive && d?.phrase) setPhrase(d.phrase); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
   const scores = useMemo(() => (["sales", "marketing", "operations"] as const).map((d) => {
     const rows = payload.kpis.filter((k) => k.dept === d).map((k) => computeView(k, "wk", "lw")).filter((v) => !v.na);
     const score = deptScore(rows.map((v) => ({ status: v.st, weight: 1 })));
@@ -73,6 +83,11 @@ function Dashboard({ payload, onJump }: { payload: CeoPayload; onJump: (k: strin
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", border: "1px solid #E4E8F0", borderLeft: `3px solid ${royal}`, borderRadius: 10, padding: "12px 16px" }}>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".7px", textTransform: "uppercase", color: royal }}>Today</span>
+        <span style={{ fontSize: 13.5, fontWeight: 500, color: navy, fontStyle: "italic" }}>{phrase ?? "Setting the tone for the day…"}</span>
+      </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
         {scores.map((s) => (
           <button key={s.dept} onClick={() => onJump(s.dept)} style={{ textAlign: "left", background: "#fff", border: "1px solid #E4E8F0", borderRadius: 12, padding: "14px 16px", cursor: "pointer" }}>

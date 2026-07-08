@@ -21,11 +21,16 @@ async function api(url: string, method: string, body?: unknown) {
 
 /* ── Planning: goals CRUD ── */
 
+interface SuggestedGoal { title: string; metric?: string | null; target?: number | null; period?: string | null; rationale?: string | null }
+
 export function PlanningTab() {
   const [goals, setGoals] = useState<Goal[] | null>(null);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ title: "", metric: "", target: "", current: "", period: "", dueDate: "" });
   const [busy, setBusy] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestions, setSuggestions] = useState<SuggestedGoal[] | null>(null);
+  const [suggestMsg, setSuggestMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => { const { ok, data } = await api("/api/ceo/goals", "GET"); if (ok) setGoals((data as { goals: Goal[] }).goals ?? []); }, []);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- load goals on mount
@@ -41,14 +46,52 @@ export function PlanningTab() {
   async function patch(id: string, p: Record<string, unknown>) { await api(`/api/ceo/goals/${id}`, "PATCH", p); void load(); }
   async function del(id: string) { if (!confirm("Delete this goal?")) return; await api(`/api/ceo/goals/${id}`, "DELETE"); void load(); }
 
+  async function suggest() {
+    setSuggesting(true); setSuggestMsg(null); setSuggestions(null);
+    const { ok, data } = await api("/api/ceo/goals/suggest", "POST", {});
+    setSuggesting(false);
+    const d = data as { goals?: SuggestedGoal[]; skippedReason?: string; error?: string };
+    if (ok && d.goals && d.goals.length > 0) setSuggestions(d.goals);
+    else setSuggestMsg(
+      d.skippedReason === "claude_not_configured" ? "AI is off — set ANTHROPIC_API_KEY to enable suggestions."
+      : d.skippedReason ? "Not enough KPI data yet — run snapshots first, then try again."
+      : d.error ?? "No suggestions available right now.");
+  }
+  async function addSuggested(g: SuggestedGoal) {
+    await api("/api/ceo/goals", "POST", { title: g.title, metric: g.metric ?? null, target: g.target ?? null, current: 0, period: g.period ?? null, dueDate: null });
+    setSuggestions((cur) => (cur ? cur.filter((x) => x !== g) : cur));
+    void load();
+  }
+
   if (!goals) return <p style={{ fontSize: 13, color: "#6B7690" }}>Loading…</p>;
 
   return (
     <div style={{ maxWidth: 760 }}>
-      <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: navy }}>Planning · Goals</div>
-        <button onClick={() => setAdding((v) => !v)} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: "#fff", background: navy, border: "none", borderRadius: 8, padding: "8px 13px", cursor: "pointer" }}>{adding ? "Cancel" : "+ New goal"}</button>
+        <button onClick={suggest} disabled={suggesting} style={{ marginLeft: "auto", fontSize: 12, fontWeight: 600, color: royal, background: "#EEF3FC", border: "none", borderRadius: 8, padding: "8px 13px", cursor: suggesting ? "default" : "pointer", opacity: suggesting ? 0.7 : 1 }}>{suggesting ? "Thinking…" : "✦ Suggest goals"}</button>
+        <button onClick={() => setAdding((v) => !v)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: navy, border: "none", borderRadius: 8, padding: "8px 13px", cursor: "pointer" }}>{adding ? "Cancel" : "+ New goal"}</button>
       </div>
+
+      {suggestMsg && <div style={{ fontSize: 12, color: "#D6455D", marginBottom: 10 }}>{suggestMsg}</div>}
+      {suggestions && suggestions.length > 0 && (
+        <div style={{ background: "#F7FAFF", border: "1px solid #DCE7FA", borderRadius: 12, padding: 12, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".7px", textTransform: "uppercase", color: royal }}>AI-suggested goals</div>
+            <button onClick={() => setSuggestions(null)} style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 15, color: "#98A2B3", cursor: "pointer", lineHeight: 1 }} aria-label="Dismiss">✕</button>
+          </div>
+          {suggestions.map((g, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "9px 0", borderTop: i ? "1px solid #E4ECF9" : "none" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: navy }}>{g.title}</div>
+                <div style={{ fontSize: 11.5, color: "#6B7690", marginTop: 2 }}>{[g.metric, g.target != null ? `target ${g.target}` : null, g.period].filter(Boolean).join(" · ")}</div>
+                {g.rationale && <div style={{ fontSize: 11.5, color: "#6B7690", marginTop: 3, lineHeight: 1.5 }}>{g.rationale}</div>}
+              </div>
+              <button onClick={() => addSuggested(g)} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: royal, border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer", whiteSpace: "nowrap" }}>+ Add</button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {adding && (
         <div style={{ background: "#F6F8FB", borderRadius: 10, padding: 12, marginBottom: 12, display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 8 }}>
@@ -162,22 +205,26 @@ export function SettingsTab({ meetings, onRefreshMeetings }: { meetings: CeoMeet
   );
 }
 
+const CADENCE_OPTS: [string, string][] = [["weekly", "Weekly"], ["biweekly", "Biweekly"], ["monthly", "Monthly"]];
+
 function MeetingRow({ meeting, first, onSaved }: { meeting: CeoMeeting; first: boolean; onSaved: () => void }) {
+  const [cadence, setCadence] = useState<string>(meeting.cadence);
   const [day, setDay] = useState(meeting.dayOfWeek);
   const [time, setTime] = useState(meeting.timeLocal.slice(0, 5));
   const [dur, setDur] = useState(meeting.durationMin);
   const [busy, setBusy] = useState(false);
-  const dirty = day !== meeting.dayOfWeek || time !== meeting.timeLocal.slice(0, 5) || dur !== meeting.durationMin;
+  const dirty = cadence !== meeting.cadence || day !== meeting.dayOfWeek || time !== meeting.timeLocal.slice(0, 5) || dur !== meeting.durationMin;
 
   async function save() {
     setBusy(true);
-    await api(`/api/ceo/meetings/${meeting.key}`, "PATCH", { dayOfWeek: day, timeLocal: time, durationMin: dur });
+    await api(`/api/ceo/meetings/${meeting.key}`, "PATCH", { cadence, dayOfWeek: day, timeLocal: time, durationMin: dur });
     setBusy(false); onSaved();
   }
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderTop: first ? "none" : "1px solid #F1F4F9", flexWrap: "wrap" }}>
       <div style={{ minWidth: 150, fontSize: 13, fontWeight: 600 }}>{meeting.name}{meeting.gcalEventId && <span style={{ marginLeft: 6, fontSize: 10, color: "#0E9F6E" }}>· synced</span>}</div>
+      <select value={cadence} onChange={(e) => setCadence(e.target.value)} style={inp}>{CADENCE_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
       <select value={day} onChange={(e) => setDay(Number(e.target.value))} style={inp}>{DAY_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
       <input type="time" value={time} onChange={(e) => setTime(e.target.value)} style={inp} />
       <input type="number" value={dur} onChange={(e) => setDur(Number(e.target.value))} style={{ ...inp, width: 72 }} /> <span style={{ fontSize: 11.5, color: "#6B7690" }}>min</span>

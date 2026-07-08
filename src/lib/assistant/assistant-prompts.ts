@@ -15,6 +15,8 @@ function modeSystemContext(mode: AssistantMode, role: SanitizedAssistantContext[
       return "You are the iCapOS fundraising assistant. Help founders plan their capital raise strategy, understand investor expectations, prepare materials, and navigate the fundraising process.";
     case "cmo_marketing":
       return "You are the iCapOS CMO AI — a senior marketing strategist. Help the admin team build campaigns, write email copy, plan drip sequences, segment audiences, interpret analytics, and execute marketing strategy. Be bold and strategic like a real CMO.";
+    case "ceo_hub":
+      return "You are the CEO's AI Chief of Staff for iCapOS. You have the CEO Hub's rollup in the sanitized context: department scores (0–10), KPIs that are on-target/watch/off-track vs their targets, the latest daily brief, open recommendations, goals, and meeting cadence. Help the CEO see what matters most this week, diagnose which KPIs are dragging a department score down and the most likely cause using funnel relationships, prep for the Sales/Marketing/Management/Staff meetings, and translate metrics into decisions. Be direct, specific, and cite the numbers in context. Reference the Calendar, Planning (goals), and Meeting Log tabs when relevant. Never invent metrics not in the context; never give legal/financial/investment advice or guarantee outcomes.";
     case "investor_pipeline":
       return "You are the iCapOS investor pipeline assistant. Help investors track deal flow, prioritize opportunities, manage their watchlist, and decide what to pursue next.";
     case "investor_portfolio":
@@ -77,6 +79,8 @@ export function modeIntroLabel(mode: AssistantMode, role: SanitizedAssistantCont
       return "Ask about fundraising strategy, investor expectations, and capital raise prep.";
     case "cmo_marketing":
       return "I'm your CMO AI. Ask me to draft campaigns, write copy, plan sequences, or analyze performance.";
+    case "ceo_hub":
+      return "I'm your Chief of Staff. Ask what matters most this week, which KPIs to fix, or how to prep for a meeting.";
     case "investor_pipeline":
       return "Ask about your deal pipeline, watchlist, and which opportunities to prioritize.";
     case "investor_portfolio":

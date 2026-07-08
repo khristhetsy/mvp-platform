@@ -31,6 +31,8 @@ function inferClientMode(pathname: string, workspace: ReturnType<typeof resolveW
   if (pathname.includes("/spv") || pathname.startsWith("/investor/spvs")) return "spv_guidance";
   if (pathname.startsWith("/admin/compliance")) return "compliance_guidance";
   if (pathname.startsWith("/admin/reports")) return "reports_guidance";
+  // CEO Hub → Chief of Staff
+  if (pathname.startsWith("/admin/ceo")) return "ceo_hub";
   // Admin marketing → CMO AI
   if (pathname.startsWith("/admin/marketing")) return "cmo_marketing";
   // Investor pages
@@ -240,7 +242,7 @@ export function IcapOSAssistant() {
               </div>
               <div>
                 <p id="capitalos-assistant-title" className="text-sm font-semibold text-slate-900">
-                  {mode === "cmo_marketing" ? "CMO AI" : mode === "investor_pipeline" || mode === "investor_portfolio" || mode === "investor_matching" ? "Analysis AI" : "iCapOS AI"}
+                  {mode === "cmo_marketing" ? "CMO AI" : mode === "ceo_hub" ? "Chief of Staff" : mode === "investor_pipeline" || mode === "investor_portfolio" || mode === "investor_matching" ? "Analysis AI" : "iCapOS AI"}
                 </p>
                 <p className="truncate text-[10px] leading-none text-slate-500" style={{ maxWidth: 180 }}>
                   {intro.length > 44 ? intro.slice(0, 44) + "…" : intro}

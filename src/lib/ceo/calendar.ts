@@ -32,6 +32,13 @@ function localDateTimes(date: string, timeLocal: string, durationMin: number): {
   return { start, end };
 }
 
+/** RRULE for the meeting's cadence (weekly | biweekly | monthly). */
+function rruleFor(cadence: string): string {
+  if (cadence === "biweekly") return "RRULE:FREQ=WEEKLY;INTERVAL=2";
+  if (cadence === "monthly") return "RRULE:FREQ=MONTHLY";
+  return "RRULE:FREQ=WEEKLY";
+}
+
 function description(meeting: CeoMeeting): string {
   const agenda = meeting.agenda.map((a) => `• ${a.title}${a.minutes ? ` (${a.minutes}m)` : ""}`).join("\n");
   return `${meeting.name}\n\nAgenda:\n${agenda}\n\nOpen the log note in the CEO Hub: https://icapos.com/admin/ceo?tab=${meeting.dept}`;
@@ -52,7 +59,7 @@ export async function createRecurringMeeting(meeting: CeoMeeting, adminUserId: s
     description: description(meeting),
     start: { dateTime: start, timeZone: meeting.timezone },
     end: { dateTime: end, timeZone: meeting.timezone },
-    recurrence: ["RRULE:FREQ=WEEKLY"],
+    recurrence: [rruleFor(meeting.cadence)],
     attendees: attendees.length ? attendees : undefined,
     conferenceData: { createRequest: { requestId: randomUUID(), conferenceSolutionKey: { type: "hangoutsMeet" } } },
   };

@@ -9,7 +9,36 @@ import {
   parseEntityFromPath,
   workspaceLabelForRole,
 } from "@/lib/assistant/assistant-context";
+import { loadCeoPayload } from "@/lib/ceo/hub-data";
+import { status as ceoKpiStatus, deptScore as ceoDeptScore } from "@/lib/ceo/kpi";
 import type { Profile, Database } from "@/lib/supabase/types";
+
+/** CEO Hub rollup for the Chief-of-Staff assistant mode. Best-effort. */
+async function appendCeoContext(
+  summary: SanitizedAssistantContext["summary"],
+  highlights: string[],
+): Promise<void> {
+  try {
+    const payload = await loadCeoPayload();
+    const dept = (["sales", "marketing", "operations"] as const).map((d) => {
+      const rows = payload.kpis.filter((k) => k.dept === d && k.weeks.length > 0).map((k) => ({ status: ceoKpiStatus(k.weeks[k.weeks.length - 1].value, k), weight: k.weight }));
+      return { dept: d, score: ceoDeptScore(rows) };
+    });
+    for (const d of dept) summary[`ceoScore_${d.dept}`] = d.score;
+    summary.ceoOpenRecommendations = payload.recommendations.length;
+    summary.ceoGoals = payload.goals.length;
+
+    const offTrack = payload.kpis
+      .filter((k) => k.weeks.length > 0 && ceoKpiStatus(k.weeks[k.weeks.length - 1].value, k) === "r")
+      .map((k) => `${k.label} (${k.dept})`);
+    if (offTrack.length) highlights.push(`Off-track KPIs: ${offTrack.slice(0, 6).join(", ")}.`);
+    const scoreLine = dept.filter((d) => d.score != null).map((d) => `${d.dept} ${d.score}/10`).join(", ");
+    if (scoreLine) highlights.push(`Department scores — ${scoreLine}.`);
+    if (payload.brief?.headline) highlights.push(`Latest brief: ${payload.brief.headline}`);
+  } catch {
+    /* CEO tables may be empty or unmigrated — assistant still works without them */
+  }
+}
 
 async function loadEntityLabel(
   supabase: SupabaseClient<Database>,
@@ -101,6 +130,10 @@ export async function loadAdminAssistantContext(
   }
   if (highlights.length === 0) {
     highlights.push("Core review queues appear clear — monitor operational activity for new items.");
+  }
+
+  if (mode === "ceo_hub") {
+    await appendCeoContext(summary, highlights);
   }
 
   const parsedEntity = parseEntityFromPath(currentPath);
