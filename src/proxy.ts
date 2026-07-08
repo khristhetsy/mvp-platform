@@ -177,7 +177,10 @@ export async function proxy(request: NextRequest) {
     const exempt =
       p === "/admin" ||
       p === "/admin/dashboard" || p.startsWith("/admin/dashboard/") ||
-      p === "/admin/profile" || p.startsWith("/admin/profile/");
+      p === "/admin/profile" || p.startsWith("/admin/profile/") ||
+      // CEO Hub is a platform-admin surface with its own requireRole(["admin"])
+      // gate; it is not a departmental feature, so skip the department check here.
+      p === "/admin/ceo" || p.startsWith("/admin/ceo/");
     if (!exempt) {
       try {
         const { count } = await supabase
