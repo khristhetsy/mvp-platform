@@ -21,9 +21,37 @@ export function emailConfigured(): boolean {
   return Boolean(getApiKey());
 }
 
-/** Replace {{first_name}}, {{company}}, etc. in subject/body */
-function interpolate(text: string, vars: Record<string, string>): string {
-  return text.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
+// Replace merge fields in subject/body. Tolerant of the many ways people write
+// them: {{first_name}}, {first_name}, {First Name}, {Company}, {Your Name} — both
+// single/double braces, any case, spaces or underscores. Only known tokens are
+// replaced, so CSS/HTML braces are never touched. Fixes literal "Hi {First Name},"
+// leaking into sent mail (which reads as spam to filters and recipients).
+export function interpolate(text: string, vars: Record<string, string>): string {
+  const known: Record<string, string> = {};
+  const add = (aliases: string[], val: string) => aliases.forEach((a) => { known[a] = val; });
+  add(["first_name", "firstname", "fname"], vars.first_name ?? "");
+  add(["last_name", "lastname", "lname"], vars.last_name ?? "");
+  add(["company", "company_name", "organization"], vars.company ?? "");
+  add(["email", "email_address"], vars.email ?? "");
+  add(["your_name", "sender_name", "from_name"], vars.sender_name ?? "");
+  return text.replace(/\{\{?\s*([A-Za-z][\w ]*?)\s*\}?\}/g, (m, tok: string) => {
+    const key = tok.trim().toLowerCase().replace(/\s+/g, "_");
+    return key in known ? known[key] : m;
+  });
+}
+
+/** Minimal HTML→text so every email carries a real plain-text part (deliverability). */
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<br\s*\/?>(?!\n)/gi, "\n")
+    .replace(/<\/(p|div|h[1-6]|li|tr)>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#39;/g, "'").replace(/&quot;/g, '"')
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 export type SendMarketingEmailInput = {
@@ -52,11 +80,14 @@ export async function sendMarketingEmail(
     first_name: input.first_name ?? "there",
     company: input.company ?? "",
     email: input.to,
+    sender_name: input.from_name ?? "",
   };
 
   const subject = interpolate(input.subject, vars);
   const htmlBody = interpolate(input.html_body, vars);
-  const textBody = input.text_body ? interpolate(input.text_body, vars) : undefined;
+  // Always send a plain-text alternative — derive one from the HTML if none was
+  // authored. Missing text parts are a real spam signal.
+  const textBody = input.text_body ? interpolate(input.text_body, vars) : htmlToText(htmlBody);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
   const unsubscribeUrl = `${appUrl}/unsubscribe?token=${input.unsubscribe_token}`;
