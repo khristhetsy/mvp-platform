@@ -492,7 +492,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                     </button>
                   )}
                   {c.status === "draft" && !scheduledAt && (
-                    <ScheduleButton campaignId={c.id} onSchedule={(at) => handleAction(c.id, "schedule", at)} acting={acting === c.id + "schedule"} />
+                    <ScheduleButton onSchedule={(at) => handleAction(c.id, "schedule", at)} acting={acting === c.id + "schedule"} />
                   )}
                   {c.status === "sending" && (
                     <button onClick={() => handleAction(c.id, "pause")} disabled={acting === c.id + "pause"}
@@ -569,7 +569,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
   );
 }
 
-function ScheduleButton({ campaignId, onSchedule, acting }: { campaignId: string; onSchedule: (at: string) => void; acting: boolean }) {
+function ScheduleButton({ onSchedule, acting }: { onSchedule: (at: string) => void; acting: boolean }) {
   const [open, setOpen] = useState(false);
   const [at, setAt] = useState("");
   if (!open) {
