@@ -28,7 +28,7 @@ function parseJson(raw: string): any {
 const briefSchema = z.object({ headline: z.string().max(400), sections: z.array(z.object({ title: z.string().max(80), body: z.string().max(1200) })).max(6) });
 const kpiAiSchema = z.array(z.object({ kpi_key: z.string(), diagnosis: z.string().max(1000), solutions: z.array(z.string().max(400)).max(3), mentorship: z.string().max(600), coach_prompt: z.string().max(300) }));
 
-export interface BriefingResult { week: string; snapshots: number; briefWritten: boolean; kpiAiWritten: number; emailsSent: number; skippedReason?: string }
+export interface BriefingResult { week: string; snapshots: number; briefWritten: boolean; kpiAiWritten: number; emailsSent: number; skippedReason?: string; briefError?: string }
 
 export async function runBriefing(mode: "weekly" | "daily" = "daily"): Promise<BriefingResult> {
   const snap = await computeWeekSnapshots();
@@ -60,6 +60,7 @@ export async function runBriefing(mode: "weekly" | "daily" = "daily"): Promise<B
   // ── Daily brief ──
   let briefWritten = false;
   let briefHeadline = "";
+  let briefError: string | undefined;
   const briefCtx = {
     week,
     dept_scores: scores,
@@ -75,11 +76,13 @@ export async function runBriefing(mode: "weekly" | "daily" = "daily"): Promise<B
     );
     const parsed = briefSchema.safeParse(parseJson(out));
     if (parsed.success) {
-      await db().from("ceo_briefs").upsert({ business: "icapos", brief_date: today(), headline: parsed.data.headline, sections: parsed.data.sections, model: CLAUDE_SONNET }, { onConflict: "business,brief_date" });
-      briefWritten = true;
-      briefHeadline = parsed.data.headline;
+      const { error } = await db().from("ceo_briefs").upsert({ business: "icapos", brief_date: today(), headline: parsed.data.headline, sections: parsed.data.sections, model: CLAUDE_SONNET }, { onConflict: "business,brief_date" });
+      if (error) { briefError = `save failed: ${error.message}`; }
+      else { briefWritten = true; briefHeadline = parsed.data.headline; }
+    } else {
+      briefError = "the AI response was not valid JSON";
     }
-  } catch { /* fail soft */ }
+  } catch (e) { briefError = e instanceof Error ? e.message : "brief generation failed"; }
 
   // ── Per-KPI AI coaching (batched, capped) ──
   let kpiAiWritten = 0;
@@ -122,5 +125,5 @@ export async function runBriefing(mode: "weekly" | "daily" = "daily"): Promise<B
     } catch { /* fail soft */ }
   }
 
-  return { week, snapshots: snap.computed.length, briefWritten, kpiAiWritten, emailsSent };
+  return { week, snapshots: snap.computed.length, briefWritten, kpiAiWritten, emailsSent, briefError };
 }

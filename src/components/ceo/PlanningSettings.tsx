@@ -9,8 +9,14 @@ const DAY_OPTS: [number, string][] = [[1, "Mon"], [2, "Tue"], [3, "Wed"], [4, "T
 const inp: React.CSSProperties = { fontSize: 12.5, padding: "8px 10px", borderRadius: 8, border: "1px solid #E4E8F0", background: "#fff", color: navy, boxSizing: "border-box" };
 
 async function api(url: string, method: string, body?: unknown) {
-  try { const r = await fetch(url, { method, headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined }); return { ok: r.ok, data: await r.json().catch(() => ({})) }; }
-  catch { return { ok: false, data: {} }; }
+  try {
+    const r = await fetch(url, { method, headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined });
+    const text = await r.text();
+    let data: Record<string, unknown> = {};
+    try { data = text ? JSON.parse(text) : {}; }
+    catch { data = { error: `HTTP ${r.status} ${r.statusText}${text ? ` — ${text.slice(0, 160)}` : ""}` }; }
+    return { ok: r.ok, data };
+  } catch (e) { return { ok: false, data: { error: e instanceof Error ? e.message : "Network error" } as Record<string, unknown> }; }
 }
 
 /* ── Planning: goals CRUD ── */
@@ -99,8 +105,14 @@ export function SettingsTab({ meetings, onRefreshMeetings }: { meetings: CeoMeet
     setRunning("brief"); setRunMsg(null);
     const { ok, data } = await api("/api/ceo/briefing?mode=weekly", "POST", {});
     setRunning(null);
-    const d = data as { briefWritten?: boolean; kpiAiWritten?: number; skippedReason?: string; error?: string };
-    setRunMsg(ok ? (d.skippedReason === "claude_not_configured" ? "Ran, but ANTHROPIC_API_KEY isn't set — no AI content generated." : `Brief ${d.briefWritten ? "generated" : "skipped"}; ${d.kpiAiWritten ?? 0} KPI analyses written. Reload to see them.`) : (d.error ?? "Failed."));
+    const d = data as { briefWritten?: boolean; kpiAiWritten?: number; skippedReason?: string; briefError?: string; error?: string };
+    setRunMsg(ok
+      ? (d.skippedReason === "claude_not_configured"
+          ? "Ran, but ANTHROPIC_API_KEY isn't set in the server environment — no AI content generated."
+          : d.briefWritten
+            ? `Brief generated; ${d.kpiAiWritten ?? 0} KPI analyses written. Reload to see them.`
+            : `Brief could not be generated${d.briefError ? ` — ${d.briefError}` : ""}.`)
+      : (d.error ?? "Failed."));
   }
 
   const load = useCallback(async () => { const { ok, data } = await api("/api/ceo/settings", "GET"); if (ok) setPrefs(data as { emailDaily: boolean; emailWeekly: boolean }); }, []);
@@ -122,7 +134,7 @@ export function SettingsTab({ meetings, onRefreshMeetings }: { meetings: CeoMeet
             <button onClick={runBriefing} disabled={running !== null} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: royal, border: "none", borderRadius: 8, padding: "9px 14px", cursor: running ? "default" : "pointer", opacity: running === "brief" ? 0.6 : 1 }}>{running === "brief" ? "Generating…" : "Generate AI brief now"}</button>
           </div>
           <div style={{ fontSize: 11.5, color: "#6B7690", marginTop: 10, lineHeight: 1.5 }}>Recompute pulls this week&apos;s KPI values from Sales, Marketing &amp; task data. Generate writes the daily/weekly brief and per-KPI coaching (needs an Anthropic API key). Both normally run on the cron — use these to run on demand.</div>
-          {runMsg && <div style={{ fontSize: 12, color: runMsg.includes("Failed") || runMsg.includes("isn't set") ? "#D6455D" : "#0E9F6E", marginTop: 10 }}>{runMsg}</div>}
+          {runMsg && <div style={{ fontSize: 12, color: /Failed|isn't set|could not|HTTP|error/i.test(runMsg) ? "#D6455D" : "#0E9F6E", marginTop: 10 }}>{runMsg}</div>}
         </div>
       </div>
 
