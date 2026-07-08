@@ -14,7 +14,7 @@ import { lintCopy, type LintResult, type PublishBody } from "./lint";
 const MAX_PER_APPROVE = 250;
 const DELIVERABILITY_THRESHOLD = 0.97;
 const DEFAULT_FROM_NAME = "iCapOS";
-const DEFAULT_FROM_EMAIL = "outreach@mail.icapos.com";
+const DEFAULT_FROM_EMAIL = "outreach@icapos.com";
 
 export type Segment = "hot" | "warm" | "cold";
 
