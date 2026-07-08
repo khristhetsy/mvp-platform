@@ -22,7 +22,7 @@ interface DailyOpen { date: string; count: number; }
 interface CompletedCampaign { id: string; name: string; sent: number; opened: number; clicked: number; date: string; }
 interface ListSummary { id: string; name: string; count: number; }
 interface ListCampaign { id: string; name: string; list_id: string; sent: number; opened: number; clicked: number; }
-interface WebhookHealth { configured: boolean; lastEventAt: string | null; }
+interface WebhookHealth { configured: boolean; lastEventAt: string | null; lastAttemptAt?: string | null; lastOutcome?: string | null; attempts30d?: number; rejected30d?: number; }
 interface Props { metrics: Metrics; dailyOpens: DailyOpen[]; completedCampaigns?: CompletedCampaign[]; lists?: ListSummary[]; listCampaigns?: ListCampaign[]; webhookHealth?: WebhookHealth; }
 interface ChatMessage { role: "user" | "assistant"; content: string; }
 
@@ -78,13 +78,35 @@ const QUICK_PROMPTS = [
   "What email sequences should I build for warming up investors?",
 ];
 
+const RED = { dot: "#A32D2D", bg: "#FCEBEB", border: "#F09595", color: "#A32D2D" };
+const AMBER = { dot: "#854F0B", bg: "#FAEEDA", border: "#F4D9A0", color: "#854F0B" };
+const GREEN = { dot: "#0F6E56", bg: "#E1F5EE", border: "#9FE1CB", color: "#0F6E56" };
+
+function ago(fromIso: string, nowMs: number): string {
+  const mins = Math.floor((nowMs - new Date(fromIso).getTime()) / 60000);
+  return mins < 60 ? `${Math.max(mins, 0)}m ago` : mins < 1440 ? `${Math.floor(mins / 60)}h ago` : `${Math.floor(mins / 1440)}d ago`;
+}
+
 function webhookStatus(h: WebhookHealth | undefined, nowMs: number): { dot: string; bg: string; border: string; color: string; label: string } {
-  if (!h || !h.configured) return { dot: "#A32D2D", bg: "#FCEBEB", border: "#F09595", color: "#A32D2D", label: "Tracking webhook not configured" };
-  if (!h.lastEventAt) return { dot: "#A32D2D", bg: "#FCEBEB", border: "#F09595", color: "#A32D2D", label: "No tracking events received yet" };
-  const mins = Math.floor((nowMs - new Date(h.lastEventAt).getTime()) / 60000);
-  const ago = mins < 60 ? `${Math.max(mins, 0)}m ago` : mins < 1440 ? `${Math.floor(mins / 60)}h ago` : `${Math.floor(mins / 1440)}d ago`;
-  if (mins > 7 * 1440) return { dot: "#854F0B", bg: "#FAEEDA", border: "#F4D9A0", color: "#854F0B", label: `No tracking events in a while · last ${ago}` };
-  return { dot: "#0F6E56", bg: "#E1F5EE", border: "#9FE1CB", color: "#0F6E56", label: `Tracking live · last event ${ago}` };
+  if (!h || !h.configured) return { ...RED, label: "Webhook not configured — set RESEND_WEBHOOK_SECRET" };
+
+  const attempts = h.attempts30d ?? 0;
+  const rejected = h.rejected30d ?? 0;
+
+  // Live: real open/click/delivered events are landing.
+  if (h.lastEventAt) {
+    const mins = Math.floor((nowMs - new Date(h.lastEventAt).getTime()) / 60000);
+    if (mins > 7 * 1440) return { ...AMBER, label: `No tracking events in a while · last ${ago(h.lastEventAt, nowMs)}` };
+    return { ...GREEN, label: `Tracking live · last event ${ago(h.lastEventAt, nowMs)}` };
+  }
+
+  // No stored events yet — use the inbound-attempt log to say WHY.
+  if (attempts === 0) return { ...RED, label: "No webhook calls from Resend — add the endpoint in Resend → Webhooks" };
+  if (rejected > 0 && h.lastOutcome === "bad_signature") return { ...RED, label: `Webhook calls rejected (${rejected}) — RESEND_WEBHOOK_SECRET doesn't match the Resend endpoint` };
+  if (h.lastOutcome === "no_match") return { ...AMBER, label: "Webhook verified, but no matching sent email — resend_id isn't being recorded on send" };
+  if (h.lastOutcome === "ignored_type") return { ...AMBER, label: "Webhook verified — enable Open & Click tracking on the Resend domain" };
+  if (h.lastOutcome === "recorded") return { ...GREEN, label: "Webhook verified — awaiting the first open/click" };
+  return { ...AMBER, label: `Webhook received ${attempts} call${attempts === 1 ? "" : "s"} — awaiting tracking events` };
 }
 
 export default function AnalyticsClient({ metrics, dailyOpens, completedCampaigns = [], lists = [], listCampaigns = [], webhookHealth }: Props) {

@@ -114,9 +114,23 @@ export default async function MarketingAnalyticsPage() {
     .order("occurred_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  // Inbound-attempt diagnostics: distinguishes "Resend never called us" from
+  // "called but rejected (bad secret)" from "verified but unmatched".
+  const [{ data: lastAttempt }, { count: attempts30d }, { count: rejected30d }] = await Promise.all([
+    supabase.from("marketing_webhook_log").select("received_at, verified, outcome, event_type").order("received_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("marketing_webhook_log").select("*", { count: "exact", head: true }).gte("received_at", since30d),
+    supabase.from("marketing_webhook_log").select("*", { count: "exact", head: true }).eq("verified", false).gte("received_at", since30d),
+  ]);
+  const attempt = lastAttempt as { received_at: string; verified: boolean; outcome: string; event_type: string | null } | null;
+
   const webhookHealth = {
     configured: Boolean(process.env.RESEND_WEBHOOK_SECRET),
     lastEventAt: (lastHook as { occurred_at: string } | null)?.occurred_at ?? null,
+    lastAttemptAt: attempt?.received_at ?? null,
+    lastOutcome: attempt?.outcome ?? null,
+    attempts30d: attempts30d ?? 0,
+    rejected30d: rejected30d ?? 0,
   };
 
   return <AnalyticsClient metrics={metrics} dailyOpens={dailyOpens} completedCampaigns={completedCampaigns} lists={lists} listCampaigns={listCampaigns} webhookHealth={webhookHealth} />;

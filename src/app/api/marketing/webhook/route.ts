@@ -1,25 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac, timingSafeEqual } from "crypto";
 import { marketingDb } from "@/lib/marketing/db";
+import { verifySvixSignature } from "@/lib/marketing/webhook-verify";
 
-// Verify a Resend (Svix) webhook signature. The signed content is
-// `${id}.${timestamp}.${rawBody}`, HMAC-SHA256'd with the base64 secret that
-// follows the `whsec_` prefix; `svix-signature` is a space-separated list of
-// `v1,<base64sig>` entries. See https://docs.svix.com/receiving/verifying-payloads.
-function verifySvixSignature(secret: string, id: string, timestamp: string, signature: string, rawBody: string): boolean {
-  if (!id || !timestamp || !signature) return false;
-  // Reject stale deliveries (>5 min skew) to blunt replay attacks.
-  const ts = Number(timestamp);
-  if (Number.isFinite(ts) && Math.abs(Math.floor(Date.now() / 1000) - ts) > 60 * 5) return false;
-  const key = secret.startsWith("whsec_") ? Buffer.from(secret.slice(6), "base64") : Buffer.from(secret, "utf8");
-  const expected = createHmac("sha256", key).update(`${id}.${timestamp}.${rawBody}`).digest("base64");
-  const expectedBuf = Buffer.from(expected);
-  return signature.split(" ").some((part) => {
-    const sig = part.split(",")[1];
-    if (!sig) return false;
-    const sigBuf = Buffer.from(sig);
-    return sigBuf.length === expectedBuf.length && timingSafeEqual(sigBuf, expectedBuf);
-  });
+type WebhookOutcome = "unconfigured" | "bad_signature" | "bad_json" | "no_match" | "ignored_type" | "recorded";
+
+// Best-effort diagnostics: record every inbound attempt so Analytics can explain
+// exactly why tracking isn't flowing. Never throws — logging must not break ingest.
+async function logAttempt(outcome: WebhookOutcome, opts: { verified: boolean; eventType?: string | null; detail?: string } = { verified: false }): Promise<void> {
+  try {
+    await marketingDb().from("marketing_webhook_log").insert({
+      outcome,
+      verified: opts.verified,
+      event_type: opts.eventType ?? null,
+      detail: opts.detail ?? null,
+    });
+  } catch { /* diagnostics are best-effort */ }
 }
 
 type ResendWebhookEvent = {
@@ -42,6 +37,7 @@ type ResendWebhookEvent = {
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
   if (!webhookSecret) {
+    await logAttempt("unconfigured", { verified: false, detail: "RESEND_WEBHOOK_SECRET is not set" });
     return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
   }
   // Read the raw body — the signature is computed over the exact bytes.
@@ -50,6 +46,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const svixTimestamp = req.headers.get("svix-timestamp") ?? "";
   const svixSignature = req.headers.get("svix-signature") ?? "";
   if (!verifySvixSignature(webhookSecret, svixId, svixTimestamp, svixSignature, rawBody)) {
+    await logAttempt("bad_signature", { verified: false, detail: "Signature did not match RESEND_WEBHOOK_SECRET" });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -57,6 +54,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     event = JSON.parse(rawBody);
   } catch {
+    await logAttempt("bad_json", { verified: true });
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
@@ -64,7 +62,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const email = event.data.to?.[0];
   const resendId = event.data.email_id;
 
-  if (!email || !resendId) return NextResponse.json({ ok: true });
+  if (!email || !resendId) {
+    await logAttempt("ignored_type", { verified: true, eventType: event.type, detail: "missing to/email_id" });
+    return NextResponse.json({ ok: true });
+  }
 
   const eventTypeMap: Record<string, string> = {
     "email.sent": "sent",
@@ -72,12 +73,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     "email.opened": "opened",
     "email.clicked": "clicked",
     "email.bounced": "bounced",
+    // Resend emits `email.complained` for spam complaints; keep the legacy key too.
+    "email.complained": "spam_complaint",
     "email.spam_complaint": "spam_complaint",
     "email.unsubscribed": "unsubscribed",
   };
 
   const ourEventType = eventTypeMap[event.type];
-  if (!ourEventType) return NextResponse.json({ ok: true });
+  if (!ourEventType) {
+    await logAttempt("ignored_type", { verified: true, eventType: event.type });
+    return NextResponse.json({ ok: true });
+  }
 
   const { data: originalEvent } = await db
     .from("marketing_events")
@@ -85,7 +91,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     .eq("resend_id", resendId)
     .maybeSingle();
 
-  if (!originalEvent) return NextResponse.json({ ok: true });
+  if (!originalEvent) {
+    await logAttempt("no_match", { verified: true, eventType: ourEventType, detail: `no sent record for resend_id ${resendId}` });
+    return NextResponse.json({ ok: true });
+  }
 
   await db.from("marketing_events").insert({
     campaign_id: originalEvent.campaign_id,
@@ -126,5 +135,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       .upsert({ email, reason: ourEventType }, { onConflict: "email" });
   }
 
+  await logAttempt("recorded", { verified: true, eventType: ourEventType });
   return NextResponse.json({ ok: true });
 }
