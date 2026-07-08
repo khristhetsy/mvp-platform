@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { marketingDb } from "@/lib/marketing/db";
 import { verifySvixSignature } from "@/lib/marketing/webhook-verify";
 
-type WebhookOutcome = "unconfigured" | "bad_signature" | "bad_json" | "no_match" | "ignored_type" | "recorded";
+type WebhookOutcome = "unconfigured" | "bad_signature" | "bad_json" | "no_match" | "ignored_type" | "recorded" | "insert_error";
 
 // Best-effort diagnostics: record every inbound attempt so Analytics can explain
 // exactly why tracking isn't flowing. Never throws — logging must not break ingest.
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: true });
   }
 
-  await db.from("marketing_events").insert({
+  const { error: insErr } = await db.from("marketing_events").insert({
     campaign_id: originalEvent.campaign_id,
     sequence_id: originalEvent.sequence_id,
     step_id: originalEvent.step_id,
@@ -125,6 +125,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       bounce_type: event.data.bounce?.type,
     },
   });
+  if (insErr) {
+    await logAttempt("insert_error", { verified: true, eventType: ourEventType, detail: insErr.message });
+    return NextResponse.json({ ok: true });
+  }
 
   // Update campaign stat counter via RPC (add this to migration if you want atomic increments)
   if (originalEvent.campaign_id && ["delivered", "opened", "clicked", "bounced", "unsubscribed"].includes(ourEventType)) {
