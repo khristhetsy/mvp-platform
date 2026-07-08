@@ -24,7 +24,9 @@ export type EmailPayload = {
   attachments?: Array<{ filename: string; content: string }>;
 };
 
-const DEFAULT_FROM = "iCapOS <no-reply@mail.icapos.com>";
+// Must be an address on a domain verified for sending in Resend. icapos.com is
+// verified; mail.icapos.com and resend.dev are NOT — sending from those 403s.
+const DEFAULT_FROM = "iCapOS <no-reply@icapos.com>";
 
 /** Bare address from EMAIL_FROM, whether it's "Name <addr>" or just "addr". */
 function baseFromAddress(): string {
