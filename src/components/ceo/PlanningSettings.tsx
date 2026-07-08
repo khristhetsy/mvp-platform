@@ -85,6 +85,23 @@ export function PlanningTab() {
 export function SettingsTab({ meetings, onRefreshMeetings }: { meetings: CeoMeeting[]; onRefreshMeetings: () => void }) {
   const [prefs, setPrefs] = useState<{ emailDaily: boolean; emailWeekly: boolean } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [running, setRunning] = useState<null | "snap" | "brief">(null);
+  const [runMsg, setRunMsg] = useState<string | null>(null);
+
+  async function runSnapshots() {
+    setRunning("snap"); setRunMsg(null);
+    const { ok, data } = await api("/api/ceo/snapshots", "POST", {});
+    setRunning(null);
+    const d = data as { computed?: string[]; skipped?: string[]; error?: string };
+    setRunMsg(ok ? `Snapshots updated — ${d.computed?.length ?? 0} KPIs computed, ${d.skipped?.length ?? 0} n/a. Reload to see them.` : (d.error ?? "Failed."));
+  }
+  async function runBriefing() {
+    setRunning("brief"); setRunMsg(null);
+    const { ok, data } = await api("/api/ceo/briefing?mode=weekly", "POST", {});
+    setRunning(null);
+    const d = data as { briefWritten?: boolean; kpiAiWritten?: number; skippedReason?: string; error?: string };
+    setRunMsg(ok ? (d.skippedReason === "claude_not_configured" ? "Ran, but ANTHROPIC_API_KEY isn't set — no AI content generated." : `Brief ${d.briefWritten ? "generated" : "skipped"}; ${d.kpiAiWritten ?? 0} KPI analyses written. Reload to see them.`) : (d.error ?? "Failed."));
+  }
 
   const load = useCallback(async () => { const { ok, data } = await api("/api/ceo/settings", "GET"); if (ok) setPrefs(data as { emailDaily: boolean; emailWeekly: boolean }); }, []);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- load prefs on mount
@@ -97,6 +114,18 @@ export function SettingsTab({ meetings, onRefreshMeetings }: { meetings: CeoMeet
 
   return (
     <div style={{ maxWidth: 760, display: "flex", flexDirection: "column", gap: 18 }}>
+      <div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: navy, marginBottom: 10 }}>Data &amp; AI</div>
+        <div style={{ background: "#fff", border: "1px solid #E4E8F0", borderRadius: 12, padding: 16 }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button onClick={runSnapshots} disabled={running !== null} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: navy, border: "none", borderRadius: 8, padding: "9px 14px", cursor: running ? "default" : "pointer", opacity: running === "snap" ? 0.6 : 1 }}>{running === "snap" ? "Computing…" : "Recompute snapshots"}</button>
+            <button onClick={runBriefing} disabled={running !== null} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: royal, border: "none", borderRadius: 8, padding: "9px 14px", cursor: running ? "default" : "pointer", opacity: running === "brief" ? 0.6 : 1 }}>{running === "brief" ? "Generating…" : "Generate AI brief now"}</button>
+          </div>
+          <div style={{ fontSize: 11.5, color: "#6B7690", marginTop: 10, lineHeight: 1.5 }}>Recompute pulls this week&apos;s KPI values from Sales, Marketing &amp; task data. Generate writes the daily/weekly brief and per-KPI coaching (needs an Anthropic API key). Both normally run on the cron — use these to run on demand.</div>
+          {runMsg && <div style={{ fontSize: 12, color: runMsg.includes("Failed") || runMsg.includes("isn't set") ? "#D6455D" : "#0E9F6E", marginTop: 10 }}>{runMsg}</div>}
+        </div>
+      </div>
+
       <div>
         <div style={{ fontSize: 16, fontWeight: 700, color: navy, marginBottom: 10 }}>Notifications</div>
         <div style={{ background: "#fff", border: "1px solid #E4E8F0", borderRadius: 12, overflow: "hidden" }}>
