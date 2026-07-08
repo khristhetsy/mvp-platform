@@ -85,14 +85,29 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: true });
   }
 
-  const { data: originalEvent } = await db
+  // Find the original send by resend_id. Use limit(1) (NOT maybeSingle) — once any
+  // event for this email is recorded there are multiple rows with the same
+  // resend_id, and maybeSingle would error on "multiple rows" and drop the event.
+  const { data: matches } = await db
     .from("marketing_events")
     .select("campaign_id, sequence_id, step_id, contact_id, email")
     .eq("resend_id", resendId)
-    .maybeSingle();
+    .limit(1);
+  const originalEvent = matches?.[0];
 
   if (!originalEvent) {
     await logAttempt("no_match", { verified: true, eventType: ourEventType, detail: `no sent record for resend_id ${resendId}` });
+    return NextResponse.json({ ok: true });
+  }
+
+  // Idempotent: skip if this exact event was already recorded (Resend retries).
+  const { count: existing } = await db
+    .from("marketing_events")
+    .select("*", { count: "exact", head: true })
+    .eq("resend_id", resendId)
+    .eq("event_type", ourEventType);
+  if ((existing ?? 0) > 0) {
+    await logAttempt("recorded", { verified: true, eventType: ourEventType, detail: "duplicate ignored" });
     return NextResponse.json({ ok: true });
   }
 
