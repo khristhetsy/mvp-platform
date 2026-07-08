@@ -25,7 +25,7 @@ const REGISTERED = [
 
 // Intentionally unregistered (orphans left Admin-only, and calendar's sibling routes).
 const ALLOWLIST = [
-  "/admin/dashboard", "/admin/schedule", "/admin/meet",
+  "/admin/dashboard", "/admin/schedule", "/admin/meet", "/admin/ceo",
   "/admin/operations-hub", "/admin/queues", "/admin/automation", "/admin/system-health",
   "/admin/imports", "/admin/beta-operations", "/admin/page-builder-lab",
 ];
