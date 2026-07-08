@@ -4,7 +4,7 @@ import { loadHubPayload } from "@/lib/playbook/hub";
 import { OpsHub } from "@/components/admin/playbook/OpsHub";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Operations Hub" };
+export const metadata = { title: "Investor Relations Hub" };
 
 const TABS = ["dash", "open", "core", "close", "settings"];
 
@@ -19,7 +19,7 @@ export default async function AdminPlaybookPage({ searchParams }: { searchParams
       role="ADMIN"
       workspace="admin"
       profileName={profile.full_name ?? profile.email ?? "Admin"}
-      profileSubtitle="Operations Hub"
+      profileSubtitle="Investor Relations Hub"
       profileEmail={profile.email ?? undefined}
     >
       <OpsHub initial={payload} initialTab={initialTab} isAdmin={profile.role === "admin"} />

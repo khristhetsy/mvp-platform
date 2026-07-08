@@ -77,7 +77,7 @@ export function OpsHub({ initial, initialTab, isAdmin }: { initial: HubPayload; 
   const subtitle = new Date(payload.today + "T00:00:00").toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 
   return (
-    <HubShell title="Operations Hub" subtitle={subtitle} tabs={tabs} activeTab={tab} onTabChange={changeTab}>
+    <HubShell title="Investor Relations Hub" subtitle={subtitle} tabs={tabs} activeTab={tab} onTabChange={changeTab}>
       {tab === "dash" && <DashboardTab payload={payload} onJump={changeTab} onToggle={toggleCheck} onAdvisory={runAdvisoryAction} onRefresh={refresh} isAdmin={isAdmin} busy={busy} />}
       {(tab === "open" || tab === "core" || tab === "close") && (
         <BlockTab block={tab} surfaces={payload.surfaces.filter((s) => s.block === tab)} isAdmin={isAdmin} onToggle={toggleCheck} onRefresh={refresh} />
