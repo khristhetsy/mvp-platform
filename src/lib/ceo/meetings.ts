@@ -87,3 +87,17 @@ export async function deleteSession(id: string): Promise<void> {
 export async function setMeetingEvent(meetingKey: string, gcalEventId: string): Promise<void> {
   await db().from("ceo_meetings").update({ gcal_event_id: gcalEventId }).eq("key", meetingKey);
 }
+
+export interface MeetingSchedulePatch { dayOfWeek?: number; timeLocal?: string; durationMin?: number; timezone?: string; attendees?: Array<{ name?: string; email?: string }> }
+
+export async function updateMeeting(key: string, patch: MeetingSchedulePatch): Promise<CeoMeeting> {
+  const u: Record<string, unknown> = {};
+  if (patch.dayOfWeek !== undefined) u.day_of_week = patch.dayOfWeek;
+  if (patch.timeLocal !== undefined) u.time_local = patch.timeLocal;
+  if (patch.durationMin !== undefined) u.duration_min = patch.durationMin;
+  if (patch.timezone !== undefined) u.timezone = patch.timezone;
+  if (patch.attendees !== undefined) u.attendees = patch.attendees;
+  const { data, error } = await db().from("ceo_meetings").update(u).eq("key", key).select("*").single();
+  if (error) throw new Error(error.message);
+  return mapMeeting(data as Record<string, unknown>);
+}

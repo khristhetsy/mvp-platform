@@ -68,3 +68,23 @@ export async function createRecurringMeeting(meeting: CeoMeeting, adminUserId: s
   const meetUrl = data?.conferenceData?.entryPoints?.find((e: any) => e.entryPointType === "video")?.uri ?? data?.hangoutLink ?? null;
   return { eventId: String(data.id), meetUrl };
 }
+
+/** Re-sync a schedule change to an already-created recurring event. Best-effort. */
+export async function updateRecurringMeeting(meeting: CeoMeeting, adminUserId: string): Promise<void> {
+  if (!meeting.gcalEventId) return;
+  const token = await getValidGoogleAccessToken(adminUserId);
+  if (!token) return;
+  const date = nextWeekdayDate(meeting.dayOfWeek);
+  const { start, end } = localDateTimes(date, meeting.timeLocal, meeting.durationMin);
+  const attendees = meeting.attendees.map((a) => a.email).filter((e): e is string => Boolean(e)).map((email) => ({ email }));
+  const body = {
+    summary: meeting.name,
+    description: description(meeting),
+    start: { dateTime: start, timeZone: meeting.timezone },
+    end: { dateTime: end, timeZone: meeting.timezone },
+    attendees: attendees.length ? attendees : undefined,
+  };
+  const url = new URL(`${EVENTS_URL}/${meeting.gcalEventId}`);
+  url.searchParams.set("sendUpdates", "all");
+  await fetch(url, { method: "PATCH", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
+}

@@ -6,6 +6,7 @@ import { status as kpiStatus, compare, formatKpi, deptScore, type KpiStatus, typ
 import type { CeoPayload, CeoKpi } from "@/lib/ceo/hub-data";
 import type { CeoMeeting, CeoSession } from "@/lib/ceo/meetings";
 import { MeetingWorkflowCard, MeetingLog } from "@/components/ceo/Meetings";
+import { PlanningTab, SettingsTab } from "@/components/ceo/PlanningSettings";
 
 const ST = { g: { c: "#0E9F6E", bg: "#E6F6EC", l: "On target" }, y: { c: "#B7791F", bg: "#FDF3E3", l: "Watch" }, r: { c: "#D6455D", bg: "#FCE9EC", l: "Off track" } };
 const DEPT_LABEL: Record<string, string> = { sales: "Sales", marketing: "Marketing", operations: "Operations" };
@@ -54,9 +55,9 @@ export function CeoHub({ initial, initialTab }: { initial: CeoPayload; initialTa
       {(tab === "sales" || tab === "marketing" || tab === "operations") && (
         <DeptTab dept={tab} kpis={initial.kpis.filter((k) => k.dept === tab)} meetings={meetings.filter((m) => m.dept === tab)} sessions={sessions} onRefresh={loadMeetings} />
       )}
-      {tab === "planning" && <Planning payload={initial} />}
+      {tab === "planning" && <PlanningTab />}
       {tab === "log" && <MeetingLog meetings={meetings} sessions={sessions} />}
-      {tab === "settings" && <Placeholder title="Settings" note="Notification preferences and the meeting schedule editor land in a later step." />}
+      {tab === "settings" && <SettingsTab meetings={meetings} onRefreshMeetings={loadMeetings} />}
     </HubShell>
   );
 }
@@ -244,29 +245,3 @@ function KpiDrawer({ kpi, onClose }: { kpi: CeoKpi; onClose: () => void }) {
   );
 }
 
-/* ── Planning + placeholders ───────────────────────────────────────────────── */
-
-function Planning({ payload }: { payload: CeoPayload }) {
-  return (
-    <div style={{ maxWidth: 720 }}>
-      <div style={{ fontSize: 16, fontWeight: 700, color: navy, marginBottom: 12 }}>Planning</div>
-      <div style={{ background: "#fff", border: "1px solid #E4E8F0", borderRadius: 12, overflow: "hidden" }}>
-        <div style={{ padding: "12px 16px", borderBottom: "1px solid #F1F4F9", fontSize: 13, fontWeight: 600 }}>Goals</div>
-        {payload.goals.length === 0 ? <div style={{ padding: 16, fontSize: 12.5, color: "#6B7690" }}>No goals yet. Goal CRUD + the weekly-review timeline land in the next step.</div>
-          : payload.goals.map((g) => {
-            const pct = g.target ? Math.max(0, Math.min(100, Math.round((g.current / g.target) * 100))) : 0;
-            return <div key={g.id} style={{ padding: "11px 16px", borderTop: "1px solid #F1F4F9" }}><div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 600 }}><span>{g.title}</span><span style={{ color: "#6B7690" }}>{g.current}/{g.target ?? "—"}</span></div><div style={{ height: 6, background: "#EEF1F7", borderRadius: 3, marginTop: 6 }}><div style={{ width: `${pct}%`, height: 6, background: royal, borderRadius: 3 }} /></div></div>;
-          })}
-      </div>
-    </div>
-  );
-}
-
-function Placeholder({ title, note }: { title: string; note: string }) {
-  return (
-    <div style={{ background: "#fff", border: "1px solid #E4E8F0", borderRadius: 12, padding: 24, maxWidth: 620 }}>
-      <div style={{ fontSize: 15, fontWeight: 700, color: navy, marginBottom: 6 }}>{title}</div>
-      <div style={{ fontSize: 13, color: "#6B7690", lineHeight: 1.6 }}>{note}</div>
-    </div>
-  );
-}
