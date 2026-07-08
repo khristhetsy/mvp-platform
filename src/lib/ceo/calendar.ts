@@ -40,8 +40,8 @@ function description(meeting: CeoMeeting): string {
 export interface CalendarSyncResult { eventId: string; meetUrl: string | null }
 
 export async function createRecurringMeeting(meeting: CeoMeeting, adminUserId: string): Promise<CalendarSyncResult> {
-  const token = await getValidGoogleAccessToken(adminUserId);
-  if (!token) throw new Error("Connect your Google Calendar first (System → Integrations), then try again.");
+  const { accessToken: token, error } = await getValidGoogleAccessToken(adminUserId);
+  if (error || !token) throw new Error(error?.message ?? "Connect your Google Calendar first (System → Integrations), then try again.");
 
   const date = nextWeekdayDate(meeting.dayOfWeek);
   const { start, end } = localDateTimes(date, meeting.timeLocal, meeting.durationMin);
@@ -72,7 +72,7 @@ export async function createRecurringMeeting(meeting: CeoMeeting, adminUserId: s
 /** Re-sync a schedule change to an already-created recurring event. Best-effort. */
 export async function updateRecurringMeeting(meeting: CeoMeeting, adminUserId: string): Promise<void> {
   if (!meeting.gcalEventId) return;
-  const token = await getValidGoogleAccessToken(adminUserId);
+  const { accessToken: token } = await getValidGoogleAccessToken(adminUserId);
   if (!token) return;
   const date = nextWeekdayDate(meeting.dayOfWeek);
   const { start, end } = localDateTimes(date, meeting.timeLocal, meeting.durationMin);
