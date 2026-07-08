@@ -58,70 +58,53 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* Top bar */}
+      {/* Gradient banner (pinned) — mirrors the CEO Hub / HubShell header, with the
+          top-level marketing tabs living inside the gradient. */}
       <div style={{
-        background: "var(--background)",
-        borderBottom: "0.5px solid var(--border)",
-        padding: "0 24px",
-        height: 44,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
+        background: "linear-gradient(120deg, #0A1A40 0%, #12275C 55%, #1A6CE4 140%)",
+        color: "#fff",
+        padding: "16px 24px 0",
         flexShrink: 0,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{
-            width: 22, height: 22, borderRadius: 5, background: "#2E78F5",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EEEDFE" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-              <polyline points="22,6 12,13 2,6"/>
-            </svg>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".16em", color: "#9DBBF0" }}>Admin workspace</div>
+            <h1 style={{ fontSize: 22, fontWeight: 600, margin: "4px 0 0", letterSpacing: "-0.01em" }}>Marketing Hub</h1>
           </div>
-          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)" }}>Marketing hub</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#1D9E75" }} />
-            <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-              Sending via <span style={{ color: "#2E78F5", fontWeight: 500 }}>icapos.com</span>
-            </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, paddingTop: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,.12)", borderRadius: 999, padding: "4px 11px" }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#6EE7B7" }} />
+              <span style={{ fontSize: 11, color: "#DCE6F8" }}>
+                Sending via <span style={{ color: "#fff", fontWeight: 500 }}>icapos.com</span>
+              </span>
+            </div>
+            <MarketingBell />
           </div>
-          <MarketingBell />
         </div>
-      </div>
 
-      {/* Sub-nav */}
-      <div style={{
-        background: "var(--background)",
-        borderBottom: "0.5px solid var(--border)",
-        padding: "0 24px",
-        display: "flex",
-        gap: 2,
-        flexShrink: 0,
-      }}>
-        {GROUPS.map((group) => {
-          const active = groupActive(group, pathname);
-          return (
-            <Link
-              key={group.href}
-              href={group.href}
-              style={{
-                padding: "9px 12px",
-                fontSize: 12,
-                fontWeight: active ? 500 : 400,
-                color: active ? "#2E78F5" : "var(--muted-foreground)",
-                borderBottom: active ? "2px solid #2E78F5" : "2px solid transparent",
-                textDecoration: "none",
-                whiteSpace: "nowrap",
-                transition: "color 0.15s",
-              }}
-            >
-              {group.label}
-            </Link>
-          );
-        })}
+        <div style={{ display: "flex", gap: 2, marginTop: 12, flexWrap: "wrap" }}>
+          {GROUPS.map((group) => {
+            const active = groupActive(group, pathname);
+            return (
+              <Link
+                key={group.href}
+                href={group.href}
+                style={{
+                  padding: "9px 14px",
+                  fontSize: 13,
+                  fontWeight: active ? 600 : 500,
+                  color: active ? "#fff" : "#B7CBEF",
+                  borderBottom: active ? "2px solid #fff" : "2px solid transparent",
+                  textDecoration: "none",
+                  whiteSpace: "nowrap",
+                  transition: "color 0.15s",
+                }}
+              >
+                {group.label}
+              </Link>
+            );
+          })}
+        </div>
       </div>
 
       {/* Secondary sub-tab row for the active group */}
