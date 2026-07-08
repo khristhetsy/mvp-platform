@@ -22,8 +22,11 @@ async function getDispatcher(): Promise<unknown> {
   if (!INSECURE_TLS) return undefined;
   if (insecureDispatcher === undefined) {
     try {
-      const undiciSpecifier = "undici" as string; // avoid static module resolution; present at runtime
-      const undici = (await import(undiciSpecifier)) as { Agent: new (o: unknown) => unknown };
+      // Hide the specifier from the bundler entirely (indirect dynamic import) so
+      // `undici` is resolved only at runtime — it's an optional peer, never bundled.
+      // If it isn't installed, this throws and we fall back to normal fetch below.
+      const dynamicImport = new Function("s", "return import(s)") as (s: string) => Promise<unknown>;
+      const undici = (await dynamicImport("undici")) as { Agent: new (o: unknown) => unknown };
       insecureDispatcher = new undici.Agent({ connect: { rejectUnauthorized: false } });
     } catch {
       insecureDispatcher = null;
