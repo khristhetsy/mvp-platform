@@ -126,7 +126,7 @@ export function MarketingContactProfile({ contact: initial, memberLists, allList
             <div style={{ fontSize: 10, color: "var(--muted-foreground)" }}>Engagement</div>
             <div style={{ fontSize: 12, fontWeight: 600, color: engagement.c }}>{engagement.t}</div>
           </div>
-          <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(contact.email)}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 13px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 5 }}><Mail size={13} /> Send email</a>
+          <Link href={`/admin/inbox?to=${encodeURIComponent(contact.email)}`} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "7px 13px", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 5 }}><Mail size={13} /> Send email</Link>
           <button onClick={() => { setAddMode("list"); setAddId(""); setMsg(null); }} style={outlineBtn}><ListPlus size={13} /> Add to list</button>
           <button onClick={() => { setAddMode("seq"); setAddId(""); setMsg(null); }} style={outlineBtn}><Send size={13} /> Add to sequence</button>
           {!editing && <button onClick={() => setEditing(true)} style={outlineBtn}><Pencil size={13} /> Edit</button>}

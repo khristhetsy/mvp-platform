@@ -14,7 +14,7 @@ import { useTranslations } from "next-intl";
 import {
   Send, X, Paperclip, FileText, Minus, Maximize2, PenLine,
   Bold, Italic, Underline, Link2, List, ListOrdered,
-  AlignLeft, AlignCenter, AlignRight, Eraser, Undo2, Redo2,
+  AlignLeft, AlignCenter, AlignRight, Eraser, Undo2, Redo2, Sparkles,
 } from "lucide-react";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { EmailAttachment } from "@/lib/email/inbox";
@@ -36,6 +36,10 @@ function textToHtml(t: string): string {
 
 const SIG_ATTR = "data-icapos-signature";
 const SWATCHES = ["#0F2147", "#185FA5", "#2E78F5", "#475569", "#A32D2D", "#000000"];
+const AI_ACTIONS: [string, string][] = [
+  ["formal", "Formal"], ["friendly", "Friendly"], ["persuasive", "Persuasive"],
+  ["shorten", "Shorten"], ["expand", "Expand"], ["polish", "Polish"],
+];
 
 export interface ComposeModalProps {
   open: boolean;
@@ -81,6 +85,12 @@ export function ComposeModal({
 
   const [signatureHtml, setSignatureHtml] = useState<string | null>(null);
   const [signatureOn, setSignatureOn] = useState(true);
+
+  // AI writing assistant
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiBusy, setAiBusy] = useState<null | string>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // Fetch the sender's saved signature (falls back to the iCFO default) once.
   useEffect(() => {
@@ -181,6 +191,43 @@ export function ComposeModal({
     setDirty(true);
   };
 
+  // ── AI writing assistant ──────────────────────────────────────────────────
+  const bodyTextWithoutSig = useCallback((): string => {
+    const el = editorRef.current;
+    if (!el) return "";
+    const clone = el.cloneNode(true) as HTMLElement;
+    clone.querySelector(`[${SIG_ATTR}]`)?.remove();
+    return (clone.innerText ?? "").trim();
+  }, []);
+
+  const applyAiBody = useCallback((text: string) => {
+    const el = editorRef.current;
+    if (!el) return;
+    el.innerHTML = textToHtml(text);
+    ensureSignature();
+    setDirty(true);
+  }, [ensureSignature]);
+
+  const runAi = useCallback(async (mode: "draft" | "rewrite", action?: string) => {
+    setAiBusy(action ?? mode);
+    setAiError(null);
+    try {
+      const res = await fetch("/api/email/ai-compose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, action, instruction: aiPrompt, currentText: bodyTextWithoutSig(), subject, to }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setAiError(typeof data.error === "string" ? data.error : "AI is unavailable right now."); return; }
+      if (typeof data.body === "string" && data.body) applyAiBody(data.body);
+      if (mode === "draft" && typeof data.subject === "string" && data.subject && !subject.trim()) setSubject(data.subject);
+    } catch {
+      setAiError("AI is unavailable right now.");
+    } finally {
+      setAiBusy(null);
+    }
+  }, [aiPrompt, subject, to, bodyTextWithoutSig, applyAiBody]);
+
   if (!open) return null;
 
   const onField =
@@ -278,6 +325,34 @@ export function ComposeModal({
             className="min-h-[280px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm leading-relaxed text-slate-800 focus:border-[var(--blue)] focus:outline-none [&_a]:text-[#185FA5] [&_a]:underline [&_img]:my-1 [&_img]:inline-block empty:before:text-slate-400 empty:before:content-[attr(data-placeholder)]"
           />
 
+          {aiOpen ? (
+            <div className="space-y-2 rounded-lg border border-indigo-200 bg-indigo-50/50 p-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-indigo-600" />
+                <span className="text-xs font-semibold text-indigo-900">AI assistant</span>
+                <button type="button" onClick={() => setAiOpen(false)} className="ml-auto text-indigo-400 hover:text-indigo-700" aria-label="Close AI assistant"><X className="h-3.5 w-3.5" /></button>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (aiPrompt.trim() && !aiBusy) void runAi("draft"); } }}
+                  placeholder="Describe the email… e.g. follow up on our call and propose a time to meet"
+                  className="w-full rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none"
+                />
+                <button type="button" disabled={!aiPrompt.trim() || !!aiBusy} onClick={() => void runAi("draft")} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">{aiBusy === "draft" ? "Writing…" : "Draft"}</button>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="mr-1 text-[11px] font-medium text-indigo-700">Rewrite:</span>
+                {AI_ACTIONS.map(([key, label]) => (
+                  <button key={key} type="button" disabled={!!aiBusy} onClick={() => void runAi("rewrite", key)} className="rounded-full border border-indigo-200 bg-white px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50">{aiBusy === key ? "…" : label}</button>
+                ))}
+              </div>
+              {aiError ? <p className="text-xs text-red-700">{aiError}</p> : null}
+              <p className="text-[10.5px] text-indigo-500">AI replaces the message body; your signature stays. Always review before sending.</p>
+            </div>
+          ) : null}
+
           {uploadFiles ? (
             <div className="flex flex-wrap items-center gap-2">
               <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
@@ -332,6 +407,16 @@ export function ComposeModal({
           <button type="button" aria-label="Insert link" title={t("insert_link")} onMouseDown={(e) => e.preventDefault()} onClick={addLink} className={TB}><Link2 className="h-4 w-4" /></button>
           <button type="button" aria-label="Clear formatting" title={t("clear_formatting")} onMouseDown={(e) => e.preventDefault()} onClick={() => cmd("removeFormat")} className={TB}><Eraser className="h-4 w-4" /></button>
           <span className="mx-1 h-4 w-px bg-slate-200" />
+          <button
+            type="button"
+            aria-pressed={aiOpen}
+            title="AI writing assistant"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setAiOpen((v) => !v)}
+            className={`inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs font-medium ${aiOpen ? "bg-indigo-50 text-indigo-700" : "text-slate-600 hover:bg-slate-100"}`}
+          >
+            <Sparkles className="h-4 w-4" /> AI
+          </button>
           <button
             type="button"
             aria-pressed={signatureOn}
