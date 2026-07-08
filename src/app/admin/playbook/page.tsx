@@ -6,7 +6,7 @@ import { OpsHub } from "@/components/admin/playbook/OpsHub";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Investor Relations Hub" };
 
-const TABS = ["dash", "open", "core", "close", "settings"];
+const TABS = ["open", "core", "close", "settings"];
 
 export default async function AdminPlaybookPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const profile = await requireRole(["admin", "analyst"]);

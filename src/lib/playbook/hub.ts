@@ -135,9 +135,12 @@ export async function loadHubPayload(adminId: string): Promise<HubPayload> {
     };
   });
 
+  // The workspace Dashboard (/admin) is not an operational surface — the IR hub
+  // never lists it in the run, blocks, or drift.
   // Hidden surfaces (drift_ignored) are removed from the hub entirely — blocks,
   // today's run, drift strip, and counts — but their playbook content is preserved.
-  const surfaces = allSurfaces.filter((s) => !ignoredSet.has(s.navId));
+  const EXCLUDED_NAV_IDS = new Set(["/admin"]);
+  const surfaces = allSurfaces.filter((s) => !ignoredSet.has(s.navId) && !EXCLUDED_NAV_IDS.has(s.navId));
   const documented = surfaces.filter((s) => s.block != null);
   const missingInPlaybook = surfaces
     .filter((s) => s.state === "undocumented")

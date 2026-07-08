@@ -22,7 +22,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
     items: [
       { href: "/admin", label: "Dashboard", requiredPermission: "view_admin_dashboard" },
       { href: "/admin/ceo", label: "CEO Hub", requiredPermission: "view_admin_dashboard" },
-      { href: "/admin/playbook", label: "Investor Relations Hub", requiredPermission: "view_admin_dashboard" },
     ],
   },
   {
@@ -35,6 +34,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     title: "Investor Relations",
     items: [
+      { href: "/admin/playbook", label: "Investor Relations Hub", requiredPermission: "view_admin_dashboard" },
       {
         href: "/admin/crm",
         label: "IR CRM",

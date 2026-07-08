@@ -44,7 +44,6 @@ export function OpsHub({ initial, initialTab, isAdmin }: { initial: HubPayload; 
   const corePending = useMemo(() => payload.surfaces.filter((s) => s.block === "core").reduce((a, s) => a + (s.pending ?? 0), 0), [payload.surfaces]);
 
   const tabs: HubTab[] = [
-    { key: "dash", label: "Dashboard" },
     { key: "open", label: "Open the day", badge: { count: payload.stats.openEscalations, tone: "red" } },
     { key: "core", label: "Core operations", badge: { count: corePending, tone: "amber" } },
     { key: "close", label: "Close the day" },
@@ -78,19 +77,21 @@ export function OpsHub({ initial, initialTab, isAdmin }: { initial: HubPayload; 
 
   return (
     <HubShell title="Investor Relations Hub" subtitle={subtitle} tabs={tabs} activeTab={tab} onTabChange={changeTab}>
-      {tab === "dash" && <DashboardTab payload={payload} onJump={changeTab} onToggle={toggleCheck} onAdvisory={runAdvisoryAction} onRefresh={refresh} isAdmin={isAdmin} busy={busy} />}
       {(tab === "open" || tab === "core" || tab === "close") && (
-        <BlockTab block={tab} surfaces={payload.surfaces.filter((s) => s.block === tab)} isAdmin={isAdmin} onToggle={toggleCheck} onRefresh={refresh} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {tab === "open" && <Overview payload={payload} onJump={changeTab} onAdvisory={runAdvisoryAction} onRefresh={refresh} isAdmin={isAdmin} busy={busy} />}
+          <BlockTab block={tab} surfaces={payload.surfaces.filter((s) => s.block === tab)} isAdmin={isAdmin} onToggle={toggleCheck} onRefresh={refresh} />
+        </div>
       )}
       {tab === "settings" && <SettingsTab settings={payload.settings} isAdmin={isAdmin} onRefresh={refresh} />}
     </HubShell>
   );
 }
 
-/* ── Dashboard ─────────────────────────────────────────────────────────────── */
+/* ── Overview (top of "Open the day") ──────────────────────────────────────── */
 
-function DashboardTab({ payload, onJump, onToggle, onAdvisory, onRefresh, isAdmin, busy }: {
-  payload: HubPayload; onJump: (k: string) => void; onToggle: (s: HubSurface, c: boolean) => void;
+function Overview({ payload, onJump, onAdvisory, onRefresh, isAdmin, busy }: {
+  payload: HubPayload; onJump: (k: string) => void;
   onAdvisory: (s: Suggestion, a: AdvisoryAction) => void; onRefresh: () => void; isAdmin: boolean; busy: boolean;
 }) {
   const { stats } = payload;
@@ -101,21 +102,13 @@ function DashboardTab({ payload, onJump, onToggle, onAdvisory, onRefresh, isAdmi
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12 }}>
         <StatWidget tone="alert" label="Open escalations" value={stats.openEscalations} sub={`${stats.urgentEscalations} urgent`} onClick={() => onJump("open")} />
         <StatWidget tone="warn" label="Queue items pending" value={stats.queuePending} sub={stats.queuesClear.length ? `${stats.queuesClear.length} queue${stats.queuesClear.length === 1 ? "" : "s"} clear` : "across all queues"} onClick={() => onJump("core")} />
-        <StatWidget tone="info" label="Today's run" value={`${stats.runChecked}/${stats.runTotal}`} sub={`${stats.gatesCleared}/${stats.gatesTotal} gates cleared`} onClick={() => onJump("dash")} />
+        <StatWidget tone="info" label="Today's run" value={`${stats.runChecked}/${stats.runTotal}`} sub={`${stats.gatesCleared}/${stats.gatesTotal} gates cleared`} onClick={() => onJump("open")} />
         <StatWidget tone={stats.complianceCritical == null ? "info" : stats.complianceCritical > 0 ? "alert" : "ok"} label="Compliance" value={stats.complianceCritical == null ? "—" : stats.complianceCritical} sub={stats.complianceCritical == null ? "no source" : "critical flags"} onClick={() => onJump("close")} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.5fr) minmax(0, 1fr)", gap: 16, alignItems: "start" }}>
-        <TodaysRun surfaces={payload.surfaces.filter((s) => s.block != null).sort(orderBy)} onToggle={onToggle} onJump={onJump} />
-        {payload.settings.advisoryEnabled && <AdvisoryPanel suggestions={payload.suggestions} onAction={onAdvisory} busy={busy} />}
-      </div>
+      {payload.settings.advisoryEnabled && <AdvisoryPanel suggestions={payload.suggestions} onAction={onAdvisory} busy={busy} />}
     </div>
   );
-}
-
-const BLOCK_ORDER: Record<string, number> = { open: 0, core: 1, close: 2 };
-function orderBy(a: HubSurface, b: HubSurface) {
-  return (BLOCK_ORDER[a.block ?? "core"] - BLOCK_ORDER[b.block ?? "core"]) || (a.sortOrder - b.sortOrder);
 }
 
 const TONE: Record<string, { bg: string; border: string; color: string; label: string }> = {
@@ -181,25 +174,6 @@ function DriftStrip({ payload, onRefresh, isAdmin }: { payload: HubPayload; onRe
           )}
         </div>
       ))}
-    </div>
-  );
-}
-
-function TodaysRun({ surfaces, onToggle, onJump }: { surfaces: HubSurface[]; onToggle: (s: HubSurface, c: boolean) => void; onJump: (k: string) => void }) {
-  return (
-    <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
-      <div style={{ padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", fontSize: 13, fontWeight: 600 }}>Today&apos;s run <span style={{ fontWeight: 400, fontSize: 11.5, color: "var(--muted-foreground)" }}>· operating order</span></div>
-      {surfaces.map((s, i) => (
-        <div key={s.navId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 16px", borderTop: i ? "0.5px solid #f1f5f9" : "none", background: s.checkedToday ? "#F6FBF9" : undefined }}>
-          <input type="checkbox" checked={s.checkedToday} disabled={!s.moduleId} onChange={(e) => onToggle(s, e.target.checked)} style={{ width: 15, height: 15 }} aria-label={`Mark ${s.label} done`} />
-          <span style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--muted-foreground)", width: 18 }}>{i + 1}</span>
-          <button onClick={() => s.block && onJump(s.block)} style={{ flex: 1, textAlign: "left", background: "none", border: "none", cursor: "pointer", fontSize: 12.5, fontWeight: 500, color: s.checkedToday ? "var(--muted-foreground)" : "var(--foreground)", textDecoration: s.checkedToday ? "line-through" : "none" }}>{s.label}</button>
-          {s.pending != null && s.pending > 0 && <span style={{ fontSize: 10, color: "#185FA5", background: "#E6F1FB", borderRadius: 10, padding: "1px 7px" }}>{s.pending}</span>}
-          {s.isGate && <span style={{ fontSize: 10, color: "#A32D2D", background: "#FCEBEB", borderRadius: 10, padding: "1px 7px" }}>Gate</span>}
-          {!s.isGate && s.flags.length > 0 && <span style={{ fontSize: 10, color: "#854F0B", background: "#FAEEDA", borderRadius: 10, padding: "1px 7px" }}>Guardrail</span>}
-        </div>
-      ))}
-      {surfaces.length === 0 && <div style={{ padding: 16, fontSize: 12.5, color: "var(--muted-foreground)" }}>No documented surfaces yet.</div>}
     </div>
   );
 }

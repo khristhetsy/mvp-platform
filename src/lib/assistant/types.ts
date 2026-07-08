@@ -14,6 +14,7 @@ export const ASSISTANT_MODES = [
   "capital_raise",
   "cmo_marketing",
   "ceo_hub",
+  "ir_hub",
   "investor_pipeline",
   "investor_portfolio",
   "investor_matching",

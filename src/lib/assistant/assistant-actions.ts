@@ -214,6 +214,8 @@ export function suggestedPromptChips(ctx: SanitizedAssistantContext): string[] {
       return ["Draft a campaign email", "Best subject line tips", "Plan a drip sequence", "Analyze my open rates"];
     case "ceo_hub":
       return ["What matters most this week?", "Which KPIs are off track?", "Which department needs attention?", "Help me prep for the sales meeting"];
+    case "ir_hub":
+      return ["What needs attention in IR?", "Summarize SPV blockers", "Which intros are stalled?", "What's pending investor approval?"];
     case "investor_pipeline":
       return ["Summarize my pipeline", "Which deals to prioritize?", "What's in my watchlist?", "How do I track deal stages?"];
     case "investor_portfolio":
