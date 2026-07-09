@@ -47,6 +47,25 @@ export function AdminBillingClient({ customers, stats, health, upgradeRequests }
   const [openId, setOpenId] = useState<string | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [coPlan, setCoPlan] = useState<"founder_basic" | "founder_professional">("founder_basic");
+  const [coBusy, setCoBusy] = useState<null | "link" | "email">(null);
+  const [coUrl, setCoUrl] = useState<string | null>(null);
+  const [coMsg, setCoMsg] = useState<string | null>(null);
+
+  const createCheckout = useCallback(async (send: boolean) => {
+    if (!openId) return;
+    setCoBusy(send ? "email" : "link"); setCoMsg(null);
+    try {
+      const r = await fetch(`/api/admin/billing/customers/${openId}/checkout`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: coPlan, send }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setCoMsg(typeof d.error === "string" ? d.error : "Failed to create link."); return; }
+      if (d.url) setCoUrl(d.url);
+      if (send) setCoMsg(d.emailed ? "Checkout link emailed to the customer." : "Link created, but the email didn't send.");
+    } catch { setCoMsg("Failed to create link."); }
+    finally { setCoBusy(null); }
+  }, [openId, coPlan]);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -54,7 +73,7 @@ export function AdminBillingClient({ customers, stats, health, upgradeRequests }
   }, [q, customers]);
 
   const openCustomer = useCallback(async (c: Customer) => {
-    setOpenId(c.profileId); setDetail(null); setLoading(true);
+    setOpenId(c.profileId); setDetail(null); setLoading(true); setCoUrl(null); setCoMsg(null); setCoPlan("founder_basic");
     try { const r = await fetch(`/api/admin/billing/customers/${c.profileId}`); if (r.ok) setDetail(await r.json()); }
     catch { /* ignore */ } finally { setLoading(false); }
   }, []);
@@ -144,6 +163,25 @@ export function AdminBillingClient({ customers, stats, health, upgradeRequests }
                     <span style={{ color: "#6B7690" }}>Paid <b style={{ color: "#0F6E56" }}>{money(detail.statement.paidCents, detail.statement.currency)}</b></span>
                     <span style={{ color: "#6B7690" }}>Due <b style={{ color: detail.statement.dueCents > 0 ? "#A32D2D" : navy }}>{money(detail.statement.dueCents, detail.statement.currency)}</b></span>
                   </div>
+                </Section>
+
+                <Section title="Create checkout link">
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <select value={coPlan} onChange={(e) => setCoPlan(e.target.value as "founder_basic" | "founder_professional")} style={{ fontSize: 12.5, padding: "7px 10px", borderRadius: 8, border: "1px solid #E4E8F0" }}>
+                      <option value="founder_basic">Founder Pro — $499/mo</option>
+                      <option value="founder_professional">Founder Premium — $1,000/mo</option>
+                    </select>
+                    <button onClick={() => void createCheckout(false)} disabled={coBusy !== null} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: navy, border: "none", borderRadius: 8, padding: "8px 13px", cursor: "pointer" }}>{coBusy === "link" ? "Creating…" : "Create link"}</button>
+                    <button onClick={() => void createCheckout(true)} disabled={coBusy !== null} style={{ fontSize: 12, fontWeight: 600, color: blue, background: "#EEF3FC", border: "none", borderRadius: 8, padding: "8px 13px", cursor: "pointer" }}>{coBusy === "email" ? "Sending…" : "Email to customer"}</button>
+                  </div>
+                  {coUrl && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                      <input readOnly value={coUrl} style={{ flex: 1, fontSize: 11.5, padding: "6px 9px", borderRadius: 7, border: "1px solid #E4E8F0", color: "#475569" }} />
+                      <button onClick={() => { void navigator.clipboard?.writeText(coUrl); setCoMsg("Link copied."); }} style={{ fontSize: 11.5, fontWeight: 600, color: navy, background: "#F1EFE8", border: "none", borderRadius: 7, padding: "6px 11px", cursor: "pointer" }}>Copy</button>
+                    </div>
+                  )}
+                  {coMsg && <div style={{ fontSize: 11.5, color: /Failed|didn't/.test(coMsg) ? "#A32D2D" : "#0F6E56", marginTop: 6 }}>{coMsg}</div>}
+                  <div style={{ fontSize: 10.5, color: "#98A2B3", marginTop: 6, lineHeight: 1.5 }}>The customer enters their own card at Lemon Squeezy — this never charges a card from here.</div>
                 </Section>
               </>
             )}
