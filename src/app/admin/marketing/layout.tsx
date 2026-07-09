@@ -58,31 +58,29 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* Gradient banner (pinned) — mirrors the CEO Hub / HubShell header, with the
-          top-level marketing tabs living inside the gradient. */}
+      {/* Flat header (pinned) — dark title + underlined tab row, no gradient banner. */}
       <div style={{
-        background: "linear-gradient(120deg, #0A1A40 0%, #12275C 55%, #1A6CE4 140%)",
-        color: "#fff",
-        padding: "16px 24px 0",
+        background: "var(--background)",
+        padding: "14px 24px 0",
         flexShrink: 0,
       }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".16em", color: "#9DBBF0" }}>Admin workspace</div>
-            <h1 style={{ fontSize: 22, fontWeight: 600, margin: "4px 0 0", letterSpacing: "-0.01em" }}>Marketing Hub</h1>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".14em", color: "var(--muted-foreground)" }}>Admin workspace</div>
+            <h1 style={{ fontSize: 22, fontWeight: 600, margin: "3px 0 0", letterSpacing: "-0.01em", color: "var(--foreground)" }}>Marketing Hub</h1>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, paddingTop: 4 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,.12)", borderRadius: 999, padding: "4px 11px" }}>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#6EE7B7" }} />
-              <span style={{ fontSize: 11, color: "#DCE6F8" }}>
-                Sending via <span style={{ color: "#fff", fontWeight: 500 }}>icapos.com</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--muted)", borderRadius: 999, padding: "4px 11px" }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#1D9E75" }} />
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                Sending via <span style={{ color: "#2E78F5", fontWeight: 500 }}>icapos.com</span>
               </span>
             </div>
             <MarketingBell />
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 2, marginTop: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 2, marginTop: 12, flexWrap: "wrap", borderBottom: "0.5px solid var(--border)" }}>
           {GROUPS.map((group) => {
             const active = groupActive(group, pathname);
             return (
@@ -93,8 +91,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                   padding: "9px 14px",
                   fontSize: 13,
                   fontWeight: active ? 600 : 500,
-                  color: active ? "#fff" : "#B7CBEF",
-                  borderBottom: active ? "2px solid #fff" : "2px solid transparent",
+                  color: active ? "#1A6CE4" : "var(--muted-foreground)",
+                  borderBottom: active ? "2px solid #1A6CE4" : "2px solid transparent",
                   textDecoration: "none",
                   whiteSpace: "nowrap",
                   transition: "color 0.15s",

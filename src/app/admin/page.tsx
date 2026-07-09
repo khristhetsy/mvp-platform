@@ -126,13 +126,13 @@ export default async function AdminDashboardPage() {
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role}
           profileEmail={profile.email ?? undefined}>
-      <div className="mb-6 rounded-xl px-5 py-4" style={{ background: "#0c2340" }}>
+      <div className="mb-6 border-b border-slate-200 px-1 pb-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium" style={{ color: "#AFA9EC" }}>{t("eyebrow")}</p>
-            <h1 className="text-lg font-medium text-white">{t("title")}</h1>
+            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">{t("eyebrow")}</p>
+            <h1 className="mt-0.5 text-[22px] font-medium tracking-tight text-slate-950">{t("title")}</h1>
           </div>
-          <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: "#2E78F5", color: "#EEEDFE" }}>
+          <span className="rounded-full px-3 py-1 text-xs font-semibold" style={{ background: "#E6F1FB", color: "#1A6CE4" }}>
             {profile.role}
           </span>
         </div>

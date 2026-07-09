@@ -52,7 +52,7 @@ export function CeoHub({ initial, initialTab }: { initial: CeoPayload; initialTa
   ];
 
   return (
-    <HubShell title="CEO Hub" subtitle="iCapOS — your operating cockpit" tabs={tabs} activeTab={tab} onTabChange={changeTab}>
+    <HubShell flat title="CEO Hub" subtitle="iCapOS — your operating cockpit" tabs={tabs} activeTab={tab} onTabChange={changeTab}>
       {tab === "dash" && <Dashboard payload={initial} onJump={changeTab} />}
       {(tab === "sales" || tab === "marketing" || tab === "operations") && (
         <DeptTab dept={tab} kpis={initial.kpis.filter((k) => k.dept === tab)} meetings={meetings.filter((m) => m.dept === tab)} sessions={sessions} onRefresh={loadMeetings} />
