@@ -180,7 +180,14 @@ export async function proxy(request: NextRequest) {
       p === "/admin/profile" || p.startsWith("/admin/profile/") ||
       // CEO Hub is a platform-admin surface with its own requireRole(["admin"])
       // gate; it is not a departmental feature, so skip the department check here.
-      p === "/admin/ceo" || p.startsWith("/admin/ceo/");
+      p === "/admin/ceo" || p.startsWith("/admin/ceo/") ||
+      // Calendar / Scheduling / Meet are personal productivity tools (each with its
+      // own requireRole(["admin","analyst"]) gate), not departmental features, so
+      // they are not registered in the feature registry and would otherwise be
+      // wrongly denied. Skip the department check here.
+      p === "/admin/calendar" || p.startsWith("/admin/calendar/") ||
+      p === "/admin/schedule" || p.startsWith("/admin/schedule/") ||
+      p === "/admin/meet" || p.startsWith("/admin/meet/");
     if (!exempt) {
       try {
         const { count } = await supabase
