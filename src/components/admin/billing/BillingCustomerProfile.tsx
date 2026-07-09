@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 
 const navy = "#0A1A40", blue = "#1A6CE4";
 
@@ -10,8 +10,7 @@ interface Customer {
   priceCents: number; currency: string; currentPeriodEnd: string | null; lsCustomerId: string | null; lsSubscriptionId: string | null;
 }
 interface Invoice { id: string; total: number; totalFormatted: string; currency: string; status: string; refunded: boolean; createdAt: string; invoiceUrl: string | null }
-interface Payment { cardBrand: string | null; cardLastFour: string | null; updatePaymentUrl: string | null }
-export interface Detail { customer: Customer | null; invoices: Invoice[]; payment: Payment | null; statement: { invoicedCents: number; paidCents: number; dueCents: number; currency: string } }
+export interface Detail { customer: Customer | null; invoices: Invoice[]; statement: { invoicedCents: number; paidCents: number; dueCents: number; currency: string } }
 
 function money(cents: number, currency = "USD"): string {
   try { return (cents / 100).toLocaleString(undefined, { style: "currency", currency, maximumFractionDigits: 0 }); }
@@ -19,11 +18,6 @@ function money(cents: number, currency = "USD"): string {
 }
 function date(iso: string | null): string {
   return iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
-}
-function cardLabel(p: Payment | null): string {
-  if (!p?.cardLastFour) return "—";
-  const brand = p.cardBrand ? p.cardBrand.charAt(0).toUpperCase() + p.cardBrand.slice(1) : "Card";
-  return `${brand} •••• ${p.cardLastFour}`;
 }
 const STATUS_TONE: Record<string, { bg: string; c: string }> = {
   active: { bg: "#E1F5EE", c: "#0F6E56" }, trialing: { bg: "#FAEEDA", c: "#854F0B" },
@@ -42,6 +36,7 @@ function invStatusPill(s: string, refunded: boolean) {
 function initials(name: string): string {
   const p = name.trim().split(/\s+/); return ((p[0]?.[0] ?? "") + (p[1]?.[0] ?? "")).toUpperCase() || "—";
 }
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "6px 0", borderBottom: "0.5px solid #F1F4F9", fontSize: 12.5 }}>
@@ -52,7 +47,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 export function BillingCustomerProfile({ detail }: { detail: Detail }) {
   const c = detail.customer;
-  const [tab, setTab] = useState<"details" | "invoices" | "statement">("details");
   const [coPlan, setCoPlan] = useState<"founder_basic" | "founder_professional">("founder_basic");
   const [coBusy, setCoBusy] = useState<null | "link" | "email">(null);
   const [coUrl, setCoUrl] = useState<string | null>(null);
@@ -73,26 +67,6 @@ export function BillingCustomerProfile({ detail }: { detail: Detail }) {
     finally { setCoBusy(null); }
   }, [c, coPlan]);
 
-  // Statement rows: oldest → newest with a running balance (pending charges accrue).
-  const stmt = useMemo(() => {
-    const chrono = [...detail.invoices].reverse();
-    const balances = chrono.reduce<number[]>((acc, inv) => {
-      const prev = acc.length ? acc[acc.length - 1] : 0;
-      const paid = inv.status === "paid" && !inv.refunded;
-      return [...acc, prev + (paid ? 0 : inv.total)];
-    }, []);
-    return chrono.map((inv, i) => ({ inv, balCents: balances[i] }));
-  }, [detail.invoices]);
-
-  const exportCsv = useCallback(() => {
-    const header = "date,invoice,amount,status,currency";
-    const lines = detail.invoices.map((i) => `${i.createdAt},${i.id},${(i.total / 100).toFixed(2)},${i.refunded ? "refunded" : i.status},${i.currency}`);
-    const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = `statement-${c?.name ?? "customer"}.csv`; a.click();
-    URL.revokeObjectURL(url);
-  }, [detail.invoices, c]);
-
   if (!c) {
     return (
       <div>
@@ -102,10 +76,7 @@ export function BillingCustomerProfile({ detail }: { detail: Detail }) {
     );
   }
 
-  const btn = (bg: string, color: string): React.CSSProperties => ({ fontSize: 12, fontWeight: 600, color, background: bg, border: "none", borderRadius: 8, padding: "8px 13px", cursor: "pointer" });
-  const tabBtn = (k: typeof tab, label: string) => (
-    <button onClick={() => setTab(k)} style={{ fontSize: 13, fontWeight: tab === k ? 600 : 500, color: tab === k ? blue : "#6B7690", background: "none", border: "none", cursor: "pointer", padding: "9px 14px", borderBottom: tab === k ? `2px solid ${blue}` : "2px solid transparent" }}>{label}</button>
-  );
+  const btn = (bg: string, color: string, extra?: React.CSSProperties): React.CSSProperties => ({ fontSize: 12, fontWeight: 600, color, background: bg, border: "none", borderRadius: 8, padding: "8px 13px", cursor: "pointer", ...extra });
 
   return (
     <div>
@@ -122,73 +93,45 @@ export function BillingCustomerProfile({ detail }: { detail: Detail }) {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 2, marginTop: 14, borderBottom: "0.5px solid #F1F4F9" }}>
-          {tabBtn("details", "Details")}{tabBtn("invoices", `Invoices${detail.invoices.length ? ` (${detail.invoices.length})` : ""}`)}{tabBtn("statement", "Statement")}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "0 40px", marginTop: 16 }}>
+          <div>
+            <Field label="Plan">{c.planLabel}</Field>
+            <Field label="Price">{c.priceCents > 0 ? `${money(c.priceCents, c.currency)}/mo` : "—"}</Field>
+            <Field label="Status">{c.status}</Field>
+            <Field label="Renews">{date(c.currentPeriodEnd)}</Field>
+          </div>
+          <div>
+            <Field label="Email"><span style={{ color: "#185FA5" }}>{c.email}</span></Field>
+            <Field label="Currency">{c.currency}</Field>
+            <Field label="LS customer">{c.lsCustomerId ? `#${c.lsCustomerId}` : "—"}</Field>
+            <Field label="Subscription">{c.lsSubscriptionId ?? "—"}</Field>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1.4fr) minmax(0,1fr)", gap: 14, marginTop: 14, alignItems: "start" }}>
+        <div style={{ background: "#fff", border: "0.5px solid #E4E8F0", borderRadius: 12, overflow: "hidden" }}>
+          <div style={{ padding: "11px 14px", borderBottom: "0.5px solid #F1F4F9", fontSize: 13, fontWeight: 600 }}>Invoices</div>
+          {detail.invoices.length === 0 ? <div style={{ padding: 16, fontSize: 12, color: "#6B7690" }}>No invoices found in Lemon Squeezy for this subscription.</div>
+            : detail.invoices.map((inv, i) => (
+              <div key={inv.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, padding: "8px 14px", borderTop: i ? "0.5px solid #F1F4F9" : "none" }}>
+                <span>{date(inv.createdAt)} · {inv.totalFormatted || money(inv.total, inv.currency)}</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {invStatusPill(inv.status, inv.refunded)}
+                  {inv.invoiceUrl && <a href={inv.invoiceUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, color: blue, textDecoration: "none" }}>PDF ↗</a>}
+                </span>
+              </div>
+            ))}
         </div>
 
-        {tab === "details" && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "0 40px", marginTop: 16 }}>
-            <div>
-              <Field label="Plan">{c.planLabel}</Field>
-              <Field label="Price">{c.priceCents > 0 ? `${money(c.priceCents, c.currency)}/mo` : "—"}</Field>
-              <Field label="Status">{c.status}</Field>
-              <Field label="Renews">{date(c.currentPeriodEnd)}</Field>
-              <Field label="Payment method">{cardLabel(detail.payment)}</Field>
-            </div>
-            <div>
-              <Field label="Email"><span style={{ color: "#185FA5" }}>{c.email}</span></Field>
-              <Field label="Currency">{c.currency}</Field>
-              <Field label="LS customer">{c.lsCustomerId ? `#${c.lsCustomerId}` : "—"}</Field>
-              <Field label="Subscription">{c.lsSubscriptionId ?? "—"}</Field>
-              {detail.payment?.updatePaymentUrl && <Field label="Update card"><a href={detail.payment.updatePaymentUrl} target="_blank" rel="noopener noreferrer" style={{ color: blue, textDecoration: "none" }}>Lemon Squeezy ↗</a></Field>}
-            </div>
+        <div style={{ background: "#F6F8FB", borderRadius: 12, padding: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".6px", textTransform: "uppercase", color: "#6B7690", marginBottom: 8 }}>Statement</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#6B7690" }}>Invoiced</span><b style={{ color: navy }}>{money(detail.statement.invoicedCents, detail.statement.currency)}</b></div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#6B7690" }}>Paid</span><b style={{ color: "#0F6E56" }}>{money(detail.statement.paidCents, detail.statement.currency)}</b></div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#6B7690" }}>Due</span><b style={{ color: detail.statement.dueCents > 0 ? "#A32D2D" : navy }}>{money(detail.statement.dueCents, detail.statement.currency)}</b></div>
           </div>
-        )}
-
-        {tab === "invoices" && (
-          <div style={{ marginTop: 14 }}>
-            {detail.invoices.length === 0 ? <div style={{ fontSize: 12.5, color: "#6B7690" }}>No invoices found in Lemon Squeezy for this subscription.</div>
-              : detail.invoices.map((inv, i) => (
-                <div key={inv.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12.5, padding: "10px 0", borderTop: i ? "0.5px solid #F1F4F9" : "none" }}>
-                  <Link href={`/admin/billing/${c.profileId}/invoice/${inv.id}`} style={{ color: navy, textDecoration: "none", fontWeight: 500 }}>{date(inv.createdAt)} · {inv.totalFormatted || money(inv.total, inv.currency)}</Link>
-                  <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    {invStatusPill(inv.status, inv.refunded)}
-                    <Link href={`/admin/billing/${c.profileId}/invoice/${inv.id}`} style={{ fontSize: 11.5, color: blue, textDecoration: "none" }}>View →</Link>
-                  </span>
-                </div>
-              ))}
-          </div>
-        )}
-
-        {tab === "statement" && (
-          <div style={{ marginTop: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
-              <div style={{ fontSize: 12.5, color: "#6B7690" }}>{detail.invoices.length} transaction{detail.invoices.length === 1 ? "" : "s"}</div>
-              {detail.invoices.length > 0 && <button onClick={exportCsv} style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 600, color: blue, background: "#EEF3FC", border: "none", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}>Export CSV</button>}
-            </div>
-            {stmt.length === 0 ? <div style={{ fontSize: 12.5, color: "#6B7690" }}>No transactions yet.</div> : (
-              <div style={{ border: "0.5px solid #E4E8F0", borderRadius: 8, overflow: "hidden" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "0.9fr 1.6fr 0.8fr 0.8fr 0.9fr", background: "#F6F8FB", padding: "8px 12px", fontSize: 10.5, textTransform: "uppercase", letterSpacing: ".04em", color: "#6B7690" }}>
-                  <span>Date</span><span>Description</span><span style={{ textAlign: "right" }}>Charge</span><span style={{ textAlign: "center" }}>Status</span><span style={{ textAlign: "right" }}>Balance</span>
-                </div>
-                {stmt.map(({ inv, balCents }, i) => (
-                  <div key={inv.id} style={{ display: "grid", gridTemplateColumns: "0.9fr 1.6fr 0.8fr 0.8fr 0.9fr", padding: "9px 12px", fontSize: 12, alignItems: "center", borderTop: i ? "0.5px solid #F1F4F9" : "none" }}>
-                    <span style={{ color: "#6B7690" }}>{date(inv.createdAt)}</span>
-                    <span>{c.planLabel}</span>
-                    <span style={{ textAlign: "right" }}>{inv.totalFormatted || money(inv.total, inv.currency)}</span>
-                    <span style={{ textAlign: "center" }}>{invStatusPill(inv.status, inv.refunded)}</span>
-                    <span style={{ textAlign: "right" }}>{money(balCents, detail.statement.currency)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div style={{ display: "flex", gap: 18, justifyContent: "flex-end", marginTop: 12, fontSize: 12.5 }}>
-              <span style={{ color: "#6B7690" }}>Invoiced <b style={{ color: navy }}>{money(detail.statement.invoicedCents, detail.statement.currency)}</b></span>
-              <span style={{ color: "#6B7690" }}>Paid <b style={{ color: "#0F6E56" }}>{money(detail.statement.paidCents, detail.statement.currency)}</b></span>
-              <span style={{ color: "#6B7690" }}>Balance due <b style={{ color: detail.statement.dueCents > 0 ? "#A32D2D" : navy }}>{money(detail.statement.dueCents, detail.statement.currency)}</b></span>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
 
       <div style={{ background: "#fff", border: "0.5px solid #E4E8F0", borderRadius: 12, padding: 14, marginTop: 14 }}>
