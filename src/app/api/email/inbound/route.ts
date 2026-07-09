@@ -64,12 +64,14 @@ function tokenFromRecipients(addresses: string[]): string | null {
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
+  // Fail closed: an unset secret must never leave this service-role write path open.
   const secret = process.env.INBOUND_WEBHOOK_SECRET;
-  if (secret) {
-    const provided = req.nextUrl.searchParams.get("key") ?? req.headers.get("x-webhook-secret");
-    if (provided !== secret) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-    }
+  if (!secret) {
+    return NextResponse.json({ error: "Inbound webhook not configured." }, { status: 503 });
+  }
+  const provided = req.nextUrl.searchParams.get("key") ?? req.headers.get("x-webhook-secret");
+  if (provided !== secret) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const payload = await parseBody(req);

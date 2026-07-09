@@ -364,7 +364,7 @@ function scoreRevenueCashflow(
   ];
 
   // Hard caps
-  let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 18);
+  let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 15);
   if (!hasFinancials) pts = Math.min(pts, 7);
   if (isPreRevenue && !hasFinancials) pts = Math.min(pts, 4);
 
@@ -833,7 +833,7 @@ function scoreFounderTeam(
   ];
 
   // Hard caps
-  let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 15);
+  let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 11);
   if (!hasPitch) pts = Math.min(pts, 8);
   if (!hasTeamDepth) pts = Math.min(pts, 10); // solo founder penalty
 
@@ -1040,7 +1040,7 @@ function scoreMarketEvidence(
     { label: "Industry declared", pts: industryPts, max: 1 },
   ];
 
-  let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 13);
+  let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 10);
   if (!hasPitch && !hasBizPlan) pts = 0;
   else if (!pitchSummary && !bizSummary) pts = Math.min(pts, 4);
   else if (!hasTractionEvidence) pts = Math.min(pts, 8);
@@ -1428,7 +1428,7 @@ function scoreIpMoat(
     { label: "IP / ownership documented legally", pts: formalPts, max: 1 },
   ];
 
-  let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 10);
+  let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 8);
   if (!hasPitch && !hasBizPlan) pts = Math.min(pts, 1);
   else if (!pitchSummary && !bizSummary) pts = Math.min(pts, 2);
 
@@ -1748,7 +1748,7 @@ function scoreBurnRunway(
   ];
 
   // Hard caps
-  let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 10);
+  let pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 8);
   if (!hasFinancials) pts = Math.min(pts, 3);
   if (hasFinancials && !financialSummary) pts = Math.min(pts, 5);
 
@@ -1807,7 +1807,7 @@ function scorePitchQuality(
     { label: "Both docs with AI summaries", pts: hasSummaries && hasPitch && hasBizPlan ? 1 : 0, max: 1 },
   ];
 
-  const pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 8);
+  const pts = clamp(subScores.reduce((s, x) => s + x.pts, 0), 0, 4);
 
   const evidence: FactorEvidence[] = [];
   if (hasPitch) evidence.push({ icon: "✅", text: pitchSummary ? "Pitch deck uploaded and AI-reviewed" : "Pitch deck uploaded — AI review pending (partial credit)", src: "PITCH_DECK" });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { advanceLeadStatus } from "@/lib/prospects/lead-status";
+import { verifySvixSignature } from "@/lib/marketing/webhook-verify";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +18,25 @@ const EVENT_MAP: Record<string, "delivered" | "open" | "click" | "bounce" | "uns
 // POST /api/publish/webhook — Resend delivery events → publish_events, matched by
 // the resend id recorded at send time. Public endpoint (called by Resend).
 export async function POST(req: NextRequest): Promise<Response> {
+  // Verify the Resend (Svix) signature before trusting any event — this is an
+  // unauthenticated public endpoint that writes via service role.
+  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    return NextResponse.json({ ok: false, error: "Webhook not configured" }, { status: 503 });
+  }
+  const rawBody = await req.text();
+  const svixId = req.headers.get("svix-id") ?? "";
+  const svixTimestamp = req.headers.get("svix-timestamp") ?? "";
+  const svixSignature = req.headers.get("svix-signature") ?? "";
+  if (!verifySvixSignature(webhookSecret, svixId, svixTimestamp, svixSignature, rawBody)) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    const payload = (await req.json().catch(() => null)) as { type?: string; data?: { email_id?: string; to?: string[] } } | null;
+    const payload = (() => {
+      try { return JSON.parse(rawBody) as { type?: string; data?: { email_id?: string; to?: string[] } }; }
+      catch { return null; }
+    })();
     const mapped = payload?.type ? EVENT_MAP[payload.type] : undefined;
     const emailId = payload?.data?.email_id;
     if (!mapped || !emailId) return NextResponse.json({ ok: true, ignored: true });

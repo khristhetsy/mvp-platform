@@ -932,3 +932,24 @@ alter table public.marketing_sequence_steps alter column from_email set default 
 -- delivered/opened/clicked never persisted. Drop the unique constraint; a plain
 -- lookup index (marketing_events_resend_idx) already exists for the webhook join.
 alter table public.marketing_events drop constraint if exists marketing_events_resend_id_key;
+
+
+-- ============================================================
+-- Security fix C1: enable RLS on publish_items / publish_events (migration 20260708007)
+-- ============================================================
+-- These two tables shipped WITHOUT row level security, so the public anon key
+-- could read contact emails from publish_events. App code uses the service-role
+-- client (bypasses RLS), so this is behavior-preserving.
+alter table public.publish_items  enable row level security;
+alter table public.publish_events enable row level security;
+
+drop policy if exists publish_items_staff on public.publish_items;
+create policy publish_items_staff on public.publish_items
+  for all to authenticated using (public.is_staff()) with check (public.is_staff());
+
+drop policy if exists publish_events_staff on public.publish_events;
+create policy publish_events_staff on public.publish_events
+  for all to authenticated using (public.is_staff()) with check (public.is_staff());
+
+revoke all on public.publish_items  from anon, authenticated;
+revoke all on public.publish_events from anon, authenticated;
