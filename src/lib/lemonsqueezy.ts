@@ -145,6 +145,33 @@ export async function listSubscriptionInvoices(lsSubscriptionId: string): Promis
   }
 }
 
+// ─── Payment method (credit info) ─────────────────────────────────────────────
+
+export interface LsPayment {
+  cardBrand: string | null;      // "visa" | "mastercard" | …
+  cardLastFour: string | null;   // "4242"
+  updatePaymentUrl: string | null; // LS-hosted "update card" link
+}
+
+/** Card brand + last four for a subscription. Never returns a full card number. */
+export async function getSubscriptionPayment(lsSubscriptionId: string): Promise<LsPayment | null> {
+  if (!process.env.LEMONSQUEEZY_API_KEY || !lsSubscriptionId) return null;
+  try {
+    const res = await fetch(`${LS_API}/subscriptions/${lsSubscriptionId}`, { headers: headers() });
+    if (!res.ok) return null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const json = (await res.json()) as { data?: { attributes?: any } };
+    const a = json.data?.attributes ?? {};
+    return {
+      cardBrand: a.card_brand ?? null,
+      cardLastFour: a.card_last_four ?? null,
+      updatePaymentUrl: a.urls?.update_payment_method ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 // ─── Webhook verification ─────────────────────────────────────────────────────
 
 export function verifyWebhookSignature(rawBody: string, signature: string): boolean {

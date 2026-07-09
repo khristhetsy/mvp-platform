@@ -3,7 +3,7 @@
 // invoices fetched live from Lemon Squeezy. Read-only: charging/refunds live in LS.
 
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
-import { listSubscriptionInvoices, type LsInvoice } from "@/lib/lemonsqueezy";
+import { listSubscriptionInvoices, getSubscriptionPayment, type LsInvoice, type LsPayment } from "@/lib/lemonsqueezy";
 import { PLAN_LABELS, PLAN_PRICES, type PlanType } from "@/lib/subscriptions/plans";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -102,18 +102,21 @@ export async function getWebhookHealth(customers: BillingCustomer[]): Promise<We
 export interface BillingCustomerDetail {
   customer: BillingCustomer | null;
   invoices: LsInvoice[];
+  payment: LsPayment | null;
   statement: { invoicedCents: number; paidCents: number; dueCents: number; currency: string };
 }
 
 export async function getBillingCustomerDetail(profileId: string): Promise<BillingCustomerDetail> {
   const customers = await listBillingCustomers();
   const customer = customers.find((c) => c.profileId === profileId) ?? null;
-  const invoices = customer?.lsSubscriptionId ? await listSubscriptionInvoices(customer.lsSubscriptionId) : [];
+  const [invoices, payment] = customer?.lsSubscriptionId
+    ? await Promise.all([listSubscriptionInvoices(customer.lsSubscriptionId), getSubscriptionPayment(customer.lsSubscriptionId)])
+    : [[], null];
 
   const invoicedCents = invoices.reduce((a, i) => a + i.total, 0);
   const paidCents = invoices.filter((i) => i.status === "paid" && !i.refunded).reduce((a, i) => a + i.total, 0);
   const dueCents = invoices.filter((i) => i.status === "pending").reduce((a, i) => a + i.total, 0);
   const currency = invoices[0]?.currency ?? customer?.currency ?? "USD";
 
-  return { customer, invoices, statement: { invoicedCents, paidCents, dueCents, currency } };
+  return { customer, invoices, payment, statement: { invoicedCents, paidCents, dueCents, currency } };
 }
