@@ -101,6 +101,50 @@ export async function getCustomerPortalUrl(lsSubscriptionId: string): Promise<st
   return json.data.attributes.urls.customer_portal;
 }
 
+// ─── Invoices (admin billing) ─────────────────────────────────────────────────
+
+export interface LsInvoice {
+  id: string;
+  total: number;            // cents
+  totalFormatted: string;   // e.g. "$1,000.00"
+  currency: string;
+  status: string;           // paid | pending | void | refunded
+  refunded: boolean;
+  createdAt: string;
+  invoiceUrl: string | null; // hosted invoice / PDF
+}
+
+/** Invoices for one subscription, most recent first. Empty on any error/misconfig. */
+export async function listSubscriptionInvoices(lsSubscriptionId: string): Promise<LsInvoice[]> {
+  if (!process.env.LEMONSQUEEZY_API_KEY || !lsSubscriptionId) return [];
+  try {
+    const res = await fetch(
+      `${LS_API}/subscription-invoices?filter[subscription_id]=${encodeURIComponent(lsSubscriptionId)}&page[size]=50`,
+      { headers: headers() },
+    );
+    if (!res.ok) return [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const json = (await res.json()) as { data?: Array<{ id: string; attributes: any }> };
+    return (json.data ?? [])
+      .map((r) => {
+        const a = r.attributes ?? {};
+        return {
+          id: r.id,
+          total: Number(a.total ?? 0),
+          totalFormatted: String(a.total_formatted ?? ""),
+          currency: String(a.currency ?? "USD"),
+          status: String(a.status ?? ""),
+          refunded: Boolean(a.refunded),
+          createdAt: String(a.created_at ?? ""),
+          invoiceUrl: a.urls?.invoice_url ?? null,
+        };
+      })
+      .sort((x, y) => y.createdAt.localeCompare(x.createdAt));
+  } catch {
+    return [];
+  }
+}
+
 // ─── Webhook verification ─────────────────────────────────────────────────────
 
 export function verifyWebhookSignature(rawBody: string, signature: string): boolean {
