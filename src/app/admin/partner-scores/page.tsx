@@ -2,7 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { PartnerScoreCard } from "@/components/admin/PartnerScoreCard";
-import { loadPartnerScore } from "@/lib/investor-rating/load";
+import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 import type { PartnerScore } from "@/lib/investor-rating/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/supabase/auth";
@@ -39,17 +39,19 @@ export default async function AdminPartnerScoresPage() {
     }
   }
 
-  const rated: Array<{ name: string; subtitle: string; rating: PartnerScore }> = await Promise.all(
-    investors.map(async (inv) => {
-      const p = profileNames.get(inv.profile_id);
-      const rating = await loadPartnerScore(supabase, inv.profile_id);
-      return {
-        name: inv.firm_name ?? p?.full_name ?? p?.email ?? "Investor",
-        subtitle: [inv.investor_type ?? t("investorFallback"), t("engaged", { n: rating.sampleSize })].join(" · "),
-        rating,
-      };
-    }),
-  );
+  // Read cached partner-score snapshots in one query (live fallback for any not yet
+  // snapshotted), instead of computing the ~7-query loader per investor.
+  const scores = await loadPartnerScoresBatch(supabase, investors.map((i) => i.profile_id));
+  const rated: Array<{ name: string; subtitle: string; rating: PartnerScore }> = investors.flatMap((inv) => {
+    const rating = scores.get(inv.profile_id);
+    if (!rating) return [];
+    const p = profileNames.get(inv.profile_id);
+    return [{
+      name: inv.firm_name ?? p?.full_name ?? p?.email ?? "Investor",
+      subtitle: [inv.investor_type ?? t("investorFallback"), t("engaged", { n: rating.sampleSize })].join(" · "),
+      rating,
+    }];
+  });
 
   return (
     <AppShell

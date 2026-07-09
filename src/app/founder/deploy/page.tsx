@@ -12,7 +12,7 @@ import {
   getCompanyPledgeSummary,
   getFounderPledgeCompanyId,
 } from "@/lib/data/investor-pledges";
-import { loadPartnerScore } from "@/lib/investor-rating/load";
+import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 import { founderFacingPartnerView, type FounderFacingPartner } from "@/lib/investor-rating/founder-view";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
@@ -142,15 +142,18 @@ export default async function FounderDeployPage() {
     crmView = buildFounderInvestorCrmView(activity, pledgeSummary);
     pipelineList = buildPipelineList(crmView);
 
-    // Compute the founder-safe Partner view for each shown investor (capped to
-    // the pipeline list). Service role: a founder can't read other investors'
-    // data directly. NOTE: if this list grows, move to a snapshot table.
-    await Promise.all(
-      pipelineList.map(async (row) => {
-        const score = await loadPartnerScore(serviceSupabase, row.investorId);
-        partnerViews.set(row.investorId, founderFacingPartnerView(score));
-      }),
+    // Founder-safe Partner view for each shown investor. Reads cached partner-score
+    // snapshots in a single query (refreshed by the daily orchestration cron), with
+    // a live-compute fallback for any investor not yet snapshotted. Service role: a
+    // founder can't read other investors' data directly.
+    const scores = await loadPartnerScoresBatch(
+      serviceSupabase,
+      pipelineList.map((row) => row.investorId),
     );
+    for (const row of pipelineList) {
+      const score = scores.get(row.investorId);
+      if (score) partnerViews.set(row.investorId, founderFacingPartnerView(score));
+    }
   }
 
   const funnel: FunnelStage[] = [

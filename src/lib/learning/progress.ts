@@ -17,6 +17,10 @@ import type {
   LearningUserBadgeRecord,
 } from "@/lib/learning/types";
 
+// The aggregate RPCs (migration 20260708008) aren't in the generated Supabase
+// types yet, so call them through a narrow cast rather than `any`.
+type AggregateRpc = <T>(fn: string) => Promise<{ data: T[] | null; error: { message?: string } | null }>;
+
 export async function listPublishedLearningModules() {
   const admin = createServiceRoleClient();
   const { data, error } = await admin
@@ -391,6 +395,41 @@ type AtRiskCompanyRow = {
   profiles: { full_name: string | null; email: string | null } | null;
 };
 
+/**
+ * Per-company most-recent learning activity as epoch ms. Fast path uses the
+ * server-side aggregate RPC (migration 20260708008); the fallback scans the three
+ * progress tables but is bounded to the candidate companies via `.in()`.
+ */
+async function loadLastActivityByCompany(
+  admin: ReturnType<typeof createServiceRoleClient>,
+  companyIds: string[],
+): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  const bump = (companyId: string | null, iso: string | null) => {
+    if (!companyId || !iso) return;
+    const t = new Date(iso).getTime();
+    if (Number.isFinite(t) && t > (map.get(companyId) ?? 0)) map.set(companyId, t);
+  };
+
+  const rpc = admin.rpc as unknown as AggregateRpc;
+  const agg = await rpc<{ company_id: string; last_activity: string | null }>("learning_company_last_activity");
+  if (!agg.error && agg.data) {
+    for (const row of agg.data) bump(row.company_id, row.last_activity);
+    return map;
+  }
+
+  // Fallback (RPC not yet migrated): bounded scan.
+  const [{ data: progressRows }, { data: lessonRows }, { data: courseProgressRows }] = await Promise.all([
+    admin.from("learning_progress").select("company_id, last_viewed_at").in("company_id", companyIds),
+    admin.from("founder_lesson_progress").select("company_id, last_viewed_at, completed_at").in("company_id", companyIds),
+    admin.from("learning_course_progress").select("company_id, last_viewed_at").in("company_id", companyIds),
+  ]);
+  for (const row of progressRows ?? []) bump(row.company_id, row.last_viewed_at);
+  for (const row of lessonRows ?? []) { bump(row.company_id, row.last_viewed_at); bump(row.company_id, row.completed_at); }
+  for (const row of courseProgressRows ?? []) bump(row.company_id, row.last_viewed_at);
+  return map;
+}
+
 export async function getLearningAtRiskFounders(inactivityDays = 7) {
   const admin = createServiceRoleClient();
   const { data: rawCompanies, error } = await admin
@@ -405,10 +444,8 @@ export async function getLearningAtRiskFounders(inactivityDays = 7) {
   }
 
   const companyIds = companies.map((company) => company.id);
-  const [{ data: progressRows }, { data: lessonRows }, { data: courseProgressRows }, summaries] = await Promise.all([
-    admin.from("learning_progress").select("company_id, last_viewed_at"),
-    admin.from("founder_lesson_progress").select("company_id, last_viewed_at, completed_at"),
-    admin.from("learning_course_progress").select("company_id, last_viewed_at"),
+  const [lastActivityByCompany, summaries] = await Promise.all([
+    loadLastActivityByCompany(admin, companyIds),
     getLearningAdminSummaryForCompanies(companyIds),
   ]);
 
@@ -420,28 +457,10 @@ export async function getLearningAtRiskFounders(inactivityDays = 7) {
   for (const company of companies) {
     if (!company.founder_id) continue;
 
-    const activityMs: number[] = [];
-    for (const row of progressRows ?? []) {
-      if (row.company_id === company.id && row.last_viewed_at) {
-        activityMs.push(new Date(row.last_viewed_at).getTime());
-      }
-    }
-    for (const row of lessonRows ?? []) {
-      if (row.company_id !== company.id) continue;
-      if (row.last_viewed_at) activityMs.push(new Date(row.last_viewed_at).getTime());
-      if (row.completed_at) activityMs.push(new Date(row.completed_at).getTime());
-    }
-    for (const row of courseProgressRows ?? []) {
-      if (row.company_id === company.id && row.last_viewed_at) {
-        activityMs.push(new Date(row.last_viewed_at).getTime());
-      }
-    }
+    const lastMs = lastActivityByCompany.get(company.id) ?? 0;
+    const lastActivityAt = lastMs > 0 ? new Date(lastMs).toISOString() : null;
 
-    const lastActivityAt =
-      activityMs.length > 0 ? new Date(Math.max(...activityMs)).toISOString() : null;
-    const lastMs = lastActivityAt ? new Date(lastActivityAt).getTime() : 0;
-
-    if (lastMs >= cutoff && activityMs.length > 0) continue;
+    if (lastMs >= cutoff && lastMs > 0) continue;
 
     const summary = summaries.get(company.id) ?? {
       percentComplete: 0,
@@ -477,22 +496,40 @@ type LeaderboardCompanyRow = {
 
 export async function getLeaderboard(companyId: string) {
   const admin = createServiceRoleClient();
-  const [{ data: progressRows }, { data: modules }, { data: badgeRows }] = await Promise.all([
-    admin.from("learning_progress").select("company_id, status, percent_complete"),
+
+  type Stat = { modulesCompleted: number; sumPercent: number; badges: number };
+  const stats = new Map<string, Stat>();
+
+  // Fast path: per-company stats via the aggregate RPC (migration 20260708008).
+  const rpc = admin.rpc as unknown as AggregateRpc;
+  const [statsRes, { data: modules }] = await Promise.all([
+    rpc<{ company_id: string; modules_completed: number; sum_percent: number; badges: number }>("learning_leaderboard_stats"),
     admin.from("learning_modules").select("id").eq("is_published", true),
-    admin.from("learning_user_badges").select("company_id"),
   ]);
-
   const publishedCount = modules?.length ?? 0;
-  const grouped = new Map<string, Array<{ status: string; percent_complete: number }>>();
 
-  for (const row of progressRows ?? []) {
-    const list = grouped.get(row.company_id) ?? [];
-    list.push(row);
-    grouped.set(row.company_id, list);
+  if (!statsRes.error && statsRes.data) {
+    for (const r of statsRes.data) {
+      stats.set(r.company_id, { modulesCompleted: Number(r.modules_completed), sumPercent: Number(r.sum_percent), badges: Number(r.badges) });
+    }
+  } else {
+    // Fallback (RPC not yet migrated): scan + group in JS.
+    const [{ data: progressRows }, { data: badgeRows }] = await Promise.all([
+      admin.from("learning_progress").select("company_id, status, percent_complete"),
+      admin.from("learning_user_badges").select("company_id"),
+    ]);
+    const badgeCounts = new Map<string, number>();
+    for (const row of badgeRows ?? []) badgeCounts.set(row.company_id, (badgeCounts.get(row.company_id) ?? 0) + 1);
+    for (const row of progressRows ?? []) {
+      const s = stats.get(row.company_id) ?? { modulesCompleted: 0, sumPercent: 0, badges: 0 };
+      if (row.status === "completed") s.modulesCompleted += 1;
+      s.sumPercent += row.percent_complete;
+      stats.set(row.company_id, s);
+    }
+    for (const [cid, s] of stats) s.badges = badgeCounts.get(cid) ?? 0;
   }
 
-  const companyIds = [...new Set([...grouped.keys(), companyId])];
+  const companyIds = [...new Set([...stats.keys(), companyId])];
   if (companyIds.length === 0) {
     return [] as LearningLeaderboardEntry[];
   }
@@ -504,22 +541,13 @@ export async function getLeaderboard(companyId: string) {
 
   const companyMap = new Map(((rawCompanies ?? []) as LeaderboardCompanyRow[]).map((company) => [company.id, company]));
 
-  const badgeCounts = new Map<string, number>();
-  for (const row of badgeRows ?? []) {
-    badgeCounts.set(row.company_id, (badgeCounts.get(row.company_id) ?? 0) + 1);
-  }
-
   const scored = companyIds
     .map((id) => {
       const company = companyMap.get(id);
       if (!company) return null;
 
-      const rows = grouped.get(id) ?? [];
-      const modulesCompleted = rows.filter((row) => row.status === "completed").length;
-      const overallPercent =
-        publishedCount > 0
-          ? Math.round(rows.reduce((sum, row) => sum + row.percent_complete, 0) / publishedCount)
-          : 0;
+      const s = stats.get(id) ?? { modulesCompleted: 0, sumPercent: 0, badges: 0 };
+      const overallPercent = publishedCount > 0 ? Math.round(s.sumPercent / publishedCount) : 0;
 
       return {
         companyId: id,
@@ -527,8 +555,8 @@ export async function getLeaderboard(companyId: string) {
         founderFirstName: company.profiles?.full_name?.split(/\s+/)[0] ?? null,
         industry: company.industry,
         overallPercent,
-        modulesCompleted,
-        badgesEarned: badgeCounts.get(id) ?? 0,
+        modulesCompleted: s.modulesCompleted,
+        badgesEarned: s.badges,
       };
     })
     .filter((entry): entry is NonNullable<typeof entry> => entry != null);
@@ -548,6 +576,17 @@ export async function getLeaderboard(companyId: string) {
 
 export async function getGlobalModuleEngagementCounts() {
   const admin = createServiceRoleClient();
+
+  // Fast path: server-side aggregation (migration 20260708008).
+  const rpc = admin.rpc as unknown as AggregateRpc;
+  const agg = await rpc<{ module_id: string; cnt: number }>("learning_module_engagement_counts");
+  if (!agg.error && agg.data) {
+    const counts = new Map<string, number>();
+    for (const row of agg.data) counts.set(row.module_id, Number(row.cnt));
+    return counts;
+  }
+
+  // Fallback (RPC not yet migrated): scan.
   const { data, error } = await admin
     .from("learning_progress")
     .select("module_id, status")

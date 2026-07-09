@@ -953,3 +953,65 @@ create policy publish_events_staff on public.publish_events
 
 revoke all on public.publish_items  from anon, authenticated;
 revoke all on public.publish_events from anon, authenticated;
+
+
+-- ============================================================
+-- Performance fix H5: learning analytics aggregation RPCs (migration 20260708008)
+-- ============================================================
+create or replace function public.learning_company_last_activity()
+returns table(company_id uuid, last_activity timestamptz)
+language sql stable security definer set search_path = public as $$
+  select company_id, max(ts) as last_activity
+  from (
+    select company_id, last_viewed_at as ts from public.learning_progress        where last_viewed_at is not null
+    union all
+    select company_id, last_viewed_at       from public.founder_lesson_progress  where last_viewed_at is not null
+    union all
+    select company_id, completed_at         from public.founder_lesson_progress  where completed_at   is not null
+    union all
+    select company_id, last_viewed_at       from public.learning_course_progress where last_viewed_at is not null
+  ) t
+  group by company_id;
+$$;
+
+create or replace function public.learning_leaderboard_stats()
+returns table(company_id uuid, modules_completed bigint, sum_percent bigint, badges bigint)
+language sql stable security definer set search_path = public as $$
+  select p.company_id,
+         count(*) filter (where p.status = 'completed')                                     as modules_completed,
+         coalesce(sum(p.percent_complete), 0)::bigint                                        as sum_percent,
+         (select count(*) from public.learning_user_badges b where b.company_id = p.company_id) as badges
+  from public.learning_progress p
+  group by p.company_id;
+$$;
+
+create or replace function public.learning_module_engagement_counts()
+returns table(module_id uuid, cnt bigint)
+language sql stable security definer set search_path = public as $$
+  select module_id, count(*) as cnt
+  from public.learning_progress
+  where status <> 'not_started'
+  group by module_id;
+$$;
+
+grant execute on function public.learning_company_last_activity()    to service_role;
+grant execute on function public.learning_leaderboard_stats()        to service_role;
+grant execute on function public.learning_module_engagement_counts() to service_role;
+
+
+-- ============================================================
+-- Performance fix C2: partner_score_snapshots table (migration 20260708009)
+-- ============================================================
+create table if not exists public.partner_score_snapshots (
+  investor_id uuid primary key references public.profiles(id) on delete cascade,
+  score       integer,
+  tier        text    not null,
+  status      text    not null,
+  sample_size integer not null default 0,
+  payload     jsonb   not null,
+  computed_at timestamptz not null default now()
+);
+alter table public.partner_score_snapshots enable row level security;
+drop policy if exists partner_score_snapshots_staff on public.partner_score_snapshots;
+create policy partner_score_snapshots_staff on public.partner_score_snapshots
+  for all to authenticated using (public.is_staff()) with check (public.is_staff());
