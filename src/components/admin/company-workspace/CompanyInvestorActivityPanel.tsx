@@ -4,10 +4,11 @@ import { MetricGrid } from "@/components/ui/workspace-layout";
 import { MetricCard } from "@/components/MetricCard";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { buildCompanyFilteredHref, type AdminCompanyWorkspaceData } from "@/lib/admin/company-workspace-types";
+import { formatUsd } from "@/lib/ui/format-display";
 
 function formatCurrency(value: number) {
   if (!value) return "—";
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+  return formatUsd(value);
 }
 
 export function CompanyInvestorActivityPanel({

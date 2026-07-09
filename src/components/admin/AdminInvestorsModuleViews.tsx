@@ -9,6 +9,7 @@ import { AdminSubscriptionSummary } from "@/components/AdminSubscriptionSummary"
 import { AdminQueryFilterBar } from "@/components/ui/AdminQueryFilterBar";
 import { ModuleEmptyState } from "@/components/ui/ViewToolbar";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { formatUsd } from "@/lib/ui/format-display";
 import { useAdminQueryFilters } from "@/hooks/use-admin-query-filters";
 import type { PlanType, SubscriptionRecord } from "@/lib/subscriptions/plans";
 import type { InvestorApprovalStatus, InvestorProfileRecord } from "@/lib/investor/types";
@@ -33,7 +34,7 @@ function parseInvestorsPageView(raw: string | null): InvestorsPageView {
 
 function formatMoney(value: number | null) {
   if (value == null) return "—";
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+  return formatUsd(value);
 }
 
 type InvestorProfileWithMatching = InvestorProfileRecord & {

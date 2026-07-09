@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { formatUsd } from "@/lib/ui/format-display";
 import { investorApprovalStatusLabel } from "@/lib/investor/access";
 import { KYC_STATUS_LABELS, type KycReviewItem } from "@/lib/investor/kyc";
 import type { InvestorKycStatus, InvestorPriorDealRecord, InvestorProfileRecord } from "@/lib/investor/types";
@@ -21,7 +22,7 @@ function formatDate(value: string | null) {
 
 function formatMoney(value: number | null) {
   if (value == null) return "—";
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+  return formatUsd(value);
 }
 
 export function AdminInvestorReviewCard({ row }: Readonly<{ row: Row }>) {

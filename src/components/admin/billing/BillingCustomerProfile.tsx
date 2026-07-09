@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useState } from "react";
+import { formatCurrency } from "@/lib/ui/format-display";
 
 const navy = "#0A1A40", blue = "#1A6CE4";
 
@@ -13,8 +14,7 @@ interface Invoice { id: string; total: number; totalFormatted: string; currency:
 export interface Detail { customer: Customer | null; invoices: Invoice[]; statement: { invoicedCents: number; paidCents: number; dueCents: number; currency: string } }
 
 function money(cents: number, currency = "USD"): string {
-  try { return (cents / 100).toLocaleString(undefined, { style: "currency", currency, maximumFractionDigits: 0 }); }
-  catch { return `$${Math.round(cents / 100).toLocaleString()}`; }
+  return formatCurrency(cents, { cents: true, currency });
 }
 function date(iso: string | null): string {
   return iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";

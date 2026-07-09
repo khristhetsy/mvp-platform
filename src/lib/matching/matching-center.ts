@@ -1,3 +1,4 @@
+import { formatUsd } from "@/lib/ui/format-display";
 import {
   countHighMatches,
   matchInvestorToCompany,
@@ -265,8 +266,7 @@ export async function loadAdminMatchingCenterSnapshot(): Promise<AdminMatchingCe
 
 function formatCheckSize(min: number | null, max: number | null) {
   if (min == null && max == null) return "Not set";
-  const fmt = (value: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+  const fmt = (value: number) => formatUsd(value);
   if (min != null && max != null) return `${fmt(min)} – ${fmt(max)}`;
   if (min != null) return `${fmt(min)}+`;
   if (max != null) return `Up to ${fmt(max)}`;

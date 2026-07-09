@@ -2,13 +2,17 @@
 // Generated fresh each day (AI, tuned to how the departments are trending) with a
 // deterministic curated fallback when AI is unavailable. Cheap read on the dashboard.
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
 import { claudeComplete, CLAUDE_HAIKU, isClaudeConfigured } from "@/lib/claude";
 import { loadCeoPayload } from "./hub-data";
 import { status as kpiStatus, deptScore } from "./kpi";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function db(): any { return serviceRoleClientUntyped(); }
+// ceo_daily_phrase isn't in the generated Supabase types yet; declare the row shape
+// here and use the untyped service client (no file-level `any` cast needed).
+type DailyPhraseRow = { business: string; phrase_date: string; phrase: string; model: string | null };
+
+function db(): SupabaseClient { return serviceRoleClientUntyped(); }
 function today(): string { return new Date().toISOString().slice(0, 10); }
 
 const CURATED = [
@@ -29,7 +33,7 @@ function curatedForToday(): string {
 /** Cheap read — today's stored phrase, or null if none yet. */
 export async function loadTodayPhrase(): Promise<string | null> {
   const { data } = await db().from("ceo_daily_phrase").select("phrase").eq("business", "icapos").eq("phrase_date", today()).maybeSingle();
-  return data?.phrase ?? null;
+  return (data as Pick<DailyPhraseRow, "phrase"> | null)?.phrase ?? null;
 }
 
 /** Return today's phrase, generating + storing it if missing. Falls back to curated. */
@@ -60,7 +64,8 @@ export async function ensureTodayPhrase(force = false): Promise<string> {
   }
 
   try {
-    await db().from("ceo_daily_phrase").upsert({ business: "icapos", phrase_date: today(), phrase, model }, { onConflict: "business,phrase_date" });
+    const row: DailyPhraseRow = { business: "icapos", phrase_date: today(), phrase, model };
+    await db().from("ceo_daily_phrase").upsert(row, { onConflict: "business,phrase_date" });
   } catch { /* non-fatal */ }
   return phrase;
 }

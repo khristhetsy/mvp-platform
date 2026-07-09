@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { formatCurrency } from "@/lib/ui/format-display";
 
 const navy = "#0A1A40";
 
@@ -14,8 +15,7 @@ interface Health { configured: boolean; lastSyncAt: string | null }
 export interface UpgradeRequest { id: string; name: string; email: string; type: string; plan: string; feature: string; status: string; createdAt: string }
 
 function money(cents: number, currency = "USD"): string {
-  try { return (cents / 100).toLocaleString(undefined, { style: "currency", currency, maximumFractionDigits: 0 }); }
-  catch { return `$${Math.round(cents / 100).toLocaleString()}`; }
+  return formatCurrency(cents, { cents: true, currency });
 }
 function ago(iso: string | null): string {
   if (!iso) return "never";
