@@ -29,11 +29,20 @@ function headers() {
  */
 async function resolveStoreId(): Promise<string | null> {
   const fromEnv = process.env.LEMONSQUEEZY_STORE_ID?.trim();
-  if (fromEnv) return fromEnv;
-  const res = await fetch(`${LS_API}/stores`, { headers: headers() });
-  if (!res.ok) return null;
-  const json = (await res.json()) as { data?: Array<{ id: string }> };
-  return json.data?.[0]?.id ?? null;
+  // Validate the configured store against the API key's own stores, and fall back
+  // to the key's first store — so a stale or wrong-mode LEMONSQUEEZY_STORE_ID (a
+  // common cause of the checkout "store not found" 404 after rotating the key)
+  // can't break checkout.
+  try {
+    const res = await fetch(`${LS_API}/stores`, { headers: headers() });
+    if (res.ok) {
+      const json = (await res.json()) as { data?: Array<{ id: string }> };
+      const ids = (json.data ?? []).map((s) => s.id);
+      if (fromEnv && ids.includes(fromEnv)) return fromEnv;
+      return ids[0] ?? fromEnv ?? null;
+    }
+  } catch { /* fall through to env value */ }
+  return fromEnv ?? null;
 }
 
 // ─── Checkout ─────────────────────────────────────────────────────────────────
