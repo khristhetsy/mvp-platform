@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
 
-const navy = "#0A1A40", blue = "#1A6CE4";
+const navy = "#0A1A40";
 
 interface Customer {
   profileId: string; name: string; email: string; planLabel: string; status: string;
@@ -10,8 +11,6 @@ interface Customer {
 }
 interface Stats { mrrCents: number; activeCount: number; trialCount: number; pendingUpgrades: number }
 interface Health { configured: boolean; lastSyncAt: string | null }
-interface Invoice { id: string; total: number; totalFormatted: string; currency: string; status: string; refunded: boolean; createdAt: string; invoiceUrl: string | null }
-interface Detail { customer: Customer | null; invoices: Invoice[]; statement: { invoicedCents: number; paidCents: number; dueCents: number; currency: string } }
 export interface UpgradeRequest { id: string; name: string; email: string; type: string; plan: string; feature: string; status: string; createdAt: string }
 
 function money(cents: number, currency = "USD"): string {
@@ -36,47 +35,14 @@ function statusPill(s: string) {
   const t = STATUS_TONE[s] ?? { bg: "#F1EFE8", c: "#5F5E5A" };
   return <span style={{ fontSize: 10.5, fontWeight: 600, background: t.bg, color: t.c, borderRadius: 6, padding: "2px 8px" }}>{s}</span>;
 }
-function invStatusPill(s: string, refunded: boolean) {
-  const label = refunded ? "refunded" : s;
-  const t = label === "paid" ? { bg: "#E1F5EE", c: "#0F6E56" } : label === "pending" ? { bg: "#FAEEDA", c: "#854F0B" } : { bg: "#F1EFE8", c: "#5F5E5A" };
-  return <span style={{ fontSize: 10, fontWeight: 600, background: t.bg, color: t.c, borderRadius: 6, padding: "1px 7px" }}>{label}</span>;
-}
 
 export function AdminBillingClient({ customers, stats, health, upgradeRequests }: { customers: Customer[]; stats: Stats; health: Health; upgradeRequests: UpgradeRequest[] }) {
   const [q, setQ] = useState("");
-  const [openId, setOpenId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<Detail | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [coPlan, setCoPlan] = useState<"founder_basic" | "founder_professional">("founder_basic");
-  const [coBusy, setCoBusy] = useState<null | "link" | "email">(null);
-  const [coUrl, setCoUrl] = useState<string | null>(null);
-  const [coMsg, setCoMsg] = useState<string | null>(null);
-
-  const createCheckout = useCallback(async (send: boolean) => {
-    if (!openId) return;
-    setCoBusy(send ? "email" : "link"); setCoMsg(null);
-    try {
-      const r = await fetch(`/api/admin/billing/customers/${openId}/checkout`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: coPlan, send }),
-      });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) { setCoMsg(typeof d.error === "string" ? d.error : "Failed to create link."); return; }
-      if (d.url) setCoUrl(d.url);
-      if (send) setCoMsg(d.emailed ? "Checkout link emailed to the customer." : "Link created, but the email didn't send.");
-    } catch { setCoMsg("Failed to create link."); }
-    finally { setCoBusy(null); }
-  }, [openId, coPlan]);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     return s ? customers.filter((c) => c.name.toLowerCase().includes(s) || c.email.toLowerCase().includes(s) || c.planLabel.toLowerCase().includes(s)) : customers;
   }, [q, customers]);
-
-  const openCustomer = useCallback(async (c: Customer) => {
-    setOpenId(c.profileId); setDetail(null); setLoading(true); setCoUrl(null); setCoMsg(null); setCoPlan("founder_basic");
-    try { const r = await fetch(`/api/admin/billing/customers/${c.profileId}`); if (r.ok) setDetail(await r.json()); }
-    catch { /* ignore */ } finally { setLoading(false); }
-  }, []);
 
   const card: React.CSSProperties = { background: "var(--surface-1, #F6F8FB)", borderRadius: 10, padding: "12px 14px" };
 
@@ -110,84 +76,15 @@ export function AdminBillingClient({ customers, stats, health, upgradeRequests }
         </div>
         {filtered.length === 0 ? <div style={{ padding: 16, fontSize: 12.5, color: "#6B7690" }}>No customers.</div>
           : filtered.map((c) => (
-            <button key={c.profileId} onClick={() => openCustomer(c)} style={{ width: "100%", textAlign: "left", display: "grid", gridTemplateColumns: "1.6fr 1fr 0.9fr 0.9fr 1fr", padding: "10px 14px", alignItems: "center", background: "none", borderTop: "0.5px solid #F1F4F9", borderLeft: "none", borderRight: "none", borderBottom: "none", cursor: "pointer" }}>
-              <div><div style={{ fontSize: 12.5, fontWeight: 600 }}>{c.name}</div><div style={{ fontSize: 11, color: "#6B7690" }}>{c.email}</div></div>
+            <Link key={c.profileId} href={`/admin/billing/${c.profileId}`} style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr 0.9fr 0.9fr 1fr", padding: "10px 14px", borderTop: "0.5px solid #F1F4F9", alignItems: "center", textDecoration: "none", color: "inherit" }}>
+              <div><div style={{ fontSize: 12.5, fontWeight: 600, color: navy }}>{c.name}</div><div style={{ fontSize: 11, color: "#6B7690" }}>{c.email}</div></div>
               <div><span style={{ fontSize: 10.5, background: "#EEF3FC", color: "#185FA5", borderRadius: 6, padding: "2px 8px" }}>{c.planLabel}</span></div>
               <div>{statusPill(c.status)}</div>
               <div style={{ fontSize: 12.5, color: navy }}>{c.priceCents > 0 ? money(c.priceCents, c.currency) : <span style={{ color: "#98A2B3" }}>—</span>}</div>
               <div style={{ fontSize: 12, color: "#6B7690" }}>{date(c.currentPeriodEnd)}</div>
-            </button>
+            </Link>
           ))}
       </div>
-
-      {openId && (
-        <div onClick={() => setOpenId(null)} style={{ position: "fixed", inset: 0, background: "rgba(10,26,64,.4)", zIndex: 200, display: "flex", justifyContent: "flex-end" }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ width: "min(480px, 94vw)", height: "100%", background: "#fff", overflowY: "auto", padding: 22 }}>
-            {loading || !detail ? <div style={{ fontSize: 13, color: "#6B7690" }}>Loading…</div> : (
-              <>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: navy }}>{detail.customer?.name ?? "Customer"}</div>
-                  {detail.customer && statusPill(detail.customer.status)}
-                  <button onClick={() => setOpenId(null)} style={{ marginLeft: "auto", background: "none", border: "none", fontSize: 18, color: "#6B7690", cursor: "pointer" }}>✕</button>
-                </div>
-
-                <Section title="Profile">
-                  <div style={{ fontSize: 12.5, color: "#475569", lineHeight: 1.7 }}>
-                    {detail.customer?.email}{detail.customer?.lsCustomerId ? ` · LS customer #${detail.customer.lsCustomerId}` : ""}
-                  </div>
-                </Section>
-
-                <Section title="Plan">
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5 }}>
-                    <span style={{ fontWeight: 600 }}>{detail.customer?.planLabel} · {detail.customer && detail.customer.priceCents > 0 ? `${money(detail.customer.priceCents, detail.customer.currency)}/mo` : "—"}</span>
-                    <span style={{ color: "#6B7690" }}>renews {date(detail.customer?.currentPeriodEnd ?? null)}</span>
-                  </div>
-                </Section>
-
-                <Section title="Invoices">
-                  {detail.invoices.length === 0 ? <div style={{ fontSize: 12, color: "#6B7690" }}>No invoices found in Lemon Squeezy for this subscription.</div>
-                    : detail.invoices.map((inv, i) => (
-                      <div key={inv.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, padding: "5px 0", borderTop: i ? "0.5px solid #F1F4F9" : "none" }}>
-                        <span>{date(inv.createdAt)} · {inv.totalFormatted || money(inv.total, inv.currency)}</span>
-                        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          {invStatusPill(inv.status, inv.refunded)}
-                          {inv.invoiceUrl && <a href={inv.invoiceUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, color: blue, textDecoration: "none" }}>PDF ↗</a>}
-                        </span>
-                      </div>
-                    ))}
-                </Section>
-
-                <Section title="Statement">
-                  <div style={{ display: "flex", gap: 16, fontSize: 12.5 }}>
-                    <span style={{ color: "#6B7690" }}>Invoiced <b style={{ color: navy }}>{money(detail.statement.invoicedCents, detail.statement.currency)}</b></span>
-                    <span style={{ color: "#6B7690" }}>Paid <b style={{ color: "#0F6E56" }}>{money(detail.statement.paidCents, detail.statement.currency)}</b></span>
-                    <span style={{ color: "#6B7690" }}>Due <b style={{ color: detail.statement.dueCents > 0 ? "#A32D2D" : navy }}>{money(detail.statement.dueCents, detail.statement.currency)}</b></span>
-                  </div>
-                </Section>
-
-                <Section title="Create checkout link">
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                    <select value={coPlan} onChange={(e) => setCoPlan(e.target.value as "founder_basic" | "founder_professional")} style={{ fontSize: 12.5, padding: "7px 10px", borderRadius: 8, border: "1px solid #E4E8F0" }}>
-                      <option value="founder_basic">Founder Pro — $499/mo</option>
-                      <option value="founder_professional">Founder Premium — $1,000/mo</option>
-                    </select>
-                    <button onClick={() => void createCheckout(false)} disabled={coBusy !== null} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: navy, border: "none", borderRadius: 8, padding: "8px 13px", cursor: "pointer" }}>{coBusy === "link" ? "Creating…" : "Create link"}</button>
-                    <button onClick={() => void createCheckout(true)} disabled={coBusy !== null} style={{ fontSize: 12, fontWeight: 600, color: blue, background: "#EEF3FC", border: "none", borderRadius: 8, padding: "8px 13px", cursor: "pointer" }}>{coBusy === "email" ? "Sending…" : "Email to customer"}</button>
-                  </div>
-                  {coUrl && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-                      <input readOnly value={coUrl} style={{ flex: 1, fontSize: 11.5, padding: "6px 9px", borderRadius: 7, border: "1px solid #E4E8F0", color: "#475569" }} />
-                      <button onClick={() => { void navigator.clipboard?.writeText(coUrl); setCoMsg("Link copied."); }} style={{ fontSize: 11.5, fontWeight: 600, color: navy, background: "#F1EFE8", border: "none", borderRadius: 7, padding: "6px 11px", cursor: "pointer" }}>Copy</button>
-                    </div>
-                  )}
-                  {coMsg && <div style={{ fontSize: 11.5, color: /Failed|didn't/.test(coMsg) ? "#A32D2D" : "#0F6E56", marginTop: 6 }}>{coMsg}</div>}
-                  <div style={{ fontSize: 10.5, color: "#98A2B3", marginTop: 6, lineHeight: 1.5 }}>The customer enters their own card at Lemon Squeezy — this never charges a card from here.</div>
-                </Section>
-              </>
-            )}
-          </div>
-        </div>
-      )}
 
       <div style={{ marginTop: 6 }}>
         <div style={{ fontSize: 16, fontWeight: 600, color: navy, marginBottom: 10 }}>Upgrade requests <span style={{ fontSize: 12.5, fontWeight: 400, color: "#6B7690" }}>· {upgradeRequests.length}</span></div>
@@ -202,15 +99,6 @@ export function AdminBillingClient({ customers, stats, health, upgradeRequests }
             ))}
         </div>
       </div>
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ background: "#fff", border: "0.5px solid #E4E8F0", borderRadius: 10, padding: 12, marginBottom: 12 }}>
-      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".7px", textTransform: "uppercase", color: "#6B7690", marginBottom: 6 }}>{title}</div>
-      {children}
     </div>
   );
 }
