@@ -27,7 +27,7 @@ const PAGES: PageShortcut[] = [
   { id: "deal-rooms",  title: "Deal rooms",           subtitle: "Data room access",       href: "/founder/deal-room",             keywords: ["deal", "room", "data room"],               workspace: "founder" },
   { id: "capital",     title: "Capital raise",        subtitle: "Fundraising overview",   href: "/founder/capital-raise",         keywords: ["capital", "raise", "fundraising"],         workspace: "founder" },
   { id: "milestones",  title: "Milestones",           subtitle: "Track your progress",    href: "/founder/milestones",            keywords: ["milestones", "progress", "achievements"],  workspace: "founder" },
-  { id: "raise-cmd",   title: "Raise command center", subtitle: "AI tools",               href: "/founder/raise-command-center",  keywords: ["command", "center", "tools", "ai"],        workspace: "founder" },
+  { id: "raise-cmd",   title: "Raise command center", subtitle: "AI tools",               href: "/founder/command-center",        keywords: ["command", "center", "tools", "ai"],        workspace: "founder" },
   { id: "raise-kit",   title: "Raise toolkit",        subtitle: "Templates & guides",     href: "/founder/raise-toolkit",         keywords: ["toolkit", "templates"],                    workspace: "founder" },
   { id: "analytics",   title: "Analytics",            subtitle: "Insights & trends",      href: "/founder/analytics",             keywords: ["analytics", "insights", "metrics"],        workspace: "founder" },
   { id: "learning-f",  title: "Learning",             subtitle: "Capital modules",        href: "/founder/learning",              keywords: ["learning", "courses", "education"],        workspace: "founder" },
@@ -37,7 +37,7 @@ const PAGES: PageShortcut[] = [
   { id: "inv-dash",    title: "Dashboard",            subtitle: "Investor workspace",     href: "/investor/dashboard",            keywords: ["home", "overview", "dashboard"],           workspace: "investor" },
   { id: "inv-opp",     title: "Opportunities",        subtitle: "Company matches",        href: "/investor/opportunities",        keywords: ["opportunities", "matches", "companies"],   workspace: "investor" },
   { id: "inv-port",    title: "Portfolio",            subtitle: "Active investments",     href: "/investor/portfolio",            keywords: ["portfolio", "investments"],                workspace: "investor" },
-  { id: "inv-deal",    title: "Deal rooms",           subtitle: "Active deals",           href: "/investor/deal-rooms",           keywords: ["deal", "room"],                            workspace: "investor" },
+  { id: "inv-deal",    title: "Deal rooms",           subtitle: "Active deals",           href: "/investor/deal-room",            keywords: ["deal", "room"],                            workspace: "investor" },
   { id: "inv-learn",   title: "Learning",             subtitle: "Investor education",     href: "/investor/learning",             keywords: ["learning", "courses", "education"],        workspace: "investor" },
   { id: "inv-set",     title: "Investor settings",    subtitle: "Profile & integrations", href: "/investor/settings",             keywords: ["settings", "profile"],                     workspace: "investor" },
 ];

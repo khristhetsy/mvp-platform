@@ -100,7 +100,7 @@ export function buildInvestorStageCoach(input: InvestorCoachInput): InvestorStag
         ...base,
         headline: "Keep engaging founders",
         body: "Reply promptly and follow through on the deals you're interested in — that's what builds a strong Partner Score.",
-        action: { label: "Open your messages", href: "/investor/communications" },
+        action: { label: "Open your messages", href: "/investor/messages" },
         scoreHint: "Responsiveness and follow-through are 60% of your Partner Score.",
       };
     }
