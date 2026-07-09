@@ -48,6 +48,8 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
   const [acting, setActing] = useState<string | null>(null);
   const [sendingDue, setSendingDue] = useState(false);
   const [dueMsg, setDueMsg] = useState<string | null>(null);
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<{ id: string; ok: boolean; text: string } | null>(null);
   const [testing, setTesting] = useState(false);
   const [healthMsg, setHealthMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [analyticsId, setAnalyticsId] = useState<string | null>(null);
@@ -184,6 +186,28 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
     } catch (err) {
       console.error("Failed to archive campaign:", err);
     } finally { setActing(null); }
+  }
+
+  async function handleSendTest(campaignId: string) {
+    setTestingId(campaignId);
+    setTestResult(null);
+    try {
+      const res = await fetch("/api/marketing/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "test", campaign_id: campaignId }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || d.ok === false) {
+        setTestResult({ id: campaignId, ok: false, text: d.error || "Test send failed." });
+        return;
+      }
+      setTestResult({ id: campaignId, ok: true, text: `Test sent to ${d.to}. Open it (and click the link) — opens/clicks appear here within a minute or two.` });
+    } catch {
+      setTestResult({ id: campaignId, ok: false, text: "Test send failed." });
+    } finally {
+      setTestingId(null);
+    }
   }
 
   async function handleAction(campaignId: string, action: "send" | "pause" | "cancel" | "schedule", scheduledAt?: string) {
@@ -510,6 +534,11 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 4 }}>
                     ↗ Details
                   </button>
+                  <button onClick={() => handleSendTest(c.id)} disabled={testingId === c.id || !resendReady}
+                    title="Send one copy to your own email to validate delivery, opens, and clicks against a real inbox"
+                    style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: resendReady ? "pointer" : "not-allowed", color: "var(--muted-foreground)", opacity: resendReady ? 1 : 0.5 }}>
+                    {testingId === c.id ? "Sending…" : "✉ Send test to me"}
+                  </button>
                   <button onClick={() => setArchived(c.id, !c.archived)} disabled={acting === c.id + "archive"}
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
                     {c.archived ? "Unarchive" : "Archive"}
@@ -519,6 +548,11 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                       style={{ marginLeft: "auto", fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>
                       Cancel
                     </button>
+                  )}
+                  {testResult?.id === c.id && (
+                    <div style={{ flexBasis: "100%", fontSize: 11.5, marginTop: 2, color: testResult.ok ? "#0F6E56" : "#A32D2D" }}>
+                      {testResult.text}
+                    </div>
                   )}
                 </div>
               </div>

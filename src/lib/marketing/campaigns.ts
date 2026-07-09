@@ -45,6 +45,79 @@ export async function updateCampaignStatus(
   if (error) throw error;
 }
 
+/**
+ * Send ONE test copy of a campaign to a single address (typically the admin's own
+ * email) so delivery + open + click tracking can be validated against a real inbox.
+ * Records a `sent` marketing_event (metadata.test = true) tied to the campaign so the
+ * resulting open/click webhook events match by resend_id and show up in analytics.
+ * Does NOT bump the campaign's headline stat_sent. Guarantees a trackable link in the
+ * body so click tracking is testable even for link-less templates.
+ */
+export async function sendCampaignTest(
+  campaignId: string,
+  toEmail: string,
+): Promise<{ ok: boolean; to: string; resend_id: string | null; error?: string }> {
+  const email = (toEmail ?? "").trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return { ok: false, to: toEmail, resend_id: null, error: "A valid recipient email is required." };
+  }
+
+  const db = await marketingDb();
+  const { data: campaign, error: ce } = await db
+    .from("marketing_campaigns")
+    .select(`*, template:marketing_templates(*)`)
+    .eq("id", campaignId)
+    .single();
+  if (ce || !campaign) throw new Error("Campaign not found");
+  const template = campaign.template;
+  if (!template) throw new Error("Template not attached");
+  if (!emailConfigured()) {
+    throw new Error("Email provider not configured — set RESEND_API_KEY before sending.");
+  }
+
+  // Reusable internal contact for the test recipient — satisfies the not-null
+  // contact_id on marketing_events and lets the webhook match opens/clicks back.
+  const { data: contactRow } = await db
+    .from("marketing_contacts")
+    .upsert({ email, first_name: "Test", source: "internal_test", updated_at: new Date().toISOString() }, { onConflict: "email" })
+    .select("id")
+    .single();
+  const contactId = (contactRow as { id: string } | null)?.id ?? null;
+
+  const subject = `[TEST] ${campaign.subject_override || template.subject}`;
+  let html = campaign.body_override || template.html_body || "<p>(This campaign has no body yet.)</p>";
+  if (!/<a\s/i.test(html)) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
+    html += `<p style="margin-top:16px;"><a href="${appUrl}">Test link — click me to verify click tracking</a></p>`;
+  }
+
+  const result = await sendMarketingEmail({
+    to: email,
+    first_name: "there",
+    company: null,
+    from_name: campaign.from_name,
+    from_email: campaign.from_email,
+    reply_to: campaign.reply_to,
+    subject,
+    html_body: html,
+    text_body: template.text_body,
+    unsubscribe_token: makeUnsubscribeToken(email),
+  });
+
+  if (contactId) {
+    await db.from("marketing_events").insert({
+      campaign_id: campaignId,
+      contact_id: contactId,
+      email,
+      resend_id: result.resend_id,
+      event_type: result.ok ? "sent" : "failed",
+      metadata: { test: true, ...(result.error ? { error: result.error } : {}) },
+    });
+  }
+
+  return { ok: result.ok, to: email, resend_id: result.resend_id, error: result.error };
+}
+
 export async function sendCampaign(campaignId: string): Promise<{
   sent: number;
   skipped: number;

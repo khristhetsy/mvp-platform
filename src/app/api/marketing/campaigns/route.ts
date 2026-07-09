@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
-import { createCampaign, sendCampaign, updateCampaignStatus } from "@/lib/marketing/campaigns";
+import { createCampaign, sendCampaign, sendCampaignTest, updateCampaignStatus } from "@/lib/marketing/campaigns";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
@@ -11,6 +11,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (action === "send" && campaign_id) {
       const result = await sendCampaign(campaign_id);
       return NextResponse.json(result);
+    }
+
+    // Send a single test copy to the admin's own address (or an explicit `to`).
+    if (action === "test" && campaign_id) {
+      const to = (typeof rest.to === "string" && rest.to.trim()) || profile.email;
+      if (!to) return NextResponse.json({ error: "No recipient email available on your profile." }, { status: 400 });
+      const result = await sendCampaignTest(campaign_id, to);
+      return NextResponse.json(result, { status: result.ok ? 200 : 502 });
     }
 
     if (action === "pause" && campaign_id) {
