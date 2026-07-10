@@ -88,9 +88,11 @@ create table if not exists public.sales_forecast_targets (
   segment      text check (segment in ('founder','investor','hot','warm','cold')),
   target_value numeric not null,
   created_by   uuid references public.profiles(id),
-  created_at   timestamptz not null default now(),
-  unique (metric_key, month, coalesce(segment, ''))
+  created_at   timestamptz not null default now()
 );
+-- Expression unique (null segment = global) — can't live in a table-level constraint.
+create unique index if not exists sales_forecast_targets_uniq
+  on public.sales_forecast_targets (metric_key, month, coalesce(segment, ''));
 alter table public.sales_forecast_targets enable row level security;
 
 -- ── Actuals view — monthly recurring-revenue roll-up from real billing ────────
