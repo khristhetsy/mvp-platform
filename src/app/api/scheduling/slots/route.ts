@@ -12,8 +12,13 @@ export async function GET(req: NextRequest): Promise<Response> {
   const host = req.nextUrl.searchParams.get("host");
   const from = req.nextUrl.searchParams.get("from");
   const to = req.nextUrl.searchParams.get("to");
+  const durationRaw = req.nextUrl.searchParams.get("duration");
+  const duration = durationRaw ? Number(durationRaw) : undefined;
   if (!host || !from || !to) {
     return NextResponse.json({ error: "host, from and to are required." }, { status: 400 });
+  }
+  if (durationRaw && (!Number.isFinite(duration) || (duration as number) < 5 || (duration as number) > 480)) {
+    return NextResponse.json({ error: "Invalid duration." }, { status: 400 });
   }
 
   const fromMs = Date.parse(from);
@@ -26,7 +31,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   }
 
   try {
-    const slots = await computeHostSlots(host, from, to);
+    const slots = await computeHostSlots(host, from, to, duration);
     return NextResponse.json({ slots });
   } catch (err) {
     return NextResponse.json(

@@ -49,14 +49,25 @@ export function offsetMinutesForTimeZone(timeZone: string, date: Date = new Date
   }
 }
 
-/** Resolve saved settings into an engine config for a given moment. */
+/**
+ * Resolve saved settings into an engine config for a given moment. `durationOverride`
+ * lets the booker pick one of the host's offered lengths; it must be one of
+ * `settings.slotDurations`, otherwise the host's default (slotMinutes) is used.
+ */
 export function configFromSettings(
   settings: AvailabilitySettings,
   at: Date = new Date(),
+  durationOverride?: number,
 ): AvailabilityConfig {
+  const offered = Array.isArray(settings.slotDurations) && settings.slotDurations.length > 0
+    ? settings.slotDurations
+    : [settings.slotMinutes];
+  const slotMinutes = durationOverride && offered.includes(durationOverride)
+    ? durationOverride
+    : (offered[0] ?? settings.slotMinutes);
   return {
     weeklyRules: settings.weeklyRules,
-    slotMinutes: settings.slotMinutes,
+    slotMinutes,
     bufferMinutes: settings.bufferMinutes,
     timezoneOffsetMinutes: offsetMinutesForTimeZone(settings.timezone, at),
   };

@@ -31,8 +31,11 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
   const t = useTranslations("sharedCmp");
   const [days, setDays] = useState<DayState[]>(() => rulesToDays([]));
   const [timezone, setTimezone] = useState(LOCAL_TZ);
-  const [slotMinutes, setSlotMinutes] = useState(30);
+  const [slotDurations, setSlotDurations] = useState<number[]>([30, 60]);
   const [bufferMinutes, setBufferMinutes] = useState(0);
+
+  const toggleDuration = (n: number) =>
+    setSlotDurations((prev) => (prev.includes(n) ? prev.filter((d) => d !== n) : [...prev, n].sort((a, b) => a - b)));
   const [meetingTitle, setMeetingTitle] = useState("");
   const [questions, setQuestions] = useState<ScheduleQuestion[]>([]);
 
@@ -71,7 +74,11 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
       if (s) {
         setDays(rulesToDays(s.weeklyRules ?? []));
         setTimezone(s.timezone || LOCAL_TZ);
-        setSlotMinutes(s.slotMinutes ?? 30);
+        setSlotDurations(
+          Array.isArray(s.slotDurations) && s.slotDurations.length > 0
+            ? [...s.slotDurations].sort((a, b) => a - b)
+            : [s.slotMinutes ?? 30],
+        );
         setBufferMinutes(s.bufferMinutes ?? 0);
         setMeetingTitle(s.meetingTitle ?? "");
         setQuestions(Array.isArray(s.questions) ? s.questions : []);
@@ -85,6 +92,10 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
   useEffect(() => { void load(); }, [load]);
 
   const save = useCallback(async () => {
+    if (slotDurations.length === 0) {
+      setMsg("Pick at least one meeting length.");
+      return;
+    }
     setSaving(true);
     setMsg(null);
     try {
@@ -96,7 +107,7 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          timezone, slotMinutes, bufferMinutes, weeklyRules, meetingTitle,
+          timezone, slotDurations, bufferMinutes, weeklyRules, meetingTitle,
           questions: questions.filter((q) => q.label.trim()).map((q) => ({ ...q, options: q.type === "short_text" ? [] : q.options.filter((o) => o.trim()) })),
         }),
       });
@@ -111,7 +122,7 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
     } finally {
       setSaving(false);
     }
-  }, [days, timezone, slotMinutes, bufferMinutes, meetingTitle, questions]);
+  }, [days, timezone, slotDurations, bufferMinutes, meetingTitle, questions]);
 
   const setDay = (i: number, patch: Partial<DayState>) =>
     setDays((prev) => prev.map((d, idx) => (idx === i ? { ...d, ...patch } : d)));
@@ -166,12 +177,22 @@ export function AvailabilityEditor({ bookingPath }: { bookingPath?: string }) {
             <span className="mb-1 block text-xs font-medium text-slate-500">{t("timezone")}</span>
             <input value={timezone} onChange={(e) => setTimezone(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm" />
           </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-xs font-medium text-slate-500">{t("slot_length")}</span>
-            <select value={slotMinutes} onChange={(e) => setSlotMinutes(Number(e.target.value))} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm">
-              {[15, 30, 45, 60].map((n) => <option key={n} value={n}>{n} min</option>)}
-            </select>
-          </label>
+          <div className="text-sm">
+            <span className="mb-1 block text-xs font-medium text-slate-500">Meeting lengths you offer</span>
+            <div className="flex flex-wrap gap-1.5">
+              {[15, 30, 45, 60].map((n) => {
+                const on = slotDurations.includes(n);
+                return (
+                  <label key={n}
+                    className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm ${on ? "border-[#85B7EB] bg-[#E6F1FB] text-[#0C447C]" : "border-slate-200 text-slate-600"}`}>
+                    <input type="checkbox" checked={on} onChange={() => toggleDuration(n)} className="h-3.5 w-3.5 rounded" />
+                    {n} min
+                  </label>
+                );
+              })}
+            </div>
+            <span className="mt-1 block text-[11px] text-slate-400">Bookers pick one of these when they book.</span>
+          </div>
           <label className="text-sm">
             <span className="mb-1 block text-xs font-medium text-slate-500">{t("buffer_between")}</span>
             <select value={bufferMinutes} onChange={(e) => setBufferMinutes(Number(e.target.value))} className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm">

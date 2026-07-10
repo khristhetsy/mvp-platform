@@ -26,7 +26,10 @@ export interface ScheduleQuestion {
 /** A user's saved scheduling preferences. */
 export interface AvailabilitySettings {
   timezone: string;
+  /** Default/primary meeting length (kept as slotDurations[0] for back-compat). */
   slotMinutes: number;
+  /** Meeting lengths the host offers; the booker picks one. Always ≥1 item. */
+  slotDurations: number[];
   bufferMinutes: number;
   weeklyRules: WeeklyRule[];
   /** Custom meeting name shown on the booking page. */
@@ -68,6 +71,7 @@ export interface CalendarEventRecord {
 export const DEFAULT_AVAILABILITY: AvailabilitySettings = {
   timezone: "UTC",
   slotMinutes: 30,
+  slotDurations: [30, 60],
   bufferMinutes: 0,
   meetingTitle: "",
   questions: [],

@@ -30,6 +30,7 @@ export default async function BookingPage({ params }: Props) {
         hostId={hostId}
         hostName={hostName}
         meetingTitle={availability.meetingTitle}
+        slotDurations={availability.slotDurations}
         questions={availability.questions}
         viewerName={viewer?.full_name ?? null}
         viewerEmail={viewer?.email ?? null}

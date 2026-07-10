@@ -30,6 +30,7 @@ export function BookingClient({
   hostId,
   hostName,
   meetingTitle,
+  slotDurations,
   questions = [],
   viewerName,
   viewerEmail,
@@ -37,10 +38,12 @@ export function BookingClient({
   hostId: string;
   hostName: string;
   meetingTitle?: string;
+  slotDurations?: number[];
   questions?: ScheduleQuestion[];
   viewerName?: string | null;
   viewerEmail?: string | null;
 }) {
+  const durations = slotDurations && slotDurations.length > 0 ? slotDurations : [30];
   const t = useTranslations("sharedCmp");
   const title = meetingTitle?.trim() || `Meeting with ${hostName}`;
   const [firstSeed, lastSeed] = (() => {
@@ -49,6 +52,7 @@ export function BookingClient({
   })();
 
   const [anchor, setAnchor] = useState(() => new Date());
+  const [selectedDuration, setSelectedDuration] = useState<number>(durations[0]);
   const [slots, setSlots] = useState<TimeInterval[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +77,7 @@ export function BookingClient({
       const now = new Date();
       const from = new Date(Math.max(grid[0].getTime(), now.getTime())).toISOString();
       const to = new Date(grid[41].getTime() + 86400000).toISOString();
-      const res = await fetch(`/api/scheduling/slots?host=${hostId}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+      const res = await fetch(`/api/scheduling/slots?host=${hostId}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&duration=${selectedDuration}`);
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Failed to load times.");
       setSlots(data.slots ?? []);
@@ -82,7 +86,7 @@ export function BookingClient({
     } finally {
       setLoading(false);
     }
-  }, [grid, hostId]);
+  }, [grid, hostId, selectedDuration]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
@@ -106,7 +110,7 @@ export function BookingClient({
   }, [slotsByDay, grid, selectedDate]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const durationMin = slots.length > 0 ? Math.round((Date.parse(slots[0].end) - Date.parse(slots[0].start)) / 60000) : 30;
+  const durationMin = selectedDuration;
   const daySlots = selectedDate ? slotsByDay.get(selectedDate) ?? [] : [];
   const currentMonth = anchor.getMonth();
   const todayKey = ymd(new Date());
@@ -203,6 +207,23 @@ export function BookingClient({
           <div className={`grid grid-cols-1 gap-5 ${pending ? "lg:grid-cols-[minmax(0,1fr)_280px]" : "sm:grid-cols-[minmax(0,1fr)_136px]"}`}>
             {/* Month picker */}
             <div>
+              {durations.length > 1 && !pending ? (
+                <div className="mb-3">
+                  <p className="mb-1.5 text-xs font-semibold text-slate-700">Duration</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {durations.map((d) => {
+                      const on = d === selectedDuration;
+                      return (
+                        <button key={d} type="button"
+                          onClick={() => { setSelectedDuration(d); setPending(null); }}
+                          className={`rounded-full border px-3 py-1 text-xs font-medium ${on ? "border-[#185FA5] bg-[#E6F1FB] text-[#0C447C]" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>
+                          {d} min
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
               <p className="mb-3 text-sm font-semibold text-slate-900">{t("select_a_date_time")}</p>
               <div className="mb-2 flex items-center justify-between">
                 <button type="button" onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1))} className="rounded p-1 text-slate-500 hover:bg-slate-100" aria-label="Previous month"><ChevronLeft className="h-4 w-4" /></button>

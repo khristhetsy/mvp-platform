@@ -1015,3 +1015,10 @@ alter table public.partner_score_snapshots enable row level security;
 drop policy if exists partner_score_snapshots_staff on public.partner_score_snapshots;
 create policy partner_score_snapshots_staff on public.partner_score_snapshots
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
+
+
+-- ============================================================
+-- Scheduling: offer multiple meeting lengths (migration 20260709001)
+-- ============================================================
+alter table public.scheduling_availability
+  add column if not exists slot_durations jsonb;

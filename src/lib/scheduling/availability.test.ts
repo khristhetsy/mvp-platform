@@ -107,13 +107,27 @@ describe("availableSlots (end-to-end)", () => {
 });
 
 describe("configFromSettings", () => {
+  const base = { timezone: "UTC", slotMinutes: 45, slotDurations: [30, 45, 60], bufferMinutes: 10, weeklyRules: [], meetingTitle: "", questions: [] };
+
   it("carries through settings and resolves the offset", () => {
-    const cfg = configFromSettings(
-      { timezone: "UTC", slotMinutes: 45, bufferMinutes: 10, weeklyRules: [], meetingTitle: "", questions: [] },
-      new Date("2026-06-22T12:00:00Z"),
-    );
-    expect(cfg.slotMinutes).toBe(45);
+    const cfg = configFromSettings(base, new Date("2026-06-22T12:00:00Z"));
+    expect(cfg.slotMinutes).toBe(30); // first offered duration is the default
     expect(cfg.bufferMinutes).toBe(10);
     expect(cfg.timezoneOffsetMinutes).toBe(0);
+  });
+
+  it("uses a valid duration override", () => {
+    const cfg = configFromSettings(base, new Date("2026-06-22T12:00:00Z"), 60);
+    expect(cfg.slotMinutes).toBe(60);
+  });
+
+  it("ignores a duration not offered and falls back to the default", () => {
+    const cfg = configFromSettings(base, new Date("2026-06-22T12:00:00Z"), 90);
+    expect(cfg.slotMinutes).toBe(30);
+  });
+
+  it("falls back to slotMinutes when slotDurations is empty", () => {
+    const cfg = configFromSettings({ ...base, slotDurations: [] }, new Date("2026-06-22T12:00:00Z"));
+    expect(cfg.slotMinutes).toBe(45);
   });
 });

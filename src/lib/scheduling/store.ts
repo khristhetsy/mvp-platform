@@ -15,17 +15,28 @@ function raw(supabase: SupabaseClient<Database>): SupabaseClient {
 type AvailabilityRow = {
   timezone: string | null;
   slot_minutes: number | null;
+  slot_durations: number[] | null;
   buffer_minutes: number | null;
   weekly_rules: WeeklyRule[] | null;
   meeting_title: string | null;
   questions: AvailabilitySettings["questions"] | null;
 };
 
+/** Sanitize/sort the offered durations; fall back to the legacy single length. */
+function resolveDurations(row: AvailabilityRow): number[] {
+  const raw = Array.isArray(row.slot_durations) ? row.slot_durations : [];
+  const clean = [...new Set(raw.filter((n) => typeof n === "number" && n >= 5 && n <= 480))].sort((a, b) => a - b);
+  if (clean.length > 0) return clean;
+  return [row.slot_minutes ?? DEFAULT_AVAILABILITY.slotMinutes];
+}
+
 function rowToSettings(row: AvailabilityRow | null): AvailabilitySettings {
   if (!row) return DEFAULT_AVAILABILITY;
+  const slotDurations = resolveDurations(row);
   return {
     timezone: row.timezone ?? DEFAULT_AVAILABILITY.timezone,
-    slotMinutes: row.slot_minutes ?? DEFAULT_AVAILABILITY.slotMinutes,
+    slotMinutes: slotDurations[0],
+    slotDurations,
     bufferMinutes: row.buffer_minutes ?? DEFAULT_AVAILABILITY.bufferMinutes,
     weeklyRules: Array.isArray(row.weekly_rules) ? row.weekly_rules : DEFAULT_AVAILABILITY.weeklyRules,
     meetingTitle: row.meeting_title ?? "",
@@ -39,7 +50,7 @@ export async function loadAvailability(
 ): Promise<AvailabilitySettings> {
   const { data } = await raw(supabase)
     .from("scheduling_availability")
-    .select("timezone, slot_minutes, buffer_minutes, weekly_rules, meeting_title, questions")
+    .select("timezone, slot_minutes, slot_durations, buffer_minutes, weekly_rules, meeting_title, questions")
     .eq("profile_id", profileId)
     .maybeSingle();
   return rowToSettings(data as AvailabilityRow | null);
@@ -51,13 +62,18 @@ export async function saveAvailability(
   settings: AvailabilitySettings,
 ): Promise<AvailabilitySettings> {
   const now = new Date().toISOString();
+  const durations = Array.isArray(settings.slotDurations) && settings.slotDurations.length > 0
+    ? [...new Set(settings.slotDurations)].sort((a, b) => a - b)
+    : [settings.slotMinutes];
   const { error } = await raw(supabase)
     .from("scheduling_availability")
     .upsert(
       {
         profile_id: profileId,
         timezone: settings.timezone,
-        slot_minutes: settings.slotMinutes,
+        // Keep slot_minutes in sync with the first offered length for legacy readers.
+        slot_minutes: durations[0],
+        slot_durations: durations,
         buffer_minutes: settings.bufferMinutes,
         weekly_rules: settings.weeklyRules,
         meeting_title: settings.meetingTitle,
@@ -79,6 +95,7 @@ export async function computeHostSlots(
   hostId: string,
   fromISO: string,
   toISO: string,
+  durationMinutes?: number,
   now: Date = new Date(),
 ): Promise<TimeInterval[]> {
   const admin = createServiceRoleClient();
@@ -97,6 +114,6 @@ export async function computeHostSlots(
     }
   }
 
-  const config = configFromSettings(settings, new Date(fromISO));
+  const config = configFromSettings(settings, new Date(fromISO), durationMinutes);
   return availableSlots(new Date(fromISO), new Date(toISO), config, busy, now);
 }

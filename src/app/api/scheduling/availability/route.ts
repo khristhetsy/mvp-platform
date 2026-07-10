@@ -26,7 +26,9 @@ const questionSchema = z.object({
 
 const putSchema = z.object({
   timezone: z.string().min(1).max(64),
-  slotMinutes: z.number().int().min(5).max(480),
+  // Legacy single length — optional; superseded by slotDurations.
+  slotMinutes: z.number().int().min(5).max(480).optional(),
+  slotDurations: z.array(z.number().int().min(5).max(480)).min(1).max(8),
   bufferMinutes: z.number().int().min(0).max(240),
   weeklyRules: z.array(ruleSchema).max(50),
   meetingTitle: z.string().max(120).default(""),
@@ -46,7 +48,11 @@ export async function PUT(req: NextRequest): Promise<Response> {
   }
 
   try {
-    const settings = await saveAvailability(auth.supabase, auth.profile.id, parsed.data);
+    const settings = await saveAvailability(auth.supabase, auth.profile.id, {
+      ...parsed.data,
+      slotDurations: parsed.data.slotDurations,
+      slotMinutes: parsed.data.slotMinutes ?? parsed.data.slotDurations[0],
+    });
     return NextResponse.json({ settings });
   } catch (err) {
     return NextResponse.json(
