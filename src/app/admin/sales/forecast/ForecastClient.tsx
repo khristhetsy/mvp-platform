@@ -15,7 +15,8 @@ interface VarianceRow { month: string; monthIndex: number; projectedMrrCents: nu
 
 const money = (cents: number) => formatCurrency(Math.round(cents), { cents: true });
 const SEGMENTS_OPT = ["", "founder", "investor", "hot", "warm", "cold"];
-type SubTab = "overview" | "assumptions" | "projection" | "weights" | "variance";
+type SubTab = "overview" | "comparison" | "assumptions" | "projection" | "weights" | "variance" | "journal";
+type MetricKey = "mrr" | "arr" | "proj" | "variance";
 
 export function ForecastClient(props: {
   scenarios: Scenario[];
@@ -29,6 +30,7 @@ export function ForecastClient(props: {
   const [snapshot, setSnapshot] = useState<{ meta: SnapshotMeta; output: ForecastOutput } | null>(props.initialSnapshot);
   const [computing, setComputing] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [drawerMetric, setDrawerMetric] = useState<MetricKey | null>(null);
 
   const scenario = props.scenarios.find((s) => s.id === scenarioId) ?? null;
 
@@ -83,7 +85,8 @@ export function ForecastClient(props: {
   }, [scenarioId]);
 
   const TABS: Array<[SubTab, string]> = [
-    ["overview", "Overview"], ["assumptions", "Assumptions"], ["projection", "Projection"], ["weights", "Pipeline Weights"], ["variance", "Variance"],
+    ["overview", "Overview"], ["comparison", "Comparison"], ["assumptions", "Assumptions"],
+    ["projection", "Projection"], ["weights", "Pipeline Weights"], ["variance", "Variance"], ["journal", "Journal"],
   ];
 
   return (
@@ -118,12 +121,25 @@ export function ForecastClient(props: {
 
       {tab === "overview" && (
         <Overview currentMrr={currentMrr} currentArr={currentMrr * 12} projectedArr={projectedArr} varianceToDate={varianceToDate}
-          snapshot={snapshot} actualsByMonth={actualsByMonth} />
+          snapshot={snapshot} actualsByMonth={actualsByMonth} onOpenInsight={setDrawerMetric} />
       )}
+      {tab === "comparison" && <Comparison />}
       {tab === "assumptions" && <Assumptions scenarioId={scenarioId} onComputed={compute} />}
       {tab === "projection" && <Projection snapshot={snapshot} />}
       {tab === "weights" && <Weights />}
       {tab === "variance" && <Variance scenarioId={scenarioId} />}
+      {tab === "journal" && <Journal />}
+
+      {drawerMetric && scenarioId && (
+        <InsightDrawer metric={drawerMetric} scenarioId={scenarioId} onClose={() => setDrawerMetric(null)}
+          onAction={(key) => {
+            setDrawerMetric(null);
+            if (key === "edit_assumptions") setTab("assumptions");
+            else if (key === "compute_forecast") void compute();
+            else if (key === "open_pipeline") setTab("projection");
+            else if (key === "view_accounts") window.location.href = "/admin/sales/opportunities";
+          }} />
+      )}
 
       {scenario && (
         <p style={{ fontSize: 11, color: MUTED, marginTop: 16 }}>
@@ -135,32 +151,77 @@ export function ForecastClient(props: {
   );
 }
 
-function Card({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function Card({ label, value, sub, onClick }: { label: string; value: string; sub?: string; onClick?: () => void }) {
   return (
-    <div style={{ background: "var(--surface-1, #F6F8FB)", borderRadius: 10, padding: "12px 14px" }}>
-      <div style={{ fontSize: 12, color: MUTED, display: "flex", alignItems: "center", gap: 5 }}>{label} <span style={{ color: BRIGHT }}>✦</span></div>
+    <div role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}
+      onClick={onClick} onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
+      style={{ background: "var(--surface-1, #F6F8FB)", borderRadius: 10, padding: "12px 14px", cursor: onClick ? "pointer" : "default" }}>
+      <div style={{ fontSize: 12, color: MUTED, display: "flex", alignItems: "center", gap: 5 }}>{label} <span style={{ color: BRIGHT }} title="AI insight">✦</span></div>
       <div style={{ fontSize: 22, fontWeight: 600, color: NAVY, marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{sub}</div>}
     </div>
   );
 }
 
-function Overview({ currentMrr, currentArr, projectedArr, varianceToDate, snapshot, actualsByMonth }: {
+function Overview({ currentMrr, currentArr, projectedArr, varianceToDate, snapshot, actualsByMonth, onOpenInsight }: {
   currentMrr: number; currentArr: number; projectedArr: number | null; varianceToDate: number | null;
   snapshot: { meta: SnapshotMeta; output: ForecastOutput } | null; actualsByMonth: Map<string, number>;
+  onOpenInsight: (m: MetricKey) => void;
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
-        <Card label="Current MRR" value={money(currentMrr)} />
-        <Card label="Current ARR" value={money(currentArr)} />
-        <Card label="Projected ARR" value={projectedArr != null ? money(projectedArr) : "—"} sub={projectedArr != null ? "end of horizon" : "compute a forecast"} />
-        <Card label="Variance to date" value={varianceToDate != null ? `${varianceToDate >= 0 ? "+" : ""}${money(varianceToDate)}` : "—"} sub="actual vs projection" />
+        <Card label="Current MRR" value={money(currentMrr)} onClick={() => onOpenInsight("mrr")} />
+        <Card label="Current ARR" value={money(currentArr)} onClick={() => onOpenInsight("arr")} />
+        <Card label="Projected ARR" value={projectedArr != null ? money(projectedArr) : "—"} sub={projectedArr != null ? "end of horizon" : "compute a forecast"} onClick={() => onOpenInsight("proj")} />
+        <Card label="Variance to date" value={varianceToDate != null ? `${varianceToDate >= 0 ? "+" : ""}${money(varianceToDate)}` : "—"} sub="actual vs projection" onClick={() => onOpenInsight("variance")} />
       </div>
-      <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, padding: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: NAVY, marginBottom: 10 }}>MRR — actuals vs projection</div>
-        {snapshot ? <MrrChart snapshot={snapshot} actualsByMonth={actualsByMonth} /> : <p style={{ fontSize: 12.5, color: MUTED }}>Compute a forecast to see the projection curve.</p>}
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1fr)", gap: 14, alignItems: "start" }}>
+        <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, padding: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: NAVY, marginBottom: 10 }}>MRR — actuals vs projection</div>
+          {snapshot ? <MrrChart snapshot={snapshot} actualsByMonth={actualsByMonth} /> : <p style={{ fontSize: 12.5, color: MUTED }}>Compute a forecast to see the projection curve.</p>}
+        </div>
+        <OpenTasks />
       </div>
+    </div>
+  );
+}
+
+interface Task { id: string; title: string; status: string; due_date: string | null; source_kind?: string | null }
+function OpenTasks() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [title, setTitle] = useState("");
+  const [adding, setAdding] = useState(false);
+  const load = useCallback(() => {
+    fetch("/api/sales/tasks?scope=all").then((r) => r.json()).then((d) => setTasks(((d.tasks ?? []) as Task[]).filter((t) => t.status === "open").slice(0, 8))).catch(() => {});
+  }, []);
+  useEffect(() => { load(); }, [load]);
+  const add = async () => {
+    if (!title.trim()) return;
+    setAdding(true);
+    try {
+      await fetch("/api/sales/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: title.trim() }) });
+      setTitle(""); load();
+    } finally { setAdding(false); }
+  };
+  const complete = async (id: string) => {
+    await fetch(`/api/sales/tasks/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "done" }) }).catch(() => {});
+    load();
+  };
+  return (
+    <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, padding: 14 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: NAVY, marginBottom: 8 }}>Open tasks</div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void add(); }} placeholder="New task…" style={{ flex: 1, ...inp(0), width: "auto" }} />
+        <button onClick={() => void add()} disabled={adding} style={btn(BLUE, "#fff")}>+</button>
+      </div>
+      {tasks.length === 0 ? <p style={{ fontSize: 12, color: MUTED }}>No open tasks.</p> : tasks.map((t) => (
+        <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", borderTop: "0.5px solid #F1F4F9", fontSize: 12.5 }}>
+          <input type="checkbox" onChange={() => void complete(t.id)} aria-label={`Complete ${t.title}`} />
+          <span style={{ color: NAVY, flex: 1 }}>{t.title}</span>
+          {t.source_kind && t.source_kind !== "manual" && <span style={{ fontSize: 9, background: "#EEF3FC", color: "#185FA5", borderRadius: 4, padding: "1px 5px" }}>{t.source_kind === "ai_insight" ? "AI" : t.source_kind}</span>}
+        </div>
+      ))}
     </div>
   );
 }
@@ -376,5 +437,146 @@ function Variance({ scenarioId }: { scenarioId: string | null }) {
   );
 }
 
+interface PeriodPoint { label: string; newMrrCents: number; endingMrrCents: number; count: number }
+interface ComparisonData { grain: string; series: PeriodPoint[]; current: PeriodPoint | null; previous: PeriodPoint | null; deltaPct: number | null; footnote: string }
+function Comparison() {
+  const [grain, setGrain] = useState<"weekly" | "monthly" | "quarterly" | "yearly">("monthly");
+  const [data, setData] = useState<ComparisonData | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/sales/comparison?grain=${grain}`).then((r) => r.json()).then((d) => { if (alive) setData(d as ComparisonData); }).catch(() => {});
+    return () => { alive = false; };
+  }, [grain]);
+  const isWeekly = grain === "weekly";
+  const val = (p: PeriodPoint | null) => (p ? (isWeekly ? p.count : p.newMrrCents) : 0);
+  const fmt = (n: number) => (isWeekly ? String(n) : money(n));
+  const series = data?.series ?? [];
+  const maxV = Math.max(1, ...series.map((p) => (isWeekly ? p.count : p.newMrrCents)));
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+        {(["weekly", "monthly", "quarterly", "yearly"] as const).map((g) => (
+          <button key={g} onClick={() => setGrain(g)} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 99, border: g === grain ? `1px solid ${BRIGHT}` : "0.5px solid var(--border)", background: g === grain ? "#E6F1FB" : "transparent", color: g === grain ? "#0C447C" : MUTED, cursor: "pointer", textTransform: "capitalize" }}>{g}</button>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 16 }}>
+        <Card label={isWeekly ? "New opps (current)" : "New MRR (current)"} value={fmt(val(data?.current ?? null))} sub={data?.current?.label} />
+        <Card label="Previous" value={fmt(val(data?.previous ?? null))} sub={data?.previous?.label} />
+        <Card label="Change" value={data?.deltaPct != null ? `${data.deltaPct >= 0 ? "+" : ""}${(data.deltaPct * 100).toFixed(1)}%` : "—"} />
+      </div>
+      <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, padding: 16 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 140 }}>
+          {series.map((p, i) => (
+            <div key={p.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <div style={{ width: "70%", height: `${((isWeekly ? p.count : p.newMrrCents) / maxV) * 110}px`, background: i === series.length - 1 ? BLUE : "#B5D4F4", borderRadius: "4px 4px 0 0" }} />
+              <span style={{ fontSize: 9, color: MUTED, whiteSpace: "nowrap" }}>{p.label.slice(-5)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      {data && <p style={{ fontSize: 11, color: MUTED, marginTop: 10 }}>{data.footnote}</p>}
+    </div>
+  );
+}
+
+interface JournalEntry { id: string; entry_type: string; body: string; tags: string[]; pinned: boolean; author_name: string | null; created_at: string }
+const JTYPES: Array<[string, string]> = [["all", "All"], ["note", "Notes"], ["win", "Wins"], ["loss", "Losses"], ["deal", "Deals"], ["system", "System"]];
+function Journal() {
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [filter, setFilter] = useState("all");
+  const [type, setType] = useState<"note" | "win" | "loss" | "deal">("note");
+  const [body, setBody] = useState("");
+  const load = useCallback((f: string) => {
+    fetch(`/api/sales/journal?filter=${f}`).then((r) => r.json()).then((d) => setEntries((d.entries ?? []) as JournalEntry[])).catch(() => {});
+  }, []);
+  useEffect(() => { load(filter); }, [filter, load]);
+  const add = async () => {
+    if (!body.trim()) return;
+    await fetch("/api/sales/journal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entry_type: type, body: body.trim() }) }).catch(() => {});
+    setBody(""); load(filter);
+  };
+  const pin = async (id: string, pinned: boolean) => {
+    await fetch(`/api/sales/journal/${id}/pin`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pinned }) }).catch(() => {});
+    load(filter);
+  };
+  const TONE: Record<string, { bg: string; c: string }> = { win: { bg: "#E1F5EE", c: "#0F6E56" }, loss: { bg: "#FCEBEB", c: "#A32D2D" }, deal: { bg: "#EEF3FC", c: "#185FA5" }, system: { bg: "#F1EFE8", c: "#5F5E5A" }, note: { bg: "#FAEEDA", c: "#854F0B" } };
+  return (
+    <div>
+      <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, padding: 12, marginBottom: 14 }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+          <select value={type} onChange={(e) => setType(e.target.value as typeof type)} style={inp(90)}>
+            <option value="note">Note</option><option value="win">Win</option><option value="loss">Loss</option><option value="deal">Deal</option>
+          </select>
+        </div>
+        <textarea value={body} onChange={(e) => setBody(e.target.value)} onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") void add(); }} rows={2} placeholder="What happened? Use #tags. ⌘/Ctrl+Enter to save." style={{ width: "100%", fontSize: 12.5, padding: "7px 9px", borderRadius: 8, border: "0.5px solid var(--border)" }} />
+        <div style={{ marginTop: 8 }}><button onClick={() => void add()} style={btn(NAVY, "#fff")}>Add entry</button></div>
+      </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+        {JTYPES.map(([k, label]) => <button key={k} onClick={() => setFilter(k)} style={{ fontSize: 11.5, padding: "4px 10px", borderRadius: 99, border: k === filter ? `1px solid ${BRIGHT}` : "0.5px solid var(--border)", background: k === filter ? "#E6F1FB" : "transparent", color: k === filter ? "#0C447C" : MUTED, cursor: "pointer" }}>{label}</button>)}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {entries.length === 0 && <p style={{ fontSize: 12.5, color: MUTED }}>No entries yet.</p>}
+        {entries.map((e) => {
+          const t = TONE[e.entry_type] ?? TONE.note;
+          return (
+            <div key={e.id} style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 10, padding: "10px 12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, background: t.bg, color: t.c, borderRadius: 5, padding: "1px 7px", textTransform: "uppercase" }}>{e.entry_type}</span>
+                <span style={{ fontSize: 11, color: MUTED }}>{e.author_name ?? "System"} · {new Date(e.created_at).toLocaleString()}</span>
+                <button onClick={() => void pin(e.id, !e.pinned)} title="Pin" style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: e.pinned ? BRIGHT : MUTED }}>{e.pinned ? "★" : "☆"}</button>
+              </div>
+              <div style={{ fontSize: 12.5, color: NAVY, whiteSpace: "pre-wrap" }}>{e.body}</div>
+              {e.tags.length > 0 && <div style={{ marginTop: 4, display: "flex", gap: 5, flexWrap: "wrap" }}>{e.tags.map((tag) => <span key={tag} style={{ fontSize: 10, color: "#185FA5" }}>#{tag}</span>)}</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+interface Insight { metric_key: string; narrative: string; model: string | null; drivers: Array<{ label: string; value: string }>; suggested_actions: Array<{ text: string; action_key: string }>; cached: boolean }
+function InsightDrawer({ metric, scenarioId, onClose, onAction }: { metric: MetricKey; scenarioId: string; onClose: () => void; onAction: (key: string) => void }) {
+  const [insight, setInsight] = useState<Insight | null>(null);
+  const [loading, setLoading] = useState(true);
+  const load = useCallback((force: boolean) => {
+    const url = `/api/sales/forecast/insights/${metric}${force ? "/refresh" : ""}?scenario=${scenarioId}`;
+    fetch(url, { method: force ? "POST" : "GET" }).then((r) => r.json()).then((d) => setInsight(d.insight ?? null)).catch(() => {}).finally(() => setLoading(false));
+  }, [metric, scenarioId]);
+  useEffect(() => { load(false); }, [load]);
+  const LABEL: Record<string, string> = { mrr: "Current MRR", arr: "Current ARR", proj: "Projected ARR", variance: "Variance to date" };
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 200, display: "flex", justifyContent: "flex-end" }}>
+      <div onClick={(e) => e.stopPropagation()} role="dialog" aria-label={`AI insight — ${LABEL[metric]}`} style={{ width: "min(440px, 96vw)", height: "100%", background: "#fff", overflowY: "auto", padding: 22 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>✦ AI Sales — {LABEL[metric]}</div>
+          <button onClick={onClose} aria-label="Close" style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: MUTED }}>×</button>
+        </div>
+        {loading ? <p style={{ fontSize: 12.5, color: MUTED }}>Analyzing…</p> : insight ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: NAVY }}>{insight.narrative}</p>
+            {insight.drivers.length > 0 && (
+              <div>
+                <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", color: MUTED, marginBottom: 6 }}>Drivers</div>
+                {insight.drivers.map((d, i) => <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0", borderBottom: "0.5px solid #F1F4F9" }}><span style={{ color: MUTED }}>{d.label}</span><span style={{ color: NAVY }}>{d.value}</span></div>)}
+              </div>
+            )}
+            {insight.suggested_actions.length > 0 && (
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {insight.suggested_actions.map((a, i) => <button key={i} onClick={() => onAction(a.action_key)} style={btn("#EEF3FC", BLUE)}>{a.text}</button>)}
+              </div>
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button onClick={() => { setLoading(true); load(true); }} style={btn("#F1EFE8", NAVY)}>↻ Regenerate</button>
+              <span style={{ fontSize: 10.5, color: MUTED }}>{insight.model ? `${insight.cached ? "cached" : "fresh"} · ${insight.model}` : "heuristic (AI not configured)"}</span>
+            </div>
+          </div>
+        ) : <p style={{ fontSize: 12.5, color: MUTED }}>No insight available.</p>}
+        <p style={{ fontSize: 10.5, color: MUTED, marginTop: 20, lineHeight: 1.5 }}>AI Sales offers read-only commentary on internal subscription-revenue projections. Projections and scenarios only — never guarantees or funding-outcome claims. All actions require a human click.</p>
+      </div>
+    </div>
+  );
+}
+
 const btn = (bg: string, color: string): CSSProperties => ({ fontSize: 12, fontWeight: 600, color, background: bg, border: "none", borderRadius: 8, padding: "7px 13px", cursor: "pointer" });
-const inp = (w: number): CSSProperties => ({ width: w, fontSize: 12, padding: "5px 7px", borderRadius: 6, border: "0.5px solid var(--border)" });
+const inp = (w: number): CSSProperties => ({ width: w || undefined, fontSize: 12, padding: "5px 7px", borderRadius: 6, border: "0.5px solid var(--border)" });

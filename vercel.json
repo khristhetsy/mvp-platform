@@ -39,6 +39,10 @@
     {
       "path": "/api/ceo/briefing",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/sales-forecast-rollup",
+      "schedule": "0 14 * * 1"
     }
   ]
 }

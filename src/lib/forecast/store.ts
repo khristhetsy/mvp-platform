@@ -222,7 +222,18 @@ export async function computeAndSnapshot(
     .insert({ scenario_id: scenarioId, engine_version: ENGINE_VERSION, assumptions_hash: assumptionsHash, output, created_by: createdBy })
     .select("id").single();
   if (error) throw new Error(error.message);
-  return { snapshotId: String(data.id), output, assumptionsHash };
+  const snapshotId = String(data.id);
+
+  // Append-only system journal entry (best-effort — never fail the compute).
+  try {
+    const { addSystemJournalEntry } = await import("./journal");
+    await addSystemJournalEntry(
+      `Forecast snapshot ${snapshotId.slice(0, 8)} computed for "${scenario.name}" — engine ${ENGINE_VERSION}, hash ${assumptionsHash.slice(0, 12)}.`,
+      snapshotId,
+    );
+  } catch { /* journal is best-effort */ }
+
+  return { snapshotId, output, assumptionsHash };
 }
 
 // ── Variance (snapshot projection vs actuals per elapsed month) ───────────────
