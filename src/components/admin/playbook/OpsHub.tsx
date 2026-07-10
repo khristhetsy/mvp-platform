@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { HubShell, type HubTab } from "@/components/admin/hub/HubShell";
+import { IrAnalyticsTab } from "@/components/admin/playbook/IrAnalyticsTab";
 import type { HubPayload, HubSurface } from "@/lib/playbook/hub";
 import type { Suggestion, AdvisoryAction } from "@/lib/playbook/advisory";
 import type { HubSettings } from "@/lib/playbook/hub-settings";
@@ -45,6 +46,7 @@ export function OpsHub({ initial, initialTab, isAdmin }: { initial: HubPayload; 
 
   const tabs: HubTab[] = [
     { key: "dash", label: "Dashboard" },
+    { key: "analytics", label: "Analytics" },
     { key: "open", label: "Open the day", badge: { count: payload.stats.openEscalations, tone: "red" } },
     { key: "core", label: "Core operations", badge: { count: corePending, tone: "amber" } },
     { key: "close", label: "Close the day" },
@@ -79,6 +81,7 @@ export function OpsHub({ initial, initialTab, isAdmin }: { initial: HubPayload; 
   return (
     <HubShell flat title="Investor Relations Hub" subtitle={subtitle} tabs={tabs} activeTab={tab} onTabChange={changeTab}>
       {tab === "dash" && <DashboardTab payload={payload} onJump={changeTab} onToggle={toggleCheck} onAdvisory={runAdvisoryAction} onRefresh={refresh} isAdmin={isAdmin} busy={busy} />}
+      {tab === "analytics" && <IrAnalyticsTab />}
       {(tab === "open" || tab === "core" || tab === "close") && (
         <BlockTab block={tab} surfaces={payload.surfaces.filter((s) => s.block === tab)} isAdmin={isAdmin} onToggle={toggleCheck} onRefresh={refresh} />
       )}
