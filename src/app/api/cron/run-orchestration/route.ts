@@ -31,10 +31,16 @@ async function runDataRoomRemindersSafely() {
   }
 }
 
-/** Best-effort partner-score snapshot refresh. Never allowed to fail the cron pass. */
-async function refreshPartnerScoresSafely(): Promise<{ refreshed: number } | { error: string }> {
+/**
+ * Best-effort partner-score snapshot refresh. Time-boxed via `deadlineMs` so it can
+ * never exhaust the function's execution budget (a hard timeout would 504 the whole
+ * cron). Investors not reached this run are picked up next pass. Never fails the pass.
+ */
+async function refreshPartnerScoresSafely(
+  deadlineMs: number,
+): Promise<{ refreshed: number; remaining: number } | { error: string }> {
   try {
-    return await refreshPartnerScoreSnapshots(createServiceRoleClient());
+    return await refreshPartnerScoreSnapshots(createServiceRoleClient(), { deadlineMs });
   } catch (error) {
     return { error: error instanceof Error ? error.message.slice(0, 200) : "partner-score refresh failed" };
   }
@@ -52,11 +58,13 @@ async function handleCron(request: Request) {
   const url = new URL(request.url);
   const forceDigest = url.searchParams.get("forceDigest") === "true";
 
+  const startedAt = Date.now();
   try {
     const result = await runCronOrchestrationPass({ triggerSource: "cron", forceDigest });
     const snapshots = await captureMetricSnapshotsSafely();
     const dataRoomReminders = await runDataRoomRemindersSafely();
-    const partnerScores = await refreshPartnerScoresSafely();
+    // Leave ~15s of headroom under the 60s function limit for the partner-score refresh.
+    const partnerScores = await refreshPartnerScoresSafely(startedAt + 45_000);
     return NextResponse.json({ ...result, snapshots, dataRoomReminders, partnerScores }, { status: result.success ? 200 : 207 });
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 200) : "Orchestration pass failed.";
