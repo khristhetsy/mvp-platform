@@ -187,7 +187,10 @@ export async function proxy(request: NextRequest) {
       // wrongly denied. Skip the department check here.
       p === "/admin/calendar" || p.startsWith("/admin/calendar/") ||
       p === "/admin/schedule" || p.startsWith("/admin/schedule/") ||
-      p === "/admin/meet" || p.startsWith("/admin/meet/");
+      p === "/admin/meet" || p.startsWith("/admin/meet/") ||
+      // Weekly management meeting board — a CEO/management surface with its own
+      // requireRole gate, not a departmental feature.
+      p === "/admin/meetings" || p.startsWith("/admin/meetings/");
     if (!exempt) {
       try {
         const { count } = await supabase
