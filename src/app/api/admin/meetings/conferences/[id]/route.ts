@@ -17,6 +17,7 @@ const schema = z.object({
   department_id: z.string().uuid().nullable().optional(),
   host_id: z.string().uuid().nullable().optional(),
   status: z.enum(["draft", "scheduled", "live", "done", "cancelled"]).optional(),
+  event_id: z.string().uuid().nullable().optional(),
 });
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {

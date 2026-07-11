@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
-import { listRegistrations, addRegistration } from "@/lib/meetings/registrations";
+import { getConferenceRegistrations, addRegistration } from "@/lib/meetings/registrations";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +9,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   const { id } = await params;
-  return NextResponse.json(await listRegistrations(id));
+  return NextResponse.json(await getConferenceRegistrations(id));
 }
 
 const schema = z.object({

@@ -2137,3 +2137,15 @@ create policy ceo_event_registrations_staff on public.ceo_event_registrations
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
 
 grant select, insert, update, delete on public.ceo_event_registrations to service_role;
+
+-- ============================================================
+-- Weekly Meeting System: link conference to iCFO event (migration 20260711014)
+-- ============================================================
+-- Weekly Meeting System — link a conference to an iCFO Event so registrations come from
+-- the platform's OWN event registration system (public.registrations), not Eventbrite.
+-- The conference reads its linked event's registered/attended counts (zero-copy).
+
+alter table public.ceo_conferences
+  add column if not exists event_id uuid references public.events(id) on delete set null;
+
+create index if not exists ceo_conferences_event_idx on public.ceo_conferences (event_id);

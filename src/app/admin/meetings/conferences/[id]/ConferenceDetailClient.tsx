@@ -168,59 +168,59 @@ function ChecklistPanel({ conferenceId }: { conferenceId: string }) {
   );
 }
 
-interface Registration { id: string; source: string; name: string | null; email: string | null; registrant_type: string | null; attended: boolean | null }
+interface LinkedEvent { id: string; title: string; slug: string }
+interface RegData { linked: boolean; event: LinkedEvent | null; stats: { registered: number; attended: number; no_show: number; attend_pct: number | null } | null; registered: number; attended: number; attend_pct: number | null }
 function RegistrationsPanel({ conferenceId }: { conferenceId: string }) {
-  const [regs, setRegs] = useState<Registration[]>([]);
-  const [summary, setSummary] = useState<{ registered: number; attended: number; attend_pct: number | null }>({ registered: 0, attended: 0, attend_pct: null });
-  const [adding, setAdding] = useState(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [rtype, setRtype] = useState("guest");
+  const [data, setData] = useState<RegData | null>(null);
+  const [events, setEvents] = useState<LinkedEvent[]>([]);
+  const [linking, setLinking] = useState("");
 
   const load = useCallback(() => {
-    fetch(`/api/admin/meetings/conferences/${conferenceId}/registrations`).then((r) => r.json()).then((d) => {
-      setRegs((d.registrations ?? []) as Registration[]);
-      setSummary({ registered: d.registered ?? 0, attended: d.attended ?? 0, attend_pct: d.attend_pct ?? null });
-    }).catch(() => {});
+    fetch(`/api/admin/meetings/conferences/${conferenceId}/registrations`).then((r) => r.json()).then((d) => setData(d as RegData)).catch(() => {});
   }, [conferenceId]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    fetch("/api/admin/meetings/conferences/events-list").then((r) => r.json()).then((d) => setEvents((d.events ?? []) as LinkedEvent[])).catch(() => {});
+  }, [load]);
 
-  const add = async () => {
-    if (!name.trim() && !email.trim()) return;
-    await fetch(`/api/admin/meetings/conferences/${conferenceId}/registrations`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name || null, email: email || null, registrant_type: rtype }) }).catch(() => {});
-    setName(""); setEmail(""); setAdding(false); load();
+  const setLink = async (eventId: string | null) => {
+    await fetch(`/api/admin/meetings/conferences/${conferenceId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ event_id: eventId }) }).catch(() => {});
+    setLinking(""); load();
   };
-  const toggle = async (reg: Registration, attended: boolean) => {
-    setRegs((p) => p.map((x) => (x.id === reg.id ? { ...x, attended } : x)));
-    setSummary((s) => ({ ...s, attended: s.attended + (attended ? 1 : -1), attend_pct: s.registered ? Math.round(((s.attended + (attended ? 1 : -1)) / s.registered) * 1000) / 10 : null }));
-    await fetch(`/api/admin/meetings/registrations/${reg.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ attended }) }).catch(() => {});
-  };
+
+  const stat = (label: string, value: number | string, color?: string) => (
+    <div style={{ background: "#F9FBFF", borderRadius: 9, padding: "9px 12px", flex: 1, minWidth: 90 }}>
+      <div style={{ fontSize: 18, fontWeight: 700, color: color ?? NAVY, fontVariantNumeric: "tabular-nums" }}>{value}</div>
+      <div style={{ fontSize: 10.5, color: MUTED, marginTop: 2 }}>{label}</div>
+    </div>
+  );
 
   return (
     <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, padding: 14, marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
         <span style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Registrations</span>
-        <span style={{ fontSize: 11.5, color: MUTED }}>{summary.registered} registered · {summary.attended} attended{summary.attend_pct != null ? ` (${summary.attend_pct}%)` : ""}</span>
-        <button onClick={() => setAdding((v) => !v)} style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 600, color: BLUE, background: "#E6F1FB", border: "none", borderRadius: 7, padding: "5px 10px", cursor: "pointer" }}>{adding ? "Cancel" : "+ Add registrant"}</button>
+        {data?.linked && data.event && <span style={{ fontSize: 10.5, background: "#E1F5EE", color: "#0F6E56", borderRadius: 5, padding: "1px 7px" }}>iCFO Event: {data.event.title}</span>}
+        {data?.linked && data.event && <a href={`/events/${data.event.slug}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: BLUE, textDecoration: "none" }}>View event →</a>}
+        {data?.linked && <button onClick={() => void setLink(null)} style={{ marginLeft: "auto", fontSize: 11, color: MUTED, background: "transparent", border: "0.5px solid var(--border)", borderRadius: 6, padding: "3px 9px", cursor: "pointer" }}>Unlink</button>}
       </div>
-      {adding && (
-        <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" style={{ fontSize: 12, padding: "5px 8px", borderRadius: 7, border: "0.5px solid var(--border)", flex: 1, minWidth: 120 }} />
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" style={{ fontSize: 12, padding: "5px 8px", borderRadius: 7, border: "0.5px solid var(--border)", flex: 1, minWidth: 120 }} />
-          <select value={rtype} onChange={(e) => setRtype(e.target.value)} style={{ fontSize: 12, padding: "5px 7px", borderRadius: 7, border: "0.5px solid var(--border)" }}><option value="investor">Investor</option><option value="founder">Founder</option><option value="guest">Guest</option></select>
-          <button onClick={() => void add()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}>Add</button>
+
+      {data?.linked && data.stats ? (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {stat("Registered", data.stats.registered)}
+          {stat("Attended", data.stats.attended, "#0F6E56")}
+          {stat("No-show", data.stats.no_show, "#A32D2D")}
+          {stat("Attendance", data.stats.attend_pct != null ? `${data.stats.attend_pct}%` : "—", BLUE)}
         </div>
-      )}
-      {regs.length === 0 ? <p style={{ fontSize: 12, color: MUTED, margin: 0 }}>No registrations yet. Eventbrite registrations sync in via webhook once configured.</p> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          {regs.slice(0, 50).map((r) => (
-            <label key={r.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, padding: "3px 0", cursor: "pointer" }}>
-              <input type="checkbox" checked={r.attended === true} onChange={(e) => void toggle(r, e.target.checked)} />
-              <span style={{ color: NAVY, flex: 1 }}>{r.name ?? r.email ?? "Registrant"}</span>
-              {r.registrant_type && <span style={{ fontSize: 10.5, background: "#EEF3FC", color: "#185FA5", borderRadius: 5, padding: "1px 6px" }}>{r.registrant_type}</span>}
-              <span style={{ fontSize: 10, color: MUTED }}>{r.source}</span>
-            </label>
-          ))}
+      ) : (
+        <div>
+          <p style={{ fontSize: 12, color: MUTED, marginTop: 0 }}>Link this conference to an iCFO Event to pull its registrations from your own registration system.</p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <select value={linking} onChange={(e) => setLinking(e.target.value)} style={{ fontSize: 12.5, padding: "6px 9px", borderRadius: 8, border: "0.5px solid var(--border)", minWidth: 220 }}>
+              <option value="">Select an iCFO Event…</option>
+              {events.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
+            </select>
+            <button onClick={() => linking && void setLink(linking)} disabled={!linking} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>Link event</button>
+          </div>
         </div>
       )}
     </div>

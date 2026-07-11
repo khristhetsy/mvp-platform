@@ -20,9 +20,10 @@ export interface Conference {
   start_date: string; end_date: string | null; timezone: string; location: string | null;
   event_url: string | null; department_id: string | null; department_name: string | null;
   host_id: string | null; host_name: string | null; status: ConferenceStatus; session_count: number;
+  event_id: string | null;
 }
 
-const SELECT = "id, title, kind, description, start_date, end_date, timezone, location, event_url, department_id, host_id, status";
+const SELECT = "id, title, kind, description, start_date, end_date, timezone, location, event_url, department_id, host_id, status, event_id";
 
 async function enrich(rows: Array<Record<string, unknown>>): Promise<Conference[]> {
   const deptIds = [...new Set(rows.map((r) => r.department_id).filter((x): x is string => Boolean(x)))];
@@ -56,6 +57,7 @@ async function enrich(rows: Array<Record<string, unknown>>): Promise<Conference[
     department_id: (r.department_id as string) ?? null, department_name: r.department_id ? deptNames.get(String(r.department_id)) ?? null : null,
     host_id: (r.host_id as string) ?? null, host_name: r.host_id ? hostNames.get(String(r.host_id)) ?? null : null,
     status: (r.status as ConferenceStatus) ?? "draft", session_count: sessionCounts.get(String(r.id)) ?? 0,
+    event_id: (r.event_id as string) ?? null,
   }));
 }
 
@@ -97,7 +99,7 @@ export async function createConference(input: CreateConferenceInput, createdBy: 
 export interface UpdateConferencePatch {
   title?: string; kind?: ConferenceKind; description?: string | null; start_date?: string; end_date?: string | null;
   timezone?: string; location?: string | null; event_url?: string | null; department_id?: string | null;
-  host_id?: string | null; status?: ConferenceStatus;
+  host_id?: string | null; status?: ConferenceStatus; event_id?: string | null;
 }
 export async function updateConference(id: string, patch: UpdateConferencePatch): Promise<void> {
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -112,6 +114,7 @@ export async function updateConference(id: string, patch: UpdateConferencePatch)
   if (patch.department_id !== undefined) update.department_id = patch.department_id;
   if (patch.host_id !== undefined) update.host_id = patch.host_id;
   if (patch.status && STATUSES.has(patch.status)) update.status = patch.status;
+  if (patch.event_id !== undefined) update.event_id = patch.event_id;
   const { error } = await db().from("ceo_conferences").update(update).eq("id", id);
   if (error) throw new Error(error.message);
 }
