@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { CarryoverPanel, TasksPanel } from "./MeetingTasksPanel";
+import { MeetingAiPanel } from "./MeetingAiPanel";
 
 const NAVY = "#0A1A40", BLUE = "#1A6CE4", MUTED = "var(--muted-foreground)";
 
@@ -23,6 +24,7 @@ function pill(s: string) {
 
 export function MeetingBoardClient({ initial, isAdmin = false }: { initial: Board; isAdmin?: boolean }) {
   const board = initial;
+  const [taskRefresh, setTaskRefresh] = useState(0);
   if (!board.session) return <p style={{ fontSize: 13, color: MUTED }}>Meeting session not found.</p>;
   const ready = board.sections.filter((s) => board.entries[s.id]?.status === "ready" || board.entries[s.id]?.status === "presented").length;
   const sessionId = board.session.id;
@@ -41,6 +43,8 @@ export function MeetingBoardClient({ initial, isAdmin = false }: { initial: Boar
 
       <CarryoverPanel sessionId={sessionId} />
 
+      <MeetingAiPanel sessionId={sessionId} onTaskCreated={() => setTaskRefresh((n) => n + 1)} />
+
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {board.sections.map((s) => {
           const entry = board.entries[s.id];
@@ -49,7 +53,7 @@ export function MeetingBoardClient({ initial, isAdmin = false }: { initial: Boar
         })}
       </div>
 
-      <TasksPanel sessionId={sessionId} isAdmin={isAdmin} />
+      <TasksPanel sessionId={sessionId} isAdmin={isAdmin} refreshToken={taskRefresh} />
 
       {board.attendees.length > 0 && (
         <div style={{ marginTop: 20 }}>

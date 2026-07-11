@@ -42,7 +42,7 @@ export function CarryoverPanel({ sessionId }: { sessionId: string }) {
   );
 }
 
-export function TasksPanel({ sessionId, isAdmin }: { sessionId: string; isAdmin: boolean }) {
+export function TasksPanel({ sessionId, isAdmin, refreshToken = 0 }: { sessionId: string; isAdmin: boolean; refreshToken?: number }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [meta, setMeta] = useState<Meta>({ departments: [], staff: [] });
   const [showNew, setShowNew] = useState(false);
@@ -50,10 +50,10 @@ export function TasksPanel({ sessionId, isAdmin }: { sessionId: string; isAdmin:
   const load = useCallback(() => {
     fetch(`/api/admin/meetings/tasks?session=${sessionId}`).then((r) => r.json()).then((d) => setTasks((d.tasks ?? []) as Task[])).catch(() => {});
   }, [sessionId]);
+  useEffect(() => { load(); }, [load, refreshToken]);
   useEffect(() => {
-    load();
     fetch("/api/admin/meetings/meta").then((r) => r.json()).then((d) => setMeta({ departments: d.departments ?? [], staff: d.staff ?? [] })).catch(() => {});
-  }, [load]);
+  }, []);
 
   const patch = async (id: string, body: Record<string, unknown>) => {
     await fetch(`/api/admin/meetings/tasks/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => {});
