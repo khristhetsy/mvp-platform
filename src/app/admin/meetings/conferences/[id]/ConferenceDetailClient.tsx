@@ -57,6 +57,8 @@ export function ConferenceDetailClient({ conference, sessions: initialSessions }
 
       <ChecklistPanel conferenceId={conference.id} />
 
+      <RegistrationsPanel conferenceId={conference.id} />
+
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Agenda · {sessions.length} session{sessions.length === 1 ? "" : "s"}</div>
@@ -162,6 +164,65 @@ function ChecklistPanel({ conferenceId }: { conferenceId: string }) {
           ))}
         </div>
       ))}
+    </div>
+  );
+}
+
+interface Registration { id: string; source: string; name: string | null; email: string | null; registrant_type: string | null; attended: boolean | null }
+function RegistrationsPanel({ conferenceId }: { conferenceId: string }) {
+  const [regs, setRegs] = useState<Registration[]>([]);
+  const [summary, setSummary] = useState<{ registered: number; attended: number; attend_pct: number | null }>({ registered: 0, attended: 0, attend_pct: null });
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [rtype, setRtype] = useState("guest");
+
+  const load = useCallback(() => {
+    fetch(`/api/admin/meetings/conferences/${conferenceId}/registrations`).then((r) => r.json()).then((d) => {
+      setRegs((d.registrations ?? []) as Registration[]);
+      setSummary({ registered: d.registered ?? 0, attended: d.attended ?? 0, attend_pct: d.attend_pct ?? null });
+    }).catch(() => {});
+  }, [conferenceId]);
+  useEffect(() => { load(); }, [load]);
+
+  const add = async () => {
+    if (!name.trim() && !email.trim()) return;
+    await fetch(`/api/admin/meetings/conferences/${conferenceId}/registrations`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name || null, email: email || null, registrant_type: rtype }) }).catch(() => {});
+    setName(""); setEmail(""); setAdding(false); load();
+  };
+  const toggle = async (reg: Registration, attended: boolean) => {
+    setRegs((p) => p.map((x) => (x.id === reg.id ? { ...x, attended } : x)));
+    setSummary((s) => ({ ...s, attended: s.attended + (attended ? 1 : -1), attend_pct: s.registered ? Math.round(((s.attended + (attended ? 1 : -1)) / s.registered) * 1000) / 10 : null }));
+    await fetch(`/api/admin/meetings/registrations/${reg.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ attended }) }).catch(() => {});
+  };
+
+  return (
+    <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, padding: 14, marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Registrations</span>
+        <span style={{ fontSize: 11.5, color: MUTED }}>{summary.registered} registered · {summary.attended} attended{summary.attend_pct != null ? ` (${summary.attend_pct}%)` : ""}</span>
+        <button onClick={() => setAdding((v) => !v)} style={{ marginLeft: "auto", fontSize: 11.5, fontWeight: 600, color: BLUE, background: "#E6F1FB", border: "none", borderRadius: 7, padding: "5px 10px", cursor: "pointer" }}>{adding ? "Cancel" : "+ Add registrant"}</button>
+      </div>
+      {adding && (
+        <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" style={{ fontSize: 12, padding: "5px 8px", borderRadius: 7, border: "0.5px solid var(--border)", flex: 1, minWidth: 120 }} />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" style={{ fontSize: 12, padding: "5px 8px", borderRadius: 7, border: "0.5px solid var(--border)", flex: 1, minWidth: 120 }} />
+          <select value={rtype} onChange={(e) => setRtype(e.target.value)} style={{ fontSize: 12, padding: "5px 7px", borderRadius: 7, border: "0.5px solid var(--border)" }}><option value="investor">Investor</option><option value="founder">Founder</option><option value="guest">Guest</option></select>
+          <button onClick={() => void add()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 7, padding: "5px 11px", cursor: "pointer" }}>Add</button>
+        </div>
+      )}
+      {regs.length === 0 ? <p style={{ fontSize: 12, color: MUTED, margin: 0 }}>No registrations yet. Eventbrite registrations sync in via webhook once configured.</p> : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          {regs.slice(0, 50).map((r) => (
+            <label key={r.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, padding: "3px 0", cursor: "pointer" }}>
+              <input type="checkbox" checked={r.attended === true} onChange={(e) => void toggle(r, e.target.checked)} />
+              <span style={{ color: NAVY, flex: 1 }}>{r.name ?? r.email ?? "Registrant"}</span>
+              {r.registrant_type && <span style={{ fontSize: 10.5, background: "#EEF3FC", color: "#185FA5", borderRadius: 5, padding: "1px 6px" }}>{r.registrant_type}</span>}
+              <span style={{ fontSize: 10, color: MUTED }}>{r.source}</span>
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
