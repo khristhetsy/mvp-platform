@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CarryoverPanel, TasksPanel } from "./MeetingTasksPanel";
 import { MeetingAiPanel } from "./MeetingAiPanel";
+import { MeetingRecapPanel } from "./MeetingRecapPanel";
 
 const NAVY = "#0A1A40", BLUE = "#1A6CE4", MUTED = "var(--muted-foreground)";
 
@@ -86,7 +87,12 @@ export function MeetingBoardClient({ initial, isAdmin = false }: { initial: Boar
 
       {tab === "departments" && <DepartmentsTab sessionId={sessionId} sections={board.sections} entries={board.entries} deptNames={deptNames} />}
 
-      {tab === "summary" && <MeetingAiPanel sessionId={sessionId} onTaskCreated={() => setTaskRefresh((n) => n + 1)} />}
+      {tab === "summary" && (
+        <div>
+          <MeetingAiPanel sessionId={sessionId} onTaskCreated={() => setTaskRefresh((n) => n + 1)} />
+          <MeetingRecapPanel sessionId={sessionId} isAdmin={isAdmin} onTaskCreated={() => setTaskRefresh((n) => n + 1)} />
+        </div>
+      )}
 
       {tab === "plan" && (
         <div>
