@@ -88,12 +88,43 @@ function LetterPreview({ template, compact = false }: { template: Partial<Market
   );
 }
 
+/** Renders the actual template HTML full, exactly as it will appear in delivered mail —
+ *  no synthetic letterhead/greeting scaffold and no cropping. */
+function RawEmailPreview({ template }: { template: Partial<MarketingTemplate> }) {
+  return (
+    <div style={{ background: "#f4f7fc", borderRadius: 10, padding: 16 }}>
+      <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", maxWidth: 620, margin: "0 auto", border: "1px solid #E5E3DC", boxShadow: "0 2px 10px rgba(10,26,64,0.06)" }}>
+        {template.subject && (
+          <div style={{ padding: "10px 20px", borderBottom: "1px solid #eef2f9", fontSize: 12, color: "#5a6b8c" }}>
+            Subject: <b style={{ color: "#13213f" }}>{template.subject}</b>
+          </div>
+        )}
+        {template.html_body
+          ? <div style={{ fontSize: 14, color: "#333", lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: template.html_body }} />
+          : <div style={{ padding: 24, color: "#B4B2A9", fontStyle: "italic" }}>No content yet.</div>}
+      </div>
+      <div style={{ textAlign: "center", fontSize: 11, color: "#8fa0bf", marginTop: 10 }}>Full template as it renders in delivered mail — no cropping.</div>
+    </div>
+  );
+}
+
+type ViewMode = "grid" | "list";
+type SortKey = "edited" | "name" | "status";
+
 export function TemplatesClient({ templates }: { templates: MarketingTemplate[] }) {
   const router = useRouter();
   const [editing, setEditing] = useState<Partial<MarketingTemplate> | null>(null);
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<MarketingTemplate | null>(null);
   const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
+  const [view, setView] = useState<ViewMode>("grid");
+  const [sort, setSort] = useState<SortKey>("edited");
+
+  const sorted = [...templates].sort((a, b) => {
+    if (sort === "name") return a.name.localeCompare(b.name);
+    if (sort === "status") return a.status.localeCompare(b.status);
+    return (b.updated_at ?? b.created_at ?? "").localeCompare(a.updated_at ?? a.created_at ?? "");
+  });
 
   async function handleSave() {
     if (!editing) return;
@@ -134,6 +165,15 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{templates.length} total</div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", border: "0.5px solid #cdd9ec", borderRadius: 6, overflow: "hidden" }}>
+            <button onClick={() => setView("list")} style={{ fontSize: 12, padding: "5px 10px", background: view === "list" ? "#2E78F5" : "transparent", color: view === "list" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}>☰ List</button>
+            <button onClick={() => setView("grid")} style={{ fontSize: 12, padding: "5px 10px", background: view === "grid" ? "#2E78F5" : "transparent", color: view === "grid" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}>▦ Grid</button>
+          </div>
+          <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} style={{ fontSize: 12, padding: "5px 9px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: "#fff", color: "var(--foreground)" }}>
+            <option value="edited">Recently edited</option>
+            <option value="name">Name A–Z</option>
+            <option value="status">Status</option>
+          </select>
           <label style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid #C7D2E4", background: "#EEF3FC", color: "#185FA5", cursor: "pointer", fontWeight: 500 }}>
             ↑ Upload HTML
             <input
@@ -196,7 +236,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
             {(["write", "preview"] as const).map((tab) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 style={{ padding: "7px 16px", fontSize: 12, fontWeight: activeTab === tab ? 500 : 400, color: activeTab === tab ? "#2E78F5" : "var(--muted-foreground)", background: "transparent", border: "none", borderBottom: activeTab === tab ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>
-                {tab === "write" ? "Write" : "Preview as letter"}
+                {tab === "write" ? "Write" : "Preview"}
               </button>
             ))}
           </div>
@@ -223,7 +263,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
             </>
           ) : (
             <div style={{ padding: "8px 0" }}>
-              <LetterPreview template={editing} />
+              <RawEmailPreview template={editing} />
             </div>
           )}
 
@@ -256,7 +296,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
                 Close
               </button>
             </div>
-            <LetterPreview template={preview} />
+            <RawEmailPreview template={preview} />
           </div>
         </div>
       )}
@@ -266,9 +306,27 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
         <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--muted-foreground)", fontSize: 13 }}>
           No templates yet. Create your first one above.
         </div>
+      ) : view === "list" ? (
+        <div style={{ ...card, overflow: "hidden" }}>
+          {sorted.map((t, i) => {
+            const sc = STATUS_MAP[t.status] ?? STATUS_MAP.draft;
+            return (
+              <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 16px", borderTop: i ? "0.5px solid var(--border)" : "none" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--foreground)" }}>{t.name}</div>
+                  <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.subject}</div>
+                </div>
+                <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500, whiteSpace: "nowrap" }}>{t.status.charAt(0).toUpperCase() + t.status.slice(1)}</span>
+                <button onClick={() => setPreview(t)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>Preview</button>
+                <button onClick={() => { setEditing(t); setActiveTab("write"); }} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>Edit</button>
+                <button onClick={() => handleDelete(t.id)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>Delete</button>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          {templates.map((t) => {
+          {sorted.map((t) => {
             const sc = STATUS_MAP[t.status] ?? STATUS_MAP.draft;
             return (
               <div key={t.id} style={{ ...card, overflow: "hidden" }}>

@@ -23,8 +23,9 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", description: "" });
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
   const [manageList, setManageList] = useState<ListWithCount | null>(null);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
+  const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   function setListCount(id: string, count: number) {
     setLists((prev) => prev.map((l) => (l.id === id ? { ...l, contact_count: count } : l)));
@@ -63,18 +64,31 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
     } finally { setSaving(false); }
   }
 
+  // Delete with a 30-second undo window: the row is marked deleted immediately, but the
+  // actual hard DELETE only fires after 30s (cancellable via Undo). No soft-delete flag.
   async function del(id: string) {
     if (!(await confirmDialog({ message: "Delete this list? Contacts are not deleted.", danger: true, confirmLabel: "Delete" }))) return;
-    setDeleting(id);
+    setPendingIds((s) => new Set(s).add(id));
+    timers.current[id] = setTimeout(() => { void finalizeDelete(id); }, 30000);
+  }
+  async function finalizeDelete(id: string) {
+    delete timers.current[id];
     try {
       await fetch(`/api/marketing/lists/${id}`, { method: "DELETE" });
       setLists((prev) => prev.filter((l) => l.id !== id));
     } catch (err) {
       console.error("Failed to delete list:", err);
     } finally {
-      setDeleting(null);
+      setPendingIds((s) => { const n = new Set(s); n.delete(id); return n; });
     }
   }
+  function undoDelete(id: string) {
+    const t = timers.current[id];
+    if (t) clearTimeout(t);
+    delete timers.current[id];
+    setPendingIds((s) => { const n = new Set(s); n.delete(id); return n; });
+  }
+  useEffect(() => { const t = timers.current; return () => { for (const k of Object.keys(t)) clearTimeout(t[k]); }; }, []);
 
   return (
     <div style={{ padding: 24, maxWidth: 900 }}>
@@ -97,7 +111,18 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
         </div>
       ) : (
         <div style={{ ...card, overflow: "hidden" }}>
-          {lists.map((list, i) => (
+          {lists.map((list, i) => pendingIds.has(list.id) ? (
+            <div key={list.id} style={{ padding: "14px 18px", borderBottom: i < lists.length - 1 ? "0.5px solid var(--border)" : "none", display: "flex", alignItems: "center", justifyContent: "space-between", borderStyle: "dashed", background: "#fafbfe", opacity: 0.85 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: "var(--muted-foreground)", textDecoration: "line-through" }}>{list.name}</div>
+                <div style={{ fontSize: 11.5, color: "#1a7f4e", marginTop: 3 }}>✓ Deleted — will not reappear. Undo within 30 seconds.</div>
+              </div>
+              <button onClick={() => undoDelete(list.id)}
+                style={{ fontSize: 12, fontWeight: 600, padding: "5px 14px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: "#fff", color: "#0A1A40", cursor: "pointer" }}>
+                Undo
+              </button>
+            </div>
+          ) : (
             <div key={list.id} style={{ padding: "14px 18px", borderBottom: i < lists.length - 1 ? "0.5px solid var(--border)" : "none", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)" }}>{list.name}</div>
@@ -121,8 +146,8 @@ export function ListsClient({ lists: initialLists }: { lists: ListWithCount[] })
                   style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
                   Edit
                 </button>
-                <button onClick={() => del(list.id)} disabled={deleting === list.id}
-                  style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer", opacity: deleting === list.id ? 0.5 : 1 }}>
+                <button onClick={() => del(list.id)}
+                  style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>
                   Delete
                 </button>
               </div>

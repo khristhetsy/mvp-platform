@@ -59,6 +59,7 @@ export type MarketingCampaign = {
   created_at: string;
   updated_at: string;
   archived?: boolean;
+  group_type?: "founder" | "investor" | "event" | null;
   // joined
   list?: MarketingList | null;
   template?: MarketingTemplate | null;

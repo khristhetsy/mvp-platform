@@ -55,7 +55,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
     const db = await marketingDb();
-    const allowed = ["name", "status", "scheduled_at", "from_name", "from_email", "reply_to", "list_id", "template_id", "subject_override", "body_override", "archived"];
+    const allowed = ["name", "status", "scheduled_at", "from_name", "from_email", "reply_to", "list_id", "template_id", "subject_override", "body_override", "archived", "group_type"];
     const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
     for (const key of allowed) {
       if (key in body) update[key] = body[key];

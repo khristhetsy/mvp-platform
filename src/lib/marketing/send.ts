@@ -92,7 +92,17 @@ export async function sendMarketingEmail(
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
   const unsubscribeUrl = `${appUrl}/unsubscribe?token=${input.unsubscribe_token}`;
 
-  const htmlWithFooter = `${htmlBody}
+  // Branded header with an ABSOLUTE, hosted logo so it renders in delivered mail (not just
+  // the editor). Point EMAIL_LOGO_URL at the CDN asset; falls back to an app-hosted path.
+  const logoUrl = process.env.EMAIL_LOGO_URL ?? `${appUrl}/email-logo.png`;
+  const brandHeader = `<div style="text-align:center;padding:20px 0 12px;">
+  <a href="${appUrl}" style="text-decoration:none;">
+    <img src="${logoUrl}" alt="iCapOS" width="132" style="display:inline-block;max-width:132px;height:auto;border:0;" />
+  </a>
+</div>`;
+
+  const htmlWithFooter = `${brandHeader}
+${htmlBody}
 <p style="margin-top:32px;font-size:12px;color:#888;">
   You're receiving this because you're in our network.
   <a href="${unsubscribeUrl}">Unsubscribe</a>

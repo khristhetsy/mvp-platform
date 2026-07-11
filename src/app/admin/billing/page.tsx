@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { AdminBillingClient, type UpgradeRequest } from "@/components/admin/billing/AdminBillingClient";
+import { OrgBillingProfileCard } from "@/components/admin/billing/OrgBillingProfileCard";
 import { listUpgradeRequestsForAdmin } from "@/lib/billing/upgrade-requests";
 import { listBillingCustomers, getBillingStats, getWebhookHealth } from "@/lib/billing/admin-billing";
 import { PLAN_LABELS } from "@/lib/subscriptions/plans";
@@ -42,6 +43,8 @@ export default async function AdminBillingPage() {
         <h1 className="mt-0.5 text-[22px] font-medium tracking-tight text-slate-950">Billing &amp; upgrades</h1>
         <p className="mt-0.5 text-sm text-slate-600">Plans, invoices, and statements for every client. Charging runs in Lemon Squeezy — this view is read-only.</p>
       </div>
+
+      <OrgBillingProfileCard />
 
       <AdminBillingClient customers={customers} stats={stats} health={health} upgradeRequests={upgradeRequests} />
     </AppShell>

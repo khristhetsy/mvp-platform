@@ -68,7 +68,11 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
     from_email: "outreach@icapos.com",
     reply_to: "admin@myicfos.com",
     scheduled_at: "",
+    group_type: "founder",
   });
+  const [groupFilter, setGroupFilter] = useState<"all" | "founder" | "investor" | "event">("all");
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const [sortKey, setSortKey] = useState<"created" | "name" | "opens">("created");
 
   // Deep-link from the Prospects wizard: ?new=<listId> opens the composer with
   // that list pre-filled as the audience (?new=1 just opens the composer).
@@ -374,6 +378,15 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
               </div>
             ))}
             <div>
+              <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Group type</label>
+              <select value={form.group_type} onChange={(e) => setForm({ ...form, group_type: e.target.value })}
+                style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}>
+                <option value="founder">Founder</option>
+                <option value="investor">Investor</option>
+                <option value="event">Event</option>
+              </select>
+            </div>
+            <div>
               <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Audience list</label>
               <select value={form.list_id} onChange={(e) => setForm({ ...form, list_id: e.target.value })}
                 style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}>
@@ -448,23 +461,42 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
         </div>
       )}
 
-      {/* Archived toggle */}
-      {campaigns.some((c) => c.archived) && (
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
-          <button onClick={() => setShowArchived((v) => !v)}
-            style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
-            {showArchived ? "Hide archived" : `Show archived (${campaigns.filter((c) => c.archived).length})`}
-          </button>
+      {/* Filter row: group pills + view toggle + sort + archived */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {(["all", "founder", "investor", "event"] as const).map((g) => (
+            <button key={g} onClick={() => setGroupFilter(g)}
+              style={{ fontSize: 12, borderRadius: 20, padding: "5px 14px", border: groupFilter === g ? "1px solid #1A6CE4" : "1px solid #cdd9ec", background: groupFilter === g ? "#1A6CE4" : "transparent", color: groupFilter === g ? "#fff" : "#0A1A40", fontWeight: groupFilter === g ? 600 : 400, cursor: "pointer", textTransform: "capitalize" }}>{g}</button>
+          ))}
         </div>
-      )}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", border: "0.5px solid #cdd9ec", borderRadius: 6, overflow: "hidden" }}>
+            <button onClick={() => setView("list")} style={{ fontSize: 12, padding: "5px 9px", background: view === "list" ? "#1A6CE4" : "transparent", color: view === "list" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}>☰</button>
+            <button onClick={() => setView("grid")} style={{ fontSize: 12, padding: "5px 9px", background: view === "grid" ? "#1A6CE4" : "transparent", color: view === "grid" ? "#fff" : "var(--muted-foreground)", border: "none", cursor: "pointer" }}>▦</button>
+          </div>
+          <select value={sortKey} onChange={(e) => setSortKey(e.target.value as "created" | "name" | "opens")} style={{ fontSize: 12, padding: "5px 9px", borderRadius: 6, border: "0.5px solid #cdd9ec", background: "#fff", color: "var(--foreground)" }}>
+            <option value="created">Newest</option>
+            <option value="name">Name A–Z</option>
+            <option value="opens">Most opened</option>
+          </select>
+          {campaigns.some((c) => c.archived) && (
+            <button onClick={() => setShowArchived((v) => !v)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+              {showArchived ? "Hide archived" : `Show archived (${campaigns.filter((c) => c.archived).length})`}
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Campaign cards */}
-      {(() => { const visible = campaigns.filter((c) => showArchived || !c.archived); return visible.length === 0 ? (
+      {(() => { const visible = campaigns
+          .filter((c) => (showArchived || !c.archived) && (groupFilter === "all" || c.group_type === groupFilter))
+          .sort((a, b) => sortKey === "name" ? a.name.localeCompare(b.name) : sortKey === "opens" ? (b.stat_opened ?? 0) - (a.stat_opened ?? 0) : (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+        return visible.length === 0 ? (
         <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--muted-foreground)", fontSize: 13 }}>
-          {campaigns.length === 0 ? "No campaigns yet. Create your first one above." : "No active campaigns. Toggle “Show archived” to see archived ones."}
+          {campaigns.length === 0 ? "No campaigns yet. Create your first one above." : "No campaigns match this filter."}
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <div style={{ display: view === "list" ? "flex" : "grid", flexDirection: view === "list" ? "column" : undefined, gridTemplateColumns: view === "grid" ? "1fr 1fr" : undefined, gap: view === "list" ? 8 : 14 }}>
           {visible.map((c) => {
             const sc = STATUS_MAP[c.status] ?? STATUS_MAP.draft;
             const scheduledAt = (c as Record<string, unknown>).scheduled_at as string | null | undefined;
@@ -477,9 +509,12 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
                       style={{ fontSize: 14, fontWeight: 500, color: "var(--foreground)", lineHeight: 1.4, paddingRight: 8, background: "none", border: "none", cursor: "pointer", textAlign: "left", textDecoration: "none" }}>
                       {c.name}
                     </button>
-                    <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500, whiteSpace: "nowrap", flexShrink: 0 }}>
-                      {sc.label}
-                    </span>
+                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                      {c.group_type && <span style={{ fontSize: 9.5, padding: "2px 7px", borderRadius: 10, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", background: c.group_type === "investor" ? "#f0edfd" : c.group_type === "event" ? "#e9f7ef" : "#eef4fe", color: c.group_type === "investor" ? "#5b3fd4" : c.group_type === "event" ? "#1a7f4e" : "#1A6CE4" }}>{c.group_type}</span>}
+                      <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500, whiteSpace: "nowrap" }}>
+                        {sc.label}
+                      </span>
+                    </div>
                   </div>
                   <div style={{ fontSize: 12, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 4 }}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
