@@ -101,6 +101,37 @@ export function MeetingBoardClient({ initial, isAdmin = false }: { initial: Boar
   );
 }
 
+interface HubAnalytics { available: boolean; source: string; hubHref: string | null; metrics: Array<{ label: string; value: string; delta?: string }> }
+function HubAnalyticsPanel({ departmentId }: { departmentId: string }) {
+  const [data, setData] = useState<HubAnalytics | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/admin/meetings/analytics/${departmentId}`).then((r) => r.json()).then((d) => { if (alive) { setData(d.analytics ?? null); setLoading(false); } }).catch(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [departmentId]);
+
+  if (loading) return <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12 }}>Loading 📡 analytics…</div>;
+  if (!data || !data.available) return <div style={{ fontSize: 11.5, color: MUTED, marginBottom: 12 }}>📡 No linked Hub analytics for this department.</div>;
+  return (
+    <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: MUTED }}>📡 {data.source}</span>
+        {data.hubHref && <Link href={data.hubHref} style={{ marginLeft: "auto", fontSize: 11, color: BLUE, textDecoration: "none" }}>Open Hub →</Link>}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10 }}>
+        {data.metrics.map((m, i) => (
+          <div key={i} style={{ background: "#F9FBFF", borderRadius: 9, padding: "9px 11px" }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: NAVY, fontVariantNumeric: "tabular-nums" }}>{m.value}</div>
+            <div style={{ fontSize: 10.5, color: MUTED, marginTop: 2 }}>{m.label}</div>
+            {m.delta && <div style={{ fontSize: 10, color: "#6B7690", marginTop: 1 }}>{m.delta}</div>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ReadinessBoard({ sections, entries, deptNames }: { sections: Section[]; entries: Record<string, Entry>; deptNames: Record<string, string> }) {
   return (
     <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, overflow: "hidden", marginBottom: 16 }}>
@@ -141,10 +172,12 @@ function DepartmentsTab({ sections, entries, deptNames }: { sections: Section[];
         ))}
       </div>
       {active !== "__general__" && (
-        <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-          <Link href={`/admin/meetings/kpi?dept=${active}`} style={{ fontSize: 11.5, fontWeight: 600, color: BLUE, background: "#E6F1FB", borderRadius: 7, padding: "5px 10px", textDecoration: "none" }}>📊 KPI Sheet</Link>
-          <span style={{ fontSize: 11.5, color: MUTED, alignSelf: "center" }}>📡 iCapOS Analytics — zero-copy from the {label(active)} Hub</span>
-        </div>
+        <>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+            <Link href={`/admin/meetings/kpi?dept=${active}`} style={{ fontSize: 11.5, fontWeight: 600, color: BLUE, background: "#E6F1FB", borderRadius: 7, padding: "5px 10px", textDecoration: "none" }}>📊 KPI Sheet</Link>
+          </div>
+          <HubAnalyticsPanel key={active} departmentId={active} />
+        </>
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {activeSections.map((s) => {
