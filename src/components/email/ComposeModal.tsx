@@ -86,6 +86,9 @@ export function ComposeModal({
   const [signatureHtml, setSignatureHtml] = useState<string | null>(null);
   const [signatureOn, setSignatureOn] = useState(true);
 
+  // Marketing templates for the quick-insert picker.
+  const [templates, setTemplates] = useState<Array<{ id: string; name: string; subject: string; html_body: string }>>([]);
+
   // AI writing assistant
   const [aiOpen, setAiOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
@@ -105,6 +108,20 @@ export function ComposeModal({
       } catch {
         /* signature is best-effort */
       }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  // Load marketing templates for the picker (best-effort; admins only will get results).
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const res = await fetch("/api/marketing/templates");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (active && Array.isArray(data.templates)) setTemplates(data.templates);
+      } catch { /* templates are optional */ }
     })();
     return () => { active = false; };
   }, []);
@@ -208,6 +225,16 @@ export function ComposeModal({
     setDirty(true);
   }, [ensureSignature]);
 
+  const applyTemplate = useCallback((id: string) => {
+    const tpl = templates.find((x) => x.id === id);
+    const el = editorRef.current;
+    if (!tpl || !el) return;
+    if (tpl.subject) setSubject(tpl.subject);
+    el.innerHTML = tpl.html_body || "";
+    ensureSignature();
+    setDirty(true);
+  }, [templates, ensureSignature]);
+
   const runAi = useCallback(async (mode: "draft" | "rewrite", action?: string) => {
     setAiBusy(action ?? mode);
     setAiError(null);
@@ -308,6 +335,18 @@ export function ComposeModal({
               <input value={cc} onChange={(e) => onField(setCc)(e.target.value)} placeholder={t("cc")} aria-label="Cc" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
               <input value={bcc} onChange={(e) => onField(setBcc)(e.target.value)} placeholder={t("bcc")} aria-label="Bcc" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
             </>
+          ) : null}
+
+          {templates.length > 0 ? (
+            <select
+              aria-label="Insert template"
+              defaultValue=""
+              onChange={(e) => { if (e.target.value) applyTemplate(e.target.value); e.currentTarget.selectedIndex = 0; }}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 focus:border-[var(--blue)] focus:outline-none"
+            >
+              <option value="">Insert template…</option>
+              {templates.map((tpl) => <option key={tpl.id} value={tpl.id}>{tpl.name}</option>)}
+            </select>
           ) : null}
 
           <input value={subject} onChange={(e) => onField(setSubject)(e.target.value)} placeholder={t("subject")} aria-label="Subject" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />

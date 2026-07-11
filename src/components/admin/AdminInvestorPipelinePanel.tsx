@@ -25,9 +25,11 @@ function ageDays(isoDate: string | null): number | null {
 }
 
 const STAGE_COLORS: Record<string, string> = {
-  interested:        "bg-indigo-500",
-  meeting_requested: "bg-violet-500",
-  follow_up:         "bg-sky-500",
+  prospect:  "bg-slate-400",
+  outreach:  "bg-sky-500",
+  engaged:   "bg-indigo-500",
+  diligence: "bg-violet-500",
+  committed: "bg-emerald-500",
 };
 
 function StageSummaryBar({ rows }: { rows: AdminInvestorPipelineRow[] }) {

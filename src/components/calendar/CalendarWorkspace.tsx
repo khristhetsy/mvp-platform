@@ -304,7 +304,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
         <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-start justify-between gap-3 px-5 py-4">
             <div className="flex gap-2.5">
-              <span className={`mt-1 h-3 w-3 shrink-0 rounded ${sel.editable ? "bg-[#7F77DD]" : "bg-[#378ADD]"}`} />
+              <span className={`mt-1 h-3 w-3 shrink-0 rounded ${sel.editable ? "bg-[#1A6CE4]" : "bg-[#EA8420]"}`} />
               <div>
                 <p className="text-sm font-semibold text-slate-950">{sel.title}</p>
                 <p className="mt-0.5 text-xs text-slate-500">{when}</p>
@@ -347,8 +347,8 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden items-center gap-3 sm:flex">
-            <span className="flex items-center gap-1.5 text-[11px] text-slate-500"><span className="h-2 w-2 rounded-full bg-[#7F77DD]" /> iCapOS</span>
-            <span className="flex items-center gap-1.5 text-[11px] text-slate-500"><span className="h-2 w-2 rounded-full bg-[#378ADD]" /> Google</span>
+            <span className="flex items-center gap-1.5 text-[11px] text-slate-500"><span className="h-2 w-2 rounded-full bg-[#1A6CE4]" /> iCapOS</span>
+            <span className="flex items-center gap-1.5 text-[11px] text-slate-500"><span className="h-2 w-2 rounded-full bg-[#EA8420]" /> Google</span>
           </div>
           <button type="button" onClick={() => setForm(emptyForm(new Date()))} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800">
             <Plus className="h-4 w-4" /> New event
@@ -400,9 +400,9 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
                       tabIndex={0}
                       onClick={(ev) => { ev.stopPropagation(); setSelected(e); }}
                       onKeyDown={(ev) => { if (ev.key === "Enter") { ev.stopPropagation(); setSelected(e); } }}
-                      className={`flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px] ${e.editable ? "bg-[#7F77DD] font-medium text-white hover:bg-[#2E78F5]" : "font-normal text-slate-700 hover:bg-slate-100"}`}
+                      className={`flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px] ${e.editable ? "bg-[#1A6CE4] font-medium text-white hover:bg-[#1557BD]" : "bg-[#FDEBD8] font-medium text-[#8A4B10] hover:bg-[#FBDCC0]"}`}
                     >
-                      {e.editable ? null : <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#378ADD]" />}
+                      {e.editable ? null : <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#EA8420]" />}
                       {e.meet_url ? <Video className="h-2.5 w-2.5 shrink-0" /> : null}
                       <span className="truncate">{new Date(e.start_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} {e.title}</span>
                     </span>
@@ -440,7 +440,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
                   <span className="w-28 shrink-0 text-xs text-slate-500">{new Date(e.start_time).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
                   <span className="w-20 shrink-0 text-xs font-medium text-slate-700">{new Date(e.start_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
                   <span className="flex-1 truncate text-sm text-slate-900">{e.title}</span>
-                  {!e.editable ? <span className="shrink-0 rounded bg-[#E6F1FB] px-1.5 py-0.5 text-[10px] font-medium text-[#0C447C]">{t("google")}</span> : null}
+                  {!e.editable ? <span className="shrink-0 rounded bg-[#FDEBD8] px-1.5 py-0.5 text-[10px] font-medium text-[#8A4B10]">{t("google")}</span> : null}
                   {e.meet_url ? <Video className="h-3.5 w-3.5 shrink-0 text-[#2E78F5]" aria-label="Has Google Meet" /> : null}
                 </button>
               </li>
@@ -463,7 +463,7 @@ export function CalendarWorkspace({ googleConnected = false }: { googleConnected
               {dayView.events.map((e) => (
                 <li key={e.id}>
                   <button type="button" onClick={() => { setDayView(null); setSelected(e); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-slate-50">
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${e.editable ? "bg-[#2E78F5]" : "bg-[#378ADD]"}`} />
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${e.editable ? "bg-[#1A6CE4]" : "bg-[#EA8420]"}`} />
                     {e.meet_url ? <Video className="h-3.5 w-3.5 shrink-0 text-slate-400" /> : null}
                     <span className="w-16 shrink-0 text-xs text-slate-500">{new Date(e.start_time).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
                     <span className="truncate text-slate-800">{e.title}</span>

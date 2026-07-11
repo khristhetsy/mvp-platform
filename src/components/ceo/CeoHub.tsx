@@ -98,10 +98,10 @@ function Dashboard({ payload, onJump }: { payload: CeoPayload; onJump: (k: strin
         ))}
       </div>
 
-      <div style={{ background: "linear-gradient(120deg,#0A1A40,#12275C 55%,#1A6CE4 140%)", borderRadius: 12, padding: "16px 18px", color: "#fff" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".7px", textTransform: "uppercase", color: "#9DBBF0", marginBottom: 6 }}>AI Chief of Staff — daily brief</div>
-        {payload.brief ? <div style={{ fontSize: 14, lineHeight: 1.6 }}>{payload.brief.headline}</div>
-          : <div style={{ fontSize: 13, color: "#C7D7F5" }}>No brief yet — the weekly cron generates it. Run snapshots, then the briefing job.</div>}
+      <div style={{ background: "#fff", border: "1px solid #E4E8F0", borderLeft: `3px solid ${royal}`, borderRadius: 12, padding: "16px 18px" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".7px", textTransform: "uppercase", color: royal, marginBottom: 6 }}>AI Chief of Staff — daily brief</div>
+        {payload.brief ? <div style={{ fontSize: 14, lineHeight: 1.6, color: navy }}>{payload.brief.headline}</div>
+          : <div style={{ fontSize: 13, color: "#64748B" }}>No brief yet — the weekly cron generates it. Run snapshots, then the briefing job.</div>}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1.4fr) minmax(0,1fr)", gap: 16, alignItems: "start" }}>

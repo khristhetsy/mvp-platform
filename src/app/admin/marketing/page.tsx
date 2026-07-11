@@ -4,6 +4,8 @@ import { marketingDb } from "@/lib/marketing/db";
 import Link from "next/link";
 import { MarketingStatCards } from "@/components/marketing/MarketingStatCards";
 import { GuidedBanner } from "@/components/marketing/GuidedBanner";
+import { LifecycleBar } from "@/components/admin/LifecycleBar";
+import { marketingLifecycle } from "@/lib/lifecycle/counts";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,7 @@ export default async function MarketingDashboardPage() {
   const since30d = new Date(Date.now() - 30 * 86400 * 1000).toISOString();
   // eslint-disable-next-line react-hooks/purity
   const since7d  = new Date(Date.now() - 7  * 86400 * 1000).toISOString();
+  const marketingStages = await marketingLifecycle();
 
   const [
     { count: totalContacts },
@@ -109,6 +112,13 @@ export default async function MarketingDashboardPage() {
 
       {/* Dismissible guided flow */}
       <GuidedBanner />
+
+      {/* Lead lifecycle funnel */}
+      {marketingStages.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <LifecycleBar title="Marketing lifecycle" stages={marketingStages} accent="#7C3AED" />
+        </div>
+      )}
 
       {/* Clickable stat cards */}
       <MarketingStatCards data={statCardData} />

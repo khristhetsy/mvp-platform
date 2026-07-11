@@ -133,11 +133,30 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
           <h1 style={{ fontSize: 16, fontWeight: 500, color: "var(--foreground)", marginBottom: 2 }}>Templates</h1>
           <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{templates.length} total</div>
         </div>
-        <button
-          onClick={() => { setEditing({ name: "", subject: "", html_body: "", status: "draft" }); setActiveTab("write"); }}
-          style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
-          + New template
-        </button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <label style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "0.5px solid #C7D2E4", background: "#EEF3FC", color: "#185FA5", cursor: "pointer", fontWeight: 500 }}>
+            ↑ Upload HTML
+            <input
+              type="file"
+              accept=".html,.htm,text/html"
+              style={{ display: "none" }}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                const text = await file.text();
+                const name = file.name.replace(/\.html?$/i, "").replace(/[-_]+/g, " ").trim() || "Uploaded template";
+                setEditing({ name, subject: "", preview_text: "", html_body: text, status: "draft" });
+                setActiveTab("write");
+              }}
+            />
+          </label>
+          <button
+            onClick={() => { setEditing({ name: "", subject: "", html_body: "", status: "draft" }); setActiveTab("write"); }}
+            style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
+            + New template
+          </button>
+        </div>
       </div>
 
       {/* Editor */}

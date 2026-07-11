@@ -27,21 +27,21 @@ export type InvestorCrmActivityType =
   | "report_viewed"
   | "spv_interest_expressed";
 
-export type InvestorPipelineStage = "interested" | "meeting_requested" | "follow_up";
+export type InvestorPipelineStage = "prospect" | "outreach" | "engaged" | "diligence" | "committed";
 
 const ACTIVITY_PIPELINE_STAGE: Record<InvestorCrmActivityType, InvestorPipelineStage> = {
-  saved_deal: "interested",
-  expressed_interest: "interested",
-  requested_intro: "meeting_requested",
-  follow_up_requested: "follow_up",
-  pledge_amount_submitted: "interested",
-  message_thread_created: "follow_up",
-  message_sent: "follow_up",
-  meeting_requested: "meeting_requested",
-  meeting_accepted: "meeting_requested",
-  meeting_declined: "follow_up",
-  report_viewed: "interested",
-  spv_interest_expressed: "interested",
+  saved_deal: "prospect",
+  expressed_interest: "engaged",
+  requested_intro: "outreach",
+  follow_up_requested: "engaged",
+  pledge_amount_submitted: "committed",
+  message_thread_created: "engaged",
+  message_sent: "engaged",
+  meeting_requested: "diligence",
+  meeting_accepted: "diligence",
+  meeting_declined: "engaged",
+  report_viewed: "engaged",
+  spv_interest_expressed: "committed",
 };
 
 const PIPELINE_ACTIVITY_TYPES = new Set<InvestorCrmActivityType>([

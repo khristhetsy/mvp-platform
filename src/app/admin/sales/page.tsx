@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listPipelines } from "@/lib/sales/pipelines";
 import { SalesHubHeader } from "./SalesHubHeader";
 import { SalesAdvisor } from "./SalesAdvisor";
+import { LifecycleBar } from "@/components/admin/LifecycleBar";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,10 @@ export default async function SalesDashboardPage() {
   const stages = (pipelines.find((p) => p.is_default) ?? pipelines[0])?.stages ?? [];
   const perStage = stages.map((s) => ({ name: s.name, count: open.filter((o) => o.stage_id === s.id).length }));
   const maxStage = Math.max(...perStage.map((s) => s.count), 1);
+  const lifecycleStages = stages
+    .slice()
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((s) => ({ key: s.id, label: s.name, count: open.filter((o) => o.stage_id === s.id).length, href: `/admin/sales/pipeline?stage=${s.id}` }));
 
   const tiles = [
     { label: "Open opportunities", value: open.length.toLocaleString(), href: "/admin/sales/opportunities", bg: "#E6F1FB", accent: "#185FA5", text: "#0C447C", icon: "ti-briefcase" },
@@ -47,6 +52,12 @@ export default async function SalesDashboardPage() {
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>
       <SalesHubHeader />
+
+      {lifecycleStages.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <LifecycleBar title="Sales lifecycle" stages={lifecycleStages} accent="#1A6CE4" />
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 12, marginBottom: 16 }}>
         {tiles.map((t) => (

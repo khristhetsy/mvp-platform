@@ -1,6 +1,14 @@
-export const INVESTOR_PIPELINE_STAGES = ["interested", "meeting_requested", "follow_up"] as const;
+export const INVESTOR_PIPELINE_STAGES = ["prospect", "outreach", "engaged", "diligence", "committed"] as const;
 
 export type InvestorPipelineStage = (typeof INVESTOR_PIPELINE_STAGES)[number];
+
+export const INVESTOR_PIPELINE_STAGE_LABEL: Record<InvestorPipelineStage, string> = {
+  prospect: "Prospect",
+  outreach: "Outreach",
+  engaged: "Engaged",
+  diligence: "Diligence",
+  committed: "Committed",
+};
 
 export type AdminPipelineUpdateInput = {
   stage?: InvestorPipelineStage;

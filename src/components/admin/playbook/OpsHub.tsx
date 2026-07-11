@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { HubShell, type HubTab } from "@/components/admin/hub/HubShell";
 import { IrAnalyticsTab } from "@/components/admin/playbook/IrAnalyticsTab";
+import { LifecycleBar, type LifecycleStage } from "@/components/admin/LifecycleBar";
 import type { HubPayload, HubSurface } from "@/lib/playbook/hub";
 import type { Suggestion, AdvisoryAction } from "@/lib/playbook/advisory";
 import type { HubSettings } from "@/lib/playbook/hub-settings";
@@ -99,6 +100,8 @@ function DashboardTab({ payload, onJump, onToggle, onAdvisory, onRefresh, isAdmi
   const { stats } = payload;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <InvestorLifecycleBar />
+
       <DriftStrip payload={payload} onRefresh={onRefresh} isAdmin={isAdmin} />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12 }}>
@@ -114,6 +117,17 @@ function DashboardTab({ payload, onJump, onToggle, onAdvisory, onRefresh, isAdmi
       </div>
     </div>
   );
+}
+
+function InvestorLifecycleBar() {
+  const [stages, setStages] = useState<LifecycleStage[]>([]);
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/admin/lifecycle/investor").then((r) => r.json()).then((d) => { if (alive) setStages((d.stages ?? []) as LifecycleStage[]); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  if (stages.length === 0) return null;
+  return <LifecycleBar title="Investor lifecycle" stages={stages} accent="#0E9F6E" />;
 }
 
 const BLOCK_ORDER: Record<string, number> = { open: 0, core: 1, close: 2 };
