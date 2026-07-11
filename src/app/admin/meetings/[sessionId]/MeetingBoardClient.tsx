@@ -84,7 +84,7 @@ export function MeetingBoardClient({ initial, isAdmin = false }: { initial: Boar
         </div>
       )}
 
-      {tab === "departments" && <DepartmentsTab sections={board.sections} entries={board.entries} deptNames={deptNames} />}
+      {tab === "departments" && <DepartmentsTab sessionId={sessionId} sections={board.sections} entries={board.entries} deptNames={deptNames} />}
 
       {tab === "summary" && <MeetingAiPanel sessionId={sessionId} onTaskCreated={() => setTaskRefresh((n) => n + 1)} />}
 
@@ -151,7 +151,7 @@ function ReadinessBoard({ sections, entries, deptNames }: { sections: Section[];
   );
 }
 
-function DepartmentsTab({ sections, entries, deptNames }: { sections: Section[]; entries: Record<string, Entry>; deptNames: Record<string, string> }) {
+function DepartmentsTab({ sessionId, sections, entries, deptNames }: { sessionId: string; sections: Section[]; entries: Record<string, Entry>; deptNames: Record<string, string> }) {
   const groups = new Map<string, Section[]>();
   for (const s of sections) {
     const key = s.department_id ?? "__general__";
@@ -183,7 +183,7 @@ function DepartmentsTab({ sections, entries, deptNames }: { sections: Section[];
         {activeSections.map((s) => {
           const entry = entries[s.id];
           if (!entry) return null;
-          return <SectionCard key={s.id} section={s} entry={entry} />;
+          return <SectionCard key={s.id} sessionId={sessionId} section={s} entry={entry} />;
         })}
       </div>
     </div>
@@ -285,12 +285,13 @@ function GoogleMeetBar({ sessionId, meetLink }: { sessionId: string; meetLink: s
   );
 }
 
-function SectionCard({ section, entry }: { section: Section; entry: Entry }) {
+function SectionCard({ sessionId, section, entry }: { sessionId: string; section: Section; entry: Entry }) {
   const [content, setContent] = useState(entry.content);
   const [status, setStatus] = useState<EntryStatus>(entry.status);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [versions, setVersions] = useState<Array<{ id: string; content: string; edited_at: string }> | null>(null);
+  const [ai, setAi] = useState<null | "draft" | "polish" | "points">(null);
 
   const save = useCallback(async (patch: { content?: string; status?: EntryStatus }) => {
     setSaving(true);
@@ -300,6 +301,25 @@ function SectionCard({ section, entry }: { section: Section; entry: Entry }) {
     } finally { setSaving(false); }
   }, [entry.id]);
 
+  // AI assist writes into the textarea draft buffer only; a human still Saves it.
+  const assist = async (mode: "draft" | "polish" | "points") => {
+    setAi(mode);
+    try {
+      const r = await fetch(`/api/admin/meetings/${sessionId}/journal-ai`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, section_id: section.id, text: mode === "polish" ? content : undefined }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) return;
+      if (mode === "points" && Array.isArray(d.points)) {
+        const bullets = d.points.map((p: string) => `• ${p}`).join("\n");
+        setContent((c) => (c.trim() ? `${c}\n${bullets}` : bullets));
+      } else if (typeof d.text === "string") {
+        setContent(d.text);
+      }
+    } finally { setAi(null); }
+  };
+
   const setStatusAndSave = (s: EntryStatus) => { setStatus(s); void save({ status: s, content }); };
   const loadVersions = async () => {
     if (versions) { setVersions(null); return; }
@@ -308,6 +328,7 @@ function SectionCard({ section, entry }: { section: Section; entry: Entry }) {
   };
 
   const btn = (bg: string, color: string): React.CSSProperties => ({ fontSize: 11.5, fontWeight: 600, color, background: bg, border: "none", borderRadius: 7, padding: "5px 11px", cursor: "pointer" });
+  const aiBtn: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #C7DCF5", borderRadius: 6, padding: "3px 9px", cursor: "pointer" };
 
   return (
     <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, padding: 14 }}>
@@ -316,6 +337,12 @@ function SectionCard({ section, entry }: { section: Section; entry: Entry }) {
         {section.pinned && <span style={{ fontSize: 9, background: "#EEF3FC", color: "#185FA5", borderRadius: 4, padding: "1px 5px" }}>{section.pinned === "first" ? "PINNED TOP" : "PINNED END"}</span>}
         {pill(status)}
         <span style={{ marginLeft: "auto", fontSize: 11, color: MUTED }}>{saving ? "Saving…" : savedAt ? `Saved ${savedAt}` : ""}</span>
+      </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap", alignItems: "center" }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: "#185FA5" }}>✦ AI</span>
+        <button onClick={() => void assist("draft")} disabled={ai !== null} style={aiBtn}>{ai === "draft" ? "Drafting…" : "Draft"}</button>
+        <button onClick={() => void assist("polish")} disabled={ai !== null || !content.trim()} style={aiBtn}>{ai === "polish" ? "Polishing…" : "Polish"}</button>
+        <button onClick={() => void assist("points")} disabled={ai !== null} style={aiBtn}>{ai === "points" ? "Thinking…" : "Talking points"}</button>
       </div>
       <textarea value={content} onChange={(e) => setContent(e.target.value)} onBlur={() => { if (content !== entry.content) void save({ content }); }}
         rows={4} placeholder={`${section.title} — journal / prep notes`} style={{ width: "100%", fontSize: 12.5, padding: "8px 10px", borderRadius: 8, border: "0.5px solid var(--border)", resize: "vertical" }} />
