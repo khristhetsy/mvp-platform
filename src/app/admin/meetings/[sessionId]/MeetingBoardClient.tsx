@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useState } from "react";
+import { CarryoverPanel, TasksPanel } from "./MeetingTasksPanel";
 
 const NAVY = "#0A1A40", BLUE = "#1A6CE4", MUTED = "var(--muted-foreground)";
 
@@ -20,10 +21,11 @@ function pill(s: string) {
   return <span style={{ fontSize: 10.5, fontWeight: 600, background: t.bg, color: t.c, borderRadius: 6, padding: "2px 8px", textTransform: "capitalize" }}>{s.replace("_", " ")}</span>;
 }
 
-export function MeetingBoardClient({ initial }: { initial: Board }) {
+export function MeetingBoardClient({ initial, isAdmin = false }: { initial: Board; isAdmin?: boolean }) {
   const board = initial;
   if (!board.session) return <p style={{ fontSize: 13, color: MUTED }}>Meeting session not found.</p>;
   const ready = board.sections.filter((s) => board.entries[s.id]?.status === "ready" || board.entries[s.id]?.status === "presented").length;
+  const sessionId = board.session.id;
 
   return (
     <div>
@@ -36,6 +38,8 @@ export function MeetingBoardClient({ initial }: { initial: Board }) {
         </div>
       </div>
 
+      <CarryoverPanel sessionId={sessionId} />
+
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {board.sections.map((s) => {
           const entry = board.entries[s.id];
@@ -43,6 +47,8 @@ export function MeetingBoardClient({ initial }: { initial: Board }) {
           return <SectionCard key={s.id} section={s} entry={entry} />;
         })}
       </div>
+
+      <TasksPanel sessionId={sessionId} isAdmin={isAdmin} />
 
       {board.attendees.length > 0 && (
         <div style={{ marginTop: 20 }}>

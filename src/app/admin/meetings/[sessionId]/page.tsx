@@ -12,7 +12,7 @@ export default async function MeetingBoardPage({ params }: { params: Promise<{ s
 
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>
-      <MeetingBoardClient initial={board} />
+      <MeetingBoardClient initial={board} isAdmin={profile.role === "admin"} />
     </AppShell>
   );
 }
