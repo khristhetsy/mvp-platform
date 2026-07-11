@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CarryoverPanel, TasksPanel } from "./MeetingTasksPanel";
 import { MeetingAiPanel } from "./MeetingAiPanel";
 
@@ -43,6 +43,8 @@ export function MeetingBoardClient({ initial, isAdmin = false }: { initial: Boar
 
       <CarryoverPanel sessionId={sessionId} />
 
+      <PlanAtRiskWidget />
+
       <MeetingAiPanel sessionId={sessionId} onTaskCreated={() => setTaskRefresh((n) => n + 1)} />
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -63,6 +65,39 @@ export function MeetingBoardClient({ initial, isAdmin = false }: { initial: Boar
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+interface PlanObj { id: string; title: string; department_name: string | null; status: string; progress: number }
+function PlanAtRiskWidget() {
+  const [items, setItems] = useState<PlanObj[]>([]);
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/admin/meetings/plan").then((r) => r.json()).then((d) => {
+      if (!alive) return;
+      const risky = ((d.objectives ?? []) as PlanObj[]).filter((o) => o.status === "at_risk" || o.status === "off_track");
+      setItems(risky);
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  if (items.length === 0) return null;
+  return (
+    <div style={{ background: "#FDF3F2", border: "0.5px solid #F0B4AE", borderRadius: 12, padding: 14, marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#A32D2D" }}>Plan of Action · {items.length} off track</span>
+        <Link href="/admin/meetings/plan" style={{ marginLeft: "auto", fontSize: 11.5, color: BLUE, textDecoration: "none" }}>Review plan →</Link>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {items.slice(0, 8).map((o) => (
+          <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5 }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: o.status === "off_track" ? "#D2534E" : "#EF9F27" }} />
+            <span style={{ color: NAVY, flex: 1 }}>{o.title}</span>
+            {o.department_name && <span style={{ fontSize: 10.5, color: MUTED }}>{o.department_name}</span>}
+            <span style={{ fontSize: 10.5, color: MUTED, fontVariantNumeric: "tabular-nums" }}>{o.progress}%</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
