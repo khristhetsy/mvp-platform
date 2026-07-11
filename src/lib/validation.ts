@@ -179,7 +179,7 @@ export const adminInvestorReviewActionSchema = adminReviewActionSchema.extend({
 });
 
 export const adminInvestorPipelineUpdateSchema = z.object({
-  stage: z.enum(["interested", "meeting_requested", "follow_up"]).optional(),
+  stage: z.enum(["prospect", "outreach", "engaged", "diligence", "committed"]).optional(),
   probability: z.number().int().min(0).max(100).optional(),
   notes: z.string().max(5000).nullable().optional(),
   nextFollowUpAt: z.string().datetime().nullable().optional(),
