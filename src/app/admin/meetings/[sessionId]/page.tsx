@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function MeetingBoardPage({ params }: { params: Promise<{ sessionId: string }> }) {
   const profile = await requireRole(["admin", "analyst"]);
   const { sessionId } = await params;
-  const board = await loadBoard(sessionId);
+  const board = await loadBoard(sessionId, { userId: profile.id, isAdmin: profile.role === "admin" });
 
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>

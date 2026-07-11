@@ -17,7 +17,20 @@ export interface MeetingSection {
 }
 export interface SectionEntry {
   id: string; session_id: string; section_id: string; content: string; status: EntryStatus;
-  prepared_by: string | null; updated_at: string;
+  prepared_by: string | null; updated_at: string; locked?: boolean;
+}
+
+export interface Viewer { userId: string; isAdmin: boolean }
+
+/** A viewer's department memberships. Unassigned users and admin-department members are
+ *  unrestricted (fail-open, matching the Department RBAC resolver). */
+async function viewerDepartments(userId: string): Promise<{ deptIds: Set<string>; unrestricted: boolean }> {
+  const { data: mem } = await db().from("department_members").select("department_id").eq("user_id", userId);
+  const ids = ((mem ?? []) as Array<{ department_id: string }>).map((m) => m.department_id);
+  if (ids.length === 0) return { deptIds: new Set<string>(), unrestricted: true };
+  const { data: adminDepts } = await db().from("departments").select("id").eq("is_admin", true).in("id", ids);
+  const inAdmin = ((adminDepts ?? []) as unknown[]).length > 0;
+  return { deptIds: new Set(ids), unrestricted: inAdmin };
 }
 export interface Attendee { user_id: string; name: string; status: AttendStatus }
 export interface MeetingSession {
@@ -49,9 +62,9 @@ export async function ensureSessionEntries(sessionId: string, meetingKey: string
   }
 }
 
-export async function loadBoard(sessionId: string): Promise<MeetingBoard> {
+export async function loadBoard(sessionId: string, viewer?: Viewer): Promise<MeetingBoard> {
   const { data: sessionRow } = await db().from("ceo_meeting_sessions")
-    .select("id, meeting_key, session_date, started_at, meet_link, meeting:ceo_meetings(name)")
+    .select("id, meeting_key, session_date, started_at, status, meet_link, meeting:ceo_meetings(name)")
     .eq("id", sessionId).maybeSingle();
   if (!sessionRow) return { session: null, sections: [], entries: {}, attendees: [] };
   const meetingKey = String(sessionRow.meeting_key);
@@ -67,6 +80,24 @@ export async function loadBoard(sessionId: string): Promise<MeetingBoard> {
   const entries: Record<string, SectionEntry> = {};
   for (const e of (entryRows ?? []) as SectionEntry[]) entries[e.section_id] = e;
 
+  const startedAt = (sessionRow as { started_at?: string | null }).started_at ?? null;
+  const status = (sessionRow as { status?: string | null }).status ?? (startedAt ? "live" : "scheduled");
+  const isOpen = Boolean(startedAt) || status === "live" || status === "closed" || status === "summarized";
+
+  // Journal write-lock (spec §3): before the meeting starts, cross-department prep is
+  // private to the owning department + CEO/Admin. Enforced here because reads use the
+  // service-role client (RLS is bypassed). Once started, everything is readable.
+  if (viewer && !viewer.isAdmin && !isOpen) {
+    const { deptIds, unrestricted } = await viewerDepartments(viewer.userId);
+    if (!unrestricted) {
+      const sectionDept = new Map(sections.map((s) => [s.id, s.department_id]));
+      for (const secId of Object.keys(entries)) {
+        const dept = sectionDept.get(secId) ?? null;
+        if (dept && !deptIds.has(dept)) entries[secId] = { ...entries[secId], content: "", locked: true };
+      }
+    }
+  }
+
   const attRaw = (attRows ?? []) as Array<{ user_id: string; status: AttendStatus }>;
   const ids = attRaw.map((a) => a.user_id);
   const names = new Map<string, string>();
@@ -76,16 +107,34 @@ export async function loadBoard(sessionId: string): Promise<MeetingBoard> {
   }
   const attendees: Attendee[] = attRaw.map((a) => ({ user_id: a.user_id, name: names.get(a.user_id) ?? "Member", status: a.status }));
 
-  const startedAt = (sessionRow as { started_at?: string | null }).started_at ?? null;
   return {
     session: {
       id: String(sessionRow.id), meeting_key: meetingKey, session_date: String(sessionRow.session_date),
-      started_at: startedAt, status: startedAt ? "live" : "scheduled",
+      started_at: startedAt, status,
       meet_link: (sessionRow as { meet_link?: string | null }).meet_link ?? null,
       meeting_name: (sessionRow.meeting as { name?: string } | null)?.name ?? "Meeting",
     },
     sections, entries, attendees,
   };
+}
+
+/** Write-lock guard (spec §3): a non-admin may edit a section entry only if it belongs to
+ *  their department AND the meeting status is scheduled or live. Throws otherwise. */
+export async function assertCanWriteEntry(entryId: string, viewer: Viewer): Promise<void> {
+  if (viewer.isAdmin) return;
+  const { data: entry } = await db().from("ceo_meeting_section_entries").select("session_id, section_id").eq("id", entryId).maybeSingle();
+  if (!entry) throw new Error("Entry not found.");
+  const [{ data: section }, { data: session }] = await Promise.all([
+    db().from("ceo_meeting_sections").select("department_id").eq("id", entry.section_id).maybeSingle(),
+    db().from("ceo_meeting_sessions").select("started_at, status").eq("id", entry.session_id).maybeSingle(),
+  ]);
+  const status = (session?.status as string | null) ?? (session?.started_at ? "live" : "scheduled");
+  if (status !== "scheduled" && status !== "live") throw new Error("The meeting is closed — entries are locked.");
+  const dept = (section?.department_id as string | null) ?? null;
+  if (dept) {
+    const { deptIds, unrestricted } = await viewerDepartments(viewer.userId);
+    if (!unrestricted && !deptIds.has(dept)) throw new Error("You can only edit your own department's section.");
+  }
 }
 
 /** Save a section entry (content and/or status); records a version snapshot on content change. */

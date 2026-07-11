@@ -11,7 +11,7 @@ const NAVY = "#0A1A40", BLUE = "#1A6CE4", MUTED = "var(--muted-foreground)";
 
 type EntryStatus = "not_started" | "draft" | "ready" | "presented" | "deferred";
 interface Section { id: string; position: number; title: string; department_id: string | null; section_kind: string; is_required: boolean; pinned: string | null }
-interface Entry { id: string; section_id: string; content: string; status: EntryStatus }
+interface Entry { id: string; section_id: string; content: string; status: EntryStatus; locked?: boolean }
 interface Attendee { user_id: string; name: string; status: string }
 interface Board { session: { id: string; session_date: string; started_at: string | null; status: string; meeting_name: string; meet_link: string | null } | null; sections: Section[]; entries: Record<string, Entry>; attendees: Attendee[] }
 
@@ -335,6 +335,19 @@ function SectionCard({ sessionId, section, entry }: { sessionId: string; section
 
   const btn = (bg: string, color: string): React.CSSProperties => ({ fontSize: 11.5, fontWeight: 600, color, background: bg, border: "none", borderRadius: 7, padding: "5px 11px", cursor: "pointer" });
   const aiBtn: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #C7DCF5", borderRadius: 6, padding: "3px 9px", cursor: "pointer" };
+
+  if (entry.locked) {
+    return (
+      <div style={{ background: "#FBFAF7", border: "0.5px dashed #D8D4C8", borderRadius: 12, padding: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: NAVY }}>{section.title}</span>
+          {pill(status)}
+          <span style={{ marginLeft: "auto", fontSize: 11.5, color: MUTED }}>🔒 Locked until the meeting starts</span>
+        </div>
+        <p style={{ fontSize: 12, color: MUTED, margin: "8px 0 0" }}>This department&apos;s prep is private until the meeting is started.</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, padding: 14 }}>

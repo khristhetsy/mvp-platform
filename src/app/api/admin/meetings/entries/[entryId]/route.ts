@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
-import { saveSectionEntry, listEntryVersions, type EntryStatus } from "@/lib/meetings/foundation";
+import { saveSectionEntry, listEntryVersions, assertCanWriteEntry, type EntryStatus } from "@/lib/meetings/foundation";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +25,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ en
   const { entryId } = await params;
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid entry payload." }, { status: 400 });
+  try {
+    await assertCanWriteEntry(entryId, { userId: profile.id, isAdmin: profile.role === "admin" });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Not permitted." }, { status: 403 });
+  }
   try {
     await saveSectionEntry(entryId, { content: parsed.data.content, status: parsed.data.status as EntryStatus | undefined }, profile.id);
     return NextResponse.json({ ok: true });
