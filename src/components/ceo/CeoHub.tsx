@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { HubShell, type HubTab } from "@/components/admin/hub/HubShell";
 import { status as kpiStatus, compare, formatKpi, deptScore, type KpiStatus, type Period } from "@/lib/ceo/kpi";
 import type { CeoPayload, CeoKpi } from "@/lib/ceo/hub-data";
@@ -132,6 +133,47 @@ function Dashboard({ payload, onJump }: { payload: CeoPayload; onJump: (k: strin
               );
             })}
         </div>
+      </div>
+
+      <MeetingOpsCard />
+    </div>
+  );
+}
+
+interface MeetingOps {
+  nextMeeting: { id: string; name: string; date: string; ready: number; total: number } | null;
+  openTasks: number; atRiskObjectives: number; upcomingConferences: number;
+}
+function MeetingOpsCard() {
+  const [ops, setOps] = useState<MeetingOps | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/admin/meetings/summary").then((r) => r.json()).then((d) => { if (alive) setOps(d.summary ?? null); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  if (!ops) return null;
+  const tiles: Array<{ label: string; value: string; sub?: string; href: string }> = [
+    ops.nextMeeting
+      ? { label: "Next meeting", value: `${ops.nextMeeting.ready}/${ops.nextMeeting.total} ready`, sub: new Date(`${ops.nextMeeting.date}T00:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }), href: `/admin/meetings/${ops.nextMeeting.id}` }
+      : { label: "Next meeting", value: "—", sub: "none scheduled", href: "/admin/meetings" },
+    { label: "Open action items", value: String(ops.openTasks), href: "/admin/meetings" },
+    { label: "At-risk objectives", value: String(ops.atRiskObjectives), href: "/admin/meetings/plan" },
+    { label: "Upcoming events", value: String(ops.upcomingConferences), href: "/admin/meetings/conferences" },
+  ];
+  return (
+    <div style={{ background: "#fff", border: "1px solid #E4E8F0", borderRadius: 12, overflow: "hidden" }}>
+      <div style={{ padding: "12px 16px", borderBottom: "1px solid #F1F4F9", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center" }}>
+        Meeting operations
+        <Link href="/admin/meetings" style={{ marginLeft: "auto", fontSize: 11.5, color: royal, textDecoration: "none" }}>Open meetings →</Link>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 1, background: "#F1F4F9" }}>
+        {tiles.map((t) => (
+          <Link key={t.label} href={t.href} style={{ background: "#fff", padding: "12px 16px", textDecoration: "none" }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: navy }}>{t.value}</div>
+            <div style={{ fontSize: 11.5, color: royal, marginTop: 2 }}>{t.label}</div>
+            {t.sub && <div style={{ fontSize: 10.5, color: "#6B7690", marginTop: 1 }}>{t.sub}</div>}
+          </Link>
+        ))}
       </div>
     </div>
   );
