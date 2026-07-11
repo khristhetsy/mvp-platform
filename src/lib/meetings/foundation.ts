@@ -22,7 +22,7 @@ export interface SectionEntry {
 export interface Attendee { user_id: string; name: string; status: AttendStatus }
 export interface MeetingSession {
   id: string; meeting_key: string; session_date: string; started_at: string | null;
-  status: string; meeting_name: string;
+  status: string; meeting_name: string; meet_link: string | null;
 }
 export interface MeetingBoard {
   session: MeetingSession | null;
@@ -51,7 +51,7 @@ export async function ensureSessionEntries(sessionId: string, meetingKey: string
 
 export async function loadBoard(sessionId: string): Promise<MeetingBoard> {
   const { data: sessionRow } = await db().from("ceo_meeting_sessions")
-    .select("id, meeting_key, session_date, started_at, meeting:ceo_meetings(name)")
+    .select("id, meeting_key, session_date, started_at, meet_link, meeting:ceo_meetings(name)")
     .eq("id", sessionId).maybeSingle();
   if (!sessionRow) return { session: null, sections: [], entries: {}, attendees: [] };
   const meetingKey = String(sessionRow.meeting_key);

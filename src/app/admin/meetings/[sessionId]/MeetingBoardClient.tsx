@@ -10,7 +10,7 @@ type EntryStatus = "not_started" | "draft" | "ready" | "presented" | "deferred";
 interface Section { id: string; position: number; title: string; department_id: string | null; section_kind: string; is_required: boolean; pinned: string | null }
 interface Entry { id: string; section_id: string; content: string; status: EntryStatus }
 interface Attendee { user_id: string; name: string; status: string }
-interface Board { session: { id: string; session_date: string; started_at: string | null; status: string; meeting_name: string } | null; sections: Section[]; entries: Record<string, Entry>; attendees: Attendee[] }
+interface Board { session: { id: string; session_date: string; started_at: string | null; status: string; meeting_name: string; meet_link: string | null } | null; sections: Section[]; entries: Record<string, Entry>; attendees: Attendee[] }
 
 const STATUS_TONE: Record<string, { bg: string; c: string }> = {
   not_started: { bg: "#F1EFE8", c: "#5F5E5A" }, draft: { bg: "#FAEEDA", c: "#854F0B" },
@@ -36,6 +36,7 @@ export function MeetingBoardClient({ initial, isAdmin = false }: { initial: Boar
           {new Date(`${board.session.session_date}T00:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })} ·{" "}
           {board.session.started_at ? "Live" : "Scheduled"} · Readiness {ready}/{board.sections.length}
         </div>
+        <GoogleMeetBar sessionId={sessionId} meetLink={board.session.meet_link} />
       </div>
 
       <CarryoverPanel sessionId={sessionId} />
@@ -58,6 +59,33 @@ export function MeetingBoardClient({ initial, isAdmin = false }: { initial: Boar
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function GoogleMeetBar({ sessionId, meetLink }: { sessionId: string; meetLink: string | null }) {
+  const [link, setLink] = useState(meetLink);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const push = async () => {
+    setBusy(true); setErr(null);
+    try {
+      const r = await fetch(`/api/admin/meetings/${sessionId}/gcal`, { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) { setErr(typeof d.error === "string" ? d.error : "Failed to push to Google."); return; }
+      setLink(d.meetUrl ?? null);
+    } catch { setErr("Failed to push to Google."); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      {link ? (
+        <a href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#185FA5", borderRadius: 8, padding: "6px 12px", textDecoration: "none" }}>▷ Join Google Meet</a>
+      ) : (
+        <button onClick={() => void push()} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: BLUE, background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{busy ? "Adding…" : "Add Google Meet"}</button>
+      )}
+      {link && <button onClick={() => void push()} disabled={busy} title="Re-sync to Google" style={{ fontSize: 11.5, color: MUTED, background: "transparent", border: "0.5px solid var(--border)", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>↻ Sync</button>}
+      {err && <span style={{ fontSize: 11.5, color: "#A32D2D" }}>{err}</span>}
     </div>
   );
 }
