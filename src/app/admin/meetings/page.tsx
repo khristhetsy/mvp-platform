@@ -17,7 +17,10 @@ export default async function MeetingsPage() {
           <h1 style={{ fontSize: 21, fontWeight: 600, color: "#0A1A40", margin: "0 0 2px" }}>Meetings</h1>
           <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", margin: 0 }}>Weekly management meeting — agenda, journals, and readiness.</p>
         </div>
-        <NewSessionButton />
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <Link href="/admin/meetings/kpi" style={{ fontSize: 12, fontWeight: 600, color: "#1A6CE4", background: "#E6F1FB", borderRadius: 8, padding: "7px 12px", textDecoration: "none" }}>KPI Dashboard</Link>
+          <NewSessionButton />
+        </div>
       </div>
 
       <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
