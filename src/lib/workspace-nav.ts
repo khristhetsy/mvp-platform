@@ -104,6 +104,23 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
     ],
   },
   {
+    title: "Events",
+    items: [
+      {
+        href: "/admin/events",
+        label: "Event Hub",
+        requiredPermission: "manage_events",
+        children: [
+          { href: "/admin/events",              label: "All events"   },
+          { href: "/admin/events/applications", label: "Applications" },
+          { href: "/admin/events/sponsors",     label: "Sponsors"     },
+          { href: "/admin/events/analytics",    label: "Analytics"    },
+          { href: "/admin/events/gamification", label: "Gamification" },
+        ],
+      },
+    ],
+  },
+  {
     title: "Operations",
     items: [
       { href: "/admin/actions",          label: "Action Center",   requiredPermission: "view_actions"         },
@@ -119,18 +136,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/learning",          label: "Overview"       },
           { href: "/admin/learning/courses",  label: "Courses"        },
           { href: "/admin/learning/founders", label: "Founder roster" },
-        ],
-      },
-      {
-        href: "/admin/events",
-        label: "Event Hub",
-        requiredPermission: "manage_events",
-        children: [
-          { href: "/admin/events",              label: "All events"   },
-          { href: "/admin/events/applications", label: "Applications" },
-          { href: "/admin/events/sponsors",     label: "Sponsors"     },
-          { href: "/admin/events/analytics",    label: "Analytics"    },
-          { href: "/admin/events/gamification", label: "Gamification" },
         ],
       },
       { href: "/admin/manual",           label: "Operations Manual",requiredPermission: "view_admin_dashboard" },
