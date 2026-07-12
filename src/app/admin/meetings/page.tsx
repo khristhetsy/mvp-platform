@@ -20,7 +20,7 @@ export default async function MeetingsPage() {
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <Link href="/admin/meetings/dashboard" style={{ fontSize: 12, fontWeight: 600, color: "#1A6CE4", background: "#E6F1FB", borderRadius: 8, padding: "7px 12px", textDecoration: "none" }}>Dashboard</Link>
-          <Link href="/admin/meetings/conferences" style={{ fontSize: 12, fontWeight: 600, color: "#1A6CE4", background: "#E6F1FB", borderRadius: 8, padding: "7px 12px", textDecoration: "none" }}>Conferences</Link>
+          <Link href="/admin/meetings/conferences" style={{ fontSize: 12, fontWeight: 600, color: "#1A6CE4", background: "#E6F1FB", borderRadius: 8, padding: "7px 12px", textDecoration: "none" }}>Events</Link>
           <Link href="/admin/meetings/onboarding" style={{ fontSize: 12, fontWeight: 600, color: "#1A6CE4", background: "#E6F1FB", borderRadius: 8, padding: "7px 12px", textDecoration: "none" }}>Onboarding</Link>
           <Link href="/admin/meetings/campaigns" style={{ fontSize: 12, fontWeight: 600, color: "#1A6CE4", background: "#E6F1FB", borderRadius: 8, padding: "7px 12px", textDecoration: "none" }}>Campaigns</Link>
           <Link href="/admin/meetings/plan" style={{ fontSize: 12, fontWeight: 600, color: "#1A6CE4", background: "#E6F1FB", borderRadius: 8, padding: "7px 12px", textDecoration: "none" }}>Plan of Action</Link>

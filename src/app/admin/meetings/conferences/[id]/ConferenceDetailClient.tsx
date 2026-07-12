@@ -17,7 +17,7 @@ export function ConferenceDetailClient({ conference, sessions: initialSessions }
   const [sessions, setSessions] = useState<Session[]>(initialSessions);
   const [adding, setAdding] = useState(false);
 
-  if (!conference) return <p style={{ fontSize: 13, color: MUTED }}>Conference not found.</p>;
+  if (!conference) return <p style={{ fontSize: 13, color: MUTED }}>Event not found.</p>;
 
   const setStatus = async (status: string) => {
     await fetch(`/api/admin/meetings/conferences/${conference.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }).catch(() => {});
@@ -34,7 +34,7 @@ export function ConferenceDetailClient({ conference, sessions: initialSessions }
 
   return (
     <div>
-      <Link href="/admin/meetings/conferences" style={{ fontSize: 12, color: BLUE, textDecoration: "none" }}>← Conferences</Link>
+      <Link href="/admin/meetings/conferences" style={{ fontSize: 12, color: BLUE, textDecoration: "none" }}>← Events</Link>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 10, margin: "6px 0 16px" }}>
         <div>
           <h1 style={{ fontSize: 21, fontWeight: 600, color: NAVY, margin: "0 0 4px" }}>{conference.title}</h1>

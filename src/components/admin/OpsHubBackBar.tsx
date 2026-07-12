@@ -6,6 +6,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const SURFACE_PREFIXES = [
   "/admin/actions",
@@ -22,8 +23,26 @@ const SURFACE_PREFIXES = [
 
 export function OpsHubBackBar() {
   const pathname = usePathname() ?? "";
+  // Only show to users who can actually use the IR hub (unrestricted admins, or
+  // members with the Investor Relations Hub in their granted paths).
+  const [irAccess, setIrAccess] = useState<boolean | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/admin/departments/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((d) => {
+        if (cancelled) return;
+        if (!d) { setIrAccess(true); return; } // fail-open for unconfigured departments
+        const unrestricted = Boolean(d.unrestricted ?? d.isAdmin);
+        const paths: string[] = d.paths ?? [];
+        setIrAccess(unrestricted || paths.some((p) => p.startsWith("/admin/playbook")));
+      })
+      .catch(() => { if (!cancelled) setIrAccess(true); });
+    return () => { cancelled = true; };
+  }, []);
+
   const onSurface = SURFACE_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
-  if (!onSurface) return null;
+  if (!onSurface || irAccess === false || irAccess === null) return null;
   return (
     <div style={{ marginBottom: 12 }}>
       <Link

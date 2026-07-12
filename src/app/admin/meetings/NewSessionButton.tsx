@@ -13,6 +13,7 @@ function nextThursday(): string {
 
 export function NewSessionButton() {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
   const [date, setDate] = useState(nextThursday());
   const [time, setTime] = useState("09:00");
   const [busy, setBusy] = useState(false);
@@ -29,11 +30,19 @@ export function NewSessionButton() {
     finally { setBusy(false); }
   };
 
+  // Collapsed: just the button. Clicking it reveals the date + time picker inline.
+  if (!open) {
+    return (
+      <button onClick={() => { setErr(null); setOpen(true); }} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#1A6CE4", border: "none", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>New meeting session</button>
+    );
+  }
+
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-      <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ fontSize: 12.5, padding: "6px 9px", borderRadius: 8, border: "0.5px solid var(--border)" }} />
+      <input type="date" value={date} onChange={(e) => setDate(e.target.value)} autoFocus style={{ fontSize: 12.5, padding: "6px 9px", borderRadius: 8, border: "0.5px solid var(--border)" }} />
       <input type="time" value={time} onChange={(e) => setTime(e.target.value)} aria-label="Meeting time" style={{ fontSize: 12.5, padding: "6px 9px", borderRadius: 8, border: "0.5px solid var(--border)" }} />
-      <button onClick={() => void create()} disabled={busy} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#1A6CE4", border: "none", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>{busy ? "Creating…" : "New meeting session"}</button>
+      <button onClick={() => void create()} disabled={busy} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#1A6CE4", border: "none", borderRadius: 8, padding: "7px 13px", cursor: "pointer" }}>{busy ? "Creating…" : "Create"}</button>
+      <button onClick={() => { setOpen(false); setErr(null); }} disabled={busy} style={{ fontSize: 12.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
       {err && <span style={{ fontSize: 12, color: "#A32D2D" }}>{err}</span>}
     </div>
   );

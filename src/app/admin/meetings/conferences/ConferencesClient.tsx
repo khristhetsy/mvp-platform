@@ -26,7 +26,7 @@ export function ConferencesClient({ initial, departments, staff }: { initial: Co
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
         <div>
           <Link href="/admin/meetings" style={{ fontSize: 12, color: BLUE, textDecoration: "none" }}>← Meetings</Link>
-          <h1 style={{ fontSize: 21, fontWeight: 600, color: NAVY, margin: "6px 0 0" }}>Conferences & Events</h1>
+          <h1 style={{ fontSize: 21, fontWeight: 600, color: NAVY, margin: "6px 0 0" }}>Events</h1>
           <p style={{ fontSize: 12.5, color: MUTED, margin: "2px 0 0" }}>Conferences, summits, and talk shows with a session agenda.</p>
         </div>
         <button onClick={() => setShowNew(true)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "7px 12px", cursor: "pointer" }}>+ New event</button>
