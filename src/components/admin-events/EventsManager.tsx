@@ -118,7 +118,7 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
     <div className="mx-auto max-w-5xl px-4 py-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--text-primary)]">{t("events")}</h1>
+          <h1 className="text-xl font-semibold text-[var(--text-primary)]">Event Hub</h1>
           <p className="mt-1 text-sm text-[var(--text-muted)]">
             Create and publish iCFO Events. Education &amp; community only — no securities offerings here.
           </p>

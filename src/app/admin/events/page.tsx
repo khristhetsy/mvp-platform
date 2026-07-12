@@ -6,7 +6,7 @@ import { listAllEvents } from "@/lib/icfo-events/queries";
 import { EventsManager } from "@/components/admin-events/EventsManager";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Events" };
+export const metadata = { title: "Event Hub" };
 
 export default async function AdminEventsPage() {
   const profile = await requireRole(["admin", "analyst"]);
