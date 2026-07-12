@@ -22,6 +22,19 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
     items: [
       { href: "/admin", label: "Dashboard", requiredPermission: "view_admin_dashboard" },
       { href: "/admin/ceo", label: "CEO Hub", requiredPermission: "view_admin_dashboard" },
+      {
+        href: "/admin/meetings",
+        label: "Meetings",
+        requiredPermission: "view_admin_dashboard",
+        children: [
+          { href: "/admin/meetings",              label: "Meetings"        },
+          { href: "/admin/meetings/kpi",          label: "KPI Dashboard"   },
+          { href: "/admin/meetings/plan",         label: "Plan of Action"  },
+          { href: "/admin/meetings/conferences",  label: "Conferences"     },
+          { href: "/admin/meetings/onboarding",   label: "Client Onboarding" },
+          { href: "/admin/meetings/campaigns",    label: "Campaigns & ROMI" },
+        ],
+      },
     ],
   },
   {
