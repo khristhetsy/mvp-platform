@@ -70,6 +70,7 @@ export function IcapOSAssistant() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const openedLoggedRef = useRef(false);
   const prevModeRef = useRef<string | null>(null);
+  const sendMessageRef = useRef<((t: string) => Promise<void>) | null>(null);
 
   const mode = useMemo(() => inferClientMode(pathname, workspace), [pathname, workspace]);
   const promptChips = useMemo(
@@ -126,6 +127,18 @@ export function IcapOSAssistant() {
     setLastResponse(null);
     setError(null);
     openedLoggedRef.current = false;
+  }, []);
+
+  // Let hub cards deep-link a question into the assistant: dashboards dispatch
+  // window CustomEvent("icapos-assistant:ask", { detail: { prompt } }).
+  useEffect(() => {
+    function onAsk(e: Event) {
+      const prompt = (e as CustomEvent<{ prompt?: string }>).detail?.prompt;
+      setOpen(true);
+      if (prompt) void sendMessageRef.current?.(prompt);
+    }
+    window.addEventListener("icapos-assistant:ask", onAsk as EventListener);
+    return () => window.removeEventListener("icapos-assistant:ask", onAsk as EventListener);
   }, []);
 
   const requestLiveAgent = useCallback(async () => {
@@ -202,6 +215,8 @@ export function IcapOSAssistant() {
     },
     [loading, messages, mode, pathname],
   );
+
+  useEffect(() => { sendMessageRef.current = sendMessage; }, [sendMessage]);
 
   if (pathname.startsWith("/founder/learning")) {
     return null;

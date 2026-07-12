@@ -7,6 +7,8 @@ import { daysSince, ONBOARDING_SLA_DAYS, DILIGENCE_SLA_DAYS } from "@/lib/operat
 import { OperationsHubClient, type Tile, type FunnelSeg, type QueueRow } from "./OperationsHubClient";
 import { OpsHubTabs } from "./OpsHubTabs";
 import { OpsAdvicePopup } from "./OpsAdvicePopup";
+import { LifecycleStepper } from "@/components/admin/LifecycleStepper";
+import { investorLifecycle } from "@/lib/lifecycle/counts";
 
 function slaBadge(overdue: number, sla: number): QueueRow["badge"] | undefined {
   if (overdue >= sla) return { text: `Past due ${overdue}d`, color: "#A32D2D", bg: "#FCEBEB", border: "#F09595" };
@@ -101,6 +103,8 @@ export default async function OperationsHubPage() {
       } as QueueRow;
     });
 
+  const investorStages = await investorLifecycle();
+
   return (
     <AppShell
       role="ADMIN"
@@ -117,6 +121,12 @@ export default async function OperationsHubPage() {
       <p style={{ margin: "0 0 20px", maxWidth: 640, fontSize: 13, lineHeight: 1.6, color: "var(--muted-foreground)" }}>
         Onboarding and due diligence in one view. Every card, bar, and row links straight to the record — so nothing stalls unnoticed.
       </p>
+
+      {investorStages.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <LifecycleStepper title="Investor pipeline" stages={investorStages} accent="#4338CA" askLabel="IR AI" />
+        </div>
+      )}
 
       <OperationsHubClient
         tiles={tiles}

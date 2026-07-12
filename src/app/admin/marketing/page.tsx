@@ -4,7 +4,7 @@ import { marketingDb } from "@/lib/marketing/db";
 import Link from "next/link";
 import { MarketingStatCards } from "@/components/marketing/MarketingStatCards";
 import { GuidedBanner } from "@/components/marketing/GuidedBanner";
-import { LifecycleBar } from "@/components/admin/LifecycleBar";
+import { LifecycleStepper } from "@/components/admin/LifecycleStepper";
 import { marketingLifecycle } from "@/lib/lifecycle/counts";
 
 export const dynamic = "force-dynamic";
@@ -110,15 +110,15 @@ export default async function MarketingDashboardPage() {
         </Link>
       </div>
 
-      {/* Dismissible guided flow */}
-      <GuidedBanner />
-
-      {/* Lead lifecycle funnel */}
+      {/* Lead lifecycle — pinned to the top of the dashboard */}
       {marketingStages.length > 0 && (
         <div style={{ marginBottom: 14 }}>
-          <LifecycleBar title="Marketing lifecycle" stages={marketingStages} accent="#7C3AED" />
+          <LifecycleStepper title="Lead lifecycle" stages={marketingStages} accent="#7C3AED" askLabel="Marketing AI" />
         </div>
       )}
+
+      {/* Dismissible guided flow */}
+      <GuidedBanner />
 
       {/* Clickable stat cards */}
       <MarketingStatCards data={statCardData} />

@@ -5,7 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listPipelines } from "@/lib/sales/pipelines";
 import { SalesHubHeader } from "./SalesHubHeader";
 import { SalesAdvisor } from "./SalesAdvisor";
-import { LifecycleBar } from "@/components/admin/LifecycleBar";
+import { LifecycleStepper } from "@/components/admin/LifecycleStepper";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +55,7 @@ export default async function SalesDashboardPage() {
 
       {lifecycleStages.length > 0 && (
         <div style={{ marginBottom: 16 }}>
-          <LifecycleBar title="Sales lifecycle" stages={lifecycleStages} accent="#1A6CE4" />
+          <LifecycleStepper title="Sales lifecycle" stages={lifecycleStages} accent="#1A6CE4" askLabel="Sales AI" />
         </div>
       )}
 
