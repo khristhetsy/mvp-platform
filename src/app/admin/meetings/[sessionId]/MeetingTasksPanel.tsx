@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-const NAVY = "#0A1A40", BLUE = "#1A6CE4", MUTED = "var(--muted-foreground)";
+const NAVY = "#E8EDF7", BLUE = "#8FB4FF", MUTED = "#7C8DB5", CARD = "#0C142E", PANEL = "#0A1128", CHIP = "#132146";
 
 type TaskStatus = "not_started" | "in_progress" | "done" | "cancelled";
 interface Task {
@@ -26,8 +26,8 @@ export function CarryoverPanel({ sessionId }: { sessionId: string }) {
   }, [sessionId]);
   if (!tasks || tasks.length === 0) return null;
   return (
-    <div style={{ background: "#FFF9EE", border: "0.5px solid #FAC775", borderRadius: 12, padding: 14, marginBottom: 14 }}>
-      <div style={{ fontSize: 13, fontWeight: 600, color: "#854F0B", marginBottom: 8 }}>Carryover · {tasks.length} open from prior meetings</div>
+    <div style={{ background: "#2A2410", border: "0.5px solid #5C4A1E", borderRadius: 12, padding: 14, marginBottom: 14 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: "#FFD27F", marginBottom: 8 }}>Carryover · {tasks.length} open from prior meetings</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {tasks.slice(0, 12).map((t) => (
           <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5 }}>
@@ -66,15 +66,15 @@ export function TasksPanel({ sessionId, isAdmin, refreshToken = 0 }: { sessionId
         <div style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>Tasks · {tasks.length}</div>
         <button onClick={() => setShowNew(true)} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>+ New task</button>
       </div>
-      <div style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+      <div style={{ background: CARD, border: "0.5px solid rgba(255,255,255,.10)", borderRadius: 12, overflow: "hidden" }}>
         {tasks.length === 0 ? <div style={{ padding: 14, fontSize: 12.5, color: MUTED }}>No tasks in this meeting yet.</div> : tasks.map((t, i) => (
-          <div key={t.id} style={{ padding: "10px 14px", borderTop: i ? "0.5px solid #F1F4F9" : "none" }}>
+          <div key={t.id} style={{ padding: "10px 14px", borderTop: i ? "0.5px solid rgba(255,255,255,.06)" : "none" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: PRIO_TONE[t.priority] ?? "#5F5E5A" }} />
               <span style={{ fontSize: 12.5, fontWeight: 500, color: NAVY, flex: 1 }}>{t.title}</span>
-              {t.department_name && <span style={{ fontSize: 10.5, background: "#EEF3FC", color: "#185FA5", borderRadius: 5, padding: "1px 6px" }}>{t.department_name}</span>}
+              {t.department_name && <span style={{ fontSize: 10.5, background: CHIP, color: "#185FA5", borderRadius: 5, padding: "1px 6px" }}>{t.department_name}</span>}
               {t.assignee_name && <span style={{ fontSize: 10.5, color: MUTED }}>{t.assignee_name}</span>}
-              <select value={t.status} onChange={(e) => void patch(t.id, { status: e.target.value })} style={{ fontSize: 11, padding: "3px 6px", borderRadius: 6, border: "0.5px solid var(--border)", background: (STATUS_TONE[t.status] ?? STATUS_TONE.not_started).bg, color: (STATUS_TONE[t.status] ?? STATUS_TONE.not_started).c }}>
+              <select value={t.status} onChange={(e) => void patch(t.id, { status: e.target.value })} style={{ fontSize: 11, padding: "3px 6px", borderRadius: 6, border: "0.5px solid rgba(255,255,255,.10)", background: (STATUS_TONE[t.status] ?? STATUS_TONE.not_started).bg, color: (STATUS_TONE[t.status] ?? STATUS_TONE.not_started).c }}>
                 <option value="not_started">Not started</option><option value="in_progress">In progress</option><option value="done">Done</option><option value="cancelled">Cancelled</option>
               </select>
             </div>
@@ -96,7 +96,7 @@ function NoteField({ label, value, onSave, disabled }: { label: string; value: s
     <div>
       <div style={{ fontSize: 10, color: MUTED, marginBottom: 2 }}>{label}{disabled ? " (CEO only)" : ""}</div>
       <input value={v} onChange={(e) => setV(e.target.value)} onBlur={() => { if (v !== value) onSave(v); }} disabled={disabled}
-        placeholder={disabled ? "—" : "Add a note…"} style={{ width: "100%", fontSize: 11.5, padding: "5px 7px", borderRadius: 6, border: "0.5px solid var(--border)", background: disabled ? "#F6F8FB" : "#fff", color: disabled ? MUTED : NAVY }} />
+        placeholder={disabled ? "—" : "Add a note…"} style={{ width: "100%", fontSize: 11.5, padding: "5px 7px", borderRadius: 6, border: "0.5px solid rgba(255,255,255,.10)", background: disabled ? "#0A1128" : "#0C142E", color: disabled ? MUTED : NAVY }} />
     </div>
   );
 }
@@ -116,10 +116,10 @@ function NewTaskModal({ sessionId, meta, onClose, onCreated }: { sessionId: stri
       if (r.ok) onCreated();
     } finally { setBusy(false); }
   };
-  const field: React.CSSProperties = { width: "100%", fontSize: 12.5, padding: "7px 9px", borderRadius: 8, border: "0.5px solid var(--border)", marginTop: 4 };
+  const field: React.CSSProperties = { width: "100%", fontSize: 12.5, padding: "7px 9px", borderRadius: 8, border: "0.5px solid rgba(255,255,255,.10)", marginTop: 4 };
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div onClick={(e) => e.stopPropagation()} role="dialog" aria-label="New task" style={{ width: "min(420px, 94vw)", background: "#fff", borderRadius: 12, padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} role="dialog" aria-label="New task" style={{ width: "min(420px, 94vw)", background: CARD, borderRadius: 12, padding: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: NAVY, marginBottom: 12 }}>New task</div>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Task title" style={field} autoFocus />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -130,7 +130,7 @@ function NewTaskModal({ sessionId, meta, onClose, onCreated }: { sessionId: stri
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
           <button onClick={() => void create()} disabled={busy || !title.trim()} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>{busy ? "Creating…" : "Create task"}</button>
-          <button onClick={onClose} style={{ fontSize: 12.5, fontWeight: 600, color: NAVY, background: "#F1EFE8", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>Cancel</button>
+          <button onClick={onClose} style={{ fontSize: 12.5, fontWeight: 600, color: NAVY, background: CHIP, border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer" }}>Cancel</button>
         </div>
       </div>
     </div>
