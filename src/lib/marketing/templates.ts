@@ -1,5 +1,15 @@
 import { marketingDb } from "./db";
+import { stripHtmlComments } from "./send";
 import type { MarketingTemplate } from "./types";
+
+// Remove HTML author comments from a template's body before it's stored, so notes
+// like "<!-- to add more; delete to remove … -->" never persist or render.
+function cleanTemplateInput<T extends Partial<MarketingTemplate>>(input: T): T {
+  if (typeof input.html_body === "string") {
+    return { ...input, html_body: stripHtmlComments(input.html_body) };
+  }
+  return input;
+}
 
 export async function getTemplates(): Promise<MarketingTemplate[]> {
   const db = await marketingDb();
@@ -28,7 +38,7 @@ export async function createTemplate(
   const db = await marketingDb();
   const { data, error } = await db
     .from("marketing_templates")
-    .insert({ ...input, ...(createdBy ? { created_by: createdBy } : {}) })
+    .insert({ ...cleanTemplateInput(input), ...(createdBy ? { created_by: createdBy } : {}) })
     .select()
     .single();
   if (error) throw error;
@@ -42,7 +52,7 @@ export async function updateTemplate(
   const db = await marketingDb();
   const { data, error } = await db
     .from("marketing_templates")
-    .update({ ...input, updated_at: new Date().toISOString() })
+    .update({ ...cleanTemplateInput(input), updated_at: new Date().toISOString() })
     .eq("id", id)
     .select()
     .single();
