@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
-import { Mail, RefreshCw, ArrowLeft, ExternalLink, Inbox as InboxIcon, Send, FileText, Layers, AlertTriangle, Trash2, Plus, Loader2, Archive, RotateCcw, CornerUpLeft, Search, Reply, ReplyAll, Forward, Paperclip, MailOpen } from "lucide-react";
+import { Mail, RefreshCw, ArrowLeft, ExternalLink, Inbox as InboxIcon, Send, FileText, Layers, AlertTriangle, Trash2, Plus, Loader2, Archive, RotateCcw, CornerUpLeft, Search, Reply, ReplyAll, Forward, Paperclip, MailOpen, Users } from "lucide-react";
+import { SalesContactsClient } from "@/app/admin/sales/contacts/SalesContactsClient";
 import { EmailBody } from "./EmailBody";
 import { ComposeModal } from "./ComposeModal";
 import { SenderHeader } from "./SenderHeader";
@@ -12,7 +13,7 @@ import { buildPrefill, type ComposeMode, type ComposePrefill } from "@/lib/email
 import type { EmailAttachment } from "@/lib/email/inbox";
 import type { ComposeDraft, Sender } from "./types";
 
-type GmailFolder = "inbox" | "sent" | "all" | "spam" | "trash" | "drafts";
+type GmailFolder = "inbox" | "sent" | "all" | "spam" | "trash" | "drafts" | "contacts";
 type GmailActionId = "archive" | "spam" | "notspam" | "trash" | "untrash";
 type GmailItem = { id: string; threadId: string; from: string; subject: string; date: string; snippet: string; unread: boolean };
 type GmailAttachmentRef = { attachmentId: string; messageId: string; filename: string; mimeType: string; size: number };
@@ -29,6 +30,7 @@ const FOLDERS: { id: GmailFolder; label: string; icon: typeof Mail }[] = [
   { id: "all", label: "All Mail", icon: Layers },
   { id: "spam", label: "Spam", icon: AlertTriangle },
   { id: "trash", label: "Trash", icon: Trash2 },
+  { id: "contacts", label: "Contacts", icon: Users },
 ];
 
 function fromName(from: string): string {
@@ -119,6 +121,7 @@ export function GmailInbox() {
   }, [onlyUnread, onlyAttachments, dateRange]);
 
   const load = useCallback(async () => {
+    if (folder === "contacts") { setItems([]); setLoading(false); return; }
     setLoading(true);
     setError(null);
     void loadCounts();
@@ -356,7 +359,11 @@ export function GmailInbox() {
         </aside>
 
         <div className="min-w-0 space-y-3">
-          {thread ? (
+          {folder === "contacts" ? (
+            <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
+              <SalesContactsClient />
+            </div>
+          ) : thread ? (
             <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
               <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
                 <div className="flex min-w-0 items-center gap-2">
