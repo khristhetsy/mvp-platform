@@ -44,3 +44,18 @@ export async function investorLifecycle(): Promise<LifecycleStage[]> {
     return { key: s, label: INVESTOR_PIPELINE_STAGE_LABEL[s], count: count ?? 0, href: `/admin/playbook?stage=${s}` };
   }));
 }
+
+/** Founder journey: founder profiles grouped by their journey_stage (the 4 founder
+ *  stages surfaced in the founder side nav). */
+const FOUNDER_JOURNEY: Array<{ key: string; label: string }> = [
+  { key: "initialize", label: "Onboarding" },
+  { key: "qualify", label: "Verification" },
+  { key: "deploy", label: "Deals access" },
+  { key: "optimize", label: "Manage deals" },
+];
+export async function founderLifecycle(): Promise<LifecycleStage[]> {
+  return Promise.all(FOUNDER_JOURNEY.map(async (s) => {
+    const { count } = await db().from("profiles").select("id", { count: "exact", head: true }).eq("role", "founder").eq("journey_stage", s.key);
+    return { key: s.key, label: s.label, count: count ?? 0, href: `/admin/crm/founders?stage=${s.key}` };
+  }));
+}

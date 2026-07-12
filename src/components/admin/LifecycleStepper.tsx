@@ -21,12 +21,13 @@ function tint(hex: string, a: number): string {
 }
 
 export function LifecycleStepper({
-  title = "Lifecycle", stages, accent = "#7C3AED", askLabel = "iCapOS AI",
+  title = "Lifecycle", stages, accent = "#7C3AED", askLabel = "iCapOS AI", headerRight,
 }: {
   title?: string;
   stages: LifecycleStage[];
   accent?: string;
   askLabel?: string;
+  headerRight?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   if (!stages || stages.length === 0) return null;
@@ -49,8 +50,11 @@ export function LifecycleStepper({
   return (
     <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, padding: "14px 16px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
-        <span style={{ fontSize: 13, fontWeight: 500, color: NAVY }}>{title}
-          <span style={{ fontSize: 12, color: MUTED, fontWeight: 400 }}> · {total.toLocaleString()} in funnel</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: NAVY }}>{title}
+            <span style={{ fontSize: 12, color: MUTED, fontWeight: 400 }}> · {total.toLocaleString()} in funnel</span>
+          </span>
+          {headerRight}
         </span>
         <button onClick={() => setOpen((o) => !o)} aria-expanded={open}
           style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: accent, background: tint(accent, 0.1), border: "none", borderRadius: 8, padding: "5px 11px", cursor: "pointer" }}>
