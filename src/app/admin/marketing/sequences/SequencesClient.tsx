@@ -75,6 +75,33 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
     from_email: "outreach@icapos.com",
   });
 
+  // Send-test-to-myself, per sequence.
+  const [testEmail, setTestEmail] = useState<Record<string, string>>({});
+  const [testMsg, setTestMsg] = useState<Record<string, string>>({});
+  const [testBusy, setTestBusy] = useState<string | null>(null);
+
+  async function handleSendTest(sequenceId: string) {
+    const email = (testEmail[sequenceId] ?? "").trim();
+    if (!email) { setTestMsg((m) => ({ ...m, [sequenceId]: "Enter an email." })); return; }
+    setTestBusy(sequenceId);
+    setTestMsg((m) => { const n = { ...m }; delete n[sequenceId]; return n; });
+    try {
+      const res = await fetch("/api/marketing/sequences/test", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sequence_id: sequenceId, email }),
+      });
+      const data = await res.json();
+      const msg = !res.ok ? (data.error ?? "Failed to send test.")
+        : data.error ? data.error
+        : `Sent ${data.sent}/${data.steps} step${data.steps === 1 ? "" : "s"} to ${email}${data.failed ? ` (${data.failed} failed)` : ""}`;
+      setTestMsg((m) => ({ ...m, [sequenceId]: msg }));
+    } catch {
+      setTestMsg((m) => ({ ...m, [sequenceId]: "Failed to send test." }));
+    } finally {
+      setTestBusy(null);
+    }
+  }
+
   // Editing an existing step.
   const [editingStep, setEditingStep] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ template_id: "", condition: "always", delay_days: "0" });
@@ -366,6 +393,28 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
                       Enroll list
                     </button>
                     {enrollMsg[seq.id] ? <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{enrollMsg[seq.id]}</span> : null}
+                  </div>
+                ) : null}
+
+                {/* Send a test to yourself */}
+                {steps.length > 0 ? (
+                  <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <input
+                      type="email"
+                      value={testEmail[seq.id] ?? ""}
+                      onChange={(e) => setTestEmail((m) => ({ ...m, [seq.id]: e.target.value }))}
+                      placeholder="you@example.com"
+                      style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", color: "var(--foreground)", minWidth: 160 }}
+                    />
+                    <button
+                      onClick={() => handleSendTest(seq.id)}
+                      disabled={testBusy === seq.id}
+                      title="Sends every step of this sequence to the address above — real contacts are not touched."
+                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)", opacity: testBusy === seq.id ? 0.5 : 1 }}
+                    >
+                      {testBusy === seq.id ? "Sending…" : "Send test"}
+                    </button>
+                    {testMsg[seq.id] ? <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{testMsg[seq.id]}</span> : null}
                   </div>
                 ) : null}
               </div>

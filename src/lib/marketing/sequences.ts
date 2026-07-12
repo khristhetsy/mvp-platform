@@ -1,5 +1,5 @@
 import { marketingDb } from "./db";
-import { makeUnsubscribeToken, sendMarketingEmail } from "./send";
+import { makeUnsubscribeToken, sendMarketingEmail, emailConfigured } from "./send";
 import { isUnsubscribed } from "./contacts";
 import type { MarketingSequence, MarketingSequenceStep } from "./types";
 
@@ -94,6 +94,42 @@ export async function deleteSequenceStep(stepId: string): Promise<void> {
   const db = await marketingDb();
   const { error } = await db.from("marketing_sequence_steps").delete().eq("id", stepId);
   if (error) throw error;
+}
+
+/** Send every step of a sequence to a single test address so the sender can preview the
+ *  real emails. Ignores conditions/delays (all steps go at once), subject-prefixed [TEST].
+ *  Touches no contacts or enrollment state. */
+export async function sendSequenceTest(
+  sequenceId: string,
+  testEmail: string,
+): Promise<{ sent: number; failed: number; steps: number; error?: string }> {
+  const db = await marketingDb();
+  const { data: seq } = await db
+    .from("marketing_sequences")
+    .select("id, name, steps:marketing_sequence_steps(*, template:marketing_templates(*))")
+    .eq("id", sequenceId)
+    .maybeSingle();
+  if (!seq) throw new Error("Sequence not found.");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const steps = ((seq.steps ?? []) as any[]).slice().sort((a, b) => a.step_order - b.step_order);
+  if (steps.length === 0) return { sent: 0, failed: 0, steps: 0, error: "This sequence has no steps yet." };
+  if (!emailConfigured()) return { sent: 0, failed: 0, steps: steps.length, error: "Email sending isn't configured (RESEND_API_KEY missing)." };
+
+  const token = makeUnsubscribeToken(testEmail);
+  let sent = 0, failed = 0;
+  for (const step of steps) {
+    if (!step.template) { failed++; continue; }
+    const result = await sendMarketingEmail({
+      to: testEmail, first_name: "Test", company: "iCFO",
+      from_name: step.from_name, from_email: step.from_email,
+      subject: `[TEST · step ${step.step_order}] ${step.template.subject}`,
+      html_body: step.template.html_body, text_body: step.template.text_body,
+      unsubscribe_token: token,
+    });
+    if (result.ok) sent++; else failed++;
+    await new Promise((r) => setTimeout(r, 150));
+  }
+  return { sent, failed, steps: steps.length };
 }
 
 export async function enrollContact(
