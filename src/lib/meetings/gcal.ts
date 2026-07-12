@@ -26,7 +26,7 @@ export interface SessionSyncResult { eventId: string; meetUrl: string | null }
 /** Create (or update) a Google Calendar event for a meeting session, capturing the Meet link. */
 export async function pushSessionToGoogle(sessionId: string, userId: string): Promise<SessionSyncResult> {
   const { data: session } = await db().from("ceo_meeting_sessions")
-    .select("id, meeting_key, session_date, gcal_instance_id, meeting:ceo_meetings(name, time_local, timezone, duration_min, attendees)")
+    .select("id, meeting_key, session_date, start_time, gcal_instance_id, meeting:ceo_meetings(name, time_local, timezone, duration_min, attendees)")
     .eq("id", sessionId).maybeSingle();
   if (!session) throw new Error("Meeting session not found.");
   const meeting = session.meeting as { name: string; time_local: string; timezone: string; duration_min: number; attendees: unknown } | null;
@@ -35,7 +35,9 @@ export async function pushSessionToGoogle(sessionId: string, userId: string): Pr
   const { accessToken: token, error } = await getValidGoogleAccessToken(userId);
   if (error || !token) throw new Error(error?.message ?? "Connect your Google Calendar first (System → Integrations), then try again.");
 
-  const { start, end } = window(String(session.session_date), meeting.time_local ?? "09:00", meeting.duration_min ?? 60);
+  // Prefer the session's own start time; fall back to the meeting's registry time.
+  const sessionTime = (session as { start_time?: string | null }).start_time;
+  const { start, end } = window(String(session.session_date), sessionTime ?? meeting.time_local ?? "09:00", meeting.duration_min ?? 60);
   const attendees = Array.isArray(meeting.attendees)
     ? (meeting.attendees as Array<{ email?: string }>).map((a) => a.email).filter((e): e is string => Boolean(e)).map((email) => ({ email }))
     : [];

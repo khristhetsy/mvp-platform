@@ -11,9 +11,32 @@ import {
 } from "@/lib/assistant/assistant-context";
 import { loadCeoPayload } from "@/lib/ceo/hub-data";
 import { status as ceoKpiStatus, deptScore as ceoDeptScore } from "@/lib/ceo/kpi";
+import { getMeetingOpsSummary } from "@/lib/meetings/summary";
 import type { Profile, Database } from "@/lib/supabase/types";
 
 /** CEO Hub rollup for the Chief-of-Staff assistant mode. Best-effort. */
+async function appendMeetingContext(
+  summary: SanitizedAssistantContext["summary"],
+  highlights: string[],
+): Promise<void> {
+  try {
+    const ops = await getMeetingOpsSummary();
+    summary.meetingOpenTasks = ops.openTasks;
+    summary.meetingAtRiskObjectives = ops.atRiskObjectives;
+    summary.meetingUpcomingEvents = ops.upcomingConferences;
+    if (ops.nextMeeting) {
+      summary.meetingNextReady = ops.nextMeeting.ready;
+      summary.meetingNextTotal = ops.nextMeeting.total;
+      highlights.push(`Next Team meeting (${ops.nextMeeting.name}, ${ops.nextMeeting.date}) is ${ops.nextMeeting.ready}/${ops.nextMeeting.total} sections ready.`);
+    }
+    if (ops.openTasks > 0) highlights.push(`${ops.openTasks} open meeting action item${ops.openTasks === 1 ? "" : "s"}.`);
+    if (ops.atRiskObjectives > 0) highlights.push(`${ops.atRiskObjectives} Plan of Action objective${ops.atRiskObjectives === 1 ? "" : "s"} off track.`);
+    if (ops.upcomingConferences > 0) highlights.push(`${ops.upcomingConferences} upcoming conference/event${ops.upcomingConferences === 1 ? "" : "s"}.`);
+  } catch {
+    /* meeting tables may be empty or unmigrated — assistant still works without them */
+  }
+}
+
 async function appendCeoContext(
   summary: SanitizedAssistantContext["summary"],
   highlights: string[],
@@ -134,6 +157,10 @@ export async function loadAdminAssistantContext(
 
   if (mode === "ceo_hub") {
     await appendCeoContext(summary, highlights);
+  }
+
+  if (mode === "meeting") {
+    await appendMeetingContext(summary, highlights);
   }
 
   const parsedEntity = parseEntityFromPath(currentPath);

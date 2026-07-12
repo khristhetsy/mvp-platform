@@ -35,7 +35,7 @@ async function viewerDepartments(userId: string): Promise<{ deptIds: Set<string>
 export interface Attendee { user_id: string; name: string; status: AttendStatus }
 export interface MeetingSession {
   id: string; meeting_key: string; session_date: string; started_at: string | null;
-  status: string; meeting_name: string; meet_link: string | null;
+  status: string; meeting_name: string; meet_link: string | null; start_time?: string | null;
 }
 export interface MeetingBoard {
   session: MeetingSession | null;
@@ -64,7 +64,7 @@ export async function ensureSessionEntries(sessionId: string, meetingKey: string
 
 export async function loadBoard(sessionId: string, viewer?: Viewer): Promise<MeetingBoard> {
   const { data: sessionRow } = await db().from("ceo_meeting_sessions")
-    .select("id, meeting_key, session_date, started_at, status, meet_link, meeting:ceo_meetings(name)")
+    .select("id, meeting_key, session_date, started_at, status, start_time, meet_link, meeting:ceo_meetings(name)")
     .eq("id", sessionId).maybeSingle();
   if (!sessionRow) return { session: null, sections: [], entries: {}, attendees: [] };
   const meetingKey = String(sessionRow.meeting_key);
@@ -111,6 +111,7 @@ export async function loadBoard(sessionId: string, viewer?: Viewer): Promise<Mee
     session: {
       id: String(sessionRow.id), meeting_key: meetingKey, session_date: String(sessionRow.session_date),
       started_at: startedAt, status,
+      start_time: (sessionRow as { start_time?: string | null }).start_time ?? null,
       meet_link: (sessionRow as { meet_link?: string | null }).meet_link ?? null,
       meeting_name: (sessionRow.meeting as { name?: string } | null)?.name ?? "Meeting",
     },
@@ -176,10 +177,13 @@ export async function listRecentSessions(meetingKey = "mgmt", limit = 20): Promi
 }
 
 /** Create (or return) a session for the given meeting + date. */
-export async function ensureSession(meetingKey: string, sessionDate: string, createdBy: string): Promise<string> {
+export async function ensureSession(meetingKey: string, sessionDate: string, createdBy: string, startTime?: string | null): Promise<string> {
   const { data: existing } = await db().from("ceo_meeting_sessions").select("id").eq("meeting_key", meetingKey).eq("session_date", sessionDate).maybeSingle();
-  if (existing) return String(existing.id);
-  const { data, error } = await db().from("ceo_meeting_sessions").insert({ meeting_key: meetingKey, session_date: sessionDate, created_by: createdBy }).select("id").single();
+  if (existing) {
+    if (startTime) await db().from("ceo_meeting_sessions").update({ start_time: startTime }).eq("id", existing.id);
+    return String(existing.id);
+  }
+  const { data, error } = await db().from("ceo_meeting_sessions").insert({ meeting_key: meetingKey, session_date: sessionDate, start_time: startTime ?? null, created_by: createdBy }).select("id").single();
   if (error) throw new Error(error.message);
   await ensureSessionEntries(String(data.id), meetingKey);
   return String(data.id);

@@ -30,6 +30,7 @@ export function inferAssistantMode(input: {
   if (path.startsWith("/admin/reports")) return "reports_guidance";
 
   // CEO Hub → Chief of Staff
+  if (path.startsWith("/admin/meetings")) return "meeting";
   if (path.startsWith("/admin/ceo")) return "ceo_hub";
 
   // Investor Relations Hub → IR assistant

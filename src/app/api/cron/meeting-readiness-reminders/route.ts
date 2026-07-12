@@ -49,8 +49,8 @@ async function run(): Promise<{ sent: number }> {
           const ok = await sendEmail({
             to: person.email,
             subject: `Meeting prep reminder — ${sec.title}`,
-            html: `<p>Hi ${person.full_name ? String(person.full_name).split(" ")[0] : "there"},</p><p>Your section <strong>${sec.title}</strong> for the ${w.date} management meeting isn't marked ready yet. Please finish your prep in iCapOS.</p><p>iCapOS — Powered by iCFO Capital Global, Inc.</p>`,
-            text: `Reminder: your section "${sec.title}" for the ${w.date} management meeting isn't ready yet.`,
+            html: `<p>Hi ${person.full_name ? String(person.full_name).split(" ")[0] : "there"},</p><p>Your section <strong>${sec.title}</strong> for the ${w.date} team meeting isn't marked ready yet. Please finish your prep in iCapOS.</p><p>iCapOS — Powered by iCFO Capital Global, Inc.</p>`,
+            text: `Reminder: your section "${sec.title}" for the ${w.date} team meeting isn't ready yet.`,
           }).catch(() => false);
           if (ok) sent++;
         }

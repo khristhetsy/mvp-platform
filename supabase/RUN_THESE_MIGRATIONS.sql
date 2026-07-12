@@ -2188,3 +2188,13 @@ create policy org_billing_profile_staff on public.org_billing_profile
   for all to authenticated using (public.is_staff()) with check (public.is_staff());
 
 grant select, insert, update on public.org_billing_profile to service_role;
+
+-- ============================================================
+-- Meetings: rename to Team meeting + per-session start time (migration 20260711017)
+-- ============================================================
+-- Meetings tweaks: rename the weekly management meeting to "Team meeting", and let a
+-- session carry its own start time (the New meeting session picker now offers a time).
+
+update public.ceo_meetings set name = 'Team meeting' where key = 'mgmt' and name = 'Management meeting';
+
+alter table public.ceo_meeting_sessions add column if not exists start_time time;

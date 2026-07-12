@@ -13,7 +13,14 @@ type EntryStatus = "not_started" | "draft" | "ready" | "presented" | "deferred";
 interface Section { id: string; position: number; title: string; department_id: string | null; section_kind: string; is_required: boolean; pinned: string | null }
 interface Entry { id: string; section_id: string; content: string; status: EntryStatus; locked?: boolean }
 interface Attendee { user_id: string; name: string; status: string }
-interface Board { session: { id: string; session_date: string; started_at: string | null; status: string; meeting_name: string; meet_link: string | null } | null; sections: Section[]; entries: Record<string, Entry>; attendees: Attendee[] }
+interface Board { session: { id: string; session_date: string; started_at: string | null; status: string; meeting_name: string; meet_link: string | null; start_time?: string | null } | null; sections: Section[]; entries: Record<string, Entry>; attendees: Attendee[] }
+
+function fmtTime(t?: string | null): string | null {
+  if (!t) return null;
+  const [h, m] = t.split(":");
+  const hr = Number(h); const ampm = hr >= 12 ? "PM" : "AM"; const h12 = hr % 12 || 12;
+  return `${h12}:${m} ${ampm}`;
+}
 
 const STATUS_TONE: Record<string, { bg: string; c: string }> = {
   not_started: { bg: "#F1EFE8", c: "#5F5E5A" }, draft: { bg: "#FAEEDA", c: "#854F0B" },
@@ -56,7 +63,8 @@ export function MeetingBoardClient({ initial, isAdmin = false }: { initial: Boar
         <Link href="/admin/meetings" style={{ fontSize: 12, color: BLUE, textDecoration: "none" }}>← Meetings</Link>
         <h1 style={{ fontSize: 21, fontWeight: 600, color: NAVY, margin: "6px 0 2px" }}>{board.session.meeting_name}</h1>
         <div style={{ fontSize: 12.5, color: MUTED }}>
-          {new Date(`${board.session.session_date}T00:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })} ·{" "}
+          {new Date(`${board.session.session_date}T00:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+          {fmtTime(board.session.start_time) ? ` · ${fmtTime(board.session.start_time)}` : ""} ·{" "}
           {board.session.started_at ? "Live" : "Scheduled"} · Readiness {ready}/{board.sections.length}
         </div>
         <GoogleMeetBar sessionId={sessionId} meetLink={board.session.meet_link} />
