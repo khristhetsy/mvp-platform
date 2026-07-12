@@ -35,6 +35,9 @@ export async function DELETE(
     await requireRole(["admin"]);
     const { id } = await params;
     const db = await marketingDb();
+    // Campaigns reference the list without cascade — detach them first so the
+    // delete doesn't fail on the FK (which would leave the "deleted" list showing).
+    await db.from("marketing_campaigns").update({ list_id: null }).eq("list_id", id);
     const { error } = await db.from("marketing_lists").delete().eq("id", id);
     if (error) throw error;
     return NextResponse.json({ ok: true });

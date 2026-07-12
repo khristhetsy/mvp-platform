@@ -117,3 +117,25 @@ export async function getBillingCustomerDetail(profileId: string): Promise<Billi
 
   return { customer, invoices, statement: { invoicedCents, paidCents, dueCents, currency } };
 }
+
+export interface BillingCustomerPatch { plan_type?: PlanType; subscription_status?: string; current_period_end?: string | null }
+
+/** Edit the LOCAL subscription record (admin correction). Never touches Lemon Squeezy;
+ *  a later webhook may re-sync from LS. Changing the plan resets the displayed price. */
+export async function updateBillingCustomer(profileId: string, patch: BillingCustomerPatch): Promise<void> {
+  const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (patch.plan_type !== undefined) {
+    row.plan_type = patch.plan_type;
+    row.monthly_price_cents = PLAN_PRICES[patch.plan_type] ?? 0;
+  }
+  if (patch.subscription_status !== undefined) row.subscription_status = patch.subscription_status;
+  if (patch.current_period_end !== undefined) row.current_period_end = patch.current_period_end;
+  const { error } = await db().from("subscriptions").update(row).eq("profile_id", profileId);
+  if (error) throw new Error(error.message);
+}
+
+/** Remove the LOCAL subscription record only. Does not cancel/refund anything in LS. */
+export async function deleteBillingCustomer(profileId: string): Promise<void> {
+  const { error } = await db().from("subscriptions").delete().eq("profile_id", profileId);
+  if (error) throw new Error(error.message);
+}

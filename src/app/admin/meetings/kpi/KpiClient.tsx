@@ -12,7 +12,10 @@ interface Rollup { kpi_id: string; label: string; unit: string; actual: number; 
 const shortWeek = (w: string) => { const d = new Date(`${w}T00:00:00`); return `${d.getMonth() + 1}/${d.getDate()}`; };
 
 export function KpiClient({ departments, isAdmin }: { departments: Dept[]; isAdmin: boolean }) {
-  const [dept, setDept] = useState(departments[0]?.id ?? "");
+  // Default to the first non-admin department (that's where seeded KPIs live);
+  // Admin has no KPI definitions so it would otherwise open on an empty grid.
+  const defaultDept = (departments.find((d) => d.name.toLowerCase() !== "admin") ?? departments[0])?.id ?? "";
+  const [dept, setDept] = useState(defaultDept);
   const [tab, setTab] = useState<"input" | Period>("input");
 
   return (

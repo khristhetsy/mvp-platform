@@ -2,12 +2,25 @@
 
 import Link from "next/link";
 import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/ui/format-display";
+import { confirmDialog } from "@/components/ui/ConfirmDialog";
 
 const navy = "#0A1A40", blue = "#1A6CE4";
 
+const PLAN_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "founder_trial", label: "Founder Trial" },
+  { value: "founder_basic", label: "Founder Pro" },
+  { value: "founder_professional", label: "Founder Premium" },
+  { value: "investor_free", label: "Investor Free" },
+  { value: "investor_pro", label: "Investor Pro" },
+  { value: "investor_premium", label: "Investor Premium" },
+  { value: "admin_internal", label: "Admin Internal" },
+];
+const STATUS_OPTIONS = ["active", "trialing", "past_due", "cancelled", "expired", "paused"];
+
 interface Customer {
-  profileId: string; name: string; email: string; planLabel: string; status: string;
+  profileId: string; name: string; email: string; planType: string; planLabel: string; status: string;
   priceCents: number; currency: string; currentPeriodEnd: string | null; lsCustomerId: string | null; lsSubscriptionId: string | null;
 }
 interface Invoice { id: string; total: number; totalFormatted: string; currency: string; status: string; refunded: boolean; createdAt: string; invoiceUrl: string | null }
@@ -46,11 +59,46 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 export function BillingCustomerProfile({ detail }: { detail: Detail }) {
+  const router = useRouter();
   const c = detail.customer;
   const [coPlan, setCoPlan] = useState<"founder_basic" | "founder_professional">("founder_basic");
   const [coBusy, setCoBusy] = useState<null | "link" | "email">(null);
   const [coUrl, setCoUrl] = useState<string | null>(null);
   const [coMsg, setCoMsg] = useState<string | null>(null);
+
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [editMsg, setEditMsg] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    plan_type: c?.planType ?? "founder_trial",
+    subscription_status: c?.status ?? "trialing",
+    current_period_end: c?.currentPeriodEnd ? c.currentPeriodEnd.slice(0, 10) : "",
+  });
+
+  const saveEdit = useCallback(async () => {
+    if (!c) return;
+    setBusy(true); setEditMsg(null);
+    try {
+      const r = await fetch(`/api/admin/billing/customers/${c.profileId}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan_type: form.plan_type, subscription_status: form.subscription_status, current_period_end: form.current_period_end || null }),
+      });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); setEditMsg(typeof d.error === "string" ? d.error : "Failed to save."); return; }
+      setEditing(false); router.refresh();
+    } catch { setEditMsg("Failed to save."); }
+    finally { setBusy(false); }
+  }, [c, form, router]);
+
+  const removeCustomer = useCallback(async () => {
+    if (!c) return;
+    if (!(await confirmDialog({ message: "Delete this local billing record? This removes it here only — it does not cancel or refund anything in Lemon Squeezy.", danger: true, confirmLabel: "Delete" }))) return;
+    setBusy(true);
+    try {
+      const r = await fetch(`/api/admin/billing/customers/${c.profileId}`, { method: "DELETE" });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); setEditMsg(typeof d.error === "string" ? d.error : "Failed to delete."); setBusy(false); return; }
+      router.push("/admin/billing");
+    } catch { setEditMsg("Failed to delete."); setBusy(false); }
+  }, [c, router]);
 
   const createCheckout = useCallback(async (send: boolean) => {
     if (!c) return;
@@ -87,11 +135,43 @@ export function BillingCustomerProfile({ detail }: { detail: Detail }) {
       <div style={{ background: "#fff", border: "0.5px solid #E4E8F0", borderRadius: 12, padding: "16px 18px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#E6F1FB", color: "#185FA5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 600 }}>{initials(c.name)}</div>
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span style={{ fontSize: 17, fontWeight: 600, color: navy }}>{c.name}</span>{statusPill(c.status)}</div>
             <div style={{ fontSize: 12.5, color: "#6B7690" }}>{c.planLabel} · {c.email}</div>
           </div>
+          {!editing && (
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => { setEditMsg(null); setEditing(true); }} disabled={busy} style={btn("#EEF3FC", blue)}><i className="ti ti-edit" aria-hidden="true" /> Edit</button>
+              <button onClick={() => void removeCustomer()} disabled={busy} style={btn("#FCEBEB", "#A32D2D")}><i className="ti ti-trash" aria-hidden="true" /> Delete</button>
+            </div>
+          )}
         </div>
+
+        {editing && (
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: "0.5px solid #F1F4F9" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+              <label style={{ fontSize: 11.5, color: "#6B7690" }}>Plan
+                <select value={form.plan_type} onChange={(e) => setForm((f) => ({ ...f, plan_type: e.target.value }))} style={{ display: "block", width: "100%", fontSize: 12.5, padding: "7px 9px", borderRadius: 8, border: "1px solid #E4E8F0", marginTop: 4 }}>
+                  {PLAN_OPTIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                </select>
+              </label>
+              <label style={{ fontSize: 11.5, color: "#6B7690" }}>Status
+                <select value={form.subscription_status} onChange={(e) => setForm((f) => ({ ...f, subscription_status: e.target.value }))} style={{ display: "block", width: "100%", fontSize: 12.5, padding: "7px 9px", borderRadius: 8, border: "1px solid #E4E8F0", marginTop: 4 }}>
+                  {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </label>
+              <label style={{ fontSize: 11.5, color: "#6B7690" }}>Renews
+                <input type="date" value={form.current_period_end} onChange={(e) => setForm((f) => ({ ...f, current_period_end: e.target.value }))} style={{ display: "block", width: "100%", fontSize: 12.5, padding: "6px 9px", borderRadius: 8, border: "1px solid #E4E8F0", marginTop: 4 }} />
+              </label>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
+              <button onClick={() => void saveEdit()} disabled={busy} style={btn(navy, "#fff")}>{busy ? "Saving…" : "Save changes"}</button>
+              <button onClick={() => { setEditing(false); setEditMsg(null); }} disabled={busy} style={btn("#F1EFE8", navy)}>Cancel</button>
+              <span style={{ fontSize: 10.5, color: "#98A2B3" }}>Edits the local record only — never charges or refunds in Lemon Squeezy.</span>
+            </div>
+          </div>
+        )}
+        {editMsg && <div style={{ fontSize: 11.5, color: "#A32D2D", marginTop: 8 }}>{editMsg}</div>}
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "0 40px", marginTop: 16 }}>
           <div>

@@ -174,14 +174,29 @@ export async function setAttendance(sessionId: string, userId: string, status: A
 /** Recent sessions of the management meeting (for the meetings list). */
 export async function listRecentSessions(meetingKey = "mgmt", limit = 20): Promise<MeetingSession[]> {
   const { data } = await db().from("ceo_meeting_sessions")
-    .select("id, meeting_key, session_date, started_at, meet_link, meeting:ceo_meetings(name)")
+    .select("id, meeting_key, session_date, started_at, status, meet_link, meeting:ceo_meetings(name)")
     .eq("meeting_key", meetingKey).order("session_date", { ascending: false }).limit(limit);
   return ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
     id: String(r.id), meeting_key: String(r.meeting_key), session_date: String(r.session_date),
-    started_at: (r.started_at as string) ?? null, status: r.started_at ? "live" : "scheduled",
+    started_at: (r.started_at as string) ?? null,
+    status: (r.status as string) ?? (r.started_at ? "live" : "scheduled"),
     meet_link: (r.meet_link as string) ?? null,
     meeting_name: (r.meeting as { name?: string } | null)?.name ?? "Meeting",
   }));
+}
+
+/** Set a session's lifecycle status. Marking it live also stamps started_at. */
+export async function setSessionStatus(sessionId: string, status: "scheduled" | "live" | "closed"): Promise<void> {
+  const patch: Record<string, unknown> = { status };
+  if (status === "live") patch.started_at = new Date().toISOString();
+  const { error } = await db().from("ceo_meeting_sessions").update(patch).eq("id", sessionId);
+  if (error) throw new Error(error.message);
+}
+
+/** Delete a session. All child rows (entries, attendees, tasks, AI, versions) cascade. */
+export async function deleteSession(sessionId: string): Promise<void> {
+  const { error } = await db().from("ceo_meeting_sessions").delete().eq("id", sessionId);
+  if (error) throw new Error(error.message);
 }
 
 /** Create (or return) a session for the given meeting + date. */
