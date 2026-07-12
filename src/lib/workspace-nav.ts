@@ -21,18 +21,27 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     items: [
       { href: "/admin", label: "Dashboard", requiredPermission: "view_admin_dashboard" },
+    ],
+  },
+  {
+    title: "Executive",
+    items: [
       { href: "/admin/ceo", label: "CEO Hub", requiredPermission: "view_admin_dashboard" },
+    ],
+  },
+  {
+    title: "Sales",
+    items: [
       {
-        href: "/admin/meetings",
-        label: "Meetings",
-        requiredPermission: "view_admin_dashboard",
+        href: "/admin/sales",
+        label: "Sales Hub",
+        requiredPermission: "manage_crm",
         children: [
-          { href: "/admin/meetings",              label: "Meetings"        },
-          { href: "/admin/meetings/kpi",          label: "KPI Dashboard"   },
-          { href: "/admin/meetings/plan",         label: "Plan of Action"  },
-          { href: "/admin/meetings/conferences",  label: "Events"          },
-          { href: "/admin/meetings/onboarding",   label: "Client Onboarding" },
-          { href: "/admin/meetings/campaigns",    label: "Campaigns & ROMI" },
+          { href: "/admin/sales",               label: "Dashboard"     },
+          { href: "/admin/sales/contacts",      label: "Contacts"      },
+          { href: "/admin/sales/opportunities", label: "Opportunities" },
+          { href: "/admin/sales/pipeline",      label: "Pipeline"      },
+          { href: "/admin/sales/settings",      label: "Settings"      },
         ],
       },
     ],
@@ -90,18 +99,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/marketing/aeo",                 label: "AEO"          },
           { href: "/admin/marketing/suppressions",        label: "Suppressions" },
           { href: "/admin/marketing/settings/notifications", label: "Settings"  },
-        ],
-      },
-      {
-        href: "/admin/sales",
-        label: "Sales Hub",
-        requiredPermission: "manage_crm",
-        children: [
-          { href: "/admin/sales",               label: "Dashboard"     },
-          { href: "/admin/sales/contacts",      label: "Contacts"      },
-          { href: "/admin/sales/opportunities", label: "Opportunities" },
-          { href: "/admin/sales/pipeline",      label: "Pipeline"      },
-          { href: "/admin/sales/settings",      label: "Settings"      },
         ],
       },
     ],
@@ -166,11 +163,25 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/voice/calls",            label: "Voice Call Review"    },
         ],
       },
+      { href: "/admin/diligence",         label: "Diligence Review", requiredPermission: "manage_diligence"     },
     ],
   },
   {
     title: "Documents & Comms",
     items: [
+      {
+        href: "/admin/meetings",
+        label: "Meetings",
+        requiredPermission: "view_admin_dashboard",
+        children: [
+          { href: "/admin/meetings",              label: "Meetings"        },
+          { href: "/admin/meetings/kpi",          label: "KPI Dashboard"   },
+          { href: "/admin/meetings/plan",         label: "Plan of Action"  },
+          { href: "/admin/meetings/conferences",  label: "Events"          },
+          { href: "/admin/meetings/onboarding",   label: "Client Onboarding" },
+          { href: "/admin/meetings/campaigns",    label: "Campaigns & ROMI" },
+        ],
+      },
       { href: "/admin/inbox",     label: "Inbox",        requiredPermission: "view_admin_dashboard" },
       {
         href: "/admin/calendar",
@@ -183,7 +194,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         ],
       },
       { href: "/admin/signatures",        label: "E-Signatures",     requiredPermission: "review_documents"     },
-      { href: "/admin/diligence",         label: "Diligence Review", requiredPermission: "manage_diligence"     },
     ],
   },
   {
