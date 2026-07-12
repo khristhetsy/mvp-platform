@@ -41,6 +41,12 @@ export function interpolate(text: string, vars: Record<string, string>): string 
 }
 
 /** Minimal HTML→text so every email carries a real plain-text part (deliverability). */
+// Remove HTML comments (including template author notes and IE conditional comments)
+// so they can't render as visible text in the delivered email.
+export function stripHtmlComments(html: string): string {
+  return html.replace(/<!--[\s\S]*?-->/g, "");
+}
+
 export function htmlToText(html: string): string {
   return html
     .replace(/<style[\s\S]*?<\/style>/gi, "")
@@ -84,7 +90,9 @@ export async function sendMarketingEmail(
   };
 
   const subject = interpolate(input.subject, vars);
-  const htmlBody = interpolate(input.html_body, vars);
+  // Strip HTML comments so template authoring notes (e.g. "<!-- to add more; delete to
+  // remove … -->") never leak into the delivered email.
+  const htmlBody = stripHtmlComments(interpolate(input.html_body, vars));
   // Always send a plain-text alternative — derive one from the HTML if none was
   // authored. Missing text parts are a real spam signal.
   const textBody = input.text_body ? interpolate(input.text_body, vars) : htmlToText(htmlBody);
