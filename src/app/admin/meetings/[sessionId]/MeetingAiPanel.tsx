@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-const NAVY = "#E8EDF7", BLUE = "#8FB4FF", MUTED = "#7C8DB5", CARD = "#0C142E", PANEL = "#0A1128", CHIP = "#132146";
+const NAVY = "#0A1A40", BLUE = "#1A6CE4", MUTED = "var(--muted-foreground)";
 
 interface Brief { narrative: string; focus_points: string[]; risks: string[]; model: string | null; cached: boolean }
 interface Suggestion { id: string; title: string; rationale: string | null; department_name: string | null; suggested_due: string | null }
@@ -55,13 +55,13 @@ export function MeetingAiPanel({ sessionId, onTaskCreated }: { sessionId: string
   };
 
   return (
-    <div style={{ background: "#0E1A3E", border: "0.5px solid rgba(90,140,239,.35)", borderRadius: 12, padding: 14, marginBottom: 14 }}>
+    <div style={{ background: "linear-gradient(180deg,#F7FAFF,#fff)", border: "0.5px solid #D6E4F7", borderRadius: 12, padding: 14, marginBottom: 14 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: BLUE }}>✦ AI Chief-of-Staff</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#185FA5" }}>✦ AI Chief-of-Staff</span>
         {brief?.model === null && brief && <span style={{ fontSize: 10, color: MUTED }}>heuristic</span>}
         <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-          <button onClick={() => void genBrief(!!brief)} disabled={briefBusy} style={btn("#2E6BFF", "#fff")}>{briefBusy ? "Thinking…" : brief ? "Refresh brief" : "Generate brief"}</button>
-          <button onClick={() => void genSuggestions()} disabled={sugBusy} style={btn(CHIP, BLUE)}>{sugBusy ? "Analyzing…" : "Suggest actions"}</button>
+          <button onClick={() => void genBrief(!!brief)} disabled={briefBusy} style={btn(BLUE, "#fff")}>{briefBusy ? "Thinking…" : brief ? "Refresh brief" : "Generate brief"}</button>
+          <button onClick={() => void genSuggestions()} disabled={sugBusy} style={btn("#E6F1FB", BLUE)}>{sugBusy ? "Analyzing…" : "Suggest actions"}</button>
         </div>
       </div>
 
@@ -90,14 +90,14 @@ export function MeetingAiPanel({ sessionId, onTaskCreated }: { sessionId: string
           <div style={{ fontSize: 10.5, fontWeight: 700, color: MUTED, textTransform: "uppercase", marginBottom: 6 }}>Suggested actions · {suggestions.length}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {suggestions.map((s) => (
-              <div key={s.id} style={{ background: CARD, border: "0.5px solid rgba(255,255,255,.10)", borderRadius: 9, padding: "8px 11px" }}>
+              <div key={s.id} style={{ background: "#fff", border: "0.5px solid var(--border)", borderRadius: 9, padding: "8px 11px" }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 12.5, fontWeight: 500, color: NAVY }}>{s.title}</div>
                     {s.rationale && <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{s.rationale}</div>}
                   </div>
                   <button onClick={() => void resolve(s.id, "confirm")} style={btn("#E1F5EE", "#0F6E56")}>Confirm → task</button>
-                  <button onClick={() => void resolve(s.id, "dismiss")} style={{ ...btn("transparent", MUTED), border: "0.5px solid rgba(255,255,255,.10)" }}>Dismiss</button>
+                  <button onClick={() => void resolve(s.id, "dismiss")} style={{ ...btn("transparent", MUTED), border: "0.5px solid var(--border)" }}>Dismiss</button>
                 </div>
               </div>
             ))}
