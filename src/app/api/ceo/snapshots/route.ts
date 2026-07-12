@@ -7,8 +7,9 @@ export const dynamic = "force-dynamic";
 // POST /api/ceo/snapshots — manually recompute the weekly KPI snapshots (admin).
 // Body: { week?: "YYYY-MM-DD" (Monday) }. The scheduled cron reuses computeWeekSnapshots.
 export async function POST(req: NextRequest): Promise<Response> {
+  // Auth outside the try so requireRole's redirect (NEXT_REDIRECT) isn't swallowed into a 500.
+  await requireRole(["admin"]);
   try {
-    await requireRole(["admin"]);
     const body = (await req.json().catch(() => ({}))) as { week?: string };
     const week = typeof body.week === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.week) ? body.week : undefined;
     const result = await computeWeekSnapshots(week);
