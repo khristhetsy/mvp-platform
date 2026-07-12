@@ -64,7 +64,7 @@ export async function ensureSessionEntries(sessionId: string, meetingKey: string
 
 export async function loadBoard(sessionId: string, viewer?: Viewer): Promise<MeetingBoard> {
   const { data: sessionRow } = await db().from("ceo_meeting_sessions")
-    .select("id, meeting_key, session_date, started_at, status, start_time, meet_link, meeting:ceo_meetings(name)")
+    .select("id, meeting_key, session_date, started_at, status, meet_link, meeting:ceo_meetings(name)")
     .eq("id", sessionId).maybeSingle();
   if (!sessionRow) return { session: null, sections: [], entries: {}, attendees: [] };
   const meetingKey = String(sessionRow.meeting_key);
@@ -98,6 +98,14 @@ export async function loadBoard(sessionId: string, viewer?: Viewer): Promise<Mee
     }
   }
 
+  // start_time lives in migration 20260711017; fetch best-effort so the board still
+  // loads if that migration hasn't been applied yet (missing column → null, no throw).
+  let startTime: string | null = null;
+  try {
+    const { data: st } = await db().from("ceo_meeting_sessions").select("start_time").eq("id", sessionId).maybeSingle();
+    startTime = (st as { start_time?: string | null } | null)?.start_time ?? null;
+  } catch { /* column not migrated yet */ }
+
   const attRaw = (attRows ?? []) as Array<{ user_id: string; status: AttendStatus }>;
   const ids = attRaw.map((a) => a.user_id);
   const names = new Map<string, string>();
@@ -111,7 +119,7 @@ export async function loadBoard(sessionId: string, viewer?: Viewer): Promise<Mee
     session: {
       id: String(sessionRow.id), meeting_key: meetingKey, session_date: String(sessionRow.session_date),
       started_at: startedAt, status,
-      start_time: (sessionRow as { start_time?: string | null }).start_time ?? null,
+      start_time: startTime,
       meet_link: (sessionRow as { meet_link?: string | null }).meet_link ?? null,
       meeting_name: (sessionRow.meeting as { name?: string } | null)?.name ?? "Meeting",
     },
