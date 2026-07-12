@@ -75,6 +75,43 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
     from_email: "outreach@icapos.com",
   });
 
+  // Editing an existing step.
+  const [editingStep, setEditingStep] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ template_id: "", condition: "always", delay_days: "0" });
+
+  function startEditStep(step: { id: string; template_id?: string | null; condition?: string | null; delay_days?: number | null }) {
+    setEditingStep(step.id);
+    setEditForm({
+      template_id: step.template_id ?? templates[0]?.id ?? "",
+      condition: step.condition ?? "always",
+      delay_days: String(step.delay_days ?? 0),
+    });
+  }
+  async function handleUpdateStep(stepId: string) {
+    try {
+      await fetch("/api/marketing/sequences/steps", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ step_id: stepId, ...editForm, delay_days: Number(editForm.delay_days) }),
+      });
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to update sequence step:", err);
+    } finally {
+      setEditingStep(null);
+    }
+  }
+  async function handleDeleteStep(stepId: string) {
+    try {
+      await fetch(`/api/marketing/sequences/steps?step_id=${stepId}`, { method: "DELETE" });
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to delete sequence step:", err);
+    } finally {
+      setEditingStep(null);
+    }
+  }
+
   async function handleCreateSequence() {
     if (!newName.trim()) return;
     setSaving(true);
@@ -188,14 +225,54 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
                       </div>
                       {i < steps.length - 1 && <div style={{ width: 1, height: 12, background: "var(--border)", margin: "3px 0" }} />}
                     </div>
-                    <div style={{ flex: 1, background: "var(--muted)", borderRadius: 8, padding: "8px 12px" }}>
-                      <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 2 }}>
-                        Day {step.delay_days} · {conditionLabels[step.condition]}
+                    {editingStep === step.id ? (
+                      <div style={{ flex: 1, background: "var(--muted)", borderRadius: 8, padding: "10px 12px" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                          <div>
+                            <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 3 }}>Template</label>
+                            <select value={editForm.template_id} onChange={(e) => setEditForm({ ...editForm, template_id: e.target.value })}
+                              style={{ width: "100%", fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }}>
+                              {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 3 }}>Condition</label>
+                            <select value={editForm.condition} onChange={(e) => setEditForm({ ...editForm, condition: e.target.value })}
+                              style={{ width: "100%", fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }}>
+                              {selectableConditions.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 3 }}>Delay (days)</label>
+                            <input type="number" min="0" value={editForm.delay_days} onChange={(e) => setEditForm({ ...editForm, delay_days: e.target.value })}
+                              style={{ width: "100%", fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }} />
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <button onClick={() => handleUpdateStep(step.id)}
+                            style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>Save</button>
+                          <button onClick={() => setEditingStep(null)}
+                            style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>Cancel</button>
+                          <button onClick={() => handleDeleteStep(step.id)}
+                            style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "none", background: "transparent", cursor: "pointer", color: "#A32D2D", marginLeft: "auto" }}>Delete</button>
+                        </div>
                       </div>
-                      <div style={{ fontSize: 13, color: "var(--foreground)" }}>
-                        {(step.template as { name?: string } | null)?.name ?? "No template"}
+                    ) : (
+                      <div style={{ flex: 1, background: "var(--muted)", borderRadius: 8, padding: "8px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 2 }}>
+                            Day {step.delay_days} · {conditionLabels[step.condition]}
+                          </div>
+                          <div style={{ fontSize: 13, color: "var(--foreground)" }}>
+                            {(step.template as { name?: string } | null)?.name ?? "No template"}
+                          </div>
+                        </div>
+                        <button onClick={() => startEditStep(step)} aria-label="Edit step"
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4, borderRadius: 6, flexShrink: 0 }}>
+                          <i className="ti ti-edit" style={{ fontSize: 15 }} aria-hidden="true" />
+                        </button>
                       </div>
-                    </div>
+                    )}
                   </div>
                 ))}
 

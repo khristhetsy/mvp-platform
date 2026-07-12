@@ -75,6 +75,27 @@ export async function addSequenceStep(
   return data as MarketingSequenceStep;
 }
 
+export async function updateSequenceStep(
+  stepId: string,
+  patch: Partial<Pick<MarketingSequenceStep, "template_id" | "condition" | "delay_days" | "from_name" | "from_email" | "step_order">>,
+): Promise<MarketingSequenceStep> {
+  const db = await marketingDb();
+  const { data, error } = await db
+    .from("marketing_sequence_steps")
+    .update(patch)
+    .eq("id", stepId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as MarketingSequenceStep;
+}
+
+export async function deleteSequenceStep(stepId: string): Promise<void> {
+  const db = await marketingDb();
+  const { error } = await db.from("marketing_sequence_steps").delete().eq("id", stepId);
+  if (error) throw error;
+}
+
 export async function enrollContact(
   sequenceId: string,
   contactId: string
