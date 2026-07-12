@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Mail, Send, Plus, X, RefreshCw, Trash2, MailOpen, ArrowLeft, Search, Inbox as InboxIcon, FileText, Layers, AlertTriangle, RotateCcw, Paperclip, Reply, ReplyAll, Forward, ChevronDown } from "lucide-react";
+import { Mail, Send, Plus, X, RefreshCw, Trash2, MailOpen, ArrowLeft, Search, Inbox as InboxIcon, FileText, Layers, AlertTriangle, RotateCcw, Paperclip, Reply, ReplyAll, Forward, ChevronDown, Users } from "lucide-react";
+import { SalesContactsClient } from "@/app/admin/sales/contacts/SalesContactsClient";
 import type { ThreadListItem, EmailMessage, MailFolder, EmailAttachment } from "@/lib/email/inbox";
 import type { EmailDraft } from "@/lib/email/drafts";
 import { buildPrefill, type ComposeMode, type ComposePrefill } from "@/lib/email/compose-prefill";
@@ -12,7 +13,7 @@ import { SenderHeader } from "./SenderHeader";
 import { EmailBody } from "./EmailBody";
 import { ListRowsSkeleton } from "@/components/ui/Skeleton";
 
-type FolderId = MailFolder | "drafts";
+type FolderId = MailFolder | "drafts" | "contacts";
 
 /** All platform mail is sent over TLS (Resend) — shown in the contact card. */
 const TLS_SECURITY = "Standard encryption (TLS)";
@@ -23,13 +24,14 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-const FOLDERS: Array<{ id: MailFolder | "drafts" | "spam"; label: string; icon: typeof Mail; soon?: boolean }> = [
+const FOLDERS: Array<{ id: MailFolder | "drafts" | "spam" | "contacts"; label: string; icon: typeof Mail; soon?: boolean }> = [
   { id: "inbox", label: "Inbox", icon: InboxIcon },
   { id: "sent", label: "Sent", icon: Send },
   { id: "drafts", label: "Drafts", icon: FileText },
   { id: "all", label: "All Mail", icon: Layers },
   { id: "spam", label: "Spam", icon: AlertTriangle },
   { id: "trash", label: "Trash", icon: Trash2 },
+  { id: "contacts", label: "Contacts", icon: Users },
 ];
 
 function when(ts: string): string {
@@ -135,6 +137,7 @@ export function EmailInbox() {
 
   const loadThreads = useCallback(async () => {
     void loadCounts();
+    if (folder === "contacts") { setThreads([]); setLoading(false); return; }
     if (folder === "drafts") { setLoading(true); await loadDrafts(); setLoading(false); return; }
     setLoading(true);
     try {
@@ -501,7 +504,12 @@ export function EmailInbox() {
         </aside>
 
         <div className="min-w-0 space-y-3">
-      {active ? (
+      {folder === "contacts" ? (
+        /* ── Contacts (shared CRM contacts, Sales-Hub grouped list) ── */
+        <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
+          <SalesContactsClient />
+        </div>
+      ) : active ? (
         /* ── Conversation view ── */
         <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[var(--shadow-panel)]">
           <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">

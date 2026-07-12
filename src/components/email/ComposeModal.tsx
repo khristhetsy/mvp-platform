@@ -30,6 +30,18 @@ function formatSize(bytes: number): string {
 function escapeText(t: string): string {
   return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
+
+// The recipient the user is currently typing (text after the last comma).
+function currentRecipientToken(value: string): string {
+  const parts = value.split(",");
+  return (parts[parts.length - 1] ?? "").trim();
+}
+// Replace that in-progress token with a chosen email, ready for the next recipient.
+function replaceLastRecipient(value: string, email: string): string {
+  const parts = value.split(",");
+  parts[parts.length - 1] = ` ${email}`;
+  return `${parts.join(",").trim()}, `;
+}
 function textToHtml(t: string): string {
   return escapeText(t).replace(/\n/g, "<br/>");
 }
@@ -88,6 +100,14 @@ export function ComposeModal({
 
   // Marketing templates for the quick-insert picker.
   const [templates, setTemplates] = useState<Array<{ id: string; name: string; subject: string; html_body: string }>>([]);
+  const [tplMenuOpen, setTplMenuOpen] = useState(false);
+  const [tplQuery, setTplQuery] = useState("");
+
+  // Recipient autocomplete (To field) over shared CRM contacts.
+  const [toSug, setToSug] = useState<Array<{ name: string; email: string }>>([]);
+  const [toMenuOpen, setToMenuOpen] = useState(false);
+  const [toActive, setToActive] = useState(0);
+  const toTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // AI writing assistant
   const [aiOpen, setAiOpen] = useState(false);
@@ -233,7 +253,42 @@ export function ComposeModal({
     el.innerHTML = tpl.html_body || "";
     ensureSignature();
     setDirty(true);
+    setTplMenuOpen(false);
+    setTplQuery("");
   }, [templates, ensureSignature]);
+
+  const visibleTemplates = useMemo(() => {
+    const q = tplQuery.trim().toLowerCase();
+    if (!q) return templates;
+    return templates.filter((t) => t.name.toLowerCase().includes(q) || (t.subject ?? "").toLowerCase().includes(q));
+  }, [templates, tplQuery]);
+
+  // Recipient autocomplete: fetch matches for the token being typed (debounced).
+  const handleToChange = useCallback((value: string) => {
+    setDirty(true);
+    setTo(value);
+    const token = currentRecipientToken(value);
+    if (toTimer.current) clearTimeout(toTimer.current);
+    if (token.length < 1) { setToMenuOpen(false); setToSug([]); return; }
+    toTimer.current = setTimeout(() => {
+      void fetch(`/api/admin/contacts/search?q=${encodeURIComponent(token)}`)
+        .then((r) => (r.ok ? r.json() : { contacts: [] }))
+        .then((d) => {
+          const list = Array.isArray(d.contacts) ? d.contacts : [];
+          setToSug(list);
+          setToActive(0);
+          setToMenuOpen(list.length > 0);
+        })
+        .catch(() => { setToMenuOpen(false); });
+    }, 160);
+  }, []);
+
+  const pickRecipient = useCallback((email: string) => {
+    setTo((prev) => replaceLastRecipient(prev, email));
+    setToMenuOpen(false);
+    setToSug([]);
+    setDirty(true);
+  }, []);
 
   const runAi = useCallback(async (mode: "draft" | "rewrite", action?: string) => {
     setAiBusy(action ?? mode);
@@ -318,13 +373,43 @@ export function ComposeModal({
           {error ? <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{error}</p> : null}
 
           <div className="flex items-center gap-2">
-            <input
-              value={to}
-              onChange={(e) => onField(setTo)(e.target.value)}
-              placeholder={t("to")}
-              aria-label="To"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none"
-            />
+            <div className="relative w-full">
+              <input
+                value={to}
+                onChange={(e) => handleToChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (!toMenuOpen || toSug.length === 0) return;
+                  if (e.key === "ArrowDown") { e.preventDefault(); setToActive((i) => (i + 1) % toSug.length); }
+                  else if (e.key === "ArrowUp") { e.preventDefault(); setToActive((i) => (i - 1 + toSug.length) % toSug.length); }
+                  else if (e.key === "Enter") { e.preventDefault(); pickRecipient(toSug[toActive].email); }
+                  else if (e.key === "Escape") { setToMenuOpen(false); }
+                }}
+                onBlur={() => setTimeout(() => setToMenuOpen(false), 120)}
+                placeholder={t("to")}
+                aria-label="To"
+                autoComplete="off"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none"
+              />
+              {toMenuOpen && toSug.length > 0 ? (
+                <div className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+                  {toSug.map((c, i) => (
+                    <button
+                      key={c.email}
+                      type="button"
+                      onMouseDown={(e) => { e.preventDefault(); pickRecipient(c.email); }}
+                      onMouseEnter={() => setToActive(i)}
+                      className={`flex w-full items-center gap-3 px-3 py-2 text-left ${i === toActive ? "bg-blue-50" : "hover:bg-slate-50"}`}
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--blue)] text-xs font-medium text-white">{(c.name || c.email).charAt(0).toUpperCase()}</span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-slate-800">{c.name}</span>
+                        <span className="block truncate text-xs text-slate-500">{c.email}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
             {!showCc ? (
               <button type="button" onClick={() => setShowCc(true)} className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100">{t("cc_bcc")}</button>
             ) : null}
@@ -335,18 +420,6 @@ export function ComposeModal({
               <input value={cc} onChange={(e) => onField(setCc)(e.target.value)} placeholder={t("cc")} aria-label="Cc" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
               <input value={bcc} onChange={(e) => onField(setBcc)(e.target.value)} placeholder={t("bcc")} aria-label="Bcc" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
             </>
-          ) : null}
-
-          {templates.length > 0 ? (
-            <select
-              aria-label="Insert template"
-              defaultValue=""
-              onChange={(e) => { if (e.target.value) applyTemplate(e.target.value); e.currentTarget.selectedIndex = 0; }}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 focus:border-[var(--blue)] focus:outline-none"
-            >
-              <option value="">Insert template…</option>
-              {templates.map((tpl) => <option key={tpl.id} value={tpl.id}>{tpl.name}</option>)}
-            </select>
           ) : null}
 
           <input value={subject} onChange={(e) => onField(setSubject)(e.target.value)} placeholder={t("subject")} aria-label="Subject" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-[var(--blue)] focus:outline-none" />
@@ -466,6 +539,52 @@ export function ComposeModal({
           >
             <PenLine className="h-4 w-4" /> Signature
           </button>
+          {templates.length > 0 ? (
+            <div className="relative">
+              <button
+                type="button"
+                aria-pressed={tplMenuOpen}
+                title="Insert a marketing template"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setTplMenuOpen((v) => !v)}
+                className={`inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs font-medium ${tplMenuOpen ? "bg-blue-50 text-[var(--blue)]" : "text-slate-600 hover:bg-slate-100"}`}
+              >
+                <FileText className="h-4 w-4" /> Template
+              </button>
+              {tplMenuOpen ? (
+                <div className="absolute bottom-full left-0 z-20 mb-2 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl">
+                  <div className="border-b border-slate-100 p-2">
+                    <input
+                      value={tplQuery}
+                      onChange={(e) => setTplQuery(e.target.value)}
+                      placeholder="Search templates…"
+                      autoFocus
+                      className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-xs focus:border-[var(--blue)] focus:outline-none"
+                    />
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {visibleTemplates.length === 0 ? (
+                      <div className="px-3 py-4 text-center text-xs text-slate-400">No templates match.</div>
+                    ) : visibleTemplates.map((tpl) => (
+                      <button
+                        key={tpl.id}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => applyTemplate(tpl.id)}
+                        className="flex w-full items-start gap-2 px-3 py-2 text-left hover:bg-slate-50"
+                      >
+                        <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                        <span className="min-w-0">
+                          <span className="block truncate text-xs font-medium text-slate-800">{tpl.name}</span>
+                          {tpl.subject ? <span className="block truncate text-[11px] text-slate-500">{tpl.subject}</span> : null}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {/* Footer */}
