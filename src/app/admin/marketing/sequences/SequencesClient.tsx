@@ -44,23 +44,27 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
   const [addingStep, setAddingStep] = useState<string | null>(null);
-  const [enrollListId, setEnrollListId] = useState(lists[0]?.id ?? "");
-  const [enrollMsg, setEnrollMsg] = useState<string | null>(null);
+  // Per-sequence enroll-list selection + message, keyed by sequence id, so choosing
+  // a list on one sequence never changes another's.
+  const [enrollListId, setEnrollListId] = useState<Record<string, string>>({});
+  const [enrollMsg, setEnrollMsg] = useState<Record<string, string>>({});
+  const listForSeq = (sequenceId: string) => enrollListId[sequenceId] ?? lists[0]?.id ?? "";
 
   async function handleEnrollList(sequenceId: string) {
-    if (!enrollListId) return;
-    setEnrollMsg(null);
+    const listId = listForSeq(sequenceId);
+    if (!listId) return;
+    setEnrollMsg((m) => { const n = { ...m }; delete n[sequenceId]; return n; });
     try {
       const res = await fetch("/api/marketing/sequences/enroll-list", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sequence_id: sequenceId, list_id: enrollListId }),
+        body: JSON.stringify({ sequence_id: sequenceId, list_id: listId }),
       });
       const data = await res.json();
-      setEnrollMsg(res.ok ? `Enrolled ${data.enrolled ?? 0} contacts` : data.error ?? "Failed to enroll");
+      setEnrollMsg((m) => ({ ...m, [sequenceId]: res.ok ? `Enrolled ${data.enrolled ?? 0} contacts` : data.error ?? "Failed to enroll" }));
       router.refresh();
     } catch {
-      setEnrollMsg("Failed to enroll list");
+      setEnrollMsg((m) => ({ ...m, [sequenceId]: "Failed to enroll list" }));
     }
   }
   const [stepForm, setStepForm] = useState({
@@ -267,8 +271,8 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
                 {steps.length > 0 ? (
                   <div style={{ display: "flex", gap: 6, marginTop: 10, alignItems: "center" }}>
                     <select
-                      value={enrollListId}
-                      onChange={(e) => setEnrollListId(e.target.value)}
+                      value={listForSeq(seq.id)}
+                      onChange={(e) => setEnrollListId((m) => ({ ...m, [seq.id]: e.target.value }))}
                       style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", color: "var(--foreground)" }}
                     >
                       {lists.length === 0 ? (
@@ -279,12 +283,12 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
                     </select>
                     <button
                       onClick={() => handleEnrollList(seq.id)}
-                      disabled={!enrollListId}
-                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)", opacity: enrollListId ? 1 : 0.5 }}
+                      disabled={!listForSeq(seq.id)}
+                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)", opacity: listForSeq(seq.id) ? 1 : 0.5 }}
                     >
                       Enroll list
                     </button>
-                    {enrollMsg ? <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{enrollMsg}</span> : null}
+                    {enrollMsg[seq.id] ? <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{enrollMsg[seq.id]}</span> : null}
                   </div>
                 ) : null}
               </div>
