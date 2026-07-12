@@ -40,61 +40,111 @@ export function KpiClient({ departments, isAdmin }: { departments: Dept[]; isAdm
   );
 }
 
+interface Agent { id: string; name: string; position: number }
+interface Cell { goal: number | null; actual: number | null }
+type CellMap = Record<string, Record<string, Record<string, Cell>>>; // [kpiId][agentId][week]
+
+const owedColor = (owed: number) => owed > 0 ? "#A32D2D" : owed < 0 ? "#1D9E75" : MUTED;
+
 function DataInput({ dept }: { dept: string }) {
   const [defs, setDefs] = useState<Def[]>([]);
   const [weeks, setWeeks] = useState<string[]>([]);
-  const [entries, setEntries] = useState<Record<string, Record<string, number>>>({});
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [cells, setCells] = useState<CellMap>({});
   const [newKpi, setNewKpi] = useState({ key: "", label: "" });
+  const [newAgent, setNewAgent] = useState("");
 
   const load = useCallback(() => {
     if (!dept) return;
     fetch(`/api/admin/meetings/kpi?dept=${dept}`).then((r) => r.json()).then((d) => {
-      setDefs(d.definitions ?? []); setWeeks(d.weeks ?? []); setEntries(d.entries ?? {});
+      setDefs(d.definitions ?? []); setWeeks(d.weeks ?? []); setAgents(d.agents ?? []); setCells(d.agentEntries ?? {});
     }).catch(() => {});
   }, [dept]);
   useEffect(() => { load(); }, [load]);
 
-  const saveCell = async (kpiId: string, week: string, value: string) => {
-    const num = Number(value);
-    if (!Number.isFinite(num)) return;
-    setEntries((p) => ({ ...p, [kpiId]: { ...(p[kpiId] ?? {}), [week]: num } }));
-    await fetch("/api/admin/meetings/kpi/entry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kpi_id: kpiId, week_start: week, value: num }) }).catch(() => {});
+  const saveCell = async (kpiId: string, agentId: string, week: string, field: "goal" | "actual", raw: string) => {
+    const num = raw.trim() === "" ? null : Number(raw);
+    if (num !== null && !Number.isFinite(num)) return;
+    setCells((p) => {
+      const prevCell = p[kpiId]?.[agentId]?.[week] ?? { goal: null, actual: null };
+      return { ...p, [kpiId]: { ...(p[kpiId] ?? {}), [agentId]: { ...(p[kpiId]?.[agentId] ?? {}), [week]: { ...prevCell, [field]: num } } } };
+    });
+    await fetch("/api/admin/meetings/kpi/agent-entry", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kpi_id: kpiId, agent_id: agentId, week_start: week, [field]: num }) }).catch(() => {});
   };
   const addKpi = async () => {
     if (!newKpi.key.trim() || !newKpi.label.trim()) return;
     await fetch("/api/admin/meetings/kpi", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ department_id: dept, key: newKpi.key.trim(), label: newKpi.label.trim() }) }).catch(() => {});
     setNewKpi({ key: "", label: "" }); load();
   };
+  const addAgent = async () => {
+    if (!newAgent.trim()) return;
+    await fetch("/api/admin/meetings/kpi/agent", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ department_id: dept, name: newAgent.trim() }) }).catch(() => {});
+    setNewAgent(""); load();
+  };
+
+  const numInput = (defVal: number | null, onSave: (v: string) => void, tint: string) => (
+    <input type="number" step="any" defaultValue={defVal ?? ""} onBlur={(e) => onSave(e.target.value)}
+      style={{ width: 44, fontSize: 11.5, padding: "3px 4px", borderRadius: 4, border: "0.5px solid var(--border)", textAlign: "right", color: tint }} />
+  );
 
   return (
     <div>
-      {defs.length === 0 ? <p style={{ fontSize: 12.5, color: MUTED, marginBottom: 12 }}>No KPIs for this department yet. Add one below (real definitions import from the workbooks once shared).</p> : (
-        <div style={{ overflowX: "auto", border: "0.5px solid var(--border)", borderRadius: 10, marginBottom: 14 }}>
-          <table style={{ borderCollapse: "collapse", fontSize: 12, fontVariantNumeric: "tabular-nums" }}>
-            <thead><tr style={{ background: "#F6F8FB" }}>
-              <th style={{ textAlign: "left", padding: "8px 10px", fontSize: 10.5, color: MUTED, textTransform: "uppercase", position: "sticky", left: 0, background: "#F6F8FB" }}>KPI</th>
-              {weeks.map((w) => <th key={w} style={{ padding: "8px 8px", fontSize: 10.5, color: MUTED }}>{shortWeek(w)}</th>)}
-            </tr></thead>
-            <tbody>
-              {defs.map((def) => (
-                <tr key={def.id} style={{ borderTop: "0.5px solid #F1F4F9" }}>
-                  <td style={{ padding: "6px 10px", color: NAVY, whiteSpace: "nowrap", position: "sticky", left: 0, background: "#fff" }}>{def.label}</td>
-                  {weeks.map((w) => (
-                    <td key={w} style={{ padding: "2px 4px" }}>
-                      <input type="number" step="any" defaultValue={entries[def.id]?.[w] ?? ""} onBlur={(e) => { if (e.target.value !== "") void saveCell(def.id, w, e.target.value); }}
-                        style={{ width: 56, fontSize: 12, padding: "4px 5px", borderRadius: 5, border: "0.5px solid var(--border)", textAlign: "right" }} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {defs.length === 0 ? (
+        <p style={{ fontSize: 12.5, color: MUTED, marginBottom: 12 }}>No KPIs for this department yet. Add one below.</p>
+      ) : agents.length === 0 ? (
+        <p style={{ fontSize: 12.5, color: MUTED, marginBottom: 12 }}>Add an agent below to start entering weekly goals and actuals.</p>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 18, marginBottom: 16 }}>
+          {defs.map((def) => (
+            <div key={def.id} style={{ border: "0.5px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+              <div style={{ background: "#F6F8FB", padding: "8px 12px", borderBottom: "0.5px solid var(--border)", display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>{def.label}</span>
+                <span style={{ fontSize: 10, color: MUTED }}>goal · actual · owed</span>
+              </div>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ borderCollapse: "collapse", fontSize: 11.5, fontVariantNumeric: "tabular-nums", minWidth: "100%" }}>
+                  <thead><tr>
+                    <th style={{ textAlign: "left", padding: "6px 10px", fontSize: 10, color: MUTED, textTransform: "uppercase", position: "sticky", left: 0, background: "#fff", minWidth: 130 }}>Agent</th>
+                    {weeks.map((w) => <th key={w} style={{ padding: "6px 8px", fontSize: 10, color: MUTED, fontWeight: 500, borderLeft: "0.5px solid #F1F4F9" }}>wk {shortWeek(w)}</th>)}
+                  </tr></thead>
+                  <tbody>
+                    {agents.map((ag) => (
+                      <tr key={ag.id} style={{ borderTop: "0.5px solid #F1F4F9" }}>
+                        <td style={{ padding: "5px 10px", color: NAVY, whiteSpace: "nowrap", position: "sticky", left: 0, background: "#fff" }}>{ag.name}</td>
+                        {weeks.map((w) => {
+                          const c = cells[def.id]?.[ag.id]?.[w] ?? { goal: null, actual: null };
+                          const owed = (c.goal ?? 0) - (c.actual ?? 0);
+                          const hasData = c.goal !== null || c.actual !== null;
+                          return (
+                            <td key={w} style={{ padding: "3px 6px", borderLeft: "0.5px solid #F1F4F9", textAlign: "center" }}>
+                              <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                                {numInput(c.goal, (v) => void saveCell(def.id, ag.id, w, "goal", v), NAVY)}
+                                {numInput(c.actual, (v) => void saveCell(def.id, ag.id, w, "actual", v), BLUE)}
+                              </div>
+                              <div style={{ fontSize: 10, marginTop: 2, color: hasData ? owedColor(owed) : "transparent" }}>{hasData ? (owed > 0 ? `owed ${owed}` : owed < 0 ? `+${-owed}` : "met") : "·"}</div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
         </div>
       )}
-      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <input value={newKpi.key} onChange={(e) => setNewKpi((p) => ({ ...p, key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_") }))} placeholder="key_snake_case" style={{ fontSize: 12, padding: "6px 9px", borderRadius: 7, border: "0.5px solid var(--border)", width: 160 }} />
-        <input value={newKpi.label} onChange={(e) => setNewKpi((p) => ({ ...p, label: e.target.value }))} placeholder="KPI label" style={{ fontSize: 12, padding: "6px 9px", borderRadius: 7, border: "0.5px solid var(--border)", width: 200 }} />
-        <button onClick={() => void addKpi()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>+ Add KPI</button>
+
+      <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <input value={newAgent} onChange={(e) => setNewAgent(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addAgent(); }} placeholder="Agent name" style={{ fontSize: 12, padding: "6px 9px", borderRadius: 7, border: "0.5px solid var(--border)", width: 170 }} />
+          <button onClick={() => void addAgent()} style={{ fontSize: 12, fontWeight: 600, color: BLUE, background: "#E6F1FB", border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>+ Agent</button>
+        </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          <input value={newKpi.key} onChange={(e) => setNewKpi((p) => ({ ...p, key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_") }))} placeholder="key_snake_case" style={{ fontSize: 12, padding: "6px 9px", borderRadius: 7, border: "0.5px solid var(--border)", width: 150 }} />
+          <input value={newKpi.label} onChange={(e) => setNewKpi((p) => ({ ...p, label: e.target.value }))} placeholder="KPI label" style={{ fontSize: 12, padding: "6px 9px", borderRadius: 7, border: "0.5px solid var(--border)", width: 190 }} />
+          <button onClick={() => void addKpi()} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>+ Add KPI</button>
+        </div>
       </div>
     </div>
   );

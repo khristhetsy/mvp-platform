@@ -1,19 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
-import { listDefinitions, listEntries, createDefinition, recentMondays } from "@/lib/meetings/kpi";
+import { listDefinitions, listEntries, createDefinition, recentMondays, listAgents, listAgentEntries } from "@/lib/meetings/kpi";
 
 export const dynamic = "force-dynamic";
 
-// GET ?dept=<id> — KPI definitions + recent-week entries for the Data Input grid.
+// GET ?dept=<id> — KPI definitions, agent roster, and recent-week entries for the grid.
 export async function GET(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   const dept = req.nextUrl.searchParams.get("dept") ?? undefined;
   const weeks = recentMondays(8);
   const definitions = await listDefinitions(dept);
-  const entries = await listEntries(definitions.map((d) => d.id), weeks);
-  return NextResponse.json({ definitions, weeks, entries });
+  const kpiIds = definitions.map((d) => d.id);
+  const [entries, agents, agentEntries] = await Promise.all([
+    listEntries(kpiIds, weeks),
+    dept ? listAgents(dept) : Promise.resolve([]),
+    listAgentEntries(kpiIds, weeks),
+  ]);
+  return NextResponse.json({ definitions, weeks, entries, agents, agentEntries });
 }
 
 const defSchema = z.object({

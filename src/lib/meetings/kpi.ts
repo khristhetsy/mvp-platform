@@ -57,6 +57,48 @@ export async function upsertEntry(kpiId: string, weekStart: string, value: numbe
   if (error) throw new Error(error.message);
 }
 
+// ── Per-agent grid (roster + weekly goal/actual) ─────────────────────────────
+export interface KpiAgent { id: string; department_id: string; name: string; position: number; is_active: boolean }
+export interface AgentCell { goal: number | null; actual: number | null }
+
+export async function listAgents(departmentId: string): Promise<KpiAgent[]> {
+  const { data } = await db().from("ceo_kpi_meeting_agents").select("*").eq("department_id", departmentId).eq("is_active", true).order("position");
+  return (data ?? []) as KpiAgent[];
+}
+
+export async function createAgent(departmentId: string, name: string): Promise<KpiAgent> {
+  const { data: existing } = await db().from("ceo_kpi_meeting_agents").select("position").eq("department_id", departmentId).order("position", { ascending: false }).limit(1);
+  const position = ((existing?.[0]?.position as number) ?? 0) + 1;
+  const { data, error } = await db().from("ceo_kpi_meeting_agents").insert({ department_id: departmentId, name, position }).select("*").single();
+  if (error) throw new Error(error.message);
+  return data as KpiAgent;
+}
+
+/** goal + actual per agent per week, keyed entries[kpi_id][agent_id][week] = {goal, actual}. */
+export async function listAgentEntries(kpiIds: string[], weeks: string[]): Promise<Record<string, Record<string, Record<string, AgentCell>>>> {
+  if (kpiIds.length === 0) return {};
+  const { data } = await db().from("ceo_kpi_meeting_agent_entries").select("kpi_id, agent_id, week_start, goal_value, actual_value").in("kpi_id", kpiIds).in("week_start", weeks);
+  const map: Record<string, Record<string, Record<string, AgentCell>>> = {};
+  for (const r of (data ?? []) as Array<{ kpi_id: string; agent_id: string; week_start: string; goal_value: number | null; actual_value: number | null }>) {
+    const wk = String(r.week_start).slice(0, 10);
+    (((map[r.kpi_id] ??= {})[r.agent_id] ??= {}))[wk] = {
+      goal: r.goal_value == null ? null : Number(r.goal_value),
+      actual: r.actual_value == null ? null : Number(r.actual_value),
+    };
+  }
+  return map;
+}
+
+export async function upsertAgentEntry(
+  kpiId: string, agentId: string, weekStart: string, patch: { goal?: number | null; actual?: number | null }, userId: string,
+): Promise<void> {
+  const row: Record<string, unknown> = { kpi_id: kpiId, agent_id: agentId, week_start: weekStart, entered_by: userId, updated_at: new Date().toISOString() };
+  if (patch.goal !== undefined) row.goal_value = patch.goal;
+  if (patch.actual !== undefined) row.actual_value = patch.actual;
+  const { error } = await db().from("ceo_kpi_meeting_agent_entries").upsert(row, { onConflict: "kpi_id,agent_id,week_start" });
+  if (error) throw new Error(error.message);
+}
+
 const VIEW: Record<GoalPeriod, string> = {
   weekly: "v_ceo_kpi_meeting_weekly", monthly: "v_ceo_kpi_meeting_monthly",
   quarterly: "v_ceo_kpi_meeting_quarterly", yearly: "v_ceo_kpi_meeting_ytd",
