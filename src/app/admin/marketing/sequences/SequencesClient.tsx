@@ -1,9 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MarketingSequence, MarketingTemplate, MarketingList } from "@/lib/marketing/types";
 import { ApproverPicker } from "./ApproverPicker";
+import { confirmDialog } from "@/components/ui/ConfirmDialog";
+
+type SeqView = "grid" | "list";
+const SEQ_VIEW_KEY = "icapos.sequences.view";
+const STATUS_TABS: Array<{ value: string; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "draft", label: "Draft" },
+  { value: "active", label: "Active" },
+  { value: "paused", label: "Paused" },
+  { value: "archived", label: "Archived" },
+];
 
 interface Props { sequences: MarketingSequence[]; templates: MarketingTemplate[]; lists: MarketingList[]; }
 
@@ -186,6 +197,29 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
     }
   }
 
+  async function handleDeleteSequence(sequenceId: string, name: string) {
+    if (!(await confirmDialog({ message: `Delete "${name}"? Its steps and enrollments are removed too. This cannot be undone.`, danger: true, confirmLabel: "Delete" }))) return;
+    try {
+      await fetch(`/api/marketing/sequences?sequence_id=${sequenceId}`, { method: "DELETE" });
+      router.refresh();
+    } catch (err) {
+      console.error("Failed to delete sequence:", err);
+    }
+  }
+
+  // View options: grid/list + status filter (view persists).
+  const [view, setView] = useState<SeqView>("grid");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(SEQ_VIEW_KEY) as SeqView | null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (v) setView(v);
+    } catch { /* ignore */ }
+  }, []);
+  const pickView = (v: SeqView) => { setView(v); try { localStorage.setItem(SEQ_VIEW_KEY, v); } catch { /* ignore */ } };
+  const visibleSequences = statusFilter === "all" ? sequences : sequences.filter((s) => s.status === statusFilter);
+
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
       {/* Header */}
@@ -221,13 +255,34 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
         </div>
       )}
 
+      {sequences.length > 0 && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+          <div style={{ display: "flex", gap: 4 }}>
+            {STATUS_TABS.map((t) => (
+              <button key={t.value} onClick={() => setStatusFilter(t.value)}
+                style={{ fontSize: 12, padding: "5px 11px", borderRadius: 8, border: "none", cursor: "pointer", background: statusFilter === t.value ? "#2E78F5" : "transparent", color: statusFilter === t.value ? "#fff" : "var(--muted-foreground)" }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+            <button onClick={() => pickView("grid")} aria-label="Grid view" style={{ fontSize: 12, padding: "5px 10px", border: "none", cursor: "pointer", background: view === "grid" ? "#2E78F5" : "transparent", color: view === "grid" ? "#fff" : "var(--muted-foreground)" }}><i className="ti ti-layout-grid" aria-hidden="true" /></button>
+            <button onClick={() => pickView("list")} aria-label="List view" style={{ fontSize: 12, padding: "5px 10px", border: "none", cursor: "pointer", background: view === "list" ? "#2E78F5" : "transparent", color: view === "list" ? "#fff" : "var(--muted-foreground)" }}><i className="ti ti-layout-rows" aria-hidden="true" /></button>
+          </div>
+        </div>
+      )}
+
       {sequences.length === 0 ? (
         <div style={{ textAlign: "center", padding: "48px 24px", color: "var(--muted-foreground)", fontSize: 13 }}>
           No sequences yet. Create one above.
         </div>
+      ) : visibleSequences.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "36px 24px", color: "var(--muted-foreground)", fontSize: 13 }}>
+          No {statusFilter} sequences.
+        </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          {sequences.map((seq) => {
+        <div style={{ display: "grid", gridTemplateColumns: view === "grid" ? "1fr 1fr" : "1fr", gap: 14 }}>
+          {visibleSequences.map((seq) => {
             const steps = seq.steps ?? [];
             const sc = statusColors[seq.status] ?? statusColors.draft;
             return (
@@ -366,6 +421,21 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
                       Resume
                     </button>
                   )}
+                  {seq.status === "archived" ? (
+                    <button onClick={() => handleStatusChange(seq.id, "draft")}
+                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
+                      Unarchive
+                    </button>
+                  ) : (
+                    <button onClick={() => handleStatusChange(seq.id, "archived")}
+                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
+                      Archive
+                    </button>
+                  )}
+                  <button onClick={() => handleDeleteSequence(seq.id, seq.name)}
+                    style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "none", background: "transparent", cursor: "pointer", color: "#A32D2D" }}>
+                    Delete
+                  </button>
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", marginLeft: "auto" }}>
                     {steps.length} step{steps.length !== 1 ? "s" : ""}
                   </div>

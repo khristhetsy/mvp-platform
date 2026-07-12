@@ -96,6 +96,13 @@ export async function deleteSequenceStep(stepId: string): Promise<void> {
   if (error) throw error;
 }
 
+/** Permanently delete a sequence. Steps, enrollments, batches, and events cascade. */
+export async function deleteSequence(sequenceId: string): Promise<void> {
+  const db = await marketingDb();
+  const { error } = await db.from("marketing_sequences").delete().eq("id", sequenceId);
+  if (error) throw error;
+}
+
 /** Send every step of a sequence to a single test address so the sender can preview the
  *  real emails. Ignores conditions/delays (all steps go at once), subject-prefixed [TEST].
  *  Touches no contacts or enrollment state. */
