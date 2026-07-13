@@ -63,12 +63,19 @@ const ALLOWED_TAGS = new Set([
   "img", "ul", "ol", "li", "font", "h1", "h2", "h3", "blockquote",
 ]);
 
-/**
- * Conservative allowlist sanitizer for a self-authored email signature. Strips
- * scripts/handlers/javascript: URLs and any tag outside the allowlist (keeping
- * inner text). Inline styles/colors are preserved for formatting.
- */
-export function sanitizeSignatureHtml(html: string, maxLen = 20000): string {
+// Full email bodies (especially inserted marketing templates) are table-based
+// layouts — a signature allowlist would strip the structure and leave the email
+// blank. Allow the standard email-safe structural/text tags on top of the base set.
+const EMAIL_BODY_TAGS = new Set<string>([
+  ...ALLOWED_TAGS,
+  "table", "thead", "tbody", "tfoot", "tr", "td", "th", "colgroup", "col", "caption",
+  "center", "hr", "small", "sub", "sup", "pre", "code", "dl", "dt", "dd",
+  "h4", "h5", "h6", "figure", "figcaption", "address", "main", "section", "article", "header", "footer",
+]);
+
+/** Allowlist sanitizer: strips scripts/handlers/javascript: URLs and any tag
+ *  outside `allowed` (keeping inner text). Inline styles/colors are preserved. */
+function sanitizeAllowlist(html: string, allowed: Set<string>, maxLen: number): string {
   if (!html) return "";
   let out = html;
   out = out.replace(/<\s*(script|style|iframe|object|embed|link|meta|svg|math|title|head|body|html)[\s\S]*?<\/\s*\1\s*>/gi, "");
@@ -76,13 +83,18 @@ export function sanitizeSignatureHtml(html: string, maxLen = 20000): string {
   out = out.replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
   out = out.replace(/(href|src)\s*=\s*("|')\s*javascript:[^"']*\2/gi, '$1=$2#$2');
   out = out.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/g, (m, tag: string) =>
-    ALLOWED_TAGS.has(tag.toLowerCase()) ? m : "");
+    allowed.has(tag.toLowerCase()) ? m : "");
   return out.trim().slice(0, maxLen);
 }
 
-/** Sanitize a full outgoing email body (same allowlist, larger length cap). */
+/** Conservative sanitizer for a self-authored email signature. */
+export function sanitizeSignatureHtml(html: string, maxLen = 20000): string {
+  return sanitizeAllowlist(html, ALLOWED_TAGS, maxLen);
+}
+
+/** Sanitize a full outgoing email body — permissive email-safe allowlist, 25MB cap. */
 export function sanitizeEmailHtml(html: string): string {
-  return sanitizeSignatureHtml(html, 60000);
+  return sanitizeAllowlist(html, EMAIL_BODY_TAGS, 26214400);
 }
 
 /** Plain-text rendering of a signature (for the email's text/plain part). */
