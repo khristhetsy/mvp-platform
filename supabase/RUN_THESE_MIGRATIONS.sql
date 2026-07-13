@@ -2327,3 +2327,13 @@ on conflict (kpi_id, agent_id, week_start) do nothing;
 update public.features
 set label = 'Investor Relations Hub'
 where key = 'operations_hub' and path = '/admin/playbook';
+
+-- ============================================================
+-- 20260711020_crm_contacts_website.sql
+-- ============================================================
+-- Contact Sync fix: the CRM mirror upsert (crm-connectors/mirror.ts) writes a
+-- top-level `website` field, but crm_contacts never had that column — so every Odoo
+-- import/sync failed with "Could not find the 'website' column of 'crm_contacts'".
+-- Add the column so the mirror upsert succeeds.
+
+alter table public.crm_contacts add column if not exists website text;
