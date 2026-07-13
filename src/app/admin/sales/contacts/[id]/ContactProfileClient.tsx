@@ -38,11 +38,37 @@ const money = (c: number | null) => (c == null ? "—" : `$${(c / 100).toLocaleS
 const inp: React.CSSProperties = { fontSize: 12, padding: "7px 9px", borderRadius: 7, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", boxSizing: "border-box" };
 const outlineBtn: React.CSSProperties = { fontSize: 11.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "7px 13px", cursor: "pointer" };
 
-function Field({ k, v, link }: { k: string; v: string | null; link?: boolean }) {
+const LEAD_TONE: Record<string, { bg: string; c: string }> = {
+  new: { bg: "#E6F1FB", c: "#185FA5" }, contacted: { bg: "#FAEEDA", c: "#854F0B" },
+  qualified: { bg: "#E1F5EE", c: "#0F6E56" }, paused: { bg: "#F1EFE8", c: "#5F5E5A" },
+  "not interested": { bg: "#FCEBEB", c: "#A32D2D" }, won: { bg: "#EAF3DE", c: "#3B6D11" }, lost: { bg: "#FCEBEB", c: "#A32D2D" },
+};
+function StatusPill({ status }: { status: string }) {
+  const t = LEAD_TONE[status.toLowerCase()] ?? { bg: "#F1EFE8", c: "#5F5E5A" };
+  return <span style={{ fontSize: 11, fontWeight: 600, background: t.bg, color: t.c, borderRadius: 20, padding: "2px 10px", textTransform: "capitalize" }}>{status}</span>;
+}
+function Chip({ label, value }: { label: string; value: string | number }) {
   return (
-    <div style={{ display: "flex", fontSize: 11.5 }}>
-      <span style={{ width: 118, color: "var(--muted-foreground)", flexShrink: 0 }}>{k}</span>
-      <span style={{ color: link && v ? "#185FA5" : "var(--foreground)" }}>{v || "—"}</span>
+    <div style={{ background: "#F6F8FB", borderRadius: 8, padding: "9px 12px" }}>
+      <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 600, color: "#0A1A40", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>{value}</div>
+    </div>
+  );
+}
+function Row({ icon, label, value, link }: { icon: string; label: string; value: string | null; link?: boolean }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", fontSize: 12.5 }}>
+      <i className={`ti ${icon}`} aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0 }} />
+      <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0 }}>{label}</span>
+      <span style={{ color: link && value ? "#185FA5" : "var(--foreground)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value || "—"}</span>
+    </div>
+  );
+}
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--muted-foreground)", margin: "10px 0 4px" }}>{title}</div>
+      {children}
     </div>
   );
 }
@@ -135,6 +161,10 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   }
 
   const address = [contact.street, contact.street2, contact.city, contact.state, contact.zip, contact.country].filter(Boolean).join(", ") || null;
+  const pipelineCents = opportunities.reduce((a, o) => a + (o.value_cents ?? 0), 0);
+  const openOpps = opportunities.filter((o) => o.status === "open").length;
+  const lastActLabel = acts[0] ? actWhen(acts[0].created_at) : "—";
+  const subtitle = [contact.job_position, contact.company, [contact.city, contact.country].filter(Boolean).join(", ") || null].filter(Boolean).join(" · ") || "—";
 
   return (
     <div>
@@ -144,27 +174,40 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
       </div>
 
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, overflow: "hidden" }}>
-        {/* Header + smart buttons */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
-          <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#E6F1FB", color: "#185FA5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 600 }}>{contact.name.slice(0, 2).toUpperCase()}</div>
-          <div style={{ flex: 1, minWidth: 160 }}>
-            <div style={{ fontSize: 16, fontWeight: 600 }}>{contact.name}</div>
-            <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{[contact.job_position, contact.company].filter(Boolean).join(" · ") || "—"}</div>
+        {/* Redesigned header: identity + status + owner, actions, stat chips */}
+        <div style={{ padding: "14px 16px", borderBottom: "0.5px solid #eef1f5" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#E6F1FB", color: "#185FA5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 600, flex: "0 0 auto" }}>{contact.name.slice(0, 2).toUpperCase()}</div>
+            <div style={{ flex: "1 1 240px", minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 18, fontWeight: 600 }}>{contact.name}</span>
+                {contact.lead_status ? <StatusPill status={contact.lead_status} /> : null}
+              </div>
+              <div style={{ fontSize: 13, color: "var(--muted-foreground)", marginTop: 2 }}>{subtitle}</div>
+              <div style={{ display: "flex", gap: 12, marginTop: 8, flexWrap: "wrap", fontSize: 12, color: "var(--muted-foreground)" }}>
+                <span><i className="ti ti-user-check" aria-hidden="true" /> Owner: <span style={{ color: "var(--foreground)" }}>{contact.owner || "—"}</span></span>
+                <span><i className="ti ti-plug" aria-hidden="true" /> Source: {contact.source}</span>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {contact.phone
+                ? <a href={`tel:${contact.phone.replace(/[^+\d]/g, "")}`} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-phone" aria-hidden="true" /> Call</a>
+                : <span title="No phone number on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-phone" aria-hidden="true" /> Call</span>}
+              {contact.email
+                ? <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(contact.email)}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("email")} style={{ fontSize: 11.5, fontWeight: 600, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-mail" aria-hidden="true" /> Email</a>
+                : <span title="No email on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-mail" aria-hidden="true" /> Email</span>}
+              {contact.phone
+                ? <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Message</a>
+                : <span title="No phone number on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-message" aria-hidden="true" /> Message</span>}
+              {!editing && <button onClick={() => setEditing(true)} style={outlineBtn}><i className="ti ti-edit" aria-hidden="true" /> Edit</button>}
+            </div>
           </div>
-          <div style={{ textAlign: "center", border: "0.5px solid var(--border)", borderRadius: 8, padding: "6px 12px" }}>
-            <div style={{ fontSize: 10, color: "#185FA5" }}><i className="ti ti-target" aria-hidden="true" /> Opportunities</div>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>{opportunities.length}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 8, marginTop: 14 }}>
+            <Chip label="Opportunities" value={opportunities.length} />
+            <Chip label="Pipeline value" value={money(pipelineCents)} />
+            <Chip label="Open opps" value={openOpps} />
+            <Chip label="Last activity" value={lastActLabel} />
           </div>
-          {contact.phone
-            ? <a href={`tel:${contact.phone.replace(/[^+\d]/g, "")}`} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-phone" aria-hidden="true" /> Call</a>
-            : <span title="No phone number on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-phone" aria-hidden="true" /> Call</span>}
-          {contact.email
-            ? <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(contact.email)}`} target="_blank" rel="noopener noreferrer" onClick={() => logTouch("email")} style={{ fontSize: 11.5, fontWeight: 600, color: "#4338CA", background: "#EEF2FF", border: "0.5px solid #C7D2FE", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-mail" aria-hidden="true" /> Email</a>
-            : <span title="No email on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-mail" aria-hidden="true" /> Email</span>}
-          {contact.phone
-            ? <a href={`sms:${contact.phone.replace(/[^+\d]/g, "")}`} onClick={() => logTouch("message")} style={{ fontSize: 11.5, fontWeight: 600, color: "#854F0B", background: "#FAEEDA", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "7px 13px", textDecoration: "none" }}><i className="ti ti-message" aria-hidden="true" /> Message</a>
-            : <span title="No phone number on this contact" style={{ ...outlineBtn, opacity: 0.5, cursor: "not-allowed" }}><i className="ti ti-message" aria-hidden="true" /> Message</span>}
-          {!editing && <button onClick={() => setEditing(true)} style={outlineBtn}><i className="ti ti-edit" aria-hidden="true" /> Edit</button>}
         </div>
 
         {/* Tabs */}
@@ -225,28 +268,25 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             </div>
           </div>
         ) : (
-          <div style={{ padding: "14px 16px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 28px" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <Field k="Membership" v={contact.membership} />
-                <Field k="Job position" v={contact.job_position} />
-                <Field k="Lead status" v={contact.lead_status} />
-                <Field k="Lead source" v={contact.lead_source} />
-                <Field k="Owner" v={contact.owner} />
-                <Field k="Source" v={contact.source} />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <Field k="Phone" v={contact.phone} />
-                <Field k="Phone 2" v={contact.phone2} />
-                <Field k="Email" v={contact.email} link />
-                <Field k="Website" v={contact.website} link />
-                <Field k="Language" v={contact.language} />
-                <Field k="Tags" v={contact.tags.length ? contact.tags.join(", ") : null} />
-              </div>
-            </div>
-            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "0.5px solid #eef1f5" }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Address</div>
-              {address ? <div style={{ fontSize: 12, lineHeight: 1.6 }}>{address}</div> : <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</div>}
+          <div style={{ padding: "6px 16px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 28px" }}>
+            <Section title="Contact">
+              <Row icon="ti-mail" label="Email" value={contact.email} link />
+              <Row icon="ti-phone" label="Phone" value={contact.phone} />
+              <Row icon="ti-phone" label="Phone 2" value={contact.phone2} />
+              <Row icon="ti-world" label="Website" value={contact.website} link />
+              <Row icon="ti-language" label="Language" value={contact.language} />
+            </Section>
+            <Section title="Lead">
+              <Row icon="ti-flag" label="Lead status" value={contact.lead_status} />
+              <Row icon="ti-arrow-down-circle" label="Lead source" value={contact.lead_source} />
+              <Row icon="ti-id-badge" label="Membership" value={contact.membership} />
+              <Row icon="ti-briefcase" label="Job position" value={contact.job_position} />
+              <Row icon="ti-tag" label="Tags" value={contact.tags.length ? contact.tags.join(", ") : null} />
+            </Section>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <Section title="Address">
+                <Row icon="ti-map-pin" label="Location" value={address} />
+              </Section>
             </div>
           </div>
         )}
