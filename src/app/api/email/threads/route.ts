@@ -25,8 +25,8 @@ const composeSchema = z.object({
   cc: z.string().max(2000).optional(),
   bcc: z.string().max(2000).optional(),
   subject: z.string().min(1).max(300),
-  body: z.string().min(1).max(50000),
-  html: z.string().max(60000).optional(),
+  body: z.string().min(1).max(500000),
+  html: z.string().max(2000000).optional(),
   attachments: z.array(attachmentSchema).max(10).optional(),
 });
 

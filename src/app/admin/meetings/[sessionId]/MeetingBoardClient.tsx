@@ -15,11 +15,20 @@ interface Entry { id: string; section_id: string; content: string; status: Entry
 interface Attendee { user_id: string; name: string; status: string }
 interface Board { session: { id: string; session_date: string; started_at: string | null; status: string; meeting_name: string; meet_link: string | null; start_time?: string | null } | null; sections: Section[]; entries: Record<string, Entry>; attendees: Attendee[] }
 
+/** The viewer's local timezone abbreviation, e.g. "PDT" or "GMT-7". */
+function tzAbbr(): string {
+  try {
+    return new Intl.DateTimeFormat(undefined, { timeZoneName: "short" })
+      .formatToParts(new Date()).find((p) => p.type === "timeZoneName")?.value ?? "";
+  } catch { return ""; }
+}
+
 function fmtTime(t?: string | null): string | null {
   if (!t) return null;
   const [h, m] = t.split(":");
   const hr = Number(h); const ampm = hr >= 12 ? "PM" : "AM"; const h12 = hr % 12 || 12;
-  return `${h12}:${m} ${ampm}`;
+  const tz = tzAbbr();
+  return `${h12}:${m} ${ampm}${tz ? ` ${tz}` : ""}`;
 }
 
 const STATUS_TONE: Record<string, { bg: string; c: string }> = {
