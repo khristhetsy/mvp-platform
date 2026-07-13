@@ -552,7 +552,7 @@ export function ComposeModal({
                 <FileText className="h-4 w-4" /> Template
               </button>
               {tplMenuOpen ? (
-                <div className="absolute bottom-full left-0 z-20 mb-2 w-72 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl">
+                <div className="absolute bottom-full right-0 z-30 mb-2 w-72 max-w-[calc(100vw-4rem)] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl">
                   <div className="border-b border-slate-100 p-2">
                     <input
                       value={tplQuery}
