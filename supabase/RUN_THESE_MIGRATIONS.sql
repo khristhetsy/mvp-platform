@@ -2316,3 +2316,14 @@ cross join (
                          date_trunc('week', current_date), interval '1 week')::date as wk
 ) m
 on conflict (kpi_id, agent_id, week_start) do nothing;
+
+-- ============================================================
+-- 20260711019_rename_ir_hub_feature.sql
+-- ============================================================
+-- Feature Controls label fix: the /admin/playbook feature is the Investor Relations
+-- Hub in the sidebar, but the department feature registry still labels it "Operations
+-- Hub". Rename the display label to match (key and path unchanged).
+
+update public.features
+set label = 'Investor Relations Hub'
+where key = 'operations_hub' and path = '/admin/playbook';
