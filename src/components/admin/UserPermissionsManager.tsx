@@ -164,16 +164,24 @@ export function UserPermissionsManager() {
     setStatus(null);
     setError(null);
     try {
+      // Send only the permissions whose mode CHANGED. Include "inherit" changes
+      // (granted: null) so the server clears the existing override — filtering them
+      // out here was the bug that made "Inherit from role" never save.
+      const persisted = new Map(
+        selectedUser.overrides.map((o) => [o.permission, o.granted ? "grant" : "revoke"] as const),
+      );
       const overrides = payload.permissions
         .map((p) => p.slug)
         .map((permission) => {
           const mode = overrideState[permission] ?? "inherit";
-          return {
-            permission,
-            granted: mode === "inherit" ? null : mode === "grant",
-          };
+          const prev = persisted.get(permission) ?? "inherit";
+          return { permission, mode, prev };
         })
-        .filter((o) => o.granted !== null);
+        .filter((o) => o.mode !== o.prev)
+        .map((o) => ({
+          permission: o.permission,
+          granted: o.mode === "inherit" ? null : o.mode === "grant",
+        }));
 
       const res = await fetch(`/api/admin/users/permissions/${selectedUser.id}`, {
         method: "PUT",
