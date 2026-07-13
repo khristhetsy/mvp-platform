@@ -22,6 +22,8 @@ const attachmentSchema = z.object({
 const composeSchema = z.object({
   to: z.string().email(),
   toName: z.string().max(200).optional(),
+  cc: z.string().max(2000).optional(),
+  bcc: z.string().max(2000).optional(),
   subject: z.string().min(1).max(300),
   body: z.string().min(1).max(50000),
   html: z.string().max(60000).optional(),
@@ -44,6 +46,8 @@ export async function POST(req: NextRequest): Promise<Response> {
       {
         to: parsed.data.to,
         toName: parsed.data.toName,
+        cc: parsed.data.cc ?? null,
+        bcc: parsed.data.bcc ?? null,
         subject: parsed.data.subject,
         body: parsed.data.body,
         html: parsed.data.html ?? null,

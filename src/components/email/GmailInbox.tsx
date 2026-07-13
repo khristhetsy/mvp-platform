@@ -249,7 +249,7 @@ export function GmailInbox() {
     setError(null);
     try {
       const res = await fetch("/api/integrations/google/gmail/send", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: draft.to.trim(), subject: draft.subject.trim(), body: draft.body, html: draft.html, attachments: draft.attachments }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: draft.to.trim(), cc: draft.cc?.trim() || undefined, bcc: draft.bcc?.trim() || undefined, subject: draft.subject.trim(), body: draft.body, html: draft.html, attachments: draft.attachments }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Send failed.");

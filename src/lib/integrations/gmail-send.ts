@@ -47,10 +47,14 @@ function bodyMime(body: string, html?: string | null): string {
 }
 
 /** Encode an email (optionally with html + attachments) as base64url RFC 2822 for the Gmail API. */
-function encodeRawEmail(to: string, subject: string, body: string, html?: string | null, attachments: GmailAttachment[] = []): string {
+function encodeRawEmail(to: string, subject: string, body: string, html?: string | null, attachments: GmailAttachment[] = [], cc?: string | null, bcc?: string | null): string {
+  const recipientHeaders = [`To: ${to}`];
+  if (cc && cc.trim()) recipientHeaders.push(`Cc: ${cc.trim()}`);
+  if (bcc && bcc.trim()) recipientHeaders.push(`Bcc: ${bcc.trim()}`);
+
   if (attachments.length === 0) {
     const message = [
-      `To: ${to}`,
+      ...recipientHeaders,
       `Subject: ${subject}`,
       "MIME-Version: 1.0",
       bodyMime(body, html),
@@ -60,7 +64,7 @@ function encodeRawEmail(to: string, subject: string, body: string, html?: string
 
   const boundary = rand("b");
   const parts: string[] = [
-    `To: ${to}`,
+    ...recipientHeaders,
     `Subject: ${subject}`,
     "MIME-Version: 1.0",
     `Content-Type: multipart/mixed; boundary="${boundary}"`,
@@ -95,6 +99,8 @@ export type GmailSendResult =
 export async function sendViaGmail(input: {
   userId: string;
   to: string;
+  cc?: string | null;
+  bcc?: string | null;
   subject: string;
   body: string;
   html?: string | null;
@@ -105,7 +111,7 @@ export async function sendViaGmail(input: {
     return { error: tokenResult.error ?? new Error("No Gmail access token available.") };
   }
 
-  const raw = encodeRawEmail(input.to, input.subject, input.body, input.html, input.attachments ?? []);
+  const raw = encodeRawEmail(input.to, input.subject, input.body, input.html, input.attachments ?? [], input.cc, input.bcc);
 
   const response = await fetch(GMAIL_SEND_URL, {
     method: "POST",

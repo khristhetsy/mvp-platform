@@ -14,6 +14,8 @@ const attachmentSchema = z.object({
 
 const sendSchema = z.object({
   to: z.string().email(),
+  cc: z.string().max(2000).optional(),
+  bcc: z.string().max(2000).optional(),
   subject: z.string().min(1).max(200),
   body: z.string().min(1).max(50000),
   html: z.string().max(60000).optional(),
@@ -72,6 +74,8 @@ export async function POST(request: Request) {
   const result = await sendViaGmail({
     userId: user.id,
     to: parsed.data.to,
+    cc: parsed.data.cc ?? null,
+    bcc: parsed.data.bcc ?? null,
     subject: parsed.data.subject,
     body: parsed.data.body,
     html: parsed.data.html ?? null,

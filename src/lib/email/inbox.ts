@@ -167,6 +167,8 @@ async function sendOnThread(
   body: string,
   attachments: EmailAttachment[] = [],
   htmlOverride?: string | null,
+  cc?: string | null,
+  bcc?: string | null,
 ): Promise<void> {
   let fullBody: string;
   let html: string;
@@ -213,6 +215,8 @@ async function sendOnThread(
 
   const sent = await sendEmail({
     to: thread.contact_email,
+    cc: cc ?? undefined,
+    bcc: bcc ?? undefined,
     subject: subject ?? "(no subject)",
     html,
     text: fullBody,
@@ -244,7 +248,7 @@ async function sendOnThread(
 export async function composeThread(
   supabase: SupabaseClient<Database>,
   owner: Owner,
-  input: { to: string; toName?: string | null; subject: string; body: string; html?: string | null; attachments?: EmailAttachment[] },
+  input: { to: string; toName?: string | null; cc?: string | null; bcc?: string | null; subject: string; body: string; html?: string | null; attachments?: EmailAttachment[] },
 ): Promise<EmailThread> {
   const token = randomBytes(12).toString("hex");
   const now = new Date().toISOString();
@@ -265,7 +269,7 @@ export async function composeThread(
   if (error) throw new Error(error.message ?? "Unable to start thread.");
 
   const thread = data as EmailThread;
-  await sendOnThread(supabase, owner, thread, input.subject, input.body, input.attachments ?? [], input.html ?? null);
+  await sendOnThread(supabase, owner, thread, input.subject, input.body, input.attachments ?? [], input.html ?? null, input.cc ?? null, input.bcc ?? null);
   return thread;
 }
 

@@ -10,8 +10,17 @@
 
 const RESEND_API = "https://api.resend.com/emails";
 
+/** Split a comma/semicolon-separated recipient string (or array) into clean addresses. */
+export function parseRecipients(value?: string | string[] | null): string[] {
+  if (!value) return [];
+  const list = Array.isArray(value) ? value : String(value).split(/[,;]/);
+  return list.map((s) => s.trim()).filter((s) => s.includes("@"));
+}
+
 export type EmailPayload = {
   to: string | string[];
+  cc?: string | string[] | null;
+  bcc?: string | string[] | null;
   subject: string;
   html: string;
   /** Optional plain-text fallback */
@@ -58,7 +67,9 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
       },
       body: JSON.stringify({
         from,
-        to: Array.isArray(payload.to) ? payload.to : [payload.to],
+        to: parseRecipients(payload.to),
+        cc: parseRecipients(payload.cc).length ? parseRecipients(payload.cc) : undefined,
+        bcc: parseRecipients(payload.bcc).length ? parseRecipients(payload.bcc) : undefined,
         subject: payload.subject,
         html: payload.html,
         text: payload.text,
