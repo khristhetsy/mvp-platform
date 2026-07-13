@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sendViaGmail, type GmailAttachment } from "@/lib/integrations/gmail-send";
+import { parseRecipients } from "@/lib/email/send-email";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -13,7 +14,7 @@ const attachmentSchema = z.object({
 });
 
 const sendSchema = z.object({
-  to: z.string().email(),
+  to: z.string().min(1).max(2000),
   cc: z.string().max(2000).optional(),
   bcc: z.string().max(2000).optional(),
   subject: z.string().min(1).max(200),
@@ -71,11 +72,16 @@ export async function POST(request: Request) {
     attachments = fetched.filter((a): a is GmailAttachment => a !== null);
   }
 
+  const toList = parseRecipients(parsed.data.to);
+  if (toList.length === 0) {
+    return NextResponse.json({ error: "A valid recipient email is required." }, { status: 400 });
+  }
+
   const result = await sendViaGmail({
     userId: user.id,
-    to: parsed.data.to,
-    cc: parsed.data.cc ?? null,
-    bcc: parsed.data.bcc ?? null,
+    to: toList.join(", "),
+    cc: parseRecipients(parsed.data.cc).join(", ") || null,
+    bcc: parseRecipients(parsed.data.bcc).join(", ") || null,
     subject: parsed.data.subject,
     body: parsed.data.body,
     html: parsed.data.html ?? null,

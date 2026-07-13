@@ -20,7 +20,7 @@ const attachmentSchema = z.object({
 });
 
 const composeSchema = z.object({
-  to: z.string().email(),
+  to: z.string().min(1).max(2000),
   toName: z.string().max(200).optional(),
   cc: z.string().max(2000).optional(),
   bcc: z.string().max(2000).optional(),

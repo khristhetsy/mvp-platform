@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { sendEmail } from "@/lib/email/send-email";
+import { sendEmail, parseRecipients } from "@/lib/email/send-email";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadSignature, sanitizeSignatureHtml, sanitizeEmailHtml, signatureToPlainText, isHtmlSignature } from "@/lib/email/signature";
 
@@ -169,6 +169,7 @@ async function sendOnThread(
   htmlOverride?: string | null,
   cc?: string | null,
   bcc?: string | null,
+  toOverride?: string | null,
 ): Promise<void> {
   let fullBody: string;
   let html: string;
@@ -214,7 +215,7 @@ async function sendOnThread(
   }
 
   const sent = await sendEmail({
-    to: thread.contact_email,
+    to: toOverride || thread.contact_email,
     cc: cc ?? undefined,
     bcc: bcc ?? undefined,
     subject: subject ?? "(no subject)",
@@ -250,6 +251,12 @@ export async function composeThread(
   owner: Owner,
   input: { to: string; toName?: string | null; cc?: string | null; bcc?: string | null; subject: string; body: string; html?: string | null; attachments?: EmailAttachment[] },
 ): Promise<EmailThread> {
+  // The To field can carry a trailing comma or several recipients (from the
+  // autocomplete). Parse them: the first is the thread's contact, all are sent.
+  const toRecipients = parseRecipients(input.to);
+  const primaryTo = (toRecipients[0] ?? input.to).trim().replace(/,+$/, "");
+  const sendTo = toRecipients.length > 0 ? toRecipients.join(", ") : primaryTo;
+
   const token = randomBytes(12).toString("hex");
   const now = new Date().toISOString();
   const { data, error } = await raw(supabase)
@@ -257,7 +264,7 @@ export async function composeThread(
     .insert({
       owner_id: owner.id,
       subject: input.subject,
-      contact_email: input.to.toLowerCase(),
+      contact_email: primaryTo.toLowerCase(),
       contact_name: input.toName ?? null,
       reply_token: token,
       last_message_at: now,
@@ -269,7 +276,7 @@ export async function composeThread(
   if (error) throw new Error(error.message ?? "Unable to start thread.");
 
   const thread = data as EmailThread;
-  await sendOnThread(supabase, owner, thread, input.subject, input.body, input.attachments ?? [], input.html ?? null, input.cc ?? null, input.bcc ?? null);
+  await sendOnThread(supabase, owner, thread, input.subject, input.body, input.attachments ?? [], input.html ?? null, input.cc ?? null, input.bcc ?? null, sendTo);
   return thread;
 }
 
