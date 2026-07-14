@@ -9,6 +9,7 @@ import { getEffectivePermissions } from "@/lib/rbac/effective-permissions";
 import type { Profile } from "@/lib/supabase/types";
 import { SequencesClient } from "./SequencesClient";
 import { SequenceApprovals } from "./SequenceApprovals";
+import { DeliveryHealthBanner } from "@/components/marketing/DeliveryHealthBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export default async function MarketingSequencesPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <h1 style={{ fontSize: 18, fontWeight: 500 }}>{t("sequences")}</h1>
       </div>
+      <DeliveryHealthBanner />
       <SequenceApprovals canApprove={canApprove} />
       <SequencesClient sequences={sequences} templates={templates} lists={lists} defaultSender={sender ? { name: sender.default_from_name, email: sender.default_from_email } : undefined} />
     </div>
