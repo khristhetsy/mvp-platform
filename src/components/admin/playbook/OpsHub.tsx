@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { HubShell, type HubTab } from "@/components/admin/hub/HubShell";
 import { IrAnalyticsTab } from "@/components/admin/playbook/IrAnalyticsTab";
-import { LifecycleBar, type LifecycleStage } from "@/components/admin/LifecycleBar";
+import { IrLifecycleCard } from "@/components/admin/IrLifecycleCard";
+import { type LifecycleStage } from "@/components/admin/LifecycleStepper";
 import type { HubPayload, HubSurface } from "@/lib/playbook/hub";
 import type { Suggestion, AdvisoryAction } from "@/lib/playbook/advisory";
 import type { HubSettings } from "@/lib/playbook/hub-settings";
@@ -81,7 +82,7 @@ export function OpsHub({ initial, initialTab, isAdmin }: { initial: HubPayload; 
 
   return (
     <HubShell flat title="Investor Relations Hub" subtitle={subtitle} tabs={tabs} activeTab={tab} onTabChange={changeTab}>
-      {tab === "dash" && <DashboardTab payload={payload} onJump={changeTab} onToggle={toggleCheck} onAdvisory={runAdvisoryAction} onRefresh={refresh} isAdmin={isAdmin} busy={busy} />}
+      {tab === "dash" && <DashboardTab payload={payload} onJump={changeTab} onToggle={toggleCheck} onAdvisory={runAdvisoryAction} busy={busy} />}
       {tab === "analytics" && <IrAnalyticsTab />}
       {(tab === "open" || tab === "core" || tab === "close") && (
         <BlockTab block={tab} surfaces={payload.surfaces.filter((s) => s.block === tab)} isAdmin={isAdmin} onToggle={toggleCheck} onRefresh={refresh} />
@@ -93,16 +94,14 @@ export function OpsHub({ initial, initialTab, isAdmin }: { initial: HubPayload; 
 
 /* ── Dashboard ─────────────────────────────────────────────────────────────── */
 
-function DashboardTab({ payload, onJump, onToggle, onAdvisory, onRefresh, isAdmin, busy }: {
+function DashboardTab({ payload, onJump, onToggle, onAdvisory, busy }: {
   payload: HubPayload; onJump: (k: string) => void; onToggle: (s: HubSurface, c: boolean) => void;
-  onAdvisory: (s: Suggestion, a: AdvisoryAction) => void; onRefresh: () => void; isAdmin: boolean; busy: boolean;
+  onAdvisory: (s: Suggestion, a: AdvisoryAction) => void; busy: boolean;
 }) {
   const { stats } = payload;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <InvestorLifecycleBar />
-
-      <DriftStrip payload={payload} onRefresh={onRefresh} isAdmin={isAdmin} />
+      <IrJourneyCard />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12 }}>
         <StatWidget tone="alert" label="Open escalations" value={stats.openEscalations} sub={`${stats.urgentEscalations} urgent`} onClick={() => onJump("open")} />
@@ -119,15 +118,22 @@ function DashboardTab({ payload, onJump, onToggle, onAdvisory, onRefresh, isAdmi
   );
 }
 
-function InvestorLifecycleBar() {
-  const [stages, setStages] = useState<LifecycleStage[]>([]);
+// Investor/Founder journey funnel card (numbered-stage pipeline with a toggle),
+// fetched client-side. Replaces the old flat "Investor lifecycle" bar.
+function IrJourneyCard() {
+  const [investor, setInvestor] = useState<LifecycleStage[]>([]);
+  const [founder, setFounder] = useState<LifecycleStage[]>([]);
   useEffect(() => {
     let alive = true;
-    fetch("/api/admin/lifecycle/investor").then((r) => r.json()).then((d) => { if (alive) setStages((d.stages ?? []) as LifecycleStage[]); }).catch(() => {});
+    fetch("/api/admin/lifecycle/investor").then((r) => r.json()).then((d) => {
+      if (!alive) return;
+      setInvestor((d.investor ?? d.stages ?? []) as LifecycleStage[]);
+      setFounder((d.founder ?? []) as LifecycleStage[]);
+    }).catch(() => {});
     return () => { alive = false; };
   }, []);
-  if (stages.length === 0) return null;
-  return <LifecycleBar title="Investor lifecycle" stages={stages} accent="#0E9F6E" />;
+  if (investor.length === 0 && founder.length === 0) return null;
+  return <IrLifecycleCard investorStages={investor} founderStages={founder} />;
 }
 
 const BLOCK_ORDER: Record<string, number> = { open: 0, core: 1, close: 2 };
@@ -169,55 +175,6 @@ function StatWidget({ tone, label, value, sub, onClick }: { tone: "alert" | "war
       <div style={{ fontSize: 26, fontWeight: 600, color: t.color, margin: "4px 0 2px" }}>{value}</div>
       <div style={{ fontSize: 11, color: t.color, opacity: 0.85 }}>{sub}</div>
     </button>
-  );
-}
-
-function DriftStrip({ payload, onRefresh, isAdmin }: { payload: HubPayload; onRefresh: () => void; isAdmin: boolean }) {
-  const { orphaned, missingInPlaybook, settings } = payload;
-  const [busy, setBusy] = useState(false);
-  if (!settings.driftDetection) return null;
-  const items = [
-    ...missingInPlaybook.map((m) => ({ kind: "missing" as const, navId: m.navId, label: m.label })),
-    ...orphaned.map((o) => ({ kind: "orphan" as const, navId: o.navId, label: o.navId })),
-  ];
-  if (items.length === 0) return null;
-
-  async function addToCore(navId: string) {
-    setBusy(true);
-    await api("/api/admin/playbook/module", "PATCH", { navId, block: "core", cadence: "daily", sort_order: 500 });
-    setBusy(false); onRefresh();
-  }
-  async function ignore(navIds: string[]) {
-    setBusy(true);
-    await api("/api/admin/playbook/drift/ignore", "POST", { navIds, ignored: true });
-    setBusy(false); onRefresh();
-  }
-
-  return (
-    <div style={{ background: "#FFF8EC", border: "0.5px solid #F4D9A0", borderRadius: 12, padding: "10px 14px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, fontWeight: 600, color: "#854F0B", marginBottom: items.length ? 6 : 0 }}>
-        <span><i className="ti ti-alert-triangle" aria-hidden="true" /> Menu drift — {items.length} item{items.length === 1 ? "" : "s"}</span>
-        {settings.driftAutoAdd && <span style={{ fontWeight: 400 }}>· auto-add is on; new surfaces land in Core automatically.</span>}
-        {isAdmin && items.length > 2 && (
-          <button disabled={busy} onClick={() => ignore(items.map((i) => i.navId))} style={{ marginLeft: "auto", fontSize: 10.5, color: "#854F0B", background: "transparent", border: "0.5px solid #F4D9A0", borderRadius: 7, padding: "3px 10px", cursor: "pointer" }}>Ignore all</button>
-        )}
-      </div>
-      {items.slice(0, 8).map((it) => (
-        <div key={`${it.kind}:${it.navId}`} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, padding: "3px 0" }}>
-          <span style={{ fontSize: 10, color: "#854F0B", background: "#FAEEDA", borderRadius: 8, padding: "1px 7px" }}>{it.kind === "missing" ? "not in playbook" : "removed from menu"}</span>
-          <span style={{ color: "var(--foreground)" }}>{it.label}</span>
-          <code style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{it.navId}</code>
-          {isAdmin && (
-            <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-              {it.kind === "missing" && !settings.driftAutoAdd && (
-                <button disabled={busy} onClick={() => addToCore(it.navId)} style={{ fontSize: 11, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 7, padding: "3px 10px", cursor: "pointer" }}>Add to Core</button>
-              )}
-              <button disabled={busy} onClick={() => ignore([it.navId])} style={{ fontSize: 11, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border)", borderRadius: 7, padding: "3px 10px", cursor: "pointer" }}>Ignore</button>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
   );
 }
 
