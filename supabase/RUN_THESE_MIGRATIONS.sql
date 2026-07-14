@@ -2463,3 +2463,17 @@ where id in (select id from (select id, row_number() over (partition by sequence
 
 create unique index if not exists marketing_sequence_batches_one_pending
 on public.marketing_sequence_batches (sequence_id, step_order) where status = 'pending';
+
+-- ============================================================
+-- 20260714016_marketing_settings.sql
+-- ============================================================
+-- Configurable default sender for marketing campaigns/sequences.
+
+create table if not exists public.marketing_settings (
+  id text primary key default 'default',
+  default_from_name text not null default 'iCapOS',
+  default_from_email text not null default 'outreach@icapos.com',
+  default_reply_to text,
+  updated_at timestamptz not null default now()
+);
+insert into public.marketing_settings (id) values ('default') on conflict (id) do nothing;

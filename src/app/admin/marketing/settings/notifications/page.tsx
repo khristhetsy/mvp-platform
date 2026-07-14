@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/supabase/auth";
 import { getTranslations } from "next-intl/server";
 import { NotificationsSettings } from "@/components/marketing/notifications/NotificationsSettings";
+import { DefaultSenderCard } from "@/components/marketing/DefaultSenderCard";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ export default async function MarketingNotificationsSettingsPage() {
           Choose which alerts and reminders reach you, how they&apos;re delivered, and when. Changes apply only to your account.
         </p>
       </div>
+      <DefaultSenderCard />
       <NotificationsSettings />
     </div>
   );

@@ -10,6 +10,7 @@ interface Props {
   lists: MarketingList[];
   templates: MarketingTemplate[];
   resendReady?: boolean;
+  defaultSender?: { name: string; email: string; replyTo: string };
 }
 
 const STATUS_MAP: Record<string, { bg: string; color: string; label: string }> = {
@@ -41,7 +42,7 @@ function toLocalInput(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function CampaignsClient({ campaigns, lists, templates, resendReady = true }: Props) {
+export function CampaignsClient({ campaigns, lists, templates, resendReady = true, defaultSender }: Props) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -64,9 +65,9 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
     name: "",
     list_id: lists[0]?.id ?? "",
     template_id: templates[0]?.id ?? "",
-    from_name: "iCapOS",
-    from_email: "outreach@icapos.com",
-    reply_to: "admin@myicfos.com",
+    from_name: defaultSender?.name || "iCapOS",
+    from_email: defaultSender?.email || "outreach@icapos.com",
+    reply_to: defaultSender?.replyTo || "admin@myicfos.com",
     scheduled_at: "",
     group_type: "founder",
   });

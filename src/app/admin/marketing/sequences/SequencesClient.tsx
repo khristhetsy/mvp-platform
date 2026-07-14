@@ -16,7 +16,7 @@ const STATUS_TABS: Array<{ value: string; label: string }> = [
   { value: "archived", label: "Archived" },
 ];
 
-interface Props { sequences: MarketingSequence[]; templates: MarketingTemplate[]; lists: MarketingList[]; }
+interface Props { sequences: MarketingSequence[]; templates: MarketingTemplate[]; lists: MarketingList[]; defaultSender?: { name: string; email: string }; }
 
 // Display labels for all stored conditions (existing steps may use any).
 const conditionLabels: Record<string, string> = {
@@ -49,7 +49,7 @@ const card: React.CSSProperties = {
   boxShadow: "0 1px 3px rgb(12 35 64 / 0.06)",
 };
 
-export function SequencesClient({ sequences, templates, lists }: Props) {
+export function SequencesClient({ sequences, templates, lists, defaultSender }: Props) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
@@ -82,8 +82,8 @@ export function SequencesClient({ sequences, templates, lists }: Props) {
     template_id: templates[0]?.id ?? "",
     delay_days: "0",
     condition: "always",
-    from_name: "iCapOS",
-    from_email: "outreach@icapos.com",
+    from_name: defaultSender?.name || "iCapOS",
+    from_email: defaultSender?.email || "outreach@icapos.com",
   });
 
   // Send-test-to-myself, per sequence.
