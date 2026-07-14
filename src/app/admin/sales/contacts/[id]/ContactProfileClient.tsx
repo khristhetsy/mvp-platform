@@ -83,6 +83,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [task, setTask] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
   const [savedNotes, setSavedNotes] = useState<string | null>(initialContact.note);
   const [editing, setEditing] = useState(false);
+  const [assigneeOpen, setAssigneeOpen] = useState(false);
+  const [assigneeSearch, setAssigneeSearch] = useState("");
   const [form, setForm] = useState({
     lead_status: initialContact.lead_status ?? "new",
     email: initialContact.email ?? "", company: initialContact.company ?? "",
@@ -241,23 +243,6 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                   </select>
                 </div>
               )}
-              {staff.length > 0 && (
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Assigned to <span style={{ color: "var(--muted-foreground)" }}>(multiple — they can also see this contact)</span></label>
-                  <div style={{ marginTop: 4, border: "0.5px solid var(--border)", borderRadius: 7, padding: 8, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "4px 12px", maxHeight: 132, overflowY: "auto", background: "var(--background)" }}>
-                    {staff.map((s) => {
-                      const on = form.assignee_ids.includes(s.id);
-                      const isOwner = form.owner_id === s.id;
-                      return (
-                        <label key={s.id} title={isOwner ? "Already the owner" : undefined} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, padding: "3px 2px", cursor: isOwner ? "not-allowed" : "pointer", opacity: isOwner ? 0.45 : 1 }}>
-                          <input type="checkbox" checked={on} disabled={isOwner} onChange={() => setForm((f) => ({ ...f, assignee_ids: on ? f.assignee_ids.filter((x) => x !== s.id) : [...f.assignee_ids, s.id] }))} style={{ width: 14, height: 14 }} />
-                          <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
               {([
                 ["email", "Email", "name@company.com"], ["company", "Company", ""],
                 ["phone", "Phone", "+1 …"], ["phone2", "Phone 2", ""],
@@ -270,6 +255,48 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                   <input value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} placeholder={ph} style={{ ...inp, width: "100%", marginTop: 4 }} />
                 </div>
               ))}
+              {staff.length > 0 && (() => {
+                const chosen = staff.filter((s) => form.assignee_ids.includes(s.id));
+                const matches = staff.filter((s) => s.name.toLowerCase().includes(assigneeSearch.toLowerCase()));
+                return (
+                  <div style={{ position: "relative" }}>
+                    <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Assigned to <span style={{ color: "var(--muted-foreground)" }}>(multiple — they can also see this contact)</span></label>
+                    <div onClick={() => setAssigneeOpen((v) => !v)} style={{ ...inp, width: "100%", marginTop: 4, minHeight: 34, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", cursor: "pointer", borderColor: assigneeOpen ? "#2E78F5" : undefined }}>
+                      {chosen.length === 0 && <span style={{ color: "var(--muted-foreground)" }}>Add reps…</span>}
+                      {chosen.map((s) => (
+                        <span key={s.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, background: "#E6F1FB", color: "#185FA5", borderRadius: 20, padding: "2px 6px 2px 9px" }}>
+                          {s.name}
+                          <i className="ti ti-x" style={{ fontSize: 11, cursor: "pointer" }} aria-hidden="true" onClick={(e) => { e.stopPropagation(); setForm((f) => ({ ...f, assignee_ids: f.assignee_ids.filter((x) => x !== s.id) })); }} />
+                        </span>
+                      ))}
+                      <i className="ti ti-chevron-down" style={{ marginLeft: "auto", color: "var(--muted-foreground)" }} aria-hidden="true" />
+                    </div>
+                    {assigneeOpen && (
+                      <>
+                        <div onClick={() => setAssigneeOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />
+                        <div style={{ position: "absolute", top: "100%", left: 0, right: 0, marginTop: 4, zIndex: 30, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 9, boxShadow: "0 10px 26px rgba(0,0,0,0.12)", overflow: "hidden" }}>
+                          <div style={{ padding: "7px 9px", borderBottom: "0.5px solid #eef1f5" }}>
+                            <input value={assigneeSearch} onChange={(e) => setAssigneeSearch(e.target.value)} autoFocus placeholder="Search reps…" style={{ ...inp, width: "100%" }} />
+                          </div>
+                          <div style={{ maxHeight: 176, overflowY: "auto" }}>
+                            {matches.length === 0 && <div style={{ fontSize: 12, color: "var(--muted-foreground)", padding: "8px 11px" }}>No reps.</div>}
+                            {matches.map((s) => {
+                              const on = form.assignee_ids.includes(s.id);
+                              const isOwner = form.owner_id === s.id;
+                              return (
+                                <label key={s.id} title={isOwner ? "Already the owner" : undefined} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 11px", fontSize: 12.5, cursor: isOwner ? "not-allowed" : "pointer", opacity: isOwner ? 0.45 : 1 }}>
+                                  <input type="checkbox" checked={on} disabled={isOwner} onChange={() => setForm((f) => ({ ...f, assignee_ids: on ? f.assignee_ids.filter((x) => x !== s.id) : [...f.assignee_ids, s.id] }))} style={{ width: 14, height: 14 }} />
+                                  <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: "0.5px solid #eef1f5" }}>
