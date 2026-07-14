@@ -205,12 +205,14 @@ export function EventDetailManager({
   initialEventSponsors,
   liveVideoConfigured,
   bannerSlot,
+  canEdit = true,
 }: {
   event: EventWithDetail;
   sponsorCatalog: Sponsor[];
   initialEventSponsors: EventSponsor[];
   liveVideoConfigured: boolean;
   bannerSlot?: ReactNode;
+  canEdit?: boolean;
 }) {
   const t = useTranslations("eventsAdmin.manage");
   const [sessions, setSessions] = useState<EventSession[]>(event.sessions);
@@ -386,18 +388,22 @@ export function EventDetailManager({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href={`/admin/events/${event.id}/control`}
-            className="rounded-md bg-[var(--navy)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
-          >
-            {t("liveControlCenter")}
-          </Link>
-          <Link
-            href={`/admin/events/${event.id}/marketing`}
-            className="rounded-md bg-[var(--indigo)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
-          >
-            {t("marketingHub")}
-          </Link>
+          {canEdit && (
+            <Link
+              href={`/admin/events/${event.id}/control`}
+              className="rounded-md bg-[var(--navy)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+            >
+              {t("liveControlCenter")}
+            </Link>
+          )}
+          {canEdit && (
+            <Link
+              href={`/admin/events/${event.id}/marketing`}
+              className="rounded-md bg-[var(--indigo)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+            >
+              {t("marketingHub")}
+            </Link>
+          )}
           <Link
             href={`/admin/events/${event.id}/leads`}
             className="rounded-md border border-[var(--border-subtle)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-slate-50"
@@ -414,6 +420,12 @@ export function EventDetailManager({
         </div>
       </div>
 
+      {!canEdit && (
+        <div className="mt-4 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <span aria-hidden>🔒</span> View only — you can see this event but don&rsquo;t have permission to edit it.
+        </div>
+      )}
+
       {error && (
         <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>
       )}
@@ -421,7 +433,8 @@ export function EventDetailManager({
       {/* Event details */}
       <section className="mt-6 rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
         <h2 className="font-semibold text-[var(--navy)]">{t("eventDetails")}</h2>
-        <form onSubmit={saveDetails} className="mt-4 grid gap-4">
+        <form onSubmit={saveDetails} className="mt-4">
+          <fieldset disabled={!canEdit} className="grid gap-4 min-w-0 border-0 p-0 m-0">
           <label className="block">
             <span className="text-xs font-medium text-[var(--text-muted)]">{t("title")}</span>
             <input
@@ -535,16 +548,19 @@ export function EventDetailManager({
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 border-t border-[var(--border-subtle)] pt-4">
-            {detailsMsg && <span className="text-sm font-medium text-emerald-700">{detailsMsg}</span>}
-            <button
-              type="submit"
-              disabled={savingDetails || !title.trim()}
-              className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
-            >
-              {savingDetails ? t("saving") : t("saveChanges")}
-            </button>
-          </div>
+            {canEdit && (
+              <div className="flex items-center justify-end gap-3 border-t border-[var(--border-subtle)] pt-4">
+                {detailsMsg && <span className="text-sm font-medium text-emerald-700">{detailsMsg}</span>}
+                <button
+                  type="submit"
+                  disabled={savingDetails || !title.trim()}
+                  className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
+                >
+                  {savingDetails ? t("saving") : t("saveChanges")}
+                </button>
+              </div>
+            )}
+          </fieldset>
         </form>
       </section>
 
@@ -552,7 +568,7 @@ export function EventDetailManager({
       {bannerSlot ? <div className="mt-6">{bannerSlot}</div> : null}
 
       {/* Page banner, countdown & side rail */}
-      <BannerEditor event={event} />
+      {canEdit && <BannerEditor event={event} />}
 
       {/* Sessions */}
       <section className="mt-6 rounded-xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-panel)]">
@@ -574,18 +590,21 @@ export function EventDetailManager({
                       <span className="ml-2 rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">{t("recorded")}</span>
                     )}
                   </div>
-                  <button onClick={() => removeSession(s.id)} className="text-xs text-rose-600 hover:underline">
-                    {t("remove")}
-                  </button>
+                  {canEdit && (
+                    <button onClick={() => removeSession(s.id)} className="text-xs text-rose-600 hover:underline">
+                      {t("remove")}
+                    </button>
+                  )}
                 </div>
-                <SessionLiveControls session={s} onUpdated={onSessionUpdated} liveConfigured={liveVideoConfigured} />
-                <SessionVideoUpload eventId={event.id} session={s} onUpdated={onSessionUpdated} />
-                {s.type === "talk_show" && <GuestRoster sessionId={s.id} eventId={event.id} />}
+                {canEdit && <SessionLiveControls session={s} onUpdated={onSessionUpdated} liveConfigured={liveVideoConfigured} />}
+                {canEdit && <SessionVideoUpload eventId={event.id} session={s} onUpdated={onSessionUpdated} />}
+                {canEdit && s.type === "talk_show" && <GuestRoster sessionId={s.id} eventId={event.id} />}
               </div>
             ))
           )}
         </div>
 
+        {canEdit && (
         <form onSubmit={addSession} className="mt-4 grid gap-3 border-t border-[var(--border-subtle)] pt-4">
           <div className="grid grid-cols-2 gap-3">
             <input
@@ -639,6 +658,7 @@ export function EventDetailManager({
             </button>
           </div>
         </form>
+        )}
       </section>
 
       {/* Sponsors */}
@@ -655,15 +675,17 @@ export function EventDetailManager({
                   <span className="ml-2 rounded bg-slate-100 px-2 py-0.5 text-xs capitalize text-slate-600">{s.placement}</span>
                   <span className="ml-2 text-xs capitalize text-[var(--text-muted)]">{s.tier}</span>
                 </div>
-                <button onClick={() => detachSponsor(s.id)} className="text-xs text-rose-600 hover:underline">
-                  {t("remove")}
-                </button>
+                {canEdit && (
+                  <button onClick={() => detachSponsor(s.id)} className="text-xs text-rose-600 hover:underline">
+                    {t("remove")}
+                  </button>
+                )}
               </div>
             ))
           )}
         </div>
 
-        {sponsorCatalog.length === 0 ? (
+        {!canEdit ? null : sponsorCatalog.length === 0 ? (
           <p className="mt-4 border-t border-[var(--border-subtle)] pt-4 text-sm text-[var(--text-muted)]">
             {t("noCatalogPre")}
             <Link href="/admin/events/sponsors" className="text-[var(--blue)] underline">{t("catalogLink")}</Link>.

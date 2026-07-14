@@ -109,7 +109,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       {
         href: "/admin/events",
         label: "Event Hub",
-        requiredPermission: "manage_events",
+        requiredPermission: "view_events",
         children: [
           { href: "/admin/events",              label: "All events"   },
           { href: "/admin/events/applications", label: "Applications" },

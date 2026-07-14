@@ -2357,3 +2357,28 @@ create index if not exists crm_contacts_owner_idx on public.crm_contacts (owner_
 
 alter table public.crm_contacts add column if not exists assignee_ids uuid[] not null default '{}';
 create index if not exists crm_contacts_assignee_ids_idx on public.crm_contacts using gin (assignee_ids);
+
+-- ============================================================
+-- 20260714011_view_events_permission.sql
+-- ============================================================
+-- View/Edit split for Events: view_events (view read-only) alongside manage_events
+-- (edit). Grants view_events to every role holding manage_events so editors keep access.
+
+insert into public.internal_permissions (slug, label, description)
+values ('view_events', 'View Events', 'Open the Events area and view events read-only')
+on conflict (slug) do nothing;
+
+insert into public.internal_role_permissions (role_id, permission_id, granted)
+select rp.role_id, vp.id, true
+from public.internal_role_permissions rp
+join public.internal_permissions mp on mp.id = rp.permission_id and mp.slug = 'manage_events'
+cross join public.internal_permissions vp
+where vp.slug = 'view_events' and rp.granted = true
+on conflict do nothing;
+
+insert into public.internal_role_permissions (role_id, permission_id, granted)
+select r.id, p.id, true
+from public.internal_roles r
+join public.internal_permissions p on p.slug = 'view_events'
+where r.slug in ('super_admin', 'admin', 'manager')
+on conflict do nothing;

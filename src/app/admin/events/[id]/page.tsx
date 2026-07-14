@@ -18,7 +18,10 @@ export const metadata = { title: "Manage event" };
 
 export default async function AdminEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations("adminPages");
-  const { profile, effective } = await requirePermissionPage("manage_events");
+  // Viewing needs view_events; editing needs manage_events. Members with view-only
+  // access see the whole page read-only.
+  const { profile, effective } = await requirePermissionPage("view_events");
+  const canEdit = effective.permissions.includes("manage_events");
   const { id } = await params;
   const admin = createServiceRoleClient();
 
@@ -31,7 +34,7 @@ export default async function AdminEventDetailPage({ params }: { params: Promise
     listEventModerators(admin, id).catch(() => []),
     listInternalUsers(admin).catch(() => []),
   ]);
-  const canManageModerators = effective.permissions.includes("assign_roles");
+  const canManageModerators = canEdit && effective.permissions.includes("assign_roles");
 
   return (
     <AppShell
@@ -45,6 +48,7 @@ export default async function AdminEventDetailPage({ params }: { params: Promise
         sponsorCatalog={sponsorCatalog}
         initialEventSponsors={eventSponsors}
         liveVideoConfigured={isLiveVideoConfigured()}
+        canEdit={canEdit}
         bannerSlot={
           <EventBannerEditor
             eventId={id}
@@ -52,6 +56,7 @@ export default async function AdminEventDetailPage({ params }: { params: Promise
             initialUrl={bannerPublicUrl(admin, event.coverPath)}
             initialOverlay={event.coverOverlay}
             initialFocal={event.coverFocal}
+            canEdit={canEdit}
           />
         }
       />

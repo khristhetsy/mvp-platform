@@ -15,12 +15,14 @@ export function EventBannerEditor({
   initialUrl,
   initialOverlay,
   initialFocal,
+  canEdit = true,
 }: {
   eventId: string;
   eventTitle: string;
   initialUrl: string | null;
   initialOverlay: number;
   initialFocal: string;
+  canEdit?: boolean;
 }) {
   const t = useTranslations("eventsAdmin.banner");
   const [url, setUrl] = useState<string | null>(initialUrl);
@@ -87,19 +89,21 @@ export function EventBannerEditor({
         </div>
       </div>
 
-      <div
-        onDragOver={(e) => { e.preventDefault(); setOver(true); }}
-        onDragLeave={() => setOver(false)}
-        onDrop={(e) => { e.preventDefault(); setOver(false); const f = e.dataTransfer.files?.[0]; if (f) void upload(f); }}
-        onClick={() => inputRef.current?.click()}
-        className={`mt-3 cursor-pointer rounded-xl border-2 border-dashed p-5 text-center transition-colors ${over ? "border-[var(--indigo)] bg-[var(--indigo-soft)]" : "border-[var(--border-subtle)]"}`}
-      >
-        <p className="text-sm text-[var(--navy)]">{busy ? t("uploading") : t("dropPrompt")}</p>
-        <p className="mt-0.5 text-xs text-[var(--text-muted)]">{t("fileHint")}</p>
-        <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = ""; }} />
-      </div>
+      {canEdit && (
+        <div
+          onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+          onDragLeave={() => setOver(false)}
+          onDrop={(e) => { e.preventDefault(); setOver(false); const f = e.dataTransfer.files?.[0]; if (f) void upload(f); }}
+          onClick={() => inputRef.current?.click()}
+          className={`mt-3 cursor-pointer rounded-xl border-2 border-dashed p-5 text-center transition-colors ${over ? "border-[var(--indigo)] bg-[var(--indigo-soft)]" : "border-[var(--border-subtle)]"}`}
+        >
+          <p className="text-sm text-[var(--navy)]">{busy ? t("uploading") : t("dropPrompt")}</p>
+          <p className="mt-0.5 text-xs text-[var(--text-muted)]">{t("fileHint")}</p>
+          <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(f); e.target.value = ""; }} />
+        </div>
+      )}
 
-      {url && (
+      {canEdit && url && (
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
             <p className="mb-1 text-xs font-medium text-[var(--text-secondary)]">{t("overlay", { overlay })}</p>
@@ -130,7 +134,7 @@ export function EventBannerEditor({
       )}
 
       <div className="mt-4 flex items-center gap-3">
-        {url && (
+        {canEdit && url && (
           <button onClick={remove} disabled={busy} className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-50">
             {t("removeBanner")}
           </button>
