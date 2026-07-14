@@ -73,7 +73,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-export function ContactProfileClient({ contact: initialContact, opportunities, staff, activity }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; activity: Activity[] }) {
+export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[] }) {
+  const assignableStaff = leadStaff ?? staff;
   const router = useRouter();
   const [contact, setContact] = useState<Contact>(initialContact);
   const [note, setNote] = useState("");
@@ -256,8 +257,11 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                 </div>
               ))}
               {staff.length > 0 && (() => {
+                // Chosen chips resolve from full staff (so an already-assigned person stays
+                // visible/removable even if later removed from the eligible list). The pick
+                // list only offers lead-assignable members (Feature Controls).
                 const chosen = staff.filter((s) => form.assignee_ids.includes(s.id));
-                const matches = staff.filter((s) => s.name.toLowerCase().includes(assigneeSearch.toLowerCase()));
+                const matches = assignableStaff.filter((s) => s.name.toLowerCase().includes(assigneeSearch.toLowerCase()));
                 return (
                   <div style={{ position: "relative" }}>
                     <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Assigned to <span style={{ color: "var(--muted-foreground)" }}>(multiple — they can also see this contact)</span></label>

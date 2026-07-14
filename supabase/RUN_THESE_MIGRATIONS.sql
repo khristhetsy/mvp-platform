@@ -2382,3 +2382,11 @@ from public.internal_roles r
 join public.internal_permissions p on p.slug = 'view_events'
 where r.slug in ('super_admin', 'admin', 'manager')
 on conflict do nothing;
+
+-- ============================================================
+-- 20260714012_sales_lead_assignees.sql
+-- ============================================================
+-- Lead-assignable members: which staff appear in a contact's "Assigned to" picker.
+-- Configured in Admin → Feature Controls. Empty = no restriction (all staff eligible).
+
+alter table public.sales_settings add column if not exists lead_assignee_ids uuid[] not null default '{}';
