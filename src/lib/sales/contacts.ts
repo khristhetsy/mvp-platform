@@ -8,7 +8,7 @@ function db(): any { return createServiceRoleClient(); }
 export type ContactProfile = {
   id: string; source: string; external_id: string; name: string; email: string | null; company: string | null;
   phone: string | null; phone2: string | null; website: string | null; lead_status: string | null; lead_source: string | null;
-  tags: string[]; owner: string | null; membership: string | null; job_position: string | null;
+  tags: string[]; owner: string | null; owner_id: string | null; membership: string | null; job_position: string | null;
   street: string | null; street2: string | null; city: string | null; state: string | null; zip: string | null; country: string | null;
   language: string | null; created_on: string | null; note: string | null;
 };
@@ -70,7 +70,7 @@ export async function getContactProfile(id: string): Promise<{ contact: ContactP
     website: c.website ?? pickRaw(raw, ["website"]),
     lead_status: pref("lead_status", (c.lead_status as string) ?? pickExtra(raw, ["Lead Status"]) ?? pickRaw(raw, ["x_studio_lead_status"]) ?? null),
     lead_source: pref("lead_source", ((raw?.__profile as { leadSource?: unknown } | undefined)?.leadSource as string) ?? pickExtra(raw, ["Lead Source"]) ?? pickRaw(raw, ["x_studio_lead_type"])),
-    tags: Array.isArray(c.tags) ? c.tags : [], owner: c.owner ?? null,
+    tags: Array.isArray(c.tags) ? c.tags : [], owner: c.owner ?? null, owner_id: c.owner_id ?? null,
     membership: pref("membership", (c.plan as string) ?? pickRaw(raw, ["membership_type", "membership"])),
     job_position: pref("job_position", pickRaw(raw, ["function", "job_position", "title"])),
     street: pref("street", pickRaw(raw, ["street"])), street2: pref("street2", pickRaw(raw, ["street2"])),
@@ -84,7 +84,7 @@ export async function getContactProfile(id: string): Promise<{ contact: ContactP
 
 export type ContactPatch = {
   lead_status?: string | null; phone?: string | null; email?: string | null; company?: string | null;
-  website?: string | null; owner?: string | null; tags?: string[];
+  website?: string | null; owner?: string | null; owner_id?: string | null; tags?: string[];
   phone2?: string | null; lead_source?: string | null; membership?: string | null; job_position?: string | null;
   language?: string | null; street?: string | null; street2?: string | null; city?: string | null;
   state?: string | null; zip?: string | null; country?: string | null;
@@ -103,6 +103,7 @@ export async function updateContact(id: string, patch: ContactPatch, actorId?: s
   if (patch.company !== undefined) update.company = patch.company || null;
   if (patch.website !== undefined) update.website = patch.website || null;
   if (patch.owner !== undefined) update.owner = patch.owner || null;
+  if (patch.owner_id !== undefined) update.owner_id = patch.owner_id || null;
   if (patch.tags !== undefined) update.tags = patch.tags.map((t) => t.trim()).filter(Boolean).slice(0, 20);
 
   const ovPatch: Record<string, string | null> = {};

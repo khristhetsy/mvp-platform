@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { getSalesScope } from "@/lib/sales/scope";
 
 export const dynamic = "force-dynamic";
 
@@ -27,9 +28,11 @@ export async function GET(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   const p = req.nextUrl.searchParams;
+  const scope = await getSalesScope(profile);
 
   const countOne = async (group: string): Promise<number> => {
     let q = db().from("crm_contacts").select("id", { count: "exact", head: true }).eq("contact_type", group);
+    if (!scope.isManager) q = q.eq("owner_id", scope.ownerId);
     q = applyTextFilters(q, p);
     const { count } = await q;
     return count ?? 0;

@@ -59,9 +59,10 @@ export async function getDefaultPipeline(): Promise<{ id: string; stages: Stage[
   return { id: String(p.id), stages: (s ?? []) as Stage[] };
 }
 
-export async function listOpportunities(includeArchived = false): Promise<Opportunity[]> {
+export async function listOpportunities(includeArchived = false, ownerId?: string | null): Promise<Opportunity[]> {
   let q = db().from("sales_opportunities").select(SELECT).order("created_at", { ascending: false });
   if (!includeArchived) q = q.neq("status", "archived");
+  if (ownerId) q = q.eq("owner_id", ownerId);
   const { data } = await q;
   return ((data ?? []) as Array<Record<string, unknown>>).map(mapRow);
 }
@@ -82,7 +83,7 @@ export type CreateOpportunityInput = {
   name: string; email?: string | null; company?: string | null; contactCrmId?: string | null;
   valueCents?: number | null; billing?: "yearly" | "monthly"; pipelineId?: string | null; stageId?: string | null;
   probability?: number | null; expectedClose?: string | null; source?: string | null; leadStatus?: string | null;
-  createdBy?: string | null;
+  createdBy?: string | null; ownerId?: string | null;
 };
 
 export async function createOpportunity(input: CreateOpportunityInput): Promise<Opportunity | null> {
@@ -102,6 +103,7 @@ export async function createOpportunity(input: CreateOpportunityInput): Promise<
       probability: input.probability ?? null, expected_close: input.expectedClose || null,
       source: input.source || null, lead_status: input.leadStatus || null,
       created_by: input.createdBy || null,
+      owner_id: input.ownerId ?? input.createdBy ?? null,
     })
     .select("id")
     .single();

@@ -17,8 +17,10 @@ export async function listPipelines(): Promise<Pipeline[]> {
   }));
 }
 
-export async function listBoardOpportunities(): Promise<BoardOpp[]> {
-  const { data } = await db().from("sales_opportunities").select("id, title, value_cents, billing, probability, priority, stage_id, pipeline_id, contact_name, updated_at").eq("status", "open");
+export async function listBoardOpportunities(ownerId?: string | null): Promise<BoardOpp[]> {
+  let query = db().from("sales_opportunities").select("id, title, value_cents, billing, probability, priority, stage_id, pipeline_id, contact_name, updated_at").eq("status", "open");
+  if (ownerId) query = query.eq("owner_id", ownerId);
+  const { data } = await query;
   return ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
     id: String(r.id), title: String(r.title), value_cents: (r.value_cents as number) ?? null,
     billing: (r.billing as "yearly" | "monthly") ?? "yearly", probability: (r.probability as number) ?? null, priority: (r.priority as number) ?? 0,

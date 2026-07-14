@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 type Contact = {
   id: string; source: string; name: string; email: string | null; company: string | null; phone: string | null; phone2: string | null;
-  website: string | null; lead_status: string | null; lead_source: string | null; tags: string[]; owner: string | null; membership: string | null;
+  website: string | null; lead_status: string | null; lead_source: string | null; tags: string[]; owner: string | null; owner_id: string | null; membership: string | null;
   job_position: string | null; street: string | null; street2: string | null; city: string | null; state: string | null; zip: string | null;
   country: string | null; language: string | null; created_on: string | null; note: string | null;
 };
@@ -87,7 +87,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     lead_status: initialContact.lead_status ?? "new",
     email: initialContact.email ?? "", company: initialContact.company ?? "",
     phone: initialContact.phone ?? "", phone2: initialContact.phone2 ?? "",
-    website: initialContact.website ?? "", owner: initialContact.owner ?? "",
+    website: initialContact.website ?? "", owner: initialContact.owner ?? "", owner_id: initialContact.owner_id ?? "",
     membership: initialContact.membership ?? "", job_position: initialContact.job_position ?? "",
     lead_source: initialContact.lead_source ?? "", language: initialContact.language ?? "",
     street: initialContact.street ?? "", street2: initialContact.street2 ?? "",
@@ -129,7 +129,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
         lead_status: form.lead_status,
         email: form.email || null, company: form.company || null,
         phone: form.phone || null, phone2: form.phone2 || null,
-        website: form.website || null, owner: form.owner || null,
+        website: form.website || null, owner: form.owner || null, owner_id: form.owner_id || null,
         membership: form.membership || null, job_position: form.job_position || null,
         lead_source: form.lead_source || null, language: form.language || null,
         street: form.street || null, street2: form.street2 || null,
@@ -225,6 +225,13 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                 <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Lead status</label>
                 <select value={form.lead_status} onChange={(e) => setForm({ ...form, lead_status: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }}>
                   {(LEAD_STATUSES.includes(form.lead_status) || !form.lead_status ? LEAD_STATUSES : [form.lead_status, ...LEAD_STATUSES]).map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Assign owner</label>
+                <select value={form.owner_id} onChange={(e) => setForm({ ...form, owner_id: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }}>
+                  <option value="">Unassigned</option>
+                  {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
               {([

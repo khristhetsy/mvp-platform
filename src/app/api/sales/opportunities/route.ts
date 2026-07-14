@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { listOpportunities, createOpportunity, getDefaultPipeline } from "@/lib/sales/opportunities";
+import { getSalesScope } from "@/lib/sales/scope";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,8 @@ export async function GET(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   const includeArchived = req.nextUrl.searchParams.get("archived") === "1";
-  const [opportunities, pipeline] = await Promise.all([listOpportunities(includeArchived), getDefaultPipeline()]);
+  const scope = await getSalesScope(profile);
+  const [opportunities, pipeline] = await Promise.all([listOpportunities(includeArchived, scope.isManager ? null : scope.ownerId), getDefaultPipeline()]);
   return NextResponse.json({ opportunities, stages: pipeline?.stages ?? [] });
 }
 

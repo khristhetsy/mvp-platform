@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { getSalesScope } from "@/lib/sales/scope";
 
 export const dynamic = "force-dynamic";
 
@@ -50,8 +51,11 @@ export async function GET(req: NextRequest): Promise<Response> {
   const sort = p.get("sort") && SORTABLE.has(p.get("sort")!) ? p.get("sort")! : "name";
   const dir = p.get("dir") === "desc" ? false : true;
 
+  const scope = await getSalesScope(profile);
+
   const cols = "id, name, email, company, phone, source, contact_type, country, created_on, raw";
   let query = db().from("crm_contacts").select(cols, { count: "exact" });
+  if (!scope.isManager) query = query.eq("owner_id", scope.ownerId);
   if (group && (GROUPS as readonly string[]).includes(group)) query = query.eq("contact_type", group);
   query = applyFilters(query, p);
   query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);
@@ -76,6 +80,7 @@ const addSchema = z.object({
   email: z.string().email().optional().or(z.literal("")),
   company: z.string().max(200).optional(),
   phone: z.string().max(60).optional(),
+  assigneeId: z.string().uuid().optional(),
 });
 
 // POST /api/sales/contacts — add a new contact (stored in the CRM mirror as source='manual').
@@ -84,9 +89,12 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   const parsed = addSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "A contact name is required." }, { status: 400 });
+  // Only managers may assign to someone else; reps own what they create.
+  const scope = await getSalesScope(profile);
+  const ownerId = scope.isManager && parsed.data.assigneeId ? parsed.data.assigneeId : profile.id;
   const { data, error } = await db()
     .from("crm_contacts")
-    .insert({ name: parsed.data.name.trim(), email: parsed.data.email || null, company: parsed.data.company || null, phone: parsed.data.phone || null, source: "manual" })
+    .insert({ name: parsed.data.name.trim(), email: parsed.data.email || null, company: parsed.data.company || null, phone: parsed.data.phone || null, source: "manual", owner_id: ownerId })
     .select("id, name, email, company, phone, source")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

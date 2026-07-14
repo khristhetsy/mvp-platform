@@ -6,6 +6,7 @@ import { listPipelines } from "@/lib/sales/pipelines";
 import { SalesHubHeader } from "./SalesHubHeader";
 import { SalesAdvisor } from "./SalesAdvisor";
 import { LifecycleStepper } from "@/components/admin/LifecycleStepper";
+import { getSalesScope } from "@/lib/sales/scope";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +14,11 @@ export default async function SalesDashboardPage() {
   const profile = await requireRole(["admin", "analyst"]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin: any = createServiceRoleClient();
+  const scope = await getSalesScope(profile);
 
-  const { data: oppRows } = await admin.from("sales_opportunities").select("status, value_cents, stage_id, billing, probability, updated_at");
+  let oppQuery = admin.from("sales_opportunities").select("status, value_cents, stage_id, billing, probability, updated_at");
+  if (!scope.isManager) oppQuery = oppQuery.eq("owner_id", scope.ownerId);
+  const { data: oppRows } = await oppQuery;
   const opps = (oppRows ?? []) as Array<{ status: string; value_cents: number | null; stage_id: string | null; billing: string | null; probability: number | null; updated_at: string | null }>;
   const open = opps.filter((o) => o.status === "open");
   const won = opps.filter((o) => o.status === "won");
