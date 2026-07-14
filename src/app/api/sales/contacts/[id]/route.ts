@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { getContactProfile, appendContactNote, updateContact } from "@/lib/sales/contacts";
+import { getSalesScope } from "@/lib/sales/scope";
 
 export const dynamic = "force-dynamic";
 
@@ -34,8 +35,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
+  const scope = await getSalesScope(profile);
+  // Non-admins may only edit contacts they own, and may never reassign the owner.
+  const update = { ...parsed.data };
+  if (!scope.isManager) {
+    const existing = await getContactProfile(id);
+    if (!existing || existing.contact.owner_id !== scope.ownerId) return NextResponse.json({ error: "Not found." }, { status: 404 });
+    delete update.owner_id;
+  }
   try {
-    await updateContact(id, parsed.data, profile.id);
+    await updateContact(id, update, profile.id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Save failed." }, { status: 500 });
@@ -49,6 +58,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const data = await getContactProfile(id);
   if (!data) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  const scope = await getSalesScope(profile);
+  if (!scope.isManager && data.contact.owner_id !== scope.ownerId) return NextResponse.json({ error: "Not found." }, { status: 404 });
   return NextResponse.json(data);
 }
 
@@ -61,6 +72,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const parsed = noteSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "A note is required." }, { status: 400 });
+  const scope = await getSalesScope(profile);
+  if (!scope.isManager) {
+    const existing = await getContactProfile(id);
+    if (!existing || existing.contact.owner_id !== scope.ownerId) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
   try {
     await appendContactNote(id, parsed.data.note, profile.id);
     return NextResponse.json({ ok: true });

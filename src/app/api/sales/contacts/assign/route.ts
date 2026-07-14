@@ -30,12 +30,12 @@ function applyFilters(query: any, p: URLSearchParams): any {
 }
 
 // POST /api/sales/contacts/assign?<same filters as the list> — bulk-set owner_id for
-// the matching contacts. Managers only.
+// the matching contacts. Admins only.
 export async function POST(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   const scope = await getSalesScope(profile);
-  if (!scope.isManager) return NextResponse.json({ error: "Only managers can assign contacts to reps." }, { status: 403 });
+  if (!scope.isManager) return NextResponse.json({ error: "Only admins can assign contacts to reps." }, { status: 403 });
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "A valid assignee (or null to unassign) is required." }, { status: 400 });

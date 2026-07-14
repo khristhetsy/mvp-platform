@@ -227,13 +227,15 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                   {(LEAD_STATUSES.includes(form.lead_status) || !form.lead_status ? LEAD_STATUSES : [form.lead_status, ...LEAD_STATUSES]).map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
-              <div>
-                <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Assign owner</label>
-                <select value={form.owner_id} onChange={(e) => setForm({ ...form, owner_id: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }}>
-                  <option value="">Unassigned</option>
-                  {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
+              {staff.length > 0 && (
+                <div>
+                  <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Assign owner</label>
+                  <select value={form.owner_id} onChange={(e) => setForm({ ...form, owner_id: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }}>
+                    <option value="">Unassigned</option>
+                    {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+              )}
               {([
                 ["email", "Email", "name@company.com"], ["company", "Company", ""],
                 ["phone", "Phone", "+1 …"], ["phone2", "Phone 2", ""],
