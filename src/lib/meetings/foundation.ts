@@ -174,10 +174,11 @@ export async function setAttendance(sessionId: string, userId: string, status: A
 /** Recent sessions of the management meeting (for the meetings list). */
 export async function listRecentSessions(meetingKey = "mgmt", limit = 20): Promise<MeetingSession[]> {
   const { data } = await db().from("ceo_meeting_sessions")
-    .select("id, meeting_key, session_date, started_at, status, meet_link, meeting:ceo_meetings(name)")
+    .select("id, meeting_key, session_date, start_time, started_at, status, meet_link, meeting:ceo_meetings(name)")
     .eq("meeting_key", meetingKey).order("session_date", { ascending: false }).limit(limit);
   return ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
     id: String(r.id), meeting_key: String(r.meeting_key), session_date: String(r.session_date),
+    start_time: (r.start_time as string) ?? null,
     started_at: (r.started_at as string) ?? null,
     status: (r.status as string) ?? (r.started_at ? "live" : "scheduled"),
     meet_link: (r.meet_link as string) ?? null,

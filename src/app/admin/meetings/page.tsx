@@ -36,7 +36,7 @@ export default async function MeetingsPage() {
         {sessions.length === 0 ? (
           <div style={{ padding: 16, fontSize: 12.5, color: "var(--muted-foreground)" }}>No meeting sessions yet — create one to start prepping the agenda.</div>
         ) : sessions.map((s) => (
-          <MeetingRow key={s.id} session={{ id: s.id, meeting_name: s.meeting_name, session_date: s.session_date, status: s.status }} />
+          <MeetingRow key={s.id} session={{ id: s.id, meeting_name: s.meeting_name, session_date: s.session_date, start_time: s.start_time ?? null, status: s.status }} />
         ))}
       </div>
     </AppShell>

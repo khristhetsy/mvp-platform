@@ -8,7 +8,25 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 
-interface Session { id: string; meeting_name: string; session_date: string; status: string }
+interface Session { id: string; meeting_name: string; session_date: string; start_time?: string | null; status: string }
+
+/** Short local timezone abbreviation (e.g. "PDT"). */
+function localTzAbbr(): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", { timeZoneName: "short" }).formatToParts(new Date());
+    return parts.find((p) => p.type === "timeZoneName")?.value ?? "";
+  } catch { return ""; }
+}
+/** "09:00[:00]" → "9:00 AM" (local-agnostic; the stored time is the meeting's clock time). */
+function fmtTime(t?: string | null): string | null {
+  if (!t) return null;
+  const [h, m] = t.split(":");
+  const hh = Number(h);
+  if (Number.isNaN(hh)) return null;
+  const ampm = hh < 12 ? "AM" : "PM";
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  return `${h12}:${m ?? "00"} ${ampm}`;
+}
 
 const STATUS: Record<string, { bg: string; color: string; border?: string; label: string }> = {
   live: { bg: "#E1F5EE", color: "#0F6E56", label: "Live" },
@@ -21,6 +39,7 @@ export function MeetingRow({ session }: { session: Session }) {
   const router = useRouter();
   const [menu, setMenu] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [tz, setTz] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -28,9 +47,13 @@ export function MeetingRow({ session }: { session: Session }) {
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
+  // Resolve the local tz label after mount (avoids SSR/client hydration mismatch).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setTz(localTzAbbr()); }, []);
 
   const st = STATUS[session.status] ?? STATUS.scheduled;
   const dateLabel = new Date(`${session.session_date}T00:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  const timeLabel = fmtTime(session.start_time);
 
   const setStatus = async (status: "closed" | "live") => {
     setMenu(false); setBusy(true);
@@ -50,7 +73,7 @@ export function MeetingRow({ session }: { session: Session }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 0.7fr 44px", padding: "10px 14px", borderTop: "0.5px solid #F1F4F9", alignItems: "center", opacity: busy ? 0.5 : 1 }}>
       <Link href={`/admin/meetings/${session.id}`} style={{ fontSize: 12.5, fontWeight: 600, color: "#0A1A40", textDecoration: "none" }}>{session.meeting_name}</Link>
-      <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{dateLabel}</div>
+      <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{dateLabel}{timeLabel ? ` · ${timeLabel}${tz ? ` ${tz}` : ""}` : ""}</div>
       <div><span style={{ fontSize: 10.5, fontWeight: 600, background: st.bg, color: st.color, border: st.border, borderRadius: 6, padding: "2px 8px" }}>{st.label}</span></div>
       <div ref={ref} style={{ position: "relative", justifySelf: "end" }}>
         <button aria-label="Meeting options" onClick={() => setMenu((m) => !m)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", fontSize: 18, padding: "2px 6px", borderRadius: 6 }}>
