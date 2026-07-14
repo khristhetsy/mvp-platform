@@ -10,6 +10,7 @@ export async function getContacts(opts?: {
   offset?: number;
   sort?: "name" | "company" | "created_at";
   dir?: "asc" | "desc";
+  enrich?: boolean;
 }): Promise<{ contacts: MarketingContact[]; total: number }> {
   const db = await marketingDb();
 
@@ -49,7 +50,49 @@ export async function getContacts(opts?: {
 
   const { data, count, error } = await query;
   if (error) throw error;
-  return { contacts: (data ?? []) as MarketingContact[], total: count ?? 0 };
+  let contacts = (data ?? []) as MarketingContact[];
+  if (opts?.enrich && contacts.length) contacts = await enrichFromCrm(db, contacts);
+  return { contacts, total: count ?? 0 };
+}
+
+// Attach phone / membership / type / lead-assignees from the CRM mirror (matched by
+// email) so the Marketing contacts grid can show those columns.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function enrichFromCrm(db: any, contacts: MarketingContact[]): Promise<MarketingContact[]> {
+  try {
+    const emails = [...new Set(contacts.map((c) => c.email).filter(Boolean))];
+    if (emails.length === 0) return contacts;
+    const { data: crm } = await db
+      .from("crm_contacts")
+      .select("email, phone, contact_type, plan, assignee_ids, raw")
+      .in("email", emails);
+    const byEmail = new Map<string, { phone: string | null; membership: string | null; type: string | null; assignee_ids: string[] }>();
+    const ids = new Set<string>();
+    for (const r of (crm ?? []) as Array<Record<string, unknown>>) {
+      const email = String(r.email ?? "").toLowerCase();
+      if (!email) continue;
+      const raw = (r.raw ?? {}) as Record<string, unknown>;
+      const phone = (r.phone as string) || (typeof raw.phone === "string" ? raw.phone : null) || (typeof raw.mobile === "string" ? raw.mobile : null) || null;
+      const membership = (r.plan as string) || (typeof raw.membership_type === "string" ? raw.membership_type : null) || null;
+      const assignee_ids = Array.isArray(r.assignee_ids) ? (r.assignee_ids as string[]) : [];
+      assignee_ids.forEach((id) => ids.add(id));
+      byEmail.set(email, { phone, membership, type: (r.contact_type as string) ?? null, assignee_ids });
+    }
+    const nameById = new Map<string, string>();
+    if (ids.size) {
+      const { data: profs } = await db.from("profiles").select("id, full_name, email").in("id", [...ids]);
+      for (const p of (profs ?? []) as Array<{ id: string; full_name: string | null; email: string | null }>) {
+        nameById.set(p.id, p.full_name ?? p.email ?? "Member");
+      }
+    }
+    return contacts.map((c) => {
+      const m = byEmail.get((c.email ?? "").toLowerCase());
+      if (!m) return c;
+      return { ...c, phone: m.phone, membership: m.membership, type: m.type, assignees: m.assignee_ids.map((id) => nameById.get(id)).filter(Boolean) as string[] };
+    });
+  } catch {
+    return contacts;
+  }
 }
 
 export async function createContact(

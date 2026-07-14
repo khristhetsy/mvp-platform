@@ -10,6 +10,11 @@ export type MarketingContact = {
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+  // Enriched from crm_contacts (matched by email) when getContacts({ enrich: true }).
+  phone?: string | null;
+  membership?: string | null;
+  type?: string | null;
+  assignees?: string[];
 };
 
 export type MarketingList = {

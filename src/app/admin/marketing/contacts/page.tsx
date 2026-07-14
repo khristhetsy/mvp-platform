@@ -19,7 +19,7 @@ export default async function MarketingContactsPage({ searchParams }: Props) {
   const dir = (params.dir === "asc" ? "asc" : "desc") as "asc" | "desc";
 
   const [{ contacts, total }, lists] = await Promise.all([
-    getContacts({ search: params.search, list_id: params.list_id, tag: params.tag, limit, offset, sort, dir }),
+    getContacts({ search: params.search, list_id: params.list_id, tag: params.tag, limit, offset, sort, dir, enrich: true }),
     getLists(),
   ]);
 

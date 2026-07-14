@@ -19,6 +19,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       dir: p.get("dir") === "asc" ? "asc" : "desc",
       offset: Math.max(0, Number(p.get("offset") ?? 0) || 0),
       limit: Math.min(200, Math.max(1, Number(p.get("limit") ?? 50) || 50)),
+      enrich: true,
     });
     return NextResponse.json(result);
   } catch (err) {

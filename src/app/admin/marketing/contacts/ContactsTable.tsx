@@ -43,7 +43,7 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
   const [tagFilter, setTagFilter] = useState(currentTag);
   const [sort, setSort] = useState<"name" | "company" | "created_at">(currentSort);
   const [dir, setDir] = useState<"asc" | "desc">(currentDir);
-  const [cols, setCols] = useState({ company: true, tags: true, source: true });
+  const [cols, setCols] = useState({ company: true, type: false, membership: false, phone: false, email: false, lead_assign: false, tags: true, source: true });
   const [showCols, setShowCols] = useState(false);
 
   // None-mode data (seeded from server props).
@@ -183,7 +183,7 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
     } finally { setBulkBusy(false); }
   }
 
-  const template = ["30px", "30px", "2fr", cols.company ? "1.3fr" : null, cols.tags ? "1.2fr" : null, cols.source ? "90px" : null, "128px"].filter(Boolean).join(" ");
+  const template = ["30px", "30px", "2fr", cols.company ? "1.3fr" : null, cols.type ? "84px" : null, cols.membership ? "1fr" : null, cols.phone ? "1fr" : null, cols.email ? "1.4fr" : null, cols.lead_assign ? "1.1fr" : null, cols.tags ? "1.2fr" : null, cols.source ? "90px" : null, "128px"].filter(Boolean).join(" ");
   const sortArrow = (col: "name" | "company") => sort === col ? (dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : null;
 
   function renderRow(c: MarketingContact) {
@@ -201,6 +201,11 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
           {displayName && <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.email}</div>}
         </div>
         {cols.company && <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.company ?? "—"}</div>}
+        {cols.type && <div>{c.type ? <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 10, background: "#EEEDFE", color: "#4338CA", textTransform: "capitalize" }}>{c.type}</span> : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}</div>}
+        {cols.membership && <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.membership ?? "—"}</div>}
+        {cols.phone && <div style={{ fontSize: 11.5, fontFamily: "var(--font-mono)", color: c.phone ? "var(--foreground)" : "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.phone || "—"}</div>}
+        {cols.email && <div style={{ fontSize: 12, color: "#1A6CE4", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.email}</div>}
+        {cols.lead_assign && <div style={{ display: "flex", gap: 4, flexWrap: "wrap", overflow: "hidden" }}>{c.assignees && c.assignees.length ? (<>{c.assignees.slice(0, 2).map((n) => <span key={n} style={{ fontSize: 10, background: "#E6F1FB", color: "#185FA5", borderRadius: 10, padding: "1px 7px", whiteSpace: "nowrap" }}>{n}</span>)}{c.assignees.length > 2 && <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>+{c.assignees.length - 2}</span>}</>) : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>—</span>}</div>}
         {cols.tags && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
             {tags.map((tag) => (
@@ -293,9 +298,13 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
           <button onClick={() => setShowCols((v) => !v)} style={{ ...ICON_BTN, width: "auto", padding: "0 10px", gap: 5, height: 32 }} title="Columns"><Columns3 size={14} /> <span style={{ fontSize: 12 }}>Columns</span></button>
           {showCols && (
             <div style={{ position: "absolute", right: 0, top: 36, zIndex: 20, background: "#fff", border: "0.5px solid var(--border)", borderRadius: 8, padding: 8, boxShadow: "0 8px 24px rgb(12 35 64 / 0.12)", minWidth: 150 }}>
-              {(["company", "tags", "source"] as const).map((k) => (
-                <label key={k} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, padding: "5px 6px", cursor: "pointer", textTransform: "capitalize" }}>
-                  <input type="checkbox" checked={cols[k]} onChange={() => setCols((c) => ({ ...c, [k]: !c[k] }))} /> {k}
+              {([
+                ["company", "Company"], ["type", "Type"], ["membership", "Membership"],
+                ["phone", "Phone"], ["email", "Email"], ["lead_assign", "Lead assign"],
+                ["tags", "Tags"], ["source", "Source"],
+              ] as const).map(([k, label]) => (
+                <label key={k} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, padding: "5px 6px", cursor: "pointer" }}>
+                  <input type="checkbox" checked={cols[k]} onChange={() => setCols((c) => ({ ...c, [k]: !c[k] }))} /> {label}
                 </label>
               ))}
             </div>
@@ -349,6 +358,11 @@ export function ContactsTable({ contacts, lists: initialLists, total, currentSea
           <div />
           <button onClick={() => toggleSort("name")} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Contact {sortArrow("name")}</button>
           {cols.company && <button onClick={() => toggleSort("company")} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>Company {sortArrow("company")}</button>}
+          {cols.type && <div style={{ fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)" }}>Type</div>}
+          {cols.membership && <div style={{ fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)" }}>Membership</div>}
+          {cols.phone && <div style={{ fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)" }}>Phone</div>}
+          {cols.email && <div style={{ fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)" }}>Email</div>}
+          {cols.lead_assign && <div style={{ fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)" }}>Lead assign</div>}
           {cols.tags && <div style={{ fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)" }}>Tags</div>}
           {cols.source && <div style={{ fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)" }}>Source</div>}
           <div style={{ fontSize: 11, fontWeight: 500, color: "var(--muted-foreground)", textAlign: "right" }}>Actions</div>
