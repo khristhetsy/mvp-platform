@@ -244,12 +244,13 @@ export function GmailInbox() {
       }
       return;
     }
-    if (!draft.to.trim() || !draft.subject.trim() || !draft.body.trim()) { setError("To, subject and message are required."); return; }
+    const hasRecipient = draft.to.trim() || draft.cc?.trim() || draft.bcc?.trim();
+    if (!hasRecipient || !draft.subject.trim() || !draft.body.trim()) { setError("A recipient (To, Cc, or Bcc), a subject, and a message are required."); return; }
     setSending(true);
     setError(null);
     try {
       const res = await fetch("/api/integrations/google/gmail/send", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: draft.to.trim(), cc: draft.cc?.trim() || undefined, bcc: draft.bcc?.trim() || undefined, subject: draft.subject.trim(), body: draft.body, html: draft.html, attachments: draft.attachments }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: draft.to.trim() || undefined, cc: draft.cc?.trim() || undefined, bcc: draft.bcc?.trim() || undefined, subject: draft.subject.trim(), body: draft.body, html: draft.html, attachments: draft.attachments }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Send failed.");

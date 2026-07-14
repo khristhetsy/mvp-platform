@@ -48,7 +48,9 @@ function bodyMime(body: string, html?: string | null): string {
 
 /** Encode an email (optionally with html + attachments) as base64url RFC 2822 for the Gmail API. */
 function encodeRawEmail(to: string, subject: string, body: string, html?: string | null, attachments: GmailAttachment[] = [], cc?: string | null, bcc?: string | null): string {
-  const recipientHeaders = [`To: ${to}`];
+  // Bcc-only sends (blast to a list) are valid — when there's no To, use the standard
+  // "undisclosed-recipients:;" placeholder so the header is well-formed.
+  const recipientHeaders = [`To: ${to.trim() || "undisclosed-recipients:;"}`];
   if (cc && cc.trim()) recipientHeaders.push(`Cc: ${cc.trim()}`);
   if (bcc && bcc.trim()) recipientHeaders.push(`Bcc: ${bcc.trim()}`);
 

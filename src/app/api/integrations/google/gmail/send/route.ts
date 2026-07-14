@@ -14,7 +14,7 @@ const attachmentSchema = z.object({
 });
 
 const sendSchema = z.object({
-  to: z.string().min(1).max(2000),
+  to: z.string().max(2000).optional(),
   cc: z.string().max(2000).optional(),
   bcc: z.string().max(2000).optional(),
   subject: z.string().min(1).max(200),
@@ -72,16 +72,19 @@ export async function POST(request: Request) {
     attachments = fetched.filter((a): a is GmailAttachment => a !== null);
   }
 
-  const toList = parseRecipients(parsed.data.to);
-  if (toList.length === 0) {
-    return NextResponse.json({ error: "A valid recipient email is required." }, { status: 400 });
+  const toList = parseRecipients(parsed.data.to ?? "");
+  const ccList = parseRecipients(parsed.data.cc);
+  const bccList = parseRecipients(parsed.data.bcc);
+  // Any of To / Cc / Bcc is enough — a Bcc-only blast is valid.
+  if (toList.length + ccList.length + bccList.length === 0) {
+    return NextResponse.json({ error: "At least one recipient (To, Cc, or Bcc) is required." }, { status: 400 });
   }
 
   const result = await sendViaGmail({
     userId: user.id,
     to: toList.join(", "),
-    cc: parseRecipients(parsed.data.cc).join(", ") || null,
-    bcc: parseRecipients(parsed.data.bcc).join(", ") || null,
+    cc: ccList.join(", ") || null,
+    bcc: bccList.join(", ") || null,
     subject: parsed.data.subject,
     body: parsed.data.body,
     html: parsed.data.html ?? null,
