@@ -51,8 +51,12 @@ function buildParams(q: string, tf: TextFilters, countries: string[], sort: Sort
   return sp.toString();
 }
 
-export function SalesContactsClient() {
+export function SalesContactsClient({ assignStaff }: { assignStaff?: Array<{ id: string; name: string }> } = {}) {
   const [q, setQ] = useState("");
+  const [assignTo, setAssignTo] = useState("");
+  const [onlyUnassigned, setOnlyUnassigned] = useState(true);
+  const [assignBusy, setAssignBusy] = useState(false);
+  const [assignMsg, setAssignMsg] = useState<string | null>(null);
   const [textFilters, setTextFilters] = useState<TextFilters>({ name: "", company: "", email: "", phone: "" });
   const [countries, setCountries] = useState<string[]>([]);
   const [sort, setSort] = useState<Sort>(() => loadLS<Sort>("salesContacts.sort", { key: "name", dir: "asc" }));
@@ -130,6 +134,22 @@ export function SalesContactsClient() {
     } catch (e) { setErr(e instanceof Error ? e.message : "Add failed."); } finally { setBusy(false); }
   }
 
+  async function handleAssign() {
+    if (!assignTo) return;
+    setAssignBusy(true); setAssignMsg(null);
+    try {
+      const res = await fetch(`/api/sales/contacts/assign${paramsStr ? `?${paramsStr}` : ""}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assigneeId: assignTo, onlyUnassigned }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Assign failed.");
+      const name = assignStaff?.find((s) => s.id === assignTo)?.name ?? "the rep";
+      setAssignMsg(`Assigned ${data.assigned ?? 0} contact${data.assigned === 1 ? "" : "s"} to ${name}.`);
+      await Promise.all([loadAll(paramsStr), loadFacets(paramsStr)]);
+    } catch (e) { setAssignMsg(e instanceof Error ? e.message : "Assign failed."); } finally { setAssignBusy(false); }
+  }
+
   function openText(col: string) { setDraft(textFilters[col as keyof TextFilters]); setCountrySearch(""); setOpenFilter(openFilter === col ? null : col); }
   function applyText(col: string) { setTextFilters((f) => ({ ...f, [col]: draft })); setOpenFilter(null); }
   function clearText(col: string) { setTextFilters((f) => ({ ...f, [col]: "" })); setOpenFilter(null); }
@@ -189,6 +209,22 @@ export function SalesContactsClient() {
             <button onClick={() => { setAdding(false); setErr(null); }} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>✕</button>
           </div>
           {err && <div style={{ gridColumn: "1 / -1", fontSize: 11.5, color: "#A32D2D" }}>{err}</div>}
+        </div>
+      )}
+
+      {assignStaff && assignStaff.length > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: "#F5F9FF", border: "0.5px solid #BFDBFE", borderRadius: 10, padding: "8px 12px", marginBottom: 12 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#185FA5" }}><i className="ti ti-users" aria-hidden="true" /> Assign matching to</span>
+          <select value={assignTo} onChange={(e) => setAssignTo(e.target.value)} style={{ fontSize: 12, padding: "6px 9px", borderRadius: 7, border: "0.5px solid var(--border)" }}>
+            <option value="">Choose a rep…</option>
+            {assignStaff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          <label style={{ fontSize: 12, color: "var(--muted-foreground)", display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <input type="checkbox" checked={onlyUnassigned} onChange={(e) => setOnlyUnassigned(e.target.checked)} /> only unassigned
+          </label>
+          <button onClick={() => void handleAssign()} disabled={assignBusy || !assignTo} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer", opacity: assignBusy || !assignTo ? 0.5 : 1 }}>{assignBusy ? "Assigning…" : "Assign"}</button>
+          {assignMsg && <span style={{ fontSize: 11.5, color: /failed|Failed/.test(assignMsg) ? "#A32D2D" : "#0F6E56" }}>{assignMsg}</span>}
+          <span style={{ fontSize: 11, color: "var(--muted-foreground)", marginLeft: "auto" }}>Applies your current search &amp; filters across all groups.</span>
         </div>
       )}
 
