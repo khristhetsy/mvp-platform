@@ -24,6 +24,8 @@ import { UpcomingMeetingsCard } from "@/components/calendar/UpcomingMeetingsCard
 import { AdminPlatformHealthWidget } from "@/components/admin/AdminPlatformHealthWidget";
 import { getEffectivePermissions } from "@/lib/rbac/effective-permissions";
 import { canSeeCard, canActOnCard } from "@/lib/rbac/dashboard-cards";
+import { getPersonalDashboard } from "@/lib/dashboard/personal";
+import { PersonalDashboard } from "@/components/admin/PersonalDashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -37,8 +39,19 @@ export default async function AdminDashboardPage() {
   // Resolve the viewer's effective permissions (role defaults + per-user
   // overrides + super-admin), then gate each dashboard card on them. This is
   // controlled entirely from /admin/users/permissions — no separate config.
-  const { permissions } = await getEffectivePermissions(supabase, profile.id, profile);
+  const { permissions, isSuperAdmin } = await getEffectivePermissions(supabase, profile.id, profile);
   const showCard = (id: Parameters<typeof canSeeCard>[0]) => canSeeCard(id, permissions);
+
+  // Only the super admin sees the org-wide dashboard (platform health, all priorities).
+  // Every other member gets a personal dashboard scoped to their own activity.
+  if (!isSuperAdmin) {
+    const data = await getPersonalDashboard(profile.id);
+    return (
+      <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Member"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>
+        <PersonalDashboard name={profile.full_name ?? profile.email ?? "there"} data={data} />
+      </AppShell>
+    );
+  }
 
   const [
     metrics,
