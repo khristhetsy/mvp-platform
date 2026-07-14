@@ -2398,3 +2398,45 @@ alter table public.sales_settings add column if not exists lead_assignee_ids uui
 
 alter table public.sales_forecast_snapshots add column if not exists owner_id uuid references public.profiles(id) on delete cascade;
 create index if not exists sales_forecast_snapshots_owner_idx on public.sales_forecast_snapshots (scenario_id, owner_id, computed_at desc);
+
+-- ============================================================
+-- 20260714014_relax_user_delete_fks.sql
+-- ============================================================
+-- Make hard-deleting a user work: relax every FK to profiles/auth.users that is
+-- NO ACTION/RESTRICT -> SET NULL (nullable col) or CASCADE (not-null col).
+
+do $$
+declare
+  r record;
+  def text;
+  all_nullable boolean;
+  action text;
+begin
+  for r in
+    select con.oid, con.conname, con.conrelid as relid, con.conrelid::regclass as tbl, con.conkey
+    from pg_constraint con
+    join pg_class frel on frel.oid = con.confrelid
+    join pg_namespace fns on fns.oid = frel.relnamespace
+    where con.contype = 'f'
+      and con.confdeltype in ('a', 'r')
+      and (
+        (fns.nspname = 'public' and frel.relname = 'profiles')
+        or (fns.nspname = 'auth' and frel.relname = 'users')
+      )
+  loop
+    select bool_and(not a.attnotnull) into all_nullable
+    from pg_attribute a
+    where a.attrelid = r.relid and a.attnum = any(r.conkey);
+
+    action := case when all_nullable then 'set null' else 'cascade' end;
+
+    def := pg_get_constraintdef(r.oid);
+    def := regexp_replace(def, '\s+ON DELETE [A-Z ]+', '', 'i');
+    def := regexp_replace(def, '\s+ON UPDATE [A-Z ]+', '', 'i');
+
+    execute format('alter table %s drop constraint %I', r.tbl, r.conname);
+    execute format('alter table %s add constraint %I %s on delete %s', r.tbl, r.conname, def, action);
+
+    raise notice 'Relaxed % on % -> on delete %', r.conname, r.tbl, action;
+  end loop;
+end $$;
