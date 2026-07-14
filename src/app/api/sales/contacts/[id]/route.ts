@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { getContactProfile, appendContactNote, updateContact } from "@/lib/sales/contacts";
 import { getSalesScope } from "@/lib/sales/scope";
+import { isSuperAdmin } from "@/lib/rbac/effective-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -37,13 +38,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
   const scope = await getSalesScope(profile);
-  // Non-admins may only edit contacts they own or are assigned to, and may never change
-  // ownership or the assignee set (assignment is admin-only).
+  // Non-admins may only edit contacts they own or are assigned to.
   const update = { ...parsed.data };
   if (!scope.isManager) {
     const existing = await getContactProfile(id);
     const c = existing?.contact;
     if (!c || (c.owner_id !== scope.ownerId && !c.assignee_ids.includes(scope.ownerId ?? ""))) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+  // Lead owner and Lead assign (assignees) can only be changed by a super admin.
+  if (!isSuperAdmin(profile)) {
     delete update.owner_id;
     delete update.assignee_ids;
   }

@@ -73,7 +73,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[] }) {
+export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean }) {
   const assignableStaff = leadStaff ?? staff;
   const router = useRouter();
   const [contact, setContact] = useState<Contact>(initialContact);
@@ -84,8 +84,12 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [task, setTask] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
   const [savedNotes, setSavedNotes] = useState<string | null>(initialContact.note);
   const [editing, setEditing] = useState(false);
-  const [assigneeOpen, setAssigneeOpen] = useState(false);
-  const [assigneeSearch, setAssigneeSearch] = useState("");
+  // Read-view "Lead assign" control (super admin only) — saves assignees directly.
+  const [leadOpen, setLeadOpen] = useState(false);
+  const [leadSel, setLeadSel] = useState<string[]>(initialContact.assignee_ids ?? []);
+  const [leadSearch, setLeadSearch] = useState("");
+  const [leadSaving, setLeadSaving] = useState(false);
+  const [leadMsg, setLeadMsg] = useState<string | null>(null);
   const [form, setForm] = useState({
     lead_status: initialContact.lead_status ?? "new",
     email: initialContact.email ?? "", company: initialContact.company ?? "",
@@ -134,7 +138,6 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
         email: form.email || null, company: form.company || null,
         phone: form.phone || null, phone2: form.phone2 || null,
         website: form.website || null, owner: form.owner || null, owner_id: form.owner_id || null,
-        assignee_ids: form.assignee_ids,
         membership: form.membership || null, job_position: form.job_position || null,
         lead_source: form.lead_source || null, language: form.language || null,
         street: form.street || null, street2: form.street2 || null,
@@ -144,6 +147,19 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
       const res = await fetch(`/api/sales/contacts/${contact.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (res.ok) { setContact({ ...contact, ...body }); setEditing(false); }
     } finally { setBusy(false); }
+  }
+
+  async function saveLeadAssign() {
+    setLeadSaving(true); setLeadMsg(null);
+    try {
+      const res = await fetch(`/api/sales/contacts/${contact.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignee_ids: leadSel }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Save failed.");
+      setContact({ ...contact, assignee_ids: leadSel });
+      setLeadOpen(false);
+    } catch (e) { setLeadMsg(e instanceof Error ? e.message : "Save failed."); } finally { setLeadSaving(false); }
   }
 
   async function saveNote() {
@@ -235,9 +251,9 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                   {(LEAD_STATUSES.includes(form.lead_status) || !form.lead_status ? LEAD_STATUSES : [form.lead_status, ...LEAD_STATUSES]).map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
-              {staff.length > 0 && (
+              {isSuperAdmin && staff.length > 0 && (
                 <div>
-                  <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Owner <span style={{ color: "var(--muted-foreground)" }}>(one)</span></label>
+                  <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Lead owner <span style={{ color: "var(--muted-foreground)" }}>(super admin)</span></label>
                   <select value={form.owner_id} onChange={(e) => setForm({ ...form, owner_id: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }}>
                     <option value="">Unassigned</option>
                     {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -256,51 +272,6 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                   <input value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} placeholder={ph} style={{ ...inp, width: "100%", marginTop: 4 }} />
                 </div>
               ))}
-              {staff.length > 0 && (() => {
-                // Chosen chips resolve from full staff (so an already-assigned person stays
-                // visible/removable even if later removed from the eligible list). The pick
-                // list only offers lead-assignable members (Feature Controls).
-                const chosen = staff.filter((s) => form.assignee_ids.includes(s.id));
-                const matches = assignableStaff.filter((s) => s.name.toLowerCase().includes(assigneeSearch.toLowerCase()));
-                return (
-                  <div style={{ position: "relative" }}>
-                    <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Assigned to <span style={{ color: "var(--muted-foreground)" }}>(multiple — they can also see this contact)</span></label>
-                    <div onClick={() => setAssigneeOpen((v) => !v)} style={{ ...inp, width: "100%", marginTop: 4, minHeight: 34, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", cursor: "pointer", borderColor: assigneeOpen ? "#2E78F5" : undefined }}>
-                      {chosen.length === 0 && <span style={{ color: "var(--muted-foreground)" }}>Add reps…</span>}
-                      {chosen.map((s) => (
-                        <span key={s.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, background: "#E6F1FB", color: "#185FA5", borderRadius: 20, padding: "2px 6px 2px 9px" }}>
-                          {s.name}
-                          <i className="ti ti-x" style={{ fontSize: 11, cursor: "pointer" }} aria-hidden="true" onClick={(e) => { e.stopPropagation(); setForm((f) => ({ ...f, assignee_ids: f.assignee_ids.filter((x) => x !== s.id) })); }} />
-                        </span>
-                      ))}
-                      <i className="ti ti-chevron-down" style={{ marginLeft: "auto", color: "var(--muted-foreground)" }} aria-hidden="true" />
-                    </div>
-                    {assigneeOpen && (
-                      <>
-                        <div onClick={() => setAssigneeOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />
-                        <div style={{ position: "absolute", top: "100%", left: 0, right: 0, marginTop: 4, zIndex: 30, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 9, boxShadow: "0 10px 26px rgba(0,0,0,0.12)", overflow: "hidden" }}>
-                          <div style={{ padding: "7px 9px", borderBottom: "0.5px solid #eef1f5" }}>
-                            <input value={assigneeSearch} onChange={(e) => setAssigneeSearch(e.target.value)} autoFocus placeholder="Search reps…" style={{ ...inp, width: "100%" }} />
-                          </div>
-                          <div style={{ maxHeight: 176, overflowY: "auto" }}>
-                            {matches.length === 0 && <div style={{ fontSize: 12, color: "var(--muted-foreground)", padding: "8px 11px" }}>No reps.</div>}
-                            {matches.map((s) => {
-                              const on = form.assignee_ids.includes(s.id);
-                              const isOwner = form.owner_id === s.id;
-                              return (
-                                <label key={s.id} title={isOwner ? "Already the owner" : undefined} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 11px", fontSize: 12.5, cursor: isOwner ? "not-allowed" : "pointer", opacity: isOwner ? 0.45 : 1 }}>
-                                  <input type="checkbox" checked={on} disabled={isOwner} onChange={() => setForm((f) => ({ ...f, assignee_ids: on ? f.assignee_ids.filter((x) => x !== s.id) : [...f.assignee_ids, s.id] }))} style={{ width: 14, height: 14 }} />
-                                  <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })()}
             </div>
 
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: "0.5px solid #eef1f5" }}>
@@ -341,6 +312,63 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             <Section title="Lead">
               <Row icon="ti-flag" label="Lead status" value={contact.lead_status} />
               <Row icon="ti-arrow-down-circle" label="Lead source" value={contact.lead_source} />
+              {/* Lead assign — under Lead source. Editable by super admin only. */}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "5px 0", fontSize: 12.5 }}>
+                <i className="ti ti-users" aria-hidden="true" style={{ fontSize: 15, color: "var(--muted-foreground)", width: 18, flexShrink: 0, marginTop: 3 }} />
+                <span style={{ width: 100, color: "var(--muted-foreground)", flexShrink: 0, marginTop: 3 }}>Lead assign</span>
+                <div style={{ minWidth: 0, flex: 1, position: "relative" }}>
+                  {isSuperAdmin ? (() => {
+                    const chosen = staff.filter((s) => leadSel.includes(s.id));
+                    const matches = assignableStaff.filter((s) => s.name.toLowerCase().includes(leadSearch.toLowerCase()));
+                    return (
+                      <>
+                        <div onClick={() => setLeadOpen((v) => !v)} style={{ ...inp, width: "100%", minHeight: 30, display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", cursor: "pointer", borderColor: leadOpen ? "#2E78F5" : undefined }}>
+                          {chosen.length === 0 && <span style={{ color: "var(--muted-foreground)" }}>Assign members…</span>}
+                          {chosen.map((s) => (
+                            <span key={s.id} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, background: "#E6F1FB", color: "#185FA5", borderRadius: 20, padding: "1px 6px 1px 8px" }}>
+                              {s.name}
+                              <i className="ti ti-x" style={{ fontSize: 10, cursor: "pointer" }} aria-hidden="true" onClick={(e) => { e.stopPropagation(); setLeadSel((p) => p.filter((x) => x !== s.id)); }} />
+                            </span>
+                          ))}
+                          <i className="ti ti-chevron-down" style={{ marginLeft: "auto", color: "var(--muted-foreground)" }} aria-hidden="true" />
+                        </div>
+                        {leadOpen && (
+                          <>
+                            <div onClick={() => setLeadOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 20 }} />
+                            <div style={{ position: "absolute", top: "100%", left: 0, right: 0, marginTop: 4, zIndex: 30, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 9, boxShadow: "0 10px 26px rgba(0,0,0,0.12)", overflow: "hidden" }}>
+                              <div style={{ padding: "7px 9px", borderBottom: "0.5px solid #eef1f5" }}>
+                                <input value={leadSearch} onChange={(e) => setLeadSearch(e.target.value)} autoFocus placeholder="Search members…" style={{ ...inp, width: "100%" }} />
+                              </div>
+                              <div style={{ maxHeight: 168, overflowY: "auto" }}>
+                                {matches.length === 0 && <div style={{ fontSize: 12, color: "var(--muted-foreground)", padding: "8px 11px" }}>No members.</div>}
+                                {matches.map((s) => {
+                                  const on = leadSel.includes(s.id);
+                                  const isOwner = contact.owner_id === s.id;
+                                  return (
+                                    <label key={s.id} title={isOwner ? "Already the owner" : undefined} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 11px", fontSize: 12.5, cursor: isOwner ? "not-allowed" : "pointer", opacity: isOwner ? 0.45 : 1 }}>
+                                      <input type="checkbox" checked={on} disabled={isOwner} onChange={() => setLeadSel((p) => on ? p.filter((x) => x !== s.id) : [...p, s.id])} style={{ width: 14, height: 14 }} />
+                                      <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 11px", borderTop: "0.5px solid #eef1f5" }}>
+                                <button onClick={saveLeadAssign} disabled={leadSaving} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "5px 12px", cursor: "pointer", opacity: leadSaving ? 0.6 : 1 }}>{leadSaving ? "Saving…" : "Save"}</button>
+                                <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{leadSel.length} selected</span>
+                                {leadMsg && <span style={{ fontSize: 11, color: "#A32D2D" }}>{leadMsg}</span>}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </>
+                    );
+                  })() : (
+                    <span style={{ color: contact.assignee_ids.length ? "var(--foreground)" : "var(--muted-foreground)" }}>
+                      {contact.assignee_ids.map((id) => staff.find((s) => s.id === id)?.name).filter(Boolean).join(", ") || "—"}
+                    </span>
+                  )}
+                </div>
+              </div>
               <Row icon="ti-id-badge" label="Membership" value={contact.membership} />
               <Row icon="ti-briefcase" label="Job position" value={contact.job_position} />
               <Row icon="ti-tag" label="Tags" value={contact.tags.length ? contact.tags.join(", ") : null} />

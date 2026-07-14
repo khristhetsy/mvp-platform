@@ -5,6 +5,7 @@ import { getContactProfile } from "@/lib/sales/contacts";
 import { listAssignableStaff, listLeadAssignableStaff } from "@/lib/sales/settings";
 import { listContactActivity } from "@/lib/sales/activity";
 import { getSalesScope } from "@/lib/sales/scope";
+import { isSuperAdmin } from "@/lib/rbac/effective-permissions";
 import { SalesHubHeader } from "../../SalesHubHeader";
 import { ContactProfileClient } from "./ContactProfileClient";
 
@@ -26,7 +27,7 @@ export default async function ContactProfilePage({ params }: { params: Promise<{
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>
       <SalesHubHeader />
-      <ContactProfileClient contact={data.contact} opportunities={data.opportunities} staff={staff} leadStaff={leadStaff} activity={activity} />
+      <ContactProfileClient contact={data.contact} opportunities={data.opportunities} staff={staff} leadStaff={leadStaff} activity={activity} isSuperAdmin={isSuperAdmin(profile)} />
     </AppShell>
   );
 }
