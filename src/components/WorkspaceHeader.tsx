@@ -24,6 +24,7 @@ import { NotificationBellDropdown } from "@/components/NotificationBellDropdown"
 import { WorkspaceBreadcrumbs } from "@/components/ui/WorkspaceBreadcrumbs";
 import type { WorkspaceId } from "@/lib/workspace-nav";
 import { workspaceLabel } from "@/lib/workspace-nav";
+import type { InternalPermission } from "@/lib/rbac/constants";
 
 type Props = {
   workspace: WorkspaceId;
@@ -34,7 +35,7 @@ type Props = {
 };
 
 type MenuItem =
-  | { kind: "link"; label: string; href: string; icon: React.ReactNode }
+  | { kind: "link"; label: string; href: string; icon: React.ReactNode; perm?: InternalPermission }
   | { kind: "divider" }
   | { kind: "signout" };
 
@@ -55,9 +56,9 @@ function menuItemsForWorkspace(workspace: WorkspaceId): MenuItem[] {
   if (workspace === "admin") {
     return [
       { kind: "link", label: "Profile", href: "/admin/profile", icon: <User className="h-4 w-4" /> },
-      { kind: "link", label: "Platform settings", href: "/admin/integrations", icon: <Shield className="h-4 w-4" /> },
-      { kind: "link", label: "System health", href: "/admin/system-health", icon: <Activity className="h-4 w-4" /> },
-      { kind: "link", label: "Audit log", href: "/admin/audit", icon: <Terminal className="h-4 w-4" /> },
+      { kind: "link", label: "Platform settings", href: "/admin/integrations", icon: <Shield className="h-4 w-4" />, perm: "manage_integrations" },
+      { kind: "link", label: "System health", href: "/admin/system-health", icon: <Activity className="h-4 w-4" />, perm: "view_system_health" },
+      { kind: "link", label: "Audit log", href: "/admin/audit", icon: <Terminal className="h-4 w-4" />, perm: "view_audit_logs" },
       { kind: "divider" },
       { kind: "link", label: "Help & support", href: "https://docs.icapos.com", icon: <HelpCircle className="h-4 w-4" /> },
       { kind: "divider" },
@@ -76,6 +77,44 @@ function menuItemsForWorkspace(workspace: WorkspaceId): MenuItem[] {
     { kind: "divider" },
     { kind: "signout" },
   ];
+}
+
+// Gate admin profile-menu items by the same rules as the sidebar: RBAC permission +
+// department path access. Super admins (and unrestricted admins) see everything.
+function useAdminMenuAccess(workspace: WorkspaceId) {
+  const [perms, setPerms] = useState<{ permissions: string[]; isSuperAdmin: boolean } | null>(null);
+  const [dept, setDept] = useState<{ unrestricted: boolean; paths: string[] } | null>(null);
+  useEffect(() => {
+    if (workspace !== "admin") return;
+    let alive = true;
+    fetch("/api/admin/users/permissions/me").then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (alive) setPerms(d ? { permissions: d.permissions ?? [], isSuperAdmin: Boolean(d.isSuperAdmin) } : { permissions: [], isSuperAdmin: false }); })
+      .catch(() => { if (alive) setPerms({ permissions: [], isSuperAdmin: false }); });
+    fetch("/api/admin/departments/me").then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (alive) setDept(d ? { unrestricted: Boolean(d.unrestricted ?? d.isAdmin), paths: d.paths ?? [] } : { unrestricted: true, paths: [] }); })
+      .catch(() => { if (alive) setDept({ unrestricted: true, paths: [] }); });
+    return () => { alive = false; };
+  }, [workspace]);
+
+  return (item: MenuItem): boolean => {
+    if (item.kind !== "link" || !item.perm) return true;   // ungated items always show
+    if (!perms) return false;                              // hide gated items until access is known
+    if (perms.isSuperAdmin) return true;
+    if (!perms.permissions.includes(item.perm)) return false;
+    if (!dept || dept.unrestricted) return true;
+    return dept.paths.some((p) => (p === "/admin" ? item.href === "/admin" : item.href === p || item.href.startsWith(`${p}/`) || p.startsWith(`${item.href}/`)));
+  };
+}
+
+// Drop leading/trailing dividers and collapse consecutive ones (after filtering).
+function tidyDividers(items: MenuItem[]): MenuItem[] {
+  const out: MenuItem[] = [];
+  for (const it of items) {
+    if (it.kind === "divider" && (out.length === 0 || out[out.length - 1].kind === "divider")) continue;
+    out.push(it);
+  }
+  while (out.length && out[out.length - 1].kind === "divider") out.pop();
+  return out;
 }
 
 function ProfileDropdown({
@@ -122,7 +161,8 @@ function ProfileDropdown({
     }
   }
 
-  const items = menuItemsForWorkspace(workspace);
+  const canShow = useAdminMenuAccess(workspace);
+  const items = tidyDividers(menuItemsForWorkspace(workspace).filter(canShow));
 
   return (
     <div ref={ref} className="relative">
