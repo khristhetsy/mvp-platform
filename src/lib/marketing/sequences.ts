@@ -267,15 +267,25 @@ export async function collectDueSequenceBatches(): Promise<{ batches: number; qu
 
     if (willSend.length === 0) continue;
 
+    // Guard against duplicate batches: if a pending batch for this sequence + step is
+    // already awaiting approval, don't create another (these enrollments stay active
+    // and get collected on the next run after the current batch is released). A
+    // partial unique index enforces the same rule against concurrent runs.
+    const { data: existingPending } = await db.from("marketing_sequence_batches")
+      .select("id").eq("sequence_id", first.sequence_id).eq("step_order", first.current_step).eq("status", "pending").maybeSingle();
+    if (existingPending) continue;
+
     const { data: seq } = await db.from("marketing_sequences").select("approver_id").eq("id", first.sequence_id).maybeSingle();
 
-    const { data: batch } = await db.from("marketing_sequence_batches").insert({
+    const { data: batch, error: batchErr } = await db.from("marketing_sequence_batches").insert({
       sequence_id: first.sequence_id, step_id: step.id, step_order: first.current_step,
       eligible_count: group.length, will_send_count: willSend.length,
       suppressed_count: suppressed, skipped_count: skipped,
       approver_id: seq?.approver_id ?? null,
     }).select("id").single();
 
+    // A concurrent run may have won the unique-index race — skip quietly.
+    if (batchErr) continue;
     if (batch) {
       await db.from("marketing_sequence_enrollments").update({ status: "awaiting_approval", batch_id: batch.id }).in("id", willSend);
       batches++; queued += willSend.length;

@@ -2440,3 +2440,26 @@ begin
     raise notice 'Relaxed % on % -> on delete %', r.conname, r.tbl, action;
   end loop;
 end $$;
+
+-- ============================================================
+-- 20260714015_dedupe_sequence_batches.sql
+-- ============================================================
+-- Remove duplicate pending sequence batches and prevent recurrence (one pending
+-- batch per sequence + step).
+
+delete from public.marketing_sequence_batches b
+where b.status = 'pending'
+  and not exists (select 1 from public.marketing_sequence_enrollments e where e.batch_id = b.id and e.status = 'awaiting_approval');
+
+with dups as (
+  select id from (select id, row_number() over (partition by sequence_id, step_order order by created_at) as rn
+                  from public.marketing_sequence_batches where status = 'pending') x where rn > 1)
+update public.marketing_sequence_enrollments set status = 'active', batch_id = null
+where status = 'awaiting_approval' and batch_id in (select id from dups);
+
+delete from public.marketing_sequence_batches
+where id in (select id from (select id, row_number() over (partition by sequence_id, step_order order by created_at) as rn
+                             from public.marketing_sequence_batches where status = 'pending') x where rn > 1);
+
+create unique index if not exists marketing_sequence_batches_one_pending
+on public.marketing_sequence_batches (sequence_id, step_order) where status = 'pending';
