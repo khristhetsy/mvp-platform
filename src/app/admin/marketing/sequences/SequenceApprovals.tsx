@@ -32,21 +32,30 @@ export function SequenceApprovals({ canApprove }: { canApprove: boolean }) {
 
   async function release(id: string) {
     setBusy(id); setError(null); setMsg(null);
+    let sent = 0, failed = 0;
     try {
-      const res = await fetch(`/api/marketing/sequence-batches/${id}/release`, { method: "POST" });
-      // Parse defensively: a timeout or runtime error can return a non-JSON body.
-      const text = await res.text();
-      let data: { error?: string; sent?: number; failed?: number } = {};
-      try { data = text ? JSON.parse(text) : {}; }
-      catch {
-        throw new Error(
-          res.status === 504 || res.status === 502
-            ? "The send timed out — this batch may be too large to release in one go. Try again, or split it into smaller sends."
-            : `Release failed (${res.status}). The server returned an unexpected response.`,
-        );
+      // The server sends in bounded chunks so it never times out; keep calling until
+      // there's nothing left to send, showing running progress.
+      for (let i = 0; i < 400; i++) {
+        const res = await fetch(`/api/marketing/sequence-batches/${id}/release`, { method: "POST" });
+        // Parse defensively: a timeout or runtime error can return a non-JSON body.
+        const text = await res.text();
+        let data: { error?: string; sent?: number; failed?: number; remaining?: number } = {};
+        try { data = text ? JSON.parse(text) : {}; }
+        catch {
+          throw new Error(
+            res.status === 504 || res.status === 502
+              ? "The send timed out — retry to continue where it left off."
+              : `Release failed (${res.status}). The server returned an unexpected response.`,
+          );
+        }
+        if (!res.ok) throw new Error(data.error ?? `Release failed (${res.status}).`);
+        sent += data.sent ?? 0; failed += data.failed ?? 0;
+        const remaining = data.remaining ?? 0;
+        if (remaining > 0) setMsg(`Releasing… ${sent.toLocaleString()} sent · ${remaining.toLocaleString()} to go`);
+        else break;
       }
-      if (!res.ok) throw new Error(data.error ?? `Release failed (${res.status}).`);
-      setMsg(`Released — ${data.sent ?? 0} sent${data.failed ? `, ${data.failed} failed` : ""}.`);
+      setMsg(`Released — ${sent.toLocaleString()} sent${failed ? `, ${failed} failed` : ""}.`);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Release failed.");

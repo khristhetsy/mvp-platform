@@ -325,7 +325,10 @@ export async function getPendingBatches(): Promise<PendingBatch[]> {
 }
 
 /** Human release: actually send the batch's queued emails, then advance enrollments. */
-export async function releaseSequenceBatch(batchId: string, releasedBy: string): Promise<{ sent: number; failed: number }> {
+// Release (send) a pending batch. Processes at most `limit` recipients per call so a
+// large batch (e.g. 500) never exceeds the serverless time budget — the caller loops
+// until `remaining` reaches 0. The batch stays "pending" until fully drained.
+export async function releaseSequenceBatch(batchId: string, releasedBy: string, limit = 50): Promise<{ sent: number; failed: number; remaining: number }> {
   const db = await marketingDb();
   const { data: batch } = await db.from("marketing_sequence_batches").select("*").eq("id", batchId).maybeSingle();
   if (!batch) throw new Error("Batch not found.");
@@ -336,7 +339,8 @@ export async function releaseSequenceBatch(batchId: string, releasedBy: string):
     .from("marketing_sequence_enrollments")
     .select(`*, contact:marketing_contacts(*)`)
     .eq("batch_id", batchId)
-    .eq("status", "awaiting_approval");
+    .eq("status", "awaiting_approval")
+    .limit(limit);
 
   let sent = 0, failed = 0;
   for (const e of (enrollments ?? [])) {
@@ -360,11 +364,22 @@ export async function releaseSequenceBatch(batchId: string, releasedBy: string):
     });
     if (result.ok) sent++; else failed++;
     await advanceEnrollment(db, e, step);
-    await new Promise((r) => setTimeout(r, 150));
+    await new Promise((r) => setTimeout(r, 120));
   }
 
-  await db.from("marketing_sequence_batches").update({ status: "released", released_by: releasedBy, released_at: new Date().toISOString() }).eq("id", batchId);
-  return { sent, failed };
+  // How many recipients are still awaiting approval on this batch after this chunk?
+  const { count: remaining } = await db
+    .from("marketing_sequence_enrollments")
+    .select("id", { count: "exact", head: true })
+    .eq("batch_id", batchId)
+    .eq("status", "awaiting_approval");
+  const left = remaining ?? 0;
+
+  // Only mark the batch released once every recipient has been processed.
+  if (left === 0) {
+    await db.from("marketing_sequence_batches").update({ status: "released", released_by: releasedBy, released_at: new Date().toISOString() }).eq("id", batchId);
+  }
+  return { sent, failed, remaining: left };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
