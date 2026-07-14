@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-/** Short local timezone abbreviation (e.g. "PDT"), resolved client-side. */
-function localTzAbbr(): string {
+/** Pacific Time abbreviation (PST/PDT). Meetings are scheduled in Pacific Time.
+ *  Deterministic across server/client, so it can render directly. */
+function pacificTzAbbr(): string {
   try {
-    const parts = new Intl.DateTimeFormat("en-US", { timeZoneName: "short" }).formatToParts(new Date());
-    return parts.find((p) => p.type === "timeZoneName")?.value ?? "";
-  } catch { return ""; }
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", timeZoneName: "short" }).formatToParts(new Date());
+    return parts.find((p) => p.type === "timeZoneName")?.value ?? "PT";
+  } catch { return "PT"; }
 }
 
 /** Next Thursday (the management meeting's day) in local time, YYYY-MM-DD. */
@@ -26,10 +27,7 @@ export function NewSessionButton() {
   const [time, setTime] = useState("09:00");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [tz, setTz] = useState("");
-  // Resolve on the client after mount so SSR and client markup match (no hydration mismatch).
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { setTz(localTzAbbr()); }, []);
+  const tz = pacificTzAbbr();
 
   const create = async () => {
     setBusy(true); setErr(null);

@@ -10,12 +10,12 @@ import { confirmDialog } from "@/components/ui/ConfirmDialog";
 
 interface Session { id: string; meeting_name: string; session_date: string; start_time?: string | null; status: string }
 
-/** Short local timezone abbreviation (e.g. "PDT"). */
-function localTzAbbr(): string {
+/** Pacific Time abbreviation (PST/PDT). Meetings are scheduled in Pacific Time. */
+function pacificTzAbbr(): string {
   try {
-    const parts = new Intl.DateTimeFormat("en-US", { timeZoneName: "short" }).formatToParts(new Date());
-    return parts.find((p) => p.type === "timeZoneName")?.value ?? "";
-  } catch { return ""; }
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", timeZoneName: "short" }).formatToParts(new Date());
+    return parts.find((p) => p.type === "timeZoneName")?.value ?? "PT";
+  } catch { return "PT"; }
 }
 /** "09:00[:00]" → "9:00 AM" (local-agnostic; the stored time is the meeting's clock time). */
 function fmtTime(t?: string | null): string | null {
@@ -39,7 +39,7 @@ export function MeetingRow({ session }: { session: Session }) {
   const router = useRouter();
   const [menu, setMenu] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [tz, setTz] = useState("");
+  const tz = pacificTzAbbr();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,9 +47,6 @@ export function MeetingRow({ session }: { session: Session }) {
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
-  // Resolve the local tz label after mount (avoids SSR/client hydration mismatch).
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { setTz(localTzAbbr()); }, []);
 
   const st = STATUS[session.status] ?? STATUS.scheduled;
   const dateLabel = new Date(`${session.session_date}T00:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });

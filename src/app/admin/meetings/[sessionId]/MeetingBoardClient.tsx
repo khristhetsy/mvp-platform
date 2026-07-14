@@ -15,12 +15,12 @@ interface Entry { id: string; section_id: string; content: string; status: Entry
 interface Attendee { user_id: string; name: string; status: string }
 interface Board { session: { id: string; session_date: string; started_at: string | null; status: string; meeting_name: string; meet_link: string | null; start_time?: string | null } | null; sections: Section[]; entries: Record<string, Entry>; attendees: Attendee[] }
 
-/** The viewer's local timezone abbreviation, e.g. "PDT" or "GMT-7". */
+/** Pacific Time abbreviation (PST/PDT). Meetings are scheduled in Pacific Time. */
 function tzAbbr(): string {
   try {
-    return new Intl.DateTimeFormat(undefined, { timeZoneName: "short" })
-      .formatToParts(new Date()).find((p) => p.type === "timeZoneName")?.value ?? "";
-  } catch { return ""; }
+    return new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", timeZoneName: "short" })
+      .formatToParts(new Date()).find((p) => p.type === "timeZoneName")?.value ?? "PT";
+  } catch { return "PT"; }
 }
 
 function fmtTime(t?: string | null): string | null {
@@ -76,6 +76,7 @@ export function MeetingBoardClient({ initial, isAdmin = false }: { initial: Boar
           {fmtTime(board.session.start_time) ? ` · ${fmtTime(board.session.start_time)}` : ""} ·{" "}
           {board.session.started_at ? "Live" : "Scheduled"} · Readiness {ready}/{board.sections.length}
         </div>
+        <MeetingScheduleControls sessionId={sessionId} date={board.session.session_date} time={board.session.start_time ?? null} />
         <GoogleMeetBar sessionId={sessionId} meetLink={board.session.meet_link} />
         <MeetingLifecycleControls sessionId={sessionId} status={board.session.status} startedAt={board.session.started_at} isAdmin={isAdmin} />
       </div>
@@ -244,6 +245,64 @@ function MeetingLifecycleControls({ sessionId, status, startedAt, isAdmin }: { s
         <button onClick={() => void run("close")} disabled={busy !== null} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer" }}>{busy === "close" ? "Closing…" : "■ Close meeting"}</button>
       )}
       {msg && <span style={{ fontSize: 11.5, color: MUTED }}>{msg}</span>}
+    </div>
+  );
+}
+
+// Reschedule (date + time, Pacific) and delete the meeting from its header.
+function MeetingScheduleControls({ sessionId, date, time }: { sessionId: string; date: string; time: string | null }) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+  const [d, setD] = useState(date);
+  const [t, setT] = useState(time ?? "09:00");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const inp: React.CSSProperties = { fontSize: 12.5, padding: "6px 9px", borderRadius: 8, border: "0.5px solid var(--border)" };
+  const outline: React.CSSProperties = { fontSize: 12, color: MUTED, background: "transparent", border: "0.5px solid var(--border)", borderRadius: 8, padding: "6px 11px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 };
+
+  const save = async () => {
+    setBusy(true); setErr(null);
+    try {
+      const r = await fetch(`/api/admin/meetings/${sessionId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionDate: d, sessionTime: t }) });
+      if (!r.ok) { const j = await r.json().catch(() => ({})); setErr(typeof j.error === "string" ? j.error : "Save failed."); return; }
+      setEditing(false); router.refresh();
+    } catch { setErr("Save failed."); } finally { setBusy(false); }
+  };
+  const del = async () => {
+    setBusy(true);
+    try {
+      const r = await fetch(`/api/admin/meetings/${sessionId}`, { method: "DELETE" });
+      if (r.ok) router.push("/admin/meetings"); else { setErr("Delete failed."); setBusy(false); }
+    } catch { setErr("Delete failed."); setBusy(false); }
+  };
+
+  if (confirm) {
+    return (
+      <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", background: "#FCEBEB", border: "0.5px solid #F0C7C7", borderRadius: 8, padding: "8px 12px" }}>
+        <span style={{ fontSize: 12, color: "#A32D2D" }}><i className="ti ti-alert-triangle" aria-hidden="true" /> Delete this meeting? Its agenda entries and tasks are removed too. This can&rsquo;t be undone.</span>
+        <button onClick={() => void del()} disabled={busy} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#A32D2D", border: "none", borderRadius: 7, padding: "5px 12px", cursor: "pointer" }}>{busy ? "Deleting…" : "Delete"}</button>
+        <button onClick={() => setConfirm(false)} disabled={busy} style={{ fontSize: 12, color: MUTED, background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
+      </div>
+    );
+  }
+  if (editing) {
+    return (
+      <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <input type="date" value={d} onChange={(e) => setD(e.target.value)} style={inp} />
+        <input type="time" value={t} onChange={(e) => setT(e.target.value)} aria-label="Meeting time" style={inp} />
+        <span style={{ fontSize: 12, color: MUTED }} title="Pacific Time">{tzAbbr()}</span>
+        <button onClick={() => void save()} disabled={busy} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: BLUE, border: "none", borderRadius: 8, padding: "6px 13px", cursor: "pointer" }}>{busy ? "Saving…" : "Save"}</button>
+        <button onClick={() => { setEditing(false); setD(date); setT(time ?? "09:00"); }} disabled={busy} style={{ fontSize: 12.5, color: MUTED, background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
+        {err && <span style={{ fontSize: 11.5, color: "#A32D2D" }}>{err}</span>}
+      </div>
+    );
+  }
+  return (
+    <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
+      <button onClick={() => { setErr(null); setEditing(true); }} style={outline}><i className="ti ti-edit" aria-hidden="true" /> Edit schedule</button>
+      <button onClick={() => setConfirm(true)} style={{ ...outline, color: "#A32D2D", borderColor: "#F0C7C7" }}><i className="ti ti-trash" aria-hidden="true" /> Delete</button>
     </div>
   );
 }

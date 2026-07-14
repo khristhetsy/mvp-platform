@@ -200,6 +200,16 @@ export async function deleteSession(sessionId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/** Reschedule a session: update its date and/or start time. */
+export async function updateSessionSchedule(sessionId: string, input: { sessionDate?: string; sessionTime?: string | null }): Promise<void> {
+  const patch: Record<string, unknown> = {};
+  if (input.sessionDate) patch.session_date = input.sessionDate;
+  if (input.sessionTime !== undefined) patch.start_time = input.sessionTime || null;
+  if (Object.keys(patch).length === 0) return;
+  const { error } = await db().from("ceo_meeting_sessions").update(patch).eq("id", sessionId);
+  if (error) throw new Error(error.message);
+}
+
 /** Create (or return) a session for the given meeting + date. */
 export async function ensureSession(meetingKey: string, sessionDate: string, createdBy: string, startTime?: string | null): Promise<string> {
   const { data: existing } = await db().from("ceo_meeting_sessions").select("id").eq("meeting_key", meetingKey).eq("session_date", sessionDate).maybeSingle();
