@@ -2477,3 +2477,13 @@ create table if not exists public.marketing_settings (
   updated_at timestamptz not null default now()
 );
 insert into public.marketing_settings (id) values ('default') on conflict (id) do nothing;
+
+-- ============================================================
+-- 20260714017_features_scheduling_meet.sql
+-- ============================================================
+-- Add Scheduling and Meet to the Feature Controls → Departments catalog.
+
+insert into public.features (key, label, hub_key, path, sort_order) values
+  ('scheduling', 'Scheduling', 'general_admin', '/admin/schedule', 221),
+  ('meet',       'Meet',       'general_admin', '/admin/meet',     222)
+on conflict (key) do nothing;
