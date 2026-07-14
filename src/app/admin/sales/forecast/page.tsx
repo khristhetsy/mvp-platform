@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/supabase/auth";
 import { listScenarios, getLatestSnapshot, loadActualsAnchor, loadActualsSeries } from "@/lib/forecast/store";
+import { getSalesScope } from "@/lib/sales/scope";
 import { SalesHubHeader } from "../SalesHubHeader";
 import { ForecastClient } from "./ForecastClient";
 
@@ -8,11 +9,13 @@ export const dynamic = "force-dynamic";
 
 export default async function SalesForecastPage() {
   const profile = await requireRole(["admin", "analyst"]);
+  const scope = await getSalesScope(profile);
+  const ownerId = scope.isManager ? null : scope.ownerId;
 
   const scenarios = await listScenarios();
   const active = scenarios.find((s) => s.is_active && s.kind === "base") ?? scenarios.find((s) => s.is_active) ?? scenarios[0] ?? null;
   const [latest, anchor, series] = await Promise.all([
-    active ? getLatestSnapshot(active.id) : Promise.resolve(null),
+    active ? getLatestSnapshot(active.id, ownerId) : Promise.resolve(null),
     loadActualsAnchor(),
     loadActualsSeries(),
   ]);

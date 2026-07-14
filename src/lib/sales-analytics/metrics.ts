@@ -35,11 +35,14 @@ interface Opp {
   stage_id: string | null; created_at: string | null; updated_at: string | null; last_activity_at: string | null;
 }
 
-async function loadRaw() {
+async function loadRaw(ownerId?: string | null) {
+  let oppQ = db().from("sales_opportunities").select("status, value_cents, billing, probability, stage_id, created_at, updated_at, last_activity_at");
+  let actQ = db().from("sales_activity_log").select("created_at");
+  if (ownerId) { oppQ = oppQ.eq("owner_id", ownerId); actQ = actQ.eq("actor_id", ownerId); }
   const [{ data: opps }, { data: stages }, { data: acts }, { data: settings }] = await Promise.all([
-    db().from("sales_opportunities").select("status, value_cents, billing, probability, stage_id, created_at, updated_at, last_activity_at"),
+    oppQ,
     db().from("sales_stages").select("id, is_won"),
-    db().from("sales_activity_log").select("created_at"),
+    actQ,
     db().from("sales_settings").select("stalled_days").eq("id", "default").maybeSingle(),
   ]);
   return {
@@ -99,10 +102,10 @@ function build(raw: Raw): SalesMetric[] {
   ];
 }
 
-export async function loadSalesAnalytics(): Promise<SalesMetric[]> {
-  try { return build(await loadRaw()); } catch { return []; }
+export async function loadSalesAnalytics(ownerId?: string | null): Promise<SalesMetric[]> {
+  try { return build(await loadRaw(ownerId)); } catch { return []; }
 }
 
-export async function loadSalesMetric(key: string): Promise<SalesMetric | null> {
-  try { return build(await loadRaw()).find((m) => m.key === key) ?? null; } catch { return null; }
+export async function loadSalesMetric(key: string, ownerId?: string | null): Promise<SalesMetric | null> {
+  try { return build(await loadRaw(ownerId)).find((m) => m.key === key) ?? null; } catch { return null; }
 }

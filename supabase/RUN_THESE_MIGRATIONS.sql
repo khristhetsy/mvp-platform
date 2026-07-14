@@ -2390,3 +2390,11 @@ on conflict do nothing;
 -- Configured in Admin → Feature Controls. Empty = no restriction (all staff eligible).
 
 alter table public.sales_settings add column if not exists lead_assignee_ids uuid[] not null default '{}';
+
+-- ============================================================
+-- 20260714013_forecast_snapshot_owner.sql
+-- ============================================================
+-- Per-member forecast: snapshots partitioned by owner_id (NULL = shared org forecast).
+
+alter table public.sales_forecast_snapshots add column if not exists owner_id uuid references public.profiles(id) on delete cascade;
+create index if not exists sales_forecast_snapshots_owner_idx on public.sales_forecast_snapshots (scenario_id, owner_id, computed_at desc);

@@ -143,8 +143,8 @@ export async function loadActualsSeries(): Promise<Array<{ month: string; segmen
 }
 
 // ── Open pipeline → engine PipelineOpen[] (segment from CRM side + weights) ───
-export async function loadOpenPipeline(): Promise<PipelineOpen[]> {
-  const opps = (await listOpportunities(false)).filter((o) => o.status === "open");
+export async function loadOpenPipeline(ownerId?: string | null): Promise<PipelineOpen[]> {
+  const opps = (await listOpportunities(false, ownerId)).filter((o) => o.status === "open");
   if (opps.length === 0) return [];
 
   // Segment each deal by its CRM contact side (founder|investor), batched.
@@ -173,20 +173,33 @@ export async function loadOpenPipeline(): Promise<PipelineOpen[]> {
 }
 
 // ── Snapshots ────────────────────────────────────────────────────────────────
-export async function listSnapshots(scenarioId: string): Promise<SnapshotMeta[]> {
-  const { data } = await db().from("sales_forecast_snapshots")
+// Snapshots are partitioned by owner: a member (ownerId set) only sees their own
+// scoped snapshots; managers/super admins (ownerId null) see the shared org snapshots.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ownerFilter(q: any, ownerId?: string | null): any {
+  return ownerId ? q.eq("owner_id", ownerId) : q.is("owner_id", null);
+}
+
+export async function listSnapshots(scenarioId: string, ownerId?: string | null): Promise<SnapshotMeta[]> {
+  let q = db().from("sales_forecast_snapshots")
     .select("id, scenario_id, computed_at, engine_version, assumptions_hash")
-    .eq("scenario_id", scenarioId).order("computed_at", { ascending: false });
+    .eq("scenario_id", scenarioId);
+  q = ownerFilter(q, ownerId).order("computed_at", { ascending: false });
+  const { data } = await q;
   return (data ?? []) as SnapshotMeta[];
 }
-export async function getSnapshot(id: string): Promise<{ meta: SnapshotMeta; output: ForecastOutput } | null> {
+export async function getSnapshot(id: string, ownerId?: string | null): Promise<{ meta: SnapshotMeta; output: ForecastOutput } | null> {
   const { data } = await db().from("sales_forecast_snapshots").select("*").eq("id", id).maybeSingle();
   if (!data) return null;
+  // A member can only read their own snapshot; managers only the shared (null-owner) ones.
+  const owner = (data as { owner_id?: string | null }).owner_id ?? null;
+  if ((ownerId ?? null) !== owner) return null;
   return { meta: data as SnapshotMeta, output: (data as { output: ForecastOutput }).output };
 }
-export async function getLatestSnapshot(scenarioId: string): Promise<{ meta: SnapshotMeta; output: ForecastOutput } | null> {
-  const { data } = await db().from("sales_forecast_snapshots").select("*")
-    .eq("scenario_id", scenarioId).order("computed_at", { ascending: false }).limit(1).maybeSingle();
+export async function getLatestSnapshot(scenarioId: string, ownerId?: string | null): Promise<{ meta: SnapshotMeta; output: ForecastOutput } | null> {
+  let q = db().from("sales_forecast_snapshots").select("*").eq("scenario_id", scenarioId);
+  q = ownerFilter(q, ownerId).order("computed_at", { ascending: false }).limit(1).maybeSingle();
+  const { data } = await q;
   if (!data) return null;
   return { meta: data as SnapshotMeta, output: (data as { output: ForecastOutput }).output };
 }
@@ -201,12 +214,12 @@ function hashAssumptions(assumptions: AssumptionRow[]): string {
 
 /** Assemble inputs, run the engine, and persist an immutable snapshot. */
 export async function computeAndSnapshot(
-  scenarioId: string, createdBy: string,
+  scenarioId: string, createdBy: string, ownerId?: string | null,
 ): Promise<{ snapshotId: string; output: ForecastOutput; assumptionsHash: string }> {
   const scenario = await getScenario(scenarioId);
   if (!scenario) throw new Error("Scenario not found.");
   const [assumptions, anchor, pipeline] = await Promise.all([
-    listAssumptions(scenarioId), loadActualsAnchor(), loadOpenPipeline(),
+    listAssumptions(scenarioId), loadActualsAnchor(), loadOpenPipeline(ownerId),
   ]);
 
   const output = runForecast({
@@ -219,7 +232,7 @@ export async function computeAndSnapshot(
   const assumptionsHash = hashAssumptions(assumptions);
 
   const { data, error } = await db().from("sales_forecast_snapshots")
-    .insert({ scenario_id: scenarioId, engine_version: ENGINE_VERSION, assumptions_hash: assumptionsHash, output, created_by: createdBy })
+    .insert({ scenario_id: scenarioId, engine_version: ENGINE_VERSION, assumptions_hash: assumptionsHash, output, created_by: createdBy, owner_id: ownerId ?? null })
     .select("id").single();
   if (error) throw new Error(error.message);
   const snapshotId = String(data.id);
@@ -237,11 +250,11 @@ export async function computeAndSnapshot(
 }
 
 // ── Variance (snapshot projection vs actuals per elapsed month) ───────────────
-export async function computeVariance(scenarioId: string): Promise<{
+export async function computeVariance(scenarioId: string, ownerId?: string | null): Promise<{
   snapshot: SnapshotMeta | null;
   rows: Array<{ month: string; monthIndex: number; projectedMrrCents: number; actualMrrCents: number; deltaCents: number; deltaPct: number | null }>;
 }> {
-  const snap = await getLatestSnapshot(scenarioId);
+  const snap = await getLatestSnapshot(scenarioId, ownerId);
   if (!snap) return { snapshot: null, rows: [] };
 
   // Sum projected ending MRR per month index across segments.

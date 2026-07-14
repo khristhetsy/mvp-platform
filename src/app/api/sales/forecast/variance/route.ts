@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { computeVariance } from "@/lib/forecast/store";
+import { getSalesScope } from "@/lib/sales/scope";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   const scenario = req.nextUrl.searchParams.get("scenario");
   if (!scenario) return NextResponse.json({ error: "scenario is required." }, { status: 400 });
-  const result = await computeVariance(scenario);
+  const scope = await getSalesScope(profile);
+  const result = await computeVariance(scenario, scope.isManager ? null : scope.ownerId);
   return NextResponse.json(result);
 }

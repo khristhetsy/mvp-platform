@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { listSnapshots, getLatestSnapshot } from "@/lib/forecast/store";
+import { getSalesScope } from "@/lib/sales/scope";
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +10,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   const { id } = await params;
+  const scope = await getSalesScope(profile);
+  const ownerId = scope.isManager ? null : scope.ownerId;
   if (req.nextUrl.searchParams.get("latest") === "1") {
-    const latest = await getLatestSnapshot(id);
+    const latest = await getLatestSnapshot(id, ownerId);
     return NextResponse.json({ snapshot: latest?.meta ?? null, output: latest?.output ?? null });
   }
-  return NextResponse.json({ snapshots: await listSnapshots(id) });
+  return NextResponse.json({ snapshots: await listSnapshots(id, ownerId) });
 }
