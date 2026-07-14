@@ -57,6 +57,10 @@ export function SalesContactsClient({ assignStaff }: { assignStaff?: Array<{ id:
   const [onlyUnassigned, setOnlyUnassigned] = useState(true);
   const [assignBusy, setAssignBusy] = useState(false);
   const [assignMsg, setAssignMsg] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selAssignTo, setSelAssignTo] = useState("");
+  const [selBusy, setSelBusy] = useState(false);
+  const [selMsg, setSelMsg] = useState<string | null>(null);
   const [textFilters, setTextFilters] = useState<TextFilters>({ name: "", company: "", email: "", phone: "" });
   const [countries, setCountries] = useState<string[]>([]);
   const [sort, setSort] = useState<Sort>(() => loadLS<Sort>("salesContacts.sort", { key: "name", dir: "asc" }));
@@ -76,9 +80,12 @@ export function SalesContactsClient({ assignStaff }: { assignStaff?: Array<{ id:
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const selectable = !!(assignStaff && assignStaff.length > 0);
   const paramsStr = useMemo(() => buildParams(q, textFilters, countries, sort), [q, textFilters, countries, sort]);
   const visibleColumns = useMemo(() => ALL_COLUMNS.filter((c) => c.always || visibleCols.includes(c.key)), [visibleCols]);
-  const gridCols = useMemo(() => visibleColumns.map((c) => c.width).join(" "), [visibleColumns]);
+  const gridCols = useMemo(() => (selectable ? "30px " : "") + visibleColumns.map((c) => c.width).join(" "), [visibleColumns, selectable]);
+  const allLoadedIds = useMemo(() => GROUP_DEFS.flatMap((g) => groups[g.id]?.rows.map((r) => r.id) ?? []), [groups]);
+  const allLoadedSelected = allLoadedIds.length > 0 && allLoadedIds.every((id) => selected.has(id));
 
   useEffect(() => { try { window.localStorage.setItem("salesContacts.cols", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
   useEffect(() => { try { window.localStorage.setItem("salesContacts.sort", JSON.stringify(sort)); } catch { /* ignore */ } }, [sort]);
@@ -148,6 +155,34 @@ export function SalesContactsClient({ assignStaff }: { assignStaff?: Array<{ id:
       setAssignMsg(`Assigned ${data.assigned ?? 0} contact${data.assigned === 1 ? "" : "s"} to ${name}.`);
       await Promise.all([loadAll(paramsStr), loadFacets(paramsStr)]);
     } catch (e) { setAssignMsg(e instanceof Error ? e.message : "Assign failed."); } finally { setAssignBusy(false); }
+  }
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  }
+  function toggleSelectAllLoaded() {
+    setSelected((prev) => {
+      if (allLoadedIds.length > 0 && allLoadedIds.every((id) => prev.has(id))) {
+        const n = new Set(prev); allLoadedIds.forEach((id) => n.delete(id)); return n;
+      }
+      return new Set([...prev, ...allLoadedIds]);
+    });
+  }
+  async function handleAssignSelected() {
+    if (!selAssignTo || selected.size === 0) return;
+    setSelBusy(true); setSelMsg(null);
+    try {
+      const res = await fetch("/api/sales/contacts/assign", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assigneeId: selAssignTo, ids: Array.from(selected) }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Assign failed.");
+      const name = assignStaff?.find((s) => s.id === selAssignTo)?.name ?? "the rep";
+      setSelMsg(`Assigned ${data.assigned ?? 0} contact${data.assigned === 1 ? "" : "s"} to ${name}.`);
+      setSelected(new Set());
+      await Promise.all([loadAll(paramsStr), loadFacets(paramsStr)]);
+    } catch (e) { setSelMsg(e instanceof Error ? e.message : "Assign failed."); } finally { setSelBusy(false); }
   }
 
   function openText(col: string) { setDraft(textFilters[col as keyof TextFilters]); setCountrySearch(""); setOpenFilter(openFilter === col ? null : col); }
@@ -228,10 +263,29 @@ export function SalesContactsClient({ assignStaff }: { assignStaff?: Array<{ id:
         </div>
       )}
 
+      {selectable && selected.size > 0 && (
+        <div style={{ position: "sticky", top: 8, zIndex: 15, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", background: "#0C447C", borderRadius: 10, padding: "9px 14px", marginBottom: 12, boxShadow: "0 4px 14px rgba(12,68,124,0.25)" }}>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: "#fff" }}>{selected.size} selected</span>
+          <span style={{ fontSize: 12, color: "#BFDBFE" }}>Assign to</span>
+          <select value={selAssignTo} onChange={(e) => setSelAssignTo(e.target.value)} style={{ fontSize: 12, padding: "6px 9px", borderRadius: 7, border: "none" }}>
+            <option value="">Choose a rep…</option>
+            {assignStaff!.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          <button onClick={() => void handleAssignSelected()} disabled={selBusy || !selAssignTo} style={{ fontSize: 12, fontWeight: 600, color: "#0C447C", background: "#fff", border: "none", borderRadius: 7, padding: "6px 12px", cursor: "pointer", opacity: selBusy || !selAssignTo ? 0.6 : 1 }}>{selBusy ? "Assigning…" : `Assign ${selected.size}`}</button>
+          <button onClick={() => { setSelected(new Set()); setSelMsg(null); }} style={{ fontSize: 12, color: "#BFDBFE", background: "transparent", border: "none", cursor: "pointer" }}>Clear</button>
+          {selMsg && <span style={{ fontSize: 11.5, color: /failed|Failed/.test(selMsg) ? "#FCA5A5" : "#BBF7D0" }}>{selMsg}</span>}
+        </div>
+      )}
+
       {(openFilter || openColPicker) && <div onClick={() => { setOpenFilter(null); setOpenColPicker(false); }} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
 
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, position: "relative" }}>
         <div style={{ display: "grid", gridTemplateColumns: gridCols, padding: "9px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em", borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
+          {selectable && (
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <input type="checkbox" checked={allLoadedSelected} onChange={toggleSelectAllLoaded} title="Select all loaded contacts" style={{ width: 14, height: 14, cursor: "pointer" }} />
+            </div>
+          )}
           {visibleColumns.map((h) => {
             const filterActive = h.kind === "country" ? countries.length > 0 : h.kind === "text" ? !!textFilters[h.key as keyof TextFilters] : false;
             const sortActive = sort.key === h.key;
@@ -298,7 +352,12 @@ export function SalesContactsClient({ assignStaff }: { assignStaff?: Array<{ id:
                   ) : (
                     <>
                       {gs!.rows.map((c) => (
-                        <Link key={c.id} href={`/admin/sales/contacts/${c.id}`} style={{ display: "grid", gridTemplateColumns: gridCols, padding: "10px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, textDecoration: "none", color: "var(--foreground)" }}>
+                        <Link key={c.id} href={`/admin/sales/contacts/${c.id}`} style={{ display: "grid", gridTemplateColumns: gridCols, padding: "10px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, textDecoration: "none", color: "var(--foreground)", background: selected.has(c.id) ? "#F0F7FF" : undefined }}>
+                          {selectable && (
+                            <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} style={{ display: "flex", alignItems: "center" }}>
+                              <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleSelect(c.id)} aria-label={`Select ${c.name}`} style={{ width: 14, height: 14, cursor: "pointer" }} />
+                            </div>
+                          )}
                           {visibleColumns.map((col) => <div key={col.key} style={{ minWidth: 0 }}>{renderCell(col.key, c)}</div>)}
                         </Link>
                       ))}

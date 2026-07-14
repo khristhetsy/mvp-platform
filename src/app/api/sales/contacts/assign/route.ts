@@ -14,6 +14,7 @@ const bodySchema = z.object({
   assigneeId: z.string().uuid().nullable(),   // null = unassign
   group: z.string().optional(),
   onlyUnassigned: z.boolean().optional(),
+  ids: z.array(z.string().uuid()).max(5000).optional(), // explicit selection; overrides filters
 });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,11 +41,16 @@ export async function POST(req: NextRequest): Promise<Response> {
   const parsed = bodySchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "A valid assignee (or null to unassign) is required." }, { status: 400 });
 
-  const p = req.nextUrl.searchParams;
   let q = db().from("crm_contacts").update({ owner_id: parsed.data.assigneeId }, { count: "exact" });
-  if (parsed.data.group && (GROUPS as readonly string[]).includes(parsed.data.group)) q = q.eq("contact_type", parsed.data.group);
-  if (parsed.data.onlyUnassigned) q = q.is("owner_id", null);
-  q = applyFilters(q, p);
+  if (parsed.data.ids && parsed.data.ids.length) {
+    // Explicit row selection — assign exactly these contacts, ignore filters.
+    q = q.in("id", parsed.data.ids);
+  } else {
+    const p = req.nextUrl.searchParams;
+    if (parsed.data.group && (GROUPS as readonly string[]).includes(parsed.data.group)) q = q.eq("contact_type", parsed.data.group);
+    if (parsed.data.onlyUnassigned) q = q.is("owner_id", null);
+    q = applyFilters(q, p);
+  }
 
   const { count, error } = await q;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
