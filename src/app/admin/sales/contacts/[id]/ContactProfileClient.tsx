@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 type Contact = {
   id: string; source: string; name: string; email: string | null; company: string | null; phone: string | null; phone2: string | null;
-  website: string | null; lead_status: string | null; lead_source: string | null; tags: string[]; owner: string | null; owner_id: string | null; membership: string | null;
+  website: string | null; lead_status: string | null; lead_source: string | null; tags: string[]; owner: string | null; owner_id: string | null; assignee_ids: string[]; membership: string | null;
   job_position: string | null; street: string | null; street2: string | null; city: string | null; state: string | null; zip: string | null;
   country: string | null; language: string | null; created_on: string | null; note: string | null;
 };
@@ -88,6 +88,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     email: initialContact.email ?? "", company: initialContact.company ?? "",
     phone: initialContact.phone ?? "", phone2: initialContact.phone2 ?? "",
     website: initialContact.website ?? "", owner: initialContact.owner ?? "", owner_id: initialContact.owner_id ?? "",
+    assignee_ids: initialContact.assignee_ids ?? [],
     membership: initialContact.membership ?? "", job_position: initialContact.job_position ?? "",
     lead_source: initialContact.lead_source ?? "", language: initialContact.language ?? "",
     street: initialContact.street ?? "", street2: initialContact.street2 ?? "",
@@ -130,6 +131,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
         email: form.email || null, company: form.company || null,
         phone: form.phone || null, phone2: form.phone2 || null,
         website: form.website || null, owner: form.owner || null, owner_id: form.owner_id || null,
+        assignee_ids: form.assignee_ids,
         membership: form.membership || null, job_position: form.job_position || null,
         lead_source: form.lead_source || null, language: form.language || null,
         street: form.street || null, street2: form.street2 || null,
@@ -186,6 +188,9 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               <div style={{ fontSize: 13, color: "var(--muted-foreground)", marginTop: 2 }}>{subtitle}</div>
               <div style={{ display: "flex", gap: 12, marginTop: 8, flexWrap: "wrap", fontSize: 12, color: "var(--muted-foreground)" }}>
                 <span><i className="ti ti-user-check" aria-hidden="true" /> Owner: <span style={{ color: "var(--foreground)" }}>{contact.owner || "—"}</span></span>
+                {contact.assignee_ids.length > 0 && (
+                  <span><i className="ti ti-users" aria-hidden="true" /> Assigned: <span style={{ color: "var(--foreground)" }}>{contact.assignee_ids.map((id) => staff.find((s) => s.id === id)?.name).filter(Boolean).join(", ") || `${contact.assignee_ids.length}`}</span></span>
+                )}
                 <span><i className="ti ti-plug" aria-hidden="true" /> Source: {contact.source}</span>
               </div>
             </div>
@@ -229,11 +234,28 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               </div>
               {staff.length > 0 && (
                 <div>
-                  <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Assign owner</label>
+                  <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Owner <span style={{ color: "var(--muted-foreground)" }}>(one)</span></label>
                   <select value={form.owner_id} onChange={(e) => setForm({ ...form, owner_id: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }}>
                     <option value="">Unassigned</option>
                     {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
+                </div>
+              )}
+              {staff.length > 0 && (
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Assigned to <span style={{ color: "var(--muted-foreground)" }}>(multiple — they can also see this contact)</span></label>
+                  <div style={{ marginTop: 4, border: "0.5px solid var(--border)", borderRadius: 7, padding: 8, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "4px 12px", maxHeight: 132, overflowY: "auto", background: "var(--background)" }}>
+                    {staff.map((s) => {
+                      const on = form.assignee_ids.includes(s.id);
+                      const isOwner = form.owner_id === s.id;
+                      return (
+                        <label key={s.id} title={isOwner ? "Already the owner" : undefined} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, padding: "3px 2px", cursor: isOwner ? "not-allowed" : "pointer", opacity: isOwner ? 0.45 : 1 }}>
+                          <input type="checkbox" checked={on} disabled={isOwner} onChange={() => setForm((f) => ({ ...f, assignee_ids: on ? f.assignee_ids.filter((x) => x !== s.id) : [...f.assignee_ids, s.id] }))} style={{ width: 14, height: 14 }} />
+                          <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
               {([

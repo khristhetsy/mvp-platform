@@ -2347,3 +2347,13 @@ alter table public.crm_contacts add column if not exists website text;
 
 alter table public.crm_contacts add column if not exists owner_id uuid references public.profiles(id) on delete set null;
 create index if not exists crm_contacts_owner_idx on public.crm_contacts (owner_id);
+
+-- ============================================================
+-- 20260714010_crm_contacts_assignee_ids.sql
+-- ============================================================
+-- Multi-assign: contact keeps one owner (owner_id) plus a set of additional assignees
+-- (assignee_ids). A rep sees a contact if they are the owner OR in assignee_ids.
+-- Edited in the contact profile, admins only.
+
+alter table public.crm_contacts add column if not exists assignee_ids uuid[] not null default '{}';
+create index if not exists crm_contacts_assignee_ids_idx on public.crm_contacts using gin (assignee_ids);

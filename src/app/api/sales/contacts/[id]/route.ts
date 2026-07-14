@@ -14,6 +14,7 @@ const patchSchema = z.object({
   website: z.string().max(200).nullable().optional(),
   owner: z.string().max(120).nullable().optional(),
   owner_id: z.string().uuid().nullable().optional(),
+  assignee_ids: z.array(z.string().uuid()).max(50).nullable().optional(),
   tags: z.array(z.string().min(1).max(40)).max(20).optional(),
   phone2: z.string().max(60).nullable().optional(),
   lead_source: z.string().max(120).nullable().optional(),
@@ -36,12 +37,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const parsed = patchSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid update." }, { status: 400 });
   const scope = await getSalesScope(profile);
-  // Non-admins may only edit contacts they own, and may never reassign the owner.
+  // Non-admins may only edit contacts they own or are assigned to, and may never change
+  // ownership or the assignee set (assignment is admin-only).
   const update = { ...parsed.data };
   if (!scope.isManager) {
     const existing = await getContactProfile(id);
-    if (!existing || existing.contact.owner_id !== scope.ownerId) return NextResponse.json({ error: "Not found." }, { status: 404 });
+    const c = existing?.contact;
+    if (!c || (c.owner_id !== scope.ownerId && !c.assignee_ids.includes(scope.ownerId ?? ""))) return NextResponse.json({ error: "Not found." }, { status: 404 });
     delete update.owner_id;
+    delete update.assignee_ids;
   }
   try {
     await updateContact(id, update, profile.id);
@@ -59,7 +63,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const data = await getContactProfile(id);
   if (!data) return NextResponse.json({ error: "Not found." }, { status: 404 });
   const scope = await getSalesScope(profile);
-  if (!scope.isManager && data.contact.owner_id !== scope.ownerId) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  if (!scope.isManager && data.contact.owner_id !== scope.ownerId && !data.contact.assignee_ids.includes(scope.ownerId ?? "")) return NextResponse.json({ error: "Not found." }, { status: 404 });
   return NextResponse.json(data);
 }
 
@@ -75,7 +79,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const scope = await getSalesScope(profile);
   if (!scope.isManager) {
     const existing = await getContactProfile(id);
-    if (!existing || existing.contact.owner_id !== scope.ownerId) return NextResponse.json({ error: "Not found." }, { status: 404 });
+    const c = existing?.contact;
+    if (!c || (c.owner_id !== scope.ownerId && !c.assignee_ids.includes(scope.ownerId ?? ""))) return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
   try {
     await appendContactNote(id, parsed.data.note, profile.id);

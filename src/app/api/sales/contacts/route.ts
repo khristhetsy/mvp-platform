@@ -55,7 +55,8 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const cols = "id, name, email, company, phone, source, contact_type, country, created_on, raw";
   let query = db().from("crm_contacts").select(cols, { count: "exact" });
-  if (!scope.isManager) query = query.eq("owner_id", scope.ownerId);
+  // Non-admins see a contact if they own it OR are one of its assignees.
+  if (!scope.isManager) query = query.or(`owner_id.eq.${scope.ownerId},assignee_ids.cs.{${scope.ownerId}}`);
   if (group && (GROUPS as readonly string[]).includes(group)) query = query.eq("contact_type", group);
   query = applyFilters(query, p);
   query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);
