@@ -57,7 +57,9 @@ export function SalesContactsClient() {
   const [textFilters, setTextFilters] = useState<TextFilters>({ name: "", company: "", email: "", phone: "" });
   const [countries, setCountries] = useState<string[]>([]);
   const [sort, setSort] = useState<Sort>(() => loadLS<Sort>("salesContacts.sort", { key: "name", dir: "asc" }));
-  const [visibleCols, setVisibleCols] = useState<string[]>(() => loadLS<string[]>("salesContacts.cols", ALL_COLUMNS.map((c) => c.key)));
+  // v2 key: bumped when the "Lead assign" column was added so a stale saved set
+  // (from before that column existed) doesn't hide it. Resets column prefs once.
+  const [visibleCols, setVisibleCols] = useState<string[]>(() => loadLS<string[]>("salesContacts.cols.v2", ALL_COLUMNS.map((c) => c.key)));
 
   const [facets, setFacets] = useState<Facets>({ counts: {}, countries: [] });
   const [groups, setGroups] = useState<Record<string, GroupState>>({});
@@ -77,7 +79,7 @@ export function SalesContactsClient() {
   const visibleColumns = useMemo(() => ALL_COLUMNS.filter((c) => c.always || visibleCols.includes(c.key)), [visibleCols]);
   const gridCols = useMemo(() => visibleColumns.map((c) => c.width).join(" "), [visibleColumns]);
 
-  useEffect(() => { try { window.localStorage.setItem("salesContacts.cols", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
+  useEffect(() => { try { window.localStorage.setItem("salesContacts.cols.v2", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
   useEffect(() => { try { window.localStorage.setItem("salesContacts.sort", JSON.stringify(sort)); } catch { /* ignore */ } }, [sort]);
 
   const loadAll = useCallback(async (params: string) => {
