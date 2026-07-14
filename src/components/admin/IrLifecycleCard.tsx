@@ -31,7 +31,7 @@ export function IrLifecycleCard({
   return (
     <LifecycleStepper
       key={mode}
-      title={mode === "investor" ? "Investor pipeline" : "Founder journey"}
+      title={mode === "investor" ? "Investor journey" : "Founder journey"}
       stages={stages}
       accent={ACCENT}
       askLabel="IR AI"
