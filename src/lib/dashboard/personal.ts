@@ -21,12 +21,12 @@ export type PersonalDashboard = {
   activity: PersonalActivity[];
 };
 
-// Count contacts the member owns or is assigned to.
+// Count contacts the member is Lead-assigned to.
 async function myContactsCount(userId: string): Promise<number> {
   const { count } = await db()
     .from("crm_contacts")
     .select("id", { count: "exact", head: true })
-    .or(`owner_id.eq.${userId},assignee_ids.cs.{${userId}}`);
+    .contains("assignee_ids", [userId]);
   return count ?? 0;
 }
 

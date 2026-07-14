@@ -53,16 +53,28 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const scope = await getSalesScope(profile);
 
-  const cols = "id, name, email, company, phone, source, contact_type, country, created_on, raw";
+  const cols = "id, name, email, company, phone, source, contact_type, country, created_on, assignee_ids, raw";
   let query = db().from("crm_contacts").select(cols, { count: "exact" });
-  // Non-admins see a contact if they own it OR are one of its assignees.
-  if (!scope.isManager) query = query.or(`owner_id.eq.${scope.ownerId},assignee_ids.cs.{${scope.ownerId}}`);
+  // Non-admins see a contact only if they are one of its Lead-assigned members.
+  if (!scope.isManager) query = query.contains("assignee_ids", [scope.ownerId]);
   if (group && (GROUPS as readonly string[]).includes(group)) query = query.eq("contact_type", group);
   query = applyFilters(query, p);
   query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);
 
   const { data, count } = await query;
-  const rows = ((data ?? []) as Array<Row & { raw?: unknown }>).map((r) => ({
+  const raw = (data ?? []) as Array<Row & { raw?: unknown; assignee_ids?: string[] }>;
+
+  // Resolve assignee names for the Lead assign column in one lookup.
+  const ids = [...new Set(raw.flatMap((r) => (Array.isArray(r.assignee_ids) ? r.assignee_ids : [])))];
+  const nameById = new Map<string, string>();
+  if (ids.length) {
+    const { data: profs } = await db().from("profiles").select("id, full_name, email").in("id", ids);
+    for (const pr of (profs ?? []) as Array<{ id: string; full_name: string | null; email: string | null }>) {
+      nameById.set(pr.id, pr.full_name ?? pr.email ?? "Member");
+    }
+  }
+
+  const rows = raw.map((r) => ({
     id: r.id,
     name: r.name ?? r.email ?? "Contact",
     email: r.email ?? "",
@@ -72,6 +84,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     type: r.contact_type ?? "other",
     country: r.country ?? "",
     createdOn: r.created_on ?? "",
+    assignees: (Array.isArray(r.assignee_ids) ? r.assignee_ids : []).map((id) => nameById.get(id)).filter(Boolean) as string[],
   }));
   return NextResponse.json({ contacts: rows, total: count ?? rows.length });
 }
@@ -90,12 +103,13 @@ export async function POST(req: NextRequest): Promise<Response> {
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   const parsed = addSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "A contact name is required." }, { status: 400 });
-  // Only managers may assign to someone else; reps own what they create.
+  // Only managers may assign to someone else; reps own what they create. Since visibility
+  // is Lead-assign based, the creator is added to assignee_ids so they can see it.
   const scope = await getSalesScope(profile);
   const ownerId = scope.isManager && parsed.data.assigneeId ? parsed.data.assigneeId : profile.id;
   const { data, error } = await db()
     .from("crm_contacts")
-    .insert({ name: parsed.data.name.trim(), email: parsed.data.email || null, company: parsed.data.company || null, phone: parsed.data.phone || null, source: "manual", owner_id: ownerId })
+    .insert({ name: parsed.data.name.trim(), email: parsed.data.email || null, company: parsed.data.company || null, phone: parsed.data.phone || null, source: "manual", owner_id: ownerId, assignee_ids: scope.isManager ? [] : [profile.id] })
     .select("id, name, email, company, phone, source")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

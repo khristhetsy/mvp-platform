@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
-export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string; type: string; country: string; createdOn: string };
+export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string; type: string; country: string; createdOn: string; assignees?: string[] };
 type GroupState = { rows: SalesContact[]; total: number; loading: boolean };
 type Facets = { counts: Record<string, number>; countries: { value: string; n: number }[] };
 type TextFilters = { name: string; company: string; email: string; phone: string };
@@ -26,6 +26,7 @@ const ALL_COLUMNS: ColMeta[] = [
   { key: "type", label: "Type", width: "88px", kind: "none", sortable: false },
   { key: "phone", label: "Phone", width: "1fr", kind: "text", sortable: false },
   { key: "email", label: "Email", width: "1.4fr", kind: "text", sortable: true },
+  { key: "lead_assign", label: "Lead assign", width: "1.1fr", kind: "none", sortable: false },
   { key: "country", label: "Country", width: "100px", kind: "country", sortable: true },
   { key: "created_on", label: "Created on", width: "104px", kind: "none", sortable: true },
 ];
@@ -148,6 +149,12 @@ export function SalesContactsClient() {
       case "type": { const tb = TYPE_BADGE[c.type] ?? TYPE_BADGE.other; return <div><span style={{ fontSize: 10, fontWeight: 600, color: tb.c, background: tb.bg, borderRadius: 10, padding: "2px 8px" }}>{tb.t}</span></div>; }
       case "phone": return <div style={{ fontSize: 11.5, fontFamily: "var(--font-mono)", color: c.phone ? "var(--foreground)" : "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.phone || "—"}</div>;
       case "email": return <div style={{ color: "#185FA5", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.email || "—"}</div>;
+      case "lead_assign": return c.assignees && c.assignees.length ? (
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap", overflow: "hidden" }}>
+          {c.assignees.slice(0, 2).map((n) => <span key={n} style={{ fontSize: 10, background: "#E6F1FB", color: "#185FA5", borderRadius: 10, padding: "1px 7px", whiteSpace: "nowrap" }}>{n}</span>)}
+          {c.assignees.length > 2 && <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>+{c.assignees.length - 2}</span>}
+        </div>
+      ) : <div style={{ color: "var(--muted-foreground)" }}>—</div>;
       case "country": return <div style={{ color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.country || "—"}</div>;
       case "created_on": return <div style={{ color: "var(--muted-foreground)", fontSize: 11.5, whiteSpace: "nowrap" }}>{c.createdOn ? c.createdOn.slice(0, 10) : "—"}</div>;
       default: return null;

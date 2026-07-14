@@ -43,7 +43,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!scope.isManager) {
     const existing = await getContactProfile(id);
     const c = existing?.contact;
-    if (!c || (c.owner_id !== scope.ownerId && !c.assignee_ids.includes(scope.ownerId ?? ""))) return NextResponse.json({ error: "Not found." }, { status: 404 });
+    if (!c || !c.assignee_ids.includes(scope.ownerId ?? "")) return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
   // Lead owner and Lead assign (assignees) can only be changed by a super admin.
   if (!isSuperAdmin(profile)) {
@@ -66,7 +66,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const data = await getContactProfile(id);
   if (!data) return NextResponse.json({ error: "Not found." }, { status: 404 });
   const scope = await getSalesScope(profile);
-  if (!scope.isManager && data.contact.owner_id !== scope.ownerId && !data.contact.assignee_ids.includes(scope.ownerId ?? "")) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  if (!scope.isManager && !data.contact.assignee_ids.includes(scope.ownerId ?? "")) return NextResponse.json({ error: "Not found." }, { status: 404 });
   return NextResponse.json(data);
 }
 
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!scope.isManager) {
     const existing = await getContactProfile(id);
     const c = existing?.contact;
-    if (!c || (c.owner_id !== scope.ownerId && !c.assignee_ids.includes(scope.ownerId ?? ""))) return NextResponse.json({ error: "Not found." }, { status: 404 });
+    if (!c || !c.assignee_ids.includes(scope.ownerId ?? "")) return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
   try {
     await appendContactNote(id, parsed.data.note, profile.id);
