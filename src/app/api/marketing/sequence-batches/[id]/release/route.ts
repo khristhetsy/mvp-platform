@@ -15,15 +15,18 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const profile = (await requireRole(["admin", "analyst"]).catch(() => null)) as (Profile & { is_super_admin?: boolean }) | null;
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
 
-  const svc = createServiceRoleClient();
-  const effective = await getEffectivePermissions(svc, profile.id, profile);
-  const canApprove = effective.isSuperAdmin || effective.permissions.includes("manage_actions");
-  if (!canApprove) {
-    return NextResponse.json({ error: "You don't have permission to release sends. Ask an approver or a super admin." }, { status: 403 });
-  }
-
-  const { id } = await params;
+  // Everything below is wrapped so any failure (permission lookup, service client,
+  // or the send itself) returns JSON rather than a non-JSON runtime error page that
+  // the client can't parse.
   try {
+    const svc = createServiceRoleClient();
+    const effective = await getEffectivePermissions(svc, profile.id, profile);
+    const canApprove = effective.isSuperAdmin || effective.permissions.includes("manage_actions");
+    if (!canApprove) {
+      return NextResponse.json({ error: "You don't have permission to release sends. Ask an approver or a super admin." }, { status: 403 });
+    }
+
+    const { id } = await params;
     const result = await releaseSequenceBatch(id, profile.id);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {

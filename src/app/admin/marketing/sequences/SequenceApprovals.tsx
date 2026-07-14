@@ -34,9 +34,19 @@ export function SequenceApprovals({ canApprove }: { canApprove: boolean }) {
     setBusy(id); setError(null); setMsg(null);
     try {
       const res = await fetch(`/api/marketing/sequence-batches/${id}/release`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Release failed.");
-      setMsg(`Released — ${data.sent} sent${data.failed ? `, ${data.failed} failed` : ""}.`);
+      // Parse defensively: a timeout or runtime error can return a non-JSON body.
+      const text = await res.text();
+      let data: { error?: string; sent?: number; failed?: number } = {};
+      try { data = text ? JSON.parse(text) : {}; }
+      catch {
+        throw new Error(
+          res.status === 504 || res.status === 502
+            ? "The send timed out — this batch may be too large to release in one go. Try again, or split it into smaller sends."
+            : `Release failed (${res.status}). The server returned an unexpected response.`,
+        );
+      }
+      if (!res.ok) throw new Error(data.error ?? `Release failed (${res.status}).`);
+      setMsg(`Released — ${data.sent ?? 0} sent${data.failed ? `, ${data.failed} failed` : ""}.`);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Release failed.");
