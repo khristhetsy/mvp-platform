@@ -2541,3 +2541,12 @@ $$;
 insert into public.features (key, label, hub_key, path, sort_order)
 values ('ir_contacts', 'Contacts', 'investor_relations', '/admin/sales/contacts', 5)
 on conflict (key) do nothing;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Per-department contact visibility (Marketing = see all contacts).
+-- Governs VISIBILITY only; assignment/reassign stays admin-only.
+
+alter table public.departments
+  add column if not exists contacts_see_all boolean not null default false;
+
+update public.departments set contacts_see_all = true where key = 'marketing';

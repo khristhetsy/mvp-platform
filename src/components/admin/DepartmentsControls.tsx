@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FeatureControlsClient } from "@/components/admin/FeatureControlsClient";
 
-type Dept = { id: string; key: string; name: string; hubKey: string; isAdmin: boolean };
+type Dept = { id: string; key: string; name: string; hubKey: string; isAdmin: boolean; contactsSeeAll: boolean };
 type Feature = { id: string; key: string; label: string; hubKey: string; path: string; sortOrder: number };
 type Matrix = { departments: Dept[]; features: Feature[]; grants: Record<string, boolean> };
 type Member = { userId: string; name: string | null; email: string | null; departmentIds: string[] };
@@ -67,6 +67,12 @@ function DepartmentMatrix() {
     } finally { setBusy(false); }
   }
 
+  async function toggleVisibility(departmentId: string, seeAll: boolean) {
+    setData((prev) => prev ? { ...prev, departments: prev.departments.map((d) => d.id === departmentId ? { ...d, contactsSeeAll: seeAll } : d) } : prev);
+    const res = await fetch("/api/admin/departments/contacts-visibility", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ departmentId, seeAll }) });
+    if (!res.ok) await load(); // revert to server truth on failure
+  }
+
   if (!data) return <p style={{ fontSize: 13, color: "#6B7690" }}>Loading…</p>;
   const nonAdmin = data.departments.filter((d) => !d.isAdmin);
   const byHub = data.features.reduce((acc, f) => { (acc[f.hubKey] ??= []).push(f); return acc; }, {} as Record<string, Feature[]>);
@@ -82,6 +88,26 @@ function DepartmentMatrix() {
           <option value="">View as… (preview)</option>
           {nonAdmin.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
+      </div>
+
+      <div style={{ border: "1px solid #E4E8F0", borderRadius: 12, background: "#fff", padding: "14px 16px", marginBottom: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: navy, marginBottom: 3 }}>Contact visibility</div>
+        <div style={{ fontSize: 11.5, color: "#6B7690", marginBottom: 12 }}>Which contacts each department&apos;s members see. &quot;All contacts&quot; suits Marketing (campaigns); &quot;Only assigned&quot; limits members to their Lead-assigned contacts.</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+          {data.departments.map((d) => (
+            <div key={d.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+              <span style={{ fontSize: 12.5, color: navy }}>{d.name}</span>
+              {d.isAdmin ? (
+                <span style={{ fontSize: 10.5, color: "#3730A3", background: "#EEF2FF", borderRadius: 10, padding: "3px 10px" }}>All contacts (locked)</span>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                  <span style={{ fontSize: 11.5, color: d.contactsSeeAll ? "#3730A3" : "#6B7690", fontWeight: d.contactsSeeAll ? 600 : 400 }}>{d.contactsSeeAll ? "All contacts" : "Only assigned"}</span>
+                  <Toggle on={d.contactsSeeAll} onChange={(v) => toggleVisibility(d.id, v)} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       <div style={{ border: "1px solid #E4E8F0", borderRadius: 12, overflow: "hidden", background: "#fff" }}>

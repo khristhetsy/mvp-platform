@@ -66,7 +66,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const data = await getContactProfile(id);
   if (!data) return NextResponse.json({ error: "Not found." }, { status: 404 });
   const scope = await getSalesScope(profile);
-  if (!scope.isManager && !data.contact.assignee_ids.includes(scope.ownerId ?? "")) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  if (!scope.canSeeAllContacts && !data.contact.assignee_ids.includes(scope.ownerId ?? "")) return NextResponse.json({ error: "Not found." }, { status: 404 });
   return NextResponse.json(data);
 }
 

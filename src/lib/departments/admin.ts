@@ -7,7 +7,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function db(): any { return createServiceRoleClient(); }
 
-export interface DeptRow { id: string; key: string; name: string; hubKey: string; isAdmin: boolean }
+export interface DeptRow { id: string; key: string; name: string; hubKey: string; isAdmin: boolean; contactsSeeAll: boolean }
 export interface FeatureRow { id: string; key: string; label: string; hubKey: string; path: string; sortOrder: number }
 export interface MatrixData {
   departments: DeptRow[];
@@ -17,7 +17,7 @@ export interface MatrixData {
 
 export async function loadMatrix(): Promise<MatrixData> {
   const [{ data: depts }, { data: feats }, { data: grants }] = await Promise.all([
-    db().from("departments").select("id, key, name, hub_key, is_admin").eq("is_active", true).order("is_admin", { ascending: false }).order("name"),
+    db().from("departments").select("id, key, name, hub_key, is_admin, contacts_see_all").eq("is_active", true).order("is_admin", { ascending: false }).order("name"),
     db().from("features").select("id, key, label, hub_key, path, sort_order").eq("is_active", true).order("hub_key").order("sort_order"),
     db().from("department_features").select("department_id, feature_id, enabled"),
   ]);
@@ -26,7 +26,7 @@ export async function loadMatrix(): Promise<MatrixData> {
     grantMap[`${g.department_id}:${g.feature_id}`] = g.enabled;
   }
   return {
-    departments: ((depts ?? []) as Array<Record<string, unknown>>).map((d) => ({ id: String(d.id), key: String(d.key), name: String(d.name), hubKey: String(d.hub_key), isAdmin: Boolean(d.is_admin) })),
+    departments: ((depts ?? []) as Array<Record<string, unknown>>).map((d) => ({ id: String(d.id), key: String(d.key), name: String(d.name), hubKey: String(d.hub_key), isAdmin: Boolean(d.is_admin), contactsSeeAll: Boolean(d.contacts_see_all) })),
     features: ((feats ?? []) as Array<Record<string, unknown>>).map((f) => ({ id: String(f.id), key: String(f.key), label: String(f.label), hubKey: String(f.hub_key), path: String(f.path), sortOrder: Number(f.sort_order) })),
     grants: grantMap,
   };
@@ -37,6 +37,16 @@ export async function batchUpsertGrants(rows: Array<{ departmentId: string; feat
   const payload = rows.map((r) => ({ department_id: r.departmentId, feature_id: r.featureId, enabled: r.enabled, updated_by: actorId, updated_at: new Date().toISOString() }));
   const { error } = await db().from("department_features").upsert(payload, { onConflict: "department_id,feature_id" });
   if (error) throw new Error(error.message);
+}
+
+// Flip a department's "members see all contacts" flag (visibility only). Admin
+// departments always see all, so they can't be toggled off here.
+export async function setDepartmentContactsVisibility(departmentId: string, seeAll: boolean, actorId: string): Promise<void> {
+  const { data: dept } = await db().from("departments").select("is_admin").eq("id", departmentId).maybeSingle();
+  if (dept?.is_admin) throw new Error("The Admin department always sees all contacts.");
+  const { error } = await db().from("departments").update({ contacts_see_all: seeAll }).eq("id", departmentId);
+  if (error) throw new Error(error.message);
+  await db().from("department_audit_log").insert({ actor_id: actorId, action: seeAll ? "contacts_see_all_enabled" : "contacts_see_all_disabled", department_id: departmentId });
 }
 
 export interface MemberRow { userId: string; name: string | null; email: string | null; departmentIds: string[] }

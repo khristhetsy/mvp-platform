@@ -71,8 +71,9 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const cols = "id, name, email, company, phone, source, contact_type, country, created_on, assignee_ids, raw";
   let query = db().from("crm_contacts").select(cols, { count: "exact" });
-  // Non-admins see a contact only if they are one of its Lead-assigned members.
-  if (!scope.isManager) query = query.contains("assignee_ids", [scope.ownerId]);
+  // Scoped users see a contact only if they are one of its Lead-assigned members.
+  // Admins and "see all contacts" departments (e.g. Marketing) see everything.
+  if (!scope.canSeeAllContacts) query = query.contains("assignee_ids", [scope.ownerId]);
   if (group && (GROUPS as readonly string[]).includes(group)) query = query.eq("contact_type", group);
   query = applyFilters(query, p);
   query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);

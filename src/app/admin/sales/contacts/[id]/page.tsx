@@ -17,8 +17,9 @@ export default async function ContactProfilePage({ params }: { params: Promise<{
   const scope = await getSalesScope(profile);
   const data = await getContactProfile(id);
   if (!data) notFound();
-  // Non-admins can only open contacts they are Lead-assigned to.
-  if (!scope.isManager && !data.contact.assignee_ids.includes(scope.ownerId ?? "")) notFound();
+  // Scoped users can only open contacts they are Lead-assigned to; admins and
+  // "see all contacts" departments (e.g. Marketing) can open any contact.
+  if (!scope.canSeeAllContacts && !data.contact.assignee_ids.includes(scope.ownerId ?? "")) notFound();
   // Owner picker = all staff; Assigned-to picker = only lead-assignable members (Feature Controls).
   const [staff, leadStaff] = scope.isManager
     ? await Promise.all([listAssignableStaff(), listLeadAssignableStaff()])

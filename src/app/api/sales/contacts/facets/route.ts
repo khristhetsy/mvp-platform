@@ -38,7 +38,7 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const countOne = async (group: string): Promise<number> => {
     let q = db().from("crm_contacts").select("id", { count: "exact", head: true }).eq("contact_type", group);
-    if (!scope.isManager) q = q.contains("assignee_ids", [scope.ownerId]);
+    if (!scope.canSeeAllContacts) q = q.contains("assignee_ids", [scope.ownerId]);
     q = applyTextFilters(q, p);
     const { count } = await q;
     return count ?? 0;
