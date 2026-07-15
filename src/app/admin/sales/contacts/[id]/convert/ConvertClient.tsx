@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-type Contact = { id: string; name: string; email: string | null; company: string | null; lead_status: string | null; source: string };
+type Contact = { id: string; name: string; email: string | null; company: string | null; lead_status: string | null; source: string; note: string | null };
 type Pipe = { id: string; name: string; stages: { id: string; name: string }[] };
 
 const inp: React.CSSProperties = { fontSize: 12, padding: "7px 9px", borderRadius: 7, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)", boxSizing: "border-box", width: "100%" };
@@ -17,6 +17,8 @@ export function ConvertClient({ contact, pipelines }: { contact: Contact; pipeli
     pipelineId: pipelines[0]?.id ?? "", stageId: pipelines[0]?.stages[0]?.id ?? "",
     probability: "", expectedClose: "",
   });
+  const [carryNotes, setCarryNotes] = useState(true);
+  const [notes, setNotes] = useState(contact.note ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -38,6 +40,7 @@ export function ConvertClient({ contact, pipelines }: { contact: Contact; pipeli
           pipelineId: form.pipelineId || null, stageId: form.stageId || null,
           probability: form.probability ? Number(form.probability) : null, expectedClose: form.expectedClose || null,
           source: contact.source, leadStatus: contact.lead_status,
+          notes: carryNotes ? (notes.trim() || null) : null,
         }),
       });
       const data = await res.json();
@@ -94,6 +97,20 @@ export function ConvertClient({ contact, pipelines }: { contact: Contact; pipeli
             <input type="date" value={form.expectedClose} onChange={(e) => setForm({ ...form, expectedClose: e.target.value })} style={{ ...inp, marginTop: 5 }} />
           </div>
         </div>
+
+        {contact.note && contact.note.trim() && (
+          <div style={{ marginBottom: 11 }}>
+            <label style={{ ...lbl, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+              <input type="checkbox" checked={carryNotes} onChange={(e) => setCarryNotes(e.target.checked)} style={{ width: 13, height: 13 }} /> Carry over contact notes
+            </label>
+            {carryNotes && (
+              <>
+                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} style={{ ...inp, marginTop: 5, minHeight: 60, resize: "vertical", lineHeight: 1.5 }} />
+                <div style={{ fontSize: 10.5, color: "var(--muted-foreground)", marginTop: 4 }}><i className="ti ti-arrow-down-right" aria-hidden="true" /> Copied from the contact — editable. The contact keeps its own note.</div>
+              </>
+            )}
+          </div>
+        )}
 
         <div style={{ background: "var(--muted)", borderRadius: 8, padding: "9px 11px", fontSize: 11, color: "var(--muted-foreground)", marginBottom: 14 }}>
           <i className="ti ti-info-circle" aria-hidden="true" /> Expected MRR {mrr != null ? <>auto-fills to <span style={{ fontWeight: 600, color: "var(--foreground)" }}>${mrr.toLocaleString()}/mo</span></> : "is derived from deal value"}. Contact, email, and source carry over.

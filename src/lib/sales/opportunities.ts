@@ -83,7 +83,7 @@ export type CreateOpportunityInput = {
   name: string; email?: string | null; company?: string | null; contactCrmId?: string | null;
   valueCents?: number | null; billing?: "yearly" | "monthly"; pipelineId?: string | null; stageId?: string | null;
   probability?: number | null; expectedClose?: string | null; source?: string | null; leadStatus?: string | null;
-  createdBy?: string | null; ownerId?: string | null;
+  createdBy?: string | null; ownerId?: string | null; notes?: string | null;
 };
 
 export async function createOpportunity(input: CreateOpportunityInput): Promise<Opportunity | null> {
@@ -104,11 +104,16 @@ export async function createOpportunity(input: CreateOpportunityInput): Promise<
       source: input.source || null, lead_status: input.leadStatus || null,
       created_by: input.createdBy || null,
       owner_id: input.ownerId ?? input.createdBy ?? null,
+      notes: input.notes?.trim() || null,
     })
     .select("id")
     .single();
   if (error || !data) return null;
   await logActivity({ kind: "converted", summary: `Converted to opportunity: ${title}`, actorId: input.createdBy, contactCrmId: input.contactCrmId ?? null, opportunityId: String(data.id) });
+  // Carry the contact's note onto the opportunity timeline as well.
+  if (input.notes?.trim()) {
+    await logActivity({ kind: "opp_note", summary: `Carried from contact: ${input.notes.trim().slice(0, 300)}`, actorId: input.createdBy, contactCrmId: input.contactCrmId ?? null, opportunityId: String(data.id) });
+  }
   return getOpportunity(String(data.id));
 }
 

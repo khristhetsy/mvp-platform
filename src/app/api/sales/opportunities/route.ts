@@ -29,6 +29,7 @@ const createSchema = z.object({
   expectedClose: z.string().max(20).optional().nullable(),
   source: z.string().max(80).optional().nullable(),
   leadStatus: z.string().max(80).optional().nullable(),
+  notes: z.string().max(4000).optional().nullable(),
 });
 
 // POST /api/sales/opportunities — convert a contact into an opportunity.
