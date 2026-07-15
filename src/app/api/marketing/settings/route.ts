@@ -16,6 +16,7 @@ const putSchema = z.object({
   default_from_name: z.string().max(120).optional(),
   default_from_email: z.string().email().max(200).optional(),
   default_reply_to: z.string().email().max(200).nullable().optional(),
+  senders: z.array(z.object({ name: z.string().max(120), email: z.string().email().max(200) })).max(25).optional(),
 });
 
 // PUT — update the default sender used when creating new campaigns/sequences.

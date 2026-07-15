@@ -2550,3 +2550,16 @@ alter table public.departments
   add column if not exists contacts_see_all boolean not null default false;
 
 update public.departments set contacts_see_all = true where key = 'marketing';
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Approved "From" addresses for marketing campaigns (managed dropdown).
+
+alter table public.marketing_settings
+  add column if not exists senders jsonb not null default '[]'::jsonb;
+
+update public.marketing_settings
+set senders = jsonb_build_array(
+  jsonb_build_object('name', coalesce(nullif(default_from_name, ''), 'iCapOS'),
+                     'email', coalesce(nullif(default_from_email, ''), 'outreach@icapos.com'))
+)
+where id = 'default' and (senders is null or senders = '[]'::jsonb);

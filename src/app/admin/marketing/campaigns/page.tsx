@@ -27,7 +27,7 @@ export default async function MarketingCampaignsPage() {
         <h1 style={{ fontSize: 18, fontWeight: 500 }}>{t("campaigns")}</h1>
       </div>
       <DeliveryHealthBanner />
-      <CampaignsClient campaigns={campaigns} lists={lists} templates={templates} resendReady={emailConfigured()} defaultSender={sender ? { name: sender.default_from_name, email: sender.default_from_email, replyTo: sender.default_reply_to ?? "" } : undefined} />
+      <CampaignsClient campaigns={campaigns} lists={lists} templates={templates} resendReady={emailConfigured()} defaultSender={sender ? { name: sender.default_from_name, email: sender.default_from_email, replyTo: sender.default_reply_to ?? "" } : undefined} senders={sender?.senders ?? []} />
     </div>
   );
 }

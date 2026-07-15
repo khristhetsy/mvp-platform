@@ -11,6 +11,7 @@ interface Props {
   templates: MarketingTemplate[];
   resendReady?: boolean;
   defaultSender?: { name: string; email: string; replyTo: string };
+  senders?: { name: string; email: string }[];
 }
 
 const STATUS_MAP: Record<string, { bg: string; color: string; label: string }> = {
@@ -42,7 +43,7 @@ function toLocalInput(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function CampaignsClient({ campaigns, lists, templates, resendReady = true, defaultSender }: Props) {
+export function CampaignsClient({ campaigns, lists, templates, resendReady = true, defaultSender, senders = [] }: Props) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -71,6 +72,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
     scheduled_at: "",
     group_type: "founder",
   });
+  const [customFrom, setCustomFrom] = useState(false);
   const [groupFilter, setGroupFilter] = useState<"all" | "founder" | "investor" | "event">("all");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [sortKey, setSortKey] = useState<"created" | "name" | "opens">("created");
@@ -370,12 +372,28 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
             ].map((f) => (
               <div key={f.key}>
                 <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>{f.label}</label>
-                <input
-                  type={f.type}
-                  value={(form as Record<string, string>)[f.key]}
-                  onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-                  style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}
-                />
+                {f.key === "from_email" && senders.length > 0 && !customFrom ? (
+                  <select
+                    value={form.from_email}
+                    onChange={(e) => {
+                      if (e.target.value === "__custom__") { setCustomFrom(true); return; }
+                      const s = senders.find((x) => x.email === e.target.value);
+                      setForm({ ...form, from_email: e.target.value, from_name: s?.name ?? form.from_name });
+                    }}
+                    style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}
+                  >
+                    {!senders.some((s) => s.email === form.from_email) && form.from_email && <option value={form.from_email}>{form.from_email}</option>}
+                    {senders.map((s) => <option key={s.email} value={s.email}>{s.name} &lt;{s.email}&gt;</option>)}
+                    <option value="__custom__">✎ Custom address…</option>
+                  </select>
+                ) : (
+                  <input
+                    type={f.type}
+                    value={(form as Record<string, string>)[f.key]}
+                    onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+                    style={{ width: "100%", fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)" }}
+                  />
+                )}
               </div>
             ))}
             <div>
@@ -627,7 +645,7 @@ export function CampaignsClient({ campaigns, lists, templates, resendReady = tru
               </div>
             )}
             {analyticsData && editing && (
-              <CampaignEditForm form={editForm} setForm={setEditForm} lists={lists} templates={templates} saving={savingEdit} onSave={saveEdit} onCancel={() => setEditing(false)} />
+              <CampaignEditForm form={editForm} setForm={setEditForm} lists={lists} templates={templates} saving={savingEdit} onSave={saveEdit} onCancel={() => setEditing(false)} senders={senders} />
             )}
             {analyticsData && !editing && drawerTab === "analytics" && <AnalyticsPanel data={analyticsData} />}
             {analyticsData && !editing && drawerTab === "preview" && <CampaignPreview data={analyticsData} />}
@@ -669,13 +687,14 @@ function ScheduleButton({ onSchedule, acting }: { onSchedule: (at: string) => vo
 
 type EditForm = { name: string; from_name: string; from_email: string; reply_to: string; list_id: string; template_id: string; scheduled_at: string };
 
-function CampaignEditForm({ form, setForm, lists, templates, saving, onSave, onCancel }: {
+function CampaignEditForm({ form, setForm, lists, templates, saving, onSave, onCancel, senders = [] }: {
   form: EditForm; setForm: (f: EditForm) => void; lists: MarketingList[]; templates: MarketingTemplate[];
-  saving: boolean; onSave: () => void; onCancel: () => void;
+  saving: boolean; onSave: () => void; onCancel: () => void; senders?: { name: string; email: string }[];
 }) {
   const lbl: React.CSSProperties = { display: "block", fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 5 };
   const inp: React.CSSProperties = { width: "100%", boxSizing: "border-box", fontSize: 13, padding: "8px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" };
   const set = (patch: Partial<EditForm>) => setForm({ ...form, ...patch });
+  const [customFrom, setCustomFrom] = useState(false);
   const canSave = form.name.trim().length > 0 && form.from_email.trim().length > 0 && !saving;
   return (
     <div>
@@ -686,7 +705,21 @@ function CampaignEditForm({ form, setForm, lists, templates, saving, onSave, onC
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div><label style={lbl}>From name</label><input value={form.from_name} onChange={(e) => set({ from_name: e.target.value })} style={inp} /></div>
-          <div><label style={lbl}>From email</label><input value={form.from_email} onChange={(e) => set({ from_email: e.target.value })} style={inp} /></div>
+          <div><label style={lbl}>From email</label>
+            {senders.length > 0 && !customFrom ? (
+              <select value={form.from_email} onChange={(e) => {
+                if (e.target.value === "__custom__") { setCustomFrom(true); return; }
+                const s = senders.find((x) => x.email === e.target.value);
+                set({ from_email: e.target.value, from_name: s?.name ?? form.from_name });
+              }} style={inp}>
+                {!senders.some((s) => s.email === form.from_email) && form.from_email && <option value={form.from_email}>{form.from_email}</option>}
+                {senders.map((s) => <option key={s.email} value={s.email}>{s.name} &lt;{s.email}&gt;</option>)}
+                <option value="__custom__">✎ Custom address…</option>
+              </select>
+            ) : (
+              <input value={form.from_email} onChange={(e) => set({ from_email: e.target.value })} style={inp} />
+            )}
+          </div>
         </div>
         <div>
           <label style={lbl}>Reply-to</label>
