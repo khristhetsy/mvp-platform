@@ -206,13 +206,6 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                 {contact.lead_status ? <StatusPill status={contact.lead_status} /> : null}
               </div>
               <div style={{ fontSize: 13, color: "var(--muted-foreground)", marginTop: 2 }}>{subtitle}</div>
-              <div style={{ display: "flex", gap: 12, marginTop: 8, flexWrap: "wrap", fontSize: 12, color: "var(--muted-foreground)" }}>
-                <span><i className="ti ti-user-check" aria-hidden="true" /> Owner: <span style={{ color: "var(--foreground)" }}>{contact.owner || "—"}</span></span>
-                {contact.assignee_ids.length > 0 && (
-                  <span><i className="ti ti-users" aria-hidden="true" /> Assigned: <span style={{ color: "var(--foreground)" }}>{contact.assignee_ids.map((id) => staff.find((s) => s.id === id)?.name).filter(Boolean).join(", ") || `${contact.assignee_ids.length}`}</span></span>
-                )}
-                <span><i className="ti ti-plug" aria-hidden="true" /> Source: {contact.source}</span>
-              </div>
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {contact.phone
@@ -370,6 +363,9 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                   )}
                 </div>
               </div>
+              {/* Owner + Source — moved here from the header, directly under Lead assign. */}
+              <Row icon="ti-user-check" label="Owner" value={contact.owner} />
+              <Row icon="ti-plug" label="Source" value={contact.source} />
               <Row icon="ti-id-badge" label="Membership" value={contact.membership} />
               <Row icon="ti-briefcase" label="Job position" value={contact.job_position} />
               <Row icon="ti-tag" label="Tags" value={contact.tags.length ? contact.tags.join(", ") : null} />
