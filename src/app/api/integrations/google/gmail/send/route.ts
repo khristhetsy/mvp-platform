@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sendViaGmail, type GmailAttachment } from "@/lib/integrations/gmail-send";
 import { parseRecipients } from "@/lib/email/send-email";
+import { absolutizeEmailHtml } from "@/lib/email/absolutize-html";
 import { getGoogleConnectionStatus } from "@/lib/integrations/connected-accounts";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
     bcc: bccList.join(", ") || null,
     subject: parsed.data.subject,
     body: parsed.data.body,
-    html: parsed.data.html ?? null,
+    html: parsed.data.html ? absolutizeEmailHtml(parsed.data.html) : null,
     attachments,
   });
 

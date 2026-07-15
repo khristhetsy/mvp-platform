@@ -239,7 +239,8 @@ export function SalesContactsClient() {
               <div style={{ maxHeight: 340, overflowY: "auto" }}>
                 {roleFacets.map((key) => {
                   const sel = facetSel[key] ?? [];
-                  const opts = (facetOpts[key] ?? []).filter((o) => o.toLowerCase().includes(facetSearch.toLowerCase()));
+                  const allOpts = facetOpts[key] ?? [];
+                  const opts = allOpts.filter((o) => o.toLowerCase().includes(facetSearch.toLowerCase()));
                   const isOpen = openFacetKey === key;
                   return (
                     <div key={key} style={{ borderBottom: "0.5px solid #f1f5f9" }}>
@@ -252,7 +253,7 @@ export function SalesContactsClient() {
                         <div style={{ padding: "0 8px 8px" }}>
                           <input value={facetSearch} onChange={(e) => setFacetSearch(e.target.value)} placeholder="Search…" style={{ ...inp, width: "100%", boxSizing: "border-box", marginBottom: 6 }} />
                           <div style={{ maxHeight: 180, overflowY: "auto" }}>
-                            {opts.length === 0 && <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", padding: "4px 6px" }}>No options.</div>}
+                            {opts.length === 0 && <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", padding: "4px 6px" }}>{allOpts.length === 0 ? "No options loaded yet." : `No matches for "${facetSearch}".`}</div>}
                             {opts.map((o) => (
                               <label key={o} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 6px", fontSize: 12, cursor: "pointer" }}>
                                 <input type="checkbox" checked={sel.includes(o)} onChange={() => toggleFacet(key, o)} style={{ width: 14, height: 14 }} />

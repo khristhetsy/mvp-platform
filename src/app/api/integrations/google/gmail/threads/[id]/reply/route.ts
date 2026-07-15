@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiProfile } from "@/lib/api/auth";
 import { replyGmailThread } from "@/lib/integrations/gmail-write";
+import { absolutizeEmailHtml } from "@/lib/email/absolutize-html";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!parsed.success) return NextResponse.json({ error: "Message body is required." }, { status: 400 });
 
   try {
-    await replyGmailThread(auth.profile.id, id, parsed.data.body, parsed.data.html ?? null);
+    await replyGmailThread(auth.profile.id, id, parsed.data.body, parsed.data.html ? absolutizeEmailHtml(parsed.data.html) : null);
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Reply failed." }, { status: 500 });
