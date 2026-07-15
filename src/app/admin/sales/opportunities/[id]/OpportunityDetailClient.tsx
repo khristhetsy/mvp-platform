@@ -11,6 +11,7 @@ type Opp = {
   billing: "yearly" | "monthly"; probability: number | null; expected_close: string | null;
   priority: number; tags: string[]; source: string | null; lead_status: string | null;
   status: "open" | "won" | "lost" | "archived"; notes: string | null;
+  lead_assignees: string[];
 };
 
 const money = (c: number | null) => (c == null ? "—" : `$${(c / 100).toLocaleString()}`);
@@ -156,6 +157,7 @@ export function OpportunityDetailClient({ initial, stages }: { initial: Opp; sta
                   ["Contact", o.contact_name ?? "—"], ["Email", o.contact_email ?? "—"],
                   ["Stage", o.stage_name ?? "—"], ["Source", o.source ?? "—"],
                   ["Lead status", o.lead_status ?? "—"], ["Billing", o.billing === "monthly" ? "Monthly" : "Yearly"],
+                  ["Lead assign", o.lead_assignees.length ? o.lead_assignees.join(", ") : "—"],
                 ].map(([k, v]) => (
                   <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
                     <span style={{ color: "var(--muted-foreground)" }}>{k}</span>

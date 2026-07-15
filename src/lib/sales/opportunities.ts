@@ -1,6 +1,7 @@
 // Sales opportunities — standalone (no Odoo). Keyed loosely to a CRM contact.
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/sales/activity";
+import { listAssignableStaff } from "@/lib/sales/settings";
 
 // sales_* tables aren't in the generated Supabase types — use a loose client.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -15,6 +16,7 @@ export type Opportunity = {
   priority: number; tags: string[]; source: string | null; lead_status: string | null;
   status: "open" | "won" | "lost" | "archived"; notes: string | null;
   created_at: string; updated_at: string | null; last_activity_at: string | null;
+  lead_assignees: string[]; // names of the linked contact's Lead-assigned reps (read-only mirror)
 };
 
 const SELECT =
@@ -43,6 +45,7 @@ function mapRow(r: Record<string, unknown>): Opportunity {
     created_at: String(r.created_at),
     updated_at: (r.updated_at as string) ?? null,
     last_activity_at: (r.last_activity_at as string) ?? null,
+    lead_assignees: [],
   };
 }
 
@@ -71,10 +74,16 @@ export async function getOpportunity(id: string): Promise<Opportunity | null> {
   const { data } = await db().from("sales_opportunities").select(SELECT).eq("id", id).maybeSingle();
   if (!data) return null;
   const opp = mapRow(data as Record<string, unknown>);
-  // Pull the linked contact's phone (not stored on the opp) for click-to-call/message.
+  // Pull the linked contact's phone + Lead assignees (not stored on the opp).
   if (opp.contact_crm_id) {
-    const { data: c } = await db().from("crm_contacts").select("phone").eq("id", opp.contact_crm_id).maybeSingle();
+    const { data: c } = await db().from("crm_contacts").select("phone, assignee_ids").eq("id", opp.contact_crm_id).maybeSingle();
     opp.contact_phone = (c?.phone as string) ?? null;
+    const ids = Array.isArray(c?.assignee_ids) ? (c.assignee_ids as string[]) : [];
+    if (ids.length > 0) {
+      const staff = await listAssignableStaff();
+      const byId = new Map(staff.map((s) => [s.id, s.name]));
+      opp.lead_assignees = ids.map((id) => byId.get(id)).filter((n): n is string => !!n);
+    }
   }
   return opp;
 }
