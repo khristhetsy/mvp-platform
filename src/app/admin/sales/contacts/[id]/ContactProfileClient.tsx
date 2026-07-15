@@ -9,6 +9,7 @@ type Contact = {
   website: string | null; lead_status: string | null; lead_source: string | null; tags: string[]; owner: string | null; owner_id: string | null; assignee_ids: string[]; membership: string | null;
   job_position: string | null; street: string | null; street2: string | null; city: string | null; state: string | null; zip: string | null;
   country: string | null; language: string | null; created_on: string | null; note: string | null;
+  extra: Array<{ label: string; values: string[] }>;
 };
 type LinkedOpp = { id: string; title: string; stage_name: string | null; value_cents: number | null; probability: number | null; status: string };
 type Staff = { id: string; name: string };
@@ -378,6 +379,26 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                 <Row icon="ti-map-pin" label="Location" value={address} />
               </Section>
             </div>
+            {contact.extra.length > 0 && (
+              <div style={{ gridColumn: "1 / -1" }}>
+                <Section title="Additional details">
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 28px", marginTop: 4 }}>
+                    {contact.extra.map((f) => (
+                      <div key={f.label} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "4px 0", fontSize: 12.5 }}>
+                        <span style={{ width: 190, flexShrink: 0, color: "var(--muted-foreground)" }}>{f.label}</span>
+                        <span style={{ display: "flex", flexWrap: "wrap", gap: 5, minWidth: 0 }}>
+                          {f.values.length === 1 && f.values[0].length > 40 ? (
+                            <span style={{ color: "var(--foreground)" }}>{f.values[0]}</span>
+                          ) : f.values.map((v) => (
+                            <span key={v} style={{ fontSize: 11, background: "#F1EFE8", color: "#5F5E5A", borderRadius: 12, padding: "2px 9px", whiteSpace: "nowrap" }}>{v}</span>
+                          ))}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </Section>
+              </div>
+            )}
           </div>
         )}
 

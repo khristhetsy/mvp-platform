@@ -11,6 +11,8 @@ export type ContactProfile = {
   tags: string[]; owner: string | null; owner_id: string | null; assignee_ids: string[]; membership: string | null; job_position: string | null;
   street: string | null; street2: string | null; city: string | null; state: string | null; zip: string | null; country: string | null;
   language: string | null; created_on: string | null; note: string | null;
+  // Full source (Odoo) questionnaire/company fields, label → values, for display.
+  extra: Array<{ label: string; values: string[] }>;
 };
 export type LinkedOpp = { id: string; title: string; stage_name: string | null; value_cents: number | null; probability: number | null; status: string };
 
@@ -24,6 +26,31 @@ function pickRaw(raw: Record<string, unknown> | null, keys: string[]): string | 
     if (Array.isArray(v) && v.length === 2 && typeof v[1] === "string" && v[1].trim()) return v[1].trim();
   }
   return null;
+}
+
+// Flatten raw.__profile.extra (the full source questionnaire / company fields) into an
+// ordered label → values list for display. Skips empties and labels already surfaced
+// as first-class fields to avoid duplication.
+const EXTRA_SKIP = new Set(["lead status", "lead source", "membership type", "membership"]);
+function flattenExtra(raw: Record<string, unknown> | null): Array<{ label: string; values: string[] }> {
+  const prof = (raw?.__profile as { extra?: Record<string, unknown> } | undefined) ?? undefined;
+  if (!prof?.extra) return [];
+  const out: Array<{ label: string; values: string[] }> = [];
+  for (const [label, v] of Object.entries(prof.extra)) {
+    if (EXTRA_SKIP.has(label.trim().toLowerCase())) continue;
+    let values: string[];
+    if (Array.isArray(v)) {
+      values = v.map((x) => (Array.isArray(x) && x.length === 2 ? String(x[1]) : String(x))).map((s) => s.trim()).filter(Boolean);
+    } else if (typeof v === "boolean") {
+      values = [v ? "Yes" : "No"];
+    } else if (v == null || v === "") {
+      values = [];
+    } else {
+      values = [String(v).trim()].filter(Boolean);
+    }
+    if (values.length) out.push({ label, values });
+  }
+  return out;
 }
 
 // Odoo studio fields not mapped to a semantic key land in raw.__profile.extra, keyed by label.
@@ -79,6 +106,7 @@ export async function getContactProfile(id: string): Promise<{ contact: ContactP
     country: pref("country", pickRaw(raw, ["country_id", "country"])),
     language: pref("language", pickRaw(raw, ["lang", "language"])), created_on: pickRaw(raw, ["create_date", "created_on"]) ?? (c.synced_at as string) ?? null,
     note,
+    extra: flattenExtra(raw),
   };
   return { contact, opportunities };
 }
