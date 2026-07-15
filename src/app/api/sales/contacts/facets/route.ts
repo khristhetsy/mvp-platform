@@ -10,6 +10,8 @@ function db(): any { return createServiceRoleClient(); }
 
 const GROUPS = ["founder", "investor", "advisor", "other"] as const;
 
+const FACET_KEYS = ["industries", "capital", "fundingStages", "investorTypes", "operatingStages"] as const;
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function applyTextFilters(query: any, p: URLSearchParams): any {
   const q = p.get("q")?.trim();
@@ -20,6 +22,10 @@ function applyTextFilters(query: any, p: URLSearchParams): any {
   }
   const countries = p.get("country")?.split(",").map((s) => s.trim()).filter(Boolean);
   if (countries && countries.length) query = query.in("country", countries);
+  for (const key of FACET_KEYS) {
+    const vals = p.getAll(key).map((s) => s.trim()).filter((v) => v && !v.includes(",") && !v.includes('"'));
+    if (vals.length) query = query.or(vals.map((v) => `raw->__profile->${key}.cs.["${v}"]`).join(","));
+  }
   return query;
 }
 

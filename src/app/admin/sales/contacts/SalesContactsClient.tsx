@@ -38,17 +38,33 @@ const TYPE_BADGE: Record<string, { t: string; c: string; bg: string }> = {
   other: { t: "Other", c: "#444441", bg: "#F1EFE8" },
 };
 
+type FacetKey = "industries" | "capital" | "fundingStages" | "investorTypes" | "operatingStages";
+const FACET_LABEL: Record<FacetKey, string> = {
+  industries: "Type of industries",
+  capital: "Amount / type of capital",
+  fundingStages: "Funding stage",
+  investorTypes: "Investor type",
+  operatingStages: "Operating stage",
+};
+const FACETS_BY_ROLE: Record<string, FacetKey[]> = {
+  founder: ["industries", "capital", "fundingStages", "operatingStages"],
+  investor: ["investorTypes", "industries", "capital", "fundingStages", "operatingStages"],
+  advisor: ["industries"],
+  any: ["industries", "capital", "fundingStages", "investorTypes", "operatingStages"],
+};
+
 function loadLS<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
   try { const v = window.localStorage.getItem(key); return v ? (JSON.parse(v) as T) : fallback; } catch { return fallback; }
 }
 
-function buildParams(q: string, tf: TextFilters, countries: string[], sort: Sort): string {
+function buildParams(q: string, tf: TextFilters, countries: string[], sort: Sort, facetSel: Record<string, string[]>): string {
   const sp = new URLSearchParams();
   if (q.trim()) sp.set("q", q.trim());
   (["name", "company", "email", "phone"] as const).forEach((k) => { if (tf[k].trim()) sp.set(k, tf[k].trim()); });
   if (countries.length) sp.set("country", countries.join(","));
   if (sort.key !== "name" || sort.dir !== "asc") { sp.set("sort", sort.key); sp.set("dir", sort.dir); }
+  for (const [key, vals] of Object.entries(facetSel)) for (const v of vals) if (v) sp.append(key, v);
   return sp.toString();
 }
 
@@ -70,32 +86,48 @@ export function SalesContactsClient() {
   const [draft, setDraft] = useState("");
   const [countrySearch, setCountrySearch] = useState("");
 
+  // Role + questionnaire facet filters (Odoo-style Filters dropdown).
+  const [role, setRole] = useState<"" | "founder" | "investor" | "advisor">("");
+  const [facetSel, setFacetSel] = useState<Record<string, string[]>>({});
+  const [facetOpts, setFacetOpts] = useState<Record<string, string[]>>({});
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [openFacetKey, setOpenFacetKey] = useState<string | null>(null);
+  const [facetSearch, setFacetSearch] = useState("");
+
   const [adding, setAdding] = useState(false);
   const [addDraft, setAddDraft] = useState({ name: "", email: "", company: "", phone: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const paramsStr = useMemo(() => buildParams(q, textFilters, countries, sort), [q, textFilters, countries, sort]);
+  const paramsStr = useMemo(() => buildParams(q, textFilters, countries, sort, facetSel), [q, textFilters, countries, sort, facetSel]);
   const visibleColumns = useMemo(() => ALL_COLUMNS.filter((c) => c.always || visibleCols.includes(c.key)), [visibleCols]);
   const gridCols = useMemo(() => visibleColumns.map((c) => c.width).join(" "), [visibleColumns]);
 
   useEffect(() => { try { window.localStorage.setItem("salesContacts.cols.v2", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
   useEffect(() => { try { window.localStorage.setItem("salesContacts.sort", JSON.stringify(sort)); } catch { /* ignore */ } }, [sort]);
 
-  const loadAll = useCallback(async (params: string) => {
+  const loadAll = useCallback(async (params: string, roleFilter: string) => {
+    const defs = roleFilter ? GROUP_DEFS.filter((g) => g.id === roleFilter) : GROUP_DEFS;
     setGroups((prev) => {
       const next = { ...prev };
-      for (const g of GROUP_DEFS) next[g.id] = { rows: next[g.id]?.rows ?? [], total: next[g.id]?.total ?? 0, loading: true };
+      for (const g of GROUP_DEFS) next[g.id] = (roleFilter && g.id !== roleFilter)
+        ? { rows: [], total: 0, loading: false }
+        : { rows: next[g.id]?.rows ?? [], total: next[g.id]?.total ?? 0, loading: true };
       return next;
     });
-    const entries = await Promise.all(GROUP_DEFS.map(async (g) => {
+    const entries = await Promise.all(defs.map(async (g) => {
       try {
         const res = await fetch(`/api/sales/contacts?group=${g.id}&offset=0&limit=${PAGE}${params ? `&${params}` : ""}`);
         const data = res.ok ? await res.json() : { contacts: [], total: 0 };
         return [g.id, { rows: data.contacts ?? [], total: data.total ?? 0, loading: false }] as const;
       } catch { return [g.id, { rows: [], total: 0, loading: false }] as const; }
     }));
-    setGroups(Object.fromEntries(entries));
+    setGroups((prev) => {
+      const next = { ...prev };
+      for (const [id, st] of entries) next[id] = st;
+      for (const g of GROUP_DEFS) if (roleFilter && g.id !== roleFilter) next[g.id] = { rows: [], total: 0, loading: false };
+      return next;
+    });
   }, []);
 
   const loadFacets = useCallback(async (params: string) => {
@@ -106,9 +138,14 @@ export function SalesContactsClient() {
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(() => { void loadAll(paramsStr); void loadFacets(paramsStr); }, 300);
+    const t = setTimeout(() => { void loadAll(paramsStr, role); void loadFacets(paramsStr); }, 300);
     return () => clearTimeout(t);
-  }, [paramsStr, loadAll, loadFacets]);
+  }, [paramsStr, role, loadAll, loadFacets]);
+
+  // Load the questionnaire facet option lists once (universal — same for everyone).
+  useEffect(() => {
+    fetch("/api/sales/contacts/filter-facets").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) setFacetOpts(d as Record<string, string[]>); }).catch(() => {});
+  }, []);
 
   async function loadMore(groupId: string) {
     const gs = groups[groupId];
@@ -129,7 +166,7 @@ export function SalesContactsClient() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Add failed.");
       setAdding(false); setAddDraft({ name: "", email: "", company: "", phone: "" });
-      await Promise.all([loadAll(paramsStr), loadFacets(paramsStr)]);
+      await Promise.all([loadAll(paramsStr, role), loadFacets(paramsStr)]);
     } catch (e) { setErr(e instanceof Error ? e.message : "Add failed."); } finally { setBusy(false); }
   }
 
@@ -139,6 +176,19 @@ export function SalesContactsClient() {
   function toggleCountry(v: string) { setCountries((c) => c.includes(v) ? c.filter((x) => x !== v) : [...c, v]); }
   function toggleSort(key: string) { setSort((s) => s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }); }
   function toggleCol(key: string) { setVisibleCols((v) => v.includes(key) ? v.filter((x) => x !== key) : [...v, key]); }
+  function toggleFacet(key: string, v: string) {
+    setFacetSel((s) => {
+      const cur = s[key] ?? [];
+      const next = cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v];
+      const copy = { ...s };
+      if (next.length) copy[key] = next; else delete copy[key];
+      return copy;
+    });
+  }
+  function clearAllFilters() { setRole(""); setFacetSel({}); setOpenFacetKey(null); }
+  const facetCount = Object.values(facetSel).reduce((a, v) => a + v.length, 0);
+  const filterBadge = (role ? 1 : 0) + facetCount;
+  const roleFacets = FACETS_BY_ROLE[role || "any"];
 
   const inp: React.CSSProperties = { fontSize: 12, padding: "7px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--background)", color: "var(--foreground)" };
   const activeFilters = countries.length + (["name", "company", "email", "phone"] as const).filter((k) => textFilters[k]).length;
@@ -171,7 +221,60 @@ export function SalesContactsClient() {
           <button onClick={() => { setTextFilters({ name: "", company: "", email: "", phone: "" }); setCountries([]); }} style={{ fontSize: 12, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 8, padding: "8px 12px", cursor: "pointer" }}>Clear {activeFilters} filter{activeFilters > 1 ? "s" : ""}</button>
         )}
         <div style={{ position: "relative" }}>
-          <button onClick={() => { setOpenColPicker((v) => !v); setOpenFilter(null); }} style={{ fontSize: 12, color: "var(--foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}><i className="ti ti-columns-3" style={{ fontSize: 15 }} aria-hidden="true" /> Columns</button>
+          <button onClick={() => { setFiltersOpen((v) => !v); setOpenColPicker(false); setOpenFilter(null); }} style={{ fontSize: 12, fontWeight: 500, color: filterBadge ? "#fff" : "var(--foreground)", background: filterBadge ? "#2E78F5" : "transparent", border: filterBadge ? "none" : "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <i className="ti ti-adjustments" style={{ fontSize: 15 }} aria-hidden="true" /> Filters
+            {filterBadge > 0 && <span style={{ background: "rgba(255,255,255,.28)", borderRadius: 10, padding: "0 6px", fontSize: 10 }}>{filterBadge}</span>}
+            <i className="ti ti-chevron-down" style={{ fontSize: 13 }} aria-hidden="true" />
+          </button>
+          {filtersOpen && (
+            <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, width: 300, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 10px 28px rgba(0,0,0,0.14)", overflow: "hidden" }}>
+              <div style={{ padding: "10px 12px", borderBottom: "0.5px solid #eef1f5" }}>
+                <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--muted-foreground)", marginBottom: 6 }}>Role</div>
+                <div style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+                  {([["", "Any"], ["founder", "Founder"], ["investor", "Investor"], ["advisor", "Advisor"]] as const).map(([val, label]) => (
+                    <button key={val} onClick={() => { setRole(val); setOpenFacetKey(null); }} style={{ fontSize: 11.5, fontWeight: role === val ? 600 : 400, color: role === val ? "#fff" : "var(--muted-foreground)", background: role === val ? "#4338CA" : "transparent", border: "none", padding: "4px 10px", cursor: "pointer" }}>{label}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ maxHeight: 340, overflowY: "auto" }}>
+                {roleFacets.map((key) => {
+                  const sel = facetSel[key] ?? [];
+                  const opts = (facetOpts[key] ?? []).filter((o) => o.toLowerCase().includes(facetSearch.toLowerCase()));
+                  const isOpen = openFacetKey === key;
+                  return (
+                    <div key={key} style={{ borderBottom: "0.5px solid #f1f5f9" }}>
+                      <button onClick={() => { setOpenFacetKey(isOpen ? null : key); setFacetSearch(""); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", background: "none", border: "none", cursor: "pointer", fontSize: 12.5, textAlign: "left" }}>
+                        <span style={{ flex: 1, color: "var(--foreground)" }}>{FACET_LABEL[key]}</span>
+                        {sel.length > 0 && <span style={{ fontSize: 10.5, color: "#185FA5", background: "#E6F1FB", borderRadius: 10, padding: "1px 8px" }}>{sel.length}</span>}
+                        <i className={isOpen ? "ti ti-chevron-up" : "ti ti-chevron-down"} style={{ color: "var(--muted-foreground)" }} aria-hidden="true" />
+                      </button>
+                      {isOpen && (
+                        <div style={{ padding: "0 8px 8px" }}>
+                          <input value={facetSearch} onChange={(e) => setFacetSearch(e.target.value)} placeholder="Search…" style={{ ...inp, width: "100%", boxSizing: "border-box", marginBottom: 6 }} />
+                          <div style={{ maxHeight: 180, overflowY: "auto" }}>
+                            {opts.length === 0 && <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", padding: "4px 6px" }}>No options.</div>}
+                            {opts.map((o) => (
+                              <label key={o} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 6px", fontSize: 12, cursor: "pointer" }}>
+                                <input type="checkbox" checked={sel.includes(o)} onChange={() => toggleFacet(key, o)} style={{ width: 14, height: 14 }} />
+                                <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderTop: "0.5px solid #eef1f5" }}>
+                <button onClick={clearAllFilters} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Clear all</button>
+                <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{filterBadge} active</span>
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{ position: "relative" }}>
+          <button onClick={() => { setOpenColPicker((v) => !v); setOpenFilter(null); setFiltersOpen(false); }} style={{ fontSize: 12, color: "var(--foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 12px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}><i className="ti ti-columns-3" style={{ fontSize: 15 }} aria-hidden="true" /> Columns</button>
           {openColPicker && (
             <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, width: 190, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", padding: 8 }}>
               <div style={{ fontSize: 10.5, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: ".04em", padding: "2px 4px 6px" }}>Show columns</div>
@@ -201,7 +304,7 @@ export function SalesContactsClient() {
         </div>
       )}
 
-      {(openFilter || openColPicker) && <div onClick={() => { setOpenFilter(null); setOpenColPicker(false); }} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
+      {(openFilter || openColPicker || filtersOpen) && <div onClick={() => { setOpenFilter(null); setOpenColPicker(false); setFiltersOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
 
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, position: "relative" }}>
         <div style={{ display: "grid", gridTemplateColumns: gridCols, padding: "9px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em", borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>

@@ -22,7 +22,22 @@ function rawPhone(raw: unknown): string {
   return v || "";
 }
 
-// Apply the shared column filters (global search + per-column contains + country).
+// Questionnaire facets stored as jsonb arrays under raw.__profile.<key>. Filtering uses
+// jsonb containment (@>). Values within a facet are OR'd; different facets are AND'd.
+const FACET_KEYS = ["industries", "capital", "fundingStages", "investorTypes", "operatingStages"] as const;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyFacetFilters(query: any, p: URLSearchParams): any {
+  for (const key of FACET_KEYS) {
+    const vals = p.getAll(key).map((s) => s.trim()).filter((v) => v && !v.includes(",") && !v.includes('"'));
+    if (!vals.length) continue;
+    const orExpr = vals.map((v) => `raw->__profile->${key}.cs.["${v}"]`).join(",");
+    query = query.or(orExpr);
+  }
+  return query;
+}
+
+// Apply the shared column filters (global search + per-column contains + country + facets).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function applyFilters(query: any, p: URLSearchParams): any {
   const q = p.get("q")?.trim();
@@ -33,6 +48,7 @@ function applyFilters(query: any, p: URLSearchParams): any {
   }
   const countries = p.get("country")?.split(",").map((s) => s.trim()).filter(Boolean);
   if (countries && countries.length) query = query.in("country", countries);
+  query = applyFacetFilters(query, p);
   return query;
 }
 

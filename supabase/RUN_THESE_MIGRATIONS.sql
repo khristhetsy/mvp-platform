@@ -2513,3 +2513,22 @@ update public.crm_contacts c
 set tags = (select array(select distinct unnest(coalesce(c.tags,'{}') || coalesce(m.tags,'{}'))))
 from public.marketing_contacts m
 where m.crm_contact_id = c.id and coalesce(array_length(m.tags,1),0) > 0;
+
+-- ============================================================
+-- 20260714019_crm_contacts_raw_gin.sql
+-- ============================================================
+-- GIN index on crm_contacts.raw for fast @> containment filtering on questionnaire facets.
+
+create index if not exists crm_contacts_raw_gin on public.crm_contacts using gin (raw jsonb_path_ops);
+
+create or replace function public.contact_filter_facets()
+returns jsonb language sql stable as $$
+  with vals as (
+    select k.key, jsonb_array_elements_text(c.raw->'__profile'->k.key) as v
+    from public.crm_contacts c
+    cross join lateral (values ('industries'),('capital'),('fundingStages'),('investorTypes'),('operatingStages')) as k(key)
+    where jsonb_typeof(c.raw->'__profile'->k.key) = 'array'
+  )
+  select coalesce(jsonb_object_agg(key, arr), '{}'::jsonb)
+  from (select key, jsonb_agg(distinct v order by v) as arr from vals where v is not null and v <> '' group by key) t;
+$$;
