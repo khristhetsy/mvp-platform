@@ -68,7 +68,7 @@ function buildParams(q: string, tf: TextFilters, countries: string[], sort: Sort
   return sp.toString();
 }
 
-export function SalesContactsClient() {
+export function SalesContactsClient({ canBulkAssign = false }: { canBulkAssign?: boolean }) {
   const [q, setQ] = useState("");
   const [textFilters, setTextFilters] = useState<TextFilters>({ name: "", company: "", email: "", phone: "" });
   const [countries, setCountries] = useState<string[]>([]);
@@ -99,9 +99,19 @@ export function SalesContactsClient() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  // Mass Lead assign (super admin only).
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectAllMatching, setSelectAllMatching] = useState(false);
+  const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignSel, setAssignSel] = useState<string[]>([]);
+  const [assignBusy, setAssignBusy] = useState(false);
+  const [assignMsg, setAssignMsg] = useState<string | null>(null);
+
   const paramsStr = useMemo(() => buildParams(q, textFilters, countries, sort, facetSel), [q, textFilters, countries, sort, facetSel]);
   const visibleColumns = useMemo(() => ALL_COLUMNS.filter((c) => c.always || visibleCols.includes(c.key)), [visibleCols]);
   const gridCols = useMemo(() => visibleColumns.map((c) => c.width).join(" "), [visibleColumns]);
+  const gridColsSel = canBulkAssign ? `34px ${gridCols}` : gridCols;
 
   useEffect(() => { try { window.localStorage.setItem("salesContacts.cols.v2", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
   useEffect(() => { try { window.localStorage.setItem("salesContacts.sort", JSON.stringify(sort)); } catch { /* ignore */ } }, [sort]);
@@ -147,6 +157,17 @@ export function SalesContactsClient() {
     fetch("/api/sales/contacts/filter-facets").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) setFacetOpts(d as Record<string, string[]>); }).catch(() => {});
   }, []);
 
+  // Members for the mass-assign picker (super admin only).
+  useEffect(() => {
+    if (!canBulkAssign) return;
+    fetch("/api/sales/contacts/assignable-members").then((r) => (r.ok ? r.json() : null)).then((d) => { if (d?.members) setMembers(d.members); }).catch(() => {});
+  }, [canBulkAssign]);
+
+  // The matching set changes with the filters — clear any selection so a stale
+  // "select all matching" can't apply to a different set.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reset selection on filter change
+  useEffect(() => { setSelected(new Set()); setSelectAllMatching(false); setAssignOpen(false); }, [paramsStr, role]);
+
   async function loadMore(groupId: string) {
     const gs = groups[groupId];
     if (!gs) return;
@@ -186,6 +207,31 @@ export function SalesContactsClient() {
     });
   }
   function clearAllFilters() { setRole(""); setFacetSel({}); setOpenFacetKey(null); }
+
+  // ── Mass Lead assign helpers ──────────────────────────────────────────────
+  const allLoadedIds = useMemo(() => GROUP_DEFS.flatMap((g) => (groups[g.id]?.rows ?? []).map((r) => r.id)), [groups]);
+  const matchingTotal = role ? (facets.counts[role] ?? 0) : (facets.counts.total ?? 0);
+  const selectionCount = selectAllMatching ? matchingTotal : selected.size;
+  const allLoadedSelected = allLoadedIds.length > 0 && allLoadedIds.every((id) => selected.has(id));
+  function toggleRow(id: string) { setSelectAllMatching(false); setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
+  function toggleAllLoaded() { setSelectAllMatching(false); setSelected(allLoadedSelected ? new Set() : new Set(allLoadedIds)); }
+  function clearSelection() { setSelected(new Set()); setSelectAllMatching(false); setAssignOpen(false); setAssignMsg(null); }
+  const assignNames = members.filter((m) => assignSel.includes(m.id)).map((m) => m.name);
+  async function submitAssign() {
+    if (assignSel.length === 0) { setAssignMsg("Pick at least one member."); return; }
+    setAssignBusy(true); setAssignMsg(null);
+    try {
+      const body = selectAllMatching
+        ? { mode: "filter", memberIds: assignSel, params: paramsStr, group: role || undefined }
+        : { mode: "ids", memberIds: assignSel, ids: [...selected] };
+      const res = await fetch("/api/sales/contacts/bulk-assign", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Assign failed.");
+      clearSelection(); setAssignSel([]);
+      await Promise.all([loadAll(paramsStr, role), loadFacets(paramsStr)]);
+    } catch (e) { setAssignMsg(e instanceof Error ? e.message : "Assign failed."); } finally { setAssignBusy(false); }
+  }
+
   const facetCount = Object.values(facetSel).reduce((a, v) => a + v.length, 0);
   const filterBadge = (role ? 1 : 0) + facetCount;
   const roleFacets = FACETS_BY_ROLE[role || "any"];
@@ -307,8 +353,51 @@ export function SalesContactsClient() {
 
       {(openFilter || openColPicker || filtersOpen) && <div onClick={() => { setOpenFilter(null); setOpenColPicker(false); setFiltersOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 20 }} />}
 
+      {canBulkAssign && selectionCount > 0 && (
+        <div style={{ background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 10, padding: "10px 13px", marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12.5, color: "#0C447C", fontWeight: 500 }}>{selectAllMatching ? `All ${matchingTotal.toLocaleString()} matching selected` : `${selected.size.toLocaleString()} selected`}</span>
+            {!selectAllMatching && allLoadedSelected && matchingTotal > selected.size && (
+              <button onClick={() => setSelectAllMatching(true)} style={{ fontSize: 12.5, color: "#185FA5", background: "none", border: "none", textDecoration: "underline", cursor: "pointer", padding: 0 }}>Select all {matchingTotal.toLocaleString()} matching this filter</button>
+            )}
+            <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+              <button onClick={() => { setAssignOpen((v) => !v); setAssignMsg(null); }} style={{ fontSize: 12, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 7, padding: "6px 13px", cursor: "pointer" }}><i className="ti ti-users" aria-hidden="true" /> Lead assign</button>
+              <button onClick={clearSelection} style={{ fontSize: 12, color: "var(--muted-foreground)", background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 7, padding: "6px 12px", cursor: "pointer" }}>Clear</button>
+            </div>
+          </div>
+          {assignOpen && (
+            <div style={{ marginTop: 10, background: "#fff", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 10, padding: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>Add members to {selectionCount.toLocaleString()} contact{selectionCount === 1 ? "" : "s"}</div>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 5 }}>Members (lead-assignable only)</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10, maxHeight: 132, overflowY: "auto" }}>
+                {members.length === 0 && <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>No assignable members configured.</span>}
+                {members.map((m) => {
+                  const on = assignSel.includes(m.id);
+                  return (
+                    <button key={m.id} onClick={() => setAssignSel((s) => on ? s.filter((x) => x !== m.id) : [...s, m.id])} style={{ fontSize: 11.5, fontWeight: on ? 600 : 400, color: on ? "#185FA5" : "var(--muted-foreground)", background: on ? "#E6F1FB" : "transparent", border: `0.5px solid ${on ? "#B5D4F4" : "var(--border)"}`, borderRadius: 16, padding: "4px 11px", cursor: "pointer" }}>{on ? "✓ " : "+ "}{m.name}</button>
+                  );
+                })}
+              </div>
+              <div style={{ background: "var(--muted)", borderRadius: 8, padding: "8px 11px", fontSize: 11.5, color: "#854F0B", marginBottom: 10 }}>
+                <i className="ti ti-alert-triangle" aria-hidden="true" /> Adds {assignNames.length ? assignNames.join(", ") : "the selected members"} to <b>{selectionCount.toLocaleString()}</b> contact{selectionCount === 1 ? "" : "s"}. Existing assignees are kept. Logged to the audit trail.
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button onClick={submitAssign} disabled={assignBusy || assignSel.length === 0} style={{ fontSize: 12.5, fontWeight: 600, color: "#fff", background: "#2E78F5", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", opacity: assignBusy || assignSel.length === 0 ? 0.55 : 1 }}>{assignBusy ? "Assigning…" : `Add to ${selectionCount.toLocaleString()} contact${selectionCount === 1 ? "" : "s"}`}</button>
+                <button onClick={() => setAssignOpen(false)} style={{ fontSize: 12.5, color: "var(--muted-foreground)", background: "transparent", border: "0.5px solid var(--border-strong, #cbd5e1)", borderRadius: 8, padding: "8px 16px", cursor: "pointer" }}>Cancel</button>
+                {assignMsg && <span style={{ fontSize: 11.5, color: "#A32D2D" }}>{assignMsg}</span>}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, position: "relative" }}>
-        <div style={{ display: "grid", gridTemplateColumns: gridCols, padding: "9px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em", borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: gridColsSel, padding: "9px 14px", background: "var(--muted)", fontSize: 10.5, fontWeight: 500, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.04em", borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
+          {canBulkAssign && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <input type="checkbox" checked={allLoadedSelected || selectAllMatching} onChange={toggleAllLoaded} aria-label="Select all loaded" style={{ width: 14, height: 14, cursor: "pointer" }} />
+            </div>
+          )}
           {visibleColumns.map((h) => {
             const filterActive = h.kind === "country" ? countries.length > 0 : h.kind === "text" ? !!textFilters[h.key as keyof TextFilters] : false;
             const sortActive = sort.key === h.key;
@@ -374,7 +463,16 @@ export function SalesContactsClient() {
                     <p style={{ padding: "14px", fontSize: 12.5, color: "var(--muted-foreground)" }}>No matching contacts in this group.</p>
                   ) : (
                     <>
-                      {gs!.rows.map((c) => (
+                      {gs!.rows.map((c) => canBulkAssign ? (
+                        <div key={c.id} style={{ display: "grid", gridTemplateColumns: gridColsSel, borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, background: selected.has(c.id) || selectAllMatching ? "#F5F9FF" : undefined }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <input type="checkbox" checked={selected.has(c.id) || selectAllMatching} onChange={() => toggleRow(c.id)} aria-label={`Select ${c.name}`} style={{ width: 14, height: 14, cursor: "pointer" }} />
+                          </div>
+                          <Link href={`/admin/sales/contacts/${c.id}`} style={{ display: "grid", gridTemplateColumns: gridCols, gridColumn: "2 / -1", padding: "10px 14px", alignItems: "center", textDecoration: "none", color: "var(--foreground)" }}>
+                            {visibleColumns.map((col) => <div key={col.key} style={{ minWidth: 0 }}>{renderCell(col.key, c)}</div>)}
+                          </Link>
+                        </div>
+                      ) : (
                         <Link key={c.id} href={`/admin/sales/contacts/${c.id}`} style={{ display: "grid", gridTemplateColumns: gridCols, padding: "10px 14px", borderTop: "0.5px solid #eef1f5", alignItems: "center", fontSize: 12.5, textDecoration: "none", color: "var(--foreground)" }}>
                           {visibleColumns.map((col) => <div key={col.key} style={{ minWidth: 0 }}>{renderCell(col.key, c)}</div>)}
                         </Link>

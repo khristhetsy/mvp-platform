@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSalesScope } from "@/lib/sales/scope";
+import { applyContactFilters } from "@/lib/sales/contact-filters";
 
 export const dynamic = "force-dynamic";
 
@@ -9,25 +10,6 @@ export const dynamic = "force-dynamic";
 function db(): any { return createServiceRoleClient(); }
 
 const GROUPS = ["founder", "investor", "advisor", "other"] as const;
-
-const FACET_KEYS = ["industries", "capital", "fundingStages", "investorTypes", "operatingStages"] as const;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function applyTextFilters(query: any, p: URLSearchParams): any {
-  const q = p.get("q")?.trim();
-  if (q) query = query.or(`name.ilike.%${q}%,email.ilike.%${q}%,company.ilike.%${q}%,phone.ilike.%${q}%`);
-  for (const col of ["name", "company", "email", "phone"]) {
-    const v = p.get(col)?.trim();
-    if (v) query = query.ilike(col, `%${v}%`);
-  }
-  const countries = p.get("country")?.split(",").map((s) => s.trim()).filter(Boolean);
-  if (countries && countries.length) query = query.in("country", countries);
-  for (const key of FACET_KEYS) {
-    const vals = p.getAll(key).map((s) => s.trim()).filter((v) => v && !v.includes(",") && !v.includes('"'));
-    if (vals.length) query = query.or(vals.map((v) => `raw->__profile->${key}.cs.["${v}"]`).join(","));
-  }
-  return query;
-}
 
 // GET /api/sales/contacts/facets — group counts (respecting active filters) + country value list.
 export async function GET(req: NextRequest): Promise<Response> {
@@ -39,7 +21,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   const countOne = async (group: string): Promise<number> => {
     let q = db().from("crm_contacts").select("id", { count: "exact", head: true }).eq("contact_type", group);
     if (!scope.canSeeAllContacts) q = q.contains("assignee_ids", [scope.ownerId]);
-    q = applyTextFilters(q, p);
+    q = applyContactFilters(q, p);
     const { count } = await q;
     return count ?? 0;
   };

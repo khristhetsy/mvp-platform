@@ -1,4 +1,5 @@
 import { requireRole } from "@/lib/supabase/auth";
+import { isSuperAdmin } from "@/lib/rbac/effective-permissions";
 import { SalesContactsClient } from "@/app/admin/sales/contacts/SalesContactsClient";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic";
 // marketing_contacts mirror. Marketing's Lists / campaigns / sequences plumbing is
 // untouched (still crm-linked via the Phase-A mapping). Reversible.
 export default async function MarketingContactsPage() {
-  await requireRole(["admin", "analyst"]);
+  const profile = await requireRole(["admin", "analyst"]);
   return (
     <div style={{ padding: 24 }}>
       <div style={{ marginBottom: 14 }}>
@@ -17,7 +18,7 @@ export default async function MarketingContactsPage() {
           <i className="ti ti-link" aria-hidden="true" /> One universal list shared across Sales, IR &amp; Marketing — you see only your Lead-assigned contacts (admins see all).
         </p>
       </div>
-      <SalesContactsClient />
+      <SalesContactsClient canBulkAssign={isSuperAdmin(profile)} />
     </div>
   );
 }

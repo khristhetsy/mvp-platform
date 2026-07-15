@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSalesScope } from "@/lib/sales/scope";
+import { applyContactFilters } from "@/lib/sales/contact-filters";
 
 export const dynamic = "force-dynamic";
 
@@ -20,36 +21,6 @@ function rawPhone(raw: unknown): string {
   const r = raw as Record<string, unknown> | null;
   const v = (typeof r?.phone === "string" && r.phone) || (typeof r?.mobile === "string" && r.mobile);
   return v || "";
-}
-
-// Questionnaire facets stored as jsonb arrays under raw.__profile.<key>. Filtering uses
-// jsonb containment (@>). Values within a facet are OR'd; different facets are AND'd.
-const FACET_KEYS = ["industries", "capital", "fundingStages", "investorTypes", "operatingStages"] as const;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function applyFacetFilters(query: any, p: URLSearchParams): any {
-  for (const key of FACET_KEYS) {
-    const vals = p.getAll(key).map((s) => s.trim()).filter((v) => v && !v.includes(",") && !v.includes('"'));
-    if (!vals.length) continue;
-    const orExpr = vals.map((v) => `raw->__profile->${key}.cs.["${v}"]`).join(",");
-    query = query.or(orExpr);
-  }
-  return query;
-}
-
-// Apply the shared column filters (global search + per-column contains + country + facets).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function applyFilters(query: any, p: URLSearchParams): any {
-  const q = p.get("q")?.trim();
-  if (q) query = query.or(`name.ilike.%${q}%,email.ilike.%${q}%,company.ilike.%${q}%,phone.ilike.%${q}%`);
-  for (const col of ["name", "company", "email", "phone"]) {
-    const v = p.get(col)?.trim();
-    if (v) query = query.ilike(col, `%${v}%`);
-  }
-  const countries = p.get("country")?.split(",").map((s) => s.trim()).filter(Boolean);
-  if (countries && countries.length) query = query.in("country", countries);
-  query = applyFacetFilters(query, p);
-  return query;
 }
 
 // GET /api/sales/contacts — grouped, filtered, paginated contact list.
@@ -75,7 +46,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   // Admins and "see all contacts" departments (e.g. Marketing) see everything.
   if (!scope.canSeeAllContacts) query = query.contains("assignee_ids", [scope.ownerId]);
   if (group && (GROUPS as readonly string[]).includes(group)) query = query.eq("contact_type", group);
-  query = applyFilters(query, p);
+  query = applyContactFilters(query, p);
   query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);
 
   const { data, count } = await query;

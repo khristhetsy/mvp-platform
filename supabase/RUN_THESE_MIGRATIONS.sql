@@ -2563,3 +2563,30 @@ set senders = jsonb_build_array(
                      'email', coalesce(nullif(default_from_email, ''), 'outreach@icapos.com'))
 )
 where id = 'default' and (senders is null or senders = '[]'::jsonb);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Mass Lead assign (super-admin only): set-based union function + audit table.
+
+create or replace function public.sales_bulk_add_assignees(p_member_ids uuid[], p_ids uuid[])
+returns integer language plpgsql security definer set search_path = public as $$
+declare n integer;
+begin
+  update public.crm_contacts c
+  set assignee_ids = (select array(select distinct e from unnest(coalesce(c.assignee_ids, '{}') || p_member_ids) as e))
+  where c.id = any(p_ids);
+  get diagnostics n = row_count;
+  return n;
+end; $$;
+
+create table if not exists public.sales_bulk_assign_audit (
+  id            bigint generated always as identity primary key,
+  actor_id      uuid references auth.users(id),
+  member_ids    uuid[] not null default '{}',
+  contact_count integer not null default 0,
+  filter        text,
+  created_at    timestamptz not null default now()
+);
+create index if not exists sales_bulk_assign_audit_created on public.sales_bulk_assign_audit (created_at desc);
+
+-- Make the new function callable via the REST API immediately.
+notify pgrst, 'reload schema';
