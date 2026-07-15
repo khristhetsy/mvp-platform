@@ -2532,3 +2532,12 @@ returns jsonb language sql stable as $$
   select coalesce(jsonb_object_agg(key, arr), '{}'::jsonb)
   from (select key, jsonb_agg(distinct v order by v) as arr from vals where v is not null and v <> '' group by key) t;
 $$;
+
+-- ============================================================
+-- 20260714020_ir_contacts_feature.sql
+-- ============================================================
+-- Add Contacts to the Investor Relations feature group.
+
+insert into public.features (key, label, hub_key, path, sort_order)
+values ('ir_contacts', 'Contacts', 'investor_relations', '/admin/sales/contacts', 5)
+on conflict (key) do nothing;
