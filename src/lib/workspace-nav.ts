@@ -21,6 +21,9 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     items: [
       { href: "/admin", label: "Dashboard", requiredPermission: "view_admin_dashboard" },
+      // Universal Contacts — one shared list for every department; each member sees the
+      // contacts Lead-assigned to them (admins see all). No permission gate on purpose.
+      { href: "/admin/sales/contacts", label: "Contacts" },
     ],
   },
   {
@@ -38,7 +41,6 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
         requiredPermission: "manage_crm",
         children: [
           { href: "/admin/sales",               label: "Dashboard"     },
-          { href: "/admin/sales/contacts",      label: "Contacts"      },
           { href: "/admin/sales/opportunities", label: "Opportunities" },
           { href: "/admin/sales/pipeline",      label: "Pipeline"      },
           { href: "/admin/sales/settings",      label: "Settings"      },

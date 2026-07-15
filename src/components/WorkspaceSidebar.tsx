@@ -323,8 +323,12 @@ export function WorkspaceSidebar({
 
   // Department-path allow check (longest-prefix, additive to permissions).
   const deptAllows = useMemo(() => {
+    // Paths every department can always reach, regardless of their scoped grants.
+    // Contacts is the universal shared list (each member sees only their assigned rows).
+    const universal = ["/admin/sales/contacts"];
     return (href: string) => {
       if (workspace !== "admin") return true;
+      if (universal.some((p) => href === p || href.startsWith(`${p}/`))) return true;
       if (!deptAccess || deptAccess.unrestricted) return true;
       return deptAccess.paths.some((p) =>
         p === "/admin" ? href === "/admin" : href === p || href.startsWith(`${p}/`) || p.startsWith(`${href}/`),
