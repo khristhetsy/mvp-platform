@@ -2487,3 +2487,29 @@ insert into public.features (key, label, hub_key, path, sort_order) values
   ('scheduling', 'Scheduling', 'general_admin', '/admin/schedule', 221),
   ('meet',       'Meet',       'general_admin', '/admin/meet',     222)
 on conflict (key) do nothing;
+
+-- ============================================================
+-- 20260714018_unify_contacts_phase_a.sql  (PHASE A only — safe/additive/reversible)
+-- ============================================================
+alter table public.marketing_contacts
+  add column if not exists crm_contact_id uuid references public.crm_contacts(id) on delete set null;
+
+update public.marketing_contacts m set crm_contact_id = c.id
+from public.crm_contacts c
+where lower(c.email) = lower(m.email) and m.crm_contact_id is null;
+
+insert into public.crm_contacts (source, external_id, module, email, name, company, tags)
+select 'marketing', m.id::text, 'unknown', m.email,
+       nullif(trim(concat_ws(' ', m.first_name, m.last_name)), ''), m.company, coalesce(m.tags, '{}')
+from public.marketing_contacts m
+where m.crm_contact_id is null
+on conflict (source, external_id) do nothing;
+
+update public.marketing_contacts m set crm_contact_id = c.id
+from public.crm_contacts c
+where c.source = 'marketing' and c.external_id = m.id::text and m.crm_contact_id is null;
+
+update public.crm_contacts c
+set tags = (select array(select distinct unnest(coalesce(c.tags,'{}') || coalesce(m.tags,'{}'))))
+from public.marketing_contacts m
+where m.crm_contact_id = c.id and coalesce(array_length(m.tags,1),0) > 0;
