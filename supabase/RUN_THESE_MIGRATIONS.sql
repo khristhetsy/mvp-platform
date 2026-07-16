@@ -2606,3 +2606,12 @@ select 'default', public.contact_filter_facets()
 on conflict (id) do update set data = excluded.data, updated_at = now();
 
 notify pgrst, 'reload schema';
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Efficiency: trigram indexes so the Contacts search (ILIKE '%text%') is index-backed.
+
+create extension if not exists pg_trgm;
+create index if not exists crm_contacts_name_trgm    on public.crm_contacts using gin (name gin_trgm_ops);
+create index if not exists crm_contacts_company_trgm on public.crm_contacts using gin (company gin_trgm_ops);
+create index if not exists crm_contacts_email_trgm   on public.crm_contacts using gin (email gin_trgm_ops);
+create index if not exists crm_contacts_phone_trgm   on public.crm_contacts using gin (phone gin_trgm_ops);
