@@ -223,6 +223,19 @@ export function GmailInbox() {
   }, []);
   const closeCompose = useCallback(() => { setComposeOpen(false); setComposePrefill(undefined); }, []);
 
+  // Deep-link entry point: "Email" buttons across the app navigate to
+  // /admin/inbox?compose=1&to=<email> to open the Gmail compose in-platform.
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    if (!sp.get("compose")) return;
+    const to = sp.get("to") || undefined;
+    // Clear the params so a refresh doesn't reopen the composer.
+    window.history.replaceState(null, "", window.location.pathname);
+    const t = setTimeout(() => openCompose(buildPrefill({ mode: "new", sender: to })), 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
+  }, []);
+
   const onSend = useCallback(async (draft: ComposeDraft) => {
     const inThread = (composeContext.mode === "reply" || composeContext.mode === "replyAll") && composeContext.threadId;
     if (inThread) {

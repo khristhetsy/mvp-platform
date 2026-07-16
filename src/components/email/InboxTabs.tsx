@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { EmailInbox } from "./EmailInbox";
 import { GmailInbox } from "./GmailInbox";
 import { MailboxTabs } from "./MailboxTabs";
@@ -13,7 +14,10 @@ const MAILBOXES: Mailbox[] = [
 
 /** Inbox shell: a horizontal mailbox switcher (F1) on top, content below. */
 export function InboxTabs() {
-  const [tab, setTab] = useState<"capitalos" | "gmail">("capitalos");
+  const searchParams = useSearchParams();
+  // "Email" buttons across the app deep-link here with ?compose=1 to open the Gmail
+  // compose in-platform (instead of leaving for mail.google.com).
+  const [tab, setTab] = useState<"capitalos" | "gmail">(searchParams?.get("compose") ? "gmail" : "capitalos");
 
   return (
     <div className="space-y-3">
