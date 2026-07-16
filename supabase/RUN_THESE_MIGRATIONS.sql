@@ -2590,3 +2590,19 @@ create index if not exists sales_bulk_assign_audit_created on public.sales_bulk_
 
 -- Make the new function callable via the REST API immediately.
 notify pgrst, 'reload schema';
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Fast Contacts Filters: precomputed option cache (read instantly instead of
+-- scanning ~24k rows per open). Self-refreshes daily from the API.
+
+create table if not exists public.crm_facet_cache (
+  id         text primary key default 'default',
+  data       jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+insert into public.crm_facet_cache (id, data)
+select 'default', public.contact_filter_facets()
+on conflict (id) do update set data = excluded.data, updated_at = now();
+
+notify pgrst, 'reload schema';
