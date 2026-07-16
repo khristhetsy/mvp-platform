@@ -1,6 +1,7 @@
 "use client";
 
 import { type CSSProperties, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/ui/format-display";
 import { ALL_DRIVER_KEYS, type ForecastOutput, type MonthSegmentRow, type ActualsAnchor, type Segment } from "@/lib/forecast/engine";
 
@@ -24,7 +25,11 @@ export function ForecastClient(props: {
   initialSnapshot: { meta: SnapshotMeta; output: ForecastOutput } | null;
   anchor: ActualsAnchor;
   actualsSeries: ActualsPoint[];
+  canToggleScope?: boolean;
+  viewScope: "all" | "mine";
 }) {
+  const router = useRouter();
+  const scopeQ = `scope=${props.viewScope}`;
   const [tab, setTab] = useState<SubTab>("overview");
   const [scenarioId, setScenarioId] = useState<string | null>(props.activeScenarioId);
   const [snapshot, setSnapshot] = useState<{ meta: SnapshotMeta; output: ForecastOutput } | null>(props.initialSnapshot);
@@ -64,25 +69,25 @@ export function ForecastClient(props: {
     if (!scenarioId) return;
     setComputing(true); setMsg(null);
     try {
-      const r = await fetch(`/api/sales/forecast/scenarios/${scenarioId}/compute`, { method: "POST" });
+      const r = await fetch(`/api/sales/forecast/scenarios/${scenarioId}/compute?${scopeQ}`, { method: "POST" });
       const d = await r.json();
       if (!r.ok) { setMsg(typeof d.error === "string" ? d.error : "Compute failed."); return; }
-      const s = await fetch(`/api/sales/forecast/scenarios/${scenarioId}/snapshots?latest=1`).then((x) => x.json());
+      const s = await fetch(`/api/sales/forecast/scenarios/${scenarioId}/snapshots?latest=1&${scopeQ}`).then((x) => x.json());
       if (s.output) setSnapshot({ meta: s.snapshot, output: s.output });
       setMsg("Forecast computed.");
     } catch { setMsg("Compute failed."); }
     finally { setComputing(false); }
-  }, [scenarioId]);
+  }, [scenarioId, scopeQ]);
 
   // Refresh the shown snapshot when switching scenarios.
   useEffect(() => {
     let alive = true;
     if (!scenarioId) return;
-    fetch(`/api/sales/forecast/scenarios/${scenarioId}/snapshots?latest=1`).then((x) => x.json()).then((s) => {
+    fetch(`/api/sales/forecast/scenarios/${scenarioId}/snapshots?latest=1&${scopeQ}`).then((x) => x.json()).then((s) => {
       if (alive) setSnapshot(s.output ? { meta: s.snapshot, output: s.output } : null);
     }).catch(() => {});
     return () => { alive = false; };
-  }, [scenarioId]);
+  }, [scenarioId, scopeQ]);
 
   const TABS: Array<[SubTab, string]> = [
     ["overview", "Overview"], ["comparison", "Comparison"], ["assumptions", "Assumptions"],
@@ -94,6 +99,14 @@ export function ForecastClient(props: {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
         <h1 style={{ fontSize: 20, fontWeight: 600, color: NAVY, margin: 0 }}>Sales Forecast &amp; Projection</h1>
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          {props.canToggleScope && (
+            <div style={{ display: "inline-flex", border: "0.5px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+              {([["all", "All company"], ["mine", "My pipeline"]] as const).map(([val, label]) => (
+                <button key={val} onClick={() => router.push(`/admin/sales/forecast?scope=${val}`)}
+                  style={{ fontSize: 12, fontWeight: props.viewScope === val ? 600 : 400, color: props.viewScope === val ? "#fff" : MUTED, background: props.viewScope === val ? BLUE : "transparent", border: "none", padding: "6px 12px", cursor: "pointer" }}>{label}</button>
+              ))}
+            </div>
+          )}
           <select value={scenarioId ?? ""} onChange={(e) => setScenarioId(e.target.value || null)}
             style={{ fontSize: 12.5, padding: "6px 10px", borderRadius: 8, border: "0.5px solid var(--border)" }}>
             {props.scenarios.length === 0 && <option value="">No scenarios</option>}
@@ -125,9 +138,9 @@ export function ForecastClient(props: {
       )}
       {tab === "comparison" && <Comparison />}
       {tab === "assumptions" && <Assumptions scenarioId={scenarioId} onComputed={compute} />}
-      {tab === "projection" && <Projection snapshot={snapshot} />}
+      {tab === "projection" && <Projection snapshot={snapshot} scopeQ={scopeQ} />}
       {tab === "weights" && <Weights />}
-      {tab === "variance" && <Variance scenarioId={scenarioId} />}
+      {tab === "variance" && <Variance scenarioId={scenarioId} scopeQ={scopeQ} />}
       {tab === "journal" && <Journal />}
 
       {drawerMetric && scenarioId && (
@@ -253,7 +266,7 @@ function MrrChart({ snapshot, actualsByMonth }: { snapshot: { output: ForecastOu
   );
 }
 
-function Projection({ snapshot }: { snapshot: { meta: SnapshotMeta; output: ForecastOutput } | null }) {
+function Projection({ snapshot, scopeQ }: { snapshot: { meta: SnapshotMeta; output: ForecastOutput } | null; scopeQ: string }) {
   const [seg, setSeg] = useState<"all" | Segment>("all");
   if (!snapshot) return <p style={{ fontSize: 12.5, color: MUTED }}>Compute a forecast to populate the projection table.</p>;
   const rows = snapshot.output.rows.filter((r) => (seg === "all" ? true : r.segment === seg) && r.month > 0);
@@ -267,8 +280,8 @@ function Projection({ snapshot }: { snapshot: { meta: SnapshotMeta; output: Fore
         <select value={seg} onChange={(e) => setSeg(e.target.value as "all" | Segment)} style={{ fontSize: 12, padding: "5px 9px", borderRadius: 7, border: "0.5px solid var(--border)" }}>
           <option value="all">All segments</option><option value="founder">Founder</option><option value="investor">Investor</option>
         </select>
-        <a href={`/api/sales/forecast/export?snapshot=${snapshot.meta.id}&format=csv`} style={{ fontSize: 12, color: BLUE, textDecoration: "none" }}>Export CSV</a>
-        <a href={`/api/sales/forecast/export?snapshot=${snapshot.meta.id}&format=xlsx`} style={{ fontSize: 12, color: BLUE, textDecoration: "none" }}>Export XLSX</a>
+        <a href={`/api/sales/forecast/export?snapshot=${snapshot.meta.id}&format=csv&${scopeQ}`} style={{ fontSize: 12, color: BLUE, textDecoration: "none" }}>Export CSV</a>
+        <a href={`/api/sales/forecast/export?snapshot=${snapshot.meta.id}&format=xlsx&${scopeQ}`} style={{ fontSize: 12, color: BLUE, textDecoration: "none" }}>Export XLSX</a>
       </div>
       <div style={{ overflowX: "auto", border: "0.5px solid var(--border)", borderRadius: 10 }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontVariantNumeric: "tabular-nums" }}>
@@ -406,15 +419,15 @@ function Weights() {
   );
 }
 
-function Variance({ scenarioId }: { scenarioId: string | null }) {
+function Variance({ scenarioId, scopeQ }: { scenarioId: string | null; scopeQ: string }) {
   const [rows, setRows] = useState<VarianceRow[]>([]);
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     let alive = true;
     if (!scenarioId) return;
-    fetch(`/api/sales/forecast/variance?scenario=${scenarioId}`).then((r) => r.json()).then((d) => { if (alive) { setRows((d.rows ?? []) as VarianceRow[]); setLoaded(true); } }).catch(() => {});
+    fetch(`/api/sales/forecast/variance?scenario=${scenarioId}&${scopeQ}`).then((r) => r.json()).then((d) => { if (alive) { setRows((d.rows ?? []) as VarianceRow[]); setLoaded(true); } }).catch(() => {});
     return () => { alive = false; };
-  }, [scenarioId]);
+  }, [scenarioId, scopeQ]);
   if (!scenarioId) return <p style={{ fontSize: 12.5, color: MUTED }}>Select a scenario.</p>;
   if (loaded && rows.length === 0) return <p style={{ fontSize: 12.5, color: MUTED }}>No elapsed months with actuals to compare yet — compute a snapshot, then check back after a month of actuals.</p>;
   return (

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { getSnapshot } from "@/lib/forecast/store";
 import { getSalesScope } from "@/lib/sales/scope";
+import { forecastOwnerId } from "@/lib/sales/forecast-scope";
 import type { MonthSegmentRow } from "@/lib/forecast/engine";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   if (!snapshotId) return NextResponse.json({ error: "snapshot is required." }, { status: 400 });
 
   const scope = await getSalesScope(profile);
-  const snap = await getSnapshot(snapshotId, scope.isManager ? null : scope.ownerId);
+  const snap = await getSnapshot(snapshotId, forecastOwnerId(scope, profile.id, req.nextUrl.searchParams.get("scope")));
   if (!snap) return NextResponse.json({ error: "Snapshot not found." }, { status: 404 });
   const rows = snap.output.rows;
   const stamp = snap.meta.computed_at.slice(0, 10);

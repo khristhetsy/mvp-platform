@@ -2,15 +2,18 @@ import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/supabase/auth";
 import { listScenarios, getLatestSnapshot, loadActualsAnchor, loadActualsSeries } from "@/lib/forecast/store";
 import { getSalesScope } from "@/lib/sales/scope";
+import { forecastOwnerId } from "@/lib/sales/forecast-scope";
 import { SalesHubHeader } from "../SalesHubHeader";
 import { ForecastClient } from "./ForecastClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function SalesForecastPage() {
+export default async function SalesForecastPage({ searchParams }: { searchParams: Promise<{ scope?: string }> }) {
   const profile = await requireRole(["admin", "analyst"]);
   const scope = await getSalesScope(profile);
-  const ownerId = scope.isManager ? null : scope.ownerId;
+  const { scope: scopeParam } = await searchParams;
+  const viewScope: "all" | "mine" = scope.isManager && scopeParam === "mine" ? "mine" : "all";
+  const ownerId = forecastOwnerId(scope, profile.id, scopeParam);
 
   const scenarios = await listScenarios();
   const active = scenarios.find((s) => s.is_active && s.kind === "base") ?? scenarios.find((s) => s.is_active) ?? scenarios[0] ?? null;
@@ -29,6 +32,8 @@ export default async function SalesForecastPage() {
         initialSnapshot={latest ? { meta: latest.meta, output: latest.output } : null}
         anchor={anchor}
         actualsSeries={series}
+        canToggleScope={scope.isManager}
+        viewScope={viewScope}
       />
     </AppShell>
   );
