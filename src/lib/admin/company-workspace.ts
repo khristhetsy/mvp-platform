@@ -11,6 +11,7 @@ import { getCompanyUpdateAdminSummaries } from "@/lib/company-updates/company-up
 import { getCompanyMatchingSummaries } from "@/lib/matching/admin-matching-summaries";
 import { getLearningAdminSummaryForCompanies } from "@/lib/learning/progress";
 import { computeReadinessMilestones, milestoneLabelForAdmin } from "@/lib/learning/milestones";
+import { computeReadinessScore, documentTypeCode } from "@/lib/data/founder-readiness";
 import { getOperationalActivityFeed } from "@/lib/operational-activity/event-queries";
 import {
   getAdminQueueItems,
@@ -306,6 +307,14 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
     created_at: row.created_at,
   }));
 
+  // Fallback readiness score from document completeness — matches the Companies
+  // list (mapAdminCompaniesToCardData), so the workspace card and the list agree
+  // when no AI diligence report exists yet.
+  const computedReadinessScore = companyRow.documents.length
+    ? computeReadinessScore(companyRow.documents.map((d) => documentTypeCode(d.document_type ?? "")))
+    : null;
+  const effectiveReadinessScore = latestReport?.readiness_score ?? computedReadinessScore;
+
   const remediationByCompanyId = new Map(
     [...remediationSummaries.entries()].map(([id, summary]) => [id, { active: summary.active, total: summary.total }]),
   );
@@ -332,7 +341,7 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
     } as never,
     documents: companyRow.documents as DocumentRecord[],
     onboardingPercent: companyRow.onboarding_progress_percent ?? 0,
-    readinessScore: latestReport?.readiness_score ?? null,
+    readinessScore: effectiveReadinessScore,
     hasDiligenceReport: Boolean(latestReport),
     remediationActive: remediationSummary.active,
     remediationHighPriorityOpen: highPriorityOpen,
@@ -362,7 +371,7 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
     company: companyCard,
     founder: companyRow.founder,
     readiness: {
-      latestScore: latestReport?.readiness_score ?? null,
+      latestScore: effectiveReadinessScore,
       scoreHistory,
       onboardingPercent: companyRow.onboarding_progress_percent ?? 0,
       onboardingCompletedAt: companyRow.onboarding_completed_at ?? null,
