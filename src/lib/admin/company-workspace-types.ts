@@ -4,6 +4,7 @@ import type { OperationalActivityFeedItem } from "@/lib/operational-activity/typ
 import type { AdminQueueItem } from "@/lib/queues/admin-queues";
 import type { summarizeRemediationTasks } from "@/lib/remediation/tasks";
 import type { FactorKey, FactorScore } from "@/lib/ai/readiness-scoring";
+import type { FounderJourneyState } from "@/lib/founder-journey/types";
 
 export type AdminInvestableFactorScores = Record<FactorKey, FactorScore>;
 
@@ -44,6 +45,7 @@ export type AdminCompanyWorkspaceData = {
     milestoneLabel: string;
   };
   investable: AdminInvestableReadiness | null;
+  journey: FounderJourneyState;
   investorActivity: {
     savedDeals: number;
     interests: number;

@@ -12,6 +12,7 @@ import { getCompanyMatchingSummaries } from "@/lib/matching/admin-matching-summa
 import { getLearningAdminSummaryForCompanies } from "@/lib/learning/progress";
 import { computeReadinessMilestones, milestoneLabelForAdmin } from "@/lib/learning/milestones";
 import { computeReadinessScore, documentTypeCode } from "@/lib/data/founder-readiness";
+import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { getOperationalActivityFeed } from "@/lib/operational-activity/event-queries";
 import {
   getAdminQueueItems,
@@ -233,6 +234,7 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
     matchingSummaries,
     updateSummaries,
     investableScoreRows,
+    journeyState,
   ] = await Promise.all([
     listRemediationTasksForCompany(companyId),
     admin
@@ -272,6 +274,7 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
       .eq("company_id", companyId)
       .order("created_at", { ascending: false })
       .limit(30),
+    evaluateFounderJourney(admin, founderId),
   ]);
 
   // Investable Readiness (13-factor model) — admin/analyst surface.
@@ -380,6 +383,7 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
       milestoneLabel,
     },
     investable,
+    journey: journeyState,
     investorActivity: {
       savedDeals: savedDealsCount.count ?? 0,
       interests: interestsResult.count ?? 0,

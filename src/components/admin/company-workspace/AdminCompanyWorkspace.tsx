@@ -26,6 +26,7 @@ import type { RiskSignal } from "@/lib/predictive-intelligence/types";
 import { RiskSignalsPanel } from "@/components/predictive-intelligence/RiskSignalsPanel";
 import { AdminCompanyAIAssessment } from "@/components/admin/AdminCompanyAIAssessment";
 import { InvestableReadinessPanel } from "@/components/investor/InvestableReadinessPanel";
+import { FounderJourneyPanel } from "@/components/admin/company-workspace/FounderJourneyPanel";
 
 export function AdminCompanyWorkspace({
   data,
@@ -44,6 +45,10 @@ export function AdminCompanyWorkspace({
   return (
     <div className="space-y-6">
       <CompanyWorkspaceHeader data={data} />
+
+      <PageSection title="Founder Journey" subtitle="Current stage, gates, and what's pending to advance">
+        <FounderJourneyPanel journey={data.journey} />
+      </PageSection>
 
       <DraftEmailPanel
         role={adminRole}
