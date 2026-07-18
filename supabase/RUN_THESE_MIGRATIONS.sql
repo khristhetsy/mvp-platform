@@ -2628,3 +2628,19 @@ alter view public.v_ceo_kpi_meeting_quarterly set (security_invoker = on);
 alter view public.v_ceo_kpi_meeting_ytd       set (security_invoker = on);
 alter view public.v_ceo_meeting_readiness     set (security_invoker = on);
 alter view public.crm_country_facets          set (security_invoker = on);
+
+-- =====================================================================
+-- 20260716006_founder_read_own_readiness.sql
+-- Founders may now read their OWN company's Investable Readiness score.
+-- (Reverses 0071's "never to founders" — read-only, scoped to owned companies.)
+-- =====================================================================
+drop policy if exists "founder_read_own" on company_readiness_scores;
+create policy "founder_read_own" on company_readiness_scores
+  for select to authenticated
+  using (
+    exists (
+      select 1 from public.companies c
+      where c.id = company_readiness_scores.company_id
+        and c.founder_id = auth.uid()
+    )
+  );

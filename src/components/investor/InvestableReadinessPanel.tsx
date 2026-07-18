@@ -23,6 +23,8 @@ type Props = {
   scoreHistory?: Array<{ score: number; scoredAt: string }>;
   platformAvg?: number | null;
   percentile?: number | null;
+  /** Base path for recommended-course links. Founders use /founder/learning. */
+  learningBasePath?: string;
 };
 
 const FACTOR_COLORS: Record<string, string> = {
@@ -867,7 +869,7 @@ function OverviewTab({
   );
 }
 
-function RecommendationCard({ rec, index }: { rec: Recommendation; index: number }) {
+function RecommendationCard({ rec, index, learningBasePath }: { rec: Recommendation; index: number; learningBasePath: string }) {
   const t = useTranslations("investorCmp");
   const [open, setOpen] = useState(index === 0);
 
@@ -963,7 +965,7 @@ function RecommendationCard({ rec, index }: { rec: Recommendation; index: number
                 {rec.courses.map((c) => (
                   <a
                     key={c.slug}
-                    href={`/investor/learning/${c.slug}`}
+                    href={`${learningBasePath}/${c.slug}`}
                     className="flex items-center gap-2 text-xs font-medium text-emerald-800 hover:text-emerald-600 transition-colors group"
                   >
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white text-[9px] font-bold group-hover:bg-emerald-500 transition-colors">
@@ -981,7 +983,7 @@ function RecommendationCard({ rec, index }: { rec: Recommendation; index: number
   );
 }
 
-function RecommendationsTab({ factorScores }: { factorScores: Record<FactorKey, FactorScore> }) {
+function RecommendationsTab({ factorScores, learningBasePath }: { factorScores: Record<FactorKey, FactorScore>; learningBasePath: string }) {
   const t = useTranslations("investorCmp");
   const recs = buildRecommendations(factorScores);
 
@@ -1004,7 +1006,7 @@ function RecommendationsTab({ factorScores }: { factorScores: Record<FactorKey, 
       <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 px-1">{title}</p>
         {items.map((rec, i) => (
-          <RecommendationCard key={startIndex + i} rec={rec} index={startIndex + i} />
+          <RecommendationCard key={startIndex + i} rec={rec} index={startIndex + i} learningBasePath={learningBasePath} />
         ))}
       </div>
     );
@@ -1224,6 +1226,7 @@ export function InvestableReadinessPanel({
   scoreHistory = [],
   platformAvg = null,
   percentile = null,
+  learningBasePath = "/investor/learning",
 }: Props) {
   const t = useTranslations("investorCmp");
   const [activeKey, setActiveKey] = useState<FactorKey | null>(null);
@@ -1313,7 +1316,7 @@ export function InvestableReadinessPanel({
             mainColor={mainColor}
           />
         )}
-        {tab === "recommendations" && <RecommendationsTab factorScores={factorScores} />}
+        {tab === "recommendations" && <RecommendationsTab factorScores={factorScores} learningBasePath={learningBasePath} />}
         {tab === "history" && <HistoryTab history={scoreHistory} />}
         {tab === "comparison" && (
           <ComparisonTab
