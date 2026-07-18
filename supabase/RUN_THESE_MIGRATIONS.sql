@@ -2667,3 +2667,29 @@ drop policy if exists "own_notification_prefs" on public.notification_preference
 create policy "own_notification_prefs" on public.notification_preferences
   for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- =====================================================================
+-- 20260718002_prospect_investors.sql
+-- Internal prospect investor records to seed/test matching (admin-only).
+-- =====================================================================
+create table if not exists public.prospect_investors (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  investor_type text,
+  preferred_sectors text[] not null default '{}',
+  preferred_stages text[] not null default '{}',
+  preferred_geographies text[] not null default '{}',
+  check_size_min numeric,
+  check_size_max numeric,
+  notes text,
+  source text,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.prospect_investors enable row level security;
+drop policy if exists "staff_manage_prospect_investors" on public.prospect_investors;
+create policy "staff_manage_prospect_investors" on public.prospect_investors
+  for all to authenticated
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin','analyst')))
+  with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin','analyst')));

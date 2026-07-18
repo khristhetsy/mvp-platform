@@ -77,6 +77,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       { href: "/admin/deal-rooms",     label: "Deal Rooms",      requiredPermission: "manage_deal_rooms" },
       { href: "/admin/spvs",           label: "SPVs",            requiredPermission: "manage_spvs"       },
       { href: "/admin/matching",       label: "Matching",        requiredPermission: "manage_matching"   },
+      { href: "/admin/matching/prospects", label: "Prospect Investors", requiredPermission: "manage_matching" },
       { href: "/admin/partner-scores", label: "Partner Scores",  requiredPermission: "manage_investors"  },
     ],
   },

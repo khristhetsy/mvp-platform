@@ -12,6 +12,7 @@ import {
   loadApprovedInvestorMatchProfiles,
   loadFounderCompanyMatchContext,
 } from "@/lib/matching/load-matching-data";
+import { loadProspectInvestorMatchProfiles } from "@/lib/matching/prospect-investors";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { Company } from "@/lib/supabase/types";
 
@@ -160,14 +161,18 @@ function buildPairRow(
 }
 
 export async function loadAdminMatchingCenterSnapshot(): Promise<AdminMatchingCenterSnapshot> {
-  const [companies, investors] = await Promise.all([
+  const [companies, memberInvestors, prospects] = await Promise.all([
     loadAdminCompanyMatchProfiles(),
     loadApprovedInvestorMatchProfiles(),
+    loadProspectInvestorMatchProfiles(),
   ]);
 
+  // Admin snapshot ranks members + internal prospect investors together.
+  // Prospect names are pre-suffixed (" · prospect") so they read as unverified.
+  const investors = [...memberInvestors, ...prospects.profiles];
   const marketplaceCompanies = companies.filter(isMarketplaceListed);
-  const investorIds = investors.map((row) => row.profile_id);
-  const nameById = await loadInvestorDisplayNames(investorIds);
+  const memberNames = await loadInvestorDisplayNames(memberInvestors.map((row) => row.profile_id));
+  const nameById = new Map<string, string>([...memberNames, ...prospects.names]);
 
   const pairs: MatchingCenterPairRow[] = [];
 
