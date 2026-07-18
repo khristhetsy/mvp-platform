@@ -47,7 +47,7 @@ export function AdminCompanyWorkspace({
       <CompanyWorkspaceHeader data={data} />
 
       <PageSection title="Founder Journey" subtitle="Current stage, gates, and what's pending to advance">
-        <FounderJourneyPanel journey={data.journey} />
+        <FounderJourneyPanel journey={data.journey} companyId={data.company.id} />
       </PageSection>
 
       <DraftEmailPanel
