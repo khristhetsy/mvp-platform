@@ -1,6 +1,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { NotificationRecord, NotificationType } from "@/lib/notifications/types";
+import { shouldDeliverInApp } from "@/lib/notifications/preferences";
 
 export type CreateNotificationInput = {
   recipientUserId: string;
@@ -19,6 +20,13 @@ export type CreateNotificationInput = {
 
 export async function createNotification(input: CreateNotificationInput) {
   try {
+    // Respect the recipient's notification preferences for the in-app channel.
+    // Unmapped notification types are always delivered (no user toggle exists).
+    const allowed = await shouldDeliverInApp(input.recipientUserId, String(input.type), input.severity ?? null);
+    if (!allowed) {
+      return null;
+    }
+
     const admin = createServiceRoleClient();
     const { data, error } = await admin
       .from("notifications")
