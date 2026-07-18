@@ -13,7 +13,7 @@ import { CompanyQueuesPanel } from "@/components/admin/company-workspace/Company
 import { CompanyReadinessPanel } from "@/components/admin/company-workspace/CompanyReadinessPanel";
 import { CompanySpvPanel } from "@/components/admin/company-workspace/CompanySpvPanel";
 import { CompanyTimelinePanel } from "@/components/admin/company-workspace/CompanyTimelinePanel";
-import { CompanyWorkspaceHeader } from "@/components/admin/company-workspace/CompanyWorkspaceHeader";
+import { CompanyWorkspaceHeader, CompanyWorkspaceMetrics } from "@/components/admin/company-workspace/CompanyWorkspaceHeader";
 import { CompanyWorkspaceReportsPanel } from "@/components/admin/company-workspace/CompanyWorkspaceReportsPanel";
 import { PageSection } from "@/components/ui/workspace-layout";
 import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
@@ -103,10 +103,7 @@ export function AdminCompanyWorkspace({
 
   return (
     <div className="space-y-6">
-      {/* Persistent summary strip — scores stay visible on every tab */}
-      <CompanyWorkspaceHeader data={data} />
-
-      {/* Stage tab menu */}
+      {/* Stage tab menu — top of the workspace */}
       <div className="sticky top-0 z-10 -mx-2 border-b border-slate-200 bg-white/90 px-2 backdrop-blur">
         <nav className="flex gap-1 overflow-x-auto">
           {TABS.map((tabItem) => {
@@ -130,9 +127,14 @@ export function AdminCompanyWorkspace({
         </nav>
       </div>
 
+      {/* Company header — title, badges, actions; metric cards live on Initialize only */}
+      <CompanyWorkspaceHeader data={data} showMetrics={false} />
+
       {/* ---------- INITIALIZE ---------- */}
       {tab === "initialize" ? (
         <div className="space-y-6">
+          <CompanyWorkspaceMetrics data={data} />
+
           <PageSection title="Founder Journey" subtitle="Current stage, gates, and what's pending to advance">
             <FounderJourneyPanel journey={data.journey} companyId={data.company.id} />
           </PageSection>

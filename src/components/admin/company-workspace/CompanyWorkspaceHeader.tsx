@@ -26,7 +26,10 @@ function reviewStatusToBadge(status: string | null): "neutral" | "info" | "succe
   }
 }
 
-export function CompanyWorkspaceHeader({ data }: Readonly<{ data: AdminCompanyWorkspaceData }>) {
+export function CompanyWorkspaceHeader({
+  data,
+  showMetrics = true,
+}: Readonly<{ data: AdminCompanyWorkspaceData; showMetrics?: boolean }>) {
   const t = useTranslations("adminCmp");
   const { company, founder, readiness } = data;
   const companyId = company.id;
@@ -116,54 +119,64 @@ export function CompanyWorkspaceHeader({ data }: Readonly<{ data: AdminCompanyWo
         </p>
       ) : null}
 
-      <MetricGrid>
-        <MetricCard
-          label={t("readiness_score")}
-          value={readiness.latestScore != null ? String(readiness.latestScore) : "—"}
-          detail={readiness.milestoneLabel}
-          accent="indigo"
-          href={`/admin/companies/${companyId}`}
-        />
-        <MetricCard
-          label="Investable Readiness"
-          value={
-            data.investable
-              ? String(data.investable.effectiveScore ?? data.investable.totalScore)
-              : "—"
-          }
-          detail={
-            data.investable
-              ? `${data.investable.isOverridden ? "Adjusted · " : ""}13-factor model`
-              : "Not yet scored"
-          }
-          accent="blue"
-          status={data.investable ? "info" : "neutral"}
-          href={`/admin/companies/${companyId}#investable-readiness`}
-        />
-        <MetricCard
-          label={t("open_remediation")}
-          value={String(readiness.remediation.active)}
-          detail={`${readiness.remediation.highPriorityOpen} high priority`}
-          accent="violet"
-          status={readiness.remediation.active > 0 ? "warning" : "success"}
-          href={buildCompanyFilteredHref("/admin/companies", companyId, { queue: "remediation" })}
-        />
-        <MetricCard
-          label={t("investor_interests_2")}
-          value={String(data.investorActivity.interests)}
-          detail={`${data.investorActivity.introRequests} intro requests`}
-          accent="blue"
-          href={buildCompanyFilteredHref("/admin/crm", companyId)}
-        />
-        <MetricCard
-          label={t("open_compliance")}
-          value={String(data.compliance.openCount)}
-          detail={`${data.compliance.criticalCount} critical`}
-          accent="slate"
-          status={data.compliance.criticalCount > 0 ? "danger" : data.compliance.openCount > 0 ? "warning" : "success"}
-          href={buildCompanyFilteredHref("/admin/compliance", companyId)}
-        />
-      </MetricGrid>
+      {showMetrics ? <CompanyWorkspaceMetrics data={data} /> : null}
     </div>
+  );
+}
+
+export function CompanyWorkspaceMetrics({ data }: Readonly<{ data: AdminCompanyWorkspaceData }>) {
+  const t = useTranslations("adminCmp");
+  const { company, readiness } = data;
+  const companyId = company.id;
+
+  return (
+    <MetricGrid>
+      <MetricCard
+        label={t("readiness_score")}
+        value={readiness.latestScore != null ? String(readiness.latestScore) : "—"}
+        detail={readiness.milestoneLabel}
+        accent="indigo"
+        href={`/admin/companies/${companyId}`}
+      />
+      <MetricCard
+        label="Investable Readiness"
+        value={
+          data.investable
+            ? String(data.investable.effectiveScore ?? data.investable.totalScore)
+            : "—"
+        }
+        detail={
+          data.investable
+            ? `${data.investable.isOverridden ? "Adjusted · " : ""}13-factor model`
+            : "Not yet scored"
+        }
+        accent="blue"
+        status={data.investable ? "info" : "neutral"}
+        href={`/admin/companies/${companyId}#investable-readiness`}
+      />
+      <MetricCard
+        label={t("open_remediation")}
+        value={String(readiness.remediation.active)}
+        detail={`${readiness.remediation.highPriorityOpen} high priority`}
+        accent="violet"
+        status={readiness.remediation.active > 0 ? "warning" : "success"}
+        href={buildCompanyFilteredHref("/admin/companies", companyId, { queue: "remediation" })}
+      />
+      <MetricCard
+        label={t("investor_interests_2")}
+        value={String(data.investorActivity.interests)}
+        detail={`${data.investorActivity.introRequests} intro requests`}
+        accent="blue"
+        href={buildCompanyFilteredHref("/admin/crm", companyId)}
+      />
+      <MetricCard
+        label={t("open_compliance")}
+        value={String(data.compliance.openCount)}
+        detail={`${data.compliance.criticalCount} critical`}
+        accent="slate"
+        status={data.compliance.criticalCount > 0 ? "danger" : data.compliance.openCount > 0 ? "warning" : "success"}
+        href={buildCompanyFilteredHref("/admin/compliance", companyId)}
+      />
+    </MetricGrid>
   );
 }
