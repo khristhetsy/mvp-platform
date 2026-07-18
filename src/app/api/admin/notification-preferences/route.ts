@@ -31,6 +31,7 @@ const DEFAULT_PREFS: NotificationPrefs = {
     spv_blocker: { in_app: true, email: true, digest: false },
     document_uploaded: { in_app: true, email: false, digest: true },
     readiness_rescored: { in_app: false, email: false, digest: true },
+    strong_investor_match: { in_app: true, email: true, digest: false },
   },
   digest_frequency: "weekly",
   quiet_start: "20:00",

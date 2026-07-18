@@ -28,6 +28,7 @@ const EVENT_META: ReadonlyArray<{ key: string; label: string; description: strin
   { key: "spv_blocker", label: "SPV blocker", description: "An SPV item needs operational attention" },
   { key: "document_uploaded", label: "Document uploaded", description: "Founder uploads a data-room document" },
   { key: "readiness_rescored", label: "Readiness re-scored", description: "A company's readiness score changes" },
+  { key: "strong_investor_match", label: "Strong investor match", description: "A company strongly matches an investor (70%+)" },
 ];
 
 const DEFAULT_PREFS: NotificationPrefs = {
@@ -41,6 +42,7 @@ const DEFAULT_PREFS: NotificationPrefs = {
     spv_blocker: { in_app: true, email: true, digest: false },
     document_uploaded: { in_app: true, email: false, digest: true },
     readiness_rescored: { in_app: false, email: false, digest: true },
+    strong_investor_match: { in_app: true, email: true, digest: false },
   },
   digest_frequency: "weekly",
   quiet_start: "20:00",

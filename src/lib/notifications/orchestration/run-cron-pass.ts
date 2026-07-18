@@ -17,6 +17,7 @@ import {
 } from "@/lib/integrations/emit-bridge";
 import { processBoundedIntegrationRetries } from "@/lib/integrations/delivery";
 import { runScheduledDigestPass } from "@/lib/notifications/scheduled/digest-scheduler";
+import { runMatchNotificationPass } from "@/lib/notifications/match-notifications";
 import type { Database } from "@/lib/supabase/types";
 
 export type CronOrchestrationResponse = {
@@ -93,6 +94,14 @@ export async function runCronOrchestrationPass(options?: {
   } catch (error) {
     failuresCount += 1;
     errors.push({ step: "scheduled_digest_pass", message: safeErrorMessage(error) });
+  }
+
+  try {
+    const matches = await runMatchNotificationPass();
+    remindersGenerated += matches.companiesNotified;
+  } catch (error) {
+    failuresCount += 1;
+    errors.push({ step: "match_notifications", message: safeErrorMessage(error) });
   }
 
   let escalationsDetected = 0;

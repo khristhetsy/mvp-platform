@@ -10,7 +10,8 @@ export type NotificationEventKey =
   | "intro_request"
   | "spv_blocker"
   | "document_uploaded"
-  | "readiness_rescored";
+  | "readiness_rescored"
+  | "strong_investor_match";
 
 export type NotificationChannel = "in_app" | "email" | "digest";
 
@@ -41,6 +42,7 @@ export const DEFAULT_PREFS: NotificationPrefs = {
     spv_blocker: { in_app: true, email: true, digest: false },
     document_uploaded: { in_app: true, email: false, digest: true },
     readiness_rescored: { in_app: false, email: false, digest: true },
+    strong_investor_match: { in_app: true, email: true, digest: false },
   },
   digest_frequency: "weekly",
   quiet_start: "20:00",
@@ -72,6 +74,7 @@ const TYPE_TO_EVENT: Record<string, NotificationEventKey> = {
   spv_requirement_uploaded: "document_uploaded",
   spv_document_ready: "document_uploaded",
   deal_room_document_requested: "document_uploaded",
+  strong_investor_match: "strong_investor_match",
 };
 
 export function mapNotificationTypeToEvent(type: string): NotificationEventKey | null {
