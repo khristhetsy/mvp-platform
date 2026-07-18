@@ -105,6 +105,29 @@ export default async function AdminCompaniesPage() {
     const companies = await listAdminCompanies(supabase);
     const founderIds = companies.map((company) => company.founder_id).filter(Boolean);
     const companyIds = companies.map((company) => company.id);
+
+    // AI "investable" score per company (latest effective_score) + founder journey stage.
+    const investableByCompanyId = new Map<string, number | null>();
+    const journeyByFounderId = new Map<string, { stage: string | null; approval: string | null }>();
+    if (companyIds.length) {
+      const { data: scoreRows } = await rawSupabase
+        .from("company_readiness_scores")
+        .select("company_id, effective_score, created_at")
+        .in("company_id", companyIds)
+        .order("created_at", { ascending: false });
+      for (const r of (scoreRows ?? []) as Array<{ company_id: string; effective_score: number | null }>) {
+        if (!investableByCompanyId.has(r.company_id)) investableByCompanyId.set(r.company_id, r.effective_score ?? null);
+      }
+    }
+    if (founderIds.length) {
+      const { data: journeyRows } = await rawSupabase
+        .from("profiles")
+        .select("id, journey_stage, stage_approval_status")
+        .in("id", founderIds);
+      for (const r of (journeyRows ?? []) as Array<{ id: string; journey_stage: string | null; stage_approval_status: string | null }>) {
+        journeyByFounderId.set(r.id, { stage: r.journey_stage ?? null, approval: r.stage_approval_status ?? null });
+      }
+    }
     const [subscriptionsByProfileId, requestedPlansByProfileId, remediationSummaries, learningSummaries, matchingSummaries, updateSummaries] =
       await Promise.all([
         listSubscriptionsByProfileIds(founderIds),
@@ -128,6 +151,8 @@ export default async function AdminCompaniesPage() {
       learningSummaries,
       matchingSummaries,
       updateSummaries,
+      investableByCompanyId,
+      journeyByFounderId,
     );
   } catch (error) {
     loadError = formatError(error);

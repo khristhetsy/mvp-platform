@@ -48,6 +48,10 @@ export type AdminCompanyCardData = {
   investor_match_top_score: number;
   company_updates_published_count: number;
   company_updates_latest_published_at: string | null;
+  readiness_score?: number | null;
+  investable_score?: number | null;
+  journey_stage?: string | null;
+  stage_approval_status?: string | null;
 };
 
 type Props = {

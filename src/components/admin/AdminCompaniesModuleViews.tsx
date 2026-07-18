@@ -13,6 +13,20 @@ import { filterCompanies as applyCompanyQueryFilters, type CompanyQueryFilters }
 type ViewMode = "kanban" | "grid" | "list";
 type T = (key: string, values?: Record<string, string | number>) => string;
 
+const STAGE_ORDER = ["initialize", "qualify", "deploy", "optimize"];
+const STAGE_STYLE: Record<string, string> = {
+  initialize: "bg-slate-100 text-slate-600",
+  qualify: "bg-blue-50 text-blue-800",
+  deploy: "bg-indigo-50 text-indigo-800",
+  optimize: "bg-emerald-50 text-emerald-800",
+};
+function scoreClass(n: number | null | undefined) {
+  if (n == null) return "text-slate-400";
+  if (n >= 70) return "text-emerald-700 font-semibold";
+  if (n >= 50) return "text-amber-700 font-semibold";
+  return "text-red-600 font-semibold";
+}
+
 function reviewStatusLabel(t: T, status: string | null) {
   if (status === "pending" || status === "approved" || status === "rejected") return t(`companies.reviewStatus.${status}`);
   return t("companies.reviewStatus.unknown");
@@ -52,6 +66,28 @@ function AdminCompaniesModuleViewsInner({
 
   const filtered = useMemo(() => filterCompaniesBySearch(drilldownFiltered, query), [drilldownFiltered, query]);
 
+  // Journey-stage filter + sortable score/stage columns (list view).
+  const [stageFilter, setStageFilter] = useState<string>("");
+  const [sortKey, setSortKey] = useState<"readiness" | "investable" | "stage" | "">("");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  function toggleSort(key: "readiness" | "investable" | "stage") {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("desc"); }
+  }
+  const listRows = useMemo(() => {
+    let rows = filtered;
+    if (stageFilter === "pending") rows = rows.filter((c) => c.stage_approval_status === "pending");
+    else if (stageFilter) rows = rows.filter((c) => (c.journey_stage ?? "") === stageFilter);
+    if (sortKey) {
+      const val = (c: AdminCompanyCardData) =>
+        sortKey === "stage"
+          ? (c.journey_stage ? STAGE_ORDER.indexOf(c.journey_stage) : -1)
+          : (sortKey === "readiness" ? c.readiness_score : c.investable_score) ?? -1;
+      rows = [...rows].sort((a, b) => (sortDir === "asc" ? val(a) - val(b) : val(b) - val(a)));
+    }
+    return rows;
+  }, [filtered, stageFilter, sortKey, sortDir]);
+
   const pipelineColumns = useMemo(() => {
     const byStatus = new Map<string, AdminCompanyCardData[]>();
     for (const company of filtered) {
@@ -82,6 +118,19 @@ function AdminCompaniesModuleViewsInner({
           placeholder={t("companies.searchPh")}
           className="flex-1 min-w-[200px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         />
+        <select
+          value={stageFilter}
+          onChange={(e) => setStageFilter(e.target.value)}
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          aria-label="Filter by journey stage"
+        >
+          <option value="">All stages</option>
+          <option value="initialize">Initialize</option>
+          <option value="qualify">Qualify</option>
+          <option value="deploy">Deploy</option>
+          <option value="optimize">Optimize</option>
+          <option value="pending">⏳ Awaiting my approval</option>
+        </select>
         <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
           {(["kanban", "grid", "list"] as const).map((v) => (
             <button
@@ -130,13 +179,21 @@ function AdminCompaniesModuleViewsInner({
                   <th className="px-4 py-3">{t("companies.colCompany")}</th>
                   <th className="px-4 py-3">{t("companies.colFounder")}</th>
                   <th className="px-4 py-3">{t("companies.colIndustry")}</th>
+                  {([["readiness", "Readiness"], ["investable", "Investable"], ["stage", "Stage"]] as const).map(([key, label]) => (
+                    <th key={key} className="px-4 py-3">
+                      <button type="button" onClick={() => toggleSort(key)} className="inline-flex items-center gap-1 hover:text-slate-800">
+                        {label}
+                        <span className="text-[9px]">{sortKey === key ? (sortDir === "asc" ? "▲" : "▼") : "↕"}</span>
+                      </button>
+                    </th>
+                  ))}
                   <th className="px-4 py-3">{t("companies.colReview")}</th>
                   <th className="px-4 py-3">{t("companies.colPublished")}</th>
                   <th className="px-4 py-3">{t("companies.colAction")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map((company) => (
+                {listRows.map((company) => (
                   <tr
                     key={company.id}
                     className="hover:bg-slate-50 cursor-pointer"
@@ -145,6 +202,24 @@ function AdminCompaniesModuleViewsInner({
                     <td className="px-4 py-3 font-medium text-slate-900">{company.company_name}</td>
                     <td className="px-4 py-3 text-slate-600">{company.founder_name}</td>
                     <td className="px-4 py-3 text-slate-500">{company.industry ?? "—"}</td>
+                    <td className={`px-4 py-3 ${scoreClass(company.readiness_score)}`}>
+                      {company.readiness_score != null ? company.readiness_score : "—"}
+                    </td>
+                    <td className={`px-4 py-3 ${scoreClass(company.investable_score)}`}>
+                      {company.investable_score != null ? company.investable_score : "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      {company.journey_stage ? (
+                        <span className="inline-flex items-center gap-1">
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STAGE_STYLE[company.journey_stage] ?? "bg-slate-100 text-slate-600"}`}>
+                            {company.journey_stage}
+                          </span>
+                          {company.stage_approval_status === "pending" && <span className="text-[10px] text-amber-700" title="Awaiting your approval">⏳</span>}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                         company.review_status === "approved"

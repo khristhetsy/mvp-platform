@@ -2615,3 +2615,16 @@ create index if not exists crm_contacts_name_trgm    on public.crm_contacts usin
 create index if not exists crm_contacts_company_trgm on public.crm_contacts using gin (company gin_trgm_ops);
 create index if not exists crm_contacts_email_trgm   on public.crm_contacts using gin (email gin_trgm_ops);
 create index if not exists crm_contacts_phone_trgm   on public.crm_contacts using gin (phone gin_trgm_ops);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Security (CRITICAL): the 7 "Security Definer View" advisor errors. Each view is
+-- read only via the service role server-side, so switching to invoker mode closes
+-- the REST-API exposure with no change to app behaviour.
+
+alter view public.v_sales_forecast_actuals   set (security_invoker = on);
+alter view public.v_ceo_kpi_meeting_weekly    set (security_invoker = on);
+alter view public.v_ceo_kpi_meeting_monthly   set (security_invoker = on);
+alter view public.v_ceo_kpi_meeting_quarterly set (security_invoker = on);
+alter view public.v_ceo_kpi_meeting_ytd       set (security_invoker = on);
+alter view public.v_ceo_meeting_readiness     set (security_invoker = on);
+alter view public.crm_country_facets          set (security_invoker = on);

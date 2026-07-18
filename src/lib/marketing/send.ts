@@ -1,5 +1,7 @@
 import type { SendResult } from "./types";
 
+import { absolutizeEmailHtml } from "@/lib/email/absolutize-html";
+
 const RESEND_API_URL = "https://api.resend.com/emails";
 
 function getApiKey(): string | null {
@@ -47,6 +49,15 @@ export function stripHtmlComments(html: string): string {
   return html.replace(/<!--[\s\S]*?-->/g, "");
 }
 
+/**
+ * True when a template already renders its own iCapOS brand mark, so we shouldn't also
+ * prepend the automatic branded header (which would show the logo twice). Matches an
+ * <img> whose alt is the brand or whose src looks like a logo asset.
+ */
+export function hasOwnBrandLogo(html: string): boolean {
+  return /<img[^>]*(?:alt=["']\s*icapos\s*["']|src=["'][^"']*logo[^"']*["'])/i.test(html);
+}
+
 export function htmlToText(html: string): string {
   return html
     .replace(/<style[\s\S]*?<\/style>/gi, "")
@@ -91,8 +102,10 @@ export async function sendMarketingEmail(
 
   const subject = interpolate(input.subject, vars);
   // Strip HTML comments so template authoring notes (e.g. "<!-- to add more; delete to
-  // remove … -->") never leak into the delivered email.
-  const htmlBody = stripHtmlComments(interpolate(input.html_body, vars));
+  // remove … -->") never leak into the delivered email, then rewrite any relative
+  // src/href to absolute — delivered mail has no base URL, so a relative logo path
+  // renders as a broken image in the inbox.
+  const htmlBody = absolutizeEmailHtml(stripHtmlComments(interpolate(input.html_body, vars)));
   // Always send a plain-text alternative — derive one from the HTML if none was
   // authored. Missing text parts are a real spam signal.
   const textBody = input.text_body ? interpolate(input.text_body, vars) : htmlToText(htmlBody);
@@ -109,7 +122,9 @@ export async function sendMarketingEmail(
   </a>
 </div>`;
 
-  const htmlWithFooter = `${brandHeader}
+  // Templates that carry their own logo (e.g. the investor digest) already brand
+  // themselves — adding the header would stack two logos.
+  const htmlWithFooter = `${hasOwnBrandLogo(htmlBody) ? "" : brandHeader}
 ${htmlBody}
 <p style="margin-top:32px;font-size:12px;color:#888;">
   You're receiving this because you're in our network.

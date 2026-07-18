@@ -1,5 +1,24 @@
 import { describe, it, expect } from "vitest";
-import { interpolate, htmlToText } from "./send";
+import { interpolate, htmlToText, hasOwnBrandLogo } from "./send";
+
+describe("hasOwnBrandLogo — suppress the auto header when a template self-brands", () => {
+  it("detects a logo by alt text", () => {
+    expect(hasOwnBrandLogo('<img src="https://x.com/a.png" alt="iCapOS" />')).toBe(true);
+    expect(hasOwnBrandLogo('<IMG ALT="icapos" SRC="/a.png">')).toBe(true);
+  });
+
+  it("detects a logo by src filename", () => {
+    expect(hasOwnBrandLogo('<img src="https://icapos.com/email-logo.png" alt="">')).toBe(true);
+  });
+
+  it("ignores ordinary content images", () => {
+    expect(hasOwnBrandLogo('<img src="https://icapos.com/chart.png" alt="Revenue chart">')).toBe(false);
+  });
+
+  it("is false when there is no image at all", () => {
+    expect(hasOwnBrandLogo("<p>Hello there</p>")).toBe(false);
+  });
+});
 
 const vars = { first_name: "Khris", company: "iCFO", email: "k@icfo.com", sender_name: "Jordan" };
 

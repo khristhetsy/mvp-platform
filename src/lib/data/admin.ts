@@ -5,7 +5,11 @@ import { getStorageBucket, createSignedDocumentUrl } from "@/lib/data/documents"
 import type { SubscriptionRecord } from "@/lib/subscriptions/plans";
 import type { PlanType } from "@/lib/subscriptions/plans";
 import { computeReadinessMilestones, milestoneLabelForAdmin } from "@/lib/learning/milestones";
+import { computeReadinessScore, documentTypeCode } from "@/lib/data/founder-readiness";
 import type { Company, DocumentRecord } from "@/lib/supabase/types";
+
+// Per-founder journey state surfaced on the admin companies list.
+export type FounderJourneyState = { stage: string | null; approval: string | null };
 
 export type AdminCompanyRow = {
   id: string;
@@ -233,6 +237,11 @@ export type AdminCompanyCardPayload = {
   investor_match_top_score: number;
   company_updates_published_count: number;
   company_updates_latest_published_at: string | null;
+  // Founder scores + journey (shown on the admin companies list).
+  readiness_score: number | null;   // document/profile completeness
+  investable_score: number | null;  // AI diligence score (gates investor outreach)
+  journey_stage: string | null;     // initialize → qualify → deploy → optimize
+  stage_approval_status: string | null;
 };
 
 export function mapAdminCompaniesToCardData(
@@ -249,6 +258,8 @@ export function mapAdminCompaniesToCardData(
     string,
     { publishedCount: number; latestPublishedAt: string | null }
   > = new Map(),
+  investableByCompanyId: Map<string, number | null> = new Map(),
+  journeyByFounderId: Map<string, FounderJourneyState> = new Map(),
 ): AdminCompanyCardPayload[] {
   return companies.map((company) => {
     const remediation = remediationByCompanyId.get(company.id);
@@ -302,6 +313,12 @@ export function mapAdminCompaniesToCardData(
       investor_match_top_score: matching?.topMatchScore ?? 0,
       company_updates_published_count: updates?.publishedCount ?? 0,
       company_updates_latest_published_at: updates?.latestPublishedAt ?? null,
+      readiness_score: company.documents.length
+        ? computeReadinessScore(company.documents.map((d) => documentTypeCode(d.document_type ?? "")))
+        : null,
+      investable_score: investableByCompanyId.get(company.id) ?? null,
+      journey_stage: journeyByFounderId.get(company.founder_id)?.stage ?? null,
+      stage_approval_status: journeyByFounderId.get(company.founder_id)?.approval ?? null,
     };
   });
 }
