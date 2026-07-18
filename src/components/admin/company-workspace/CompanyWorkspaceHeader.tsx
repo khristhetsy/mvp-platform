@@ -125,6 +125,22 @@ export function CompanyWorkspaceHeader({ data }: Readonly<{ data: AdminCompanyWo
           href={`/admin/companies/${companyId}`}
         />
         <MetricCard
+          label="Investable Readiness"
+          value={
+            data.investable
+              ? String(data.investable.effectiveScore ?? data.investable.totalScore)
+              : "—"
+          }
+          detail={
+            data.investable
+              ? `${data.investable.isOverridden ? "Adjusted · " : ""}13-factor model`
+              : "Not yet scored"
+          }
+          accent="blue"
+          status={data.investable ? "info" : "neutral"}
+          href={`/admin/companies/${companyId}#investable-readiness`}
+        />
+        <MetricCard
           label={t("open_remediation")}
           value={String(readiness.remediation.active)}
           detail={`${readiness.remediation.highPriorityOpen} high priority`}

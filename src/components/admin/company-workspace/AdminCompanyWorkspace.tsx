@@ -25,6 +25,7 @@ import type { NextBestAction, NextBestActionRole } from "@/lib/next-best-actions
 import type { RiskSignal } from "@/lib/predictive-intelligence/types";
 import { RiskSignalsPanel } from "@/components/predictive-intelligence/RiskSignalsPanel";
 import { AdminCompanyAIAssessment } from "@/components/admin/AdminCompanyAIAssessment";
+import { InvestableReadinessPanel } from "@/components/investor/InvestableReadinessPanel";
 
 export function AdminCompanyWorkspace({
   data,
@@ -84,6 +85,25 @@ export function AdminCompanyWorkspace({
       <PageSection title={t("operational_timeline")} subtitle={t("company_scoped_events_from_operational_activ")}>
         <CompanyTimelinePanel items={data.timeline} companyId={data.company.id} />
       </PageSection>
+
+      {data.investable ? (
+        <div id="investable-readiness" className="scroll-mt-24">
+          <PageSection
+            title="Investable Readiness"
+            subtitle="13-factor investability model — factor breakdown, recommendations, and score history"
+          >
+            <InvestableReadinessPanel
+              companyName={data.company.company_name}
+              totalScore={data.investable.totalScore}
+              factorScores={data.investable.factorScores}
+              effectiveScore={data.investable.effectiveScore}
+              isOverridden={data.investable.isOverridden}
+              scoredAt={data.investable.scoredAt}
+              scoreHistory={data.investable.history}
+            />
+          </PageSection>
+        </div>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-2">
         <PageSection title={t("readiness")} subtitle={t("source_diligence_reports_onboarding_remediat")}>

@@ -1,6 +1,7 @@
 import type {
   AdminCompanyWorkspaceData,
   AdminCompanyWorkspaceSpvSummary,
+  AdminInvestableFactorScores,
 } from "@/lib/admin/company-workspace-types";
 import type { AdminCompanyRow } from "@/lib/data/admin";
 import { mapAdminCompaniesToCardData } from "@/lib/data/admin";
@@ -230,6 +231,7 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
     learningSummaries,
     matchingSummaries,
     updateSummaries,
+    investableScoreRows,
   ] = await Promise.all([
     listRemediationTasksForCompany(companyId),
     admin
@@ -263,7 +265,35 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
     getLearningAdminSummaryForCompanies([companyId]),
     getCompanyMatchingSummaries([companyId]),
     getCompanyUpdateAdminSummaries([companyId]),
+    admin
+      .from("company_readiness_scores")
+      .select("total_score, effective_score, override_score, factor_scores, created_at")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false })
+      .limit(30),
   ]);
+
+  // Investable Readiness (13-factor model) — admin/analyst surface.
+  const investableRows = (investableScoreRows.data ?? []) as Array<{
+    total_score: number;
+    effective_score: number | null;
+    override_score: number | null;
+    factor_scores: unknown;
+    created_at: string;
+  }>;
+  const investable = investableRows.length > 0
+    ? {
+        totalScore: investableRows[0].total_score,
+        effectiveScore: investableRows[0].effective_score,
+        isOverridden: investableRows[0].override_score != null,
+        factorScores: (investableRows[0].factor_scores ?? {}) as AdminInvestableFactorScores,
+        scoredAt: investableRows[0].created_at,
+        history: investableRows.map((r) => ({
+          score: r.effective_score ?? r.total_score,
+          scoredAt: r.created_at,
+        })),
+      }
+    : null;
 
   const remediationSummary = summarizeRemediationTasks(remediationTasks);
   const highPriorityOpen = remediationTasks.filter(
@@ -340,6 +370,7 @@ export async function getAdminCompanyWorkspace(companyId: string): Promise<Admin
       nextAction: deriveReadinessNextAction(remediationTasks, milestoneLabel),
       milestoneLabel,
     },
+    investable,
     investorActivity: {
       savedDeals: savedDealsCount.count ?? 0,
       interests: interestsResult.count ?? 0,

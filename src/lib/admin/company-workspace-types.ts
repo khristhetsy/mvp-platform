@@ -3,6 +3,18 @@ import type { ComplianceEventRecord } from "@/lib/compliance/types";
 import type { OperationalActivityFeedItem } from "@/lib/operational-activity/types";
 import type { AdminQueueItem } from "@/lib/queues/admin-queues";
 import type { summarizeRemediationTasks } from "@/lib/remediation/tasks";
+import type { FactorKey, FactorScore } from "@/lib/ai/readiness-scoring";
+
+export type AdminInvestableFactorScores = Record<FactorKey, FactorScore>;
+
+export type AdminInvestableReadiness = {
+  totalScore: number;
+  effectiveScore: number | null;
+  isOverridden: boolean;
+  factorScores: AdminInvestableFactorScores;
+  scoredAt: string | null;
+  history: Array<{ score: number; scoredAt: string }>;
+};
 
 export type AdminCompanyWorkspaceSpvSummary = {
   id: string;
@@ -31,6 +43,7 @@ export type AdminCompanyWorkspaceData = {
     nextAction: string;
     milestoneLabel: string;
   };
+  investable: AdminInvestableReadiness | null;
   investorActivity: {
     savedDeals: number;
     interests: number;

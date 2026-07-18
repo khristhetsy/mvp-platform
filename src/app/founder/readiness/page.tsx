@@ -23,8 +23,6 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { computeReadinessBenchmark } from "@/lib/data/readiness-benchmark";
 import { ReadinessBenchmarkBanner } from "@/components/founder/ReadinessBenchmarkBanner";
-import { InvestableReadinessPanel } from "@/components/investor/InvestableReadinessPanel";
-import type { FactorKey, FactorScore } from "@/lib/ai/readiness-scoring";
 
 export const dynamic = "force-dynamic";
 
@@ -66,34 +64,6 @@ export default async function FounderReadinessPage() {
   const companyName = company?.company_name ?? "Your company";
   const remediation = await loadFounderRemediationPlan(profile);
   const benchmark = company ? await computeReadinessBenchmark(company.id, company.revenue_stage ?? null) : null;
-
-  // Investable Readiness — now readable by the founder for their own company (RLS
-  // policy founder_read_own). Reuses the investor panel with founder course links.
-  let investable: null | {
-    totalScore: number; effectiveScore: number | null; isOverridden: boolean;
-    factorScores: Record<FactorKey, FactorScore>; scoredAt: string | null;
-    history: Array<{ score: number; scoredAt: string }>;
-  } = null;
-  if (company) {
-    const { data: scoreRows } = await supabase
-      .from("company_readiness_scores")
-      .select("total_score, effective_score, override_score, factor_scores, created_at")
-      .eq("company_id", company.id)
-      .order("created_at", { ascending: false })
-      .limit(30);
-    const rows = (scoreRows ?? []) as Array<{ total_score: number; effective_score: number | null; override_score: number | null; factor_scores: unknown; created_at: string }>;
-    if (rows.length > 0) {
-      const latest = rows[0];
-      investable = {
-        totalScore: latest.total_score,
-        effectiveScore: latest.effective_score,
-        isOverridden: latest.override_score != null,
-        factorScores: (latest.factor_scores ?? {}) as Record<FactorKey, FactorScore>,
-        scoredAt: latest.created_at,
-        history: rows.map((r) => ({ score: r.effective_score ?? r.total_score, scoredAt: r.created_at })),
-      };
-    }
-  }
 
   return (
     <FounderAppShell
@@ -143,21 +113,6 @@ export default async function FounderReadinessPage() {
               {benchmark && (
                 <section className="mt-6">
                   <ReadinessBenchmarkBanner benchmark={benchmark} />
-                </section>
-              )}
-
-              {investable && (
-                <section className="mt-6">
-                  <InvestableReadinessPanel
-                    companyName={companyName}
-                    totalScore={investable.totalScore}
-                    factorScores={investable.factorScores}
-                    effectiveScore={investable.effectiveScore}
-                    isOverridden={investable.isOverridden}
-                    scoredAt={investable.scoredAt}
-                    scoreHistory={investable.history}
-                    learningBasePath="/founder/learning"
-                  />
                 </section>
               )}
 
