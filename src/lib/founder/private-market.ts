@@ -13,9 +13,18 @@ export type InvestorMomentum = "active" | "warm" | "quiet";
 
 export type FounderInvestorRow = {
   symbol: string;
-  /** Anonymized descriptor — never an investor's identity. */
+  /** Investor display name (members from profiles, prospects from CRM). */
+  name: string;
   label: string;
   matchScore: number;
+  /** Per-factor fit for the profile popup (0 / 50 / 100). */
+  fitSector: number;
+  fitStage: number;
+  fitCheck: number;
+  fitGeo: number;
+  /** Criteria shown in the profile popup. */
+  stages: string[];
+  geographies: string[];
   band: "high" | "mid" | "low";
   checkSize: string;
   sectors: string[];
@@ -142,6 +151,16 @@ export async function loadFounderInvestorBoard(
   const scoreMap: Map<string, PartnerScore> =
     ids.length > 0 ? await loadPartnerScoresBatch(admin, ids) : new Map<string, PartnerScore>();
 
+  // Display names: members from profiles, prospects from the CRM-sourced names map.
+  const memberNameById = new Map<string, string>();
+  if (memberIds.length > 0) {
+    const { data: profs } = await admin.from("profiles").select("id, full_name, email").in("id", memberIds);
+    for (const p of (profs ?? []) as Array<{ id: string; full_name: string | null; email: string | null }>) {
+      memberNameById.set(p.id, p.full_name || p.email || "Investor");
+    }
+  }
+  const cleanName = (value: string) => value.replace(/ · prospect$/, "");
+
   // Outreach status per investor from this founder's own campaign (admin-run).
   const outreachByInvestor = new Map<string, string>();
   {
@@ -192,10 +211,23 @@ export async function loadFounderInvestorBoard(
             ? "skipped"
             : "none";
     const ps = investor.profile_id ? scoreMap.get(investor.profile_id) : undefined;
+    const pid = investor.profile_id ?? "";
+    const rawName = isProspectInvestorId(pid)
+      ? cleanName(prospectData.names.get(pid) ?? "Network investor")
+      : memberNameById.get(pid) ?? "Investor";
+    const reasons = new Set(match.matchReasons);
+    const fitCheck = reasons.has("Check size fit") ? 100 : reasons.has("Partial check size overlap") ? 50 : 0;
     return {
       symbol: `INV·${code}`,
+      name: rawName,
       label: sectors.length ? `${type} · ${sectors.slice(0, 2).join(", ")} focus` : type,
       matchScore: match.matchScore,
+      fitSector: reasons.has("Sector alignment") ? 100 : 0,
+      fitStage: reasons.has("Stage alignment") ? 100 : 0,
+      fitCheck,
+      fitGeo: reasons.has("Geography alignment") ? 100 : 0,
+      stages: tokens(investor.preferred_stages),
+      geographies: tokens(investor.preferred_geographies),
       band: matchBand(match.matchScore),
       checkSize: formatCheck(investor.check_size_min ?? null, investor.check_size_max ?? null),
       sectors,
