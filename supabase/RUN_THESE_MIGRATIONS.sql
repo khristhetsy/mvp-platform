@@ -2768,3 +2768,14 @@ create policy "founder_read_own_outreach_recipients" on public.investor_outreach
     join public.companies c on c.id = oc.company_id
     where oc.id = investor_outreach_recipients.campaign_id and c.founder_id = auth.uid()
   ));
+-- Email suppression list for investor outreach (CAN-SPAM). A recipient who
+-- clicks unsubscribe is added here; the send pass skips any suppressed email.
+-- Accessed only server-side via the service role, so RLS is on with no policies
+-- (blocks anon/authenticated; service role bypasses RLS).
+
+create table if not exists public.outreach_unsubscribes (
+  email text primary key,
+  created_at timestamptz not null default now()
+);
+
+alter table public.outreach_unsubscribes enable row level security;

@@ -7,6 +7,7 @@ import {
 } from "@/lib/matching/load-matching-data";
 import { sendEmail } from "@/lib/email/send-email";
 import { renderIntroEmail } from "@/lib/outreach/intro-template";
+import { buildUnsubscribeUrl, filterUnsubscribed } from "@/lib/outreach/unsubscribe";
 import { isProspectInvestorId } from "@/lib/matching/prospect-investors";
 
 const STRONG_MATCH_THRESHOLD = 70;
@@ -206,10 +207,14 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
         }
       }
 
+      // CAN-SPAM: never send to a suppressed address.
+      const emails = [...contactById.values()].map((c) => c.email).filter((e): e is string => Boolean(e));
+      const suppressed = await filterUnsubscribed(emails);
+
       for (const r of batch) {
         const contact = contactById.get(r.investor_ref);
         const email = contact?.email ?? null;
-        if (!email) {
+        if (!email || suppressed.has(email.trim().toLowerCase())) {
           await db.from("investor_outreach_recipients").update({ status: "skipped" }).eq("id", r.id);
           continue;
         }
@@ -219,6 +224,7 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
           sector: comp.industry ?? null,
           stage: comp.revenue_stage ?? null,
           investorFirstName: firstName,
+          unsubscribeUrl: buildUnsubscribeUrl(email),
         });
         const ok = await sendEmail({ to: email, subject, html, text });
         await db
