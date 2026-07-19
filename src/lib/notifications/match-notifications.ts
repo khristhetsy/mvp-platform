@@ -4,6 +4,7 @@ import {
   loadApprovedInvestorMatchProfiles,
 } from "@/lib/matching/load-matching-data";
 import { notifyCompanyFounderIfNotRecent, notifyStaffIfNotRecent } from "@/lib/notifications/notifications";
+import { createDraftFromMatch } from "@/lib/outreach/investor-outreach";
 
 const STRONG_MATCH_THRESHOLD = 70;
 // One notification per company per week — avoids re-firing every cron pass.
@@ -67,6 +68,10 @@ export async function runMatchNotificationPass(): Promise<{ companiesNotified: n
       deepLink: `/admin/matching?company=${company.id}`,
       withinHours: DEDUPE_HOURS,
     });
+
+    // Auto-draft an approval-gated outreach campaign (idempotent). Nothing sends
+    // until an admin approves it.
+    await createDraftFromMatch(company.id);
 
     companiesNotified += 1;
   }
