@@ -5,6 +5,9 @@ import {
   loadAdminCompanyMatchProfiles,
   loadApprovedInvestorMatchProfiles,
 } from "@/lib/matching/load-matching-data";
+import { sendEmail } from "@/lib/email/send-email";
+import { renderIntroEmail } from "@/lib/outreach/intro-template";
+import { isProspectInvestorId } from "@/lib/matching/prospect-investors";
 
 const STRONG_MATCH_THRESHOLD = 70;
 const DEFAULT_WEEKLY_CAP = 10;
@@ -162,31 +165,72 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
   for (const campaign of list) {
     const { data: queued } = await db
       .from("investor_outreach_recipients")
-      .select("id")
+      .select("id, investor_ref, investor_name")
       .eq("campaign_id", campaign.id)
       .eq("status", "queued")
       .order("match_score", { ascending: false })
       .limit(campaign.weekly_cap);
 
-    const batch = (queued ?? []) as Array<{ id: string }>;
+    const batch = (queued ?? []) as Array<{ id: string; investor_ref: string; investor_name: string }>;
     if (batch.length === 0) {
       await db.from("investor_outreach_campaigns").update({ status: "completed", updated_at: new Date().toISOString() }).eq("id", campaign.id);
       continue;
     }
 
-    // NOTE: when `live` is true, dispatch the counsel-approved intro_fit_v1
-    // template to each recipient here via the platform email sender. Left as a
-    // guarded no-op until the disclaimer copy is approved and the flag is set.
     const now = new Date().toISOString();
-    await db
-      .from("investor_outreach_recipients")
-      .update({ status: "sent", sent_at: now })
-      .in("id", batch.map((r) => r.id));
+
+    if (!live) {
+      // Flag OFF: advance the log without dispatching real email (safe testing).
+      await db
+        .from("investor_outreach_recipients")
+        .update({ status: "sent", sent_at: now })
+        .in("id", batch.map((r) => r.id));
+      recipientsSent += batch.length;
+    } else {
+      // Flag ON: render the locked intro_fit_v1 template and dispatch via the
+      // platform email sender. Members only — prospects have no verified email
+      // and are excluded from outreach audiences.
+      const { data: companyRow } = await db
+        .from("companies")
+        .select("company_name, industry, revenue_stage")
+        .eq("id", campaign.company_id)
+        .maybeSingle();
+      const comp = (companyRow ?? {}) as { company_name?: string; industry?: string | null; revenue_stage?: string | null };
+
+      const memberIds = batch.map((r) => r.investor_ref).filter((ref) => !isProspectInvestorId(ref));
+      const contactById = new Map<string, { email: string | null; name: string | null }>();
+      if (memberIds.length > 0) {
+        const { data: profs } = await db.from("profiles").select("id, email, full_name").in("id", memberIds);
+        for (const p of (profs ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>) {
+          contactById.set(p.id, { email: p.email, name: p.full_name });
+        }
+      }
+
+      for (const r of batch) {
+        const contact = contactById.get(r.investor_ref);
+        const email = contact?.email ?? null;
+        if (!email) {
+          await db.from("investor_outreach_recipients").update({ status: "skipped" }).eq("id", r.id);
+          continue;
+        }
+        const firstName = (contact?.name ?? "").trim().split(/\s+/)[0] || null;
+        const { subject, html, text } = renderIntroEmail({
+          company: comp.company_name ?? "a company",
+          sector: comp.industry ?? null,
+          stage: comp.revenue_stage ?? null,
+          investorFirstName: firstName,
+        });
+        const ok = await sendEmail({ to: email, subject, html, text });
+        await db
+          .from("investor_outreach_recipients")
+          .update({ status: ok ? "sent" : "skipped", sent_at: ok ? new Date().toISOString() : null })
+          .eq("id", r.id);
+        if (ok) recipientsSent += 1;
+      }
+    }
 
     await db.from("investor_outreach_campaigns").update({ last_run_at: now, updated_at: now }).eq("id", campaign.id);
-
     campaignsRun += 1;
-    recipientsSent += batch.length;
   }
 
   return { campaignsRun, recipientsSent, liveSend: live };
