@@ -9,8 +9,19 @@ type Props = {
   companyName: string;
   documentTypes: { label: string; value: string }[];
   existingByType?: Record<string, { fileName?: string | null } | undefined>;
+  /** Canonical document-type codes currently flagged "Not applicable". */
+  notApplicableTypes?: string[];
   maxUploadBytes: number;
 };
+
+// Types a founder may flag "Not applicable" (must match the API allow-list).
+// Keyed by the UI value; LEGAL_DOCUMENT normalizes to LEGAL_DOCUMENTS server-side.
+const NA_ALLOWED_UI = new Set(["CUSTOMER_CONTRACTS", "LEGAL_DOCUMENT", "OTHER"]);
+
+function normalizeNa(value: string): string {
+  const v = value.toUpperCase();
+  return v === "LEGAL_DOCUMENT" ? "LEGAL_DOCUMENTS" : v;
+}
 
 type UploadResult =
   | { ok: true }
@@ -57,6 +68,7 @@ export function DocumentUploadForm({
   companyName,
   documentTypes,
   existingByType = {},
+  notApplicableTypes = [],
   maxUploadBytes,
 }: Props) {
   const t = useTranslations("sharedCmp");
@@ -67,6 +79,34 @@ export function DocumentUploadForm({
   const [result, setResult] = useState<UploadResult | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [lastDebug, setLastDebug] = useState<unknown>(null);
+  const [naSet, setNaSet] = useState<Set<string>>(() => new Set(notApplicableTypes.map((v) => v.toUpperCase())));
+  const [naBusy, setNaBusy] = useState<string | null>(null);
+
+  async function toggleNotApplicable(uiValue: string, next: boolean) {
+    const canonical = normalizeNa(uiValue);
+    setNaBusy(canonical);
+    try {
+      const res = await fetch("/api/documents/not-applicable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ companyId, documentType: uiValue, notApplicable: next }),
+      });
+      if (!res.ok) {
+        const json = (await res.json().catch(() => ({}))) as { error?: string };
+        setResult({ ok: false, status: res.status, message: json.error ?? "Unable to update." });
+        return;
+      }
+      setNaSet((prev) => {
+        const copy = new Set(prev);
+        if (next) copy.add(canonical);
+        else copy.delete(canonical);
+        return copy;
+      });
+      router.refresh();
+    } finally {
+      setNaBusy(null);
+    }
+  }
 
   const accept = useMemo(() => allowedAccept(documentType), [documentType]);
   const hasExistingForSelected = useMemo(() => {
@@ -166,23 +206,55 @@ export function DocumentUploadForm({
           {documentTypes.map((type) => {
             const active = type.value === documentType;
             const existing = existingByType[type.value.toUpperCase()]?.fileName ?? null;
+            const canBeNa = NA_ALLOWED_UI.has(type.value.toUpperCase());
+            const isNa = naSet.has(normalizeNa(type.value));
+            const busy = naBusy === normalizeNa(type.value);
             return (
-              <button
+              <div
                 key={type.value}
-                type="button"
-                aria-pressed={active}
                 className={[
                   "flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm",
-                  active ? "border-slate-900 bg-slate-950 text-white" : "border-slate-300 bg-white text-slate-900",
+                  isNa
+                    ? "border-slate-200 bg-slate-50 text-slate-400"
+                    : active
+                    ? "border-slate-900 bg-slate-950 text-white"
+                    : "border-slate-300 bg-white text-slate-900",
                 ].join(" ")}
-                onClick={() => setDocumentType(type.value)}
-                disabled={isUploading}
               >
-                <span className="font-medium">{type.label}</span>
-                <span className={active ? "text-slate-200" : "text-slate-500"}>
-                  {existing ? "Replace" : "Upload"}
-                </span>
-              </button>
+                <button
+                  type="button"
+                  aria-pressed={active}
+                  className="flex-1 text-left font-medium disabled:cursor-not-allowed"
+                  onClick={() => setDocumentType(type.value)}
+                  disabled={isUploading || isNa}
+                >
+                  <span className={isNa ? "line-through" : ""}>{type.label}</span>
+                  {isNa ? <span className="ml-2 text-[11px] font-normal not-italic">Not applicable</span> : null}
+                </button>
+                <div className="flex items-center gap-3">
+                  {!isNa ? (
+                    <span className={active ? "text-slate-200" : "text-slate-500"}>{existing ? "Replace" : "Upload"}</span>
+                  ) : null}
+                  {canBeNa ? (
+                    <button
+                      type="button"
+                      className={[
+                        "rounded-full px-2.5 py-1 text-[11px] font-semibold transition",
+                        isNa
+                          ? "bg-slate-200 text-slate-600 hover:bg-slate-300"
+                          : active
+                          ? "bg-white/15 text-slate-100 hover:bg-white/25"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                      ].join(" ")}
+                      onClick={() => void toggleNotApplicable(type.value, !isNa)}
+                      disabled={busy || isUploading || Boolean(existing)}
+                      title={existing ? "Remove the uploaded file before marking N/A" : undefined}
+                    >
+                      {busy ? "…" : isNa ? "Mark applicable" : "N/A"}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
             );
           })}
         </div>

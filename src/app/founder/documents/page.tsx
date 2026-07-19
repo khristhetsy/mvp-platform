@@ -9,6 +9,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { DocumentUploadForm } from "@/components/DocumentUploadForm";
 import { listCompanyDocuments } from "@/lib/data/documents";
+import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
@@ -47,6 +49,9 @@ export default async function DocumentUploadPage() {
     data: { user: authUser },
   } = await supabase.auth.getUser();
   const { data: documents } = company ? await listCompanyDocuments(supabase, company.id) : { data: [] };
+  const notApplicableTypes = company
+    ? await loadNotApplicableTypes(createServiceRoleClient(), company.id)
+    : [];
   const maxUploadBytes = 25 * 1024 * 1024;
 
   const existingByType: Record<string, { fileName?: string | null } | undefined> = {};
@@ -107,6 +112,7 @@ export default async function DocumentUploadPage() {
               companyName={company.company_name}
               documentTypes={FOUNDER_DOCUMENT_TYPES.map(({ label, value }) => ({ label, value }))}
               existingByType={existingByType}
+              notApplicableTypes={notApplicableTypes}
               maxUploadBytes={maxUploadBytes}
             />
           )}
@@ -136,7 +142,7 @@ export default async function DocumentUploadPage() {
 
         <div className="space-y-5">
           {/* Document quality analyzer */}
-          <DocumentQualityPanel documents={documents ?? []} />
+          <DocumentQualityPanel documents={documents ?? []} notApplicableTypes={notApplicableTypes} />
 
           {/* Uploaded files list */}
           <div className="cap-surface-card p-4 sm:p-6">

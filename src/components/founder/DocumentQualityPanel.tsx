@@ -163,10 +163,21 @@ type UploadedDoc = {
   status: string | null;
 };
 
-function computeOverallScore(docs: UploadedDoc[]): number {
+// Canonical codes a founder may flag "Not applicable". Matches the API allow-list.
+function specIsNotApplicable(spec: DocSpec, naTypes: Set<string>): boolean {
+  const canonical = spec.typeCode === "LEGAL_DOCUMENT" ? "LEGAL_DOCUMENTS" : spec.typeCode;
+  return naTypes.has(spec.typeCode) || naTypes.has(canonical);
+}
+
+function computeOverallScore(docs: UploadedDoc[], naTypes: Set<string>): number {
   // Delegate to isUploaded() so alias resolution is consistent with the checklist display.
   // Capped at 100 — the 3 supplementary types (weight 5 each) act as bonus points.
-  const raw = DOC_SPECS.reduce((sum, spec) => sum + (isUploaded(spec, docs) ? spec.weight : 0), 0);
+  // A spec flagged "Not applicable" is credited its weight so it never reads as a
+  // penalty (only non-critical types can be flagged, enforced server-side).
+  const raw = DOC_SPECS.reduce((sum, spec) => {
+    if (isUploaded(spec, docs) || specIsNotApplicable(spec, naTypes)) return sum + spec.weight;
+    return sum;
+  }, 0);
   return Math.min(raw, 100);
 }
 
@@ -191,7 +202,7 @@ function isUploaded(spec: DocSpec, docs: UploadedDoc[]): boolean {
 // Document card
 // ---------------------------------------------------------------------------
 
-function DocCard({ spec, uploaded }: { spec: DocSpec; uploaded: boolean }) {
+function DocCard({ spec, uploaded, notApplicable }: { spec: DocSpec; uploaded: boolean; notApplicable: boolean }) {
   const t = useTranslations("founderCmp");
   const [expanded, setExpanded] = useState(false);
 
@@ -199,8 +210,8 @@ function DocCard({ spec, uploaded }: { spec: DocSpec; uploaded: boolean }) {
     <div
       className="overflow-hidden rounded-xl border"
       style={{
-        borderColor: uploaded ? "#bbf7d0" : spec.critical ? "#fca5a5" : "#e2e8f0",
-        background: uploaded ? "#f0fdf4" : spec.critical ? "#fff9f9" : "white",
+        borderColor: notApplicable ? "#e2e8f0" : uploaded ? "#bbf7d0" : spec.critical ? "#fca5a5" : "#e2e8f0",
+        background: notApplicable ? "#f8fafc" : uploaded ? "#f0fdf4" : spec.critical ? "#fff9f9" : "white",
       }}
     >
       {/* Header */}
@@ -214,10 +225,14 @@ function DocCard({ spec, uploaded }: { spec: DocSpec; uploaded: boolean }) {
           <div
             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
             style={{
-              background: uploaded ? "#16a34a" : spec.critical ? "#dc2626" : "#e2e8f0",
+              background: notApplicable ? "#cbd5e1" : uploaded ? "#16a34a" : spec.critical ? "#dc2626" : "#e2e8f0",
             }}
           >
-            {uploaded ? (
+            {notApplicable ? (
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M5 12h14" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+              </svg>
+            ) : uploaded ? (
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M5 13l4 4L19 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -229,20 +244,25 @@ function DocCard({ spec, uploaded }: { spec: DocSpec; uploaded: boolean }) {
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-slate-900">{spec.label}</p>
+            <p className="text-xs font-semibold text-slate-900" style={notApplicable ? { color: "#94a3b8" } : undefined}>{spec.label}</p>
             <p className="text-[10px] text-slate-400">
-              {uploaded
+              {notApplicable
+                ? "Not applicable — excluded from your score"
+                : uploaded
                 ? "Uploaded"
                 : spec.critical
                 ? "Missing — critical for investor conversations"
                 : "Not uploaded"}
-              {" · "}+{spec.weight} pts
+              {notApplicable ? "" : ` · +${spec.weight} pts`}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {!uploaded && spec.critical ? (
+          {notApplicable ? (
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-500">N/A</span>
+          ) : null}
+          {!uploaded && !notApplicable && spec.critical ? (
             <span className="rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-bold text-red-700">{t("critical")}</span>
           ) : null}
           <svg
@@ -294,13 +314,19 @@ function DocCard({ spec, uploaded }: { spec: DocSpec; uploaded: boolean }) {
 
 type Props = Readonly<{
   documents: UploadedDoc[];
+  /** Canonical document-type codes flagged "Not applicable". */
+  notApplicableTypes?: string[];
 }>;
 
-export function DocumentQualityPanel({ documents }: Props) {
+export function DocumentQualityPanel({ documents, notApplicableTypes = [] }: Props) {
   const t = useTranslations("founderCmp");
-  const score = computeOverallScore(documents);
-  const uploadedCount = DOC_SPECS.filter((s) => isUploaded(s, documents)).length;
-  const missingCritical = DOC_SPECS.filter((s) => s.critical && !isUploaded(s, documents)).length;
+  const naTypes = new Set(notApplicableTypes.map((v) => v.toUpperCase()));
+  const score = computeOverallScore(documents, naTypes);
+  // Applicable specs = everything not flagged N/A. N/A specs drop out of the denominator.
+  const applicableSpecs = DOC_SPECS.filter((s) => !specIsNotApplicable(s, naTypes));
+  const naCount = DOC_SPECS.length - applicableSpecs.length;
+  const uploadedCount = applicableSpecs.filter((s) => isUploaded(s, documents)).length;
+  const missingCritical = applicableSpecs.filter((s) => s.critical && !isUploaded(s, documents)).length;
 
   const scoreColor =
     score >= 80 ? "#16a34a" : score >= 55 ? "#d97706" : "#dc2626";
@@ -325,7 +351,8 @@ export function DocumentQualityPanel({ documents }: Props) {
             <div>
               <p className="text-sm font-semibold text-slate-900">{t("document_quality")}</p>
               <p className="text-[11px] text-slate-400">
-                {uploadedCount} of {DOC_SPECS.length} uploaded
+                {uploadedCount} of {applicableSpecs.length} uploaded
+                {naCount > 0 ? ` · ${naCount} N/A` : ""}
                 {missingCritical > 0 ? ` · ${missingCritical} critical missing` : ""}
               </p>
             </div>
@@ -365,7 +392,12 @@ export function DocumentQualityPanel({ documents }: Props) {
         {/* Document cards */}
         <div className="space-y-2">
           {DOC_SPECS.map((spec) => (
-            <DocCard key={spec.typeCode} spec={spec} uploaded={isUploaded(spec, documents)} />
+            <DocCard
+              key={spec.typeCode}
+              spec={spec}
+              uploaded={isUploaded(spec, documents)}
+              notApplicable={specIsNotApplicable(spec, naTypes)}
+            />
           ))}
         </div>
       </div>
