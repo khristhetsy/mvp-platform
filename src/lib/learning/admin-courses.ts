@@ -1,4 +1,12 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+
+// Published learning content is global and already gated by is_published /
+// content_status = 'published'. Read it with the service role so founder
+// visibility never depends on per-request RLS/auth context (a founder's SSR
+// client returning zero rows was hiding all admin-authored courses).
+function publishedReadClient() {
+  return createServiceRoleClient();
+}
 
 export type AdminPublishedCourse = {
   id: string;
@@ -65,7 +73,7 @@ export type AdminPublishedQuizQuestionPublic = {
 };
 
 export async function listPublishedAdminCourses(): Promise<AdminPublishedCourse[]> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = publishedReadClient();
   const { data } = await supabase
     .from("learning_programs")
     .select(
@@ -80,7 +88,7 @@ export async function listPublishedAdminCourses(): Promise<AdminPublishedCourse[
 }
 
 export async function getPublishedAdminCourse(courseId: string): Promise<AdminPublishedCourse | null> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = publishedReadClient();
   const { data } = await supabase
     .from("learning_programs")
     .select(
@@ -94,7 +102,7 @@ export async function getPublishedAdminCourse(courseId: string): Promise<AdminPu
 }
 
 export async function getPublishedAdminCourseBySlug(slug: string): Promise<AdminPublishedCourse | null> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = publishedReadClient();
   const { data } = await supabase
     .from("learning_programs")
     .select(
@@ -108,7 +116,7 @@ export async function getPublishedAdminCourseBySlug(slug: string): Promise<Admin
 }
 
 export async function listPublishedAdminCourseModules(courseId: string): Promise<AdminPublishedModule[]> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = publishedReadClient();
 
   const { data: links } = await supabase
     .from("learning_program_modules")
@@ -136,7 +144,7 @@ export async function listPublishedAdminCourseModules(courseId: string): Promise
 }
 
 export async function listPublishedAdminLessonsForModule(moduleSlug: string): Promise<AdminPublishedLesson[]> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = publishedReadClient();
   const { data } = await supabase
     .from("learning_lessons")
     .select("id, module_id, module_slug, lesson_key, title, body_markdown, order_index, estimated_time_minutes, content_status, video_url, slide_deck_url, video_render_status")
@@ -149,7 +157,7 @@ export async function listPublishedAdminLessonsForModule(moduleSlug: string): Pr
 }
 
 export async function getPublishedAdminLesson(lessonId: string): Promise<AdminPublishedLesson | null> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = publishedReadClient();
   const { data } = await supabase
     .from("learning_lessons")
     .select("id, module_id, module_slug, lesson_key, title, body_markdown, order_index, estimated_time_minutes, content_status, video_url, slide_deck_url, video_render_status")
@@ -161,7 +169,7 @@ export async function getPublishedAdminLesson(lessonId: string): Promise<AdminPu
 }
 
 export async function getPublishedCourseQuiz(courseId: string): Promise<AdminPublishedQuiz | null> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = publishedReadClient();
   const { data } = await supabase
     .from("learning_quizzes")
     .select("id, scope_type, program_id, module_id, lesson_id, title, passing_score, retry_limit, content_status")
@@ -175,7 +183,7 @@ export async function getPublishedCourseQuiz(courseId: string): Promise<AdminPub
 }
 
 export async function listPublishedQuizQuestionsPublic(quizId: string): Promise<AdminPublishedQuizQuestionPublic[]> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = publishedReadClient();
   const { data } = await supabase
     .from("learning_quiz_questions")
     .select("id, order_index, prompt, options")
