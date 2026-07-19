@@ -2693,3 +2693,12 @@ create policy "staff_manage_prospect_investors" on public.prospect_investors
   for all to authenticated
   using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin','analyst')))
   with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin','analyst')));
+
+-- =====================================================================
+-- 20260719001_prospect_investors_source_ref.sql
+-- Track the source CRM contact so re-imports are idempotent.
+-- =====================================================================
+alter table public.prospect_investors add column if not exists source_ref text;
+create unique index if not exists prospect_investors_source_ref_uniq
+  on public.prospect_investors (source_ref)
+  where source_ref is not null;

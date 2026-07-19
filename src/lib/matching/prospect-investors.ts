@@ -76,6 +76,90 @@ export async function createProspectInvestor(
   return data as ProspectInvestor;
 }
 
+type CrmContactRow = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  company: string | null;
+  raw: Record<string, unknown> | null;
+};
+
+function asList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map((v) => String(v).trim()).filter(Boolean);
+  if (typeof value === "string") {
+    return value
+      .split(/[,;/|]+/)
+      .map((v) => v.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function odooProfile(raw: Record<string, unknown> | null): Record<string, unknown> | null {
+  const p = raw?.__profile;
+  return p && typeof p === "object" ? (p as Record<string, unknown>) : null;
+}
+
+function contactCountry(raw: Record<string, unknown> | null): string | null {
+  const c = raw?.country_id;
+  if (Array.isArray(c) && c.length >= 2) return String(c[1]);
+  if (typeof raw?.country === "string") return raw.country;
+  return null;
+}
+
+/**
+ * Bulk-imports investor CRM contacts (crm_contacts where module = 'investor')
+ * into prospect_investors with best-effort enrichment (sector from Odoo
+ * industries, geography from country, type from investor types). Idempotent via
+ * source_ref = the contact id, so re-running only adds new contacts.
+ */
+export async function importInvestorContactsAsProspects(
+  createdBy: string | null,
+): Promise<{ total: number; imported: number; skipped: number }> {
+  const client = prospectClient();
+  const { data } = await client
+    .from("crm_contacts")
+    .select("id, name, email, company, raw")
+    .eq("module", "investor");
+
+  const rows = (data ?? []) as CrmContactRow[];
+  if (rows.length === 0) return { total: 0, imported: 0, skipped: 0 };
+
+  const records = rows.map((r) => {
+    const prof = odooProfile(r.raw);
+    const investorTypes = asList(prof?.investorTypes);
+    const industries = asList(prof?.industries);
+    const country = contactCountry(r.raw);
+    return {
+      name: (r.name || r.email || "Unknown investor").slice(0, 200),
+      investor_type: investorTypes[0] ?? null,
+      preferred_sectors: industries,
+      preferred_stages: [] as string[],
+      preferred_geographies: country ? [country] : [],
+      check_size_min: null,
+      check_size_max: null,
+      notes: r.company ?? null,
+      source: "investor_crm",
+      source_ref: r.id,
+      created_by: createdBy,
+      updated_at: new Date().toISOString(),
+    };
+  });
+
+  let imported = 0;
+  const chunkSize = 500;
+  for (let i = 0; i < records.length; i += chunkSize) {
+    const chunk = records.slice(i, i + chunkSize);
+    const { data: inserted, error } = await client
+      .from("prospect_investors")
+      .upsert(chunk, { onConflict: "source_ref", ignoreDuplicates: true })
+      .select("id");
+    if (!error) imported += (inserted ?? []).length;
+  }
+
+  return { total: records.length, imported, skipped: records.length - imported };
+}
+
 /**
  * Prospects mapped into the matching engine's investor shape. They are scored as
  * "approved" so they rank, but their id carries the `prospect:` prefix and their

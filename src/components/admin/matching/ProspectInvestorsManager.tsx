@@ -53,6 +53,8 @@ export function ProspectInvestorsManager({ initialProspects }: Props) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<string | null>(null);
 
   function update<K extends keyof typeof form>(key: K, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -102,6 +104,34 @@ export function ProspectInvestorsManager({ initialProspects }: Props) {
     }
   }
 
+  async function handleImport() {
+    if (importing) return;
+    setImporting(true);
+    setImportResult(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/prospect-investors/import-from-crm", { method: "POST" });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        setError(data?.error ?? "Import failed.");
+        return;
+      }
+      const r = (await res.json()) as { total: number; imported: number; skipped: number };
+      setImportResult(
+        `Imported ${r.imported} new investor${r.imported === 1 ? "" : "s"} · ${r.skipped} already present (of ${r.total} contacts). Reload the Matching page to see them.`,
+      );
+      const listRes = await fetch("/api/admin/prospect-investors");
+      if (listRes.ok) {
+        const data = (await listRes.json()) as { prospects: ProspectInvestor[] };
+        setProspects(data.prospects);
+      }
+    } catch {
+      setError("Network error during import.");
+    } finally {
+      setImporting(false);
+    }
+  }
+
   const inputClass =
     "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-100";
   const labelClass = "mb-1 block text-xs font-medium text-slate-600";
@@ -118,6 +148,24 @@ export function ProspectInvestorsManager({ initialProspects }: Props) {
           <span className="font-medium text-slate-800">Matching</span> page ranked alongside members,
           suffixed <span className="font-mono text-xs text-slate-800">· prospect</span>.
         </p>
+
+        <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-200 pt-3">
+          <button
+            type="button"
+            onClick={handleImport}
+            disabled={importing}
+            className="rounded-lg bg-slate-900 px-3.5 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
+          >
+            {importing ? "Importing…" : "Import from investor CRM"}
+          </button>
+          <span className="text-xs text-slate-500">
+            Pulls investor CRM contacts in as prospects (best-effort sector/geography). Safe to re-run — duplicates are skipped.
+          </span>
+        </div>
+
+        {importResult ? (
+          <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">{importResult}</p>
+        ) : null}
       </div>
 
       {/* Add prospect form */}
