@@ -277,6 +277,7 @@ function CampaignCard({
 
 export function InvestorOutreachManager() {
   const [campaigns, setCampaigns] = useState<OutreachCampaignSummary[]>([]);
+  const [liveSend, setLiveSend] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -287,8 +288,9 @@ export function InvestorOutreachManager() {
         setError("Failed to load campaigns.");
         return;
       }
-      const data = (await res.json()) as { campaigns: OutreachCampaignSummary[] };
+      const data = (await res.json()) as { campaigns: OutreachCampaignSummary[]; liveSend?: boolean };
       setCampaigns(data.campaigns);
+      setLiveSend(Boolean(data.liveSend));
       setError(null);
     } catch {
       setError("Network error loading campaigns.");
@@ -331,8 +333,16 @@ export function InvestorOutreachManager() {
           investment advice or solicitation. Copy is a locked, counsel-approved template; only
           company / sector / stage are dynamic.
         </p>
-        <p className="mt-1 font-medium">
-          Live email sending is currently OFF (<span className="font-mono">INVESTOR_OUTREACH_LIVE</span>).
+        <p className="mt-2 flex items-center gap-2 font-medium">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+              liveSend ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"
+            }`}
+          >
+            <span className={`h-2 w-2 rounded-full ${liveSend ? "bg-red-500" : "bg-emerald-500"}`} />
+            Live email sending: {liveSend ? "ON — real emails will be sent" : "OFF (safe / test mode)"}
+          </span>
+          <span className="font-mono text-xs text-amber-800">INVESTOR_OUTREACH_LIVE</span>
         </p>
       </div>
 

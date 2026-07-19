@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import {
   listOutreachCampaigns,
   getCampaignRecipients,
+  isOutreachLiveSendEnabled,
   type OutreachCampaign,
 } from "@/lib/outreach/investor-outreach";
 
@@ -80,5 +81,5 @@ export async function GET(): Promise<Response> {
     }),
   );
 
-  return NextResponse.json({ campaigns: summaries });
+  return NextResponse.json({ campaigns: summaries, liveSend: isOutreachLiveSendEnabled() });
 }

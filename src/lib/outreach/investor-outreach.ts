@@ -17,7 +17,7 @@ const MAX_AUDIENCE = 50;
 /** Live investor email dispatch is OFF until this is explicitly enabled AND the
  *  disclaimer copy is counsel-approved. When off, the pass advances the log
  *  (queued → sent) without dispatching real email — safe for end-to-end testing. */
-function outreachLiveSendEnabled(): boolean {
+export function isOutreachLiveSendEnabled(): boolean {
   return process.env.INVESTOR_OUTREACH_LIVE === "true";
 }
 
@@ -149,7 +149,7 @@ export async function setCampaignWeeklyCap(campaignId: string, cap: number): Pro
  */
 export async function processApprovedOutreach(): Promise<{ campaignsRun: number; recipientsSent: number; liveSend: boolean }> {
   const db = client();
-  const live = outreachLiveSendEnabled();
+  const live = isOutreachLiveSendEnabled();
   const sixDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString();
 
   const { data: campaigns } = await db

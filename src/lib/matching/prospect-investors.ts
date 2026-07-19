@@ -117,11 +117,12 @@ export async function importInvestorContactsAsProspects(
   createdBy: string | null,
 ): Promise<{ total: number; imported: number; skipped: number }> {
   const client = prospectClient();
-  const { data } = await client
+  const { data, error } = await client
     .from("crm_contacts")
-    .select("id, name, email, company, raw")
+    .select("*")
     .eq("module", "investor");
 
+  if (error) return { total: 0, imported: 0, skipped: 0 };
   const rows = (data ?? []) as CrmContactRow[];
   if (rows.length === 0) return { total: 0, imported: 0, skipped: 0 };
 
