@@ -29,6 +29,7 @@ import { AdminCompanyAIAssessment } from "@/components/admin/AdminCompanyAIAsses
 import { InvestableReadinessPanel } from "@/components/investor/InvestableReadinessPanel";
 import { FounderJourneyPanel } from "@/components/admin/company-workspace/FounderJourneyPanel";
 import { NotificationSettings } from "@/components/admin/company-workspace/NotificationSettings";
+import { SubscriptionManager } from "@/components/admin/company-workspace/SubscriptionManager";
 
 const TABS = [
   { key: "initialize", label: "Initialize" },
@@ -256,6 +257,12 @@ export function AdminCompanyWorkspace({
           <PageSection title="Notifications" subtitle="Choose which events notify you and how">
             <NotificationSettings />
           </PageSection>
+
+          {data.founder ? (
+            <PageSection title="Subscription" subtitle="Extend trial or comp a plan — no payment, audited">
+              <SubscriptionManager profileId={data.founder.id} />
+            </PageSection>
+          ) : null}
         </div>
       ) : null}
     </div>
