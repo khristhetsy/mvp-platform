@@ -77,9 +77,9 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
       </div>
 
       <div>
-        {rows.map((r) => (
+        {rows.map((r, i) => (
           <div
-            key={r.symbol}
+            key={`${r.symbol}-${i}`}
             className={`grid grid-cols-[1fr_auto] items-center gap-3 border-b border-slate-100 px-5 py-4 transition-colors last:border-b-0 hover:bg-[var(--blue-muted)] sm:grid ${COLS}`}
           >
             {/* investor */}

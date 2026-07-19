@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Company } from "@/lib/supabase/types";
 import { companyToMatchProfile, loadApprovedInvestorMatchProfiles } from "@/lib/matching/load-matching-data";
+import { loadProspectInvestorMatchProfiles, isProspectInvestorId } from "@/lib/matching/prospect-investors";
 import { matchInvestorToCompany } from "@/lib/matching/investor-company-matching";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
@@ -90,9 +91,16 @@ type Activity = { count: number; sum: number; last: number };
  */
 export async function loadFounderInvestorBoard(
   company: Company,
-  limit = 24,
+  limit = 50,
 ): Promise<{ rows: FounderInvestorRow[]; summary: FounderPrivateMarketSummary }> {
-  const investors = await loadApprovedInvestorMatchProfiles();
+  // Full network: approved members + enriched prospects, ranked by fit. Identities
+  // stay anonymized. Only members carry pledge / score / outreach enrichment.
+  const [members, prospectData] = await Promise.all([
+    loadApprovedInvestorMatchProfiles(),
+    loadProspectInvestorMatchProfiles(),
+  ]);
+  const investors = [...members, ...prospectData.profiles];
+  const memberCount = members.length;
   const profile = companyToMatchProfile(company);
 
   const scored = investors
@@ -103,10 +111,12 @@ export async function loadFounderInvestorBoard(
   const admin = createServiceRoleClient();
   const rawAdmin = admin as unknown as SupabaseClient;
 
-  // Real pledge activity per investor (count, indicated total, last active).
-  const ids = scored
+  // Enrichment applies to real member investors only (prospects have no
+  // pledges, no partner score, and aren't outreach targets).
+  const memberIds = scored
     .map((s) => s.investor.profile_id)
-    .filter((id): id is string => Boolean(id));
+    .filter((id): id is string => Boolean(id) && !isProspectInvestorId(id));
+  const ids = memberIds;
   const activity = new Map<string, Activity>();
 
   if (ids.length > 0) {
@@ -159,15 +169,16 @@ export async function loadFounderInvestorBoard(
       .from("crm_contacts")
       .select("id", { count: "exact", head: true })
       .eq("module", "investor");
-    if (typeof count === "number" && count > investors.length) totalContacts = count;
+    if (typeof count === "number" && count > 0) totalContacts = count;
   }
 
   const now = Date.now();
   const rows: FounderInvestorRow[] = scored.map(({ investor, match }, index) => {
     const sectors = tokens(investor.preferred_sectors);
     const type = investor.investor_type ? String(investor.investor_type) : "Investor";
+    const rawId = (investor.profile_id ?? "").replace(/^prospect:/, "");
     const code =
-      (investor.profile_id ?? "").replace(/[^a-z0-9]/gi, "").slice(0, 4).toUpperCase() ||
+      rawId.replace(/[^a-z0-9]/gi, "").slice(0, 4).toUpperCase() ||
       String(index + 1).padStart(4, "0");
     const agg = investor.profile_id ? activity.get(investor.profile_id) : undefined;
     const lastMs = agg && agg.last ? now - agg.last : null;
@@ -203,7 +214,7 @@ export async function loadFounderInvestorBoard(
   const shownScores = scored.map((s) => s.match.matchScore);
   const ratedScores = rows.map((r) => r.investorScore).filter((s): s is number => s != null);
   const summary: FounderPrivateMarketSummary = {
-    investorUniverse: investors.length,
+    investorUniverse: memberCount,
     totalContacts,
     reachedOut: rows.filter((r) => r.outreach === "reached_out").length,
     pledgedTotal: rows.reduce((total, r) => total + r.indicated, 0),
