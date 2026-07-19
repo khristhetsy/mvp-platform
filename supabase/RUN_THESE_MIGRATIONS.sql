@@ -2699,6 +2699,6 @@ create policy "staff_manage_prospect_investors" on public.prospect_investors
 -- Track the source CRM contact so re-imports are idempotent.
 -- =====================================================================
 alter table public.prospect_investors add column if not exists source_ref text;
+drop index if exists prospect_investors_source_ref_uniq;
 create unique index if not exists prospect_investors_source_ref_uniq
-  on public.prospect_investors (source_ref)
-  where source_ref is not null;
+  on public.prospect_investors (source_ref);
