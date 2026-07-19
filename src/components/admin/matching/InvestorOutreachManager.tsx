@@ -60,6 +60,52 @@ const RECIPIENT_STATUS_LABEL: Record<OutreachRecipient["status"], string> = {
   skipped: "Skipped",
 };
 
+const FLOW_STEPS = [
+  { label: "Match", sub: "Fit ≥ 70%", state: "done" },
+  { label: "Notify", sub: "Founder + Admin", state: "done" },
+  { label: "Draft", sub: "Auto-generated", state: "done" },
+  { label: "Approve", sub: "Admin gate", state: "current" },
+  { label: "Queue", sub: "X / week", state: "todo" },
+  { label: "Send + log", sub: "Per recipient", state: "todo" },
+] as const;
+
+function FlowStepper() {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start overflow-x-auto">
+        {FLOW_STEPS.map((step, i) => {
+          const done = step.state === "done";
+          const current = step.state === "current";
+          return (
+            <div key={step.label} className="flex flex-1 items-start last:flex-none">
+              <div className="flex min-w-[84px] flex-col items-center text-center">
+                <div
+                  className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
+                    current
+                      ? "bg-indigo-600 text-white ring-4 ring-indigo-100"
+                      : done
+                        ? "bg-emerald-500 text-white"
+                        : "bg-slate-100 text-slate-400"
+                  }`}
+                >
+                  {done ? "✓" : i + 1}
+                </div>
+                <span className={`mt-1.5 text-[11px] font-semibold ${current ? "text-indigo-700" : done ? "text-slate-800" : "text-slate-400"}`}>
+                  {step.label}
+                </span>
+                <span className="text-[10px] text-slate-400">{step.sub}</span>
+              </div>
+              {i < FLOW_STEPS.length - 1 ? (
+                <div className={`mx-1 mt-4 h-0.5 flex-1 rounded ${done ? "bg-emerald-400" : "bg-slate-200"}`} />
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function LockedTemplatePreview() {
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-5">
@@ -345,6 +391,8 @@ export function InvestorOutreachManager() {
           <span className="font-mono text-xs text-amber-800">INVESTOR_OUTREACH_LIVE</span>
         </p>
       </div>
+
+      <FlowStepper />
 
       <LockedTemplatePreview />
 
