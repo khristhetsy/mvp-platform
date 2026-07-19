@@ -270,21 +270,22 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
     title: "Investors",
     items: [
       { href: "/founder/private-market", label: "Private Market", minStage: "qualify" },
-      {
-        href: "/founder/investors",
-        label: "Fundraising",
-        minStage: "deploy",
-        children: [
-          { href: "/founder/investors", label: "Investors", minStage: "deploy" },
-          { href: "/founder/matching", label: "AI match center", minStage: "deploy" },
-          { href: "/founder/investor-pipeline", label: "Pipeline", minStage: "deploy" },
-          { href: "/founder/investors/outreach", label: "Outreach (CRM)", minStage: "deploy" },
-          { href: "/founder/investors/matches", label: "Matches", minStage: "deploy" },
-          { href: "/founder/deal-room", label: "Deal Room", minStage: "deploy" },
-          { href: "/founder/capital-raise", label: "Capital Raise", minStage: "deploy" },
-          { href: "/founder/spvs", label: "SPVs" },
-        ],
-      },
+      // Hidden from nav (routes still resolve). Restore by uncommenting.
+      // {
+      //   href: "/founder/investors",
+      //   label: "Fundraising",
+      //   minStage: "deploy",
+      //   children: [
+      //     { href: "/founder/investors", label: "Investors", minStage: "deploy" },
+      //     { href: "/founder/matching", label: "AI match center", minStage: "deploy" },
+      //     { href: "/founder/investor-pipeline", label: "Pipeline", minStage: "deploy" },
+      //     { href: "/founder/investors/outreach", label: "Outreach (CRM)", minStage: "deploy" },
+      //     { href: "/founder/investors/matches", label: "Matches", minStage: "deploy" },
+      //     { href: "/founder/deal-room", label: "Deal Room", minStage: "deploy" },
+      //     { href: "/founder/capital-raise", label: "Capital Raise", minStage: "deploy" },
+      //     { href: "/founder/spvs", label: "SPVs" },
+      //   ],
+      // },
       {
         href: "/founder/business-plan",
         label: "Docs & models",
@@ -420,7 +421,8 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
         href: "/investor/opportunities",
         label: "Private Market",
         children: [
-          { href: "/investor/opportunities", label: "Overview" },
+          // Hidden from nav (route still resolves). Restore by uncommenting.
+          // { href: "/investor/opportunities", label: "Overview" },
           { href: "/investor/watchlist", label: "Watchlist" },
           { href: "/investor/interest-pipeline", label: "Interest Pipeline" },
           { href: "/investor/deal-room", label: "Deal Room" },
