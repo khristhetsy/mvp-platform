@@ -224,6 +224,9 @@ export function InvestorOutreachCoach({
       <div style={{ padding: "24px 0", textAlign: "center" }}>
         <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 8px" }}>{t("no_contacts_in_your_crm_yet")}</p>
         <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>{t("add_investors_to_your_crm_first_then_come_ba")}</p>
+        <p style={{ fontSize: 11, color: "#9ca3af", margin: "10px auto 0", maxWidth: 340, lineHeight: 1.5 }}>
+          This coach is for your own leads and connected investors. Outreach to matched platform investors is handled automatically by iCapOS — nothing to send here.
+        </p>
       </div>
     );
   }
@@ -249,6 +252,21 @@ export function InvestorOutreachCoach({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* How outreach works — automated vs manual */}
+      <div style={{ background: "#F1F5FF", border: "0.5px solid #d8e2fb", borderLeft: `3px solid ${ACCENT}`, borderRadius: 10, padding: "12px 14px" }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: ACCENT, textTransform: "uppercase", letterSpacing: ".07em" }}>
+          How outreach works
+        </span>
+        <p style={{ fontSize: 12, color: "#334155", margin: "6px 0 0", lineHeight: 1.6 }}>
+          <b style={{ color: "#1e2a5a" }}>Platform investors are reached automatically.</b> When you match with an investor in the iCapOS
+          network, we draft and send the introduction for you — approval-gated and capped. You don&apos;t email them yourself.
+        </p>
+        <p style={{ fontSize: 12, color: "#334155", margin: "6px 0 0", lineHeight: 1.6 }}>
+          <b style={{ color: "#1e2a5a" }}>This coach is for your own contacts</b> — the leads you added and investors you&apos;re
+          already connected to. That&apos;s the only outreach you send by hand.
+        </p>
+      </div>
+
       {/* Header description */}
       <div style={{ background: "#EEEDFE", borderRadius: 10, padding: "12px 14px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
@@ -261,7 +279,7 @@ export function InvestorOutreachCoach({
           </span>
         </div>
         <p style={{ fontSize: 12, color: "#1A6CE4", margin: 0, lineHeight: 1.6 }}>
-          Select an investor from your CRM. We&apos;ll analyse their profile and tell you exactly how to frame your outreach — before you send a word.
+          Select one of your own contacts. We&apos;ll analyse their profile and tell you exactly how to frame your outreach — before you send a word.
         </p>
       </div>
 
