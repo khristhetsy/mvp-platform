@@ -1,7 +1,12 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Company } from "@/lib/supabase/types";
 import { companyToMatchProfile, loadApprovedInvestorMatchProfiles } from "@/lib/matching/load-matching-data";
 import { matchInvestorToCompany } from "@/lib/matching/investor-company-matching";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
+import { TIER_LABELS, type PartnerScore } from "@/lib/investor-rating/types";
+
+export type OutreachStatus = "reached_out" | "queued" | "skipped" | "none";
 
 export type InvestorMomentum = "active" | "warm" | "quiet";
 
@@ -21,12 +26,22 @@ export type FounderInvestorRow = {
   momentum: InvestorMomentum | null;
   /** Investor quality trend — null until investor-side snapshots exist. */
   trend: null;
+  /** Where the admin-run introduction campaign stands with this investor. */
+  outreach: OutreachStatus;
+  /** Platform partner score (0–100), null when the investor is unrated ("New"). */
+  investorScore: number | null;
+  scoreTier: string | null;
+  scoreRated: boolean;
 };
 
 export type FounderPrivateMarketSummary = {
   investorUniverse: number;
+  totalContacts: number;
+  reachedOut: number;
+  pledgedTotal: number;
   strongCount: number;
   avgMatch: number | null;
+  avgScore: number | null;
 };
 
 function matchBand(score: number): "high" | "mid" | "low" {
@@ -85,6 +100,9 @@ export async function loadFounderInvestorBoard(
     .sort((a, b) => b.match.matchScore - a.match.matchScore)
     .slice(0, limit);
 
+  const admin = createServiceRoleClient();
+  const rawAdmin = admin as unknown as SupabaseClient;
+
   // Real pledge activity per investor (count, indicated total, last active).
   const ids = scored
     .map((s) => s.investor.profile_id)
@@ -92,7 +110,6 @@ export async function loadFounderInvestorBoard(
   const activity = new Map<string, Activity>();
 
   if (ids.length > 0) {
-    const admin = createServiceRoleClient();
     const { data } = await admin
       .from("investor_interests")
       .select("investor_id, pledge_amount, pledge_amount_updated_at")
@@ -111,6 +128,40 @@ export async function loadFounderInvestorBoard(
     }
   }
 
+  // Platform partner ("investor") scores, batched.
+  const scoreMap: Map<string, PartnerScore> =
+    ids.length > 0 ? await loadPartnerScoresBatch(admin, ids) : new Map<string, PartnerScore>();
+
+  // Outreach status per investor from this founder's own campaign (admin-run).
+  const outreachByInvestor = new Map<string, string>();
+  {
+    const { data: campaign } = await rawAdmin
+      .from("investor_outreach_campaigns")
+      .select("id")
+      .eq("company_id", company.id)
+      .maybeSingle();
+    const campaignId = (campaign as { id: string } | null)?.id ?? null;
+    if (campaignId) {
+      const { data: recips } = await rawAdmin
+        .from("investor_outreach_recipients")
+        .select("investor_ref, status")
+        .eq("campaign_id", campaignId);
+      for (const row of (recips ?? []) as Array<{ investor_ref: string; status: string }>) {
+        outreachByInvestor.set(row.investor_ref, row.status);
+      }
+    }
+  }
+
+  // Total investor contacts in the network (investor CRM), for the reach stat.
+  let totalContacts = investors.length;
+  {
+    const { count } = await rawAdmin
+      .from("crm_contacts")
+      .select("id", { count: "exact", head: true })
+      .eq("module", "investor");
+    if (typeof count === "number" && count > investors.length) totalContacts = count;
+  }
+
   const now = Date.now();
   const rows: FounderInvestorRow[] = scored.map(({ investor, match }, index) => {
     const sectors = tokens(investor.preferred_sectors);
@@ -120,6 +171,16 @@ export async function loadFounderInvestorBoard(
       String(index + 1).padStart(4, "0");
     const agg = investor.profile_id ? activity.get(investor.profile_id) : undefined;
     const lastMs = agg && agg.last ? now - agg.last : null;
+    const rawOutreach = investor.profile_id ? outreachByInvestor.get(investor.profile_id) : undefined;
+    const outreach: OutreachStatus =
+      rawOutreach === "sent"
+        ? "reached_out"
+        : rawOutreach === "queued"
+          ? "queued"
+          : rawOutreach === "skipped"
+            ? "skipped"
+            : "none";
+    const ps = investor.profile_id ? scoreMap.get(investor.profile_id) : undefined;
     return {
       symbol: `INV·${code}`,
       label: sectors.length ? `${type} · ${sectors.slice(0, 2).join(", ")} focus` : type,
@@ -132,15 +193,26 @@ export async function loadFounderInvestorBoard(
       lastActiveLabel: lastMs != null ? relativeShort(lastMs) : null,
       momentum: lastMs != null ? momentumFor(lastMs) : null,
       trend: null,
+      outreach,
+      investorScore: ps?.score ?? null,
+      scoreTier: ps ? TIER_LABELS[ps.tier] : null,
+      scoreRated: ps?.status === "rated",
     };
   });
 
   const shownScores = scored.map((s) => s.match.matchScore);
+  const ratedScores = rows.map((r) => r.investorScore).filter((s): s is number => s != null);
   const summary: FounderPrivateMarketSummary = {
     investorUniverse: investors.length,
+    totalContacts,
+    reachedOut: rows.filter((r) => r.outreach === "reached_out").length,
+    pledgedTotal: rows.reduce((total, r) => total + r.indicated, 0),
     strongCount: shownScores.filter((s) => s >= 75).length,
     avgMatch: shownScores.length
       ? Math.round((shownScores.reduce((a, b) => a + b, 0) / shownScores.length) * 10) / 10
+      : null,
+    avgScore: ratedScores.length
+      ? Math.round(ratedScores.reduce((a, b) => a + b, 0) / ratedScores.length)
       : null,
   };
 

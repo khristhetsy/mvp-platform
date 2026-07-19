@@ -1,4 +1,4 @@
-import { LayoutGrid, Star, Gauge } from "lucide-react";
+import { Users, Send, HandCoins, Gauge } from "lucide-react";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { getTranslations } from "next-intl/server";
 import { FounderPrivateMarketBoard } from "@/components/founder/FounderPrivateMarketBoard";
@@ -19,12 +19,30 @@ export default async function FounderPrivateMarketPage() {
 
   const board = company
     ? await loadFounderInvestorBoard(company)
-    : { rows: [], summary: { investorUniverse: 0, strongCount: 0, avgMatch: null } };
+    : {
+        rows: [],
+        summary: {
+          investorUniverse: 0,
+          totalContacts: 0,
+          reachedOut: 0,
+          pledgedTotal: 0,
+          strongCount: 0,
+          avgMatch: null,
+          avgScore: null,
+        },
+      };
+
+  const pledged = board.summary.pledgedTotal;
+  const pledgedLabel =
+    pledged > 0
+      ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: pledged >= 1_000_000 ? "compact" : "standard", maximumFractionDigits: pledged >= 1_000_000 ? 1 : 0 }).format(pledged)
+      : "$0";
 
   const cards = [
-    { icon: LayoutGrid, label: "Investor universe", value: String(board.summary.investorUniverse), sub: "approved on the platform", tint: "var(--indigo)", bg: "var(--indigo-soft)" },
-    { icon: Star, label: "Strong fits", value: String(board.summary.strongCount), sub: "match 75+ to your company", tint: "var(--teal)", bg: "var(--teal-muted)" },
-    { icon: Gauge, label: "Avg match", value: board.summary.avgMatch != null ? board.summary.avgMatch.toFixed(1) : "—", sub: "across ranked investors", tint: "var(--navy)", bg: "var(--navy-muted)" },
+    { icon: Users, label: "Total investor contacts", value: board.summary.totalContacts.toLocaleString(), sub: "in the iCapOS network", tint: "var(--indigo)", bg: "var(--indigo-soft)" },
+    { icon: Send, label: "Reached out", value: String(board.summary.reachedOut), sub: `of ${board.summary.investorUniverse} contacted`, tint: "var(--teal)", bg: "var(--teal-muted)" },
+    { icon: HandCoins, label: "Pledged", value: pledgedLabel, sub: "soft commitments", tint: "var(--navy)", bg: "var(--navy-muted)" },
+    { icon: Gauge, label: "Avg investor score", value: board.summary.avgScore != null ? String(board.summary.avgScore) : "—", sub: "across rated investors", tint: "var(--navy)", bg: "var(--navy-muted)" },
   ];
 
   return (
@@ -49,7 +67,7 @@ export default async function FounderPrivateMarketPage() {
           <>
             <FounderPrivateMarketTicker rows={board.rows} />
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {cards.map((c) => {
                 const Icon = c.icon;
                 return (

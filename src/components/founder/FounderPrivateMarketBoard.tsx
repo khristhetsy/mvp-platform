@@ -1,6 +1,6 @@
 import { LayoutGrid } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { FounderInvestorRow } from "@/lib/founder/private-market";
+import type { FounderInvestorRow, OutreachStatus } from "@/lib/founder/private-market";
 
 const SIGIL: Record<string, string> = {
   high: "bg-[var(--teal-muted)] text-[var(--teal)]",
@@ -14,6 +14,13 @@ const PRICE: Record<string, string> = {
 };
 const BAND_LABEL: Record<string, string> = { high: "Strong", mid: "Moderate", low: "Building" };
 
+const OUTREACH_META: Record<OutreachStatus, { label: string; className: string; dot: string }> = {
+  reached_out: { label: "Reached out", className: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" },
+  queued: { label: "Queued", className: "bg-amber-50 text-amber-700", dot: "bg-amber-500" },
+  skipped: { label: "Skipped", className: "bg-slate-100 text-slate-500", dot: "bg-slate-400" },
+  none: { label: "Not contacted", className: "bg-slate-100 text-slate-500", dot: "bg-slate-300" },
+};
+
 function money(n: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -23,13 +30,17 @@ function money(n: number): string {
   }).format(n);
 }
 
-function Pulse({ momentum }: { momentum: FounderInvestorRow["momentum"] }) {
-  if (momentum === "active") return <span className="cap-ping inline-block h-2 w-2 rounded-full bg-[var(--teal)] text-[var(--teal)]" />;
-  if (momentum === "warm") return <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />;
-  return <span className="inline-block h-2 w-2 rounded-full bg-slate-300" />;
+function OutreachPill({ status }: { status: OutreachStatus }) {
+  const m = OUTREACH_META[status];
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${m.className}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${m.dot}`} />
+      {m.label}
+    </span>
+  );
 }
 
-const COLS = "sm:grid-cols-[1.7fr_0.8fr_0.65fr_1.1fr_0.85fr_0.8fr]";
+const COLS = "sm:grid-cols-[1.7fr_0.7fr_1.1fr_1.1fr_1fr]";
 
 export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInvestorRow[] }>) {
   const t = useTranslations("founderCmp");
@@ -60,10 +71,9 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
       <div className={`hidden gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 font-mono text-[9.5px] uppercase tracking-wide text-slate-400 sm:grid ${COLS}`}>
         <div>{t("investor")}</div>
         <div className="text-right">{t("match")}</div>
-        <div className="text-right">{t("trend")}</div>
-        <div className="text-right">{t("pledge_interest")}</div>
-        <div>{t("momentum")}</div>
-        <div>{t("sector")}</div>
+        <div className="text-center">Outreach</div>
+        <div className="text-center">Pledge</div>
+        <div className="text-center">Investor score</div>
       </div>
 
       <div>
@@ -89,44 +99,38 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
               <div className="mt-1 font-mono text-[9px] uppercase tracking-wide text-slate-400">{BAND_LABEL[r.band]}</div>
             </div>
 
-            {/* trend — no investor-side history yet */}
-            <div className="hidden text-right font-mono text-xs text-slate-300 sm:block" title={t("investor_trend_needs_score_history_not_colle")}>
-              —
+            {/* outreach */}
+            <div className="flex items-center justify-start sm:justify-center">
+              <OutreachPill status={r.outreach} />
             </div>
 
-            {/* pledge interest */}
-            <div className="hidden text-right sm:block">
-              {r.pledgeCount > 0 ? (
+            {/* pledge */}
+            <div className="text-left sm:text-center">
+              {r.indicated > 0 ? (
                 <>
-                  <div className="font-mono text-[12.5px] font-semibold text-slate-700">
-                    {r.pledgeCount} pledge{r.pledgeCount === 1 ? "" : "s"}
+                  <div className="inline-flex items-center rounded-full bg-[var(--blue-muted)] px-2.5 py-1 text-[11px] font-semibold text-[var(--blue-hover)]">
+                    Soft pledge
                   </div>
-                  <div className="font-mono text-[10px] text-slate-400">{money(r.indicated)} indicated</div>
+                  <div className="mt-1 font-mono text-[10px] text-slate-400">{money(r.indicated)} indicated</div>
                 </>
               ) : (
-                <>
-                  <div className="font-mono text-[12.5px] font-semibold text-slate-400">0 pledges</div>
-                  <div className="font-mono text-[10px] text-slate-300">—</div>
-                </>
+                <span className="font-mono text-[12px] text-slate-300">—</span>
               )}
             </div>
 
-            {/* momentum */}
-            <div className="hidden items-center gap-2 font-mono text-[11px] text-slate-500 sm:flex">
-              <Pulse momentum={r.momentum} />
-              <span>{r.lastActiveLabel ?? "—"}</span>
-            </div>
-
-            {/* sector */}
-            <div className="hidden flex-wrap gap-1.5 sm:flex">
-              {r.sectors.length > 0 ? (
-                r.sectors.map((t) => (
-                  <span key={t} className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[10px] text-slate-600">
-                    {t}
-                  </span>
-                ))
+            {/* investor score */}
+            <div className="text-left sm:text-center">
+              {r.scoreRated && r.investorScore != null ? (
+                <>
+                  <div className="font-mono text-[17px] font-semibold leading-none text-[var(--navy)]">{r.investorScore}</div>
+                  <div className="mt-1 font-mono text-[9px] uppercase tracking-wide text-slate-400">
+                    {r.scoreTier ?? "Rated"}
+                  </div>
+                </>
               ) : (
-                <span className="font-mono text-[10px] text-slate-300">—</span>
+                <div className="font-mono text-[10px] text-slate-400" title="Not enough investor activity to score yet">
+                  Insufficient data
+                </div>
               )}
             </div>
           </div>
