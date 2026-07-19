@@ -1,8 +1,6 @@
 import { formatUsd } from "@/lib/ui/format-display";
 import {
-  countHighMatches,
   matchInvestorToCompany,
-  rankCompaniesForInvestor,
   rankInvestorsForCompany,
   type CompanyMatchProfile,
   type InvestorMatchProfile,
@@ -174,37 +172,57 @@ export async function loadAdminMatchingCenterSnapshot(): Promise<AdminMatchingCe
   const memberNames = await loadInvestorDisplayNames(memberInvestors.map((row) => row.profile_id));
   const nameById = new Map<string, string>([...memberNames, ...prospects.names]);
 
-  const pairs: MatchingCenterPairRow[] = [];
+  // Single streaming pass. Materializing + re-filtering the full company × investor
+  // matrix was O(companies × investors) per aggregate and blew up past a few
+  // thousand investors. Here we scan once, keep running aggregates, and retain
+  // only meaningful pairs (>= floor, capped) for the detail table + filters.
+  const MEANINGFUL_FLOOR = 25;
+  const MAX_DETAIL_PAIRS = 1000;
+
+  const distributionCounts = { high: 0, medium: 0, low: 0, minimal: 0 };
+  let scoreSum = 0;
+  let totalPairs = 0;
+  let highMatchCount = 0;
+
+  const companyAgg = new Map<string, { top: number; high: number }>();
+  const investorAgg = new Map<string, { top: number; high: number }>();
+  const detailPairs: MatchingCenterPairRow[] = [];
 
   for (const company of marketplaceCompanies) {
     for (const investor of investors) {
-      pairs.push(buildPairRow(investor, company, nameById.get(investor.profile_id) ?? "Platform investor"));
+      const row = buildPairRow(investor, company, nameById.get(investor.profile_id) ?? "Platform investor");
+      totalPairs += 1;
+      scoreSum += row.matchScore;
+      distributionCounts[scoreBucket(row.matchScore)] += 1;
+      const isHigh = row.matchScore >= 70;
+      if (isHigh) highMatchCount += 1;
+
+      const ca = companyAgg.get(row.companyId) ?? { top: 0, high: 0 };
+      ca.top = Math.max(ca.top, row.matchScore);
+      if (isHigh) ca.high += 1;
+      companyAgg.set(row.companyId, ca);
+
+      const ia = investorAgg.get(row.investorId) ?? { top: 0, high: 0 };
+      ia.top = Math.max(ia.top, row.matchScore);
+      if (isHigh) ia.high += 1;
+      investorAgg.set(row.investorId, ia);
+
+      if (row.matchScore >= MEANINGFUL_FLOOR) detailPairs.push(row);
     }
   }
 
-  const scores = pairs.map((row) => row.matchScore);
-  const averageMatchScore =
-    scores.length > 0 ? Math.round(scores.reduce((total, score) => total + score, 0) / scores.length) : 0;
-
-  const distributionCounts = { high: 0, medium: 0, low: 0, minimal: 0 };
-  for (const score of scores) {
-    distributionCounts[scoreBucket(score)] += 1;
-  }
+  const averageMatchScore = totalPairs > 0 ? Math.round(scoreSum / totalPairs) : 0;
 
   const topCompanies = marketplaceCompanies
     .map((company) => {
-      const ranked = rankInvestorsForCompany(company, investors, 1);
-      const companyPairs = pairs.filter((row) => row.companyId === company.id);
+      const agg = companyAgg.get(company.id) ?? { top: 0, high: 0 };
       return {
         companyId: company.id,
         companyName: company.companyName,
         industry: company.industry,
         geography: company.geography,
-        topMatchScore: ranked[0]?.match.matchScore ?? 0,
-        highMatchInvestorCount: countHighMatches(
-          companyPairs.map((row) => ({ companyId: row.companyId, matchScore: row.matchScore, matchReasons: row.matchReasons, missingFitReasons: row.missingFitReasons })),
-          70,
-        ),
+        topMatchScore: agg.top,
+        highMatchInvestorCount: agg.high,
       };
     })
     .sort((a, b) => b.topMatchScore - a.topMatchScore || b.highMatchInvestorCount - a.highMatchInvestorCount)
@@ -212,21 +230,21 @@ export async function loadAdminMatchingCenterSnapshot(): Promise<AdminMatchingCe
 
   const topInvestors = investors
     .map((investor) => {
-      const ranked = rankCompaniesForInvestor(investor, marketplaceCompanies, 1);
-      const investorPairs = pairs.filter((row) => row.investorId === investor.profile_id);
+      const agg = investorAgg.get(investor.profile_id) ?? { top: 0, high: 0 };
       return {
         investorId: investor.profile_id,
         investorName: nameById.get(investor.profile_id) ?? "Platform investor",
         investorType: investor.investor_type ?? null,
-        topMatchScore: ranked[0]?.match.matchScore ?? 0,
-        highMatchCompanyCount: countHighMatches(
-          investorPairs.map((row) => ({ companyId: row.companyId, matchScore: row.matchScore, matchReasons: row.matchReasons, missingFitReasons: row.missingFitReasons })),
-          70,
-        ),
+        topMatchScore: agg.top,
+        highMatchCompanyCount: agg.high,
       };
     })
     .sort((a, b) => b.topMatchScore - a.topMatchScore || b.highMatchCompanyCount - a.highMatchCompanyCount)
     .slice(0, 12);
+
+  // Bounded, score-sorted detail set for the filterable table + recent matches.
+  detailPairs.sort((a, b) => b.matchScore - a.matchScore);
+  const pairs = detailPairs.slice(0, MAX_DETAIL_PAIRS);
 
   const recentMatches = [...pairs]
     .filter((row) => row.matchScore >= 50)
@@ -241,11 +259,8 @@ export async function loadAdminMatchingCenterSnapshot(): Promise<AdminMatchingCe
     stats: {
       marketplaceCompanyCount: marketplaceCompanies.length,
       approvedInvestorCount: investors.length,
-      totalPairs: pairs.length,
-      highMatchCount: countHighMatches(
-        pairs.map((row) => ({ companyId: row.companyId, matchScore: row.matchScore, matchReasons: row.matchReasons, missingFitReasons: row.missingFitReasons })),
-        70,
-      ),
+      totalPairs,
+      highMatchCount,
       averageMatchScore,
     },
     scoreDistribution: [
