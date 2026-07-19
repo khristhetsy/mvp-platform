@@ -64,6 +64,21 @@ export default async function FounderAdminCoursePage({ params }: PageProps) {
       .map((r) => `${r.module_slug}:${r.lesson_id}`),
   );
 
+  // Best attempt on the course-completion quiz (gates completion at 80%).
+  const { data: quizAttempts } = quiz
+    ? await supabase
+        .from("founder_quiz_attempts")
+        .select("score, passed")
+        .eq("company_id", company.id)
+        .eq("founder_id", profile.id)
+        .eq("module_slug", `course:${courseId}`)
+        .eq("lesson_id", `quiz:${quiz.id}`)
+        .order("score", { ascending: false })
+        .limit(1)
+    : { data: null };
+  const bestQuiz = quizAttempts?.[0] ?? null;
+  const quizPassed = Boolean(bestQuiz?.passed);
+
   const totalLessons = [...lessonsByModule.values()].reduce((sum, list) => sum + list.length, 0);
   const completedLessons = [...lessonsByModule.entries()].reduce((sum, [moduleSlug, list]) => {
     return sum + list.filter((l) => completedSet.has(`${moduleSlug}:${l.lesson_key}`)).length;
@@ -132,6 +147,38 @@ export default async function FounderAdminCoursePage({ params }: PageProps) {
               </div>
             ) : null}
           </div>
+
+          {/* Completion gate */}
+          {quiz ? (
+            <div
+              className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-5 py-4 ${
+                quizPassed ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"
+              }`}
+            >
+              <div>
+                <p className={`text-sm font-semibold ${quizPassed ? "text-emerald-800" : "text-amber-900"}`}>
+                  {quizPassed ? "✓ Final quiz passed" : "🔒 Final quiz required to complete"}
+                </p>
+                <p className={`mt-0.5 text-xs ${quizPassed ? "text-emerald-700" : "text-amber-700"}`}>
+                  {quizPassed
+                    ? `You scored ${bestQuiz?.score ?? 0}%. Finish any remaining lessons to earn your certificate.`
+                    : `Complete the lessons, then pass the final quiz (80% to pass, unlimited retries) to complete this course.${
+                        bestQuiz ? ` Best score so far: ${bestQuiz.score}%.` : ""
+                      }`}
+                </p>
+              </div>
+              <Link
+                href={`/founder/learning/courses/${courseId}/quiz`}
+                className={`rounded-md px-4 py-2 text-sm font-semibold ${
+                  quizPassed
+                    ? "border border-emerald-300 bg-white text-emerald-700 hover:bg-emerald-100"
+                    : "bg-amber-600 text-white hover:bg-amber-700"
+                }`}
+              >
+                {quizPassed ? "Review quiz" : bestQuiz ? "Retake quiz" : "Take final quiz"}
+              </Link>
+            </div>
+          ) : null}
 
           {/* Curriculum */}
           <div>

@@ -67,7 +67,7 @@ export async function POST(
   }
 
   const score = Math.round((correct / q.length) * 100);
-  const passed = score >= Number(quiz.passing_score ?? 70);
+  const passed = score >= Number(quiz.passing_score ?? 80);
   const now = new Date().toISOString();
 
   const { data: existingCourseProgress } = await auth.supabase

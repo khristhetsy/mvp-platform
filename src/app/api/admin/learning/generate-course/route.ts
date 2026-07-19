@@ -14,6 +14,7 @@ import { z } from "zod";
 import { claudeComplete, CLAUDE_SONNET, isClaudeConfigured } from "@/lib/claude";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireLearningStaff, ensureCanPublish, jsonBadRequest } from "../_shared";
+import { generateCourseQuiz } from "@/lib/learning/generate-course-quiz";
 
 export const dynamic = "force-dynamic";
 
@@ -158,9 +159,17 @@ Learning objective: ${lesson.learningObjective}
 
 ${quizInstruction}
 
+Write a rigorous, in-depth lesson — this is an advanced course, so go deep. The bodyMarkdown must include, in this order and using ## section headers:
+1. **Learning objectives** — 3–4 concrete things the founder can do afterward.
+2. Two to four substantive teaching sections with real depth, specific numbers, and mechanisms (not generic advice).
+3. **Worked example** — a concrete, realistic founder scenario worked through end to end.
+4. **Common pitfalls** — 2–3 mistakes and how to avoid them.
+5. **Framework / checklist** — a reusable template or step list the founder can apply.
+Target 900–1400 words of dense, specific content. Use bullet lists and **bold** for key terms.
+
 Return ONLY valid JSON:
 {
-  "bodyMarkdown": "Full lesson text in markdown. Use ## for section headers, bullet lists, **bold** for key terms. 500–700 words of substantive, specific content — practical examples, not generic advice.",
+  "bodyMarkdown": "Full lesson text in markdown following the structure above.",
   "quiz": {
     "questions": [
       {
@@ -176,9 +185,9 @@ Return ONLY valid JSON:
     ],
     {
       model: CLAUDE_SONNET,
-      maxTokens: 3000,
+      maxTokens: 4500,
       system:
-        "You are an expert educator writing educational lessons for startup founders. Content must be specific, practical, and actionable — not generic business advice. Return only valid JSON.",
+        "You are an expert educator writing rigorous, in-depth lessons for startup founders. Content must be specific, practical, and actionable — deep, not generic. Educational only: never give legal, tax, securities, or investment advice. Return only valid JSON.",
     },
   );
 
@@ -372,6 +381,18 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Course-scoped final quiz — this is what gates completion (80% to pass).
+  // Generated from the freshly-created (draft) lessons so it's ready on publish.
+  let courseQuizQuestions = 0;
+  if (includeQuiz && lessonCreated > 0) {
+    try {
+      const cq = await generateCourseQuiz(db, program.id, { createdBy: auth.profile.id, includeUnpublished: true });
+      courseQuizQuestions = cq.questionCount;
+    } catch {
+      // Non-fatal: the course is still created; admin can generate the quiz later.
+    }
+  }
+
   return NextResponse.json(
     {
       courseId: program.id,
@@ -379,6 +400,7 @@ export async function POST(req: NextRequest) {
       moduleId: module.id,
       lessonCount: lessonCreated,
       quizCount: quizCreated,
+      courseQuizQuestions,
     },
     { status: 201 },
   );

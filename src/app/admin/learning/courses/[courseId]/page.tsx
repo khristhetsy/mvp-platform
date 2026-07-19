@@ -8,6 +8,7 @@ import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { AdminCourseEditor } from "@/components/admin/learning/AdminCourseEditor";
 import { AdminCourseModulesManager } from "@/components/admin/learning/AdminCourseModulesManager";
 import { AdminCourseContentStudio } from "@/components/admin/learning/AdminCourseContentStudio";
+import { AdminCourseQuizGenerator } from "@/components/admin/learning/AdminCourseQuizGenerator";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { isAdminModuleComingSoon } from "@/lib/admin/module-flags";
 import { requireRole } from "@/lib/supabase/auth";
@@ -192,6 +193,10 @@ export default async function AdminLearningCourseDetailPage({ params }: PageProp
             <p className="mt-3 text-xs text-slate-500">
               Educational analytics only. No private founder messages or documents.
             </p>
+          </WorkspacePanel>
+
+          <WorkspacePanel title="Completion quiz" subtitle="Graded final quiz — required to complete (80%)">
+            <AdminCourseQuizGenerator courseId={program.id} />
           </WorkspacePanel>
         </section>
 

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { AdminQuizBackfillButton } from "@/components/admin/learning/AdminQuizBackfillButton";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { isAdminModuleComingSoon } from "@/lib/admin/module-flags";
@@ -42,12 +43,15 @@ export default async function AdminLearningCoursesPage() {
           title={t("coursesTitle")}
           description={t("coursesDesc")}
           actions={
-            <Link
-              href="/admin/learning/courses/new"
-              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
-            >
-              New course
-            </Link>
+            <div className="flex items-center gap-2">
+              <AdminQuizBackfillButton />
+              <Link
+                href="/admin/learning/courses/new"
+                className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
+              >
+                New course
+              </Link>
+            </div>
           }
         />
 
