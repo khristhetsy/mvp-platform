@@ -186,17 +186,20 @@ export async function createList(name: string, description?: string): Promise<Ma
 
 export async function isUnsubscribed(email: string): Promise<boolean> {
   const db = await marketingDb();
+  // Case-insensitive match so a case difference between the stored suppression
+  // and the recipient address can't let an unsubscribed person through.
   const { data } = await db
     .from("marketing_unsubscribes")
     .select("email")
-    .eq("email", email)
+    .ilike("email", email.trim())
     .maybeSingle();
   return !!data;
 }
 
 export async function addUnsubscribe(email: string, reason = "user_request"): Promise<void> {
   const db = await marketingDb();
+  // Store normalized so suppression is consistent regardless of source casing.
   await db
     .from("marketing_unsubscribes")
-    .upsert({ email, reason }, { onConflict: "email" });
+    .upsert({ email: email.trim().toLowerCase(), reason }, { onConflict: "email" });
 }
