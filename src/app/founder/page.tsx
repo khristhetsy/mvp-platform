@@ -9,6 +9,7 @@ import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingProgressCard";
 import { FounderRemediationActionPlan } from "@/components/FounderRemediationActionPlan";
 import { computeReadinessScore, getLatestDiligenceReport } from "@/lib/data/founder-readiness";
+import { READINESS_FACTORS } from "@/lib/ai/readiness-scoring";
 import { FounderLearningPreviewCard } from "@/components/FounderLearningPreviewCard";
 import { loadFounderLearningWorkspace } from "@/lib/learning/load-founder-learning";
 import { DashboardInsightPanel } from "@/components/ui/DashboardInsightPanel";
@@ -104,6 +105,33 @@ export default async function FounderDashboardPage() {
   );
   const checklistReadinessScore = computeReadinessScore(uploadedTypeCodes);
   const readinessScore = diligenceReport?.readiness_score ?? checklistReadinessScore;
+
+  // Investable Readiness (13-factor) — founder-facing, read server-side.
+  let investableScore: number | null = null;
+  let investableFactors: Array<{ name: string; points: number; max: number; rating: string }> | null = null;
+  if (company) {
+    const { data: scoreRow } = await serviceSupabase
+      .from("company_readiness_scores")
+      .select("total_score, effective_score, factor_scores")
+      .eq("company_id", company.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (scoreRow) {
+      const row = scoreRow as { total_score: number; effective_score: number | null; factor_scores: unknown };
+      investableScore = row.effective_score ?? row.total_score;
+      const fs = (row.factor_scores ?? {}) as Record<string, { pts?: number; max?: number; rating?: string }>;
+      investableFactors = READINESS_FACTORS.map((f) => {
+        const entry = fs[f.key];
+        return {
+          name: f.label,
+          points: Number(entry?.pts ?? 0),
+          max: Number(entry?.max ?? f.max),
+          rating: String(entry?.rating ?? "—"),
+        };
+      });
+    }
+  }
   const readinessDetail = diligenceReport
     ? "Latest stored diligence report"
     : "Estimate from required document checklist";
@@ -167,6 +195,8 @@ export default async function FounderDashboardPage() {
           <CapitalReadinessSection
             readinessScore={readinessScore}
             readinessDetail={readinessDetail}
+            investableScore={investableScore}
+            investableFactors={investableFactors}
             raiseProgress={raiseProgress}
             companyStatus={company?.status ?? null}
             companyFundingAmount={company?.funding_amount ? Number(company.funding_amount) : null}

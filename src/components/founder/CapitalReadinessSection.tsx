@@ -5,7 +5,29 @@ import { useTranslations } from "next-intl";
 import type { FounderInvestorActivityResult } from "@/lib/data/investor-interests";
 import { formatPledgeTotal } from "@/lib/data/investor-pledges";
 
-type DrawerKey = "readiness" | "raise" | "interest" | "activity";
+type DrawerKey = "readiness" | "investable" | "raise" | "interest" | "activity";
+
+interface InvestableFactor {
+  name: string;
+  points: number;
+  max: number;
+  rating: string;
+}
+
+function investableBand(score: number): string {
+  if (score >= 70) return "Investment ready";
+  if (score >= 45) return "Developing";
+  if (score >= 25) return "Early";
+  return "Foundational";
+}
+
+function factorVariant(points: number, max: number): "critical" | "high" | "medium" | "success" {
+  const pct = max > 0 ? points / max : 0;
+  if (pct >= 0.7) return "success";
+  if (pct >= 0.4) return "medium";
+  if (pct >= 0.15) return "high";
+  return "critical";
+}
 
 interface DocRecord {
   id: string;
@@ -195,6 +217,8 @@ const DOC_LABELS: Record<string, string> = {
 export function CapitalReadinessSection({
   readinessScore,
   readinessDetail,
+  investableScore = null,
+  investableFactors = null,
   raiseProgress,
   companyStatus,
   companyFundingAmount,
@@ -205,6 +229,8 @@ export function CapitalReadinessSection({
 }: {
   readinessScore: number;
   readinessDetail: string;
+  investableScore?: number | null;
+  investableFactors?: InvestableFactor[] | null;
   raiseProgress: string;
   companyStatus: string | null;
   companyFundingAmount: number | null;
@@ -263,6 +289,40 @@ export function CapitalReadinessSection({
           ? `Getting to ${Math.min(100, readinessScore + 15)} requires completing your remaining ${missingTypes.length} document${missingTypes.length === 1 ? "" : "s"} and ensuring your pitch deck references audited numbers. Set a 2-week target.`
           : `Your score of ${readinessScore} is excellent. The next leverage point is investor engagement — respond to all intro requests within 24 hours to convert signals into meetings.`,
       ],
+    },
+    investable: {
+      title: "Investable score",
+      sub: "iCapOS 13-factor investability model",
+      stats: [
+        { label: "Overall score", value: `${investableScore ?? 0}/100` },
+        { label: "Band", value: investableBand(investableScore ?? 0) },
+        { label: "Factors", value: String(investableFactors?.length ?? 0) },
+      ],
+      breakdown: (
+        <div>
+          {(investableFactors ?? []).length === 0 ? (
+            <p className="py-2 text-xs text-slate-500">No factor breakdown available yet.</p>
+          ) : (
+            (investableFactors ?? []).map((f) => (
+              <BRow key={f.name} name={f.name} status={`${f.points}/${f.max}`} variant={factorVariant(f.points, f.max)} />
+            ))
+          )}
+        </div>
+      ),
+      meaning: `Your investable score of ${investableScore ?? 0} reflects how investable your company looks across 13 weighted factors — team, traction, market, unit economics, governance and more. This is a different lens from your readiness score (which measures document completeness): a company can have a complete data room but still be early on investability. ${(investableScore ?? 0) >= 70 ? "You're in a strong band for investor conversations." : (investableScore ?? 0) >= 45 ? "You're developing — closing the weakest factors below will move you toward the investable range." : "You're early — focus on the lowest-scoring factors first."}`,
+      advice: (() => {
+        const weakest = [...(investableFactors ?? [])]
+          .filter((f) => f.max > 0)
+          .sort((a, b) => a.points / a.max - b.points / b.max)
+          .slice(0, 3);
+        if (weakest.length === 0) {
+          return ["Generate an investable readiness score to see targeted guidance on which factors to strengthen first."];
+        }
+        return weakest.map(
+          (f) =>
+            `${f.name} is scoring ${f.points}/${f.max}. This is one of your lowest factors — improving it has the highest marginal impact on your investable score.`,
+        );
+      })(),
     },
     raise: {
       title: "Raise progress",
@@ -394,7 +454,7 @@ export function CapitalReadinessSection({
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 ${investableScore != null ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
           {/* Readiness Score */}
           <button type="button" className={cardClass} onClick={() => setOpen("readiness")} aria-label="View readiness score details">
             <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-500">{t("readiness_score")}</p>
@@ -407,6 +467,21 @@ export function CapitalReadinessSection({
             </div>
             <p className="mt-3 text-[10px] font-medium text-[#2E78F5]">{t("tap_to_explore")}</p>
           </button>
+
+          {/* Investable Score */}
+          {investableScore != null ? (
+            <button type="button" className={cardClass} onClick={() => setOpen("investable")} aria-label="View investable score details">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-slate-500">Investable score</p>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <div>
+                  <p className="font-mono text-xl font-semibold text-slate-950">{investableScore}/100</p>
+                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">13-factor investability model</p>
+                </div>
+                <DonutChart pct={investableScore / 100} color="#7F77DD" />
+              </div>
+              <p className="mt-3 text-[10px] font-medium text-[#2E78F5]">{t("tap_to_explore")}</p>
+            </button>
+          ) : null}
 
           {/* Raise Progress */}
           <button type="button" className={cardClass} onClick={() => setOpen("raise")} aria-label="View raise progress details">
