@@ -164,6 +164,21 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
   let recipientsSent = 0;
 
   for (const campaign of list) {
+    const now = new Date().toISOString();
+
+    // Atomically claim this campaign for this run by advancing last_run_at under
+    // the same freshness guard. A concurrent run's identical update won't match
+    // (last_run_at is now recent), so it can't double-send the same campaign.
+    const { data: claimed } = await db
+      .from("investor_outreach_campaigns")
+      .update({ last_run_at: now, updated_at: now })
+      .eq("id", campaign.id)
+      .eq("status", "approved")
+      .eq("paused", false)
+      .or(`last_run_at.is.null,last_run_at.lt.${sixDaysAgo}`)
+      .select("id");
+    if (!claimed || (claimed as Array<{ id: string }>).length === 0) continue;
+
     const { data: queued } = await db
       .from("investor_outreach_recipients")
       .select("id, investor_ref, investor_name")
@@ -177,8 +192,6 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
       await db.from("investor_outreach_campaigns").update({ status: "completed", updated_at: new Date().toISOString() }).eq("id", campaign.id);
       continue;
     }
-
-    const now = new Date().toISOString();
 
     if (!live) {
       // Flag OFF: advance the log without dispatching real email (safe testing).
@@ -214,6 +227,7 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
       for (const r of batch) {
         const contact = contactById.get(r.investor_ref);
         const email = contact?.email ?? null;
+        // No email or suppressed (unsubscribed) → terminal skip.
         if (!email || suppressed.has(email.trim().toLowerCase())) {
           await db.from("investor_outreach_recipients").update({ status: "skipped" }).eq("id", r.id);
           continue;
@@ -227,15 +241,19 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
           unsubscribeUrl: buildUnsubscribeUrl(email),
         });
         const ok = await sendEmail({ to: email, subject, html, text });
-        await db
-          .from("investor_outreach_recipients")
-          .update({ status: ok ? "sent" : "skipped", sent_at: ok ? new Date().toISOString() : null })
-          .eq("id", r.id);
-        if (ok) recipientsSent += 1;
+        if (ok) {
+          await db
+            .from("investor_outreach_recipients")
+            .update({ status: "sent", sent_at: new Date().toISOString() })
+            .eq("id", r.id);
+          recipientsSent += 1;
+        }
+        // On send failure, leave the recipient queued so a later run retries it —
+        // a transient email outage must not silently drop people from the campaign.
       }
     }
 
-    await db.from("investor_outreach_campaigns").update({ last_run_at: now, updated_at: now }).eq("id", campaign.id);
+    // last_run_at was already set atomically at claim time above.
     campaignsRun += 1;
   }
 

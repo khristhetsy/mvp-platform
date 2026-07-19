@@ -77,9 +77,14 @@ export async function PATCH(
     case "resume":
       ok = await setCampaignPaused(id, false);
       break;
-    case "cap":
-      ok = await setCampaignWeeklyCap(id, Number(body?.cap));
+    case "cap": {
+      const cap = Number(body?.cap);
+      if (!Number.isFinite(cap)) {
+        return NextResponse.json({ error: "cap must be a number between 5 and 20." }, { status: 400 });
+      }
+      ok = await setCampaignWeeklyCap(id, cap);
       break;
+    }
     default:
       return NextResponse.json({ error: "Unknown action." }, { status: 400 });
   }
