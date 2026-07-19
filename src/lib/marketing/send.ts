@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import type { SendResult } from "./types";
 
 import { absolutizeEmailHtml } from "@/lib/email/absolutize-html";
@@ -169,20 +170,48 @@ ${htmlBody}
   }
 }
 
-/** Generate a simple signed token for unsubscribe links */
+function unsubscribeSecret(): string {
+  return process.env.MARKETING_UNSUBSCRIBE_SECRET ?? "default-secret";
+}
+
+/**
+ * HMAC-signed unsubscribe token. Format: `base64url(email).hexHmac`. The secret
+ * is never placed in the payload (unlike the old scheme), so a recipient cannot
+ * recover it or forge tokens for other addresses.
+ */
 export function makeUnsubscribeToken(email: string): string {
-  const secret = process.env.MARKETING_UNSUBSCRIBE_SECRET ?? "default-secret";
-  // Base64url encode of "email:hmac" — for production use crypto.subtle HMAC
-  const payload = Buffer.from(`${email}:${secret}`).toString("base64url");
-  return payload;
+  const normalized = email.trim().toLowerCase();
+  const enc = Buffer.from(normalized).toString("base64url");
+  const sig = crypto.createHmac("sha256", unsubscribeSecret()).update(normalized).digest("hex").slice(0, 32);
+  return `${enc}.${sig}`;
 }
 
 export function verifyUnsubscribeToken(token: string): string | null {
   try {
-    const secret = process.env.MARKETING_UNSUBSCRIBE_SECRET ?? "default-secret";
+    if (token.includes(".")) {
+      // Current HMAC format.
+      const [enc, sig] = token.split(".");
+      if (!enc || !sig) return null;
+      const email = Buffer.from(enc, "base64url").toString("utf8");
+      const expected = crypto
+        .createHmac("sha256", unsubscribeSecret())
+        .update(email.trim().toLowerCase())
+        .digest("hex")
+        .slice(0, 32);
+      if (sig.length !== expected.length) return null;
+      if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+      return email;
+    }
+
+    // DEPRECATED legacy format base64url("email:secret") — kept so unsubscribe
+    // links already sitting in inboxes keep working. Remove this branch (and
+    // rotate MARKETING_UNSUBSCRIBE_SECRET) once old campaigns have aged out.
     const decoded = Buffer.from(token, "base64url").toString("utf8");
-    const [email, sig] = decoded.split(":");
-    if (sig !== secret) return null;
+    const idx = decoded.lastIndexOf(":");
+    if (idx === -1) return null;
+    const email = decoded.slice(0, idx);
+    const sig = decoded.slice(idx + 1);
+    if (sig !== unsubscribeSecret()) return null;
     return email;
   } catch {
     return null;
