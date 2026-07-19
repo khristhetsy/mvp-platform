@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { summarize, modelRound } from "@/lib/cap-table/compute";
 import type { Holder, HolderGroup, RoundModel } from "@/lib/cap-table/types";
+import { FounderModulePreview, PreviewButton } from "./FounderModulePreview";
 
 const GROUP_LABEL: Record<HolderGroup, string> = { founder: "Founder", pool: "Option pool", investor: "Investor" };
 const SLICE_COLORS = ["#1D9E75", "#5DCAA5", "#9FE1CB", "#378ADD", "#85B7EB", "#2E78F5", "#D85A30", "#D4537E", "#BA7517"];
@@ -29,6 +30,7 @@ export function CapTableClient() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [exporting, setExporting] = useState<"xlsx" | "pdf" | null>(null);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
+  const [preview, setPreview] = useState(false);
 
   useEffect(() => {
     let on = true;
@@ -129,6 +131,7 @@ export function CapTableClient() {
         <span className="text-sm font-semibold text-[var(--text-primary)]">{companyName} — cap table</span>
         <div className="flex flex-wrap items-center gap-2">
           {savedAt && <span className="text-xs text-emerald-700">Saved {savedAt}</span>}
+          <PreviewButton onClick={() => setPreview(true)} />
           <button onClick={save} disabled={saving} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] disabled:opacity-50">
             {saving ? "Saving…" : "Save"}
           </button>
@@ -281,6 +284,58 @@ export function CapTableClient() {
         )}
         <p className="mt-3 text-xs text-[var(--text-muted)]">Illustrative cap table and dilution based on the figures you enter. Not a valuation, an offer of securities, or investment advice.</p>
       </section>
+
+      {preview && (
+        <FounderModulePreview
+          title={`${companyName} — cap table`}
+          subtitle={modelOn && dilution ? "Current + modeled round · read-only" : "Current ownership · read-only"}
+          onClose={() => setPreview(false)}
+          footer="Illustrative cap table and dilution based on the figures you entered. Not a valuation, an offer of securities, or investment advice."
+        >
+          <h4 className="text-sm font-semibold text-[var(--navy)]">Ownership</h4>
+          <div className="mt-2 overflow-hidden rounded-lg border border-[var(--border-subtle)]">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border-subtle)] text-left text-xs text-[var(--text-muted)]">
+                  <th className="px-3 py-2">Holder</th><th className="px-3 py-2">Group</th><th className="px-3 py-2">Class</th><th className="px-3 py-2 text-right">Shares</th><th className="px-3 py-2 text-right">FD %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sum.rows.map((row) => (
+                  <tr key={row.holder.id} className="border-b border-[var(--border-subtle)] last:border-0">
+                    <td className="px-3 py-2">{row.holder.name}</td>
+                    <td className="px-3 py-2 text-[var(--text-secondary)]">{GROUP_LABEL[row.holder.group]}</td>
+                    <td className="px-3 py-2 text-[var(--text-secondary)]">{row.holder.shareClass}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{row.holder.shares.toLocaleString()}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{pct(row.pct)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-[var(--border-subtle)] font-medium">
+                  <td className="px-3 py-2" colSpan={3}>Fully diluted</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{sum.totalShares.toLocaleString()}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">100%</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          {modelOn && dilution && (
+            <>
+              <h4 className="mt-5 text-sm font-semibold text-[var(--navy)]">Modeled round</h4>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {([["New investment", money(round.newInvestment)], ["Post-money", money(dilution.postMoney)], ["New investor", pct(dilution.newInvestorPct)], ["Founder after", pct(sum.founderPct * (1 - dilution.newInvestorPct))]] as const).map(([l, v]) => (
+                  <div key={l} className="rounded-md border border-[var(--border-subtle)] p-2.5">
+                    <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">{l}</div>
+                    <div className="text-base font-semibold text-[var(--navy)] tabular-nums">{v}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </FounderModulePreview>
+      )}
     </div>
   );
 }

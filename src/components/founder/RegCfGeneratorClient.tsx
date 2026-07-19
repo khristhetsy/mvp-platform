@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Sparkles, Check, Download, Pencil, Loader2, FileText, Info } from "lucide-react";
 import { REGCF_DOCS, type RegCfDocKey } from "@/lib/regcf/documents";
+import { FounderModulePreview, PreviewButton } from "./FounderModulePreview";
 
 type DocState = { content: string; ai_generated: boolean };
 
@@ -15,6 +16,7 @@ export function RegCfGeneratorClient() {
   const [editing, setEditing] = useState<RegCfDocKey | null>(null);
   const [draft, setDraft] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
+  const [preview, setPreview] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -145,11 +147,41 @@ export function RegCfGeneratorClient() {
       </div>
 
       <div className="flex items-center gap-3">
+        <PreviewButton onClick={() => setPreview(true)} label="Preview packet" />
         <button type="button" onClick={downloadPacket} disabled={draftedCount === 0} className="inline-flex items-center gap-1.5 rounded-lg bg-[#2E78F5] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1A6CE4] disabled:opacity-50">
           <Download className="h-4 w-4" /> Download prep packet
         </button>
         <span className="text-xs text-slate-400">{draftedCount} of {REGCF_DOCS.length} drafted</span>
       </div>
+
+      {preview && (
+        <FounderModulePreview
+          title="Reg CF prep packet"
+          subtitle={`${draftedCount} of ${REGCF_DOCS.length} documents drafted · read-only`}
+          onClose={() => setPreview(false)}
+          footer="Drafts only — not legal or investment advice. You own these documents and are responsible for them; have counsel review before use."
+        >
+          <div className="space-y-5">
+            {REGCF_DOCS.map((d) => {
+              const content = docs[d.key]?.content?.trim();
+              return (
+                <div key={d.key}>
+                  <h4 className="flex items-center gap-2 text-sm font-semibold text-[var(--navy)]">
+                    {d.label}
+                    {d.counsel ? <span className="rounded bg-[#FCEBEB] px-1.5 text-[10px] font-medium text-[#A32D2D]">counsel</span> : null}
+                    {!content ? <span className="rounded bg-slate-100 px-1.5 text-[10px] font-medium text-slate-500">not generated</span> : null}
+                  </h4>
+                  {content ? (
+                    <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-600">{content}</p>
+                  ) : (
+                    <p className="mt-1 text-sm italic text-slate-400">{d.description}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </FounderModulePreview>
+      )}
     </div>
   );
 }

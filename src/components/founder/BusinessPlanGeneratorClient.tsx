@@ -10,6 +10,7 @@ import type { ProjectionAssumptions, ProjectionResult } from "@/lib/business-pla
 import type { BusinessPlan } from "@/lib/business-plan/types";
 import type { AllocationSlice, MarketSize } from "@/lib/business-plan/charts";
 import { ProjectionsChart, MarketChart, FundsChart } from "./BusinessPlanSectionChart";
+import { FounderModulePreview, PreviewButton } from "./FounderModulePreview";
 
 type SectionMap = BusinessPlan["sections"];
 const PROJ_ID = "projections";
@@ -41,6 +42,7 @@ export function BusinessPlanGeneratorClient() {
   const [allocation, setAllocation] = useState<AllocationSlice[]>(DEFAULT_ALLOC);
   const [market, setMarket] = useState<MarketSize>({ tam: null, sam: null, som: null });
   const [filling, setFilling] = useState(false);
+  const [preview, setPreview] = useState(false);
 
   useEffect(() => {
     let on = true;
@@ -210,6 +212,7 @@ export function BusinessPlanGeneratorClient() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {savedAt && <span className="text-xs text-emerald-700">Saved {savedAt}</span>}
+          <PreviewButton onClick={() => setPreview(true)} />
           <button onClick={() => save()} disabled={saving} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] disabled:opacity-50">
             {saving ? "Saving…" : "Save"}
           </button>
@@ -334,6 +337,64 @@ export function BusinessPlanGeneratorClient() {
           )}
         </section>
       </div>
+
+      {preview && (
+        <FounderModulePreview
+          title="Business plan"
+          subtitle={`${filledCount} of ${visibleSections.length} sections · investor view`}
+          onClose={() => setPreview(false)}
+          footer="Read-only preview of your latest edits. Illustrative only — not a forecast, guarantee, or investment advice."
+        >
+          <div className="space-y-5">
+            {visibleSections.map((s) => {
+              if (s.id === PROJ_ID) {
+                return (
+                  <div key={s.id}>
+                    <h4 className="text-sm font-semibold text-[var(--navy)]">{s.title}</h4>
+                    {projections ? (
+                      <div className="mt-2 overflow-hidden rounded-lg border border-[var(--border-subtle)]">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-[var(--border-subtle)] text-left text-xs text-[var(--text-muted)]">
+                              <th className="px-3 py-2"></th><th className="px-3 py-2 text-right">Yr 1</th><th className="px-3 py-2 text-right">Yr 2</th><th className="px-3 py-2 text-right">Yr 3</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {([["Revenue", "revenue"], ["Gross profit", "grossProfit"], ["Operating expense", "operatingExpense"], ["Net cash flow", "netCashFlow"]] as const).map(([label, key]) => (
+                              <tr key={key} className="border-b border-[var(--border-subtle)] last:border-0">
+                                <td className="px-3 py-2 text-[var(--text-secondary)]">{label}</td>
+                                {projections.years.map((y) => (
+                                  <td key={y.year} className="px-3 py-2 text-right tabular-nums">{money(y[key])}</td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        <div className="border-t border-[var(--border-subtle)] px-3 py-2 text-xs text-[var(--text-muted)]">
+                          {projections.runwayMonths ? `Runway ≈ ${projections.runwayMonths} months` : "Cash-flow positive within 3 years"} · ending cash {money(projections.endingCash)}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-sm italic text-[var(--text-muted)]">Projections not set yet.</p>
+                    )}
+                  </div>
+                );
+              }
+              const content = (sections[s.id]?.content ?? "").trim();
+              return (
+                <div key={s.id}>
+                  <h4 className="text-sm font-semibold text-[var(--navy)]">{s.title}</h4>
+                  {content ? (
+                    <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-[var(--text-secondary)]">{content}</p>
+                  ) : (
+                    <p className="mt-1 text-sm italic text-[var(--text-muted)]">Not written yet.</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </FounderModulePreview>
+      )}
     </div>
   );
 }

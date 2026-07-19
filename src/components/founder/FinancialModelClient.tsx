@@ -8,6 +8,7 @@ import { computeProjections } from "@/lib/business-plan/projections";
 import { computeMonthlyModel } from "@/lib/financial-model/monthly";
 import { resolveAssumptions } from "@/lib/financial-model/resolve";
 import type { ProjectionAssumptions } from "@/lib/business-plan/projections";
+import { FounderModulePreview, PreviewButton } from "./FounderModulePreview";
 
 type Source = "business-plan" | "fresh";
 
@@ -26,6 +27,7 @@ export function FinancialModelClient() {
   const [assumptions, setAssumptions] = useState<ProjectionAssumptions | null>(null);
   const [generating, setGenerating] = useState(false);
   const [done, setDone] = useState<{ url: string | null; fileName: string } | null>(null);
+  const [preview, setPreview] = useState(false);
 
   useEffect(() => {
     let on = true;
@@ -173,6 +175,7 @@ export function FinancialModelClient() {
           </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
+            <PreviewButton onClick={() => setPreview(true)} />
             <button onClick={generate} disabled={generating} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
               {generating ? "Generating…" : "Generate Excel model"}
             </button>
@@ -194,6 +197,62 @@ export function FinancialModelClient() {
           </p>
         </section>
       </div>
+
+      {preview && projections && (
+        <FounderModulePreview
+          title="Financial model"
+          subtitle="3-year projection · read-only"
+          onClose={() => setPreview(false)}
+          footer="Illustrative projections based on your drivers. The Excel export includes the full 36-month model. Not a forecast, guarantee, or investment advice."
+        >
+          <div className="grid grid-cols-3 gap-2">
+            {([["Runway", projections.runwayMonths ? `≈ ${projections.runwayMonths} mo` : "3 yr+"], ["Ending cash", money(projections.endingCash)], ["Yr 3 revenue", money(projections.years[2]?.revenue ?? 0)]] as const).map(([l, v]) => (
+              <div key={l} className="rounded-md border border-[var(--border-subtle)] p-2.5">
+                <div className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">{l}</div>
+                <div className="text-base font-semibold text-[var(--navy)] tabular-nums">{v}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 overflow-hidden rounded-lg border border-[var(--border-subtle)]">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border-subtle)] text-left text-xs text-[var(--text-muted)]">
+                  <th className="px-3 py-2"></th><th className="px-3 py-2 text-right">Yr 1</th><th className="px-3 py-2 text-right">Yr 2</th><th className="px-3 py-2 text-right">Yr 3</th>
+                </tr>
+              </thead>
+              <tbody>
+                {([["Revenue", "revenue"], ["Gross profit", "grossProfit"], ["Operating expense", "operatingExpense"], ["Net cash flow", "netCashFlow"]] as const).map(([label, key]) => (
+                  <tr key={key} className="border-b border-[var(--border-subtle)] last:border-0">
+                    <td className="px-3 py-2 text-[var(--text-secondary)]">{label}</td>
+                    {projections.years.map((y) => (
+                      <td key={y.year} className="px-3 py-2 text-right tabular-nums">{money(y[key])}</td>
+                    ))}
+                  </tr>
+                ))}
+                <tr className="border-t border-[var(--border-subtle)] bg-[var(--surface-sunken)]">
+                  <td className="px-3 py-2 text-[var(--text-secondary)]">Year-end cash</td>
+                  {yearEndCash.map((c, i) => (
+                    <td key={i} className={`px-3 py-2 text-right tabular-nums ${c !== null && c < 0 ? "font-medium text-rose-600" : ""}`}>
+                      {c === null ? "—" : money(c)}
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h4 className="mt-5 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Your drivers</h4>
+          <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1.5 sm:grid-cols-3">
+            {ASSUMPTION_DEFS.map((d) => (
+              <div key={d.key} className="flex justify-between border-b border-slate-100 py-1 text-sm">
+                <span className="text-[var(--text-secondary)]">{d.label}</span>
+                <span className="font-medium tabular-nums text-[var(--navy)]">{assumptions[d.key]}</span>
+              </div>
+            ))}
+          </div>
+        </FounderModulePreview>
+      )}
     </div>
   );
 }
