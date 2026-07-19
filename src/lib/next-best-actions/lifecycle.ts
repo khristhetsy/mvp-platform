@@ -443,7 +443,19 @@ export async function loadAndMergeNextBestActions(input: {
     entityId: input.options?.entityId,
   });
 
-  const merged = mergeComputedWithPersistedActions(computedResult.actions, persisted, {
+  // When scoped to a specific entity (e.g. a company workspace), the COMPUTED
+  // actions must be scoped too — otherwise platform-wide admin actions leak into
+  // a single company's Operational priorities.
+  const wantEntityId = input.options?.entityId;
+  const wantEntityType = input.options?.entityType;
+  const computedActions = wantEntityId
+    ? computedResult.actions.filter(
+        (action) =>
+          action.entityId === wantEntityId && (!wantEntityType || action.entityType === wantEntityType),
+      )
+    : computedResult.actions;
+
+  const merged = mergeComputedWithPersistedActions(computedActions, persisted, {
     limit,
     includeInactive: input.options?.includeInactive,
   });
