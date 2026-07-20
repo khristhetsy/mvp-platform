@@ -9,6 +9,8 @@ export type WorkspaceNavItem = {
   label: string;
   requiredPermission?: InternalPermission;
   minStage?: JourneyStage;
+  /** Founder-only: show only when the founder's offering_type is 'reg_cf'. */
+  requiresRegCf?: boolean;
   children?: WorkspaceNavItem[];
 };
 
@@ -272,6 +274,9 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
     items: [
       { href: "/founder/private-market", label: "Private Market", minStage: "qualify" },
       { href: "/founder/matches", label: "Investor matches", minStage: "qualify" },
+      // Reg CF founders only — private (Reg D) founders are never prompted toward
+      // public exposure (dual-lane spec §3.2). Gated in WorkspaceSidebar.
+      { href: "/founder/marketplace/new", label: "List on marketplace", minStage: "deploy", requiresRegCf: true },
       // Hidden from nav (routes still resolve). Restore by uncommenting.
       // {
       //   href: "/founder/investors",

@@ -187,6 +187,25 @@ function useFounderStage(workspace: WorkspaceId) {
   return stage;
 }
 
+function useFounderOfferingType(workspace: WorkspaceId) {
+  const [offeringType, setOfferingType] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (workspace !== "founder") return;
+    let cancelled = false;
+    void fetch("/api/founder/offering-type")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { offeringType?: string | null } | null) => {
+        if (cancelled) return;
+        setOfferingType(data?.offeringType ?? null);
+      })
+      .catch(() => { /* silent — fail closed, Reg-CF-only items stay hidden */ });
+    return () => { cancelled = true; };
+  }, [workspace]);
+
+  return offeringType;
+}
+
 function useAdminNavPermissions(workspace: WorkspaceId) {
   const [state, setState] = useState<{ permissions: InternalPermission[]; isSuperAdmin: boolean } | null>(null);
 
@@ -250,6 +269,7 @@ export function WorkspaceSidebar({
   const adminNav = useAdminNavPermissions(workspace);
   const deptAccess = useDepartmentAccess(workspace);
   const founderStage = useFounderStage(workspace);
+  const founderOfferingType = useFounderOfferingType(workspace);
 
   // Live unread-email count for the Inbox nav badge (polled), plus a toast when
   // new mail arrives.
@@ -313,13 +333,19 @@ export function WorkspaceSidebar({
 
   const canShowNavItem = useMemo(() => {
     return (item: WorkspaceNavItem) => {
+      // Founder: Reg-CF-only items stay hidden unless the founder is Reg CF
+      // (fail closed while loading — never prompt private founders toward public exposure).
+      if (workspace === "founder") {
+        if (item.requiresRegCf && founderOfferingType !== "reg_cf") return false;
+        return true;
+      }
       if (workspace !== "admin") return true;
       if (!item.requiredPermission) return true;
       if (!adminNav) return false;
       if (adminNav.isSuperAdmin) return true;
       return adminNav.permissions.includes(item.requiredPermission);
     };
-  }, [adminNav, workspace]);
+  }, [adminNav, workspace, founderOfferingType]);
 
   // Department-path allow check (longest-prefix, additive to permissions).
   const deptAllows = useMemo(() => {
