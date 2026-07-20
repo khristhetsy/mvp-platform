@@ -73,6 +73,53 @@ describe("renderBlocksToEmailHtml", () => {
   });
 });
 
+describe("linked text and heading blocks", () => {
+  it("wraps a linked text block in an anchor", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "t", type: "text", text: "Read the guide", url: "https://icapos.com/guide" },
+    ]);
+    expect(html).toContain('href="https://icapos.com/guide"');
+    expect(html).toContain("Read the guide</a>");
+  });
+
+  it("links headings too", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "h", type: "heading", text: "Your score", level: 1, url: "https://icapos.com/score" },
+    ]);
+    expect(html).toContain('href="https://icapos.com/score"');
+  });
+
+  it("renders plain text when the URL is unsafe, never a dead href", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "t", type: "text", text: "Click", url: "javascript:alert(1)" },
+    ]);
+    expect(html).not.toContain("javascript:");
+    expect(html).not.toContain("<a ");
+    expect(html).toContain("Click");
+  });
+
+  it("leaves unlinked blocks untouched", () => {
+    expect(renderBlocksToEmailHtml([{ id: "t", type: "text", text: "Plain" }])).not.toContain("<a ");
+  });
+
+  it("surfaces the destination in the plain-text alternative", () => {
+    const text = renderBlocksToText([
+      { id: "t", type: "text", text: "Read the guide", url: "https://icapos.com/guide" },
+    ]);
+    expect(text).toContain("Read the guide (https://icapos.com/guide)");
+  });
+
+  it("recovers a link from a paragraph that is only a link", () => {
+    const blocks = parseHtmlToBlocks('<p><a href="https://icapos.com/x">Open your pipeline</a></p>');
+    expect(blocks[0]).toMatchObject({ type: "text", text: "Open your pipeline", url: "https://icapos.com/x" });
+  });
+
+  it("does not attach a URL when the link is mid-sentence", () => {
+    const blocks = parseHtmlToBlocks('<p>Read the <a href="https://x.com">docs</a> first.</p>');
+    expect(blocks[0]).not.toHaveProperty("url");
+  });
+});
+
 describe("renderBlocksToText", () => {
   it("produces a readable plain-text alternative", () => {
     const text = renderBlocksToText(blocks);

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Template editor — new blocks mockup</title>
+<style>
+  :root {
+    --blue: #2E78F5;
+    --blue-soft: #f2f7ff;
+    --blue-border: #bcd3fb;
+    --navy: #0c2340;
+    --fg: #1c2434;
+    --muted: #6b7a90;
+    --faint: #94a3b8;
+    --border: #e2e6ed;
+    --bg: #f4f6fa;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 28px;
+    font: 400 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--fg);
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  .note { font-size: 12.5px; color: var(--muted); margin: 0 0 18px; }
+  .panel {
+    background: #fff; border: 0.5px solid var(--border); border-radius: 12px;
+    box-shadow: 0 1px 3px rgb(12 35 64 / 0.06); padding: 18px 20px; margin-bottom: 22px;
+  }
+  .panel > h2 { font-size: 14px; font-weight: 500; margin: 0 0 14px; }
+  .tabs { display: flex; border-bottom: 0.5px solid var(--border); margin-bottom: 14px; }
+  .tabs span { padding: 7px 16px; font-size: 12px; color: var(--muted); border-bottom: 2px solid transparent; }
+  .tabs span.on { color: var(--blue); font-weight: 500; border-bottom-color: var(--blue); }
+  .editor { display: grid; grid-template-columns: minmax(0,1fr) 246px; gap: 16px; }
+  .canvas { background: #eef2f8; border-radius: 12px; padding: 18px; }
+  .mail { max-width: 560px; margin: 0 auto; background: #fff; border-radius: 10px; overflow: hidden; }
+  .blk { position: relative; outline: 1px solid transparent; border-radius: 6px; }
+  .blk:hover { outline: 1px dashed #9ec5ff; }
+  .blk.sel { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .tag {
+    position: absolute; top: -9px; left: 10px; z-index: 2;
+    background: var(--blue); color: #fff; font-size: 9px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px;
+  }
+  .rail { border: 0.5px solid var(--border); border-radius: 12px; padding: 12px; align-self: start; }
+  .rail h3 {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--faint); margin: 0 0 8px;
+  }
+  .rail h3.mt { margin-top: 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip {
+    border: 0.5px solid var(--border); border-radius: 6px; padding: 4px 8px;
+    font-size: 11px; color: var(--muted); background: #fff;
+  }
+  .chip.new { border-color: var(--blue-border); background: var(--blue-soft); color: var(--blue); font-weight: 600; }
+  label.f { display: block; font-size: 11px; font-weight: 600; color: #475569; margin-top: 10px; }
+  label.f input, label.f select {
+    width: 100%; margin-top: 4px; padding: 6px 8px; font-size: 12px;
+    border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--fg);
+  }
+  label.f input[type=color] { padding: 2px; height: 30px; }
+  label.f .hint { display: block; font-weight: 400; font-size: 10.5px; color: var(--faint); margin-top: 4px; }
+  .seg { display: flex; gap: 4px; margin-top: 4px; }
+  .seg span {
+    flex: 1; text-align: center; border: 0.5px solid var(--border); border-radius: 6px;
+    padding: 4px; font-size: 11px; color: var(--muted); background: #fff;
+  }
+  .seg span.on { border-color: var(--blue-border); background: var(--blue-soft); color: var(--blue); font-weight: 600; }
+  .row3 { display: flex; gap: 5px; margin-top: 4px; }
+  .row3 span {
+    flex: 1; text-align: center; border: 0.5px solid var(--border); border-radius: 6px;
+    padding: 4px; font-size: 11px; color: var(--muted);
+  }
+  .row3 span.del { flex: 0 0 auto; padding: 4px 9px; border-color: #f0a5a5; color: #a32d2d; }
+  .sw { display: flex; gap: 5px; margin-top: 4px; }
+  .sw i { width: 24px; height: 24px; border-radius: 5px; display: inline-block; border: 1px solid rgba(0,0,0,.08); }
+  .sw i.on { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .actions { margin-top: 14px; display: flex; gap: 8px; }
+  .btn { font-size: 12px; padding: 6px 14px; border-radius: 8px; border: none; background: var(--blue); color: #fff; }
+  .btn.ghost { background: transparent; border: 0.5px solid var(--border); color: var(--fg); }
+  .cap { font-size: 11px; color: var(--muted); margin-top: 10px; }
+  .legend { font-size: 12px; color: var(--muted); margin: 0 0 14px; }
+  .legend b { color: var(--blue); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="note">Mockup — admin › marketing › templates › edit. Highlighted chips are the new block types; everything else exists today.</p>
+
+  <div class="panel">
+    <h2>Edit template</h2>
+
+    <div class="tabs"><span class="on">Visual</span><span>&lt;/&gt; HTML</span><span>Preview</span></div>
+
+    <p class="legend">New blocks: <b>Section</b>, <b>Callout</b>, <b>List</b>, <b>Columns</b>, <b>Stats</b>.</p>
+
+    <div class="editor">
+      <div class="canvas">
+        <div class="mail">
+
+          <div class="blk" style="padding:14px 24px;text-align:center;">
+            <span style="font-size:19px;font-weight:700;color:var(--navy);">iCapOS</span>
+          </div>
+
+          <div class="blk sel" style="background:var(--navy);padding:16px 24px;">
+            <span class="tag">Section</span>
+            <div style="font-size:12px;color:#7f9bc4;margin-bottom:5px;">Seasonal focus</div>
+            <div style="font-size:23px;font-weight:700;color:#fff;">Raise-ready by fall</div>
+          </div>
+
+          <div class="blk" style="padding:12px 24px 6px;font-size:15px;color:#3a4a63;">Dear {{first_name}},</div>
+
+          <div class="blk" style="padding:6px 24px;font-size:15px;color:#3a4a63;">
+            Planning a raise this half? Work backward from diligence and close the gaps now.
+          </div>
+
+          <div class="blk" style="margin:10px 24px;background:#eef4ff;border-left:3px solid var(--blue);padding:11px 13px;">
+            <span class="tag">Callout</span>
+            <div style="font-size:14px;color:#1d4ed8;">Most founders go to market before they're truly ready.</div>
+          </div>
+
+          <div class="blk" style="padding:10px 24px;">
+            <span class="tag">Stats</span>
+            <table width="100%" cellpadding="0" cellspacing="0" style="text-align:center;">
+              <tr>
+                <td style="width:33%;"><div style="font-size:22px;font-weight:700;color:var(--navy);">78</div><div style="font-size:11px;color:#6b7a90;">Readiness</div></td>
+                <td style="width:33%;"><div style="font-size:22px;font-weight:700;color:var(--navy);">14</div><div style="font-size:11px;color:#6b7a90;">Matched</div></td>
+                <td style="width:33%;"><div style="font-size:22px;font-weight:700;color:var(--navy);">6</div><div style="font-size:11px;color:#6b7a90;">Gaps left</div></td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="blk" style="padding:8px 24px;">
+            <span class="tag">List</span>
+            <ul style="margin:6px 0 0;padding-left:20px;font-size:14px;color:#3a4a63;line-height:1.9;">
+              <li>Get your readiness score</li>
+              <li>Fix the highest-impact gaps first</li>
+            </ul>
+          </div>
+
+          <div class="blk" style="padding:12px 24px;">
+            <span class="tag">Columns</span>
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="width:50%;padding-right:6px;vertical-align:top;">
+                  <div style="background:#f4f6fa;border-radius:8px;padding:10px;">
+                    <div style="font-size:13px;font-weight:600;">For founders</div>
+                    <div style="font-size:12px;color:#6b7a90;">Know where you stand</div>
+                  </div>
+                </td>
+                <td style="width:50%;padding-left:6px;vertical-align:top;">
+                  <div style="background:#f4f6fa;border-radius:8px;padding:10px;">
+                    <div style="font-size:13px;font-weight:600;">For investors</div>
+                    <div style="font-size:12px;color:#6b7a90;">See who's actually ready</div>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="blk" style="padding:6px 24px;font-size:15px;">
+            <a href="#" style="color:var(--blue);text-decoration:underline;">See the full readiness checklist</a>
+          </div>
+
+          <div class="blk" style="padding:12px 24px;">
+            <span style="display:inline-block;background:var(--blue);color:#fff;font-size:15px;font-weight:700;padding:12px 22px;border-radius:8px;">Start now</span>
+          </div>
+
+          <div class="blk" style="padding:10px 24px;"><div style="border-top:1px solid #e3e8f2;"></div></div>
+
+          <div class="blk" style="padding:6px 24px 16px;font-size:15px;color:#3a4a63;">{{sender_name}}</div>
+
+        </div>
+      </div>
+
+      <div class="rail">
+        <h3>Add block</h3>
+        <div class="chips">
+          <span class="chip">+ Heading</span>
+          <span class="chip">+ Text</span>
+          <span class="chip">+ Button</span>
+          <span class="chip">+ Image</span>
+          <span class="chip">+ Divider</span>
+          <span class="chip">+ Spacer</span>
+          <span class="chip new">+ Section</span>
+          <span class="chip new">+ Callout</span>
+          <span class="chip new">+ List</span>
+          <span class="chip new">+ Columns</span>
+          <span class="chip new">+ Stats</span>
+        </div>
+
+        <h3 class="mt">Selected block · section</h3>
+        <div class="row3"><span>↑ Up</span><span>↓ Down</span><span class="del">Delete</span></div>
+
+        <label class="f">Background
+          <input type="color" value="#0c2340" />
+        </label>
+
+        <h3 class="mt">Brand palette</h3>
+        <div class="sw">
+          <i class="on" style="background:#0c2340"></i>
+          <i style="background:#2E78F5"></i>
+          <i style="background:#5B4BE0"></i>
+          <i style="background:#0F6E56"></i>
+          <i style="background:#F1EFE8"></i>
+        </div>
+
+        <label class="f">Padding (vertical / horizontal)
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
+            <input type="number" value="16" />
+            <input type="number" value="24" />
+          </div>
+        </label>
+
+        <label class="f">Align
+          <select><option>Left</option><option>Center</option><option>Right</option></select>
+        </label>
+
+        <label class="f">Full-width band
+          <div class="seg"><span class="on">Yes</span><span>No</span></div>
+          <span class="hint">Bleeds to the email edges instead of sitting inside the card.</span>
+        </label>
+
+        <h3 class="mt">Merge fields</h3>
+        <div class="chips">
+          <span class="chip" style="color:#1d4ed8;background:#eef4ff;border-color:#dbe7ff;">{{first_name}}</span>
+          <span class="chip" style="color:#1d4ed8;background:#eef4ff;border-color:#dbe7ff;">{{company}}</span>
+          <span class="chip" style="color:#1d4ed8;background:#eef4ff;border-color:#dbe7ff;">{{sender_name}}</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="cap">Click any block to edit it. The email HTML is regenerated from these blocks when you save — it stays table-based and inline-styled so it renders correctly in Outlook and Gmail.</p>
+
+    <div class="actions">
+      <button class="btn">Save template</button>
+      <button class="btn ghost">Cancel</button>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

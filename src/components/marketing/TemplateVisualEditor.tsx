@@ -193,7 +193,12 @@ export function TemplateVisualEditor({
                   onFocus={(e) => { lastFocused.current = e.currentTarget; }}
                   onBlur={(e) => update(b.id, { text: e.currentTarget.textContent ?? "" } as Partial<TemplateBlock>)}
                   className="px-6 py-2 font-bold outline-none"
-                  style={{ fontSize: b.level === 1 ? 24 : 19, color: b.color ?? "#0c2340", textAlign: b.align ?? "left" }}
+                  style={{
+                    fontSize: b.level === 1 ? 24 : 19,
+                    color: b.color ?? "#0c2340",
+                    textDecoration: b.url ? "underline" : undefined,
+                    textAlign: b.align ?? "left",
+                  }}
                 >
                   {b.text}
                 </div>
@@ -204,7 +209,11 @@ export function TemplateVisualEditor({
                   onFocus={(e) => { lastFocused.current = e.currentTarget; }}
                   onBlur={(e) => update(b.id, { text: e.currentTarget.textContent ?? "" } as Partial<TemplateBlock>)}
                   className="px-6 py-2 text-[15px] leading-relaxed outline-none"
-                  style={{ color: b.color ?? "#3a4a63", textAlign: b.align ?? "left" }}
+                  style={{
+                    color: b.url ? "#2E78F5" : b.color ?? "#3a4a63",
+                    textDecoration: b.url ? "underline" : undefined,
+                    textAlign: b.align ?? "left",
+                  }}
                 >
                   {b.text}
                 </div>
@@ -313,6 +322,23 @@ export function TemplateVisualEditor({
                 >
                   <option value={1}>H1</option><option value={2}>H2</option>
                 </select>
+              </label>
+            ) : null}
+
+            {selected.type === "heading" || selected.type === "text" ? (
+              <label className="block text-[11px] font-semibold text-slate-600">
+                Link URL <span className="font-normal text-slate-400">(optional)</span>
+                <input
+                  value={selected.url ?? ""}
+                  onChange={(e) =>
+                    update(selected.id, { url: e.target.value.trim() || undefined } as Partial<TemplateBlock>)
+                  }
+                  className="mt-1 w-full rounded-md border border-slate-200 px-2 py-1.5 text-[12px]"
+                  placeholder="https://…"
+                />
+                <span className="mt-1 block text-[10.5px] font-normal text-slate-400">
+                  Makes the whole block clickable.
+                </span>
               </label>
             ) : null}
 

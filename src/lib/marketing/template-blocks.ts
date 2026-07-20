@@ -9,8 +9,8 @@
 export type BlockAlign = "left" | "center" | "right";
 
 export type TemplateBlock =
-  | { id: string; type: "heading"; text: string; level: 1 | 2; color?: string; align?: BlockAlign }
-  | { id: string; type: "text"; text: string; color?: string; align?: BlockAlign }
+  | { id: string; type: "heading"; text: string; level: 1 | 2; color?: string; align?: BlockAlign; url?: string }
+  | { id: string; type: "text"; text: string; color?: string; align?: BlockAlign; url?: string }
   | { id: string; type: "button"; label: string; url: string; bg?: string; color?: string; align?: BlockAlign }
   | { id: string; type: "image"; src: string; alt?: string; width?: number; align?: BlockAlign }
   | { id: string; type: "divider" }
@@ -118,11 +118,18 @@ export function parseHtmlToBlocks(html: string): TemplateBlock[] {
   const blocks: TemplateBlock[] = [];
   let buffer = "";
   let bufferAlign: BlockAlign | undefined;
+  // A paragraph that is nothing but one link becomes a linked text block, so the
+  // destination survives the round trip instead of decaying to bare words.
+  let soleLink: { label: string; url: string } | null = null;
 
   function flushText() {
     const text = decodeEntities(buffer);
+    const url = soleLink && soleLink.label === text ? soleLink.url : undefined;
     buffer = "";
-    if (text) blocks.push({ id: newBlockId(), type: "text", text, align: bufferAlign ?? "left" });
+    soleLink = null;
+    if (text) {
+      blocks.push({ id: newBlockId(), type: "text", text, align: bufferAlign ?? "left", ...(url ? { url } : {}) });
+    }
     bufferAlign = undefined;
   }
 
@@ -194,7 +201,9 @@ export function parseHtmlToBlocks(html: string): TemplateBlock[] {
           color: styleProp(linkTag, "color"),
           align: alignOf(linkTag) ?? "left",
         });
-      } else {
+      } else if (label) {
+        const href = attr(linkTag, "href");
+        soleLink = buffer.trim() === "" && href ? { label, url: href } : null;
         buffer += ` ${label} `;
       }
       continue;
@@ -276,6 +285,19 @@ function safeUrl(url: string): string {
 }
 
 const FONT = "Helvetica, Arial, sans-serif";
+const LINK_COLOR = "#2E78F5";
+
+/**
+ * Wrap already-escaped content in a link when the block has a URL. Unsafe or
+ * missing URLs fall through to plain text rather than emitting a dead `href="#"`
+ * that looks clickable to the recipient but goes nowhere.
+ */
+function linkWrap(inner: string, url: string | undefined, color: string): string {
+  if (!url) return inner;
+  const safe = safeUrl(url);
+  if (safe === "#") return inner;
+  return `<a href="${esc(safe)}" style="color:${esc(color)};text-decoration:underline;">${inner}</a>`;
+}
 
 function renderBlock(block: TemplateBlock): string {
   const align = "align" in block && block.align ? block.align : "left";
@@ -283,11 +305,11 @@ function renderBlock(block: TemplateBlock): string {
     case "heading": {
       const size = block.level === 1 ? 24 : 19;
       const color = block.color ?? "#0c2340";
-      return `<tr><td style="padding:8px 24px;font-family:${FONT};font-size:${size}px;line-height:1.3;font-weight:bold;color:${esc(color)};text-align:${align};">${escText(block.text)}</td></tr>`;
+      return `<tr><td style="padding:8px 24px;font-family:${FONT};font-size:${size}px;line-height:1.3;font-weight:bold;color:${esc(color)};text-align:${align};">${linkWrap(escText(block.text), block.url, color)}</td></tr>`;
     }
     case "text": {
       const color = block.color ?? "#3a4a63";
-      return `<tr><td style="padding:8px 24px;font-family:${FONT};font-size:15px;line-height:1.6;color:${esc(color)};text-align:${align};">${escText(block.text)}</td></tr>`;
+      return `<tr><td style="padding:8px 24px;font-family:${FONT};font-size:15px;line-height:1.6;color:${esc(color)};text-align:${align};">${linkWrap(escText(block.text), block.url, LINK_COLOR)}</td></tr>`;
     }
     case "button": {
       const bg = block.bg ?? "#2E78F5";
@@ -331,7 +353,10 @@ export function renderBlocksToEmailHtml(blocks: TemplateBlock[]): string {
 export function renderBlocksToText(blocks: TemplateBlock[]): string {
   const lines: string[] = [];
   for (const b of blocks) {
-    if (b.type === "heading" || b.type === "text") lines.push(b.text);
+    if (b.type === "heading" || b.type === "text") {
+      // Plain-text readers can't click, so surface the destination inline.
+      lines.push(b.url && safeUrl(b.url) !== "#" ? `${b.text} (${safeUrl(b.url)})` : b.text);
+    }
     else if (b.type === "button") lines.push(`${b.label}: ${safeUrl(b.url)}`);
     else if (b.type === "divider") lines.push("---");
   }
