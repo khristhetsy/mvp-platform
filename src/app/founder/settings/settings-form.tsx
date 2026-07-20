@@ -7,6 +7,7 @@ import type { Company } from "@/lib/supabase/types";
 import { FormField } from "@/components/ui/FormField";
 import { AIFieldHelper } from "@/components/ui/AIFieldHelper";
 import { useFormValidation, type ZodFlatErrors } from "@/hooks/useFormValidation";
+import { industryOptionsFor } from "@/lib/industries";
 
 /* ── Revenue stage options ──────────────────────────────────── */
 
@@ -275,12 +276,18 @@ export function CompanySettingsForm({ company }: Props) {
         </FormField>
 
         <FormField label="Industry" error={getError("industry")} required>
-          <input
+          {/* Shared taxonomy — same options the admin sees, so the value never drifts. */}
+          <select
             className={`${BASE_INPUT} ${inputCls("industry")}`}
             value={industry}
             onChange={(e) => { setIndustry(e.target.value); clearError("industry"); }}
             disabled={isSaving}
-          />
+          >
+            {!industry ? <option value="">— Select an industry —</option> : null}
+            {industryOptionsFor(industry).map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
         </FormField>
       </div>
 

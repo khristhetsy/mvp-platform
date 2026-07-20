@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { industryOptionsFor, isCanonicalIndustry } from "@/lib/industries";
 
 const STAGES: { id: string; label: string }[] = [
   { id: "pre_revenue", label: "Pre-revenue" },
@@ -93,7 +94,18 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
       </div>
       <div>
         <label className={LABEL} htmlFor="cb-industry">Industry</label>
-        <input id="cb-industry" value={b.industry} onChange={(e) => patch({ industry: e.target.value })} className={INPUT} placeholder="e.g. CleanTech" />
+        <select id="cb-industry" value={b.industry} onChange={(e) => patch({ industry: e.target.value })} className={INPUT}>
+          {!b.industry ? <option value="">— Select an industry —</option> : null}
+          {industryOptionsFor(b.industry).map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+              {!isCanonicalIndustry(opt) ? " (current — not in list)" : ""}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-[11px] text-slate-400">
+          Shared list — the founder picks from the same options, so matching and the marketplace stay in sync.
+        </p>
       </div>
       <div>
         <label className={LABEL} htmlFor="cb-desc">Business description</label>
