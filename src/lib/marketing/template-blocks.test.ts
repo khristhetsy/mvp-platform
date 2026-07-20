@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   renderBlocksToEmailHtml,
   renderBlocksToText,
+  parseHtmlToBlocks,
   seedBlocksFromHtml,
   stripHtmlToText,
   type TemplateBlock,
@@ -81,14 +82,83 @@ describe("renderBlocksToText", () => {
 });
 
 describe("seedBlocksFromHtml", () => {
-  it("seeds a heading from the subject and paragraphs from the body", () => {
+  it("keeps paragraphs as separate text blocks", () => {
     const seeded = seedBlocksFromHtml("Welcome", "<p>First para</p><p>Second para</p>");
-    expect(seeded[0]).toMatchObject({ type: "heading", text: "Welcome" });
     expect(seeded.some((b) => b.type === "text" && b.text.includes("First para"))).toBe(true);
+    expect(seeded.some((b) => b.type === "text" && b.text.includes("Second para"))).toBe(true);
+  });
+
+  it("falls back to the subject heading when the body has no content", () => {
+    const seeded = seedBlocksFromHtml("Welcome", "");
+    expect(seeded[0]).toMatchObject({ type: "heading", text: "Welcome" });
   });
 
   it("never returns an empty document", () => {
     expect(seedBlocksFromHtml("", "").length).toBeGreaterThan(0);
+  });
+});
+
+describe("parseHtmlToBlocks", () => {
+  const digest = `
+    <table role="presentation" width="600">
+      <tr><td align="center"><img src="https://cdn.example.com/logo.png" alt="iCapOS" width="132" /></td></tr>
+      <tr><td><h1 style="color:#ffffff;">This month's matched founders</h1></td></tr>
+      <tr><td><p>A new cohort has completed their assessment.</p></td></tr>
+      <tr><td align="center">
+        <a href="https://icapos.com/pipeline" style="background:#5B4BE0;color:#ffffff;display:inline-block;padding:12px 22px;">Open your pipeline</a>
+      </td></tr>
+      <tr><td><hr /></td></tr>
+    </table>`;
+
+  it("preserves headings rather than flattening them to text", () => {
+    const blocks = parseHtmlToBlocks(digest);
+    expect(blocks).toContainEqual(
+      expect.objectContaining({ type: "heading", text: "This month's matched founders" }),
+    );
+  });
+
+  it("preserves images with their src, alt, and width", () => {
+    const img = parseHtmlToBlocks(digest).find((b) => b.type === "image");
+    expect(img).toMatchObject({ src: "https://cdn.example.com/logo.png", alt: "iCapOS", width: 132 });
+  });
+
+  it("turns styled links into button blocks with their background", () => {
+    const btn = parseHtmlToBlocks(digest).find((b) => b.type === "button");
+    expect(btn).toMatchObject({
+      label: "Open your pipeline",
+      url: "https://icapos.com/pipeline",
+      bg: "#5B4BE0",
+    });
+  });
+
+  it("keeps plain inline links as text, not buttons", () => {
+    const blocks = parseHtmlToBlocks('<p>Read the <a href="https://x.com">docs</a> first.</p>');
+    expect(blocks.every((b) => b.type !== "button")).toBe(true);
+    expect(blocks.some((b) => b.type === "text" && b.text.includes("docs"))).toBe(true);
+  });
+
+  it("preserves horizontal rules as dividers", () => {
+    expect(parseHtmlToBlocks(digest).some((b) => b.type === "divider")).toBe(true);
+  });
+
+  it("carries alignment down from the containing cell", () => {
+    const blocks = parseHtmlToBlocks('<td align="center"><p>Centered</p></td>');
+    expect(blocks.find((b) => b.type === "text")).toMatchObject({ align: "center" });
+  });
+
+  it("drops script and style content", () => {
+    const blocks = parseHtmlToBlocks("<style>p{color:red}</style><script>alert(1)</script><p>Body</p>");
+    const text = blocks.map((b) => (b.type === "text" ? b.text : "")).join(" ");
+    expect(text).not.toContain("alert");
+    expect(text).not.toContain("color:red");
+    expect(text).toContain("Body");
+  });
+
+  it("survives a round trip through the renderer", () => {
+    const html = renderBlocksToEmailHtml(parseHtmlToBlocks(digest));
+    expect(html).toContain("This month's matched founders");
+    expect(html).toContain("https://icapos.com/pipeline");
+    expect(html).toContain("https://cdn.example.com/logo.png");
   });
 });
 

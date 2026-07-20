@@ -54,12 +54,186 @@ export function stripHtmlToText(html: string): string {
     .trim();
 }
 
+// ── HTML → blocks ────────────────────────────────────────────────────────────
+
+const MAX_PARSED_BLOCKS = 80;
+
+/** Read one attribute off a raw tag string. */
+function attr(tag: string, name: string): string | undefined {
+  const m = new RegExp(`\\b${name}\\s*=\\s*("([^"]*)"|'([^']*)')`, "i").exec(tag);
+  return m ? (m[2] ?? m[3] ?? "").trim() : undefined;
+}
+
+/** Read one property out of an inline style attribute. */
+function styleProp(tag: string, prop: string): string | undefined {
+  const style = attr(tag, "style");
+  if (!style) return undefined;
+  const m = new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`, "i").exec(style);
+  return m ? m[1].trim() : undefined;
+}
+
+function decodeEntities(value: string): string {
+  return value
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** An <a> is a call-to-action button if it's styled like one. */
+function looksLikeButton(tag: string): boolean {
+  const bg = styleProp(tag, "background") ?? styleProp(tag, "background-color");
+  if (bg && !/^(none|transparent|inherit)$/i.test(bg)) return true;
+  const display = styleProp(tag, "display");
+  const padding = styleProp(tag, "padding");
+  return Boolean(display && /inline-block|block/i.test(display) && padding);
+}
+
+function alignOf(tag: string): BlockAlign | undefined {
+  const raw = styleProp(tag, "text-align") ?? attr(tag, "align");
+  if (!raw) return undefined;
+  const v = raw.toLowerCase();
+  return v === "center" || v === "right" || v === "left" ? v : undefined;
+}
+
+/**
+ * Parse existing email HTML into editable blocks, preserving structure rather
+ * than flattening everything to paragraphs: headings stay headings, images stay
+ * images, styled links stay buttons, rules stay dividers.
+ *
+ * Deliberately a small tag scanner rather than a DOM parse — this runs in Node
+ * (tests, server) as well as the browser, so `DOMParser` isn't available.
+ */
+export function parseHtmlToBlocks(html: string): TemplateBlock[] {
+  const cleaned = html
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<(script|style|head)\b[\s\S]*?<\/\1>/gi, "");
+
+  const blocks: TemplateBlock[] = [];
+  let buffer = "";
+  let bufferAlign: BlockAlign | undefined;
+
+  function flushText() {
+    const text = decodeEntities(buffer);
+    buffer = "";
+    if (text) blocks.push({ id: newBlockId(), type: "text", text, align: bufferAlign ?? "left" });
+    bufferAlign = undefined;
+  }
+
+  // Capture groups, in order: 1 heading level, 2 heading attrs, 3 heading inner,
+  // 4 anchor attrs, 5 anchor inner, 6 block-container attrs, 7 block closer name.
+  // The trailing `<[^>]+>` swallows every other tag (inline markup) without
+  // flushing, so a </span> mid-sentence doesn't split a paragraph in two.
+  const TOKEN =
+    /<img\b[^>]*>|<hr\b[^>]*>|<h([1-6])\b([^>]*)>([\s\S]*?)<\/h\1>|<a\b([^>]*)>([\s\S]*?)<\/a>|<(?:p|div|td|tr|table|li)\b([^>]*)>|<\/(p|div|td|tr|table|li)>|<[^>]+>/gi;
+
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = TOKEN.exec(cleaned)) !== null) {
+    if (blocks.length >= MAX_PARSED_BLOCKS) break;
+    buffer += cleaned.slice(lastIndex, match.index);
+    lastIndex = TOKEN.lastIndex;
+    const raw = match[0];
+
+    if (/^<img/i.test(raw)) {
+      flushText();
+      const src = attr(raw, "src") ?? "";
+      const widthRaw = attr(raw, "width");
+      const width = widthRaw && /^\d+$/.test(widthRaw) ? Number(widthRaw) : undefined;
+      blocks.push({
+        id: newBlockId(),
+        type: "image",
+        src,
+        alt: attr(raw, "alt") ?? "",
+        width: width ?? 200,
+        align: alignOf(raw) ?? "center",
+      });
+      continue;
+    }
+
+    if (/^<hr/i.test(raw)) {
+      flushText();
+      blocks.push({ id: newBlockId(), type: "divider" });
+      continue;
+    }
+
+    if (match[1]) {
+      flushText();
+      const text = decodeEntities(match[3].replace(/<[^>]+>/g, " "));
+      if (text) {
+        blocks.push({
+          id: newBlockId(),
+          type: "heading",
+          text,
+          level: Number(match[1]) <= 2 ? 1 : 2,
+          color: styleProp(match[2], "color"),
+          align: alignOf(match[2]) ?? "left",
+        });
+      }
+      continue;
+    }
+
+    if (match[4] !== undefined) {
+      const linkTag = `<a${match[4]}>`;
+      const label = decodeEntities((match[5] ?? "").replace(/<[^>]+>/g, " "));
+      if (looksLikeButton(linkTag) && label) {
+        flushText();
+        blocks.push({
+          id: newBlockId(),
+          type: "button",
+          label,
+          url: attr(linkTag, "href") ?? "#",
+          bg: styleProp(linkTag, "background") ?? styleProp(linkTag, "background-color"),
+          color: styleProp(linkTag, "color"),
+          align: alignOf(linkTag) ?? "left",
+        });
+      } else {
+        buffer += ` ${label} `;
+      }
+      continue;
+    }
+
+    if (match[6] !== undefined) {
+      // Opening a block-level container: remember its alignment for the text inside.
+      bufferAlign = alignOf(match[6]) ?? bufferAlign;
+      continue;
+    }
+
+    if (match[7] !== undefined) {
+      flushText();
+      continue;
+    }
+  }
+
+  buffer += cleaned.slice(lastIndex);
+  flushText();
+
+  return blocks.slice(0, MAX_PARSED_BLOCKS);
+}
+
 /**
  * Seed blocks for a template that only has html_body (never converted).
- * Deliberately conservative: one heading (the subject) plus the existing body as
- * paragraphs, so nothing is invented and no content is lost.
+ * Parses the existing markup so the visual editor shows the real layout; falls
+ * back to subject-plus-paragraphs when the HTML yields nothing usable.
  */
 export function seedBlocksFromHtml(subject: string, html: string): TemplateBlock[] {
+  const parsed = parseHtmlToBlocks(html);
+  const hasContent = parsed.some(
+    (b) =>
+      (b.type === "text" && b.text.trim()) ||
+      (b.type === "heading" && b.text.trim()) ||
+      b.type === "image" ||
+      b.type === "button",
+  );
+  if (hasContent) return parsed;
+
   const paragraphs = stripHtmlToText(html)
     .split(/\n{2,}/)
     .map((p) => p.trim())

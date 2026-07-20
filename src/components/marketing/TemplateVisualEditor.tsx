@@ -93,6 +93,20 @@ export function TemplateVisualEditor({
     }
   }
 
+  /**
+   * Templates often put light text on a dark band. The editor canvas is white,
+   * so that text would be invisible — give those blocks a dark backdrop while
+   * editing. Purely a canvas affordance; the saved HTML is unaffected.
+   */
+  function isLightText(color?: string): boolean {
+    if (!color) return false;
+    const hex = color.trim().replace(/^#/, "");
+    const full = hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex;
+    if (!/^[0-9a-f]{6}$/i.test(full)) return /^white$/i.test(color.trim());
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
+    return (r * 299 + g * 587 + b * 114) / 1000 > 186;
+  }
+
   const wrapSel = (id: string) =>
     `relative rounded-md outline-offset-2 transition ${
       selectedId === id ? "outline outline-2 outline-[#2E78F5]" : "outline outline-1 outline-transparent hover:outline-dashed hover:outline-[#9ec5ff]"
@@ -108,7 +122,16 @@ export function TemplateVisualEditor({
           ) : null}
 
           {blocks.map((b) => (
-            <div key={b.id} className={`${wrapSel(b.id)} px-1`} onClick={() => setSelectedId(b.id)}>
+            <div
+              key={b.id}
+              className={`${wrapSel(b.id)} px-1`}
+              style={
+                (b.type === "heading" || b.type === "text") && isLightText(b.color)
+                  ? { background: "#0c2340" }
+                  : undefined
+              }
+              onClick={() => setSelectedId(b.id)}
+            >
               {selectedId === b.id ? (
                 <span className="absolute -top-2 left-2 z-10 rounded-full bg-[#2E78F5] px-2 text-[9px] font-bold uppercase tracking-wide text-white">
                   {b.type}
@@ -216,6 +239,32 @@ export function TemplateVisualEditor({
                   <option value={1}>H1</option><option value={2}>H2</option>
                 </select>
               </label>
+            ) : null}
+
+            {selected.type === "heading" || selected.type === "text" ? (
+              <label className="block text-[11px] font-semibold text-slate-600">
+                Text colour
+                <input
+                  type="color"
+                  value={selected.color ?? (selected.type === "heading" ? "#0c2340" : "#3a4a63")}
+                  onChange={(e) => update(selected.id, { color: e.target.value } as Partial<TemplateBlock>)}
+                  className="mt-1 h-8 w-full rounded-md border border-slate-200"
+                />
+              </label>
+            ) : null}
+
+            {selected.type === "button" ? (
+              <>
+                <label className="block text-[11px] font-semibold text-slate-600">
+                  Button colour
+                  <input
+                    type="color"
+                    value={selected.bg ?? "#2E78F5"}
+                    onChange={(e) => update(selected.id, { bg: e.target.value } as Partial<TemplateBlock>)}
+                    className="mt-1 h-8 w-full rounded-md border border-slate-200"
+                  />
+                </label>
+              </>
             ) : null}
 
             {selected.type === "button" ? (
