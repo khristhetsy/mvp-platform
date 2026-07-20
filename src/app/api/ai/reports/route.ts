@@ -1,24 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireApiProfile } from "@/lib/api/auth";
-import { generateDiligenceReport } from "@/lib/ai";
 import { writeAuditLog } from "@/lib/data/audit";
 import { diligenceReportCreateSchema } from "@/lib/validation";
+import { generateAndSaveDiligenceReport } from "@/lib/reports/generate-and-save";
 
-type ReportSection = {
-  title: string;
-  body: string;
-};
-
-function findSectionBody(sections: ReportSection[], keywords: string[]) {
-  const section = sections.find((item) => {
-    const title = item.title.toLowerCase();
-
-    return keywords.some((keyword) => title.includes(keyword));
-  });
-
-  return section?.body ?? "";
-}
-
+// Staff-initiated generation. Founder self-serve lives at
+// POST /api/founder/report/generate and shares the same generation lib.
 export async function POST(request: Request) {
   const auth = await requireApiProfile(["admin", "analyst"]);
 
@@ -33,64 +20,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid diligence report request." }, { status: 400 });
   }
 
-  const { data: company, error: companyError } = await auth.supabase
-    .from("companies")
-    .select("*")
-    .eq("id", parsed.data.companyId)
-    .single();
-
-  if (companyError || !company) {
-    return NextResponse.json({ error: "Company not found." }, { status: 404 });
-  }
-
-  const { data: documents } = await auth.supabase
-    .from("documents")
-    .select("document_type, ai_summary")
-    .eq("company_id", parsed.data.companyId);
-
-  const report = await generateDiligenceReport({
-    companyName: company.company_name,
-    documentSummaries: documents?.flatMap((document) => (document.ai_summary ? [document.ai_summary] : [])) ?? [],
-    uploadedDocumentTypes:
-      documents?.flatMap((document) => (document.document_type ? [document.document_type] : [])) ?? [],
-  });
-
-  const { data: savedReport, error: reportError } = await auth.supabase
-    .from("diligence_reports")
-    .insert({
-      company_id: parsed.data.companyId,
-      executive_summary: report.executiveSummary,
-      business_overview: findSectionBody(report.sections, ["business", "overview"]),
-      financial_review: findSectionBody(report.sections, ["financial", "finance"]),
-      market_review: findSectionBody(report.sections, ["market", "competition"]),
-      legal_review: findSectionBody(report.sections, ["legal", "compliance"]),
-      team_review: findSectionBody(report.sections, ["team", "founder"]),
-      risk_flags: report.riskFlags,
-      missing_documents: report.missingDocuments,
-      readiness_score: report.readinessScore,
-      recommendations: report.recommendedNextSteps.join("\n"),
-    })
-    .select("*")
-    .single();
-
-  if (reportError) {
-    return NextResponse.json({ error: reportError.message }, { status: 400 });
+  let result;
+  try {
+    result = await generateAndSaveDiligenceReport(auth.supabase, parsed.data.companyId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Report generation failed.";
+    return NextResponse.json({ error: message }, { status: message === "Company not found." ? 404 : 400 });
   }
 
   await writeAuditLog(auth.supabase, {
     userId: auth.profile.id,
     action: "diligence_report.created",
     entityType: "diligence_report",
-    entityId: savedReport.id,
-    metadata: { companyId: parsed.data.companyId },
+    entityId: String(result.report.id),
+    metadata: { companyId: parsed.data.companyId, initiatedBy: "staff" },
   });
 
-  return NextResponse.json({
-    report: savedReport,
-    generation: {
-      generatedBy: report.generatedBy,
-      isDemo: report.isDemo,
-      readinessScoreAvailable: report.readinessScore !== null,
-    },
-  });
+  return NextResponse.json(result);
 }

@@ -19,6 +19,9 @@ export function TemplateVisualEditor({
 }: Readonly<{ blocks: TemplateBlock[]; onChange: (next: TemplateBlock[]) => void }>) {
   const [selectedId, setSelectedId] = useState<string | null>(blocks[0]?.id ?? null);
   const lastFocused = useRef<HTMLElement | null>(null);
+  const fileInput = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const selected = blocks.find((b) => b.id === selectedId) ?? null;
 
@@ -45,7 +48,7 @@ export function TemplateVisualEditor({
         : type === "button"
         ? { ...base, type: "button", label: "Click here", url: "https://icapos.com", align: "left" }
         : type === "image"
-        ? { ...base, type: "image", src: "https://icapos.com/logo.png", alt: "", width: 200, align: "center" }
+        ? { ...base, type: "image", src: "", alt: "", width: 200, align: "center" }
         : type === "divider"
         ? { ...base, type: "divider" }
         : type === "spacer"
@@ -53,6 +56,31 @@ export function TemplateVisualEditor({
         : { ...base, type: "text", text: "New paragraph", align: "left" };
     onChange([...blocks, block]);
     setSelectedId(block.id);
+  }
+
+  /**
+   * Upload an image and point the selected image block at the returned public
+   * URL. Uploads go to a public bucket because mail clients fetch images with no
+   * session — a signed URL would break for every recipient.
+   */
+  async function uploadImage(file: File, blockId: string) {
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/api/marketing/assets/upload", { method: "POST", body });
+      const json = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
+      if (!res.ok || !json?.url) {
+        setUploadError(json?.error ?? "Upload failed.");
+        return;
+      }
+      update(blockId, { src: json.url } as Partial<TemplateBlock>);
+    } catch {
+      setUploadError("Upload failed. Check your connection and try again.");
+    } finally {
+      setUploading(false);
+    }
   }
 
   /** Insert a merge field into the selected text/heading block. */
@@ -123,8 +151,14 @@ export function TemplateVisualEditor({
                 </div>
               ) : b.type === "image" ? (
                 <div className="px-6 py-3" style={{ textAlign: b.align ?? "center" }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={b.src} alt={b.alt ?? ""} width={b.width ?? 200} className="inline-block h-auto max-w-full" />
+                  {b.src ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={b.src} alt={b.alt ?? ""} width={b.width ?? 200} className="inline-block h-auto max-w-full" />
+                  ) : (
+                    <span className="inline-block rounded-md border border-dashed border-slate-300 bg-slate-50 px-6 py-5 text-[11.5px] text-slate-400">
+                      No image yet — select this block and upload one.
+                    </span>
+                  )}
                 </div>
               ) : b.type === "divider" ? (
                 <div className="px-6 py-3"><div className="border-t border-slate-200" /></div>
@@ -198,12 +232,47 @@ export function TemplateVisualEditor({
 
             {selected.type === "image" ? (
               <>
+                <div>
+                  <input
+                    ref={fileInput}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void uploadImage(f, selected.id);
+                      e.target.value = "";
+                    }}
+                  />
+                  <button
+                    type="button"
+                    disabled={uploading}
+                    onClick={() => fileInput.current?.click()}
+                    className="w-full rounded-md border border-[#bcd3fb] bg-[#f2f7ff] px-2 py-1.5 text-[11.5px] font-semibold text-[#2E78F5] hover:bg-[#e6f0ff] disabled:opacity-60"
+                  >
+                    {uploading ? "Uploading…" : "⬆ Upload image"}
+                  </button>
+                  {uploadError ? <p className="mt-1 text-[10.5px] text-rose-600">{uploadError}</p> : null}
+                  <p className="mt-1 text-[10.5px] text-slate-400">JPG, PNG, WebP, or GIF · max 5MB</p>
+                </div>
+
                 <label className="block text-[11px] font-semibold text-slate-600">
                   Image URL
                   <input
                     value={selected.src}
                     onChange={(e) => update(selected.id, { src: e.target.value } as Partial<TemplateBlock>)}
                     className="mt-1 w-full rounded-md border border-slate-200 px-2 py-1.5 text-[12px]"
+                    placeholder="Upload above, or paste a hosted URL"
+                  />
+                </label>
+
+                <label className="block text-[11px] font-semibold text-slate-600">
+                  Alt text
+                  <input
+                    value={selected.alt ?? ""}
+                    onChange={(e) => update(selected.id, { alt: e.target.value } as Partial<TemplateBlock>)}
+                    className="mt-1 w-full rounded-md border border-slate-200 px-2 py-1.5 text-[12px]"
+                    placeholder="Describes the image when it can't load"
                   />
                 </label>
                 <label className="block text-[11px] font-semibold text-slate-600">

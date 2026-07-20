@@ -48,6 +48,28 @@ describe("renderBlocksToEmailHtml", () => {
   it("keeps https button URLs", () => {
     expect(renderBlocksToEmailHtml(blocks)).toContain("https://icapos.com/pipeline");
   });
+
+  it("omits image blocks with no source rather than emitting a broken img", () => {
+    const html = renderBlocksToEmailHtml([{ id: "i", type: "image", src: "", width: 200 }]);
+    expect(html).not.toContain("<img");
+  });
+
+  it("omits image blocks with a non-http(s) source", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "i", type: "image", src: "javascript:alert(1)", width: 200 },
+    ]);
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain("javascript:");
+  });
+
+  it("renders uploaded image URLs", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "i", type: "image", src: "https://cdn.example.com/a.png", alt: "Logo", width: 180 },
+    ]);
+    expect(html).toContain('src="https://cdn.example.com/a.png"');
+    expect(html).toContain('alt="Logo"');
+    expect(html).toContain('width="180"');
+  });
 });
 
 describe("renderBlocksToText", () => {

@@ -121,8 +121,12 @@ function renderBlock(block: TemplateBlock): string {
       return `<tr><td style="padding:14px 24px;text-align:${align};"><a href="${esc(safeUrl(block.url))}" style="display:inline-block;background:${esc(bg)};color:${esc(color)};font-family:${FONT};font-size:15px;font-weight:bold;text-decoration:none;padding:12px 22px;border-radius:8px;">${escText(block.label)}</a></td></tr>`;
     }
     case "image": {
+      // An empty or non-http(s) src would render as a broken image in every
+      // recipient's inbox, so drop the row entirely instead of emitting it.
+      const src = safeUrl(block.src);
+      if (!block.src || src === "#") return "";
       const width = block.width && block.width > 0 ? Math.min(block.width, 600) : 200;
-      return `<tr><td style="padding:14px 24px;text-align:${align};"><img src="${esc(block.src)}" alt="${esc(block.alt ?? "")}" width="${width}" style="display:inline-block;max-width:100%;height:auto;border:0;" /></td></tr>`;
+      return `<tr><td style="padding:14px 24px;text-align:${align};"><img src="${esc(src)}" alt="${esc(block.alt ?? "")}" width="${width}" style="display:inline-block;max-width:100%;height:auto;border:0;" /></td></tr>`;
     }
     case "divider":
       return `<tr><td style="padding:10px 24px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-top:1px solid #e3e8f2;font-size:0;line-height:0;">&nbsp;</td></tr></table></td></tr>`;

@@ -6,6 +6,7 @@ import { track } from "@/lib/analytics/posthog";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
 import { ReportExportButtons } from "@/components/founder/ReportExportButtons";
+import { GenerateMyReportButton } from "@/components/founder/GenerateMyReportButton";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -54,11 +55,16 @@ export default async function DiligenceReportPage() {
             <h1 className="mt-3 text-2xl font-semibold text-slate-950">{t("no_diligence_report_generated_yet")}</h1>
             <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600">
               {company
-                ? "When staff or AI generates a diligence report for your company, it will appear here with executive summary, risks, and recommendations."
+                ? "Generate a report from the documents you've uploaded — you'll get an executive summary, risk flags, missing documents, and recommended next steps. Upload more documents first for a sharper result."
                 : "Complete company onboarding first, then request diligence review."}
             </p>
+            {company ? (
+              <div className="mt-6 flex justify-center">
+                <GenerateMyReportButton />
+              </div>
+            ) : null}
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <Link href="/founder/readiness" className="cap-btn-primary rounded-lg px-4 py-2 text-sm font-medium">
+              <Link href="/founder/readiness" className="cap-btn-secondary rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[var(--navy)]">
                 View readiness checklist
               </Link>
               <Link href="/founder/documents" className="cap-btn-secondary rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[var(--navy)]">
@@ -79,8 +85,9 @@ export default async function DiligenceReportPage() {
                   <p className="mt-2 text-xs text-slate-500">
                     Generated {new Date(diligenceReport.created_at).toLocaleString("en-US")}
                   </p>
-                  <div className="mt-4">
+                  <div className="mt-4 flex flex-wrap items-start gap-3">
                     <ReportExportButtons />
+                    <GenerateMyReportButton variant="secondary" label="Regenerate" />
                   </div>
                 </div>
                 {typeof diligenceReport.readiness_score === "number" ? (
