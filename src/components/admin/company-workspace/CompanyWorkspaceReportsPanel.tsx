@@ -2,6 +2,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { buildCompanyReportHref } from "@/lib/admin/company-workspace-types";
+import { GenerateDiligenceReportButton } from "@/components/admin/company-workspace/GenerateDiligenceReportButton";
 
 const REPORT_LINKS = [
   {
@@ -49,6 +50,8 @@ export function CompanyWorkspaceReportsPanel({
       <p className="mt-4 text-xs text-slate-500">
         Source: /admin/reports · Company filter applied via URL parameters
       </p>
+
+      <GenerateDiligenceReportButton companyId={companyId} />
     </WorkspacePanel>
   );
 }
