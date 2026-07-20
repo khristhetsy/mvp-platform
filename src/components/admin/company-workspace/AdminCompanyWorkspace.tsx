@@ -30,6 +30,7 @@ import { InvestableReadinessPanel } from "@/components/investor/InvestableReadin
 import { FounderJourneyPanel } from "@/components/admin/company-workspace/FounderJourneyPanel";
 import { NotificationSettings } from "@/components/admin/company-workspace/NotificationSettings";
 import { SubscriptionManager } from "@/components/admin/company-workspace/SubscriptionManager";
+import { CompanyBasicsEditor } from "@/components/admin/company-workspace/CompanyBasicsEditor";
 
 const TABS = [
   { key: "initialize", label: "Initialize" },
@@ -254,6 +255,10 @@ export function AdminCompanyWorkspace({
       {/* ---------- SETTINGS ---------- */}
       {tab === "settings" ? (
         <div className="space-y-6">
+          <PageSection title="Company basics" subtitle="Edit industry, revenue stage, and funding target — audited">
+            <CompanyBasicsEditor companyId={data.company.id} />
+          </PageSection>
+
           <PageSection title="Notifications" subtitle="Choose which events notify you and how">
             <NotificationSettings />
           </PageSection>
