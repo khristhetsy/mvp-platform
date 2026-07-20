@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { getAnonymizedMatchCards } from "@/lib/matching/anonymized-cards";
 import { logInvestorMatchCardViews } from "@/lib/matching/queue";
 import { InvestorMatchList } from "@/components/matching/InvestorMatchList";
+import { MatchStatusStepper } from "@/components/matching/MatchStatusStepper";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export default async function InvestorMatchesPage() {
           title="Your matches"
           description="Fit-scored founders, anonymized until both sides consent to an introduction."
         />
+        <MatchStatusStepper />
         <InvestorMatchList cards={cards} />
       </WorkspacePageContainer>
     </AppShell>

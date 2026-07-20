@@ -37,9 +37,9 @@ export function InvestorMatchList({ cards }: Readonly<{ cards: AnonymizedMatchCa
 
   if (visible.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white px-8 py-14 text-center">
-        <p className="text-sm font-semibold text-slate-700">No matches yet</p>
-        <p className="mt-1 text-xs text-slate-500">Fit-scored founder matches appear here as they&apos;re generated.</p>
+      <div className="rounded-2xl border border-[#E3E8F2] bg-white px-8 py-14 text-center">
+        <p className="text-sm font-semibold text-[#0A1A40]">No matches yet</p>
+        <p className="mt-1 text-xs text-[#5A6782]">Fit-scored founder matches appear here as they&apos;re generated.</p>
       </div>
     );
   }
@@ -52,12 +52,12 @@ export function InvestorMatchList({ cards }: Readonly<{ cards: AnonymizedMatchCa
           const status = statuses[c.matchId];
           const reasons = reasonsOf(c.scoreBreakdown);
           return (
-            <article key={c.matchId} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5">
+            <article key={c.matchId} className="flex flex-col gap-3 rounded-2xl border border-[#E3E8F2] bg-white p-5">
               <div className="flex items-center justify-between">
-                <span className="rounded-full bg-[#EAF1FD] px-2.5 py-1 text-[11px] font-semibold text-[#1A6CE4]">
+                <span className="rounded-full bg-[#EAF1FD] px-2.5 py-1 text-[11px] font-bold text-[#1A6CE4]">
                   Match {Math.round(c.matchScore)}
                 </span>
-                <span className="text-[11px] font-medium text-slate-400">Anonymized until introduced</span>
+                <span className="text-[11px] font-medium text-[#9aa2b1]">Anonymized until introduced</span>
               </div>
               <dl className="grid grid-cols-2 gap-2 text-[12px]">
                 <Field label="Industry" value={c.industry ?? "—"} />
@@ -68,7 +68,7 @@ export function InvestorMatchList({ cards }: Readonly<{ cards: AnonymizedMatchCa
               {reasons.length ? (
                 <div className="flex flex-wrap gap-1.5">
                   {reasons.map((r) => (
-                    <span key={r} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10.5px] text-slate-600">{r}</span>
+                    <span key={r} className="rounded-full bg-[#EFF2F7] px-2.5 py-0.5 text-[10.5px] text-[#5A6782]">{r}</span>
                   ))}
                 </div>
               ) : null}
@@ -79,7 +79,7 @@ export function InvestorMatchList({ cards }: Readonly<{ cards: AnonymizedMatchCa
                     type="button"
                     disabled={pending}
                     onClick={() => act(c.matchId, "interested")}
-                    className="flex-1 rounded-lg bg-[#1A6CE4] px-3 py-2 text-[13px] font-semibold text-white disabled:opacity-50"
+                    className="flex-1 rounded-lg bg-[#1A6CE4] px-3 py-2 text-[13px] font-bold text-white hover:bg-[#155cc4] disabled:opacity-50"
                   >
                     Interested
                   </button>
@@ -87,17 +87,17 @@ export function InvestorMatchList({ cards }: Readonly<{ cards: AnonymizedMatchCa
                     type="button"
                     disabled={pending}
                     onClick={() => act(c.matchId, "decline")}
-                    className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-600 disabled:opacity-50"
+                    className="rounded-lg border border-[#E3E8F2] px-3 py-2 text-[13px] font-medium text-[#5A6782] hover:bg-[#F6F8FC] disabled:opacity-50"
                   >
                     Pass
                   </button>
                 </div>
               ) : status === "investor_interested" ? (
-                <p className="mt-1 rounded-lg bg-emerald-50 px-3 py-2 text-[12px] font-medium text-emerald-700">
+                <p className="mt-1 rounded-lg bg-[#E6F7F0] px-3 py-2 text-[12px] font-semibold text-[#0B5C41]">
                   ✓ Interest sent — awaiting the founder&apos;s approval to introduce.
                 </p>
               ) : (
-                <p className="mt-1 rounded-lg bg-slate-50 px-3 py-2 text-[12px] text-slate-500">
+                <p className="mt-1 rounded-lg bg-[#EEF1F7] px-3 py-2 text-[12px] text-[#2E3A54]">
                   Approved — introduction in progress.
                 </p>
               )}
@@ -111,9 +111,9 @@ export function InvestorMatchList({ cards }: Readonly<{ cards: AnonymizedMatchCa
 
 function Field({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
-    <div className="rounded-lg bg-slate-50 px-2.5 py-2">
-      <dt className="text-[10.5px] uppercase tracking-[0.5px] text-slate-400">{label}</dt>
-      <dd className="mt-0.5 text-[12.5px] font-semibold text-slate-800">{value}</dd>
+    <div className="rounded-lg bg-[#F6F8FC] px-2.5 py-2">
+      <dt className="text-[10.5px] uppercase tracking-[0.5px] text-[#5A6782]">{label}</dt>
+      <dd className="mt-0.5 text-[12.5px] font-bold text-[#16223F]">{value}</dd>
     </div>
   );
 }
