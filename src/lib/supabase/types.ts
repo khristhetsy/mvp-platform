@@ -46,6 +46,10 @@ export type Company = {
   onboarding_step_state?: Record<string, unknown> | null;
   capital_ready_at?: string | null;
   learning_readiness_bonus?: number;
+  /** Dual-lane: founder-attested securities exemption (added 20260719006). */
+  offering_type?: string | null;
+  offering_type_attested_at?: string | null;
+  offering_type_attested_by?: string | null;
   created_at: string;
   updated_at: string;
 };

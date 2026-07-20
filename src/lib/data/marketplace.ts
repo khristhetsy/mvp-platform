@@ -151,14 +151,17 @@ function mapCompanyToListing(
 
 export function isCompanyMarketplaceListed(company: Pick<
   Company,
-  "review_status" | "is_published" | "marketplace_visible" | "published_at"
+  "review_status" | "is_published" | "marketplace_visible" | "published_at" | "offering_type"
 > & { is_sample?: boolean | null }) {
   return (
     company.review_status === "approved" &&
     company.is_published === true &&
     company.marketplace_visible === true &&
     Boolean(company.published_at) &&
-    company.is_sample !== true
+    company.is_sample !== true &&
+    // Compliance (dual-lane §0.1): only Reg CF founders may appear on any public
+    // surface. Non-Reg-CF (Reg D) offerings must never be publicly visible.
+    company.offering_type === "reg_cf"
   );
 }
 
@@ -223,6 +226,8 @@ export async function listMarketplaceListings(supabase: SupabaseClient<Database>
     .eq("is_published", true)
     .eq("marketplace_visible", true)
     .eq("is_sample", false)
+    // Compliance (dual-lane §0.1): public surfaces are Reg CF only.
+    .eq("offering_type", "reg_cf")
     .not("published_at", "is", null)
     .order("published_at", { ascending: false });
 
