@@ -131,6 +131,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
   // from blocks, so if we always did that we'd silently discard hand-written
   // HTML. Whichever surface was touched last wins on save.
   const [editSource, setEditSource] = useState<"visual" | "html">("visual");
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("grid");
   const [sort, setSort] = useState<SortKey>("edited");
 
@@ -189,6 +190,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
   async function handleSave() {
     if (!editing) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const isNew = !editing.id;
       const url = isNew ? "/api/marketing/templates" : `/api/marketing/templates/${editing.id}`;
@@ -206,16 +208,39 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
               text_body: renderBlocksToText(blocks),
             }
           : editing;
-      await fetch(url, {
+      let res = await fetch(url, {
         method: isNew ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
+      // The blocks column ships in migration 20260720002. If it hasn't been
+      // applied yet, Postgres rejects the whole write and the template appears
+      // not to save at all. Retry without blocks so the user's actual content is
+      // never lost to a pending migration — the visual editor just reseeds from
+      // html_body next time.
+      if (!res.ok && (await res.clone().text()).toLowerCase().includes("blocks")) {
+        const { blocks: _omit, ...withoutBlocks } = payload as Record<string, unknown>;
+        void _omit;
+        res = await fetch(url, {
+          method: isNew ? "POST" : "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(withoutBlocks),
+        });
+      }
+
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        setSaveError(body?.error ?? `Save failed (${res.status}). Your changes are still here — nothing was lost.`);
+        return;
+      }
+
       setEditing(null);
       setBlocks(null);
       router.refresh();
     } catch (err) {
       console.error("Failed to save template:", err);
+      setSaveError("Couldn't reach the server. Your changes are still here — try again.");
     } finally {
       setSaving(false);
     }
@@ -369,6 +394,12 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
                 }
               />
             </div>
+          ) : null}
+
+          {saveError ? (
+            <p style={{ marginTop: 12, fontSize: 12, color: "#A32D2D", background: "#FCEBEB", border: "0.5px solid #F09595", borderRadius: 6, padding: "8px 11px" }}>
+              {saveError}
+            </p>
           ) : null}
 
           <div style={{ marginTop: 14, display: "flex", gap: 8 }}>

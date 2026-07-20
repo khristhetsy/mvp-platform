@@ -22,6 +22,7 @@ export function TemplateVisualEditor({
   const fileInput = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   const selected = blocks.find((b) => b.id === selectedId) ?? null;
 
@@ -63,7 +64,11 @@ export function TemplateVisualEditor({
    * URL. Uploads go to a public bucket because mail clients fetch images with no
    * session — a signed URL would break for every recipient.
    */
-  async function uploadImage(file: File, blockId: string) {
+  async function uploadImage(file: File): Promise<string | null> {
+    if (!/^image\//.test(file.type)) {
+      setUploadError("That file isn't an image.");
+      return null;
+    }
     setUploading(true);
     setUploadError(null);
     try {
@@ -72,15 +77,44 @@ export function TemplateVisualEditor({
       const res = await fetch("/api/marketing/assets/upload", { method: "POST", body });
       const json = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
       if (!res.ok || !json?.url) {
-        setUploadError(json?.error ?? "Upload failed.");
-        return;
+        const raw = json?.error ?? "Upload failed.";
+        // "Bucket not found" means migration 20260720003 hasn't been applied —
+        // say so plainly instead of leaking the storage error.
+        setUploadError(
+          /bucket not found/i.test(raw)
+            ? "Image storage isn't set up yet — run migration 20260720003. You can paste a hosted image URL below in the meantime."
+            : raw,
+        );
+        return null;
       }
-      update(blockId, { src: json.url } as Partial<TemplateBlock>);
+      return json.url;
     } catch {
       setUploadError("Upload failed. Check your connection and try again.");
+      return null;
     } finally {
       setUploading(false);
     }
+  }
+
+  /** Upload into an existing block. */
+  async function uploadInto(file: File, blockId: string) {
+    const url = await uploadImage(file);
+    if (url) update(blockId, { src: url } as Partial<TemplateBlock>);
+  }
+
+  /** Append a new image block and upload into it (drag-and-drop onto the canvas). */
+  async function uploadAsNewBlock(file: File) {
+    const block: TemplateBlock = { id: newBlockId(), type: "image", src: "", alt: "", width: 200, align: "center" };
+    const withPlaceholder = [...blocks, block];
+    onChange(withPlaceholder);
+    setSelectedId(block.id);
+    const url = await uploadImage(file);
+    // Apply against the list we just built — `blocks` in this closure is stale.
+    onChange(
+      url
+        ? withPlaceholder.map((b) => (b.id === block.id ? { ...b, src: url } : b))
+        : withPlaceholder.filter((b) => b.id !== block.id),
+    );
   }
 
   /** Insert a merge field into the selected text/heading block. */
@@ -115,7 +149,21 @@ export function TemplateVisualEditor({
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_240px]">
       {/* Canvas — the rendered email */}
-      <div className="rounded-xl bg-[#eef2f8] p-5">
+      <div
+        className={`rounded-xl p-5 transition ${dragOverId === "canvas" ? "bg-[#dbe8ff] outline-dashed outline-2 outline-[#2E78F5]" : "bg-[#eef2f8]"}`}
+        onDragOver={(e) => { e.preventDefault(); setDragOverId((cur) => cur ?? "canvas"); }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragOverId(null);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          const wasOverBlock = dragOverId !== "canvas" && dragOverId !== null;
+          setDragOverId(null);
+          if (wasOverBlock) return; // an image block already handled it
+          const f = e.dataTransfer.files?.[0];
+          if (f) void uploadAsNewBlock(f);
+        }}
+      >
         <div className="mx-auto max-w-[560px] overflow-hidden rounded-[10px] bg-white shadow-sm">
           {blocks.length === 0 ? (
             <p className="p-8 text-center text-sm text-slate-400">No blocks yet — add one from the panel.</p>
@@ -173,13 +221,40 @@ export function TemplateVisualEditor({
                   </span>
                 </div>
               ) : b.type === "image" ? (
-                <div className="px-6 py-3" style={{ textAlign: b.align ?? "center" }}>
+                <div
+                  className="px-6 py-3"
+                  style={{ textAlign: b.align ?? "center" }}
+                  onDragOver={(e) => { e.preventDefault(); setDragOverId(b.id); }}
+                  onDragLeave={() => setDragOverId((cur) => (cur === b.id ? null : cur))}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOverId(null);
+                    setSelectedId(b.id);
+                    const f = e.dataTransfer.files?.[0];
+                    if (f) void uploadInto(f, b.id);
+                  }}
+                >
                   {b.src ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={b.src} alt={b.alt ?? ""} width={b.width ?? 200} className="inline-block h-auto max-w-full" />
+                    <img
+                      src={b.src}
+                      alt={b.alt ?? ""}
+                      width={b.width ?? 200}
+                      className={`inline-block h-auto max-w-full rounded ${dragOverId === b.id ? "opacity-50 outline-dashed outline-2 outline-[#2E78F5]" : ""}`}
+                    />
                   ) : (
-                    <span className="inline-block rounded-md border border-dashed border-slate-300 bg-slate-50 px-6 py-5 text-[11.5px] text-slate-400">
-                      No image yet — select this block and upload one.
+                    <span
+                      className={`inline-block rounded-md border-2 border-dashed px-6 py-5 text-[11.5px] ${
+                        dragOverId === b.id
+                          ? "border-[#2E78F5] bg-[#eef4ff] text-[#2E78F5]"
+                          : "border-slate-300 bg-slate-50 text-slate-400"
+                      }`}
+                    >
+                      {uploading && selectedId === b.id
+                        ? "Uploading…"
+                        : dragOverId === b.id
+                        ? "Drop to upload"
+                        : "Drag an image here, or select this block and upload one."}
                     </span>
                   )}
                 </div>
@@ -289,7 +364,7 @@ export function TemplateVisualEditor({
                     className="hidden"
                     onChange={(e) => {
                       const f = e.target.files?.[0];
-                      if (f) void uploadImage(f, selected.id);
+                      if (f) void uploadInto(f, selected.id);
                       e.target.value = "";
                     }}
                   />
