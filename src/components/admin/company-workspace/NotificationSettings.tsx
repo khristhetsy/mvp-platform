@@ -11,12 +11,62 @@ type NotificationPrefs = {
   digest_frequency: DigestFrequency;
   quiet_start: string | null;
   quiet_end: string | null;
+  timezone: string | null;
   pause_all: boolean;
   critical_override: boolean;
   channel_in_app: boolean;
   channel_email: boolean;
   channel_slack: boolean;
 };
+
+// Curated common IANA zones for the dropdown; the saved/detected zone is
+// prepended if it isn't already in the list.
+const COMMON_TIMEZONES = [
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Sao_Paulo",
+  "Europe/London",
+  "Europe/Berlin",
+  "Europe/Madrid",
+  "Africa/Johannesburg",
+  "Asia/Dubai",
+  "Asia/Kolkata",
+  "Asia/Singapore",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+  "UTC",
+];
+
+function detectBrowserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+
+/** e.g. "America/New_York (GMT-4)". */
+function tzOffsetLabel(tz: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "shortOffset" }).formatToParts(new Date());
+    const name = parts.find((p) => p.type === "timeZoneName")?.value ?? "";
+    return name ? `${tz} (${name})` : tz;
+  } catch {
+    return tz;
+  }
+}
+
+/** "20:00" → "8:00 PM". */
+function to12h(hhmm: string | null): string {
+  if (!hhmm) return "—";
+  const [h, m] = hhmm.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return hhmm;
+  const ampm = h < 12 ? "AM" : "PM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
 
 const EVENT_META: ReadonlyArray<{ key: string; label: string; description: string }> = [
   { key: "new_founder_signup", label: "New founder signup", description: "A founder completes signup" },
@@ -47,6 +97,7 @@ const DEFAULT_PREFS: NotificationPrefs = {
   digest_frequency: "weekly",
   quiet_start: "20:00",
   quiet_end: "07:00",
+  timezone: null,
   pause_all: false,
   critical_override: true,
   channel_in_app: true,
@@ -103,7 +154,9 @@ export function NotificationSettings() {
         const res = await fetch("/api/admin/notification-preferences");
         if (!res.ok) throw new Error("Failed to load preferences.");
         const data = (await res.json()) as NotificationPrefs;
-        if (active) setPrefs(data);
+        // Default the zone to the viewer's browser zone on first visit so quiet
+        // hours are interpreted locally out of the box.
+        if (active) setPrefs({ ...data, timezone: data.timezone ?? detectBrowserTimezone() });
       } catch {
         if (active) {
           setPrefs(DEFAULT_PREFS);
@@ -276,6 +329,43 @@ export function NotificationSettings() {
               />
             </div>
           </div>
+
+          {/* Time zone — quiet hours are evaluated in this zone. */}
+          <div className="flex flex-col gap-1">
+            <label htmlFor="timezone" className="text-sm font-medium text-slate-700">
+              Time zone
+            </label>
+            <select
+              id="timezone"
+              value={prefs.timezone ?? "UTC"}
+              onChange={(e) => update({ timezone: e.target.value })}
+              className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              {(prefs.timezone && !COMMON_TIMEZONES.includes(prefs.timezone)
+                ? [prefs.timezone, ...COMMON_TIMEZONES]
+                : COMMON_TIMEZONES
+              ).map((tz) => (
+                <option key={tz} value={tz}>{tzOffsetLabel(tz)}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => update({ timezone: detectBrowserTimezone() })}
+              className="mt-1 self-start text-xs font-medium text-blue-600 hover:text-blue-700"
+            >
+              📍 Use my current zone ({detectBrowserTimezone()})
+            </button>
+          </div>
+
+          {prefs.quiet_start && prefs.quiet_end ? (
+            <div className="flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2.5 text-[13px] text-blue-900">
+              <span aria-hidden="true">🕗</span>
+              <span>
+                Notifications are muted <b>{to12h(prefs.quiet_start)} → {to12h(prefs.quiet_end)}</b> in{" "}
+                <b>{tzOffsetLabel(prefs.timezone ?? "UTC")}</b>. The times above are interpreted in this zone.
+              </span>
+            </div>
+          ) : null}
 
           <div className="flex items-center justify-between border-t border-slate-100 pt-4">
             <div>

@@ -13,6 +13,7 @@ type NotificationPrefs = {
   digest_frequency: DigestFrequency;
   quiet_start: string | null;
   quiet_end: string | null;
+  timezone: string | null;
   pause_all: boolean;
   critical_override: boolean;
   channel_in_app: boolean;
@@ -36,6 +37,7 @@ const DEFAULT_PREFS: NotificationPrefs = {
   digest_frequency: "weekly",
   quiet_start: "20:00",
   quiet_end: "07:00",
+  timezone: null,
   pause_all: false,
   critical_override: true,
   channel_in_app: true,
@@ -75,6 +77,18 @@ function coerceTime(value: unknown, fallback: string | null): string | null {
   return typeof value === "string" ? value : fallback;
 }
 
+/** Accept only a valid IANA time zone; anything else → null (UTC fallback). */
+function coerceTimezone(value: unknown): string | null {
+  if (typeof value !== "string" || value.length === 0 || value.length > 64) return null;
+  try {
+    // Throws RangeError for an unknown zone.
+    new Intl.DateTimeFormat("en-US", { timeZone: value });
+    return value;
+  } catch {
+    return null;
+  }
+}
+
 function sanitize(body: Record<string, unknown>): NotificationPrefs {
   const digest = body.digest_frequency;
   const digest_frequency: DigestFrequency = DIGEST_FREQUENCIES.includes(
@@ -88,6 +102,7 @@ function sanitize(body: Record<string, unknown>): NotificationPrefs {
     digest_frequency,
     quiet_start: coerceTime(body.quiet_start, DEFAULT_PREFS.quiet_start),
     quiet_end: coerceTime(body.quiet_end, DEFAULT_PREFS.quiet_end),
+    timezone: coerceTimezone(body.timezone),
     pause_all: coerceBool(body.pause_all, DEFAULT_PREFS.pause_all),
     critical_override: coerceBool(body.critical_override, DEFAULT_PREFS.critical_override),
     channel_in_app: coerceBool(body.channel_in_app, DEFAULT_PREFS.channel_in_app),
@@ -110,7 +125,7 @@ export async function GET(): Promise<Response> {
   const { data, error } = await db
     .from("notification_preferences")
     .select(
-      "events, digest_frequency, quiet_start, quiet_end, pause_all, critical_override, channel_in_app, channel_email, channel_slack",
+      "events, digest_frequency, quiet_start, quiet_end, timezone, pause_all, critical_override, channel_in_app, channel_email, channel_slack",
     )
     .eq("user_id", user.id)
     .maybeSingle();
@@ -159,7 +174,7 @@ export async function PUT(req: Request): Promise<Response> {
       { onConflict: "user_id" },
     )
     .select(
-      "events, digest_frequency, quiet_start, quiet_end, pause_all, critical_override, channel_in_app, channel_email, channel_slack",
+      "events, digest_frequency, quiet_start, quiet_end, timezone, pause_all, critical_override, channel_in_app, channel_email, channel_slack",
     )
     .single();
 

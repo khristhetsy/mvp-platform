@@ -22,6 +22,8 @@ export type NotificationPrefs = {
   digest_frequency: "daily" | "weekly" | "off";
   quiet_start: string | null;
   quiet_end: string | null;
+  /** IANA time zone (e.g. 'America/New_York') for quiet-hours evaluation. Null → UTC. */
+  timezone: string | null;
   pause_all: boolean;
   critical_override: boolean;
   channel_in_app: boolean;
@@ -47,6 +49,7 @@ export const DEFAULT_PREFS: NotificationPrefs = {
   digest_frequency: "weekly",
   quiet_start: "20:00",
   quiet_end: "07:00",
+  timezone: null,
   pause_all: false,
   critical_override: true,
   channel_in_app: true,
@@ -85,13 +88,31 @@ function isCritical(severity?: string | null): boolean {
   return severity === "critical";
 }
 
-/** True if `now` (UTC) falls within the user's quiet-hours window. */
+/** Minutes-since-midnight for `now` in the given IANA zone (falls back to UTC). */
+function minutesInZone(now: Date, timeZone: string | null): number {
+  if (!timeZone) return now.getUTCHours() * 60 + now.getUTCMinutes();
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(now);
+    const h = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+    const m = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+    return (h % 24) * 60 + m;
+  } catch {
+    return now.getUTCHours() * 60 + now.getUTCMinutes();
+  }
+}
+
+/** True if `now` falls within the user's quiet-hours window, evaluated in their time zone. */
 export function isQuietNow(prefs: NotificationPrefs, now: Date = new Date()): boolean {
   if (!prefs.quiet_start || !prefs.quiet_end) return false;
   const [sh, sm] = prefs.quiet_start.split(":").map(Number);
   const [eh, em] = prefs.quiet_end.split(":").map(Number);
   if ([sh, sm, eh, em].some((n) => Number.isNaN(n))) return false;
-  const cur = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const cur = minutesInZone(now, prefs.timezone);
   const start = sh * 60 + sm;
   const end = eh * 60 + em;
   if (start === end) return false;
@@ -113,6 +134,7 @@ export async function loadNotificationPrefs(userId: string): Promise<Notificatio
       digest_frequency: (row.digest_frequency as NotificationPrefs["digest_frequency"]) ?? "weekly",
       quiet_start: (row.quiet_start as string | null) ?? null,
       quiet_end: (row.quiet_end as string | null) ?? null,
+      timezone: (row.timezone as string | null) ?? null,
       pause_all: Boolean(row.pause_all),
       critical_override: row.critical_override === undefined ? true : Boolean(row.critical_override),
       channel_in_app: row.channel_in_app === undefined ? true : Boolean(row.channel_in_app),
