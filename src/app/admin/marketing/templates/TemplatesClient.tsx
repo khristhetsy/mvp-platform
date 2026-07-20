@@ -127,6 +127,10 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
   const [activeTab, setActiveTab] = useState<"visual" | "write" | "preview">("visual");
   // Structured blocks for the visual editor (regenerates html_body on save).
   const [blocks, setBlocks] = useState<TemplateBlock[] | null>(null);
+  // Which surface the user last edited. The visual editor regenerates html_body
+  // from blocks, so if we always did that we'd silently discard hand-written
+  // HTML. Whichever surface was touched last wins on save.
+  const [editSource, setEditSource] = useState<"visual" | "html">("visual");
   const [view, setView] = useState<ViewMode>("grid");
   const [sort, setSort] = useState<SortKey>("edited");
 
@@ -148,6 +152,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
     );
     setEditing(t);
     setActiveTab(tab);
+    setEditSource(tab === "write" ? "html" : "visual");
   }
 
   /**
@@ -187,16 +192,20 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
     try {
       const isNew = !editing.id;
       const url = isNew ? "/api/marketing/templates" : `/api/marketing/templates/${editing.id}`;
-      // Blocks are the source of truth for the visual editor — regenerate the
-      // email-safe HTML (and text alternative) from them on every save.
-      const payload = blocks
-        ? {
-            ...editing,
-            blocks,
-            html_body: renderBlocksToEmailHtml(blocks),
-            text_body: renderBlocksToText(blocks),
-          }
-        : editing;
+      // If the user last edited raw HTML, save it verbatim and drop the stored
+      // blocks — otherwise regenerating from stale blocks would wipe their edits.
+      // Clearing blocks makes the Visual tab reseed from the new HTML next time.
+      const payload =
+        editSource === "html"
+          ? { ...editing, blocks: null }
+          : blocks
+          ? {
+              ...editing,
+              blocks,
+              html_body: renderBlocksToEmailHtml(blocks),
+              text_body: renderBlocksToText(blocks),
+            }
+          : editing;
       await fetch(url, {
         method: isNew ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -309,7 +318,10 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
 
           {activeTab === "visual" ? (
             <div style={{ marginBottom: 12 }}>
-              <TemplateVisualEditor blocks={blocks ?? []} onChange={setBlocks} />
+              <TemplateVisualEditor
+                blocks={blocks ?? []}
+                onChange={(next) => { setBlocks(next); setEditSource("visual"); }}
+              />
               <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 10 }}>
                 Click any block to edit it. The email HTML is regenerated from these blocks when you save — it stays
                 table-based and inline-styled so it renders correctly in Outlook and Gmail.
@@ -319,12 +331,18 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
 
           {activeTab === "write" ? (
             <>
+              {editSource === "html" ? (
+                <p style={{ fontSize: 11, color: "#8a6d1f", background: "#fdf6e3", border: "0.5px solid #f0e2b6", borderRadius: 6, padding: "7px 10px", marginBottom: 10 }}>
+                  Editing raw HTML. Saving from here keeps your markup exactly as written — the Visual tab will rebuild
+                  its blocks from it next time you open this template.
+                </p>
+              ) : null}
               <div style={{ marginBottom: 12 }}>
                 <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>
                   Email body — use {"{{first_name}}"}, {"{{company}}"} as variables
                 </label>
                 <textarea value={editing.html_body ?? ""}
-                  onChange={(e) => setEditing({ ...editing, html_body: e.target.value })}
+                  onChange={(e) => { setEditing({ ...editing, html_body: e.target.value }); setEditSource("html"); }}
                   rows={12}
                   placeholder={"<p>Hi {{first_name}},</p>\n<p>I wanted to reach out about...</p>\n<p>Best regards,<br/>{{sender_name}}</p>"}
                   style={{ width: "100%", fontSize: 13, padding: "10px 12px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)", fontFamily: "var(--font-mono)", resize: "vertical", lineHeight: 1.7 }} />
@@ -332,16 +350,26 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
               <div>
                 <label style={{ fontSize: 11, color: "var(--muted-foreground)", display: "block", marginBottom: 4 }}>Plain text (optional)</label>
                 <textarea value={editing.text_body ?? ""}
-                  onChange={(e) => setEditing({ ...editing, text_body: e.target.value })}
+                  onChange={(e) => { setEditing({ ...editing, text_body: e.target.value }); setEditSource("html"); }}
                   rows={4}
                   style={{ width: "100%", fontSize: 13, padding: "8px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--muted)", color: "var(--foreground)", fontFamily: "var(--font-mono)", resize: "vertical" }} />
               </div>
             </>
-          ) : (
+          ) : null}
+
+          {activeTab === "preview" ? (
             <div style={{ padding: "8px 0" }}>
-              <RawEmailPreview template={editing} />
+              {/* Preview what will actually be stored: regenerated HTML when the
+                  visual editor is the source, otherwise the raw HTML as typed. */}
+              <RawEmailPreview
+                template={
+                  editSource === "visual" && blocks
+                    ? { ...editing, html_body: renderBlocksToEmailHtml(blocks) }
+                    : editing
+                }
+              />
             </div>
-          )}
+          ) : null}
 
           <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
             <button onClick={handleSave} disabled={saving}
