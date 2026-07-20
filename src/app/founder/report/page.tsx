@@ -5,6 +5,7 @@ import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { track } from "@/lib/analytics/posthog";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { getLatestDiligenceReport } from "@/lib/data/founder-readiness";
+import { ReportExportButtons } from "@/components/founder/ReportExportButtons";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 
@@ -78,6 +79,9 @@ export default async function DiligenceReportPage() {
                   <p className="mt-2 text-xs text-slate-500">
                     Generated {new Date(diligenceReport.created_at).toLocaleString("en-US")}
                   </p>
+                  <div className="mt-4">
+                    <ReportExportButtons />
+                  </div>
                 </div>
                 {typeof diligenceReport.readiness_score === "number" ? (
                   <div className="rounded-xl border border-[var(--navy)] bg-[var(--navy)] p-5 text-white shadow-[var(--shadow-panel)]">
