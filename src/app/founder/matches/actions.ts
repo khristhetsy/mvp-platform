@@ -2,6 +2,7 @@
 
 import { requireApiProfile } from "@/lib/api/auth";
 import { applyMatchTransition, resolveFounderCompanyIds, type TransitionResult } from "@/lib/matching/apply-transition";
+import { notifyInvestorIntroduced } from "@/lib/matching/notify";
 
 async function founderAuthorize(): Promise<{ companyIds: string[] } | { error: string }> {
   const auth = await requireApiProfile(["founder"]);
@@ -25,7 +26,9 @@ export async function founderApproveMatch(matchId: string): Promise<TransitionRe
   if (!approved.ok) return approved;
 
   // Create the introduction immediately (server-driven system transition).
-  return applyMatchTransition({ matchId, to: "introduced", by: "system", authorize });
+  const introduced = await applyMatchTransition({ matchId, to: "introduced", by: "system", authorize });
+  if (introduced.ok) await notifyInvestorIntroduced(matchId);
+  return introduced;
 }
 
 /** Founder declines: investor_interested → declined_by_founder (terminal). */

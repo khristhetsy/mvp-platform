@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { matchInvestorToCompany, type InvestorMatchProfile } from "@/lib/matching/investor-company-matching";
 import { loadAdminCompanyMatchProfiles } from "@/lib/matching/load-matching-data";
+import { notifyInvestorsOfNewMatches } from "@/lib/matching/notify";
 
 // Founder eligibility is keyed on readiness (from diligence_reports, via
 // loadAdminCompanyMatchProfiles) — NOT the prospect-only `lead_prescore` field.
@@ -93,7 +94,10 @@ export async function promoteSuggestedMatches(): Promise<{ promoted: number }> {
     .from("investor_founder_matches")
     .update({ status: "investor_notified" })
     .eq("status", "suggested")
-    .select("id");
+    .select("id, investor_profile_id");
   if (error) throw new Error(`Promotion failed: ${error.message}`);
-  return { promoted: (data ?? []).length };
+
+  const promoted = (data ?? []) as Array<{ id: string; investor_profile_id: string }>;
+  await notifyInvestorsOfNewMatches(promoted);
+  return { promoted: promoted.length };
 }
