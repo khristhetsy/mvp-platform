@@ -51,6 +51,10 @@
     {
       "path": "/api/cron/meeting-kpi-goals",
       "schedule": "0 13 * * 1"
+    },
+    {
+      "path": "/api/cron/matching",
+      "schedule": "0 6 * * *"
     }
   ]
 }
