@@ -8,7 +8,9 @@ import { writeAuditLog } from "@/lib/data/audit";
 export const REVENUE_STAGES = ["pre_revenue", "early_revenue", "growing", "scaling"] as const;
 
 const patchSchema = z.object({
+  company_name: z.string().trim().min(2, "Company name must be at least 2 characters.").max(120),
   industry: z.string().trim().min(2, "Industry must be at least 2 characters.").max(80),
+  business_description: z.string().trim().max(2000).nullable().optional(),
   revenue_stage: z.enum(REVENUE_STAGES).nullable().optional(),
   funding_amount: z.number().nonnegative().nullable().optional(),
 });
@@ -22,16 +24,25 @@ export async function GET(_req: Request, { params }: Readonly<{ params: Promise<
   const db = auth.supabase as unknown as SupabaseClient;
   const { data, error } = await db
     .from("companies")
-    .select("industry, revenue_stage, funding_amount")
+    .select("company_name, industry, business_description, revenue_stage, funding_amount")
     .eq("id", id)
     .maybeSingle();
   if (error) return NextResponse.json({ error: apiErrorMessage(error) }, { status: 400 });
   if (!data) return NextResponse.json({ error: "Company not found." }, { status: 404 });
 
+  const row = data as {
+    company_name: string | null;
+    industry: string | null;
+    business_description: string | null;
+    revenue_stage: string | null;
+    funding_amount: number | null;
+  };
   return NextResponse.json({
-    industry: (data as { industry: string | null }).industry ?? "",
-    revenue_stage: (data as { revenue_stage: string | null }).revenue_stage ?? null,
-    funding_amount: (data as { funding_amount: number | null }).funding_amount ?? null,
+    company_name: row.company_name ?? "",
+    industry: row.industry ?? "",
+    business_description: row.business_description ?? "",
+    revenue_stage: row.revenue_stage ?? null,
+    funding_amount: row.funding_amount ?? null,
   });
 }
 
@@ -51,9 +62,11 @@ export async function PATCH(request: Request, { params }: Readonly<{ params: Pro
   }
 
   const patch: Record<string, unknown> = {
+    company_name: parsed.data.company_name,
     industry: parsed.data.industry,
     updated_at: new Date().toISOString(),
   };
+  if (parsed.data.business_description !== undefined) patch.business_description = parsed.data.business_description;
   if (parsed.data.revenue_stage !== undefined) patch.revenue_stage = parsed.data.revenue_stage;
   if (parsed.data.funding_amount !== undefined) patch.funding_amount = parsed.data.funding_amount;
 
@@ -62,7 +75,7 @@ export async function PATCH(request: Request, { params }: Readonly<{ params: Pro
     .from("companies")
     .update(patch)
     .eq("id", id)
-    .select("industry, revenue_stage, funding_amount")
+    .select("company_name, industry, business_description, revenue_stage, funding_amount")
     .single();
   if (error) return NextResponse.json({ error: apiErrorMessage(error) }, { status: 400 });
 
@@ -72,6 +85,7 @@ export async function PATCH(request: Request, { params }: Readonly<{ params: Pro
     entityType: "company",
     entityId: id,
     metadata: {
+      company_name: parsed.data.company_name,
       industry: parsed.data.industry,
       revenue_stage: parsed.data.revenue_stage ?? null,
       funding_amount: parsed.data.funding_amount ?? null,

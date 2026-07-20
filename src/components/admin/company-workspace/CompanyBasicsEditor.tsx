@@ -10,7 +10,13 @@ const STAGES: { id: string; label: string }[] = [
   { id: "scaling", label: "Scaling" },
 ];
 
-type Basics = { industry: string; revenue_stage: string | null; funding_amount: number | null };
+type Basics = {
+  company_name: string;
+  industry: string;
+  business_description: string;
+  revenue_stage: string | null;
+  funding_amount: number | null;
+};
 
 const INPUT =
   "mt-1 w-full max-w-md rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
@@ -28,7 +34,15 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
     let active = true;
     void fetch(`/api/admin/companies/${companyId}/basics`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("Could not load company basics."))))
-      .then((d: Basics) => { if (active) setB({ industry: d.industry ?? "", revenue_stage: d.revenue_stage, funding_amount: d.funding_amount }); })
+      .then((d: Basics) => {
+        if (active) setB({
+          company_name: d.company_name ?? "",
+          industry: d.industry ?? "",
+          business_description: d.business_description ?? "",
+          revenue_stage: d.revenue_stage,
+          funding_amount: d.funding_amount,
+        });
+      })
       .catch((e) => { if (active) setError(e instanceof Error ? e.message : "Load failed."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
@@ -41,6 +55,7 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
 
   async function save() {
     if (!b) return;
+    if (b.company_name.trim().length < 2) { setError("Company name must be at least 2 characters."); return; }
     if (b.industry.trim().length < 2) { setError("Industry must be at least 2 characters."); return; }
     setSaving(true);
     setError(null);
@@ -49,7 +64,9 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          company_name: b.company_name.trim(),
           industry: b.industry.trim(),
+          business_description: b.business_description.trim() || null,
           revenue_stage: b.revenue_stage,
           funding_amount: b.funding_amount,
         }),
@@ -71,8 +88,16 @@ export function CompanyBasicsEditor({ companyId }: Readonly<{ companyId: string 
   return (
     <div className="grid gap-4">
       <div>
+        <label className={LABEL} htmlFor="cb-name">Company name</label>
+        <input id="cb-name" value={b.company_name} onChange={(e) => patch({ company_name: e.target.value })} className={INPUT} placeholder="e.g. Doyle Organics, LLC" />
+      </div>
+      <div>
         <label className={LABEL} htmlFor="cb-industry">Industry</label>
         <input id="cb-industry" value={b.industry} onChange={(e) => patch({ industry: e.target.value })} className={INPUT} placeholder="e.g. CleanTech" />
+      </div>
+      <div>
+        <label className={LABEL} htmlFor="cb-desc">Business description</label>
+        <textarea id="cb-desc" rows={3} value={b.business_description} onChange={(e) => patch({ business_description: e.target.value })} className={INPUT} placeholder="One or two sentences about what the company does." />
       </div>
       <div>
         <label className={LABEL} htmlFor="cb-stage">Revenue stage</label>
