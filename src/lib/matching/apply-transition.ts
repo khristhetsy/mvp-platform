@@ -21,7 +21,8 @@ export async function applyMatchTransition(params: {
   matchId: string;
   to: MatchStatus;
   by: Actor;
-  authorize?: (match: MatchRow) => boolean;
+  // Required: ownership check so no caller can transition a match it doesn't own.
+  authorize: (match: MatchRow) => boolean;
 }): Promise<TransitionResult> {
   const db = createServiceRoleClient() as unknown as SupabaseClient;
 
@@ -33,7 +34,7 @@ export async function applyMatchTransition(params: {
   const match = data as MatchRow | null;
   if (!match) return { ok: false, error: "Match not found." };
 
-  if (params.authorize && !params.authorize(match)) {
+  if (!params.authorize(match)) {
     return { ok: false, error: "You are not authorized to act on this match." };
   }
 
