@@ -7,29 +7,37 @@ import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { buildDocumentChecklist } from "@/lib/data/founder-readiness";
+import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 
 export const dynamic = "force-dynamic";
 
-function checklistStatusLabel(status: "missing" | "uploaded" | "needs_review") {
+type ChecklistStatus = "missing" | "uploaded" | "needs_review" | "not_applicable";
+
+function checklistStatusLabel(status: ChecklistStatus) {
   switch (status) {
     case "uploaded":
       return "Uploaded";
     case "needs_review":
       return "Needs review";
+    case "not_applicable":
+      return "Not applicable";
     default:
       return "Missing";
   }
 }
 
-function checklistStatusClass(status: "missing" | "uploaded" | "needs_review") {
+function checklistStatusClass(status: ChecklistStatus) {
   switch (status) {
     case "uploaded":
       return "bg-emerald-50 text-emerald-800 ring-emerald-100";
     case "needs_review":
       return "bg-amber-50 text-amber-900 ring-amber-100";
+    case "not_applicable":
+      return "bg-slate-50 text-slate-400 ring-slate-100";
     default:
       return "bg-slate-100 text-slate-600 ring-slate-100";
   }
@@ -42,8 +50,15 @@ export default async function FounderReadinessDocumentsPage() {
   const supabase = await createServerSupabaseClient();
 
   const documents = company ? (await listCompanyDocuments(supabase, company.id)).data ?? [] : [];
-  const checklist = buildDocumentChecklist(documents);
-  const uploadedCount = checklist.filter((item) => item.status !== "missing").length;
+  const notApplicable = company
+    ? await loadNotApplicableTypes(createServiceRoleClient(), company.id)
+    : [];
+  const checklist = buildDocumentChecklist(documents, undefined, notApplicable);
+  // N/A items are excluded from both sides of the ratio — they're not missing
+  // and they don't count toward what's required.
+  const applicable = checklist.filter((item) => item.status !== "not_applicable");
+  const uploadedCount = applicable.filter((item) => item.status !== "missing").length;
+  const naCount = checklist.length - applicable.length;
 
   return (
     <FounderAppShell
@@ -65,7 +80,7 @@ export default async function FounderReadinessDocumentsPage() {
           ) : (
             <WorkspacePanel
               title={t("document_checklist")}
-              subtitle={`${uploadedCount} of ${checklist.length} uploaded`}
+              subtitle={`${uploadedCount} of ${applicable.length} uploaded${naCount > 0 ? ` · ${naCount} N/A` : ""}`}
               action={
                 <Link
                   href="/founder/documents"

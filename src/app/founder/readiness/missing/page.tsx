@@ -7,6 +7,8 @@ import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { buildDocumentChecklist, getLatestDiligenceReport } from "@/lib/data/founder-readiness";
+import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
@@ -20,7 +22,11 @@ export default async function FounderReadinessMissingPage() {
   const supabase = await createServerSupabaseClient();
 
   const documents = company ? (await listCompanyDocuments(supabase, company.id)).data ?? [] : [];
-  const checklist = buildDocumentChecklist(documents);
+  const notApplicable = company
+    ? await loadNotApplicableTypes(createServiceRoleClient(), company.id)
+    : [];
+  const checklist = buildDocumentChecklist(documents, undefined, notApplicable);
+  // Types the founder marked N/A are never "missing".
   const missingDocuments = checklist.filter((item) => item.status === "missing");
 
   const { data: diligenceReport } = company

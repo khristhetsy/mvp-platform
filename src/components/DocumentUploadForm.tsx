@@ -235,7 +235,10 @@ export function DocumentUploadForm({
                   {!isNa ? (
                     <span className={active ? "text-slate-200" : "text-slate-500"}>{existing ? "Replace" : "Upload"}</span>
                   ) : null}
-                  {canBeNa ? (
+                  {/* N/A only applies to an EMPTY slot — if a document is uploaded
+                      the control is hidden entirely (you can't call a provided
+                      document "not applicable"). */}
+                  {canBeNa && (isNa || !existing) ? (
                     <button
                       type="button"
                       className={[
@@ -247,8 +250,7 @@ export function DocumentUploadForm({
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200",
                       ].join(" ")}
                       onClick={() => void toggleNotApplicable(type.value, !isNa)}
-                      disabled={busy || isUploading || Boolean(existing)}
-                      title={existing ? "Remove the uploaded file before marking N/A" : undefined}
+                      disabled={busy || isUploading}
                     >
                       {busy ? "…" : isNa ? "Mark applicable" : "N/A"}
                     </button>

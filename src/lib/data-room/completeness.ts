@@ -62,8 +62,15 @@ function isCore(label: string, code: string): boolean {
   return CORE_LABELS.has(label) || CORE_CODES.has(code.toUpperCase());
 }
 
-export function computeDataRoomState(documents: DocumentRecord[]): DataRoomState {
-  const checklist = buildDocumentChecklist(documents, requiredDocumentTypes);
+export function computeDataRoomState(
+  documents: DocumentRecord[],
+  /** Canonical document-type codes marked "not applicable" — excluded from totals. */
+  notApplicableCodes: readonly string[] = [],
+): DataRoomState {
+  const checklist = buildDocumentChecklist(documents, requiredDocumentTypes, notApplicableCodes)
+    // N/A types are excluded entirely: they never count as missing and never
+    // reduce the completeness percentage. (Type predicate narrows the status.)
+    .filter((c): c is Omit<typeof c, "status"> & { status: DataRoomStatus } => c.status !== "not_applicable");
 
   const items: DataRoomItem[] = checklist.map((c) => {
     const gen = GENERATORS[c.label];

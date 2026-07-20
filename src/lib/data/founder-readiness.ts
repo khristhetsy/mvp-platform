@@ -5,7 +5,8 @@ import type { Company, Database, DocumentRecord } from "@/lib/supabase/types";
 export type DocumentChecklistItem = {
   label: string;
   code: string;
-  status: "missing" | "uploaded" | "needs_review";
+  /** `not_applicable` = founder marked this type N/A; excluded from missing/total counts. */
+  status: "missing" | "uploaded" | "needs_review" | "not_applicable";
   fileName: string | null;
   uploadedAt: string | null;
 };
@@ -31,7 +32,10 @@ const DOC_TYPE_ALIASES: Record<string, string[]> = {
 export function buildDocumentChecklist(
   documents: DocumentRecord[],
   requiredLabels: readonly string[] = requiredDocumentTypes,
+  /** Canonical document-type codes the founder marked "not applicable". */
+  notApplicableCodes: readonly string[] = [],
 ): DocumentChecklistItem[] {
+  const naSet = new Set(notApplicableCodes.map((c) => c.toUpperCase()));
   const uploadedByType = new Map<string, DocumentRecord>();
 
   for (const document of documents) {
@@ -51,7 +55,15 @@ export function buildDocumentChecklist(
       );
 
     if (!uploaded) {
-      return { label, code, status: "missing", fileName: null, uploadedAt: null };
+      // A type the founder marked N/A is not "missing" — it doesn't apply to them.
+      const isNa = naSet.has(code) || aliases.some((a) => naSet.has(a.toUpperCase()));
+      return {
+        label,
+        code,
+        status: isNa ? "not_applicable" : "missing",
+        fileName: null,
+        uploadedAt: null,
+      };
     }
 
     const normalizedStatus = (uploaded.status ?? "uploaded").toLowerCase();
