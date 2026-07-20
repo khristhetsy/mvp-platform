@@ -5,6 +5,7 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { writeAuditLog } from "@/lib/data/audit";
 import { slugify } from "@/lib/marketplace/validation";
+import { notifyInterestListOfferingLive } from "@/lib/marketplace/interest-emails";
 
 export type ReviewResult = { ok: true } | { ok: false; error: string };
 
@@ -81,4 +82,33 @@ export async function rejectListing(listingId: string): Promise<ReviewResult> {
     metadata: {},
   });
   return { ok: true };
+}
+
+export type NotifyInterestResult =
+  | { ok: true; intended: number; sent: number; live: boolean }
+  | { ok: false; error: string };
+
+/**
+ * Notify a live listing's interest list that the offering is live on its portal.
+ * Email delivery is gated (MARKETPLACE_INTEREST_EMAILS_LIVE) and counsel-pending;
+ * until enabled this reports the intended count without sending.
+ */
+export async function notifyInterestList(listingId: string): Promise<NotifyInterestResult> {
+  const r = await requireReviewer();
+  if ("error" in r) return { ok: false, error: r.error };
+
+  try {
+    const result = await notifyInterestListOfferingLive(listingId);
+    const admin = createServiceRoleClient() as unknown as SupabaseClient;
+    await writeAuditLog(admin, {
+      userId: r.userId,
+      action: "marketplace.interest_list_notified",
+      entityType: "marketplace_listing",
+      entityId: listingId,
+      metadata: { intended: result.intended, sent: result.sent, live: result.live },
+    });
+    return { ok: true, ...result };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Notify failed." };
+  }
 }
