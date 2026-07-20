@@ -150,6 +150,37 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
     setActiveTab(tab);
   }
 
+  /**
+   * Duplicate a template: copies subject/body/blocks into a new DRAFT named
+   * "Copy of …" (never inherits Active status), then opens it so it can be renamed.
+   */
+  async function handleDuplicate(t: MarketingTemplate) {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/marketing/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `Copy of ${t.name}`,
+          subject: t.subject,
+          preview_text: t.preview_text ?? "",
+          html_body: t.html_body,
+          text_body: t.text_body ?? "",
+          blocks: t.blocks ?? null,
+          status: "draft",
+        }),
+      });
+      const created = (await res.json().catch(() => null)) as MarketingTemplate | null;
+      setPreview(null);
+      router.refresh();
+      if (created?.id) openEditor(created, "visual");
+    } catch (err) {
+      console.error("Failed to duplicate template:", err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function handleSave() {
     if (!editing) return;
     setSaving(true);
@@ -336,10 +367,21 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
                 <div style={{ fontWeight: 500, fontSize: 14 }}>{preview.name}</div>
                 <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>Letter preview</div>
               </div>
-              <button onClick={() => setPreview(null)}
-                style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
-                Close
-              </button>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                {/* Edit from the preview: opens the visual editor on this template. */}
+                <button onClick={() => { openEditor(preview, "visual"); setPreview(null); }}
+                  style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid #2E78F5", background: "#2E78F5", cursor: "pointer", color: "#ffffff", fontWeight: 600 }}>
+                  Edit
+                </button>
+                <button onClick={() => void handleDuplicate(preview)} disabled={saving}
+                  style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid #bcd3fb", background: "#f2f7ff", cursor: "pointer", color: "#2E78F5", fontWeight: 600 }}>
+                  ⧉ Duplicate
+                </button>
+                <button onClick={() => setPreview(null)}
+                  style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--foreground)" }}>
+                  Close
+                </button>
+              </div>
             </div>
             <RawEmailPreview template={preview} />
           </div>
@@ -364,6 +406,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
                 <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500, whiteSpace: "nowrap" }}>{t.status.charAt(0).toUpperCase() + t.status.slice(1)}</span>
                 <button onClick={() => setPreview(t)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>Preview</button>
                 <button onClick={() => openEditor(t, "visual")} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>Edit</button>
+                <button onClick={() => void handleDuplicate(t)} disabled={saving} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #bcd3fb", background: "#f2f7ff", cursor: "pointer", color: "#2E78F5", fontWeight: 600 }}>⧉ Duplicate</button>
                 <button onClick={() => handleDelete(t.id)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>Delete</button>
               </div>
             );
@@ -400,6 +443,10 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
                   <button onClick={() => openEditor(t, "visual")}
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
                     Edit
+                  </button>
+                  <button onClick={() => void handleDuplicate(t)} disabled={saving}
+                    style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #bcd3fb", background: "#f2f7ff", cursor: "pointer", color: "#2E78F5", fontWeight: 600 }}>
+                    ⧉ Duplicate
                   </button>
                   <button onClick={() => handleDelete(t.id)}
                     style={{ marginLeft: "auto", fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>
