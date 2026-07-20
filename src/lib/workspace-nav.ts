@@ -270,6 +270,7 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
     title: "Investors",
     items: [
       { href: "/founder/private-market", label: "Private Market", minStage: "qualify" },
+      { href: "/founder/matches", label: "Investor matches", minStage: "qualify" },
       // Hidden from nav (routes still resolve). Restore by uncommenting.
       // {
       //   href: "/founder/investors",
@@ -429,6 +430,7 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/investor/deals", label: "Diligence" },
         ],
       },
+      { href: "/investor/matches", label: "Matches" },
       { href: "/events", label: "Events" },
       { href: "/investor/partner-score", label: "Partner Score" },
     ],
