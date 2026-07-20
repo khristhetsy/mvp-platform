@@ -209,6 +209,164 @@ describe("parseHtmlToBlocks", () => {
   });
 });
 
+describe("section blocks", () => {
+  const section: TemplateBlock = {
+    id: "s",
+    type: "section",
+    eyebrow: "Seasonal focus",
+    heading: "Raise-ready by fall",
+    bg: "#0c2340",
+    color: "#ffffff",
+  };
+
+  it("renders a coloured band with the heading inside it", () => {
+    const html = renderBlocksToEmailHtml([section]);
+    expect(html).toContain("background:#0c2340");
+    expect(html).toContain("Raise-ready by fall");
+    expect(html).toContain("Seasonal focus");
+  });
+
+  it("uses tables, not divs, so Outlook honours the background", () => {
+    const html = renderBlocksToEmailHtml([section]);
+    expect(html).not.toContain("<div");
+    expect(html).toContain('role="presentation"');
+  });
+
+  it("escapes section text", () => {
+    const html = renderBlocksToEmailHtml([{ id: "s", type: "section", heading: "<script>x</script>" }]);
+    expect(html).not.toContain("<script>");
+  });
+
+  it("recovers a band from HTML as a section, not flattened text", () => {
+    const blocks = parseHtmlToBlocks(
+      '<table style="background:#0c2340;"><tr><td>Seasonal focus</td></tr><tr><td><h1 style="color:#ffffff;">Raise-ready by fall</h1></td></tr></table>',
+    );
+    const s = blocks.find((b) => b.type === "section");
+    expect(s).toMatchObject({ heading: "Raise-ready by fall", bg: "#0c2340" });
+  });
+
+  it("leaves white tables alone rather than making everything a section", () => {
+    const blocks = parseHtmlToBlocks('<table style="background:#ffffff;"><tr><td><p>Hi</p></td></tr></table>');
+    expect(blocks.every((b) => b.type !== "section")).toBe(true);
+  });
+});
+
+describe("callout, list, columns, and stats blocks", () => {
+  it("renders a callout with its accent border", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "c", type: "callout", text: "Most founders go to market too early.", borderColor: "#2E78F5" },
+    ]);
+    expect(html).toContain("border-left:3px solid #2E78F5");
+    expect(html).toContain("Most founders go to market too early.");
+  });
+
+  it("renders list items and drops empty ones", () => {
+    const html = renderBlocksToEmailHtml([{ id: "l", type: "list", items: ["First", "", "Second"] }]);
+    expect(html).toContain("<li");
+    expect(html).toContain("First");
+    expect(html).toContain("Second");
+    expect(html.match(/<li/g)?.length).toBe(2);
+  });
+
+  it("renders an ordered list when asked", () => {
+    expect(renderBlocksToEmailHtml([{ id: "l", type: "list", items: ["A"], ordered: true }])).toContain("<ol");
+  });
+
+  it("lays columns out as table cells with equal widths", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "c", type: "columns", cells: [{ title: "For founders" }, { title: "For investors" }] },
+    ]);
+    expect(html).toContain('width="50%"');
+    expect(html).not.toContain("display:flex");
+    expect(html).toContain("For founders");
+  });
+
+  it("renders stats as a single row of cells", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "s", type: "stats", items: [{ value: "78", label: "Readiness" }, { value: "14", label: "Matched" }] },
+    ]);
+    expect(html).toContain("78");
+    expect(html).toContain("Readiness");
+    expect(html).toContain('width="50%"');
+  });
+
+  it("omits empty list, columns, and stats blocks entirely", () => {
+    expect(renderBlocksToEmailHtml([{ id: "l", type: "list", items: [] }])).not.toContain("<li");
+    expect(renderBlocksToEmailHtml([{ id: "c", type: "columns", cells: [] }])).not.toContain("<td width");
+    expect(renderBlocksToEmailHtml([{ id: "s", type: "stats", items: [] }])).not.toContain("<td width");
+  });
+
+  it("recovers a list from HTML instead of flattening it to paragraphs", () => {
+    const blocks = parseHtmlToBlocks("<ul><li>Get your score</li><li>Fix the gaps</li></ul>");
+    expect(blocks.find((b) => b.type === "list")).toMatchObject({
+      items: ["Get your score", "Fix the gaps"],
+    });
+  });
+
+  it("keeps surrounding text in order around a recovered list", () => {
+    const blocks = parseHtmlToBlocks("<p>Before</p><ul><li>Item</li></ul><p>After</p>");
+    const types = blocks.map((b) => b.type);
+    expect(types.indexOf("list")).toBeGreaterThan(0);
+    expect(types.lastIndexOf("text")).toBeGreaterThan(types.indexOf("list"));
+  });
+
+  it("includes every new block in the plain-text alternative", () => {
+    const text = renderBlocksToText([
+      { id: "s", type: "section", heading: "Band heading" },
+      { id: "c", type: "callout", text: "Callout copy" },
+      { id: "l", type: "list", items: ["One", "Two"] },
+      { id: "st", type: "stats", items: [{ value: "78", label: "Readiness" }] },
+    ]);
+    expect(text).toContain("Band heading");
+    expect(text).toContain("Callout copy");
+    expect(text).toContain("- One");
+    expect(text).toContain("78 Readiness");
+  });
+});
+
+describe("round trip through render then parse", () => {
+  const rich: TemplateBlock[] = [
+    { id: "1", type: "section", eyebrow: "Seasonal focus", heading: "Raise-ready by fall", bg: "#0c2340", color: "#ffffff" },
+    { id: "2", type: "callout", text: "Most founders go to market too early." },
+    { id: "3", type: "list", items: ["Get your score", "Fix the gaps"] },
+    { id: "4", type: "stats", items: [{ value: "78", label: "Readiness" }, { value: "14", label: "Matched" }] },
+    { id: "5", type: "button", label: "Start now", url: "https://icapos.com" },
+  ];
+
+  const roundTrip = () => parseHtmlToBlocks(renderBlocksToEmailHtml(rich)).map((b) => b.type);
+
+  it("keeps sections, callouts, lists, stats, and buttons as themselves", () => {
+    const types = roundTrip();
+    for (const t of ["section", "callout", "list", "stats", "button"]) {
+      expect(types).toContain(t);
+    }
+  });
+
+  it("does not misread a callout as a section", () => {
+    expect(roundTrip().filter((t) => t === "section")).toHaveLength(1);
+  });
+
+  it("does not misread tinted column panels as sections", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "c", type: "columns", cells: [{ title: "For founders", text: "A" }, { title: "For investors", text: "B" }] },
+    ]);
+    // Columns don't survive an HTML round trip (documented limitation), but they
+    // must degrade to text rather than inventing bogus section bands.
+    expect(parseHtmlToBlocks(html).every((b) => b.type !== "section")).toBe(true);
+  });
+
+  it("preserves content even where structure degrades", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "c", type: "columns", cells: [{ title: "For founders", text: "Know where you stand" }] },
+    ]);
+    const text = parseHtmlToBlocks(html)
+      .map((b) => (b.type === "text" ? b.text : ""))
+      .join(" ");
+    expect(text).toContain("For founders");
+    expect(text).toContain("Know where you stand");
+  });
+});
+
 describe("stripHtmlToText", () => {
   it("converts breaks and tags to plain text", () => {
     expect(stripHtmlToText("<p>a</p><p>b</p>")).toBe("a\n\nb");

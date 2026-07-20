@@ -8,6 +8,9 @@ import {
   type TemplateBlock,
 } from "@/lib/marketing/template-blocks";
 
+/** Brand colours offered as one-click swatches, so hex codes aren't retyped. */
+const BRAND_COLOURS = ["#0c2340", "#2E78F5", "#5B4BE0", "#0F6E56", "#F1EFE8"] as const;
+
 /**
  * Scoped visual (block) editor: you click blocks on the rendered email and edit
  * them in place. The email HTML is regenerated from these blocks on save, so the
@@ -54,6 +57,16 @@ export function TemplateVisualEditor({
         ? { ...base, type: "divider" }
         : type === "spacer"
         ? { ...base, type: "spacer", height: 20 }
+        : type === "section"
+        ? { ...base, type: "section", eyebrow: "Eyebrow", heading: "Band heading", bg: "#0c2340", color: "#ffffff", align: "left" }
+        : type === "callout"
+        ? { ...base, type: "callout", text: "Something worth pulling out." }
+        : type === "list"
+        ? { ...base, type: "list", items: ["First item", "Second item"] }
+        : type === "columns"
+        ? { ...base, type: "columns", cells: [{ title: "For founders", text: "Know where you stand" }, { title: "For investors", text: "See who's ready" }] }
+        : type === "stats"
+        ? { ...base, type: "stats", items: [{ value: "78", label: "Readiness" }, { value: "14", label: "Matched" }] }
         : { ...base, type: "text", text: "New paragraph", align: "left" };
     onChange([...blocks, block]);
     setSelectedId(block.id);
@@ -269,6 +282,86 @@ export function TemplateVisualEditor({
                 </div>
               ) : b.type === "divider" ? (
                 <div className="px-6 py-3"><div className="border-t border-slate-200" /></div>
+              ) : b.type === "section" ? (
+                <div className="px-6 py-4" style={{ background: b.bg ?? "#0c2340", textAlign: b.align ?? "left" }}>
+                  {b.eyebrow ? (
+                    <div
+                      contentEditable
+                      suppressContentEditableWarning
+                      onBlur={(e) => update(b.id, { eyebrow: e.currentTarget.textContent ?? "" } as Partial<TemplateBlock>)}
+                      className="text-[12.5px] outline-none"
+                      style={{ color: "#9fb3d1" }}
+                    >
+                      {b.eyebrow}
+                    </div>
+                  ) : null}
+                  <div
+                    contentEditable
+                    suppressContentEditableWarning
+                    onBlur={(e) => update(b.id, { heading: e.currentTarget.textContent ?? "" } as Partial<TemplateBlock>)}
+                    className="text-[23px] font-bold outline-none"
+                    style={{ color: b.color ?? "#ffffff" }}
+                  >
+                    {b.heading}
+                  </div>
+                  {b.text ? (
+                    <div
+                      contentEditable
+                      suppressContentEditableWarning
+                      onBlur={(e) => update(b.id, { text: e.currentTarget.textContent ?? "" } as Partial<TemplateBlock>)}
+                      className="mt-1 text-[14px] outline-none"
+                      style={{ color: "#9fb3d1" }}
+                    >
+                      {b.text}
+                    </div>
+                  ) : null}
+                </div>
+              ) : b.type === "callout" ? (
+                <div className="px-6 py-2">
+                  <div
+                    contentEditable
+                    suppressContentEditableWarning
+                    onBlur={(e) => update(b.id, { text: e.currentTarget.textContent ?? "" } as Partial<TemplateBlock>)}
+                    className="px-3 py-2.5 text-[14px] outline-none"
+                    style={{
+                      background: b.bg ?? "#eef4ff",
+                      borderLeft: `3px solid ${b.borderColor ?? "#2E78F5"}`,
+                      color: b.color ?? "#1d4ed8",
+                    }}
+                  >
+                    {b.text}
+                  </div>
+                </div>
+              ) : b.type === "list" ? (
+                <div className="px-6 py-2">
+                  {b.ordered ? (
+                    <ol className="list-decimal pl-5 text-[14px] leading-[1.9]" style={{ color: b.color ?? "#3a4a63" }}>
+                      {b.items.map((it, i) => <li key={`${b.id}-${i}`}>{it}</li>)}
+                    </ol>
+                  ) : (
+                    <ul className="list-disc pl-5 text-[14px] leading-[1.9]" style={{ color: b.color ?? "#3a4a63" }}>
+                      {b.items.map((it, i) => <li key={`${b.id}-${i}`}>{it}</li>)}
+                    </ul>
+                  )}
+                </div>
+              ) : b.type === "columns" ? (
+                <div className="grid gap-2 px-6 py-2" style={{ gridTemplateColumns: `repeat(${Math.max(b.cells.length, 1)}, minmax(0,1fr))` }}>
+                  {b.cells.map((c, i) => (
+                    <div key={`${b.id}-${i}`} className="rounded-lg p-2.5" style={{ background: b.bg ?? "#f4f6fa" }}>
+                      <div className="text-[13px] font-semibold text-slate-800">{c.title}</div>
+                      <div className="text-[12.5px] text-slate-500">{c.text}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : b.type === "stats" ? (
+                <div className="grid gap-2 px-6 py-3" style={{ gridTemplateColumns: `repeat(${Math.max(b.items.length, 1)}, minmax(0,1fr))` }}>
+                  {b.items.map((it, i) => (
+                    <div key={`${b.id}-${i}`} className="text-center">
+                      <div className="text-[22px] font-bold leading-tight" style={{ color: b.color ?? "#0c2340" }}>{it.value}</div>
+                      <div className="text-[11.5px] text-slate-500">{it.label}</div>
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <div style={{ height: b.height ?? 20 }} />
               )}
@@ -283,6 +376,16 @@ export function TemplateVisualEditor({
         <div className="mb-4 flex flex-wrap gap-1.5">
           {(["heading", "text", "button", "image", "divider", "spacer"] as const).map((t) => (
             <button key={t} type="button" onClick={() => add(t)} className="rounded-md border border-slate-200 px-2 py-1 text-[11px] capitalize text-slate-600 hover:bg-slate-50">
+              + {t}
+            </button>
+          ))}
+          {(["section", "callout", "list", "columns", "stats"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => add(t)}
+              className="rounded-md border border-[#bcd3fb] bg-[#f2f7ff] px-2 py-1 text-[11px] font-semibold capitalize text-[#2E78F5] hover:bg-[#e6f0ff]"
+            >
               + {t}
             </button>
           ))}
@@ -378,6 +481,208 @@ export function TemplateVisualEditor({
                   placeholder="https://…"
                 />
               </label>
+            ) : null}
+
+            {selected.type === "section" ? (
+              <>
+                <label className="block text-[11px] font-semibold text-slate-600">
+                  Background
+                  <input
+                    type="color"
+                    value={selected.bg ?? "#0c2340"}
+                    onChange={(e) => update(selected.id, { bg: e.target.value } as Partial<TemplateBlock>)}
+                    className="mt-1 h-8 w-full rounded-md border border-slate-200"
+                  />
+                </label>
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-600">Brand palette</p>
+                  <div className="mt-1 flex gap-1.5">
+                    {BRAND_COLOURS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        aria-label={`Set background ${c}`}
+                        onClick={() => update(selected.id, { bg: c } as Partial<TemplateBlock>)}
+                        className={`h-6 w-6 rounded border ${selected.bg === c ? "outline outline-2 outline-offset-2 outline-[#2E78F5]" : "border-black/10"}`}
+                        style={{ background: c }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <label className="block text-[11px] font-semibold text-slate-600">
+                  Padding (vertical / horizontal)
+                  <div className="mt-1 grid grid-cols-2 gap-1.5">
+                    <input
+                      type="number"
+                      value={selected.padV ?? 16}
+                      onChange={(e) => update(selected.id, { padV: Number(e.target.value) || 0 } as Partial<TemplateBlock>)}
+                      className="rounded-md border border-slate-200 px-2 py-1.5 text-[12px]"
+                    />
+                    <input
+                      type="number"
+                      value={selected.padH ?? 24}
+                      onChange={(e) => update(selected.id, { padH: Number(e.target.value) || 0 } as Partial<TemplateBlock>)}
+                      className="rounded-md border border-slate-200 px-2 py-1.5 text-[12px]"
+                    />
+                  </div>
+                </label>
+                <label className="block text-[11px] font-semibold text-slate-600">
+                  Full-width band
+                  <select
+                    value={selected.fullWidth === false ? "no" : "yes"}
+                    onChange={(e) => update(selected.id, { fullWidth: e.target.value === "yes" } as Partial<TemplateBlock>)}
+                    className="mt-1 w-full rounded-md border border-slate-200 px-2 py-1.5 text-[12px]"
+                  >
+                    <option value="yes">Yes</option>
+                    <option value="no">No — inset</option>
+                  </select>
+                  <span className="mt-1 block text-[10.5px] font-normal text-slate-400">
+                    Bleeds to the card edges instead of sitting inside it.
+                  </span>
+                </label>
+              </>
+            ) : null}
+
+            {selected.type === "callout" ? (
+              <>
+                <label className="block text-[11px] font-semibold text-slate-600">
+                  Accent border
+                  <input
+                    type="color"
+                    value={selected.borderColor ?? "#2E78F5"}
+                    onChange={(e) => update(selected.id, { borderColor: e.target.value } as Partial<TemplateBlock>)}
+                    className="mt-1 h-8 w-full rounded-md border border-slate-200"
+                  />
+                </label>
+                <label className="block text-[11px] font-semibold text-slate-600">
+                  Background
+                  <input
+                    type="color"
+                    value={selected.bg ?? "#eef4ff"}
+                    onChange={(e) => update(selected.id, { bg: e.target.value } as Partial<TemplateBlock>)}
+                    className="mt-1 h-8 w-full rounded-md border border-slate-200"
+                  />
+                </label>
+              </>
+            ) : null}
+
+            {selected.type === "list" ? (
+              <>
+                <label className="block text-[11px] font-semibold text-slate-600">
+                  Items <span className="font-normal text-slate-400">(one per line)</span>
+                  <textarea
+                    value={selected.items.join("\n")}
+                    onChange={(e) =>
+                      update(selected.id, { items: e.target.value.split("\n") } as Partial<TemplateBlock>)
+                    }
+                    rows={5}
+                    className="mt-1 w-full rounded-md border border-slate-200 px-2 py-1.5 text-[12px]"
+                  />
+                </label>
+                <label className="block text-[11px] font-semibold text-slate-600">
+                  Style
+                  <select
+                    value={selected.ordered ? "ordered" : "bullet"}
+                    onChange={(e) => update(selected.id, { ordered: e.target.value === "ordered" } as Partial<TemplateBlock>)}
+                    className="mt-1 w-full rounded-md border border-slate-200 px-2 py-1.5 text-[12px]"
+                  >
+                    <option value="bullet">Bulleted</option>
+                    <option value="ordered">Numbered</option>
+                  </select>
+                </label>
+              </>
+            ) : null}
+
+            {selected.type === "columns" ? (
+              <>
+                {selected.cells.map((c, i) => (
+                  <div key={`${selected.id}-cell-${i}`} className="rounded-md border border-slate-200 p-2">
+                    <p className="mb-1 text-[10.5px] font-bold uppercase tracking-wide text-slate-400">Column {i + 1}</p>
+                    <input
+                      value={c.title ?? ""}
+                      placeholder="Title"
+                      onChange={(e) => {
+                        const cells = selected.cells.map((x, j) => (j === i ? { ...x, title: e.target.value } : x));
+                        update(selected.id, { cells } as Partial<TemplateBlock>);
+                      }}
+                      className="mb-1 w-full rounded-md border border-slate-200 px-2 py-1 text-[12px]"
+                    />
+                    <input
+                      value={c.text ?? ""}
+                      placeholder="Body"
+                      onChange={(e) => {
+                        const cells = selected.cells.map((x, j) => (j === i ? { ...x, text: e.target.value } : x));
+                        update(selected.id, { cells } as Partial<TemplateBlock>);
+                      }}
+                      className="w-full rounded-md border border-slate-200 px-2 py-1 text-[12px]"
+                    />
+                  </div>
+                ))}
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    disabled={selected.cells.length >= 3}
+                    onClick={() => update(selected.id, { cells: [...selected.cells, { title: "", text: "" }] } as Partial<TemplateBlock>)}
+                    className="flex-1 rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    + Column
+                  </button>
+                  <button
+                    type="button"
+                    disabled={selected.cells.length <= 1}
+                    onClick={() => update(selected.id, { cells: selected.cells.slice(0, -1) } as Partial<TemplateBlock>)}
+                    className="flex-1 rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    − Column
+                  </button>
+                </div>
+                <p className="text-[10.5px] text-slate-400">Columns stack on narrow screens. Three is the maximum.</p>
+              </>
+            ) : null}
+
+            {selected.type === "stats" ? (
+              <>
+                {selected.items.map((it, i) => (
+                  <div key={`${selected.id}-stat-${i}`} className="grid grid-cols-2 gap-1.5">
+                    <input
+                      value={it.value}
+                      placeholder="78"
+                      onChange={(e) => {
+                        const items = selected.items.map((x, j) => (j === i ? { ...x, value: e.target.value } : x));
+                        update(selected.id, { items } as Partial<TemplateBlock>);
+                      }}
+                      className="rounded-md border border-slate-200 px-2 py-1 text-[12px]"
+                    />
+                    <input
+                      value={it.label}
+                      placeholder="Readiness"
+                      onChange={(e) => {
+                        const items = selected.items.map((x, j) => (j === i ? { ...x, label: e.target.value } : x));
+                        update(selected.id, { items } as Partial<TemplateBlock>);
+                      }}
+                      className="rounded-md border border-slate-200 px-2 py-1 text-[12px]"
+                    />
+                  </div>
+                ))}
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    disabled={selected.items.length >= 4}
+                    onClick={() => update(selected.id, { items: [...selected.items, { value: "", label: "" }] } as Partial<TemplateBlock>)}
+                    className="flex-1 rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    + Stat
+                  </button>
+                  <button
+                    type="button"
+                    disabled={selected.items.length <= 1}
+                    onClick={() => update(selected.id, { items: selected.items.slice(0, -1) } as Partial<TemplateBlock>)}
+                    className="flex-1 rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    − Stat
+                  </button>
+                </div>
+              </>
             ) : null}
 
             {selected.type === "image" ? (

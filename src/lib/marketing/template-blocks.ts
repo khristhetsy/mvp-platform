@@ -14,7 +14,27 @@ export type TemplateBlock =
   | { id: string; type: "button"; label: string; url: string; bg?: string; color?: string; align?: BlockAlign }
   | { id: string; type: "image"; src: string; alt?: string; width?: number; align?: BlockAlign }
   | { id: string; type: "divider" }
-  | { id: string; type: "spacer"; height?: number };
+  | { id: string; type: "spacer"; height?: number }
+  // A coloured band. Deliberately self-contained (eyebrow + heading + body)
+  // rather than a container of child blocks — nesting would mean a much larger
+  // editor and parser, and every banded design we have fits this shape.
+  | {
+      id: string;
+      type: "section";
+      eyebrow?: string;
+      heading?: string;
+      text?: string;
+      bg?: string;
+      color?: string;
+      padV?: number;
+      padH?: number;
+      align?: BlockAlign;
+      fullWidth?: boolean;
+    }
+  | { id: string; type: "callout"; text: string; bg?: string; borderColor?: string; color?: string }
+  | { id: string; type: "list"; items: string[]; ordered?: boolean; color?: string }
+  | { id: string; type: "columns"; cells: Array<{ title?: string; text?: string }>; bg?: string }
+  | { id: string; type: "stats"; items: Array<{ value: string; label: string }>; color?: string };
 
 export const MERGE_FIELDS = [
   "{{first_name}}",
@@ -102,6 +122,139 @@ function alignOf(tag: string): BlockAlign | undefined {
   return v === "center" || v === "right" || v === "left" ? v : undefined;
 }
 
+// Private-use characters bracket each token so it can never collide with real
+// copy and survive entity decoding and whitespace collapsing intact. Splitting
+// on whitespace alone failed when a token sat flush against adjacent text.
+const TOKEN_OPEN = "\uE000";
+const TOKEN_CLOSE = "\uE001";
+const PLACEHOLDER = new RegExp(`${TOKEN_OPEN}(B\\d+)${TOKEN_CLOSE}`);
+const PLACEHOLDER_SPLIT = new RegExp(`(${TOKEN_OPEN}B\\d+${TOKEN_CLOSE})`);
+
+/**
+ * Lift lists, coloured bands, and multi-cell rows out of the HTML before the
+ * linear scan, since the scanner works tag-by-tag and can't see nesting. Each
+ * is swapped for a placeholder token so document order is preserved.
+ */
+/**
+ * Replace tables innermost-first. A plain non-greedy `<table>…</table>` regex
+ * mismatches on nested tables — it pairs an outer opener with an inner closer —
+ * so match only tables that contain no further table, and repeat until stable.
+ */
+function replaceInnermost(
+  html: string,
+  tag: "table" | "tr",
+  fn: (whole: string, attrs: string, inner: string) => string,
+): string {
+  const INNERMOST = new RegExp(`<${tag}\\b([^>]*)>((?:(?!<${tag}\\b)[\\s\\S])*?)</${tag}>`, "gi");
+  for (let pass = 0; pass < 12; pass++) {
+    let changed = false;
+    const next = html.replace(INNERMOST, (m, attrs: string, inner: string) => {
+      const out = fn(m, attrs, inner);
+      if (out !== m) changed = true;
+      return out;
+    });
+    html = next;
+    if (!changed) break;
+  }
+  return html;
+}
+
+function extractStructures(html: string, out: Map<string, TemplateBlock>): string {
+  let n = 0;
+  const token = (block: TemplateBlock) => {
+    const key = `B${n++}`;
+    out.set(key, block);
+    return `${TOKEN_OPEN}${key}${TOKEN_CLOSE}`;
+  };
+
+  // Lists → list blocks.
+  html = html.replace(/<(ul|ol)\b[^>]*>([\s\S]*?)<\/\1>/gi, (_m, tag: string, inner: string) => {
+    const items = [...inner.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/gi)]
+      .map((m) => decodeEntities(m[1].replace(/<[^>]+>/g, " ")))
+      .filter(Boolean);
+    if (items.length === 0) return "";
+    return token({ id: newBlockId(), type: "list", items, ordered: tag.toLowerCase() === "ol" });
+  });
+
+  // Stats and columns are multi-cell rows. Detect them before anything else
+  // consumes the cells, and tell them apart by what the cells contain: a big
+  // number over a small label is a stat, a bold title over body copy is a column.
+  html = replaceInnermost(html, "tr", (m, _attrs, inner) => {
+    const cells = [...inner.matchAll(/<td\b([^>]*)>([\s\S]*?)<\/td>/gi)];
+    if (cells.length < 2 || cells.length > 4) return m;
+    if (cells.some((c) => /<(table|img|a)\b/i.test(c[2]) && !/<table[^>]*>[\s\S]*<\/table>/i.test(c[2]))) return m;
+
+    const parsed = cells.map((c) => {
+      const divs = [...c[2].matchAll(/<div\b([^>]*)>([\s\S]*?)<\/div>/gi)];
+      if (divs.length < 2) return null;
+      const first = decodeEntities(divs[0][2].replace(/<[^>]+>/g, " "));
+      const second = decodeEntities(divs[1][2].replace(/<[^>]+>/g, " "));
+      const size = Number(/font-size:\s*(\d+)px/i.exec(divs[0][1])?.[1] ?? 0);
+      return first || second ? { first, second, size } : null;
+    });
+    if (parsed.some((p) => p === null)) return m;
+    const cellsOk = parsed as Array<{ first: string; second: string; size: number }>;
+
+    if (cellsOk.every((c) => c.size >= 20)) {
+      return token({
+        id: newBlockId(),
+        type: "stats",
+        items: cellsOk.map((c) => ({ value: c.first, label: c.second })),
+      });
+    }
+    return token({
+      id: newBlockId(),
+      type: "columns",
+      cells: cellsOk.map((c) => ({ title: c.first, text: c.second })),
+    });
+  });
+
+  // A bordered panel → callout. Checked before the section rule below, since a
+  // callout also carries a background and would otherwise be read as a band.
+  html = replaceInnermost(html, "table", (m, attrs, inner) => {
+    const tag = `<table${attrs}>`;
+    const border = styleProp(tag, "border-left");
+    if (!border) return m;
+    const text = decodeEntities(inner.replace(/<[^>]+>/g, " "));
+    if (!text) return m;
+    return token({
+      id: newBlockId(),
+      type: "callout",
+      text,
+      bg: styleProp(tag, "background") ?? styleProp(tag, "background-color"),
+      borderColor: /(#[0-9a-f]{3,8}|rgba?\([^)]+\))/i.exec(border)?.[1],
+    });
+  });
+
+  // A table whose background is set and which holds a heading → section band.
+  html = replaceInnermost(html, "table", (m, attrs, inner) => {
+    const bg = styleProp(`<table${attrs}>`, "background") ?? styleProp(`<table${attrs}>`, "background-color");
+    if (!bg || /^(none|transparent|#fff(fff)?|white)$/i.test(bg.trim())) return m;
+    // A band must carry heading-sized copy. Without this, small tinted panels
+    // (the cells inside a columns row) get misread as full-width sections.
+    if (!/<h[1-6]\b/i.test(inner) && !/font-size:\s*(19|[2-9]\d)px/i.test(inner)) return m;
+    const headingMatch = /<h[1-6]\b([^>]*)>([\s\S]*?)<\/h[1-6]>/i.exec(inner);
+    const texts = [...inner.matchAll(/<(?:p|div|td)\b[^>]*>([\s\S]*?)<\/(?:p|div|td)>/gi)]
+      .map((x) => decodeEntities(x[1].replace(/<[^>]+>/g, " ")))
+      .filter(Boolean);
+    const heading = headingMatch ? decodeEntities(headingMatch[2].replace(/<[^>]+>/g, " ")) : undefined;
+    const body = texts.filter((t) => t !== heading);
+    if (!heading && body.length === 0) return m;
+    return token({
+      id: newBlockId(),
+      type: "section",
+      eyebrow: body.length > 1 ? body[0] : undefined,
+      heading,
+      text: body.length > 1 ? body[1] : body[0],
+      bg: bg.trim(),
+      color: headingMatch ? styleProp(headingMatch[1], "color") : undefined,
+      align: "left",
+    });
+  });
+
+  return html;
+}
+
 /**
  * Parse existing email HTML into editable blocks, preserving structure rather
  * than flattening everything to paragraphs: headings stay headings, images stay
@@ -111,9 +264,14 @@ function alignOf(tag: string): BlockAlign | undefined {
  * (tests, server) as well as the browser, so `DOMParser` isn't available.
  */
 export function parseHtmlToBlocks(html: string): TemplateBlock[] {
-  const cleaned = html
+  let cleaned = html
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<(script|style|head)\b[\s\S]*?<\/\1>/gi, "");
+
+  // Pull out structures the flat scanner below can't represent, replacing each
+  // with a placeholder token so its position in the document is preserved.
+  const extracted = new Map<string, TemplateBlock>();
+  cleaned = extractStructures(cleaned, extracted);
 
   const blocks: TemplateBlock[] = [];
   let buffer = "";
@@ -128,7 +286,21 @@ export function parseHtmlToBlocks(html: string): TemplateBlock[] {
     buffer = "";
     soleLink = null;
     if (text) {
-      blocks.push({ id: newBlockId(), type: "text", text, align: bufferAlign ?? "left", ...(url ? { url } : {}) });
+      // A run of text may contain placeholder tokens for structures lifted out
+      // earlier; re-emit them in place rather than as literal "B0" text.
+      if (PLACEHOLDER.test(text)) {
+        for (const part of text.split(PLACEHOLDER_SPLIT)) {
+          const key = PLACEHOLDER.exec(part)?.[1];
+          const hit = key ? extracted.get(key) : undefined;
+          if (hit) {
+            blocks.push(hit);
+          } else if (part.trim()) {
+            blocks.push({ id: newBlockId(), type: "text", text: part.trim(), align: bufferAlign ?? "left" });
+          }
+        }
+      } else {
+        blocks.push({ id: newBlockId(), type: "text", text, align: bufferAlign ?? "left", ...(url ? { url } : {}) });
+      }
     }
     bufferAlign = undefined;
   }
@@ -287,6 +459,19 @@ function safeUrl(url: string): string {
 const FONT = "Helvetica, Arial, sans-serif";
 const LINK_COLOR = "#2E78F5";
 
+function clampPad(value: number | undefined, fallback: number): number {
+  if (typeof value !== "number" || Number.isNaN(value)) return fallback;
+  return Math.max(0, Math.min(64, Math.round(value)));
+}
+
+/**
+ * A muted partner for the section's foreground colour, used for the eyebrow and
+ * body text so they read as secondary against the band.
+ */
+function fade(color: string): string {
+  return /^#f|^#e|^#ffffff$|^white$/i.test(color.trim()) ? "#9fb3d1" : "#5f6b80";
+}
+
 /**
  * Wrap already-escaped content in a link when the block has a URL. Unsafe or
  * missing URLs fall through to plain text rather than emitting a dead `href="#"`
@@ -330,6 +515,80 @@ function renderBlock(block: TemplateBlock): string {
       const h = block.height && block.height > 0 ? Math.min(block.height, 120) : 20;
       return `<tr><td style="height:${h}px;font-size:0;line-height:0;">&nbsp;</td></tr>`;
     }
+    case "section": {
+      const bg = block.bg ?? "#0c2340";
+      const fg = block.color ?? "#ffffff";
+      const padV = clampPad(block.padV, 16);
+      const padH = clampPad(block.padH, 24);
+      const rows: string[] = [];
+      if (block.eyebrow) {
+        rows.push(
+          `<tr><td style="padding:${padV}px ${padH}px 0;font-family:${FONT};font-size:13px;line-height:1.4;color:${esc(fade(fg))};text-align:${align};">${escText(block.eyebrow)}</td></tr>`,
+        );
+      }
+      if (block.heading) {
+        const top = block.eyebrow ? 4 : padV;
+        rows.push(
+          `<tr><td style="padding:${top}px ${padH}px 0;font-family:${FONT};font-size:24px;line-height:1.3;font-weight:bold;color:${esc(fg)};text-align:${align};">${escText(block.heading)}</td></tr>`,
+        );
+      }
+      if (block.text) {
+        rows.push(
+          `<tr><td style="padding:8px ${padH}px 0;font-family:${FONT};font-size:15px;line-height:1.6;color:${esc(fade(fg))};text-align:${align};">${escText(block.text)}</td></tr>`,
+        );
+      }
+      rows.push(`<tr><td style="height:${padV}px;font-size:0;line-height:0;">&nbsp;</td></tr>`);
+      const band = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${esc(bg)};">${rows.join("")}</table>`;
+      // Full width bleeds to the card edges; otherwise inset so the band reads as a card.
+      return block.fullWidth === false
+        ? `<tr><td style="padding:10px 24px;">${band}</td></tr>`
+        : `<tr><td style="padding:0;">${band}</td></tr>`;
+    }
+    case "callout": {
+      const bg = block.bg ?? "#eef4ff";
+      const border = block.borderColor ?? "#2E78F5";
+      const color = block.color ?? "#1d4ed8";
+      return `<tr><td style="padding:10px 24px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${esc(bg)};border-left:3px solid ${esc(border)};"><tr><td style="padding:12px 14px;font-family:${FONT};font-size:15px;line-height:1.6;color:${esc(color)};">${escText(block.text)}</td></tr></table></td></tr>`;
+    }
+    case "list": {
+      const color = block.color ?? "#3a4a63";
+      const tag = block.ordered ? "ol" : "ul";
+      const items = block.items
+        .filter((i) => i.trim())
+        .map((i) => `<li style="padding-bottom:6px;">${escText(i)}</li>`)
+        .join("");
+      if (!items) return "";
+      return `<tr><td style="padding:8px 24px;font-family:${FONT};font-size:15px;line-height:1.6;color:${esc(color)};"><${tag} style="margin:0;padding-left:22px;">${items}</${tag}></td></tr>`;
+    }
+    case "columns": {
+      const cells = block.cells.slice(0, 3);
+      if (cells.length === 0) return "";
+      const bg = block.bg ?? "#f4f6fa";
+      const width = Math.floor(100 / cells.length);
+      const tds = cells
+        .map((c, i) => {
+          const pad = i === 0 ? "0 6px 0 0" : i === cells.length - 1 ? "0 0 0 6px" : "0 6px";
+          return `<td width="${width}%" style="width:${width}%;padding:${pad};vertical-align:top;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${esc(bg)};border-radius:8px;"><tr><td style="padding:12px;font-family:${FONT};">${
+            c.title ? `<div style="font-size:14px;font-weight:bold;color:#1c2434;padding-bottom:3px;">${escText(c.title)}</div>` : ""
+          }${c.text ? `<div style="font-size:13px;line-height:1.6;color:#6b7a90;">${escText(c.text)}</div>` : ""}</td></tr></table></td>`;
+        })
+        .join("");
+      // Table columns (not CSS grid/flex) so Outlook lays this out correctly.
+      return `<tr><td style="padding:10px 24px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${tds}</tr></table></td></tr>`;
+    }
+    case "stats": {
+      const items = block.items.filter((i) => i.value.trim() || i.label.trim()).slice(0, 4);
+      if (items.length === 0) return "";
+      const color = block.color ?? "#0c2340";
+      const width = Math.floor(100 / items.length);
+      const tds = items
+        .map(
+          (i) =>
+            `<td width="${width}%" style="width:${width}%;text-align:center;font-family:${FONT};"><div style="font-size:24px;font-weight:bold;color:${esc(color)};line-height:1.2;">${escText(i.value)}</div><div style="font-size:12px;color:#6b7a90;padding-top:2px;">${escText(i.label)}</div></td>`,
+        )
+        .join("");
+      return `<tr><td style="padding:12px 24px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${tds}</tr></table></td></tr>`;
+    }
     default:
       return "";
   }
@@ -359,6 +618,16 @@ export function renderBlocksToText(blocks: TemplateBlock[]): string {
     }
     else if (b.type === "button") lines.push(`${b.label}: ${safeUrl(b.url)}`);
     else if (b.type === "divider") lines.push("---");
+    else if (b.type === "section") {
+      lines.push([b.eyebrow, b.heading, b.text].filter(Boolean).join("\n"));
+    } else if (b.type === "callout") lines.push(b.text);
+    else if (b.type === "list") {
+      lines.push(b.items.filter((i) => i.trim()).map((i, n) => (b.ordered ? `${n + 1}. ${i}` : `- ${i}`)).join("\n"));
+    } else if (b.type === "columns") {
+      lines.push(b.cells.map((c) => [c.title, c.text].filter(Boolean).join(": ")).filter(Boolean).join("\n"));
+    } else if (b.type === "stats") {
+      lines.push(b.items.map((i) => `${i.value} ${i.label}`).join(" · "));
+    }
   }
   return lines.join("\n\n").trim();
 }
