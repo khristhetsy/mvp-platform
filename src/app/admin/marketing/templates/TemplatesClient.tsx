@@ -4,6 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { MarketingTemplate } from "@/lib/marketing/types";
+import { TemplateVisualEditor } from "@/components/marketing/TemplateVisualEditor";
+import {
+  defaultBlocks,
+  renderBlocksToEmailHtml,
+  renderBlocksToText,
+  seedBlocksFromHtml,
+  type TemplateBlock,
+} from "@/lib/marketing/template-blocks";
 
 const STATUS_MAP: Record<string, { bg: string; color: string }> = {
   active:   { bg: "#E1F5EE", color: "#0F6E56" },
@@ -116,7 +124,9 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
   const [editing, setEditing] = useState<Partial<MarketingTemplate> | null>(null);
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<MarketingTemplate | null>(null);
-  const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
+  const [activeTab, setActiveTab] = useState<"visual" | "write" | "preview">("visual");
+  // Structured blocks for the visual editor (regenerates html_body on save).
+  const [blocks, setBlocks] = useState<TemplateBlock[] | null>(null);
   const [view, setView] = useState<ViewMode>("grid");
   const [sort, setSort] = useState<SortKey>("edited");
 
@@ -126,18 +136,43 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
     return (b.updated_at ?? b.created_at ?? "").localeCompare(a.updated_at ?? a.created_at ?? "");
   });
 
+  /** Open a template in the editor, seeding blocks so the Visual tab works. */
+  function openEditor(t: Partial<MarketingTemplate>, tab: "visual" | "write" = "visual") {
+    const existing = (t as { blocks?: TemplateBlock[] | null }).blocks;
+    setBlocks(
+      existing && existing.length > 0
+        ? existing
+        : t.id
+        ? seedBlocksFromHtml(t.subject ?? "", t.html_body ?? "")
+        : defaultBlocks(),
+    );
+    setEditing(t);
+    setActiveTab(tab);
+  }
+
   async function handleSave() {
     if (!editing) return;
     setSaving(true);
     try {
       const isNew = !editing.id;
       const url = isNew ? "/api/marketing/templates" : `/api/marketing/templates/${editing.id}`;
+      // Blocks are the source of truth for the visual editor — regenerate the
+      // email-safe HTML (and text alternative) from them on every save.
+      const payload = blocks
+        ? {
+            ...editing,
+            blocks,
+            html_body: renderBlocksToEmailHtml(blocks),
+            text_body: renderBlocksToText(blocks),
+          }
+        : editing;
       await fetch(url, {
         method: isNew ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editing),
+        body: JSON.stringify(payload),
       });
       setEditing(null);
+      setBlocks(null);
       router.refresh();
     } catch (err) {
       console.error("Failed to save template:", err);
@@ -186,13 +221,13 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
                 if (!file) return;
                 const text = await file.text();
                 const name = file.name.replace(/\.html?$/i, "").replace(/[-_]+/g, " ").trim() || "Uploaded template";
-                setEditing({ name, subject: "", preview_text: "", html_body: text, status: "draft" });
+                openEditor({ name, subject: "", preview_text: "", html_body: text, status: "draft" }, "write");
                 setActiveTab("write");
               }}
             />
           </label>
           <button
-            onClick={() => { setEditing({ name: "", subject: "", html_body: "", status: "draft" }); setActiveTab("write"); }}
+            onClick={() => openEditor({ name: "", subject: "", html_body: "", status: "draft" }, "visual")}
             style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "none", background: "#2E78F5", color: "#EEEDFE", cursor: "pointer" }}>
             + New template
           </button>
@@ -233,13 +268,23 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
 
           {/* Write / Preview tabs */}
           <div style={{ display: "flex", gap: 0, borderBottom: "0.5px solid var(--border)", marginBottom: 14 }}>
-            {(["write", "preview"] as const).map((tab) => (
+            {(["visual", "write", "preview"] as const).map((tab) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 style={{ padding: "7px 16px", fontSize: 12, fontWeight: activeTab === tab ? 500 : 400, color: activeTab === tab ? "#2E78F5" : "var(--muted-foreground)", background: "transparent", border: "none", borderBottom: activeTab === tab ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>
-                {tab === "write" ? "Write" : "Preview"}
+                {tab === "visual" ? "🖼 Visual" : tab === "write" ? "</> HTML" : "Preview"}
               </button>
             ))}
           </div>
+
+          {activeTab === "visual" ? (
+            <div style={{ marginBottom: 12 }}>
+              <TemplateVisualEditor blocks={blocks ?? []} onChange={setBlocks} />
+              <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 10 }}>
+                Click any block to edit it. The email HTML is regenerated from these blocks when you save — it stays
+                table-based and inline-styled so it renders correctly in Outlook and Gmail.
+              </p>
+            </div>
+          ) : null}
 
           {activeTab === "write" ? (
             <>
@@ -318,7 +363,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
                 </div>
                 <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500, whiteSpace: "nowrap" }}>{t.status.charAt(0).toUpperCase() + t.status.slice(1)}</span>
                 <button onClick={() => setPreview(t)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>Preview</button>
-                <button onClick={() => { setEditing(t); setActiveTab("write"); }} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>Edit</button>
+                <button onClick={() => openEditor(t, "visual")} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>Edit</button>
                 <button onClick={() => handleDelete(t.id)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>Delete</button>
               </div>
             );
@@ -352,7 +397,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
                     Preview
                   </button>
-                  <button onClick={() => { setEditing(t); setActiveTab("write"); }}
+                  <button onClick={() => openEditor(t, "visual")}
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
                     Edit
                   </button>

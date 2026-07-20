@@ -33,6 +33,8 @@ export type MarketingTemplate = {
   preview_text: string | null;
   html_body: string;
   text_body: string | null;
+  /** Structured blocks for the visual editor; html_body is regenerated from these. */
+  blocks?: unknown;
   status: "draft" | "active" | "archived";
   created_by: string | null;
   created_at: string;
