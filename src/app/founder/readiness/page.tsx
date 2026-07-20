@@ -18,6 +18,8 @@ import {
 import { FounderRemediationActionPlan } from "@/components/FounderRemediationActionPlan";
 import { FounderReadinessDonutCards } from "@/components/founder/FounderReadinessDonutCards";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
+import { loadNotApplicableTypes } from "@/lib/documents/not-applicable";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadFounderRemediationPlan } from "@/lib/remediation/load-founder-remediation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
@@ -33,8 +35,14 @@ export default async function FounderReadinessPage() {
   const supabase = await createServerSupabaseClient();
 
   const documents = company ? (await listCompanyDocuments(supabase, company.id)).data ?? [] : [];
-  const checklist = buildDocumentChecklist(documents);
+  const notApplicable = company
+    ? await loadNotApplicableTypes(createServiceRoleClient(), company.id)
+    : [];
+  const fullChecklist = buildDocumentChecklist(documents, undefined, notApplicable);
   const profileCompletion = buildProfileCompletion(company);
+  // N/A types are excluded from the required set entirely — they are neither
+  // "uploaded" nor "missing", so they don't distort the X/Y or the missing count.
+  const checklist = fullChecklist.filter((item) => item.status !== "not_applicable");
   const uploadedCount = checklist.filter((item) => item.status !== "missing").length;
   const missingDocuments = checklist.filter((item) => item.status === "missing");
 
@@ -102,7 +110,7 @@ export default async function FounderReadinessPage() {
                   profileItems={profileCompletion.items}
                   uploadedCount={uploadedCount}
                   checklistTotal={checklist.length}
-                  checklist={checklist}
+                  checklist={fullChecklist}
                   missingCount={missingDocuments.length}
                   reviewStatusFormatted={formatReviewStatus(reviewStatus ? String(reviewStatus) : null)}
                   isPublished={Boolean(company.is_published)}

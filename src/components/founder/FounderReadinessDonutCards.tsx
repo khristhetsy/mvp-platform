@@ -196,18 +196,24 @@ export function FounderReadinessDonutCards({
                 ? "Uploaded"
                 : item.status === "needs_review"
                 ? "Needs review"
+                : item.status === "not_applicable"
+                ? "N/A"
                 : "Missing",
             bg:
               item.status === "uploaded"
                 ? "#EAF3DE"
                 : item.status === "needs_review"
                 ? "#FAEEDA"
+                : item.status === "not_applicable"
+                ? "#F1F5F9"
                 : "#FCEBEB",
             color:
               item.status === "uploaded"
                 ? "#3B6D11"
                 : item.status === "needs_review"
                 ? "#854F0B"
+                : item.status === "not_applicable"
+                ? "#64748B"
                 : "#A32D2D",
           })),
           meaning:
@@ -255,18 +261,24 @@ export function FounderReadinessDonutCards({
                 ? "Uploaded"
                 : item.status === "needs_review"
                 ? "Needs review"
+                : item.status === "not_applicable"
+                ? "N/A"
                 : "Missing",
             bg:
               item.status === "uploaded"
                 ? "#EAF3DE"
                 : item.status === "needs_review"
                 ? "#FAEEDA"
+                : item.status === "not_applicable"
+                ? "#F1F5F9"
                 : "#FCEBEB",
             color:
               item.status === "uploaded"
                 ? "#3B6D11"
                 : item.status === "needs_review"
                 ? "#854F0B"
+                : item.status === "not_applicable"
+                ? "#64748B"
                 : "#A32D2D",
           })),
           meaning:
