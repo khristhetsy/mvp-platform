@@ -86,6 +86,72 @@ function jsonError(status: number, message: string) {
   return NextResponse.json({ error: message }, { status });
 }
 
+/**
+ * Rollout mode for department scoping on admin API routes. Defaults to "warn":
+ * the check runs and logs, but never blocks. Only an explicit "enforce" returns
+ * 403, so a feature-registry gap can't lock staff out of their own tools without
+ * someone deciding to turn it on.
+ */
+function adminApiScopingMode(): "off" | "warn" | "enforce" {
+  const raw = process.env.ADMIN_API_DEPARTMENT_SCOPING?.toLowerCase();
+  return raw === "off" || raw === "enforce" ? raw : "warn";
+}
+
+/**
+ * Paths that are never department-scoped: personal tools and platform-admin
+ * surfaces that carry their own requireRole gate and aren't registered as
+ * departmental features. Expressed as page paths — API callers strip "/api"
+ * before checking, so one list covers both.
+ */
+const DEPARTMENT_EXEMPT_PREFIXES = [
+  "/admin/dashboard",
+  "/admin/profile",
+  "/admin/ceo",
+  "/admin/calendar",
+  "/admin/schedule",
+  "/admin/meet",
+  "/admin/meetings",
+] as const;
+
+function isDepartmentExempt(p: string): boolean {
+  if (p === "/admin") return true;
+  return DEPARTMENT_EXEMPT_PREFIXES.some((prefix) => p === prefix || p.startsWith(`${prefix}/`));
+}
+
+/**
+ * True when this user belongs to a department and none of its granted features
+ * cover `featurePath`. Fails CLOSED-to-false (i.e. allows) on any error, matching
+ * the page-route behaviour — a transient RPC failure must not deny access.
+ */
+async function isDepartmentDenied(
+  supabase: ReturnType<typeof createServerClient<Database>>,
+  userId: string,
+  featurePath: string,
+): Promise<boolean> {
+  if (isDepartmentExempt(featurePath)) return false;
+  try {
+    const { count } = await supabase
+      .from("department_members")
+      .select("user_id", { count: "exact", head: true })
+      .eq("user_id", userId);
+    // Unassigned users are not scoped.
+    if ((count ?? 0) === 0) return false;
+
+    // get_user_features is not in the generated types yet → loose call.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: feats, error } = await (supabase.rpc as any)("get_user_features", { p_user_id: userId });
+    if (error || !Array.isArray(feats)) return false;
+
+    const paths = (feats as Array<{ path: string }>).map((f) => f.path);
+    const allowed = paths.some((fp) =>
+      fp === "/admin" ? featurePath === "/admin" : featurePath === fp || featurePath.startsWith(`${fp}/`),
+    );
+    return !allowed;
+  } catch {
+    return false;
+  }
+}
+
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
@@ -166,56 +232,39 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // ── Department-scoped access (admin PAGE routes, all internal users) ──
+  // ── Department-scoped access ──
   // Scoping is by DEPARTMENT membership, not role. Admin-department members and
   // unassigned users bypass (the RPC returns all features for admin-dept members;
   // unassigned users are skipped by the count check below). Anyone assigned to a
   // non-admin department is scoped to their granted feature paths. Fails OPEN on
   // any error so a registry gap never locks staff out. Landing/profile always OK.
-  if (zone === "admin" && !apiRequest) {
-    const p = pathname;
-    const exempt =
-      p === "/admin" ||
-      p === "/admin/dashboard" || p.startsWith("/admin/dashboard/") ||
-      p === "/admin/profile" || p.startsWith("/admin/profile/") ||
-      // CEO Hub is a platform-admin surface with its own requireRole(["admin"])
-      // gate; it is not a departmental feature, so skip the department check here.
-      p === "/admin/ceo" || p.startsWith("/admin/ceo/") ||
-      // Calendar / Scheduling / Meet are personal productivity tools (each with its
-      // own requireRole(["admin","analyst"]) gate), not departmental features, so
-      // they are not registered in the feature registry and would otherwise be
-      // wrongly denied. Skip the department check here.
-      p === "/admin/calendar" || p.startsWith("/admin/calendar/") ||
-      p === "/admin/schedule" || p.startsWith("/admin/schedule/") ||
-      p === "/admin/meet" || p.startsWith("/admin/meet/") ||
-      // Weekly management meeting board — a CEO/management surface with its own
-      // requireRole gate, not a departmental feature.
-      p === "/admin/meetings" || p.startsWith("/admin/meetings/");
-    if (!exempt) {
-      try {
-        const { count } = await supabase
-          .from("department_members")
-          .select("user_id", { count: "exact", head: true })
-          .eq("user_id", user.id);
-        if ((count ?? 0) > 0) {
-          // get_user_features is not in the generated types yet → loose call.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { data: feats, error } = await (supabase.rpc as any)("get_user_features", { p_user_id: user.id });
-          if (!error && Array.isArray(feats)) {
-            const paths = (feats as Array<{ path: string }>).map((f) => f.path);
-            const allowed = paths.some((fp) => (fp === "/admin" ? p === "/admin" : p === fp || p.startsWith(`${fp}/`)));
-            if (!allowed) {
-              const url = request.nextUrl.clone();
-              url.pathname = "/admin/dashboard";
-              url.search = "";
-              url.searchParams.set("denied", "1");
-              return NextResponse.redirect(url);
-            }
-          }
-        }
-      } catch {
-        /* fail open — never lock out on a transient error or missing tables */
+  // API routes carry the same department scoping as pages, but rollout is staged
+  // via ADMIN_API_DEPARTMENT_SCOPING because a feature-registry gap here would
+  // return 403 to legitimate staff mid-task rather than merely redirecting them:
+  //   off     — no check (previous behaviour)
+  //   warn    — log what WOULD be denied, allow the request (default)
+  //   enforce — return 403
+  // Run in `warn` until the logs are quiet, then switch to `enforce`.
+  if (zone === "admin" && apiRequest && adminApiScopingMode() !== "off") {
+    const featurePath = pathname.replace(/^\/api/, "");
+    const denied = await isDepartmentDenied(supabase, user.id, featurePath);
+    if (denied) {
+      if (adminApiScopingMode() === "enforce") {
+        return jsonError(403, "Your department does not have access to this feature.");
       }
+      console.warn(
+        `[proxy] department scoping (warn): user ${user.id} would be denied ${pathname} — no granted feature covers ${featurePath}`,
+      );
+    }
+  }
+
+  if (zone === "admin" && !apiRequest) {
+    if (await isDepartmentDenied(supabase, user.id, pathname)) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin/dashboard";
+      url.search = "";
+      url.searchParams.set("denied", "1");
+      return NextResponse.redirect(url);
     }
   }
 
