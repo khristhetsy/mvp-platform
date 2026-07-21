@@ -131,37 +131,63 @@ function isDepartmentExempt(p: string): boolean {
 }
 
 /**
- * True when this user belongs to a department and none of its granted features
- * cover `featurePath`. Fails CLOSED-to-false (i.e. allows) on any error, matching
- * the page-route behaviour — a transient RPC failure must not deny access.
+ * Outcome of a department check. `unavailable` is deliberately distinct from
+ * `allowed`: previously a failed lookup was indistinguishable from a granted
+ * one, so an RPC outage silently granted access everywhere. Keeping it separate
+ * lets pages stay permissive while API routes fail closed.
  */
-async function isDepartmentDenied(
+type DepartmentCheck = "allowed" | "denied" | "unavailable";
+
+async function checkDepartmentAccess(
   supabase: ReturnType<typeof createServerClient<Database>>,
   userId: string,
   featurePath: string,
-): Promise<boolean> {
-  if (isDepartmentExempt(featurePath)) return false;
+): Promise<DepartmentCheck> {
+  if (isDepartmentExempt(featurePath)) return "allowed";
   try {
-    const { count } = await supabase
+    const { count, error: countError } = await supabase
       .from("department_members")
       .select("user_id", { count: "exact", head: true })
       .eq("user_id", userId);
-    // Unassigned users are not scoped.
-    if ((count ?? 0) === 0) return false;
+    if (countError) return "unavailable";
+    // Unassigned users are not department-scoped at all.
+    if ((count ?? 0) === 0) return "allowed";
 
     // get_user_features is not in the generated types yet → loose call.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: feats, error } = await (supabase.rpc as any)("get_user_features", { p_user_id: userId });
-    if (error || !Array.isArray(feats)) return false;
+    if (error || !Array.isArray(feats)) return "unavailable";
 
     const paths = (feats as Array<{ path: string }>).map((f) => f.path);
     const allowed = paths.some((fp) =>
       fp === "/admin" ? featurePath === "/admin" : featurePath === fp || featurePath.startsWith(`${fp}/`),
     );
-    return !allowed;
+    return allowed ? "allowed" : "denied";
   } catch {
-    return false;
+    return "unavailable";
   }
+}
+
+/**
+ * What to do with a check result.
+ *
+ * Pages stay permissive on `unavailable` — a transient failure that redirects
+ * staff to the dashboard mid-task is a worse trade than briefly showing a page
+ * their department may not own, and the page still has its own requireRole gate.
+ *
+ * API routes fail CLOSED on `unavailable` once enforcing, because the failure
+ * mode there is an unguarded data export rather than a misplaced nav item.
+ */
+export function resolveDepartmentAction(
+  surface: "page" | "api",
+  mode: "off" | "warn" | "enforce",
+  check: DepartmentCheck,
+): "allow" | "block" | "warn" {
+  if (check === "allowed") return "allow";
+  if (surface === "page") return check === "denied" ? "block" : "allow";
+  if (mode === "off") return "allow";
+  if (mode === "warn") return "warn";
+  return "block";
 }
 
 export async function proxy(request: NextRequest) {
@@ -259,32 +285,35 @@ export async function proxy(request: NextRequest) {
 
   // ── Department-scoped access ──
   // Scoping is by DEPARTMENT membership, not role. Admin-department members and
-  // unassigned users bypass (the RPC returns all features for admin-dept members;
-  // unassigned users are skipped by the count check below). Anyone assigned to a
-  // non-admin department is scoped to their granted feature paths. Fails OPEN on
-  // any error so a registry gap never locks staff out. Landing/profile always OK.
-  // API routes carry the same department scoping as pages, but rollout is staged
-  // via ADMIN_API_DEPARTMENT_SCOPING because a feature-registry gap here would
-  // return 403 to legitimate staff mid-task rather than merely redirecting them:
-  //   off     — no check (previous behaviour)
-  //   warn    — log what WOULD be denied, allow the request (default)
+  // unassigned users bypass. Anyone assigned to a non-admin department is scoped
+  // to their granted feature paths. Landing/profile and personal tools are exempt.
+  //
+  // API rollout is staged via ADMIN_API_DEPARTMENT_SCOPING:
+  //   off     — no check
+  //   warn    — log what WOULD be blocked, allow the request (default)
   //   enforce — return 403
-  // Run in `warn` until the logs are quiet, then switch to `enforce`.
+  //
+  // See resolveDepartmentAction for how a failed lookup is treated: pages stay
+  // permissive, enforcing API routes fail closed.
   if (zone === "admin" && apiRequest && adminApiScopingMode() !== "off") {
     const featurePath = pathname.replace(/^\/api/, "");
-    const denied = await isDepartmentDenied(supabase, user.id, featurePath);
-    if (denied) {
-      if (adminApiScopingMode() === "enforce") {
-        return jsonError(403, "Your department does not have access to this feature.");
-      }
+    const check = await checkDepartmentAccess(supabase, user.id, featurePath);
+    const action = resolveDepartmentAction("api", adminApiScopingMode(), check);
+    if (action === "block") {
+      return check === "unavailable"
+        ? jsonError(503, "Permission check unavailable. Please retry.")
+        : jsonError(403, "Your department does not have access to this feature.");
+    }
+    if (action === "warn") {
       console.warn(
-        `[proxy] department scoping (warn): user ${user.id} would be denied ${pathname} — no granted feature covers ${featurePath}`,
+        `[proxy] department scoping (warn): user ${user.id} would be blocked on ${pathname} — check result "${check}" for ${featurePath}`,
       );
     }
   }
 
   if (zone === "admin" && !apiRequest) {
-    if (await isDepartmentDenied(supabase, user.id, pathname)) {
+    const check = await checkDepartmentAccess(supabase, user.id, pathname);
+    if (resolveDepartmentAction("page", adminApiScopingMode(), check) === "block") {
       const url = request.nextUrl.clone();
       url.pathname = "/admin/dashboard";
       url.search = "";

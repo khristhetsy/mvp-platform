@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { resolveDepartmentAction } from "@/proxy";
 
 // Mirrors the matching logic in src/proxy.ts. The middleware itself needs a
 // request and a Supabase client, so the path arithmetic — the part that would
@@ -65,6 +66,50 @@ describe("feature path matching", () => {
 
   it("matches the granted path exactly as well as its children", () => {
     expect(isAllowed("/admin/audit", ["/admin/audit"])).toBe(true);
+  });
+});
+
+describe("resolveDepartmentAction — what a check result means", () => {
+  it("always allows a granted route, on every surface and mode", () => {
+    for (const surface of ["page", "api"] as const) {
+      for (const mode of ["off", "warn", "enforce"] as const) {
+        expect(resolveDepartmentAction(surface, mode, "allowed")).toBe("allow");
+      }
+    }
+  });
+
+  it("blocks a denied page regardless of the API rollout mode", () => {
+    // The page check predates the flag and is not staged behind it.
+    for (const mode of ["off", "warn", "enforce"] as const) {
+      expect(resolveDepartmentAction("page", mode, "denied")).toBe("block");
+    }
+  });
+
+  it("keeps pages permissive when the lookup fails", () => {
+    // A transient RPC failure must not bounce staff out of a page mid-task; the
+    // page still carries its own requireRole gate.
+    for (const mode of ["off", "warn", "enforce"] as const) {
+      expect(resolveDepartmentAction("page", mode, "unavailable")).toBe("allow");
+    }
+  });
+
+  it("does not touch API routes when scoping is off", () => {
+    expect(resolveDepartmentAction("api", "off", "denied")).toBe("allow");
+    expect(resolveDepartmentAction("api", "off", "unavailable")).toBe("allow");
+  });
+
+  it("only warns on API routes in warn mode, never blocks", () => {
+    expect(resolveDepartmentAction("api", "warn", "denied")).toBe("warn");
+    expect(resolveDepartmentAction("api", "warn", "unavailable")).toBe("warn");
+  });
+
+  it("blocks a denied API route when enforcing", () => {
+    expect(resolveDepartmentAction("api", "enforce", "denied")).toBe("block");
+  });
+
+  it("fails CLOSED on an API route when enforcing and the lookup fails", () => {
+    // This is the fix: an RPC outage previously granted access everywhere.
+    expect(resolveDepartmentAction("api", "enforce", "unavailable")).toBe("block");
   });
 });
 
