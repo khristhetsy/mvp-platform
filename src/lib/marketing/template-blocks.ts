@@ -8,9 +8,50 @@
 
 export type BlockAlign = "left" | "center" | "right";
 
-export type TemplateBlock =
-  | { id: string; type: "heading"; text: string; level: 1 | 2; color?: string; align?: BlockAlign; url?: string }
-  | { id: string; type: "text"; text: string; color?: string; align?: BlockAlign; url?: string }
+/**
+ * Styling available on every block. All optional — a block that sets none of
+ * these renders exactly as it did before these fields existed.
+ */
+export type BlockStyle = {
+  /** Vertical / horizontal padding in px. */
+  padV?: number;
+  padH?: number;
+  radius?: number;
+  border?: "none" | "full" | "left";
+  borderColor?: string;
+  /**
+   * Hidden on narrow screens via a media query. Honoured by Apple Mail, iOS
+   * Mail, and most webmail; Outlook desktop ignores media queries and will show
+   * the block regardless.
+   */
+  hideOnMobile?: boolean;
+  background?: string;
+};
+
+export type TemplateBlock = BlockStyle &
+  (| {
+      id: string;
+      type: "heading";
+      text: string;
+      level: 1 | 2;
+      color?: string;
+      align?: BlockAlign;
+      url?: string;
+      /** Explicit px size. Overrides the size implied by `level`. */
+      size?: number;
+    }
+  | {
+      id: string;
+      type: "text";
+      text: string;
+      color?: string;
+      align?: BlockAlign;
+      url?: string;
+      size?: number;
+      bold?: boolean;
+      /** Line height as a multiplier, e.g. 1.6. */
+      leading?: number;
+    }
   | { id: string; type: "button"; label: string; url: string; bg?: string; color?: string; align?: BlockAlign }
   | { id: string; type: "image"; src: string; alt?: string; width?: number; align?: BlockAlign }
   | { id: string; type: "divider" }
@@ -30,11 +71,67 @@ export type TemplateBlock =
       padH?: number;
       align?: BlockAlign;
       fullWidth?: boolean;
+      headingSize?: number;
+      url?: string;
     }
-  | { id: string; type: "callout"; text: string; bg?: string; borderColor?: string; color?: string }
-  | { id: string; type: "list"; items: string[]; ordered?: boolean; color?: string }
-  | { id: string; type: "columns"; cells: Array<{ title?: string; text?: string }>; bg?: string }
-  | { id: string; type: "stats"; items: Array<{ value: string; label: string }>; color?: string };
+  | { id: string; type: "callout"; text: string; bg?: string; borderColor?: string; color?: string; size?: number }
+  | { id: string; type: "list"; items: string[]; ordered?: boolean; color?: string; size?: number }
+  | {
+      id: string;
+      type: "columns";
+      cells: Array<{ title?: string; text?: string; url?: string }>;
+      bg?: string;
+      size?: number;
+    }
+  | { id: string; type: "stats"; items: Array<{ value: string; label: string }>; color?: string; size?: number }
+  | { id: string; type: "quote"; text: string; attribution?: string; color?: string; size?: number }
+  | {
+      id: string;
+      type: "profile";
+      name: string;
+      role?: string;
+      blurb?: string;
+      avatar?: string;
+      url?: string;
+      size?: number;
+    }
+  // Video can't play inside an email, so this is a poster image that links out.
+  | { id: string; type: "video"; thumbnail: string; url: string; caption?: string; width?: number }
+  | { id: string; type: "social"; links: Array<{ network: SocialNetwork; url: string }>; color?: string }
+  | {
+      id: string;
+      type: "signature";
+      name: string;
+      title?: string;
+      company?: string;
+      email?: string;
+      phone?: string;
+      avatar?: string;
+      size?: number;
+    });
+
+/**
+ * Patch shape for editing a block in place.
+ *
+ * Deliberately NOT `Partial<TemplateBlock>`: that distributes over a sixteen-member
+ * union intersected with BlockStyle, and the editor applies it at ~60 call sites,
+ * which makes the type checker do an enormous amount of redundant work. The
+ * editor already knows which block is selected before it patches, so a loose
+ * record here costs no real safety and keeps the build cheap.
+ */
+export type BlockPatch = Partial<BlockStyle> & Record<string, unknown>;
+
+export const SOCIAL_NETWORKS = ["linkedin", "x", "facebook", "instagram", "youtube", "website"] as const;
+export type SocialNetwork = (typeof SOCIAL_NETWORKS)[number];
+
+const SOCIAL_LABEL: Record<SocialNetwork, string> = {
+  linkedin: "LinkedIn",
+  x: "X",
+  facebook: "Facebook",
+  instagram: "Instagram",
+  youtube: "YouTube",
+  website: "Website",
+};
 
 export const MERGE_FIELDS = [
   "{{first_name}}",
@@ -456,8 +553,38 @@ function safeUrl(url: string): string {
   }
 }
 
-const FONT = "Helvetica, Arial, sans-serif";
-const LINK_COLOR = "#2E78F5";
+export type EmailTheme = {
+  fontFamily: string;
+  contentWidth: number;
+  pageBg: string;
+  cardBg: string;
+  linkColor: string;
+  baseLeading: number;
+  headingColor: string;
+  textColor: string;
+};
+
+const FALLBACK_THEME: EmailTheme = {
+  fontFamily: "Helvetica, Arial, sans-serif",
+  contentWidth: 600,
+  pageBg: "#f6f8fc",
+  cardBg: "#ffffff",
+  linkColor: "#2E78F5",
+  baseLeading: 1.6,
+  headingColor: "#0c2340",
+  textColor: "#3a4a63",
+};
+
+/** Font sizes are literal px — mail clients handle em/rem inconsistently. */
+function clampSize(value: number | undefined, fallback: number): number {
+  if (typeof value !== "number" || Number.isNaN(value)) return fallback;
+  return Math.max(10, Math.min(48, Math.round(value)));
+}
+
+function clampLeading(value: number | undefined): number {
+  if (typeof value !== "number" || Number.isNaN(value)) return 1.6;
+  return Math.max(1, Math.min(2.4, Math.round(value * 10) / 10));
+}
 
 function clampPad(value: number | undefined, fallback: number): number {
   if (typeof value !== "number" || Number.isNaN(value)) return fallback;
@@ -484,20 +611,25 @@ function linkWrap(inner: string, url: string | undefined, color: string): string
   return `<a href="${esc(safe)}" style="color:${esc(color)};text-decoration:underline;">${inner}</a>`;
 }
 
-function renderBlock(block: TemplateBlock): string {
+function renderBlock(block: TemplateBlock, t: EmailTheme = FALLBACK_THEME): string {
+  const FONT = t.fontFamily;
+  const LINK_COLOR = t.linkColor;
   const align = "align" in block && block.align ? block.align : "left";
   switch (block.type) {
     case "heading": {
-      const size = block.level === 1 ? 24 : 19;
-      const color = block.color ?? "#0c2340";
+      const size = clampSize(block.size, block.level === 1 ? 24 : 19);
+      const color = block.color ?? t.headingColor;
       return `<tr><td style="padding:8px 24px;font-family:${FONT};font-size:${size}px;line-height:1.3;font-weight:bold;color:${esc(color)};text-align:${align};">${linkWrap(escText(block.text), block.url, color)}</td></tr>`;
     }
     case "text": {
-      const color = block.color ?? "#3a4a63";
-      return `<tr><td style="padding:8px 24px;font-family:${FONT};font-size:15px;line-height:1.6;color:${esc(color)};text-align:${align};">${linkWrap(escText(block.text), block.url, LINK_COLOR)}</td></tr>`;
+      const color = block.color ?? t.textColor;
+      const size = clampSize(block.size, 15);
+      const leading = clampLeading(block.leading ?? t.baseLeading);
+      const weight = block.bold ? "bold" : "normal";
+      return `<tr><td style="padding:8px 24px;font-family:${FONT};font-size:${size}px;line-height:${leading};font-weight:${weight};color:${esc(color)};text-align:${align};">${linkWrap(escText(block.text), block.url, LINK_COLOR)}</td></tr>`;
     }
     case "button": {
-      const bg = block.bg ?? "#2E78F5";
+      const bg = block.bg ?? t.linkColor;
       const color = block.color ?? "#ffffff";
       return `<tr><td style="padding:14px 24px;text-align:${align};"><a href="${esc(safeUrl(block.url))}" style="display:inline-block;background:${esc(bg)};color:${esc(color)};font-family:${FONT};font-size:15px;font-weight:bold;text-decoration:none;padding:12px 22px;border-radius:8px;">${escText(block.label)}</a></td></tr>`;
     }
@@ -519,6 +651,7 @@ function renderBlock(block: TemplateBlock): string {
       const bg = block.bg ?? "#0c2340";
       const fg = block.color ?? "#ffffff";
       const padV = clampPad(block.padV, 16);
+      const headingSize = clampSize(block.headingSize, 24);
       const padH = clampPad(block.padH, 24);
       const rows: string[] = [];
       if (block.eyebrow) {
@@ -529,7 +662,7 @@ function renderBlock(block: TemplateBlock): string {
       if (block.heading) {
         const top = block.eyebrow ? 4 : padV;
         rows.push(
-          `<tr><td style="padding:${top}px ${padH}px 0;font-family:${FONT};font-size:24px;line-height:1.3;font-weight:bold;color:${esc(fg)};text-align:${align};">${escText(block.heading)}</td></tr>`,
+          `<tr><td style="padding:${top}px ${padH}px 0;font-family:${FONT};font-size:${headingSize}px;line-height:1.3;font-weight:bold;color:${esc(fg)};text-align:${align};">${linkWrap(escText(block.heading), block.url, fg)}</td></tr>`,
         );
       }
       if (block.text) {
@@ -548,43 +681,106 @@ function renderBlock(block: TemplateBlock): string {
       const bg = block.bg ?? "#eef4ff";
       const border = block.borderColor ?? "#2E78F5";
       const color = block.color ?? "#1d4ed8";
-      return `<tr><td style="padding:10px 24px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${esc(bg)};border-left:3px solid ${esc(border)};"><tr><td style="padding:12px 14px;font-family:${FONT};font-size:15px;line-height:1.6;color:${esc(color)};">${escText(block.text)}</td></tr></table></td></tr>`;
+      const size = clampSize(block.size, 15);
+      return `<tr><td style="padding:10px 24px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${esc(bg)};border-left:3px solid ${esc(border)};"><tr><td style="padding:12px 14px;font-family:${FONT};font-size:${size}px;line-height:1.6;color:${esc(color)};">${escText(block.text)}</td></tr></table></td></tr>`;
     }
     case "list": {
       const color = block.color ?? "#3a4a63";
       const tag = block.ordered ? "ol" : "ul";
+      const size = clampSize(block.size, 15);
       const items = block.items
         .filter((i) => i.trim())
         .map((i) => `<li style="padding-bottom:6px;">${escText(i)}</li>`)
         .join("");
       if (!items) return "";
-      return `<tr><td style="padding:8px 24px;font-family:${FONT};font-size:15px;line-height:1.6;color:${esc(color)};"><${tag} style="margin:0;padding-left:22px;">${items}</${tag}></td></tr>`;
+      return `<tr><td style="padding:8px 24px;font-family:${FONT};font-size:${size}px;line-height:1.6;color:${esc(color)};"><${tag} style="margin:0;padding-left:22px;">${items}</${tag}></td></tr>`;
     }
     case "columns": {
       const cells = block.cells.slice(0, 3);
       if (cells.length === 0) return "";
       const bg = block.bg ?? "#f4f6fa";
       const width = Math.floor(100 / cells.length);
+      const size = clampSize(block.size, 13);
       const tds = cells
         .map((c, i) => {
           const pad = i === 0 ? "0 6px 0 0" : i === cells.length - 1 ? "0 0 0 6px" : "0 6px";
           return `<td width="${width}%" style="width:${width}%;padding:${pad};vertical-align:top;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${esc(bg)};border-radius:8px;"><tr><td style="padding:12px;font-family:${FONT};">${
-            c.title ? `<div style="font-size:14px;font-weight:bold;color:#1c2434;padding-bottom:3px;">${escText(c.title)}</div>` : ""
-          }${c.text ? `<div style="font-size:13px;line-height:1.6;color:#6b7a90;">${escText(c.text)}</div>` : ""}</td></tr></table></td>`;
+            c.title ? `<div style="font-size:${size + 1}px;font-weight:bold;color:#1c2434;padding-bottom:3px;">${linkWrap(escText(c.title), c.url, LINK_COLOR)}</div>` : ""
+          }${c.text ? `<div style="font-size:${size}px;line-height:1.6;color:#6b7a90;">${escText(c.text)}</div>` : ""}</td></tr></table></td>`;
         })
         .join("");
       // Table columns (not CSS grid/flex) so Outlook lays this out correctly.
       return `<tr><td style="padding:10px 24px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${tds}</tr></table></td></tr>`;
+    }
+    case "quote": {
+      const color = block.color ?? "#1c2434";
+      const size = clampSize(block.size, 18);
+      const attribution = block.attribution
+        ? `<div style="padding-top:8px;font-family:${FONT};font-size:13px;color:#6b7a90;">— ${escText(block.attribution)}</div>`
+        : "";
+      return `<tr><td style="padding:14px 24px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-left:3px solid #d3d9e4;padding:4px 0 4px 16px;font-family:${FONT};font-size:${size}px;line-height:1.5;font-style:italic;color:${esc(color)};">${escText(block.text)}${attribution}</td></tr></table></td></tr>`;
+    }
+    case "profile": {
+      const size = clampSize(block.size, 15);
+      const avatar = block.avatar && safeUrl(block.avatar) !== "#"
+        ? `<td width="56" style="width:56px;vertical-align:top;padding-right:12px;"><img src="${esc(safeUrl(block.avatar))}" alt="" width="56" style="display:block;width:56px;height:56px;border-radius:28px;border:0;" /></td>`
+        : "";
+      const name = linkWrap(escText(block.name), block.url, LINK_COLOR);
+      return `<tr><td style="padding:12px 24px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${avatar}<td style="vertical-align:top;font-family:${FONT};"><div style="font-size:${size + 1}px;font-weight:bold;color:#1c2434;">${name}</div>${
+        block.role ? `<div style="font-size:${size - 2}px;color:#6b7a90;padding-top:2px;">${escText(block.role)}</div>` : ""
+      }${
+        block.blurb ? `<div style="font-size:${size - 1}px;line-height:1.6;color:#3a4a63;padding-top:6px;">${escText(block.blurb)}</div>` : ""
+      }</td></tr></table></td></tr>`;
+    }
+    case "video": {
+      const thumb = safeUrl(block.thumbnail);
+      if (!block.thumbnail || thumb === "#") return "";
+      const width = block.width && block.width > 0 ? Math.min(block.width, 600) : 480;
+      const img = `<img src="${esc(thumb)}" alt="${esc(block.caption ?? "Watch the video")}" width="${width}" style="display:inline-block;max-width:100%;height:auto;border:0;border-radius:8px;" />`;
+      const caption = block.caption
+        ? `<div style="padding-top:6px;font-family:${FONT};font-size:12px;color:#6b7a90;">${escText(block.caption)}</div>`
+        : "";
+      return `<tr><td style="padding:12px 24px;text-align:center;">${linkWrap(img, block.url, LINK_COLOR)}${caption}</td></tr>`;
+    }
+    case "social": {
+      const links = block.links.filter((l) => l.url && safeUrl(l.url) !== "#");
+      if (links.length === 0) return "";
+      const color = block.color ?? LINK_COLOR;
+      // Text labels, not icon images: hosted icons are the most common cause of
+      // a broken-image row when a CDN path rots.
+      const items = links
+        .map(
+          (l) =>
+            `<a href="${esc(safeUrl(l.url))}" style="display:inline-block;padding:0 8px;font-family:${FONT};font-size:13px;color:${esc(color)};text-decoration:none;">${esc(SOCIAL_LABEL[l.network] ?? l.network)}</a>`,
+        )
+        .join('<span style="color:#c9d2e0;">·</span>');
+      return `<tr><td style="padding:12px 24px;text-align:center;">${items}</td></tr>`;
+    }
+    case "signature": {
+      const size = clampSize(block.size, 14);
+      const avatar = block.avatar && safeUrl(block.avatar) !== "#"
+        ? `<td width="48" style="width:48px;vertical-align:top;padding-right:12px;"><img src="${esc(safeUrl(block.avatar))}" alt="" width="48" style="display:block;width:48px;height:48px;border-radius:24px;border:0;" /></td>`
+        : "";
+      const lines = [
+        block.title ? `<div style="font-size:${size - 1}px;color:#6b7a90;">${escText(block.title)}</div>` : "",
+        block.company ? `<div style="font-size:${size - 1}px;color:#6b7a90;">${escText(block.company)}</div>` : "",
+        block.email
+          ? `<div style="font-size:${size - 1}px;padding-top:3px;"><a href="mailto:${esc(block.email)}" style="color:${LINK_COLOR};text-decoration:none;">${escText(block.email)}</a></div>`
+          : "",
+        block.phone ? `<div style="font-size:${size - 1}px;color:#6b7a90;">${escText(block.phone)}</div>` : "",
+      ].join("");
+      return `<tr><td style="padding:14px 24px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${avatar}<td style="vertical-align:top;font-family:${FONT};"><div style="font-size:${size}px;font-weight:bold;color:#1c2434;">${escText(block.name)}</div>${lines}</td></tr></table></td></tr>`;
     }
     case "stats": {
       const items = block.items.filter((i) => i.value.trim() || i.label.trim()).slice(0, 4);
       if (items.length === 0) return "";
       const color = block.color ?? "#0c2340";
       const width = Math.floor(100 / items.length);
+      const size = clampSize(block.size, 24);
       const tds = items
         .map(
           (i) =>
-            `<td width="${width}%" style="width:${width}%;text-align:center;font-family:${FONT};"><div style="font-size:24px;font-weight:bold;color:${esc(color)};line-height:1.2;">${escText(i.value)}</div><div style="font-size:12px;color:#6b7a90;padding-top:2px;">${escText(i.label)}</div></td>`,
+            `<td width="${width}%" style="width:${width}%;text-align:center;font-family:${FONT};"><div style="font-size:${size}px;font-weight:bold;color:${esc(color)};line-height:1.2;">${escText(i.value)}</div><div style="font-size:12px;color:#6b7a90;padding-top:2px;">${escText(i.label)}</div></td>`,
         )
         .join("");
       return `<tr><td style="padding:12px 24px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${tds}</tr></table></td></tr>`;
@@ -594,13 +790,51 @@ function renderBlock(block: TemplateBlock): string {
   }
 }
 
+const HIDE_ON_MOBILE_CLASS = "icapos-hm";
+
+/**
+ * Wrap a rendered row so per-block styling applies. Blocks that set none of the
+ * style fields pass straight through, keeping output byte-identical to before.
+ */
+function applyBlockStyle(row: string, block: TemplateBlock): string {
+  if (!row) return row;
+  const hasBox =
+    block.background || block.radius !== undefined || (block.border && block.border !== "none");
+  const hasPad = block.padV !== undefined || block.padH !== undefined;
+
+  let out = row;
+  if (hasBox || hasPad) {
+    const styles: string[] = [];
+    if (block.background) styles.push(`background:${esc(block.background)}`);
+    if (block.radius !== undefined) styles.push(`border-radius:${clampPad(block.radius, 0)}px`);
+    if (block.border === "full") styles.push(`border:1px solid ${esc(block.borderColor ?? "#e3e8f2")}`);
+    if (block.border === "left") styles.push(`border-left:3px solid ${esc(block.borderColor ?? "#2E78F5")}`);
+    if (hasPad) styles.push(`padding:${clampPad(block.padV, 0)}px ${clampPad(block.padH, 0)}px`);
+    out = `<tr><td><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="${styles.join(";")};">${out}</table></td></tr>`;
+  }
+
+  if (block.hideOnMobile) {
+    // Needs the class on a <tr>; wrap when the row isn't already a bare <tr>.
+    out = out.replace(/^<tr(\s|>)/i, `<tr class="${HIDE_ON_MOBILE_CLASS}"$1`);
+  }
+  return out;
+}
+
 /** Render blocks to email-safe HTML (table layout + inline styles). */
-export function renderBlocksToEmailHtml(blocks: TemplateBlock[]): string {
-  const rows = blocks.map(renderBlock).join("");
+export function renderBlocksToEmailHtml(blocks: TemplateBlock[], theme?: Partial<EmailTheme>): string {
+  const t = { ...FALLBACK_THEME, ...(theme ?? {}) };
+  const rows = blocks.map((b) => applyBlockStyle(renderBlock(b, t), b)).join("");
+  const needsMobileRule = blocks.some((b) => b.hideOnMobile);
+  // A single <style> block carries the only rule that can't be inlined. Outlook
+  // desktop ignores it and shows the block; everything else honours it.
+  const mobileStyle = needsMobileRule
+    ? `<style>@media only screen and (max-width:600px){.${HIDE_ON_MOBILE_CLASS}{display:none!important;max-height:0!important;overflow:hidden!important;}}</style>`
+    : "";
   return [
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f6f8fc;padding:24px 0;">`,
+    mobileStyle,
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${esc(t.pageBg)};padding:24px 0;">`,
     `<tr><td align="center">`,
-    `<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:100%;background:#ffffff;border-radius:10px;">`,
+    `<table role="presentation" width="${t.contentWidth}" cellpadding="0" cellspacing="0" border="0" style="width:${t.contentWidth}px;max-width:100%;background:${esc(t.cardBg)};border-radius:10px;">`,
     rows,
     `</table>`,
     `</td></tr>`,
@@ -627,6 +861,16 @@ export function renderBlocksToText(blocks: TemplateBlock[]): string {
       lines.push(b.cells.map((c) => [c.title, c.text].filter(Boolean).join(": ")).filter(Boolean).join("\n"));
     } else if (b.type === "stats") {
       lines.push(b.items.map((i) => `${i.value} ${i.label}`).join(" · "));
+    } else if (b.type === "quote") {
+      lines.push(b.attribution ? `"${b.text}" — ${b.attribution}` : `"${b.text}"`);
+    } else if (b.type === "profile") {
+      lines.push([b.name, b.role, b.blurb].filter(Boolean).join("\n"));
+    } else if (b.type === "video") {
+      lines.push(`${b.caption ?? "Watch the video"}: ${safeUrl(b.url)}`);
+    } else if (b.type === "social") {
+      lines.push(b.links.filter((l) => safeUrl(l.url) !== "#").map((l) => `${l.network}: ${safeUrl(l.url)}`).join("\n"));
+    } else if (b.type === "signature") {
+      lines.push([b.name, b.title, b.company, b.email, b.phone].filter(Boolean).join("\n"));
     }
   }
   return lines.join("\n\n").trim();

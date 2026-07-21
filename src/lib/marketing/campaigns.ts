@@ -33,6 +33,22 @@ export async function createCampaign(
   return data as MarketingCampaign;
 }
 
+/**
+ * Statuses a campaign may be sent from. `sending` is excluded so a cron pass and
+ * a manual click can't double-send; `sent`, `paused`, and `cancelled` are
+ * excluded so a finished or stopped campaign can't be re-blasted to the list.
+ */
+const SENDABLE_STATUSES: ReadonlyArray<MarketingCampaign["status"]> = ["draft", "scheduled"];
+
+/**
+ * Kill switch for all marketing sending. Defaults to ENABLED — only an explicit
+ * "false" disables it, so setting it is a deliberate act and leaving it unset
+ * doesn't silently stop campaigns.
+ */
+export function marketingSendEnabled(): boolean {
+  return process.env.MARKETING_SEND_LIVE !== "false";
+}
+
 export async function updateCampaignStatus(
   id: string,
   status: MarketingCampaign["status"]
@@ -134,6 +150,27 @@ export async function sendCampaign(campaignId: string): Promise<{
 
   const template = campaign.template;
   if (!template) throw new Error("Template not attached");
+
+  // Status gate. Previously any campaign sent regardless of status, so a cron
+  // pass and a manual click could both fire the same campaign (double-sending to
+  // the whole list), and a finished or cancelled campaign could be re-blasted.
+  // `draft` and `scheduled` stay sendable — sending a draft directly is the
+  // normal admin flow — but terminal and in-flight states are refused.
+  const status = campaign.status as MarketingCampaign["status"];
+  if (!SENDABLE_STATUSES.includes(status)) {
+    throw new Error(
+      status === "sending"
+        ? "This campaign is already sending. Wait for it to finish before sending again."
+        : `Cannot send a campaign with status "${status}". Duplicate it to send again.`,
+    );
+  }
+
+  // Emergency brake. Sending stays enabled unless this is explicitly set to
+  // "false", so turning it off is a deliberate act and normal operation is
+  // unaffected.
+  if (!marketingSendEnabled()) {
+    throw new Error("Marketing sending is disabled (MARKETING_SEND_LIVE=false). No email was sent.");
+  }
 
   // Don't pretend to send when the provider isn't configured — leave the
   // campaign as-is (scheduled/draft) so it retries once RESEND_API_KEY is set,

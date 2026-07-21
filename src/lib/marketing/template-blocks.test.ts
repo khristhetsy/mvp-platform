@@ -367,6 +367,233 @@ describe("round trip through render then parse", () => {
   });
 });
 
+describe("text sizing and extended links", () => {
+  it("uses an explicit px size on text and headings", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "t", type: "text", text: "Body", size: 18 },
+      { id: "h", type: "heading", text: "Head", level: 1, size: 32 },
+    ]);
+    expect(html).toContain("font-size:18px");
+    expect(html).toContain("font-size:32px");
+  });
+
+  it("falls back to the default size when none is set", () => {
+    expect(renderBlocksToEmailHtml([{ id: "t", type: "text", text: "Body" }])).toContain("font-size:15px");
+  });
+
+  it("clamps absurd sizes rather than emitting them", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "a", type: "text", text: "Tiny", size: 2 },
+      { id: "b", type: "text", text: "Huge", size: 400 },
+    ]);
+    expect(html).toContain("font-size:10px");
+    expect(html).toContain("font-size:48px");
+    expect(html).not.toContain("font-size:400px");
+  });
+
+  it("emits literal px, never em or rem", () => {
+    const html = renderBlocksToEmailHtml([{ id: "t", type: "text", text: "Body", size: 20 }]);
+    expect(html).not.toMatch(/font-size:[\d.]+r?em/);
+  });
+
+  it("applies weight and line height to text blocks", () => {
+    const html = renderBlocksToEmailHtml([{ id: "t", type: "text", text: "Body", bold: true, leading: 2 }]);
+    expect(html).toContain("font-weight:bold");
+    expect(html).toContain("line-height:2");
+  });
+
+  it("clamps line height into a readable range", () => {
+    const html = renderBlocksToEmailHtml([{ id: "t", type: "text", text: "Body", leading: 9 }]);
+    expect(html).toContain("line-height:2.4");
+  });
+
+  it("links a whole section band", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "s", type: "section", heading: "Raise-ready", url: "https://icapos.com/band" },
+    ]);
+    expect(html).toContain('href="https://icapos.com/band"');
+  });
+
+  it("links individual column cells", () => {
+    const html = renderBlocksToEmailHtml([
+      {
+        id: "c",
+        type: "columns",
+        cells: [
+          { title: "For founders", url: "https://icapos.com/f" },
+          { title: "For investors", url: "https://icapos.com/i" },
+        ],
+      },
+    ]);
+    expect(html).toContain('href="https://icapos.com/f"');
+    expect(html).toContain('href="https://icapos.com/i"');
+  });
+
+  it("drops unsafe section and column links instead of emitting dead ones", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "s", type: "section", heading: "Band", url: "javascript:alert(1)" },
+      { id: "c", type: "columns", cells: [{ title: "Cell", url: "javascript:alert(1)" }] },
+    ]);
+    expect(html).not.toContain("javascript:");
+    expect(html).not.toContain('href="#"');
+  });
+
+  it("honours custom sizes on callouts, lists, columns, and stats", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "c", type: "callout", text: "Note", size: 17 },
+      { id: "l", type: "list", items: ["One"], size: 19 },
+      { id: "s", type: "stats", items: [{ value: "78", label: "Readiness" }], size: 30 },
+    ]);
+    expect(html).toContain("font-size:17px");
+    expect(html).toContain("font-size:19px");
+    expect(html).toContain("font-size:30px");
+  });
+});
+
+describe("quote, profile, video, social, and signature blocks", () => {
+  it("renders a quote with its attribution", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "q", type: "quote", text: "It told us what to fix.", attribution: "Founder, Series A" },
+    ]);
+    expect(html).toContain("It told us what to fix.");
+    expect(html).toContain("Founder, Series A");
+    expect(html).toContain("font-style:italic");
+  });
+
+  it("renders a profile with a circular avatar", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "p", type: "profile", name: "Jane Doe", role: "Founder", avatar: "https://cdn.example.com/a.png" },
+    ]);
+    expect(html).toContain("Jane Doe");
+    expect(html).toContain("border-radius:28px");
+  });
+
+  it("omits a profile avatar when the URL is unsafe", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "p", type: "profile", name: "Jane", avatar: "javascript:alert(1)" },
+    ]);
+    expect(html).not.toContain("<img");
+    expect(html).toContain("Jane");
+  });
+
+  it("renders video as a linked poster image, never a video tag", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "v", type: "video", thumbnail: "https://cdn.example.com/t.png", url: "https://icapos.com/watch" },
+    ]);
+    expect(html).not.toContain("<video");
+    expect(html).toContain("<img");
+    expect(html).toContain('href="https://icapos.com/watch"');
+  });
+
+  it("omits a video block with no thumbnail rather than emitting a broken image", () => {
+    expect(renderBlocksToEmailHtml([{ id: "v", type: "video", thumbnail: "", url: "https://x.com" }])).not.toContain("<img");
+  });
+
+  it("renders social links as text labels, not images", () => {
+    const html = renderBlocksToEmailHtml([
+      {
+        id: "s",
+        type: "social",
+        links: [
+          { network: "linkedin", url: "https://linkedin.com/x" },
+          { network: "x", url: "https://x.com/y" },
+        ],
+      },
+    ]);
+    expect(html).toContain("LinkedIn");
+    expect(html).not.toContain("<img");
+    expect(html).toContain('href="https://linkedin.com/x"');
+  });
+
+  it("drops social links with unsafe URLs", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "s", type: "social", links: [{ network: "website", url: "javascript:alert(1)" }] },
+    ]);
+    expect(html).not.toContain("javascript:");
+    expect(html).not.toContain("Website");
+  });
+
+  it("renders a signature with a mailto link", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "sg", type: "signature", name: "Khris", title: "CEO", email: "khris@example.com" },
+    ]);
+    expect(html).toContain("Khris");
+    expect(html).toContain('href="mailto:khris@example.com"');
+  });
+
+  it("includes the new blocks in the plain-text alternative", () => {
+    const text = renderBlocksToText([
+      { id: "q", type: "quote", text: "Quoted", attribution: "Someone" },
+      { id: "p", type: "profile", name: "Jane Doe", role: "Founder" },
+      { id: "v", type: "video", thumbnail: "https://x.com/t.png", url: "https://icapos.com/watch" },
+      { id: "sg", type: "signature", name: "Khris", company: "iCFO" },
+    ]);
+    expect(text).toContain('"Quoted" — Someone');
+    expect(text).toContain("Jane Doe");
+    expect(text).toContain("https://icapos.com/watch");
+    expect(text).toContain("iCFO");
+  });
+});
+
+describe("theme", () => {
+  it("applies font, width, and page colour from the theme", () => {
+    const html = renderBlocksToEmailHtml([{ id: "t", type: "text", text: "Body" }], {
+      fontFamily: "Georgia, serif",
+      contentWidth: 560,
+      pageBg: "#f4f2fe",
+    });
+    expect(html).toContain("Georgia, serif");
+    expect(html).toContain("width:560px");
+    expect(html).toContain("background:#f4f2fe");
+  });
+
+  it("uses the theme link colour for linked text", () => {
+    const html = renderBlocksToEmailHtml(
+      [{ id: "t", type: "text", text: "Go", url: "https://icapos.com" }],
+      { linkColor: "#0F6E56" },
+    );
+    expect(html).toContain("color:#0F6E56");
+  });
+
+  it("falls back to defaults when no theme is passed", () => {
+    const html = renderBlocksToEmailHtml([{ id: "t", type: "text", text: "Body" }]);
+    expect(html).toContain("width:600px");
+    expect(html).toContain("Helvetica, Arial, sans-serif");
+  });
+
+  it("lets a block override the theme colour", () => {
+    const html = renderBlocksToEmailHtml([{ id: "t", type: "text", text: "Body", color: "#ff0000" }], {
+      textColor: "#3a4a63",
+    });
+    expect(html).toContain("color:#ff0000");
+  });
+});
+
+describe("per-block styling", () => {
+  it("leaves unstyled blocks byte-identical", () => {
+    const plain = renderBlocksToEmailHtml([{ id: "t", type: "text", text: "Body" }]);
+    const styled = renderBlocksToEmailHtml([{ id: "t", type: "text", text: "Body", border: "none" }]);
+    expect(styled).toBe(plain);
+  });
+
+  it("applies background, radius, and border when set", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "t", type: "text", text: "Body", background: "#eef4ff", radius: 12, border: "full", borderColor: "#2E78F5" },
+    ]);
+    expect(html).toContain("background:#eef4ff");
+    expect(html).toContain("border-radius:12px");
+    expect(html).toContain("border:1px solid #2E78F5");
+  });
+
+  it("emits a media query only when a block hides on mobile", () => {
+    const without = renderBlocksToEmailHtml([{ id: "t", type: "text", text: "Body" }]);
+    const withHide = renderBlocksToEmailHtml([{ id: "t", type: "text", text: "Body", hideOnMobile: true }]);
+    expect(without).not.toContain("@media");
+    expect(withHide).toContain("@media only screen and (max-width:600px)");
+    expect(withHide).toContain("icapos-hm");
+  });
+});
+
 describe("stripHtmlToText", () => {
   it("converts breaks and tags to plain text", () => {
     expect(stripHtmlToText("<p>a</p><p>b</p>")).toBe("a\n\nb");

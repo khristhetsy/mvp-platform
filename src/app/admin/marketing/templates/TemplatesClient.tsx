@@ -12,6 +12,7 @@ import {
   seedBlocksFromHtml,
   type TemplateBlock,
 } from "@/lib/marketing/template-blocks";
+import { DEFAULT_THEME, parseDocument, type TemplateTheme } from "@/lib/marketing/template-theme";
 
 const STATUS_MAP: Record<string, { bg: string; color: string }> = {
   active:   { bg: "#E1F5EE", color: "#0F6E56" },
@@ -127,6 +128,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
   const [activeTab, setActiveTab] = useState<"visual" | "write" | "preview">("visual");
   // Structured blocks for the visual editor (regenerates html_body on save).
   const [blocks, setBlocks] = useState<TemplateBlock[] | null>(null);
+  const [theme, setTheme] = useState<TemplateTheme>({ ...DEFAULT_THEME });
   // Which surface the user last edited. The visual editor regenerates html_body
   // from blocks, so if we always did that we'd silently discard hand-written
   // HTML. Whichever surface was touched last wins on save.
@@ -143,10 +145,13 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
 
   /** Open a template in the editor, seeding blocks so the Visual tab works. */
   function openEditor(t: Partial<MarketingTemplate>, tab: "visual" | "write" = "visual") {
-    const existing = (t as { blocks?: TemplateBlock[] | null }).blocks;
+    // `blocks` holds either a bare array (saved before themes existed) or a
+    // versioned document; parseDocument normalises both.
+    const doc = parseDocument((t as { blocks?: unknown }).blocks);
+    setTheme(doc?.theme ?? { ...DEFAULT_THEME });
     setBlocks(
-      existing && existing.length > 0
-        ? existing
+      doc && doc.blocks.length > 0
+        ? doc.blocks
         : t.id
         ? seedBlocksFromHtml(t.subject ?? "", t.html_body ?? "")
         : defaultBlocks(),
@@ -203,8 +208,8 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
           : blocks
           ? {
               ...editing,
-              blocks,
-              html_body: renderBlocksToEmailHtml(blocks),
+              blocks: { version: 2, theme, blocks },
+              html_body: renderBlocksToEmailHtml(blocks, theme),
               text_body: renderBlocksToText(blocks),
             }
           : editing;
@@ -346,6 +351,8 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
               <TemplateVisualEditor
                 blocks={blocks ?? []}
                 onChange={(next) => { setBlocks(next); setEditSource("visual"); }}
+                theme={theme}
+                onThemeChange={(next) => { setTheme(next); setEditSource("visual"); }}
               />
               <p style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 10 }}>
                 Click any block to edit it. The email HTML is regenerated from these blocks when you save — it stays
@@ -389,7 +396,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
               <RawEmailPreview
                 template={
                   editSource === "visual" && blocks
-                    ? { ...editing, html_body: renderBlocksToEmailHtml(blocks) }
+                    ? { ...editing, html_body: renderBlocksToEmailHtml(blocks, theme) }
                     : editing
                 }
               />

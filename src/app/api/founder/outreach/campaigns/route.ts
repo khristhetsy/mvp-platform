@@ -55,6 +55,9 @@ export async function POST(request: Request) {
 
   const readiness = await evaluateFounderOutreachReadiness(auth.company, auth.profile.id);
 
+  // Readiness is a hard gate, not an advisory. Previously this recorded the
+  // compliance event and then created the campaign anyway, which produced an
+  // audit trail of the control being bypassed rather than enforcing it.
   if (!readiness.allowed) {
     void recordComplianceEvent({
       companyId: auth.company.id,
@@ -62,10 +65,19 @@ export async function POST(request: Request) {
       eventType: "outreach_without_readiness",
       severity: "high",
       source: "outreach_campaigns",
-      title: "Outreach attempted without readiness",
-      description: "Founder attempted to create an outreach campaign before meeting readiness requirements.",
+      title: "Outreach blocked — readiness requirements not met",
+      description: "Founder attempted to create an outreach campaign before meeting readiness requirements. The request was rejected.",
       sourceId: auth.profile.id,
     });
+
+    const unmet = readiness.requirements.filter((r) => !r.met).map((r) => r.label);
+    const reason = unmet.length
+      ? `Complete these before starting outreach: ${unmet.join("; ")}.`
+      : "Your account does not currently meet the requirements for investor outreach.";
+
+    void notifyFounderOutreachBlocked({ founderId: auth.profile.id, reason });
+
+    return NextResponse.json({ error: reason, readiness }, { status: 403 });
   }
 
   const campaignResult = await createOutreachCampaign(auth.supabase, {
@@ -76,10 +88,8 @@ export async function POST(request: Request) {
   });
 
   if (campaignResult.error) {
+    // Readiness already passed above, so a failure here is a database problem.
     const message = campaignResult.error.message ?? "Unable to create campaign.";
-    if (!readiness.allowed) {
-      void notifyFounderOutreachBlocked({ founderId: auth.profile.id, reason: message });
-    }
     return NextResponse.json({ error: message, readiness }, { status: 400 });
   }
 
