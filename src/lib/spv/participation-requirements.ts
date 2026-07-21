@@ -115,7 +115,13 @@ export async function seedSpvParticipationRequirements(
     updated_at: now,
   }));
 
-  const { error } = await admin.from("spv_participation_requirements").insert(rows);
+  // Count-then-insert can race: two concurrent invites for the same
+  // participation both read 0 and both insert. The (spv_participation_id,
+  // requirement_key) unique constraint makes that safe — upsert-ignore turns the
+  // loser's duplicate into a no-op instead of a hard error.
+  const { error } = await admin
+    .from("spv_participation_requirements")
+    .upsert(rows, { onConflict: "spv_participation_id,requirement_key", ignoreDuplicates: true });
   if (error) {
     return { error };
   }

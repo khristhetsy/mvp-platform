@@ -24,9 +24,26 @@ function firstName(name?: string | null, email?: string | null): string {
   return local ? local.charAt(0).toUpperCase() + local.slice(1) : "there";
 }
 
+/**
+ * Single source of truth for lead segmentation.
+ *
+ * This previously had a second, divergent implementation inlined in
+ * `store.ts`, and the two disagreed: the old band here was
+ * `prescore >= 40 && prescore <= 64`, so a strong lead (say 70) who wasn't
+ * actively raising fell through to "cold", while `store.ts` called the same lead
+ * "warm". Which label a founder got depended on whether batch scoring or the
+ * on-demand path touched them last.
+ *
+ * Resolved in favour of the store.ts behaviour — a high-scoring founder who
+ * isn't raising yet is a nurture-worthy "warm" lead, not "cold". The upper bound
+ * is removed so score and intent compose sensibly:
+ *   hot  — strong score AND actively raising
+ *   warm — decent score OR actively raising
+ *   cold — neither
+ */
 export function segmentFor(prescore: number, raising: boolean): Segment {
   if (prescore >= 65 && raising) return "hot";
-  if ((prescore >= 40 && prescore <= 64) || raising) return "warm";
+  if (prescore >= 40 || raising) return "warm";
   return "cold";
 }
 function priorityFor(seg: Segment): 1 | 2 | 3 {

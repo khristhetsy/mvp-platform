@@ -2,7 +2,7 @@
 // lead_prescore / prescore_dims / segment / approach onto classified rows.
 
 import { serviceRoleClientUntyped } from "@/lib/supabase/admin";
-import { founderApproach, investorApproach, type HotFounderContext, type Segment } from "./models";
+import { founderApproach, investorApproach, segmentFor, type HotFounderContext, type Segment } from "./models";
 
 type Row = {
   id: string;
@@ -87,7 +87,8 @@ async function scoreRows(db: any, rows: Row[]): Promise<ApproachBatchResult> {
         website: websiteOf(r.raw), email_status: r.email_status, phone: r.phone, signals: r.signals,
       });
       const raising = r.signals?.["raising"] === true || r.signals?.["raising"] === "true";
-      segment = prescore.score >= 65 && raising ? "hot" : (prescore.score >= 40 || raising) ? "warm" : "cold";
+      // Was an inline copy of this rule that had drifted from segmentFor.
+      segment = segmentFor(prescore.score, raising);
       patch.lead_prescore = prescore.score;
       patch.prescore_dims = prescore.dims;
       patch.approach = approach;

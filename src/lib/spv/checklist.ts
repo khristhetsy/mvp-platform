@@ -120,7 +120,12 @@ export async function seedSpvChecklistItems(
     updated_at: now,
   }));
 
-  const { error } = await admin.from("spv_checklist_items").insert(rows);
+  // Idempotent seed: a retry (or a concurrent create) must not error on the
+  // (spv_opportunity_id, item_key) unique constraint. ignoreDuplicates makes a
+  // second seed a no-op rather than a failure.
+  const { error } = await admin
+    .from("spv_checklist_items")
+    .upsert(rows, { onConflict: "spv_opportunity_id,item_key", ignoreDuplicates: true });
   if (error) {
     return { error };
   }

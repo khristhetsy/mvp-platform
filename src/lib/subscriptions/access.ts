@@ -44,9 +44,28 @@ export function isTrialExpired(subscription: SubscriptionRecord, now = new Date(
   return new Date(subscription.trial_ends_at).getTime() <= now.getTime();
 }
 
+/**
+ * True when a failed-payment grace period has run out.
+ *
+ * The billing webhook keeps a `past_due` subscriber on `active` for a bounded
+ * window and stamps `grace_period_ends_at`. Without this check that window would
+ * never close and a failed card would mean permanent free access.
+ */
+export function isGracePeriodExpired(subscription: SubscriptionRecord, now = new Date()) {
+  const endsAt = subscription.grace_period_ends_at;
+  if (!endsAt) return false;
+  return new Date(endsAt).getTime() <= now.getTime();
+}
+
 export function isSubscriptionActive(subscription: SubscriptionRecord, now = new Date()) {
   if (subscription.plan_type === "admin_internal") {
     return true;
+  }
+
+  // Checked before status: the webhook deliberately leaves a past_due
+  // subscription reading "active" for the length of the grace period.
+  if (isGracePeriodExpired(subscription, now)) {
+    return false;
   }
 
   if (subscription.plan_type === "investor_free") {

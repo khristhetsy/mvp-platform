@@ -88,7 +88,14 @@ export async function createSpvOpportunity(
   }
 
   const record = data as SpvOpportunityRecord;
-  void seedSpvChecklistItems(admin, record.id);
+  // Awaited, not fire-and-forget: on Vercel the function can return before a
+  // floating promise resolves, dropping the write. An SPV with no checklist
+  // can never be closed (assertSpvCanClose treats an empty checklist as a hard
+  // block), so a dropped seed strands the opportunity.
+  const seedResult = await seedSpvChecklistItems(admin, record.id);
+  if (seedResult && "error" in seedResult && seedResult.error) {
+    return { error: new Error(`SPV created but checklist seeding failed: ${seedResult.error.message}`) };
+  }
 
   return { data: record };
 }
@@ -205,7 +212,10 @@ export async function seedSpvParticipationsFromInterests(
 
     if (!insertError && participation?.id) {
       created += 1;
-      void seedSpvParticipationRequirements(admin, {
+      // Awaited: this write establishes the investor's document requirements. If
+      // the function returns before it lands, the investor sees an empty
+      // checklist. The seed is idempotent, so a retry of the whole invite is safe.
+      const seed = await seedSpvParticipationRequirements(admin, {
         spvParticipationId: participation.id,
         spvOpportunityId,
         investorId: row.investor_id,
@@ -213,6 +223,11 @@ export async function seedSpvParticipationsFromInterests(
         notifyInvestor: spv.status === "open",
         actorId,
       });
+      if (seed && "error" in seed && seed.error) {
+        console.error(
+          `[spv] failed to seed requirements for participation ${participation.id}: ${seed.error.message}`,
+        );
+      }
       if (spv.status === "open") {
         void notifyInvestorSpvInvited({
           investorId: row.investor_id,
@@ -393,13 +408,20 @@ export async function upsertInvestorSpvParticipation(
 
   if (!existing?.id) {
     const admin = createServiceRoleClient();
-    void seedSpvParticipationRequirements(admin, {
+    // Awaited: the investor's requirement checklist must exist before we report
+    // the participation saved. Idempotent, so retrying the whole call is safe.
+    const seed = await seedSpvParticipationRequirements(admin, {
       spvParticipationId: participation.id,
       spvOpportunityId: input.spvOpportunityId,
       investorId: input.investorId,
       spvName: spv.name,
       actorId: input.investorId,
     });
+    if (seed && "error" in seed && seed.error) {
+      console.error(
+        `[spv] failed to seed requirements for participation ${participation.id}: ${seed.error.message}`,
+      );
+    }
   }
 
   const companyName =

@@ -139,10 +139,15 @@ export async function updateInternalUserPermissions(
     const role = roleBySlug.get(input.roleSlug);
     if (!role) throw new Error("Role not found.");
 
+    // These writes were previously unchecked, so a failed REVOKE reported
+    // success — an admin would believe they had removed super-admin from someone
+    // who still had it. Throw instead: the caller must not see success here.
     if (input.roleSlug === "super_admin") {
-      await supabase.from("profiles").update({ is_super_admin: true }).eq("id", targetUserId);
+      const { error } = await supabase.from("profiles").update({ is_super_admin: true }).eq("id", targetUserId);
+      if (error) throw new Error(`Failed to grant super admin: ${error.message}`);
     } else if (isSuperAdmin(targetProfile as Profile)) {
-      await supabase.from("profiles").update({ is_super_admin: false }).eq("id", targetUserId);
+      const { error } = await supabase.from("profiles").update({ is_super_admin: false }).eq("id", targetUserId);
+      if (error) throw new Error(`Failed to revoke super admin: ${error.message}`);
     }
 
     await supabase.from("internal_user_roles").upsert(

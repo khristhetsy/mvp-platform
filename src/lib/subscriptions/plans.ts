@@ -42,6 +42,9 @@ export type SubscriptionRecord = {
   currency: string;
   created_at: string;
   updated_at: string;
+  // When a past_due subscription loses access. Set by the billing webhook;
+  // null for healthy subscriptions.
+  grace_period_ends_at: string | null;
   // LemonSqueezy
   ls_customer_id:     string | null;
   ls_subscription_id: string | null;
