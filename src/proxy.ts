@@ -87,6 +87,18 @@ function jsonError(status: number, message: string) {
 }
 
 /**
+ * Local-development escape hatch for running without Supabase configured.
+ *
+ * Refuses to apply in production regardless of the flag, so setting it by
+ * accident in a production environment cannot open the app — the worst case is
+ * that production keeps failing closed, which is the safe direction.
+ */
+function allowsUnauthenticatedLocalBypass(): boolean {
+  if (isProductionEnvironment()) return false;
+  return process.env.ALLOW_UNAUTHENTICATED_LOCAL === "true";
+}
+
+/**
  * Rollout mode for department scoping on admin API routes. Defaults to "warn":
  * the check runs and logs, but never blocks. Only an explicit "enforce" returns
  * 403, so a feature-registry gap can't lock staff out of their own tools without
@@ -168,17 +180,30 @@ export async function proxy(request: NextRequest) {
   const { url: supabaseUrl, anonKey: supabaseAnonKey, configured } = getPublicSupabaseEnv();
   const apiRequest = isApiRequest(pathname);
 
+  // Unconfigured Supabase env now fails CLOSED in every environment.
+  //
+  // This used to pass every protected route straight through whenever the env
+  // was unconfigured and APP_ENV/VERCEL_ENV weren't "production" — so a single
+  // typo'd or missing variable on a preview deployment opened /admin, /founder,
+  // and /investor to anyone with the URL. Preview environments frequently hold
+  // real data, so "not production" is not a safe proxy for "not sensitive".
+  //
+  // The escape hatch is deliberately explicit and refuses to work in production,
+  // so it can only ever help someone running the app locally without Supabase.
   if (!configured) {
-    if (isProductionEnvironment()) {
-      if (apiRequest) {
-        return jsonError(503, "Authentication service is not configured.");
-      }
-      const url = request.nextUrl.clone();
-      url.pathname = "/configuration-error";
-      url.search = "";
-      return NextResponse.redirect(url);
+    if (allowsUnauthenticatedLocalBypass()) {
+      console.warn(
+        `[proxy] Supabase env is not configured and ALLOW_UNAUTHENTICATED_LOCAL=true — ${pathname} served WITHOUT authentication. Never set this outside local development.`,
+      );
+      return response;
     }
-    return response;
+    if (apiRequest) {
+      return jsonError(503, "Authentication service is not configured.");
+    }
+    const url = request.nextUrl.clone();
+    url.pathname = "/configuration-error";
+    url.search = "";
+    return NextResponse.redirect(url);
   }
 
   const supabase = createServerClient<Database>(supabaseUrl!, supabaseAnonKey!, {
