@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { isAllowlistedPortalUrl } from "./portal-allowlist";
-import { findProhibitedTerms } from "./prohibited-terms";
+import { findProhibitedTermsInFields } from "./prohibited-terms";
 
 // Founder-supplied listing input. Tombstone-safe fields only; no pitch content.
 export const listingInputSchema = z.object({
@@ -38,9 +38,31 @@ export type ListingValidation = {
 export function validateListing(input: ListingInput): ListingValidation {
   const errors: string[] = [];
 
-  const prohibited = findProhibitedTerms(input.briefDescription);
-  if (prohibited.length > 0) {
-    errors.push(`Description contains prohibited language: ${prohibited.join(", ")}. Tombstone notices state facts only.`);
+  // Every founder-supplied field that reaches the public tombstone is linted,
+  // not just the description — a security type reading "Guaranteed 20% Return
+  // Notes" is exactly the claim Reg CF §227.204 prohibits.
+  const FIELD_LABELS: Record<string, string> = {
+    companyName: "Company name",
+    briefDescription: "Description",
+    securityType: "Security type",
+    portalName: "Portal name",
+    industry: "Industry",
+    location: "Location",
+  };
+
+  const prohibited = findProhibitedTermsInFields({
+    companyName: input.companyName,
+    briefDescription: input.briefDescription,
+    securityType: input.securityType,
+    portalName: input.portalName,
+    industry: input.industry,
+    location: input.location,
+  });
+
+  for (const hit of prohibited) {
+    errors.push(
+      `${FIELD_LABELS[hit.field] ?? hit.field} contains prohibited language: ${hit.terms.join(", ")}. Tombstone notices state facts only.`,
+    );
   }
 
   const portal = isAllowlistedPortalUrl(input.portalUrl);

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { recordInboundMessage } from "@/lib/email/inbox";
 import { pickField, extractReplyToken, parseFromHeader, type InboundPayload } from "@/lib/email/inbound-parse";
@@ -63,14 +64,32 @@ function tokenFromRecipients(addresses: string[]): string | null {
   return null;
 }
 
+/** Constant-time comparison so a wrong secret can't be recovered byte by byte. */
+function secretsMatch(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+}
+
 export async function POST(req: NextRequest): Promise<Response> {
   // Fail closed: an unset secret must never leave this service-role write path open.
   const secret = process.env.INBOUND_WEBHOOK_SECRET;
   if (!secret) {
     return NextResponse.json({ error: "Inbound webhook not configured." }, { status: 503 });
   }
-  const provided = req.nextUrl.searchParams.get("key") ?? req.headers.get("x-webhook-secret");
-  if (provided !== secret) {
+  // Prefer the header. A secret in the query string ends up in access logs,
+  // proxy logs, and any referrer — so the ?key= form is accepted only for
+  // continuity with an already-configured provider, and warns when used.
+  const headerSecret = req.headers.get("x-webhook-secret");
+  const querySecret = req.nextUrl.searchParams.get("key");
+  if (!headerSecret && querySecret) {
+    console.warn(
+      "[email/inbound] Webhook authenticated via ?key= query parameter. Move the secret to the x-webhook-secret header — query strings are recorded in access logs.",
+    );
+  }
+  const provided = headerSecret ?? querySecret;
+  if (!provided || !secretsMatch(provided, secret)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 

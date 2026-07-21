@@ -27,14 +27,32 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: "endTime must be after startTime." }, { status: 400 });
   }
 
-  // Basic anti-spam: cap bookings per email per hour.
-  const limited = await enforceRateLimit({
+  // Anti-spam. Rate limiting keyed on the submitted email was effectively no
+  // limit at all — the caller picks the email, so a new address per request
+  // resets the bucket. Every accepted booking dispatches two emails from our
+  // sending domain, so the abuse cost is deliverability reputation on the same
+  // domain used for investor mail.
+  //
+  // Primary limit is per source IP. The per-email limit is kept as a secondary
+  // check so one genuine person can't spam a single inbox from many addresses.
+  const forwardedFor = req.headers.get("x-forwarded-for") ?? "";
+  const clientIp = forwardedFor.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+
+  const ipLimited = await enforceRateLimit({
+    bucket: "scheduling-book-ip",
+    subjectId: clientIp,
+    limit: 10,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (ipLimited) return ipLimited;
+
+  const emailLimited = await enforceRateLimit({
     bucket: "scheduling-book",
     subjectId: parsed.data.email.toLowerCase(),
     limit: 6,
     windowMs: 60 * 60 * 1000,
   });
-  if (limited) return limited;
+  if (emailLimited) return emailLimited;
 
   try {
     const result = await bookSlot({
