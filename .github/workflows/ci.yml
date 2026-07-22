@@ -26,6 +26,10 @@ jobs:
 
       - name: Type check
         run: npm run typecheck
+        # The type graph is large enough to exhaust Node's default old-space
+        # heap (~2GB) and OOM the compiler. Give it room so the check can't flake.
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
 
       # Informational: flags Supabase tables that exist in migrations but are
       # missing from the generated types (no column-level type safety). Not
@@ -66,6 +70,8 @@ jobs:
       - name: Build
         run: npm run build
         env:
+          # Next runs type-checking inside the build worker; same OOM risk.
+          NODE_OPTIONS: --max-old-space-size=6144
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
