@@ -83,14 +83,40 @@ export function TemplateVisualEditor({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  // Block-level history. Each commit pushes the pre-change blocks so it can be
+  // restored; a fresh commit clears the redo stack. Capped so a long session
+  // can't grow it without bound. Theme changes aren't tracked here.
+  const [undoStack, setUndoStack] = useState<TemplateBlock[][]>([]);
+  const [redoStack, setRedoStack] = useState<TemplateBlock[][]>([]);
 
   const selected = blocks.find((b) => b.id === selectedId) ?? null;
 
+  /** Route every block mutation through here so it becomes undoable. */
+  function commit(next: TemplateBlock[]) {
+    setUndoStack((s) => [...s, blocks].slice(-50));
+    setRedoStack([]);
+    onChange(next);
+  }
+  function undo() {
+    if (undoStack.length === 0) return;
+    const prev = undoStack[undoStack.length - 1];
+    setUndoStack(undoStack.slice(0, -1));
+    setRedoStack((r) => [...r, blocks]);
+    onChange(prev);
+  }
+  function redo() {
+    if (redoStack.length === 0) return;
+    const next = redoStack[redoStack.length - 1];
+    setRedoStack(redoStack.slice(0, -1));
+    setUndoStack((u) => [...u, blocks]);
+    onChange(next);
+  }
+
   function update(id: string, patch: BlockPatch) {
-    onChange(blocks.map((b) => (b.id === id ? ({ ...b, ...patch } as TemplateBlock) : b)));
+    commit(blocks.map((b) => (b.id === id ? ({ ...b, ...patch } as TemplateBlock) : b)));
   }
   function remove(id: string) {
-    onChange(blocks.filter((b) => b.id !== id));
+    commit(blocks.filter((b) => b.id !== id));
     if (selectedId === id) setSelectedId(null);
   }
   function move(id: string, dir: -1 | 1) {
@@ -99,7 +125,7 @@ export function TemplateVisualEditor({
     if (i < 0 || j < 0 || j >= blocks.length) return;
     const next = [...blocks];
     [next[i], next[j]] = [next[j], next[i]];
-    onChange(next);
+    commit(next);
   }
   function add(type: TemplateBlock["type"]) {
     const base = { id: newBlockId() };
@@ -135,7 +161,7 @@ export function TemplateVisualEditor({
         : type === "signature"
         ? { ...base, type: "signature", name: "{{sender_name}}", title: "", company: "iCFO Capital Global, Inc.", email: "", phone: "" }
         : { ...base, type: "text", text: "New paragraph", align: "left" };
-    onChange([...blocks, block]);
+    commit([...blocks, block]);
     setSelectedId(block.id);
   }
 
@@ -186,7 +212,8 @@ export function TemplateVisualEditor({
   async function uploadAsNewBlock(file: File) {
     const block: TemplateBlock = { id: newBlockId(), type: "image", src: "", alt: "", width: 200, align: "center" };
     const withPlaceholder = [...blocks, block];
-    onChange(withPlaceholder);
+    // One undo step covers the whole drop; the async URL swap below reuses it.
+    commit(withPlaceholder);
     setSelectedId(block.id);
     const url = await uploadImage(file);
     // Apply against the list we just built — `blocks` in this closure is stale.
@@ -245,6 +272,28 @@ export function TemplateVisualEditor({
           if (f) void uploadAsNewBlock(f);
         }}
       >
+        {/* Undo / redo toolbar — white pill so it reads on any page colour. */}
+        <div className="mx-auto mb-3 flex w-fit items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={undo}
+            disabled={undoStack.length === 0}
+            title="Undo"
+            className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11.5px] font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <span aria-hidden>↺</span> Undo
+          </button>
+          <span className="h-4 w-px bg-slate-200" />
+          <button
+            type="button"
+            onClick={redo}
+            disabled={redoStack.length === 0}
+            title="Redo"
+            className="flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11.5px] font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Redo <span aria-hidden>↻</span>
+          </button>
+        </div>
         <div
           className="mx-auto overflow-hidden rounded-[10px] shadow-sm"
           style={{ maxWidth: theme.contentWidth, background: theme.cardBg }}
@@ -528,7 +577,7 @@ export function TemplateVisualEditor({
               type="button"
               onClick={() => {
                 onThemeChange(p.theme);
-                onChange(applyPreset(p, blocks));
+                commit(applyPreset(p, blocks));
               }}
               className="rounded-md border border-slate-200 p-1.5 text-left hover:bg-slate-50"
             >
