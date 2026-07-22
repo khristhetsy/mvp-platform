@@ -101,8 +101,8 @@ function LetterPreview({ template, compact = false }: { template: Partial<Market
  *  no synthetic letterhead/greeting scaffold and no cropping. */
 function RawEmailPreview({ template }: { template: Partial<MarketingTemplate> }) {
   return (
-    <div style={{ background: "#f4f7fc", borderRadius: 10, padding: 16 }}>
-      <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", maxWidth: 620, margin: "0 auto", border: "1px solid #E5E3DC", boxShadow: "0 2px 10px rgba(10,26,64,0.06)" }}>
+    <div style={{ background: "#f4f7fc", borderRadius: 10, padding: 16, overflowX: "auto" }}>
+      <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", width: 600, maxWidth: "100%", margin: "0 auto", border: "1px solid #E5E3DC", boxShadow: "0 2px 10px rgba(10,26,64,0.06)" }}>
         {template.subject && (
           <div style={{ padding: "10px 20px", borderBottom: "1px solid #eef2f9", fontSize: 12, color: "#5a6b8c" }}>
             Subject: <b style={{ color: "#13213f" }}>{template.subject}</b>
@@ -426,7 +426,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
       {preview && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
           onClick={() => setPreview(null)}>
-          <div style={{ background: "#ffffff", borderRadius: 14, padding: 24, maxWidth: 660, width: "100%", maxHeight: "90vh", overflow: "auto" }}
+          <div style={{ background: "#ffffff", borderRadius: 14, padding: 24, maxWidth: 720, width: "100%", maxHeight: "90vh", overflow: "auto", scrollbarGutter: "stable" }}
             onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div>
