@@ -12,7 +12,7 @@ import {
   seedBlocksFromHtml,
   type TemplateBlock,
 } from "@/lib/marketing/template-blocks";
-import { DEFAULT_THEME, parseDocument, type TemplateTheme } from "@/lib/marketing/template-theme";
+import { DEFAULT_THEME, inferThemeFromHtml, parseDocument, type TemplateTheme } from "@/lib/marketing/template-theme";
 
 const STATUS_MAP: Record<string, { bg: string; color: string }> = {
   active:   { bg: "#E1F5EE", color: "#0F6E56" },
@@ -155,7 +155,9 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
     // templates to the faithful HTML tab so editing — and saving — never
     // silently simplifies them. Callers can still force a tab explicitly.
     const chosenTab: "visual" | "write" = tab ?? (hasBlocks || !t.html_body ? "visual" : "write");
-    setTheme(doc?.theme ?? { ...DEFAULT_THEME });
+    // Stored theme wins; otherwise read the colours out of the HTML so the canvas
+    // and swatches match the email rather than snapping to the navy default.
+    setTheme(doc?.theme ?? (t.html_body ? inferThemeFromHtml(t.html_body) : { ...DEFAULT_THEME }));
     setBlocks(
       hasBlocks
         ? doc.blocks

@@ -93,6 +93,56 @@ export const THEME_PRESETS: ThemePreset[] = [
   },
 ];
 
+// ── Theme inference (HTML-authored templates) ────────────────────────────────
+
+/** Rough perceived luminance 0..1 for a #hex colour; returns 1 for anything unparsable. */
+function luminance(hex: string): number {
+  const h = hex.replace(/^#/, "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  if (!/^[0-9a-f]{6}$/i.test(full)) return 1;
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) / 255);
+  return 0.299 * r + 0.587 * g + 0.114 * b;
+}
+
+/**
+ * Best-effort theme for a template that has HTML but no stored theme (authored
+ * as raw HTML or imported). Only fields we can read with confidence are
+ * overridden — everything else keeps the default — so the visual editor's canvas
+ * and colour swatches match the email instead of snapping to the navy default.
+ */
+export function inferThemeFromHtml(html: string): TemplateTheme {
+  const theme: TemplateTheme = { ...DEFAULT_THEME };
+  if (!html) return theme;
+
+  const font = /font-family:\s*([^;"']+)/i.exec(html)?.[1]?.trim();
+  if (font) theme.fontFamily = font;
+
+  // Accent = the first call-to-action button's background (styled inline-block <a>).
+  const buttonBg =
+    /<a\b[^>]*\bstyle="[^"]*\bbackground(?:-color)?:\s*(#[0-9a-f]{3,6})[^"]*\bdisplay:\s*inline-block/i.exec(html)?.[1] ??
+    /<a\b[^>]*\bstyle="[^"]*\bdisplay:\s*inline-block[^"]*\bbackground(?:-color)?:\s*(#[0-9a-f]{3,6})/i.exec(html)?.[1];
+  if (buttonBg) theme.linkColor = buttonBg;
+
+  // Heading colour = first *dark* h1/h2 colour (skip white headings that sit on
+  // a coloured band, which aren't the body heading colour).
+  const headingColor = [...html.matchAll(/<h[12]\b[^>]*\bstyle="[^"]*\bcolor:\s*(#[0-9a-f]{3,6})/gi)]
+    .map((m) => m[1])
+    .find((c) => luminance(c) < 0.6);
+  if (headingColor) theme.headingColor = headingColor;
+
+  // Page background = a light background on a wrapping table/body/div. Prefer a
+  // tinted light colour (e.g. #f4f2fe) over plain white so the page tint shows.
+  const lightBgs = [
+    ...html.matchAll(/<(?:table|body|div)\b[^>]*\bstyle="[^"]*\bbackground(?:-color)?:\s*(#[0-9a-f]{3,6})/gi),
+  ]
+    .map((m) => m[1])
+    .filter((c) => luminance(c) > 0.85);
+  const page = lightBgs.find((c) => luminance(c) < 0.995) ?? lightBgs[0];
+  if (page) theme.pageBg = page;
+
+  return theme;
+}
+
 // ── Document shape ───────────────────────────────────────────────────────────
 
 export type TemplateDocument = {
