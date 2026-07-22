@@ -81,7 +81,8 @@ async function main() {
       branded = branded.replaceAll(new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "gi"), value);
     }
 
-    const { html, errors } = mjml2html(branded, { validationLevel: "strict" });
+    // MJML v5's mjml2html is async — awaiting is required or `html` is undefined.
+    const { html, errors } = await mjml2html(branded, { validationLevel: "strict" });
     if (errors && errors.length) {
       problems.push(`• ${master.name}: MJML errors — ${errors.map((e) => e.message).join("; ")}`);
       continue;
