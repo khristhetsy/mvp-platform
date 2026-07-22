@@ -1,6 +1,27 @@
+import * as Sentry from "@sentry/nextjs";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
+
+/**
+ * Send a server-side failure to Sentry with a searchable action tag.
+ *
+ * The point of this module is that a failure in a money or compliance path
+ * (a billing write that didn't land, a dropped SPV seed) should page someone,
+ * not just sit in a log nobody reads. Tagging by action lets you alert on a
+ * specific one — e.g. anything under `billing.webhook.*`.
+ */
+function captureToSentry(action: string, error: unknown, context?: Record<string, unknown>) {
+  try {
+    const err = error instanceof Error ? error : new Error(String(error));
+    Sentry.captureException(err, {
+      tags: { operational_action: action },
+      extra: context ?? {},
+    });
+  } catch {
+    // Never let the reporter throw into the caller's failure path.
+  }
+}
 
 export type OperationalEventLevel = "info" | "warning" | "error";
 
@@ -67,7 +88,31 @@ export function recordOperationalError(
   error: unknown,
   context?: Record<string, unknown>,
 ) {
+  captureToSentry(action, error, context);
   void recordOperationalEvent(null, {
+    action,
+    level: "error",
+    metadata: {
+      message: error instanceof Error ? error.message : String(error),
+      ...context,
+    },
+  });
+}
+
+/**
+ * Awaitable failure reporter for paths where the durable record must be written
+ * before the handler returns — e.g. a webhook that is about to return 500 and
+ * hand control back to the caller. Captures to Sentry (fire-and-forget, buffered)
+ * and awaits the audit_logs write so the failure is queryable even if the process
+ * is torn down immediately after the response.
+ */
+export async function reportServerFailure(
+  action: string,
+  error: unknown,
+  context?: Record<string, unknown>,
+): Promise<void> {
+  captureToSentry(action, error, context);
+  await recordOperationalEvent(null, {
     action,
     level: "error",
     metadata: {

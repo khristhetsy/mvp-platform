@@ -3,6 +3,7 @@ import { verifyWebhookSignature, type LsWebhookPayload } from "@/lib/lemonsqueez
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { mapStatus, variantToPlan } from "@/lib/billing/webhook-mapping";
 import { PLAN_PRICES } from "@/lib/subscriptions/plans";
+import { reportServerFailure } from "@/lib/monitoring/operational-events";
 
 /**
  * LemonSqueezy subscription webhook.
@@ -49,7 +50,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     error: { message: string } | null;
   };
   if (lookupError) {
-    console.error(`[billing/webhook] ${event_name}: subscription lookup failed — ${lookupError.message}`);
+    await reportServerFailure("billing.webhook.lookup_failed", new Error(lookupError.message), {
+      event_name,
+      ls_subscription_id: lsSubId,
+      profile_id: profileId,
+    });
     return NextResponse.json({ error: "Lookup failed" }, { status: 500 });
   }
 
@@ -59,8 +64,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // An unrecognised LemonSqueezy status must not silently cancel a customer.
   // Fail the delivery so it retries and shows up as a failing webhook.
   if (mapped.unknown) {
-    console.error(
-      `[billing/webhook] ${event_name}: unrecognised LemonSqueezy status "${attributes.status}" for subscription ${lsSubId}. No change written.`,
+    await reportServerFailure(
+      "billing.webhook.unknown_status",
+      new Error(`Unrecognised LemonSqueezy status "${attributes.status}"`),
+      { event_name, ls_subscription_id: lsSubId, ls_status: attributes.status },
     );
     return NextResponse.json({ error: "Unrecognised subscription status" }, { status: 500 });
   }
@@ -90,9 +97,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (existing) {
     const { error } = await admin.from("subscriptions").update(patch).eq("id", existing.id);
     if (error) {
-      console.error(
-        `[billing/webhook] ${event_name}: failed to update subscription ${existing.id} — ${error.message}`,
-      );
+      await reportServerFailure("billing.webhook.update_failed", new Error(error.message), {
+        event_name,
+        subscription_id: existing.id,
+        profile_id: existing.profile_id,
+        plan,
+      });
       return NextResponse.json({ error: "Update failed" }, { status: 500 });
     }
     return NextResponse.json({ received: true, updated: existing.id });
@@ -102,8 +112,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (!plan) {
       // Creating a subscription with no plan but a hardcoded price is how a
       // $1,000 customer got recorded at $499. Refuse and retry instead.
-      console.error(
-        `[billing/webhook] ${event_name}: cannot create a subscription for profile ${profileId} — variant ${attributes.variant_id} (${attributes.product_name ?? "?"} / ${attributes.variant_name ?? "?"}) does not map to a known plan.`,
+      await reportServerFailure(
+        "billing.webhook.unmapped_variant",
+        new Error(`Variant ${attributes.variant_id} does not map to a known plan`),
+        {
+          event_name,
+          profile_id: profileId,
+          variant_id: attributes.variant_id,
+          product_name: attributes.product_name,
+          variant_name: attributes.variant_name,
+        },
       );
       return NextResponse.json({ error: "Unmapped plan variant" }, { status: 500 });
     }
@@ -121,9 +139,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       { onConflict: "profile_id" },
     );
     if (error) {
-      console.error(
-        `[billing/webhook] ${event_name}: failed to create subscription for profile ${profileId} — ${error.message}`,
-      );
+      await reportServerFailure("billing.webhook.create_failed", new Error(error.message), {
+        event_name,
+        profile_id: profileId,
+        plan,
+      });
       return NextResponse.json({ error: "Create failed" }, { status: 500 });
     }
     return NextResponse.json({ received: true, created: profileId });

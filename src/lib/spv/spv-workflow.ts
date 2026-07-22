@@ -15,6 +15,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { assertSpvCanClose, seedSpvChecklistItems } from "@/lib/spv/checklist";
+import { recordOperationalError } from "@/lib/monitoring/operational-events";
 import {
   assertParticipationCanComplete,
   seedSpvParticipationRequirements,
@@ -224,9 +225,10 @@ export async function seedSpvParticipationsFromInterests(
         actorId,
       });
       if (seed && "error" in seed && seed.error) {
-        console.error(
-          `[spv] failed to seed requirements for participation ${participation.id}: ${seed.error.message}`,
-        );
+        recordOperationalError("spv.seed_requirements_failed", new Error(seed.error.message), {
+          participationId: participation.id,
+          spvOpportunityId,
+        });
       }
       if (spv.status === "open") {
         void notifyInvestorSpvInvited({
@@ -418,9 +420,10 @@ export async function upsertInvestorSpvParticipation(
       actorId: input.investorId,
     });
     if (seed && "error" in seed && seed.error) {
-      console.error(
-        `[spv] failed to seed requirements for participation ${participation.id}: ${seed.error.message}`,
-      );
+      recordOperationalError("spv.seed_requirements_failed", new Error(seed.error.message), {
+        participationId: participation.id,
+        spvOpportunityId: input.spvOpportunityId,
+      });
     }
   }
 
