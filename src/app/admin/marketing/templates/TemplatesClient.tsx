@@ -101,17 +101,17 @@ function LetterPreview({ template, compact = false }: { template: Partial<Market
  *  no synthetic letterhead/greeting scaffold and no cropping. */
 function RawEmailPreview({ template }: { template: Partial<MarketingTemplate> }) {
   return (
-    <div style={{ background: "#f4f7fc", borderRadius: 10, padding: 16, overflowX: "auto" }}>
-      <div style={{ background: "#fff", borderRadius: 10, overflow: "hidden", width: 600, maxWidth: "100%", margin: "0 auto", border: "1px solid #E5E3DC", boxShadow: "0 2px 10px rgba(10,26,64,0.06)" }}>
-        {template.subject && (
-          <div style={{ padding: "10px 20px", borderBottom: "1px solid #eef2f9", fontSize: 12, color: "#5a6b8c" }}>
-            Subject: <b style={{ color: "#13213f" }}>{template.subject}</b>
-          </div>
-        )}
-        {template.html_body
-          ? <div style={{ fontSize: 14, color: "#333", lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: template.html_body }} />
-          : <div style={{ padding: 24, color: "#B4B2A9", fontStyle: "italic" }}>No content yet.</div>}
-      </div>
+    <div style={{ background: "#eef2f8", borderRadius: 10, padding: 16, overflowX: "auto" }}>
+      {template.subject && (
+        <div style={{ maxWidth: 600, margin: "0 auto 12px", padding: "8px 14px", background: "#fff", border: "1px solid #E5E3DC", borderRadius: 8, fontSize: 12, color: "#5a6b8c" }}>
+          Subject: <b style={{ color: "#13213f" }}>{template.subject}</b>
+        </div>
+      )}
+      {/* Render the email directly — it carries its own page background and
+          centred card, so wrapping it in another card hid the page colour. */}
+      {template.html_body
+        ? <div style={{ minWidth: 600 }} dangerouslySetInnerHTML={{ __html: template.html_body }} />
+        : <div style={{ maxWidth: 600, margin: "0 auto", padding: 24, background: "#fff", borderRadius: 10, color: "#B4B2A9", fontStyle: "italic" }}>No content yet.</div>}
       <div style={{ textAlign: "center", fontSize: 11, color: "#8fa0bf", marginTop: 10 }}>Full template as it renders in delivered mail — no cropping.</div>
     </div>
   );
