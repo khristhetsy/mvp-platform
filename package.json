@@ -16,6 +16,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit --project tsconfig.build.json",
     "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:watch": "vitest",
     "test:investor-express-interest": "node scripts/test-investor-express-interest.mjs",
     "test:investor-crm-pipeline": "node --experimental-strip-types scripts/test-investor-crm-pipeline.ts",
