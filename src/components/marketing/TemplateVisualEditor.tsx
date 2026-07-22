@@ -55,6 +55,7 @@ function decorStyle(b: {
 const SIZED_TYPES = new Set<TemplateBlock["type"]>([
   "heading",
   "text",
+  "button",
   "callout",
   "list",
   "columns",
@@ -68,6 +69,7 @@ const SIZED_TYPES = new Set<TemplateBlock["type"]>([
 const DEFAULT_SIZE: Partial<Record<TemplateBlock["type"], number>> = {
   heading: 24,
   text: 15,
+  button: 15,
   callout: 15,
   list: 15,
   columns: 13,
@@ -375,8 +377,8 @@ export function TemplateVisualEditor({
                     contentEditable
                     suppressContentEditableWarning
                     onBlur={(e) => update(b.id, { label: e.currentTarget.textContent ?? "" })}
-                    className="inline-block rounded-lg px-5 py-3 text-[15px] font-bold text-white outline-none"
-                    style={{ background: b.bg ?? "#2E78F5" }}
+                    className="inline-block rounded-lg px-5 py-3 font-bold text-white outline-none"
+                    style={{ background: b.bg ?? "#2E78F5", fontSize: b.size ?? 15 }}
                   >
                     {b.label}
                   </span>

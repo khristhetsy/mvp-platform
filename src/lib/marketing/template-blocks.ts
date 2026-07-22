@@ -69,7 +69,7 @@ export type TemplateBlock = BlockStyle &
       /** Line height as a multiplier, e.g. 1.6. */
       leading?: number;
     })
-  | { id: string; type: "button"; label: string; url: string; bg?: string; color?: string; align?: BlockAlign }
+  | { id: string; type: "button"; label: string; url: string; bg?: string; color?: string; align?: BlockAlign; size?: number }
   | { id: string; type: "image"; src: string; alt?: string; width?: number; align?: BlockAlign }
   | { id: string; type: "divider" }
   | { id: string; type: "spacer"; height?: number }
@@ -677,7 +677,8 @@ function renderBlock(block: TemplateBlock, t: EmailTheme = FALLBACK_THEME): stri
     case "button": {
       const bg = block.bg ?? t.linkColor;
       const color = block.color ?? "#ffffff";
-      return `<tr><td style="padding:14px 24px;text-align:${align};"><a href="${esc(safeUrl(block.url))}" style="display:inline-block;background:${esc(bg)};color:${esc(color)};font-family:${FONT};font-size:15px;font-weight:bold;text-decoration:none;padding:12px 22px;border-radius:8px;">${escText(block.label)}</a></td></tr>`;
+      const size = clampSize(block.size, 15);
+      return `<tr><td style="padding:14px 24px;text-align:${align};"><a href="${esc(safeUrl(block.url))}" style="display:inline-block;background:${esc(bg)};color:${esc(color)};font-family:${FONT};font-size:${size}px;font-weight:bold;text-decoration:none;padding:12px 22px;border-radius:8px;">${escText(block.label)}</a></td></tr>`;
     }
     case "image": {
       // An empty or non-http(s) src would render as a broken image in every
