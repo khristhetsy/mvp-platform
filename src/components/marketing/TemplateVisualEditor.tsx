@@ -51,6 +51,19 @@ function decorStyle(b: {
   };
 }
 
+/** Block types that carry an explicit `size`. Section uses `headingSize` instead. */
+const SIZED_TYPES = new Set<TemplateBlock["type"]>([
+  "heading",
+  "text",
+  "callout",
+  "list",
+  "columns",
+  "stats",
+  "quote",
+  "profile",
+  "signature",
+]);
+
 /** Sizes the renderer falls back to, so the number field shows the real value. */
 const DEFAULT_SIZE: Partial<Record<TemplateBlock["type"], number>> = {
   heading: 24,
@@ -59,6 +72,9 @@ const DEFAULT_SIZE: Partial<Record<TemplateBlock["type"], number>> = {
   list: 15,
   columns: 13,
   stats: 24,
+  quote: 18,
+  profile: 15,
+  signature: 14,
 };
 
 /**
@@ -714,12 +730,15 @@ export function TemplateVisualEditor({
               </label>
             ) : null}
 
-            {"size" in selected || selected.type === "section" ? (
+            {SIZED_TYPES.has(selected.type) || selected.type === "section" ? (
               (() => {
+                // Runtime-gated above; read size/headingSize off a loose view so
+                // TS doesn't need to narrow the sixteen-member union here.
+                const sz = selected as { size?: number; headingSize?: number };
                 const currentSize =
                   selected.type === "section"
-                    ? selected.headingSize ?? 24
-                    : selected.size ?? DEFAULT_SIZE[selected.type] ?? 15;
+                    ? sz.headingSize ?? 24
+                    : sz.size ?? DEFAULT_SIZE[selected.type] ?? 15;
                 const setSize = (n: number) =>
                   update(selected.id, selected.type === "section" ? { headingSize: n } : { size: n });
                 return (
