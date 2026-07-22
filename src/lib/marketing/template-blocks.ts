@@ -28,8 +28,25 @@ export type BlockStyle = {
   background?: string;
 };
 
+/**
+ * Inline text styling shared by heading and text blocks. Every field is
+ * optional and renders email-safe (font-style / text-decoration / text-transform
+ * / letter-spacing on the cell, highlight as a wrapping span).
+ */
+export type TextDecor = {
+  italic?: boolean;
+  underline?: boolean;
+  strike?: boolean;
+  /** Letter case: uppercase or capitalize. Omitted = as typed. */
+  transform?: "upper" | "capitalize";
+  /** Letter spacing (tracking) in px. */
+  tracking?: number;
+  /** Highlight colour painted behind the text. */
+  highlight?: string;
+};
+
 export type TemplateBlock = BlockStyle &
-  (| {
+  (| (TextDecor & {
       id: string;
       type: "heading";
       text: string;
@@ -39,8 +56,8 @@ export type TemplateBlock = BlockStyle &
       url?: string;
       /** Explicit px size. Overrides the size implied by `level`. */
       size?: number;
-    }
-  | {
+    })
+  | (TextDecor & {
       id: string;
       type: "text";
       text: string;
@@ -51,7 +68,7 @@ export type TemplateBlock = BlockStyle &
       bold?: boolean;
       /** Line height as a multiplier, e.g. 1.6. */
       leading?: number;
-    }
+    })
   | { id: string; type: "button"; label: string; url: string; bg?: string; color?: string; align?: BlockAlign }
   | { id: string; type: "image"; src: string; alt?: string; width?: number; align?: BlockAlign }
   | { id: string; type: "divider" }
@@ -578,7 +595,34 @@ const FALLBACK_THEME: EmailTheme = {
 /** Font sizes are literal px — mail clients handle em/rem inconsistently. */
 function clampSize(value: number | undefined, fallback: number): number {
   if (typeof value !== "number" || Number.isNaN(value)) return fallback;
-  return Math.max(10, Math.min(48, Math.round(value)));
+  return Math.max(10, Math.min(72, Math.round(value)));
+}
+
+/** Letter spacing in px. Zero / unset means the client default (no rule emitted). */
+function clampTracking(value: number | undefined): number | undefined {
+  if (typeof value !== "number" || Number.isNaN(value) || value <= 0) return undefined;
+  return Math.max(0, Math.min(12, Math.round(value * 10) / 10));
+}
+
+/** Build the extra inline CSS for a text/heading block's decoration fields. */
+function textDecorCss(b: TextDecor): string {
+  const parts: string[] = [];
+  if (b.italic) parts.push("font-style:italic");
+  const deco: string[] = [];
+  if (b.underline) deco.push("underline");
+  if (b.strike) deco.push("line-through");
+  if (deco.length) parts.push(`text-decoration:${deco.join(" ")}`);
+  if (b.transform === "upper") parts.push("text-transform:uppercase");
+  else if (b.transform === "capitalize") parts.push("text-transform:capitalize");
+  const tr = clampTracking(b.tracking);
+  if (tr !== undefined) parts.push(`letter-spacing:${tr}px`);
+  return parts.length ? `${parts.join(";")};` : "";
+}
+
+/** Wrap already-escaped content in a highlight span when a colour is set. */
+function highlightWrap(inner: string, color: string | undefined): string {
+  if (!color) return inner;
+  return `<span style="background:${esc(color)};padding:0 3px;">${inner}</span>`;
 }
 
 function clampLeading(value: number | undefined): number {
@@ -619,14 +663,16 @@ function renderBlock(block: TemplateBlock, t: EmailTheme = FALLBACK_THEME): stri
     case "heading": {
       const size = clampSize(block.size, block.level === 1 ? 24 : 19);
       const color = block.color ?? t.headingColor;
-      return `<tr><td style="padding:8px 24px;font-family:${FONT};font-size:${size}px;line-height:1.3;font-weight:bold;color:${esc(color)};text-align:${align};">${linkWrap(escText(block.text), block.url, color)}</td></tr>`;
+      const inner = linkWrap(highlightWrap(escText(block.text), block.highlight), block.url, color);
+      return `<tr><td style="padding:8px 24px;font-family:${FONT};font-size:${size}px;line-height:1.3;font-weight:bold;color:${esc(color)};text-align:${align};${textDecorCss(block)}">${inner}</td></tr>`;
     }
     case "text": {
       const color = block.color ?? t.textColor;
       const size = clampSize(block.size, 15);
       const leading = clampLeading(block.leading ?? t.baseLeading);
       const weight = block.bold ? "bold" : "normal";
-      return `<tr><td style="padding:8px 24px;font-family:${FONT};font-size:${size}px;line-height:${leading};font-weight:${weight};color:${esc(color)};text-align:${align};">${linkWrap(escText(block.text), block.url, LINK_COLOR)}</td></tr>`;
+      const inner = linkWrap(highlightWrap(escText(block.text), block.highlight), block.url, LINK_COLOR);
+      return `<tr><td style="padding:8px 24px;font-family:${FONT};font-size:${size}px;line-height:${leading};font-weight:${weight};color:${esc(color)};text-align:${align};${textDecorCss(block)}">${inner}</td></tr>`;
     }
     case "button": {
       const bg = block.bg ?? t.linkColor;

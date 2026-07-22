@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import {
   MERGE_FIELDS,
   newBlockId,
@@ -19,6 +19,37 @@ import {
 
 /** Brand colours offered as one-click swatches, so hex codes aren't retyped. */
 const BRAND_COLOURS = ["#0c2340", "#2E78F5", "#5B4BE0", "#0F6E56", "#F1EFE8"] as const;
+
+/** Named size steps, so you pick a role instead of guessing pixels. */
+const SIZE_PRESETS = [
+  { label: "Caption", px: 12 },
+  { label: "Body", px: 15 },
+  { label: "Subhead", px: 18 },
+  { label: "Heading", px: 24 },
+  { label: "Title", px: 32 },
+  { label: "Display", px: 44 },
+] as const;
+
+/** Highlight swatches (first entry clears it). Kept soft so text stays legible. */
+const HIGHLIGHT_COLOURS = ["#FDF3C7", "#D8ECFF", "#E7F8ED", "#FBE4EC", "#EDE9FE"] as const;
+
+/** Preview-only CSS mirroring the email renderer's text decoration fields. */
+function decorStyle(b: {
+  italic?: boolean;
+  underline?: boolean;
+  strike?: boolean;
+  transform?: "upper" | "capitalize";
+  tracking?: number;
+  url?: string;
+}): CSSProperties {
+  const deco = [b.underline && "underline", b.strike && "line-through", b.url && "underline"].filter(Boolean);
+  return {
+    fontStyle: b.italic ? "italic" : undefined,
+    textDecoration: deco.length ? deco.join(" ") : undefined,
+    textTransform: b.transform === "upper" ? "uppercase" : b.transform === "capitalize" ? "capitalize" : undefined,
+    letterSpacing: b.tracking ? `${b.tracking}px` : undefined,
+  };
+}
 
 /** Sizes the renderer falls back to, so the number field shows the real value. */
 const DEFAULT_SIZE: Partial<Record<TemplateBlock["type"], number>> = {
@@ -247,13 +278,13 @@ export function TemplateVisualEditor({
                   onBlur={(e) => update(b.id, { text: e.currentTarget.textContent ?? "" })}
                   className="px-6 py-2 font-bold outline-none"
                   style={{
-                    fontSize: b.level === 1 ? 24 : 19,
+                    fontSize: b.size ?? (b.level === 1 ? 24 : 19),
                     color: b.color ?? "#0c2340",
-                    textDecoration: b.url ? "underline" : undefined,
                     textAlign: b.align ?? "left",
+                    ...decorStyle(b),
                   }}
                 >
-                  {b.text}
+                  {b.highlight ? <span style={{ background: b.highlight, padding: "0 3px" }}>{b.text}</span> : b.text}
                 </div>
               ) : b.type === "text" ? (
                 <div
@@ -267,11 +298,11 @@ export function TemplateVisualEditor({
                     fontWeight: b.bold ? 700 : 400,
                     lineHeight: b.leading ?? 1.6,
                     color: b.url ? "#2E78F5" : b.color ?? "#3a4a63",
-                    textDecoration: b.url ? "underline" : undefined,
                     textAlign: b.align ?? "left",
+                    ...decorStyle(b),
                   }}
                 >
-                  {b.text}
+                  {b.highlight ? <span style={{ background: b.highlight, padding: "0 3px" }}>{b.text}</span> : b.text}
                 </div>
               ) : b.type === "button" ? (
                 <div className="px-6 py-3" style={{ textAlign: b.align ?? "left" }}>
@@ -635,32 +666,53 @@ export function TemplateVisualEditor({
             ) : null}
 
             {"size" in selected || selected.type === "section" ? (
-              <label className="block text-[11px] font-semibold text-slate-600">
-                {selected.type === "section" ? "Heading size" : selected.type === "stats" ? "Number size" : "Text size"}
-                <div className="mt-1 flex items-center gap-1.5">
-                  <input
-                    type="number"
-                    min={10}
-                    max={48}
-                    value={
-                      selected.type === "section"
-                        ? selected.headingSize ?? 24
-                        : selected.size ?? DEFAULT_SIZE[selected.type] ?? 15
-                    }
-                    onChange={(e) => {
-                      const n = Number(e.target.value);
-                      if (Number.isNaN(n)) return;
-                      update(
-                        selected.id,
-                        (selected.type === "section" ? { headingSize: n } : { size: n }),
-                      );
-                    }}
-                    className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-[12px]"
-                  />
-                  <span className="text-[11px] text-slate-400">px</span>
-                </div>
-                <span className="mt-1 block text-[10.5px] font-normal text-slate-400">Between 10 and 48.</span>
-              </label>
+              (() => {
+                const currentSize =
+                  selected.type === "section"
+                    ? selected.headingSize ?? 24
+                    : selected.size ?? DEFAULT_SIZE[selected.type] ?? 15;
+                const setSize = (n: number) =>
+                  update(selected.id, selected.type === "section" ? { headingSize: n } : { size: n });
+                return (
+                  <label className="block text-[11px] font-semibold text-slate-600">
+                    {selected.type === "section" ? "Heading size" : selected.type === "stats" ? "Number size" : "Text size"}
+                    {selected.type === "heading" || selected.type === "text" || selected.type === "section" ? (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {SIZE_PRESETS.map((p) => (
+                          <button
+                            key={p.label}
+                            type="button"
+                            onClick={() => setSize(p.px)}
+                            className={`rounded-md border px-1.5 py-1 text-[10.5px] font-semibold ${
+                              currentSize === p.px
+                                ? "border-[#2E78F5] bg-[#eef4ff] text-[#2E78F5]"
+                                : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                            }`}
+                          >
+                            {p.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min={10}
+                        max={72}
+                        value={currentSize}
+                        onChange={(e) => {
+                          const n = Number(e.target.value);
+                          if (Number.isNaN(n)) return;
+                          setSize(n);
+                        }}
+                        className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-[12px]"
+                      />
+                      <span className="text-[11px] text-slate-400">px</span>
+                    </div>
+                    <span className="mt-1 block text-[10.5px] font-normal text-slate-400">Presets, or any value from 10 to 72.</span>
+                  </label>
+                );
+              })()
             ) : null}
 
             {selected.type === "text" ? (
@@ -692,6 +744,105 @@ export function TemplateVisualEditor({
                   />
                 </label>
               </>
+            ) : null}
+
+            {selected.type === "heading" || selected.type === "text" ? (
+              <div className="space-y-2">
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-600">Style</p>
+                  <div className="mt-1 flex gap-1.5">
+                    {([
+                      { key: "italic", label: "I", cls: "italic" },
+                      { key: "underline", label: "U", cls: "underline" },
+                      { key: "strike", label: "S", cls: "line-through" },
+                    ] as const).map((s) => (
+                      <button
+                        key={s.key}
+                        type="button"
+                        onClick={() => update(selected.id, { [s.key]: !selected[s.key] })}
+                        className={`flex-1 rounded-md border py-1.5 text-[12px] ${s.cls} ${
+                          selected[s.key]
+                            ? "border-[#2E78F5] bg-[#eef4ff] text-[#2E78F5]"
+                            : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-600">Case</p>
+                  <div className="mt-1 flex gap-1.5">
+                    {([
+                      { val: undefined, label: "Aa" },
+                      { val: "upper", label: "AA" },
+                      { val: "capitalize", label: "Ab" },
+                    ] as const).map((c) => (
+                      <button
+                        key={c.label}
+                        type="button"
+                        onClick={() => update(selected.id, { transform: c.val })}
+                        className={`flex-1 rounded-md border py-1.5 text-[12px] font-semibold ${
+                          (selected.transform ?? undefined) === c.val
+                            ? "border-[#2E78F5] bg-[#eef4ff] text-[#2E78F5]"
+                            : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-semibold text-slate-600">Letter spacing</p>
+                    <span className="text-[10.5px] text-slate-400">{selected.tracking ?? 0}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={12}
+                    step={0.5}
+                    value={selected.tracking ?? 0}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      update(selected.id, { tracking: n > 0 ? n : undefined });
+                    }}
+                    className="mt-1 w-full"
+                  />
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-600">Highlight</p>
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => update(selected.id, { highlight: undefined })}
+                      title="No highlight"
+                      className={`flex h-6 w-6 items-center justify-center rounded border text-[11px] text-slate-400 ${
+                        !selected.highlight ? "border-[#2E78F5] ring-1 ring-[#2E78F5]" : "border-slate-200"
+                      }`}
+                    >
+                      ✕
+                    </button>
+                    {HIGHLIGHT_COLOURS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => update(selected.id, { highlight: c })}
+                        title={c}
+                        className={`h-6 w-6 rounded border ${
+                          selected.highlight === c ? "border-[#2E78F5] ring-1 ring-[#2E78F5]" : "border-slate-200"
+                        }`}
+                        style={{ background: c }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
             ) : null}
 
             {selected.type === "heading" || selected.type === "text" || selected.type === "section" ? (
