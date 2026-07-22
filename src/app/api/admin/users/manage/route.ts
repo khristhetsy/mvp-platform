@@ -141,8 +141,15 @@ export async function DELETE(req: NextRequest): Promise<Response> {
     if (!msg.includes("not found") && !msg.includes("user not found")) {
       return NextResponse.json({ error: deleteError.message ?? "Delete failed." }, { status: 500 });
     }
-    // Auth user missing — delete profile manually
-    await admin.from("profiles").delete().eq("id", userId);
+    // Auth user missing — delete profile manually. Checked: a failed cleanup
+    // must not report the user deleted while the profile row survives.
+    const { error: profileDeleteError } = await admin.from("profiles").delete().eq("id", userId);
+    if (profileDeleteError) {
+      return NextResponse.json(
+        { error: `Auth user was already gone but the profile could not be removed: ${profileDeleteError.message}` },
+        { status: 500 },
+      );
+    }
   }
 
   await writeAuditLog(auth.supabase, {

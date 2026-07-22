@@ -70,8 +70,10 @@ export async function POST(req: NextRequest): Promise<Response> {
       const { data: rows } = await db.from("crm_contacts").select("id, assignee_ids").in("id", chunk);
       for (const r of (rows ?? []) as Array<{ id: string; assignee_ids: string[] | null }>) {
         const union = [...new Set([...(r.assignee_ids ?? []), ...members])];
-        await db.from("crm_contacts").update({ assignee_ids: union }).eq("id", r.id);
-        count++;
+        // Only count rows that actually updated — previously count was incremented
+        // even when the write failed, overstating how many contacts were assigned.
+        const { error: rowError } = await db.from("crm_contacts").update({ assignee_ids: union }).eq("id", r.id);
+        if (!rowError) count++;
       }
     }
   } else {

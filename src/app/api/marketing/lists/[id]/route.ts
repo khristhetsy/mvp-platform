@@ -37,7 +37,10 @@ export async function DELETE(
     const db = await marketingDb();
     // Campaigns reference the list without cascade — detach them first so the
     // delete doesn't fail on the FK (which would leave the "deleted" list showing).
-    await db.from("marketing_campaigns").update({ list_id: null }).eq("list_id", id);
+    // Checked: if the detach fails, don't attempt the delete (it would fail on the
+    // FK) and don't report success.
+    const { error: detachError } = await db.from("marketing_campaigns").update({ list_id: null }).eq("list_id", id);
+    if (detachError) throw detachError;
     const { error } = await db.from("marketing_lists").delete().eq("id", id);
     if (error) throw error;
     return NextResponse.json({ ok: true });

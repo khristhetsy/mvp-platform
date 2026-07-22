@@ -94,13 +94,18 @@ export async function POST(request: Request) {
     }
   }
 
-  // Revoke any existing pending invite for this email+company
-  await admin
+  // Revoke any existing pending invite for this email+company. Checked: if the
+  // revoke fails, stop rather than create a second live invite for the same
+  // person while reporting the old one revoked.
+  const { error: revokeError } = await admin
     .from("company_invites")
     .update({ status: "revoked" })
     .eq("company_id", company.id)
     .eq("invitee_email", parsed.data.email)
     .eq("status", "pending");
+  if (revokeError) {
+    return NextResponse.json({ error: "Unable to update the existing invite." }, { status: 500 });
+  }
 
   // Create new invite
   const { data: invite, error } = await admin
