@@ -1,0 +1,43 @@
+<mjml>
+  <mj-head>
+    <mj-attributes>
+      <mj-all font-family="Helvetica, Arial, sans-serif" />
+      <mj-text color="#16223F" font-size="15px" line-height="1.6" />
+    </mj-attributes>
+    <mj-preview>{{headline}}</mj-preview>
+  </mj-head>
+  <mj-body background-color="#F6F8FC">
+    <!-- Gradient banner (locked brand layer). The {{banner_image}} slot lets the
+         editor swap to an image banner; a navy overlay is applied at render time. -->
+    <mj-section background-color="#0A1A40" background-url="{{banner_image}}" background-size="cover" background-position="center" padding="40px 24px">
+      <mj-column>
+        <mj-image src="{{logo}}" width="132px" align="left" padding="0 0 16px 0" />
+        <mj-text color="#FFFFFF" font-size="26px" font-weight="bold" line-height="1.25">{{headline}}</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#FFFFFF" padding="28px 24px 8px">
+      <mj-column>
+        <mj-text>{{body}}</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#FFFFFF" padding="8px 24px 32px">
+      <mj-column>
+        <mj-button href="{{cta_url}}" background-color="#1A6CE4" color="#FFFFFF" font-weight="bold" font-size="15px" border-radius="8px" align="left" padding="0">{{cta_text}}</mj-button>
+      </mj-column>
+    </mj-section>
+
+    <!-- Mandatory footer (locked). {{unsubscribe_url}} is merged per-recipient. -->
+    <mj-section background-color="#F6F8FC" padding="8px 24px 24px">
+      <mj-column>
+        <mj-text align="center" color="#5A6B8C" font-size="12px" line-height="1.6">
+          iCFO Capital Global, Inc. · La Jolla, CA 92037<br />
+          <a href="{{unsubscribe_url}}" style="color:#5A6B8C;">Unsubscribe</a> ·
+          <a href="{{view_in_browser_url}}" style="color:#5A6B8C;">View in browser</a><br />
+          You're receiving this because you opted in with iCFO Capital Global, Inc.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

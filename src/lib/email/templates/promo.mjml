@@ -1,0 +1,36 @@
+<mjml>
+  <mj-head>
+    <mj-attributes>
+      <mj-all font-family="Helvetica, Arial, sans-serif" />
+      <mj-text color="#16223F" font-size="15px" line-height="1.6" />
+    </mj-attributes>
+    <mj-preview>{{headline}}</mj-preview>
+  </mj-head>
+  <mj-body background-color="#F6F8FC">
+    <!-- Centered gradient banner (locked brand layer). -->
+    <mj-section background-color="#0A1A40" background-url="{{banner_image}}" background-size="cover" background-position="center" padding="48px 24px" text-align="center">
+      <mj-column>
+        <mj-image src="{{logo}}" width="140px" align="center" padding="0 0 18px 0" />
+        <mj-text align="center" color="#FFFFFF" font-size="28px" font-weight="bold" line-height="1.2">{{headline}}</mj-text>
+        <mj-text align="center" color="#C9D8F5" font-size="16px" line-height="1.5" padding-top="8px">{{subhead}}</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#FFFFFF" padding="32px 24px" text-align="center">
+      <mj-column>
+        <mj-button href="{{cta_url}}" background-color="#1A6CE4" color="#FFFFFF" font-weight="bold" font-size="17px" border-radius="10px" inner-padding="16px 32px" align="center">{{cta_text}}</mj-button>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#F6F8FC" padding="8px 24px 24px">
+      <mj-column>
+        <mj-text align="center" color="#5A6B8C" font-size="12px" line-height="1.6">
+          iCFO Capital Global, Inc. · La Jolla, CA 92037<br />
+          <a href="{{unsubscribe_url}}" style="color:#5A6B8C;">Unsubscribe</a> ·
+          <a href="{{view_in_browser_url}}" style="color:#5A6B8C;">View in browser</a><br />
+          You're receiving this because you opted in with iCFO Capital Global, Inc.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

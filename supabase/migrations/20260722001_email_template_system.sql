@@ -10,7 +10,8 @@
 -- build:emails pipeline writes them.
 create table if not exists public.email_template_masters (
   id uuid primary key default gen_random_uuid(),
-  name text not null,
+  -- Unique so `build:emails` can upsert idempotently (on conflict (name)).
+  name text not null unique,
   description text,
   mjml_source text not null,
   compiled_html text not null,

@@ -1,0 +1,53 @@
+{
+  "masters": [
+    {
+      "slug": "announcement",
+      "name": "Announcement",
+      "description": "Gradient banner, single column, one call to action.",
+      "schema": {
+        "slots": [
+          { "key": "headline", "type": "text", "label": "Headline", "max_length": 90, "required": true },
+          { "key": "body", "type": "textarea", "label": "Body copy", "required": true },
+          { "key": "cta_text", "type": "text", "label": "CTA text", "max_length": 30, "required": true },
+          { "key": "cta_url", "type": "url", "label": "CTA link", "required": true },
+          { "key": "banner_image", "type": "image", "label": "Banner image", "editable": true, "required": false }
+        ],
+        "locked": ["logo", "brand_colors", "footer_legal", "unsubscribe"]
+      }
+    },
+    {
+      "slug": "newsletter",
+      "name": "Newsletter",
+      "description": "Image banner with two-column content sections.",
+      "schema": {
+        "slots": [
+          { "key": "headline", "type": "text", "label": "Headline", "max_length": 90, "required": true },
+          { "key": "intro", "type": "textarea", "label": "Intro paragraph", "required": true },
+          { "key": "section_one_title", "type": "text", "label": "Section 1 title", "max_length": 60, "required": true },
+          { "key": "section_one_body", "type": "textarea", "label": "Section 1 body", "required": true },
+          { "key": "section_two_title", "type": "text", "label": "Section 2 title", "max_length": 60, "required": true },
+          { "key": "section_two_body", "type": "textarea", "label": "Section 2 body", "required": true },
+          { "key": "cta_text", "type": "text", "label": "CTA text", "max_length": 30, "required": true },
+          { "key": "cta_url", "type": "url", "label": "CTA link", "required": true },
+          { "key": "banner_image", "type": "image", "label": "Banner image", "editable": true, "required": false }
+        ],
+        "locked": ["logo", "brand_colors", "footer_legal", "unsubscribe"]
+      }
+    },
+    {
+      "slug": "promo",
+      "name": "Promo",
+      "description": "Centered gradient banner, short copy, large call to action.",
+      "schema": {
+        "slots": [
+          { "key": "headline", "type": "text", "label": "Headline", "max_length": 70, "required": true },
+          { "key": "subhead", "type": "text", "label": "Subhead", "max_length": 120, "required": false },
+          { "key": "cta_text", "type": "text", "label": "CTA text", "max_length": 30, "required": true },
+          { "key": "cta_url", "type": "url", "label": "CTA link", "required": true },
+          { "key": "banner_image", "type": "image", "label": "Banner image", "editable": true, "required": false }
+        ],
+        "locked": ["logo", "brand_colors", "footer_legal", "unsubscribe"]
+      }
+    }
+  ]
+}
