@@ -12,8 +12,15 @@ export const revalidate = 300;
 type PageProps = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
-  const slugs = await getLiveSlugs();
-  return slugs.map((slug) => ({ slug }));
+  // The build must not require a live database. When Supabase env is absent
+  // (e.g. CI with no secrets), pre-render nothing and let pages render on demand
+  // via ISR — same graceful-degradation pattern already used in sitemap.ts.
+  try {
+    const slugs = await getLiveSlugs();
+    return slugs.map((slug) => ({ slug }));
+  } catch {
+    return [];
+  }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

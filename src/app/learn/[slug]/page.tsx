@@ -11,8 +11,14 @@ export const revalidate = 3600;
 export const dynamicParams = true;
 
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
-  const slugs = await listPublishedSlugs();
-  return slugs.map((s) => ({ slug: s.slug }));
+  // Build must not require a live DB. If Supabase env is absent (CI), pre-render
+  // nothing; dynamicParams is true so slugs render on first request via ISR.
+  try {
+    const slugs = await listPublishedSlugs();
+    return slugs.map((s) => ({ slug: s.slug }));
+  } catch {
+    return [];
+  }
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {

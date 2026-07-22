@@ -25,7 +25,9 @@ const SAMPLE_LISTINGS: Listing[] = [
 
 export default async function MarketplacePage() {
   const sampleMode = process.env.NEXT_PUBLIC_MARKETPLACE_SAMPLE_MODE === "true";
-  const live = await getLiveListings();
+  // Build must not require a live DB — degrade to an empty list if Supabase env
+  // is absent (CI). ISR refreshes real listings on the first request in prod.
+  const live = await getLiveListings().catch(() => [] as Listing[]);
   const showingSamples = live.length === 0 && sampleMode;
   const listings = live.length > 0 ? live : showingSamples ? SAMPLE_LISTINGS : [];
 
