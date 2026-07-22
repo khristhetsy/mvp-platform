@@ -144,21 +144,28 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
   });
 
   /** Open a template in the editor, seeding blocks so the Visual tab works. */
-  function openEditor(t: Partial<MarketingTemplate>, tab: "visual" | "write" = "visual") {
+  function openEditor(t: Partial<MarketingTemplate>, tab?: "visual" | "write") {
     // `blocks` holds either a bare array (saved before themes existed) or a
     // versioned document; parseDocument normalises both.
     const doc = parseDocument((t as { blocks?: unknown }).blocks);
+    const hasBlocks = !!(doc && doc.blocks.length > 0);
+    // When a template was authored as HTML (no stored blocks), the Visual tab
+    // has to reverse-parse the HTML into blocks, which is lossy for richer
+    // layouts (eyebrow badges, callout headings, custom theme). Default such
+    // templates to the faithful HTML tab so editing — and saving — never
+    // silently simplifies them. Callers can still force a tab explicitly.
+    const chosenTab: "visual" | "write" = tab ?? (hasBlocks || !t.html_body ? "visual" : "write");
     setTheme(doc?.theme ?? { ...DEFAULT_THEME });
     setBlocks(
-      doc && doc.blocks.length > 0
+      hasBlocks
         ? doc.blocks
         : t.id
         ? seedBlocksFromHtml(t.subject ?? "", t.html_body ?? "")
         : defaultBlocks(),
     );
     setEditing(t);
-    setActiveTab(tab);
-    setEditSource(tab === "write" ? "html" : "visual");
+    setActiveTab(chosenTab);
+    setEditSource(chosenTab === "write" ? "html" : "visual");
   }
 
   /**
@@ -184,7 +191,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
       const created = (await res.json().catch(() => null)) as MarketingTemplate | null;
       setPreview(null);
       router.refresh();
-      if (created?.id) openEditor(created, "visual");
+      if (created?.id) openEditor(created);
     } catch (err) {
       console.error("Failed to duplicate template:", err);
     } finally {
@@ -435,7 +442,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
               </div>
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 {/* Edit from the preview: opens the visual editor on this template. */}
-                <button onClick={() => { openEditor(preview, "visual"); setPreview(null); }}
+                <button onClick={() => { openEditor(preview); setPreview(null); }}
                   style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid #2E78F5", background: "#2E78F5", cursor: "pointer", color: "#ffffff", fontWeight: 600 }}>
                   Edit
                 </button>
@@ -471,7 +478,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
                 </div>
                 <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 500, whiteSpace: "nowrap" }}>{t.status.charAt(0).toUpperCase() + t.status.slice(1)}</span>
                 <button onClick={() => setPreview(t)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>Preview</button>
-                <button onClick={() => openEditor(t, "visual")} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>Edit</button>
+                <button onClick={() => openEditor(t)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>Edit</button>
                 <button onClick={() => void handleDuplicate(t)} disabled={saving} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #bcd3fb", background: "#f2f7ff", cursor: "pointer", color: "#2E78F5", fontWeight: 600 }}>⧉ Duplicate</button>
                 <button onClick={() => handleDelete(t.id)} style={{ fontSize: 12, padding: "4px 9px", borderRadius: 6, border: "0.5px solid #F09595", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>Delete</button>
               </div>
@@ -506,7 +513,7 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
                     Preview
                   </button>
-                  <button onClick={() => openEditor(t, "visual")}
+                  <button onClick={() => openEditor(t)}
                     style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid var(--border)", background: "transparent", cursor: "pointer", color: "var(--muted-foreground)" }}>
                     Edit
                   </button>
