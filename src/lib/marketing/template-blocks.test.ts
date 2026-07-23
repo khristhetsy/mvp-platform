@@ -275,6 +275,17 @@ describe("section blocks", () => {
     });
   });
 
+  it("round-trips a band background image over its fallback colour", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "s", type: "section", heading: "Hero", text: "Body", bgImage: "https://icapos.com/hero.jpg", bg: "#0c2340", color: "#ffffff" },
+    ]);
+    expect(html).toContain("hero.jpg");
+    expect(html).toContain("background-color:#0c2340");
+    const back = parseHtmlToBlocks(html).find((b) => b.type === "section") as { bgImage?: string; bg?: string } | undefined;
+    expect(back?.bgImage).toBe("https://icapos.com/hero.jpg");
+    expect(back?.bg).toBe("#0c2340");
+  });
+
   it("doesn't invent a badge or button on a plain band", () => {
     const html = renderBlocksToEmailHtml([
       { id: "s", type: "section", eyebrow: "Seasonal", heading: "Raise-ready by fall", text: "Body here.", bg: "#0c2340" },
@@ -319,6 +330,15 @@ describe("callout, list, columns, and stats blocks", () => {
     const out = renderBlocksToEmailHtml([callout!]);
     expect(out).toContain("text-transform:uppercase");
     expect(out).toContain("Context, not cold decks");
+  });
+
+  it("round-trips a callout's pill-badge eyebrow", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "c", type: "callout", eyebrow: "Scored first", eyebrowBadge: true, badgeColor: "#0F6E56", heading: "Context, not cold decks", text: "Body copy.", borderColor: "#0F6E56" },
+    ]);
+    expect(html).toContain("border-radius:20px");
+    const back = parseHtmlToBlocks(html).find((b) => b.type === "callout");
+    expect(back).toMatchObject({ eyebrow: "Scored first", eyebrowBadge: true, heading: "Context, not cold decks" });
   });
 
   it("leaves a single-line callout as plain text (no invented eyebrow/heading)", () => {

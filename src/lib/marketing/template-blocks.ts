@@ -98,8 +98,10 @@ export type TemplateBlock = BlockStyle &
       buttonLabel?: string;
       buttonUrl?: string;
       buttonColor?: string;
+      /** Optional background image URL; the band colour stays as the fallback. */
+      bgImage?: string;
     }
-  | { id: string; type: "callout"; text: string; eyebrow?: string; heading?: string; bg?: string; borderColor?: string; color?: string; size?: number }
+  | { id: string; type: "callout"; text: string; eyebrow?: string; heading?: string; eyebrowBadge?: boolean; badgeColor?: string; bg?: string; borderColor?: string; color?: string; size?: number }
   | { id: string; type: "list"; items: string[]; ordered?: boolean; color?: string; size?: number }
   | {
       id: string;
@@ -291,7 +293,20 @@ function replaceInnermost(
 function splitCalloutRuns(
   inner: string,
   flat: string,
-): { eyebrow?: string; heading?: string; text: string } {
+): { eyebrow?: string; heading?: string; text: string; eyebrowBadge?: boolean; badgeColor?: string } {
+  // A pill eyebrow: a <span> with a background and rounded corners.
+  let pillEyebrow: string | undefined;
+  let pillColor: string | undefined;
+  const pill = /<span\b([^>]*)>([\s\S]*?)<\/span>/i.exec(inner);
+  if (pill) {
+    const pillTag = `<span${pill[1]}>`;
+    const pillBg = styleProp(pillTag, "background") ?? styleProp(pillTag, "background-color");
+    if (/border-radius/i.test(pill[1]) && pillBg) {
+      pillEyebrow = decodeEntities(pill[2].replace(/<[^>]+>/g, " ")) || undefined;
+      pillColor = pillBg;
+    }
+  }
+
   const runs: Array<{ style: string; text: string; raw: string }> = [];
   const RE = /<(div|p|h[1-6])\b([^>]*)>([\s\S]*?)<\/\1>/gi;
   let m: RegExpExecArray | null;
@@ -301,7 +316,15 @@ function splitCalloutRuns(
     const text = decodeEntities(m[3].replace(/<[^>]+>/g, " "));
     if (text) runs.push({ style: /style\s*=\s*"([^"]*)"/i.exec(m[2])?.[1] ?? "", text, raw: m[3] });
   }
-  if (runs.length < 2) return { text: flat };
+  // A pill eyebrow was found separately; drop any run that merely repeats it.
+  const contentRuns = pillEyebrow ? runs.filter((r) => r.text !== pillEyebrow) : runs;
+  const badge = pillEyebrow ? { eyebrow: pillEyebrow, eyebrowBadge: true, badgeColor: pillColor } : undefined;
+
+  if (contentRuns.length === 0) {
+    if (badge) return { ...badge, text: flat.replace(pillEyebrow!, "").trim() };
+    return { text: flat };
+  }
+  if (!badge && contentRuns.length < 2) return { text: flat };
 
   const isUpper = (r: { style: string; text: string; raw: string }) =>
     /text-transform:\s*uppercase/i.test(r.style) ||
@@ -315,18 +338,21 @@ function splitCalloutRuns(
   let eyebrow: string | undefined;
   let heading: string | undefined;
   const body: string[] = [];
-  for (const r of runs) {
+  for (const r of contentRuns) {
     // Uppercase/tracked label is the eyebrow (often bold too, so weight isn't a
-    // disqualifier); the first bold non-uppercase line is the heading.
-    if (!eyebrow && !heading && isUpper(r)) eyebrow = r.text;
+    // disqualifier); the first bold non-uppercase line is the heading. A pill
+    // already supplied the eyebrow, so don't claim another run for it.
+    if (!badge && !eyebrow && !heading && isUpper(r)) eyebrow = r.text;
     else if (!heading && isBold(r) && !isUpper(r)) heading = r.text;
     else body.push(r.text);
   }
 
+  if (badge) return { ...badge, heading, text: body.join(" ") };
+
   // No style cues fired: fall back to position for the common 2–3 line panels.
   if (!eyebrow && !heading) {
-    if (runs.length >= 3) return { eyebrow: runs[0].text, heading: runs[1].text, text: runs.slice(2).map((r) => r.text).join(" ") };
-    return { heading: runs[0].text, text: runs.slice(1).map((r) => r.text).join(" ") };
+    if (contentRuns.length >= 3) return { eyebrow: contentRuns[0].text, heading: contentRuns[1].text, text: contentRuns.slice(2).map((r) => r.text).join(" ") };
+    return { heading: contentRuns[0].text, text: contentRuns.slice(1).map((r) => r.text).join(" ") };
   }
   return { eyebrow, heading, text: body.join(" ") };
 }
@@ -392,13 +418,14 @@ function extractStructures(html: string, out: Map<string, TemplateBlock>): strin
     // Recover the eyebrow / heading / body split many designs use (a small
     // uppercase label, a bold line, then body) rather than mashing them into one
     // blob. Falls back to a single text run when the panel isn't structured.
-    const { eyebrow, heading, text } = splitCalloutRuns(inner, flat);
+    const { eyebrow, heading, text, eyebrowBadge, badgeColor } = splitCalloutRuns(inner, flat);
     return token({
       id: newBlockId(),
       type: "callout",
       text,
       ...(eyebrow ? { eyebrow } : {}),
       ...(heading ? { heading } : {}),
+      ...(eyebrowBadge ? { eyebrowBadge: true, ...(badgeColor ? { badgeColor } : {}) } : {}),
       bg: styleProp(tag, "background") ?? styleProp(tag, "background-color"),
       borderColor: /(#[0-9a-f]{3,8}|rgba?\([^)]+\))/i.exec(border)?.[1],
     });
@@ -406,8 +433,12 @@ function extractStructures(html: string, out: Map<string, TemplateBlock>): strin
 
   // A table whose background is set and which holds a heading → section band.
   html = replaceInnermost(html, "table", (m, attrs, inner) => {
-    const bg = styleProp(`<table${attrs}>`, "background") ?? styleProp(`<table${attrs}>`, "background-color");
+    const tableTag = `<table${attrs}>`;
+    const bgRaw = styleProp(tableTag, "background") ?? styleProp(tableTag, "background-color");
+    // A background shorthand may carry a colour and a url(); keep just the colour.
+    const bg = bgRaw ? (/(#[0-9a-f]{3,8}|rgba?\([^)]+\))/i.exec(bgRaw)?.[1] ?? bgRaw.trim().split(/\s+/)[0]) : undefined;
     if (!bg || /^(none|transparent|#fff(fff)?|white)$/i.test(bg.trim())) return m;
+    const bgImage = /url\(\s*['"]?([^'")]+)['"]?\s*\)/i.exec(bgRaw ?? "")?.[1] ?? attr(tableTag, "background") ?? undefined;
     // A band must carry heading-sized copy. Without this, small tinted panels
     // (the cells inside a columns row) get misread as full-width sections.
     if (!/<h[1-6]\b/i.test(inner) && !/font-size:\s*(19|[2-9]\d)px/i.test(inner)) return m;
@@ -480,6 +511,7 @@ function extractStructures(html: string, out: Map<string, TemplateBlock>): strin
       heading,
       text,
       ...(buttonLabel ? { buttonLabel, ...(buttonUrl ? { buttonUrl } : {}), ...(buttonColor ? { buttonColor } : {}) } : {}),
+      ...(bgImage ? { bgImage } : {}),
       bg: bg.trim(),
       color: headingColor,
       align: "left",
@@ -856,7 +888,15 @@ function renderBlock(block: TemplateBlock, t: EmailTheme = FALLBACK_THEME): stri
         }
       }
       rows.push(`<tr><td style="height:${padV}px;font-size:0;line-height:0;">&nbsp;</td></tr>`);
-      const band = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${esc(bg)};">${rows.join("")}</table>`;
+      // Background image sits over the band colour so clients that ignore it
+      // (Outlook) still show the solid fill. `background=""` helps some webmail.
+      const imgUrl = block.bgImage ? safeUrl(block.bgImage) : "#";
+      const bandStyle =
+        block.bgImage && imgUrl !== "#"
+          ? `background:${esc(bg)} url('${esc(imgUrl)}') center/cover no-repeat;background-color:${esc(bg)};`
+          : `background:${esc(bg)};`;
+      const bandBgAttr = block.bgImage && imgUrl !== "#" ? ` background="${esc(imgUrl)}"` : "";
+      const band = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"${bandBgAttr} style="${bandStyle}">${rows.join("")}</table>`;
       // Full width bleeds to the card edges; otherwise inset so the band reads as a card.
       return block.fullWidth === false
         ? `<tr><td style="padding:10px 24px;">${band}</td></tr>`
@@ -872,9 +912,16 @@ function renderBlock(block: TemplateBlock, t: EmailTheme = FALLBACK_THEME): stri
       if (block.eyebrow || block.heading) {
         const parts: string[] = [];
         if (block.eyebrow) {
-          parts.push(
-            `<div style="font-family:${FONT};font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;color:${esc(border)};padding-bottom:5px;">${escText(block.eyebrow)}</div>`,
-          );
+          if (block.eyebrowBadge) {
+            const badgeBg = block.badgeColor ?? border;
+            parts.push(
+              `<div style="padding-bottom:8px;"><span style="display:inline-block;background:${esc(badgeBg)};color:#ffffff;font-family:${FONT};font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0.06em;padding:4px 11px;border-radius:20px;">${escText(block.eyebrow)}</span></div>`,
+            );
+          } else {
+            parts.push(
+              `<div style="font-family:${FONT};font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;color:${esc(border)};padding-bottom:5px;">${escText(block.eyebrow)}</div>`,
+            );
+          }
         }
         if (block.heading) {
           parts.push(

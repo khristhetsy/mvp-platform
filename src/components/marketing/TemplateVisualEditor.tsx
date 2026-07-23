@@ -424,7 +424,16 @@ export function TemplateVisualEditor({
               ) : b.type === "divider" ? (
                 <div className="px-6 py-3"><div className="border-t border-slate-200" /></div>
               ) : b.type === "section" ? (
-                <div className="px-6 py-4" style={{ background: b.bg ?? "#0c2340", textAlign: b.align ?? "left" }}>
+                <div
+                  className="px-6 py-4"
+                  style={{
+                    background: b.bg ?? "#0c2340",
+                    textAlign: b.align ?? "left",
+                    ...(b.bgImage
+                      ? { backgroundImage: `url('${b.bgImage}')`, backgroundSize: "cover", backgroundPosition: "center" }
+                      : {}),
+                  }}
+                >
                   {b.eyebrow ? (
                     b.eyebrowBadge ? (
                       <span
@@ -490,15 +499,29 @@ export function TemplateVisualEditor({
                     }}
                   >
                     {b.eyebrow ? (
-                      <div
-                        contentEditable
-                        suppressContentEditableWarning
-                        onBlur={(e) => update(b.id, { eyebrow: e.currentTarget.textContent ?? "" })}
-                        className="pb-1 text-[11px] font-bold uppercase tracking-wide outline-none"
-                        style={{ color: b.borderColor ?? "#2E78F5" }}
-                      >
-                        {b.eyebrow}
-                      </div>
+                      b.eyebrowBadge ? (
+                        <div className="pb-2">
+                          <span
+                            contentEditable
+                            suppressContentEditableWarning
+                            onBlur={(e) => update(b.id, { eyebrow: e.currentTarget.textContent ?? "" })}
+                            className="inline-block rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wide text-white outline-none"
+                            style={{ background: b.badgeColor ?? b.borderColor ?? "#2E78F5" }}
+                          >
+                            {b.eyebrow}
+                          </span>
+                        </div>
+                      ) : (
+                        <div
+                          contentEditable
+                          suppressContentEditableWarning
+                          onBlur={(e) => update(b.id, { eyebrow: e.currentTarget.textContent ?? "" })}
+                          className="pb-1 text-[11px] font-bold uppercase tracking-wide outline-none"
+                          style={{ color: b.borderColor ?? "#2E78F5" }}
+                        >
+                          {b.eyebrow}
+                        </div>
+                      )
                     ) : null}
                     {b.heading ? (
                       <div
@@ -1147,6 +1170,18 @@ export function TemplateVisualEditor({
                     Bleeds to the card edges instead of sitting inside it.
                   </span>
                 </label>
+                <label className="block text-[11px] font-semibold text-slate-600">
+                  Background image URL <span className="font-normal text-slate-400">(optional)</span>
+                  <input
+                    value={selected.bgImage ?? ""}
+                    onChange={(e) => update(selected.id, { bgImage: e.target.value.trim() || undefined })}
+                    className="mt-1 w-full rounded-md border border-slate-200 px-2 py-1.5 text-[12px]"
+                    placeholder="https://… (band colour stays as fallback)"
+                  />
+                  <span className="mt-1 block text-[10.5px] font-normal text-slate-400">
+                    Shown over the band colour. Outlook ignores it and shows the colour.
+                  </span>
+                </label>
               </>
             ) : null}
 
@@ -1161,6 +1196,41 @@ export function TemplateVisualEditor({
                     placeholder="e.g. SCORED FIRST"
                   />
                 </label>
+                {selected.eyebrow ? (
+                  <div>
+                    <p className="text-[11px] font-semibold text-slate-600">Eyebrow style</p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <div className="flex flex-1 gap-1">
+                        {([
+                          { on: false, label: "Plain" },
+                          { on: true, label: "Pill badge" },
+                        ] as const).map((o) => (
+                          <button
+                            key={o.label}
+                            type="button"
+                            onClick={() => update(selected.id, { eyebrowBadge: o.on })}
+                            className={`flex-1 rounded-md border py-1.5 text-[11px] font-semibold ${
+                              Boolean(selected.eyebrowBadge) === o.on
+                                ? "border-[#2E78F5] bg-[#eef4ff] text-[#2E78F5]"
+                                : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                            }`}
+                          >
+                            {o.label}
+                          </button>
+                        ))}
+                      </div>
+                      {selected.eyebrowBadge ? (
+                        <input
+                          type="color"
+                          aria-label="Badge colour"
+                          value={selected.badgeColor ?? selected.borderColor ?? "#2E78F5"}
+                          onChange={(e) => update(selected.id, { badgeColor: e.target.value })}
+                          className="h-8 w-9 rounded-md border border-slate-200"
+                        />
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
                 <label className="block text-[11px] font-semibold text-slate-600">
                   Heading <span className="font-normal text-slate-400">(optional)</span>
                   <input
