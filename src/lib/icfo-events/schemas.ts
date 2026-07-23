@@ -29,6 +29,7 @@ export const updateEventSchema = z.object({
   visibility: z.enum(["public", "members"]).optional(),
   startsAt: z.string().datetime().nullable().optional(),
   endsAt: z.string().datetime().nullable().optional(),
+  timezone: z.string().max(64).nullable().optional(),
   sectors: z.array(sectorTrackInput).max(MAX_SECTOR_TRACKS).optional(),
   bannerTitle: z.string().max(160).nullable().optional(),
   bannerHtml: z.string().max(8000).nullable().optional(),

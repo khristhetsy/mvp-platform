@@ -39,6 +39,7 @@ export function EventSideRail({
   title,
   startsAt,
   endsAt,
+  timezone,
   formatLabel,
   organizerName,
   organizerPhone,
@@ -49,6 +50,7 @@ export function EventSideRail({
   title: string;
   startsAt: string | null;
   endsAt: string | null;
+  timezone?: string | null;
   formatLabel: string;
   organizerName: string | null;
   organizerPhone: string | null;
@@ -61,6 +63,13 @@ export function EventSideRail({
 
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
   const start = startsAt ? new Date(startsAt) : null;
+  const tz = timezone ?? undefined;
+  const tzAbbrev =
+    timezone && start
+      ? new Intl.DateTimeFormat("en-US", { timeZone: timezone, timeZoneName: "short" })
+          .formatToParts(start)
+          .find((p) => p.type === "timeZoneName")?.value ?? null
+      : null;
 
   function copyLink() {
     if (!shareUrl) return;
@@ -85,14 +94,17 @@ export function EventSideRail({
       {start && (
         <div className="mt-4 flex items-center gap-3">
           <div className="text-center leading-none">
-            <div className="text-2xl font-semibold text-[var(--navy)]">{start.getDate()}</div>
+            <div className="text-2xl font-semibold text-[var(--navy)]">
+              {new Intl.DateTimeFormat(undefined, { timeZone: tz, day: "numeric" }).format(start)}
+            </div>
             <div className="text-[11px] text-[var(--text-secondary)]">
-              {start.toLocaleDateString(undefined, { month: "short", year: "numeric" })}
+              {start.toLocaleDateString(undefined, { month: "short", year: "numeric", timeZone: tz })}
             </div>
           </div>
           <div className="text-xs text-[var(--text-secondary)]">
-            {start.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
-            {endsAt && <> → {new Date(endsAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</>}
+            {start.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", timeZone: tz })}
+            {endsAt && <> → {new Date(endsAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", timeZone: tz })}</>}
+            {tzAbbrev && <span className="ml-1.5 font-medium text-[var(--navy)]">{tzAbbrev}</span>}
           </div>
         </div>
       )}

@@ -599,6 +599,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               title={event.title}
               startsAt={event.startsAt}
               endsAt={event.endsAt}
+              timezone={event.timezone}
               formatLabel={formatLabel}
               organizerName={event.organizerName}
               organizerPhone={event.organizerPhone}

@@ -37,6 +37,7 @@ function mapEvent(r: EventRow): EventRecord {
     visibility: r.visibility as EventRecord["visibility"],
     startsAt: (r.starts_at as string | null) ?? null,
     endsAt: (r.ends_at as string | null) ?? null,
+    timezone: (r.timezone as string | null) ?? null,
     coverPath: (r.cover_path as string | null) ?? null,
     coverOverlay: Number(r.cover_overlay ?? 55),
     coverFocal: (r.cover_focal as string | null) ?? "center",
@@ -281,6 +282,7 @@ export async function duplicateEvent(
     status: "draft",
     starts_at: null,
     ends_at: null,
+    timezone: (source.timezone as string | null) ?? null,
     created_by: createdBy,
   };
   if (withBranding) {
@@ -375,6 +377,7 @@ export async function updateEvent(
   if (input.visibility !== undefined) patch.visibility = input.visibility;
   if (input.startsAt !== undefined) patch.starts_at = input.startsAt;
   if (input.endsAt !== undefined) patch.ends_at = input.endsAt;
+  if (input.timezone !== undefined) patch.timezone = input.timezone;
   if (input.bannerTitle !== undefined) patch.banner_title = input.bannerTitle;
   if (input.bannerHtml !== undefined) patch.banner_html = sanitizeBannerHtml(input.bannerHtml);
   if (input.bannerBg !== undefined) patch.banner_bg = normalizeBannerBg(input.bannerBg);

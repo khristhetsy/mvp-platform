@@ -42,6 +42,8 @@ export interface EventRecord {
   visibility: EventVisibility;
   startsAt: string | null;
   endsAt: string | null;
+  /** IANA timezone (e.g. "America/Los_Angeles") the schedule is shown in. */
+  timezone: string | null;
   coverPath: string | null;
   coverOverlay: number;
   coverFocal: string;

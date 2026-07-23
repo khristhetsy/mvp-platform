@@ -87,6 +87,20 @@ export async function deleteSession(supabase: SupabaseClient<Database>, id: stri
   if (error) throw new Error(error.message);
 }
 
+/** Persist a new running order. `orderedIds` is the desired top-to-bottom order;
+ *  each session's `position` is set to its index. Scoped to the event for safety. */
+export async function reorderSessions(
+  supabase: SupabaseClient<Database>,
+  eventId: string,
+  orderedIds: string[],
+): Promise<void> {
+  await Promise.all(
+    orderedIds.map((id, index) =>
+      raw(supabase).from("sessions").update({ position: index }).eq("id", id).eq("event_id", eventId),
+    ),
+  );
+}
+
 /** Attach a live room to a session and mark it live. */
 export async function setSessionLiveRoom(
   supabase: SupabaseClient<Database>,

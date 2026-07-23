@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, GripVertical, Mic, Users, Radio, Presentation, Wrench } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { EVENT_SECTORS, sectorLabel } from "@/lib/icfo-events/sectors";
 import { GuestRoster } from "@/components/events/GuestRoster";
@@ -18,8 +18,30 @@ import type {
 } from "@/lib/icfo-events/types";
 
 const SESSION_TYPE_VALUES: SessionType[] = ["keynote", "panel", "talk_show", "founder_showcase", "workshop"];
+
+/** Clean business/line icons per session type (replaces emoji marks). */
+const SESSION_ICONS: Record<SessionType, typeof Mic> = {
+  keynote: Mic,
+  panel: Users,
+  talk_show: Radio,
+  founder_showcase: Presentation,
+  workshop: Wrench,
+};
 const FORMAT_VALUES: EventFormat[] = ["showcase", "demo_day", "webinar", "hybrid"];
 const VISIBILITY_VALUES: EventVisibility[] = ["public", "members"];
+
+/** Common IANA timezones for the schedule (label + value). */
+const TIMEZONES: { value: string; label: string }[] = [
+  { value: "America/Los_Angeles", label: "Pacific — America/Los_Angeles" },
+  { value: "America/Denver", label: "Mountain — America/Denver" },
+  { value: "America/Chicago", label: "Central — America/Chicago" },
+  { value: "America/New_York", label: "Eastern — America/New_York" },
+  { value: "Europe/London", label: "UK — Europe/London" },
+  { value: "Europe/Paris", label: "Central Europe — Europe/Paris" },
+  { value: "Asia/Dubai", label: "Gulf — Asia/Dubai" },
+  { value: "Asia/Singapore", label: "Singapore — Asia/Singapore" },
+  { value: "Australia/Sydney", label: "Sydney — Australia/Sydney" },
+];
 
 /** Flatten an API error (string or Zod fieldErrors object) into a readable message. */
 function formatApiError(error: unknown, fallback: string): string {
@@ -226,6 +248,7 @@ export function EventDetailManager({
   const [visibility, setVisibility] = useState<EventVisibility>(event.visibility);
   const [startsAt, setStartsAt] = useState(toLocalInput(event.startsAt));
   const [endsAt, setEndsAt] = useState(toLocalInput(event.endsAt));
+  const [timezone, setTimezone] = useState<string>(event.timezone ?? "");
   const [sectorSlugs, setSectorSlugs] = useState<string[]>(event.sectors.map((s) => s.sectorSlug));
   const [headerTitle, setHeaderTitle] = useState(event.title);
   const [headerSectors, setHeaderSectors] = useState<string[]>(event.sectors.map((s) => s.label));
@@ -253,6 +276,7 @@ export function EventDetailManager({
           visibility,
           startsAt: startsAt ? new Date(startsAt).toISOString() : null,
           endsAt: endsAt ? new Date(endsAt).toISOString() : null,
+          timezone: timezone || null,
           sectors: sectorSlugs.map((slug) => ({
             sectorSlug: slug,
             label: EVENT_SECTORS.find((s) => s.slug === slug)?.label ?? slug,
@@ -317,6 +341,34 @@ export function EventDetailManager({
 
   function onSessionUpdated(updated: EventSession) {
     setSessions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+  }
+
+  // Drag-to-reorder sessions. The list reorders live as you drag; the new order
+  // is saved when you drop.
+  const [dragId, setDragId] = useState<string | null>(null);
+  function reorderTo(overId: string) {
+    if (!dragId || dragId === overId) return;
+    setSessions((prev) => {
+      const from = prev.findIndex((s) => s.id === dragId);
+      const to = prev.findIndex((s) => s.id === overId);
+      if (from < 0 || to < 0) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }
+  function commitOrder() {
+    setDragId(null);
+    setSessions((prev) => {
+      const ids = prev.map((s) => s.id);
+      void fetch(`/api/admin/events/${event.id}/sessions/reorder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      }).catch(() => {});
+      return prev;
+    });
   }
 
   async function removeSession(id: string) {
@@ -523,6 +575,23 @@ export function EventDetailManager({
             </label>
           </div>
 
+          <label className="block">
+            <span className="text-xs font-medium text-[var(--text-muted)]">Timezone</span>
+            <select
+              value={timezone}
+              onChange={(e) => { setTimezone(e.target.value); setDetailsMsg(null); }}
+              className="mt-1 block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+            >
+              <option value="">Not set</option>
+              {TIMEZONES.map((tz) => (
+                <option key={tz.value} value={tz.value}>{tz.label}</option>
+              ))}
+            </select>
+            <span className="mt-1 block text-[11px] text-[var(--text-muted)]">
+              Shown next to the schedule so attendees know which zone the times are in.
+            </span>
+          </label>
+
           <div>
             <span className="text-xs font-medium text-[var(--text-muted)]">{t("sectorTracks")}</span>
             <p className="text-xs text-[var(--text-muted)]">{t("sectorHint")}</p>
@@ -577,18 +646,38 @@ export function EventDetailManager({
           {sessions.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">{t("noSessions")}</p>
           ) : (
-            sessions.map((s) => (
-              <div key={s.id} className="rounded-lg border border-[var(--border-subtle)] px-3 py-2">
+            sessions.map((s) => {
+              const TypeIcon = SESSION_ICONS[s.type] ?? Mic;
+              return (
+              <div
+                key={s.id}
+                className={`rounded-lg border border-[var(--border-subtle)] px-3 py-2 transition ${dragId === s.id ? "opacity-50" : ""}`}
+                draggable={canEdit}
+                onDragStart={canEdit ? () => setDragId(s.id) : undefined}
+                onDragOver={canEdit ? (e) => { e.preventDefault(); reorderTo(s.id); } : undefined}
+                onDrop={canEdit ? (e) => { e.preventDefault(); commitOrder(); } : undefined}
+                onDragEnd={canEdit ? commitOrder : undefined}
+              >
                 <div className="flex items-center justify-between">
-                  <div>
-                    <span className="rounded bg-[var(--indigo-soft)] px-2 py-0.5 text-xs font-medium text-[var(--indigo)]">
-                      {t(`type.${s.type}`)}
-                    </span>
-                    <span className="ml-2 text-sm font-medium text-[var(--navy)]">{s.title}</span>
-                    {s.sectorSlug && <span className="ml-2 text-xs text-[var(--text-muted)]">{sectorLabel(s.sectorSlug)}</span>}
-                    {s.recordingPath && (
-                      <span className="ml-2 rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">{t("recorded")}</span>
+                  <div className="flex items-center gap-2">
+                    {canEdit && (
+                      <span className="cursor-grab text-slate-300 active:cursor-grabbing" title="Drag to reorder" aria-hidden>
+                        <GripVertical className="h-4 w-4" />
+                      </span>
                     )}
+                    <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--indigo-soft)] text-[var(--indigo)]" aria-hidden>
+                      <TypeIcon className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <span className="rounded bg-[var(--indigo-soft)] px-2 py-0.5 text-xs font-medium text-[var(--indigo)]">
+                        {t(`type.${s.type}`)}
+                      </span>
+                      <span className="ml-2 text-sm font-medium text-[var(--navy)]">{s.title}</span>
+                      {s.sectorSlug && <span className="ml-2 text-xs text-[var(--text-muted)]">{sectorLabel(s.sectorSlug)}</span>}
+                      {s.recordingPath && (
+                        <span className="ml-2 rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">{t("recorded")}</span>
+                      )}
+                    </div>
                   </div>
                   {canEdit && (
                     <button onClick={() => removeSession(s.id)} className="text-xs text-rose-600 hover:underline">
@@ -600,7 +689,8 @@ export function EventDetailManager({
                 {canEdit && <SessionVideoUpload eventId={event.id} session={s} onUpdated={onSessionUpdated} />}
                 {canEdit && s.type === "talk_show" && <GuestRoster sessionId={s.id} eventId={event.id} />}
               </div>
-            ))
+              );
+            })
           )}
         </div>
 
