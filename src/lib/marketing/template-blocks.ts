@@ -91,7 +91,7 @@ export type TemplateBlock = BlockStyle &
       headingSize?: number;
       url?: string;
     }
-  | { id: string; type: "callout"; text: string; bg?: string; borderColor?: string; color?: string; size?: number }
+  | { id: string; type: "callout"; text: string; eyebrow?: string; heading?: string; bg?: string; borderColor?: string; color?: string; size?: number }
   | { id: string; type: "list"; items: string[]; ordered?: boolean; color?: string; size?: number }
   | {
       id: string;
@@ -273,6 +273,56 @@ function replaceInnermost(
   return html;
 }
 
+/**
+ * Split a bordered panel's inner HTML into an optional eyebrow (small uppercase
+ * label), an optional heading (bold line), and body text. Designs commonly stack
+ * these three; flattening them loses the structure, so recover it here. Uses
+ * style hints first (text-transform / letter-spacing / font-weight / font-size),
+ * then falls back to position when the markup carries no style cues.
+ */
+function splitCalloutRuns(
+  inner: string,
+  flat: string,
+): { eyebrow?: string; heading?: string; text: string } {
+  const runs: Array<{ style: string; text: string; raw: string }> = [];
+  const RE = /<(div|p|h[1-6])\b([^>]*)>([\s\S]*?)<\/\1>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = RE.exec(inner)) !== null) {
+    // Skip runs that wrap other block runs — we want the leaf text lines.
+    if (/<(?:div|p|h[1-6])\b/i.test(m[3])) continue;
+    const text = decodeEntities(m[3].replace(/<[^>]+>/g, " "));
+    if (text) runs.push({ style: /style\s*=\s*"([^"]*)"/i.exec(m[2])?.[1] ?? "", text, raw: m[3] });
+  }
+  if (runs.length < 2) return { text: flat };
+
+  const isUpper = (r: { style: string; text: string; raw: string }) =>
+    /text-transform:\s*uppercase/i.test(r.style) ||
+    /letter-spacing/i.test(r.style) ||
+    (/[a-z]/i.test(r.text) && r.text === r.text.toUpperCase() && r.text.length <= 40);
+  const isBold = (r: { style: string; text: string; raw: string }) =>
+    /font-weight:\s*(bold|[5-9]00)/i.test(r.style) ||
+    /font-size:\s*(1[6-9]|[2-9]\d)px/i.test(r.style) ||
+    /<(?:strong|b)\b/i.test(r.raw);
+
+  let eyebrow: string | undefined;
+  let heading: string | undefined;
+  const body: string[] = [];
+  for (const r of runs) {
+    // Uppercase/tracked label is the eyebrow (often bold too, so weight isn't a
+    // disqualifier); the first bold non-uppercase line is the heading.
+    if (!eyebrow && !heading && isUpper(r)) eyebrow = r.text;
+    else if (!heading && isBold(r) && !isUpper(r)) heading = r.text;
+    else body.push(r.text);
+  }
+
+  // No style cues fired: fall back to position for the common 2–3 line panels.
+  if (!eyebrow && !heading) {
+    if (runs.length >= 3) return { eyebrow: runs[0].text, heading: runs[1].text, text: runs.slice(2).map((r) => r.text).join(" ") };
+    return { heading: runs[0].text, text: runs.slice(1).map((r) => r.text).join(" ") };
+  }
+  return { eyebrow, heading, text: body.join(" ") };
+}
+
 function extractStructures(html: string, out: Map<string, TemplateBlock>): string {
   let n = 0;
   const token = (block: TemplateBlock) => {
@@ -329,12 +379,18 @@ function extractStructures(html: string, out: Map<string, TemplateBlock>): strin
     const tag = `<table${attrs}>`;
     const border = styleProp(tag, "border-left");
     if (!border) return m;
-    const text = decodeEntities(inner.replace(/<[^>]+>/g, " "));
-    if (!text) return m;
+    const flat = decodeEntities(inner.replace(/<[^>]+>/g, " "));
+    if (!flat) return m;
+    // Recover the eyebrow / heading / body split many designs use (a small
+    // uppercase label, a bold line, then body) rather than mashing them into one
+    // blob. Falls back to a single text run when the panel isn't structured.
+    const { eyebrow, heading, text } = splitCalloutRuns(inner, flat);
     return token({
       id: newBlockId(),
       type: "callout",
       text,
+      ...(eyebrow ? { eyebrow } : {}),
+      ...(heading ? { heading } : {}),
       bg: styleProp(tag, "background") ?? styleProp(tag, "background-color"),
       borderColor: /(#[0-9a-f]{3,8}|rgba?\([^)]+\))/i.exec(border)?.[1],
     });
@@ -727,8 +783,30 @@ function renderBlock(block: TemplateBlock, t: EmailTheme = FALLBACK_THEME): stri
     case "callout": {
       const bg = block.bg ?? "#eef4ff";
       const border = block.borderColor ?? "#2E78F5";
-      const color = block.color ?? "#1d4ed8";
       const size = clampSize(block.size, 15);
+      // Eyebrow + heading recovered from richer panels render as a small
+      // uppercase label, a bold line, then muted body. A plain callout (no
+      // eyebrow/heading) keeps its original single-colour look.
+      if (block.eyebrow || block.heading) {
+        const parts: string[] = [];
+        if (block.eyebrow) {
+          parts.push(
+            `<div style="font-family:${FONT};font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;color:${esc(border)};padding-bottom:5px;">${escText(block.eyebrow)}</div>`,
+          );
+        }
+        if (block.heading) {
+          parts.push(
+            `<div style="font-family:${FONT};font-size:${size + 3}px;font-weight:bold;line-height:1.3;color:#1c2434;padding-bottom:6px;">${escText(block.heading)}</div>`,
+          );
+        }
+        if (block.text) {
+          parts.push(
+            `<div style="font-family:${FONT};font-size:${size}px;line-height:1.6;color:#5f6b80;">${escText(block.text)}</div>`,
+          );
+        }
+        return `<tr><td style="padding:10px 24px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${esc(bg)};border-left:3px solid ${esc(border)};"><tr><td style="padding:14px 16px;">${parts.join("")}</td></tr></table></td></tr>`;
+      }
+      const color = block.color ?? "#1d4ed8";
       return `<tr><td style="padding:10px 24px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${esc(bg)};border-left:3px solid ${esc(border)};"><tr><td style="padding:12px 14px;font-family:${FONT};font-size:${size}px;line-height:1.6;color:${esc(color)};">${escText(block.text)}</td></tr></table></td></tr>`;
     }
     case "list": {
@@ -901,7 +979,7 @@ export function renderBlocksToText(blocks: TemplateBlock[]): string {
     else if (b.type === "divider") lines.push("---");
     else if (b.type === "section") {
       lines.push([b.eyebrow, b.heading, b.text].filter(Boolean).join("\n"));
-    } else if (b.type === "callout") lines.push(b.text);
+    } else if (b.type === "callout") lines.push([b.eyebrow, b.heading, b.text].filter(Boolean).join("\n"));
     else if (b.type === "list") {
       lines.push(b.items.filter((i) => i.trim()).map((i, n) => (b.ordered ? `${n + 1}. ${i}` : `- ${i}`)).join("\n"));
     } else if (b.type === "columns") {

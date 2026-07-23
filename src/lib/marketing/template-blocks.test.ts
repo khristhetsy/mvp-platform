@@ -260,6 +260,35 @@ describe("callout, list, columns, and stats blocks", () => {
     expect(html).toContain("Most founders go to market too early.");
   });
 
+  it("recovers a callout's eyebrow + heading + body instead of one blob", () => {
+    const html = `<table style="border-left:3px solid #0F6E56;background:#f0f7f4;"><tr><td style="padding:14px 16px;">
+      <div style="font-weight:bold;text-transform:uppercase;color:#0F6E56;">Scored first</div>
+      <div style="font-size:18px;font-weight:bold;color:#1c2434;">Context, not cold decks</div>
+      <div style="font-size:15px;color:#5f6b80;">Each founder carries a readiness rating.</div>
+    </td></tr></table>`;
+    const callout = parseHtmlToBlocks(html).find((b) => b.type === "callout");
+    expect(callout).toMatchObject({
+      type: "callout",
+      eyebrow: "Scored first",
+      heading: "Context, not cold decks",
+    });
+    expect((callout as { text: string }).text).toContain("readiness rating");
+    // Round-trips back to email HTML with the eyebrow styled as an uppercase label.
+    const out = renderBlocksToEmailHtml([callout!]);
+    expect(out).toContain("text-transform:uppercase");
+    expect(out).toContain("Context, not cold decks");
+  });
+
+  it("leaves a single-line callout as plain text (no invented eyebrow/heading)", () => {
+    const html = `<table style="border-left:3px solid #2E78F5;"><tr><td>Most founders go to market too early.</td></tr></table>`;
+    const callout = parseHtmlToBlocks(html).find((b) => b.type === "callout") as
+      | { eyebrow?: string; heading?: string; text: string }
+      | undefined;
+    expect(callout?.eyebrow).toBeUndefined();
+    expect(callout?.heading).toBeUndefined();
+    expect(callout?.text).toContain("go to market too early");
+  });
+
   it("renders list items and drops empty ones", () => {
     const html = renderBlocksToEmailHtml([{ id: "l", type: "list", items: ["First", "", "Second"] }]);
     expect(html).toContain("<li");

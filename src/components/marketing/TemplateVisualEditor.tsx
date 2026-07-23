@@ -460,18 +460,46 @@ export function TemplateVisualEditor({
               ) : b.type === "callout" ? (
                 <div className="px-6 py-2">
                   <div
-                    contentEditable
-                    suppressContentEditableWarning
-                    onBlur={(e) => update(b.id, { text: e.currentTarget.textContent ?? "" })}
-                    className="px-3 py-2.5 outline-none"
+                    className="px-4 py-3.5"
                     style={{
-                      fontSize: b.size ?? 15,
                       background: b.bg ?? "#eef4ff",
                       borderLeft: `3px solid ${b.borderColor ?? "#2E78F5"}`,
-                      color: b.color ?? "#1d4ed8",
                     }}
                   >
-                    {b.text}
+                    {b.eyebrow ? (
+                      <div
+                        contentEditable
+                        suppressContentEditableWarning
+                        onBlur={(e) => update(b.id, { eyebrow: e.currentTarget.textContent ?? "" })}
+                        className="pb-1 text-[11px] font-bold uppercase tracking-wide outline-none"
+                        style={{ color: b.borderColor ?? "#2E78F5" }}
+                      >
+                        {b.eyebrow}
+                      </div>
+                    ) : null}
+                    {b.heading ? (
+                      <div
+                        contentEditable
+                        suppressContentEditableWarning
+                        onBlur={(e) => update(b.id, { heading: e.currentTarget.textContent ?? "" })}
+                        className="pb-1.5 font-bold text-slate-800 outline-none"
+                        style={{ fontSize: (b.size ?? 15) + 3 }}
+                      >
+                        {b.heading}
+                      </div>
+                    ) : null}
+                    <div
+                      contentEditable
+                      suppressContentEditableWarning
+                      onBlur={(e) => update(b.id, { text: e.currentTarget.textContent ?? "" })}
+                      className="outline-none"
+                      style={{
+                        fontSize: b.size ?? 15,
+                        color: b.eyebrow || b.heading ? "#5f6b80" : b.color ?? "#1d4ed8",
+                      }}
+                    >
+                      {b.text}
+                    </div>
                   </div>
                 </div>
               ) : b.type === "list" ? (
@@ -1033,6 +1061,24 @@ export function TemplateVisualEditor({
 
             {selected.type === "callout" ? (
               <>
+                <label className="block text-[11px] font-semibold text-slate-600">
+                  Eyebrow <span className="font-normal text-slate-400">(small label, optional)</span>
+                  <input
+                    value={selected.eyebrow ?? ""}
+                    onChange={(e) => update(selected.id, { eyebrow: e.target.value || undefined })}
+                    className="mt-1 w-full rounded-md border border-slate-200 px-2 py-1.5 text-[12px]"
+                    placeholder="e.g. SCORED FIRST"
+                  />
+                </label>
+                <label className="block text-[11px] font-semibold text-slate-600">
+                  Heading <span className="font-normal text-slate-400">(optional)</span>
+                  <input
+                    value={selected.heading ?? ""}
+                    onChange={(e) => update(selected.id, { heading: e.target.value || undefined })}
+                    className="mt-1 w-full rounded-md border border-slate-200 px-2 py-1.5 text-[12px]"
+                    placeholder="e.g. Context, not cold decks"
+                  />
+                </label>
                 <label className="block text-[11px] font-semibold text-slate-600">
                   Accent border
                   <input
