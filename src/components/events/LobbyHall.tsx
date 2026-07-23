@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Presentation, Users, Tv, Store, Mic, Trophy } from "lucide-react";
 import { venueZones } from "@/lib/icfo-events/venue";
-import { useEventPresence } from "@/components/events/EventPresenceProvider";
+import { useEventPresence, type PresenceMember } from "@/components/events/EventPresenceProvider";
 import styles from "./LobbyHall.module.css";
+
+const initials = (n: string) => n.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+const cap = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
 
 type DoorDef = {
   key: string;
@@ -47,16 +50,42 @@ export function LobbyHall({
   tracksHref?: string;
 }) {
   const t = useTranslations("eventsCmp");
-  const { byRoom, total, members, me } = useEventPresence();
+  const { byRoom, total, members, me, announcement, incomingWave, dismissWave, sendWave } = useEventPresence();
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const [sel, setSel] = useState<{ member: PresenceMember; x: number; y: number } | null>(null);
 
   // Real attendees currently standing in the Lobby become the figures. Falls
   // back to a few decorative figures before presence has synced (or if empty).
   const lobbyMembers = members.filter((m) => m.room === "Lobby").slice(0, FIG_POS.length);
+
+  // Auto-dismiss an incoming wave toast.
+  useEffect(() => {
+    if (!incomingWave) return;
+    const id = setTimeout(dismissWave, 3600);
+    return () => clearTimeout(id);
+  }, [incomingWave, dismissWave]);
+
+  // Ticker: live room activity, plus any live announcement.
+  const tickerItems = [
+    ...(announcement ? [`📢 ${announcement.title}`] : []),
+    ...DOORS.filter((d) => d.room).map((d) => `${cap(d.label)} — ${d.meta(byRoom[d.room as string] ?? 0).text}`),
+  ];
   const hrefFor = (key: string) => venueZones(slug, tracksHref).find((z) => z.key === key)?.href ?? `/events/${slug}`;
 
   return (
     <div>
+      {tickerItems.length > 0 && (
+        <div className={styles.ticker}>
+          <span className={styles.tickerLab}><span className={styles.tickerDt} aria-hidden />WHAT&apos;S ON</span>
+          <div className={styles.tickerTrack}>
+            <div className={styles.tickerMq}>
+              {[...tickerItems, ...tickerItems].map((it, i) => (
+                <span key={i} className={styles.tickerItem}>{it}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       <div className={styles.hall}>
         <div className={styles.youHere}>
           <span aria-hidden style={{ width: 7, height: 7, borderRadius: "50%", background: "#5DCAA5" }} />
@@ -130,6 +159,17 @@ export function LobbyHall({
                   <div
                     key={m.id}
                     className={`${styles.fig} ${styles.figLive} ${isMe ? styles.figMe : ""}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={isMe ? `${m.name} (you)` : m.name}
+                    onClick={(e) => { e.stopPropagation(); setSel({ member: m, x: e.clientX, y: e.clientY }); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        setSel({ member: m, x: r.left + r.width / 2, y: r.top });
+                      }
+                    }}
                     style={{
                       left: p.left,
                       top: p.top,
@@ -160,6 +200,36 @@ export function LobbyHall({
       <p className={styles.caption} style={{ color: "var(--text-muted)" }}>
         Hover or tap a doorway to look inside, then enter.
       </p>
+
+      {sel && (
+        <>
+          <div className={styles.figBackdrop} onClick={() => setSel(null)} aria-hidden />
+          <div className={styles.profCard} style={{ left: sel.x, top: sel.y }} role="dialog">
+            <div className={styles.profHd}>
+              <span className={styles.profAv}>{initials(sel.member.name)}</span>
+              <div>
+                <p className={styles.profNm}>{sel.member.id === me.id ? `${sel.member.name} (you)` : sel.member.name}</p>
+                <p className={styles.profRl}>In the Lobby</p>
+              </div>
+            </div>
+            {sel.member.id === me.id ? (
+              <p className={styles.profHint}>This is you.</p>
+            ) : (
+              <div className={styles.profAct}>
+                <button type="button" onClick={() => { sendWave(sel.member.id, "wave"); setSel(null); }}>👋 Wave</button>
+                <button type="button" onClick={() => { sendWave(sel.member.id, "hi"); setSel(null); }}>💬 Say hi</button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {incomingWave && (
+        <div className={styles.waveToast} role="status">
+          {incomingWave.kind === "hi" ? "💬" : "👋"} {incomingWave.fromName}{" "}
+          {incomingWave.kind === "hi" ? "says hi" : "waved at you"}
+        </div>
+      )}
     </div>
   );
 }

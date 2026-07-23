@@ -25,6 +25,9 @@ export type ModerationSignal = {
   href?: string;
 };
 
+/** A lightweight attendee-to-attendee greeting broadcast in the venue. */
+export type WaveSignal = { fromId: string; fromName: string; targetId: string; kind: "wave" | "hi" };
+
 type PresenceValue = {
   members: PresenceMember[];
   total: number;
@@ -38,6 +41,11 @@ type PresenceValue = {
   sendAnnounce: (a: Omit<VenueAnnouncement, "id" | "ts">) => void;
   /** Signal a specific attendee to move rooms or be removed (admin use). */
   sendModeration: (s: ModerationSignal) => void;
+  /** Wave/greeting received from another attendee (live). */
+  incomingWave: { fromName: string; kind: "wave" | "hi" } | null;
+  dismissWave: () => void;
+  /** Send a wave/greeting to another attendee. */
+  sendWave: (targetId: string, kind?: "wave" | "hi") => void;
 };
 
 const Ctx = createContext<PresenceValue | null>(null);
@@ -64,6 +72,7 @@ export function EventPresenceProvider({
   const [members, setMembers] = useState<PresenceMember[]>([]);
   const [announcement, setAnnouncement] = useState<VenueAnnouncement | null>(null);
   const [muted, setMuted] = useState(false);
+  const [incomingWave, setIncomingWave] = useState<{ fromName: string; kind: "wave" | "hi" } | null>(null);
   const chRef = useRef<RealtimeChannel | null>(null);
   const subscribedRef = useRef(false);
   const roomRef = useRef(room);
@@ -107,6 +116,11 @@ export function EventPresenceProvider({
       else if (sig.action === "unmute") setMuted(false);
     });
 
+    ch.on("broadcast", { event: "wave" }, ({ payload }) => {
+      const w = payload as WaveSignal;
+      if (w.targetId === meRef.current.id) setIncomingWave({ fromName: w.fromName, kind: w.kind });
+    });
+
     ch.subscribe(async (status) => {
       if (status === "SUBSCRIBED") {
         subscribedRef.current = true;
@@ -138,13 +152,25 @@ export function EventPresenceProvider({
     void chRef.current?.send({ type: "broadcast", event: "moderation", payload: s });
   }, []);
 
+  const sendWave = useCallback(
+    (targetId: string, kind: "wave" | "hi" = "wave") => {
+      void chRef.current?.send({
+        type: "broadcast",
+        event: "wave",
+        payload: { fromId: meRef.current.id, fromName: meRef.current.name, targetId, kind } satisfies WaveSignal,
+      });
+    },
+    [],
+  );
+
   const dismissAnnouncement = useCallback(() => setAnnouncement(null), []);
+  const dismissWave = useCallback(() => setIncomingWave(null), []);
 
   const value = useMemo<PresenceValue>(() => {
     const byRoom: Record<string, number> = {};
     for (const m of members) byRoom[m.room] = (byRoom[m.room] ?? 0) + 1;
-    return { members, total: members.length, byRoom, me, muted, announcement, dismissAnnouncement, sendAnnounce, sendModeration };
-  }, [members, me, muted, announcement, dismissAnnouncement, sendAnnounce, sendModeration]);
+    return { members, total: members.length, byRoom, me, muted, announcement, dismissAnnouncement, sendAnnounce, sendModeration, incomingWave, dismissWave, sendWave };
+  }, [members, me, muted, announcement, dismissAnnouncement, sendAnnounce, sendModeration, incomingWave, dismissWave, sendWave]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -161,6 +187,9 @@ export function useEventPresence(): PresenceValue {
       dismissAnnouncement: () => {},
       sendAnnounce: () => {},
       sendModeration: () => {},
+      incomingWave: null,
+      dismissWave: () => {},
+      sendWave: () => {},
     }
   );
 }
