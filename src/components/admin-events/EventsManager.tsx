@@ -56,6 +56,40 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
   const [sectorSlugs, setSectorSlugs] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
 
+  // duplicate dialog state
+  const [dupFor, setDupFor] = useState<EventRecord | null>(null);
+  const [dupTitle, setDupTitle] = useState("");
+  const [dupOpts, setDupOpts] = useState({ branding: true, sessions: true, sponsors: true });
+  const [duplicating, setDuplicating] = useState(false);
+
+  function openDuplicate(ev: EventRecord) {
+    setDupFor(ev);
+    setDupTitle(`Copy of ${ev.title}`);
+    setDupOpts({ branding: true, sessions: true, sponsors: true });
+    setError(null);
+  }
+
+  async function submitDuplicate() {
+    if (!dupFor) return;
+    setDuplicating(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/${dupFor.id}/duplicate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: dupTitle.trim() || undefined, ...dupOpts }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(formatApiError(json.error, "Could not duplicate event."));
+      setEvents((prev) => [json.event as EventRecord, ...prev]);
+      setDupFor(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not duplicate event.");
+    } finally {
+      setDuplicating(false);
+    }
+  }
+
   function toggleSector(slug: string) {
     setSectorSlugs((prev) => (prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]));
   }
@@ -259,6 +293,12 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => openDuplicate(ev)}
+                        className="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                      >
+                        Duplicate
+                      </button>
                       <Link
                         href={`/admin/events/${ev.id}`}
                         className="rounded-md border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] hover:bg-slate-50"
@@ -300,6 +340,81 @@ export function EventsManager({ initialEvents }: { initialEvents: EventRecord[] 
           </table>
         )}
       </div>
+
+      {dupFor && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6"
+          onClick={() => !duplicating && setDupFor(null)}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b border-[var(--border-subtle)] px-5 py-4">
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">Duplicate event</h2>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                Start a new draft from “{dupFor.title}”. Choose what to carry over.
+              </p>
+            </div>
+            <div className="grid gap-4 px-5 py-4">
+              <label className="block">
+                <span className="text-sm font-medium text-[var(--text-secondary)]">New event name</span>
+                <input
+                  value={dupTitle}
+                  onChange={(e) => setDupTitle(e.target.value)}
+                  maxLength={200}
+                  className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+                />
+              </label>
+              <div className="grid gap-2">
+                {(
+                  [
+                    ["branding", "Branding & banner", "Cover, banner, and organiser details"],
+                    ["sessions", "Sessions & agenda", "Schedule blocks — dates reset for the new run"],
+                    ["sponsors", "Sponsors & placements", "Sponsor tiers and banner slots"],
+                  ] as const
+                ).map(([key, label, desc]) => (
+                  <label
+                    key={key}
+                    className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--border-subtle)] px-3 py-2 hover:bg-slate-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={dupOpts[key]}
+                      onChange={(e) => setDupOpts((o) => ({ ...o, [key]: e.target.checked }))}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      <span className="block text-sm font-medium text-[var(--text-primary)]">{label}</span>
+                      <span className="block text-xs text-[var(--text-muted)]">{desc}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Sector tracks are always copied. Attendees, registrations, poll results, and analytics are never copied —
+                the new event starts fresh as a <b>Draft</b>.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-[var(--border-subtle)] px-5 py-4">
+              <button
+                onClick={() => setDupFor(null)}
+                disabled={duplicating}
+                className="rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitDuplicate}
+                disabled={duplicating}
+                className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                {duplicating ? "Duplicating…" : "Create copy"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

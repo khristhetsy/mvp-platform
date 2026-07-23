@@ -235,6 +235,134 @@ export async function createEvent(
   return event;
 }
 
+export type DuplicateEventOptions = {
+  /** New title; defaults to "Copy of <source title>". */
+  title?: string;
+  /** Copy banner, cover, and organiser details (default true). */
+  branding?: boolean;
+  /** Copy the agenda / sessions, with schedule dates cleared (default true). */
+  sessions?: boolean;
+  /** Copy sponsor links and their placements (default true). */
+  sponsors?: boolean;
+};
+
+/**
+ * Deep-copy an existing event into a fresh DRAFT so organisers can reuse a past
+ * setup instead of rebuilding. Sector tracks are always copied (an event needs
+ * at least one). Schedule dates and recordings are cleared so they can be set
+ * for the new run. Attendee data — registrations, poll results, analytics — is
+ * never copied and stays with the original.
+ */
+export async function duplicateEvent(
+  supabase: SupabaseClient<Database>,
+  createdBy: string,
+  sourceId: string,
+  options: DuplicateEventOptions = {},
+): Promise<EventRecord> {
+  const { data: src, error: srcErr } = await raw(supabase)
+    .from("events")
+    .select("*")
+    .eq("id", sourceId)
+    .maybeSingle();
+  if (srcErr) throw new Error(srcErr.message);
+  if (!src) throw new Error("Source event not found.");
+  const source = src as EventRow;
+
+  const title = options.title?.trim() || `Copy of ${String(source.title)}`;
+  const slug = await uniqueSlug(supabase, slugify(title));
+  const withBranding = options.branding !== false;
+
+  const insert: Record<string, unknown> = {
+    title,
+    slug,
+    summary: (source.summary as string | null) ?? null,
+    format: source.format,
+    visibility: source.visibility,
+    status: "draft",
+    starts_at: null,
+    ends_at: null,
+    created_by: createdBy,
+  };
+  if (withBranding) {
+    Object.assign(insert, {
+      cover_path: source.cover_path ?? null,
+      cover_overlay: source.cover_overlay ?? 55,
+      cover_focal: source.cover_focal ?? "center",
+      banner_title: source.banner_title ?? null,
+      banner_html: source.banner_html ?? null,
+      banner_bg: source.banner_bg ?? "indigo",
+      show_countdown: source.show_countdown ?? true,
+      organizer_name: source.organizer_name ?? null,
+      organizer_phone: source.organizer_phone ?? null,
+      organizer_email: source.organizer_email ?? null,
+    });
+  }
+
+  const { data: created, error: insErr } = await raw(supabase)
+    .from("events")
+    .insert(insert)
+    .select("*")
+    .single();
+  if (insErr || !created) throw new Error(insErr?.message ?? "Failed to create the copy.");
+  const event = mapEvent(created as EventRow);
+  const newId = event.id;
+
+  // Sector tracks — always (an event must carry at least one).
+  const { data: sectors } = await raw(supabase)
+    .from("event_sectors")
+    .select("sector_slug,label")
+    .eq("event_id", sourceId);
+  if (sectors && sectors.length) {
+    await raw(supabase)
+      .from("event_sectors")
+      .insert((sectors as EventRow[]).map((s) => ({ event_id: newId, sector_slug: s.sector_slug, label: s.label })));
+  }
+
+  // Sponsor links (the sponsor records themselves are shared, so we re-link).
+  const copySponsors = options.sponsors !== false;
+  if (copySponsors) {
+    const { data: links } = await raw(supabase)
+      .from("event_sponsors")
+      .select("sponsor_id,placement")
+      .eq("event_id", sourceId);
+    if (links && links.length) {
+      await raw(supabase)
+        .from("event_sponsors")
+        .insert((links as EventRow[]).map((l) => ({ event_id: newId, sponsor_id: l.sponsor_id, placement: l.placement })));
+    }
+  }
+
+  // Sessions / agenda — schedule and recordings reset for the new run.
+  if (options.sessions !== false) {
+    const { data: sess } = await raw(supabase)
+      .from("sessions")
+      .select("*")
+      .eq("event_id", sourceId)
+      .order("position", { ascending: true });
+    if (sess && sess.length) {
+      await raw(supabase).from("sessions").insert(
+        (sess as EventRow[]).map((s) => ({
+          event_id: newId,
+          sector_slug: (s.sector_slug as string | null) ?? null,
+          title: s.title,
+          abstract: (s.abstract as string | null) ?? null,
+          type: s.type,
+          status: s.status,
+          starts_at: null,
+          ends_at: null,
+          video_provider: (s.video_provider as string | null) ?? null,
+          video_ref: (s.video_ref as string | null) ?? null,
+          recording_path: null,
+          host_sponsor_id: copySponsors ? ((s.host_sponsor_id as string | null) ?? null) : null,
+          position: Number(s.position ?? 0),
+        })),
+      );
+    }
+  }
+
+  return event;
+}
+
 export async function updateEvent(
   supabase: SupabaseClient<Database>,
   id: string,
