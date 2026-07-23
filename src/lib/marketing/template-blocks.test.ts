@@ -245,6 +245,48 @@ describe("section blocks", () => {
     expect(s).toMatchObject({ heading: "Raise-ready by fall", bg: "#0c2340" });
   });
 
+  it("round-trips a band's pill badge and in-band button", () => {
+    const band: TemplateBlock = {
+      id: "s",
+      type: "section",
+      eyebrow: "Now live",
+      eyebrowBadge: true,
+      badgeColor: "#0F6E56",
+      heading: "Fresh, vetted, capital-ready.",
+      text: "iCapOS is live.",
+      buttonLabel: "Browse your matches",
+      buttonUrl: "https://icapos.com/m",
+      buttonColor: "#5B4BE0",
+      bg: "#0c2340",
+      color: "#ffffff",
+    };
+    const html = renderBlocksToEmailHtml([band]);
+    expect(html).toContain("border-radius:20px");
+    expect(html).toContain("background:#0F6E56");
+    expect(html).toContain("https://icapos.com/m");
+    const back = parseHtmlToBlocks(html).find((b) => b.type === "section");
+    expect(back).toMatchObject({
+      eyebrow: "Now live",
+      eyebrowBadge: true,
+      badgeColor: "#0F6E56",
+      heading: "Fresh, vetted, capital-ready.",
+      buttonLabel: "Browse your matches",
+      buttonUrl: "https://icapos.com/m",
+    });
+  });
+
+  it("doesn't invent a badge or button on a plain band", () => {
+    const html = renderBlocksToEmailHtml([
+      { id: "s", type: "section", eyebrow: "Seasonal", heading: "Raise-ready by fall", text: "Body here.", bg: "#0c2340" },
+    ]);
+    const back = parseHtmlToBlocks(html).find((b) => b.type === "section") as
+      | { eyebrowBadge?: boolean; buttonLabel?: string; heading?: string }
+      | undefined;
+    expect(back?.eyebrowBadge).toBeUndefined();
+    expect(back?.buttonLabel).toBeUndefined();
+    expect(back?.heading).toBe("Raise-ready by fall");
+  });
+
   it("leaves white tables alone rather than making everything a section", () => {
     const blocks = parseHtmlToBlocks('<table style="background:#ffffff;"><tr><td><p>Hi</p></td></tr></table>');
     expect(blocks.every((b) => b.type !== "section")).toBe(true);

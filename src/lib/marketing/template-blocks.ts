@@ -90,6 +90,14 @@ export type TemplateBlock = BlockStyle &
       fullWidth?: boolean;
       headingSize?: number;
       url?: string;
+      /** Render the eyebrow as a rounded pill badge instead of plain text. */
+      eyebrowBadge?: boolean;
+      /** Pill background; falls back to a tint of the band foreground. */
+      badgeColor?: string;
+      /** Optional call-to-action rendered inside the band. */
+      buttonLabel?: string;
+      buttonUrl?: string;
+      buttonColor?: string;
     }
   | { id: string; type: "callout"; text: string; eyebrow?: string; heading?: string; bg?: string; borderColor?: string; color?: string; size?: number }
   | { id: string; type: "list"; items: string[]; ordered?: boolean; color?: string; size?: number }
@@ -404,20 +412,76 @@ function extractStructures(html: string, out: Map<string, TemplateBlock>): strin
     // (the cells inside a columns row) get misread as full-width sections.
     if (!/<h[1-6]\b/i.test(inner) && !/font-size:\s*(19|[2-9]\d)px/i.test(inner)) return m;
     const headingMatch = /<h[1-6]\b([^>]*)>([\s\S]*?)<\/h[1-6]>/i.exec(inner);
-    const texts = [...inner.matchAll(/<(?:p|div|td)\b[^>]*>([\s\S]*?)<\/(?:p|div|td)>/gi)]
-      .map((x) => decodeEntities(x[1].replace(/<[^>]+>/g, " ")))
-      .filter(Boolean);
-    const heading = headingMatch ? decodeEntities(headingMatch[2].replace(/<[^>]+>/g, " ")) : undefined;
-    const body = texts.filter((t) => t !== heading);
-    if (!heading && body.length === 0) return m;
+    // Leaf text runs with their inline style, so a heading rendered as a big
+    // styled <td>/<div> (not an <h*>) can still be told apart from body copy.
+    const runs = [...inner.matchAll(/<(p|div|td)\b([^>]*)>([\s\S]*?)<\/\1>/gi)]
+      .filter((x) => !/<(?:p|div|td|h[1-6])\b/i.test(x[3]))
+      .map((x) => ({ style: /style\s*=\s*"([^"]*)"/i.exec(x[2])?.[1] ?? "", text: decodeEntities(x[3].replace(/<[^>]+>/g, " ")) }))
+      .filter((r) => r.text);
+    const texts = runs.map((r) => r.text);
+    const fontSize = (s: string) => Number(/font-size:\s*(\d+)px/i.exec(s)?.[1] ?? 0);
+    const styleColor = (s: string) => /(?:^|;)\s*color:\s*([^;]+)/i.exec(s)?.[1]?.trim();
+
+    // Heading: an <h*> if present, else the largest bold/heading-sized run.
+    let heading = headingMatch ? decodeEntities(headingMatch[2].replace(/<[^>]+>/g, " ")) : undefined;
+    let headingColor = headingMatch ? styleProp(headingMatch[1], "color") : undefined;
+    if (!heading) {
+      const cand = runs
+        .filter((r) => fontSize(r.style) >= 19 || /font-weight:\s*(bold|[5-9]00)/i.test(r.style))
+        .sort((a, b) => fontSize(b.style) - fontSize(a.style))[0];
+      if (cand) {
+        heading = cand.text;
+        headingColor = styleColor(cand.style);
+      }
+    }
+
+    // Pill eyebrow: a <span> with a background and rounded corners.
+    let eyebrowBadge = false;
+    let badgeColor: string | undefined;
+    let pillText: string | undefined;
+    const pill = /<span\b([^>]*)>([\s\S]*?)<\/span>/i.exec(inner);
+    if (pill) {
+      const pillTag = `<span${pill[1]}>`;
+      const pillBg = styleProp(pillTag, "background") ?? styleProp(pillTag, "background-color");
+      if (/border-radius/i.test(pill[1]) && pillBg) {
+        pillText = decodeEntities(pill[2].replace(/<[^>]+>/g, " ")) || undefined;
+        if (pillText) {
+          eyebrowBadge = true;
+          badgeColor = pillBg;
+        }
+      }
+    }
+
+    // In-band CTA: an anchor styled like a button.
+    let buttonLabel: string | undefined;
+    let buttonUrl: string | undefined;
+    let buttonColor: string | undefined;
+    const btn = /<a\b([^>]*)>([\s\S]*?)<\/a>/i.exec(inner);
+    if (btn) {
+      const aTag = `<a${btn[1]}>`;
+      const label = decodeEntities(btn[2].replace(/<[^>]+>/g, " "));
+      if (looksLikeButton(aTag) && label) {
+        buttonLabel = label;
+        buttonUrl = attr(aTag, "href");
+        buttonColor = styleProp(aTag, "background") ?? styleProp(aTag, "background-color");
+      }
+    }
+
+    // Body = remaining text lines, minus the heading, pill, and button label.
+    const body = texts.filter((t) => t !== heading && t !== pillText && t !== buttonLabel);
+    const eyebrow = eyebrowBadge ? pillText : body.length > 1 ? body[0] : undefined;
+    const text = eyebrowBadge ? body[0] : body.length > 1 ? body[1] : body[0];
+    if (!heading && !eyebrow && !text && !buttonLabel) return m;
     return token({
       id: newBlockId(),
       type: "section",
-      eyebrow: body.length > 1 ? body[0] : undefined,
+      ...(eyebrow ? { eyebrow } : {}),
+      ...(eyebrowBadge ? { eyebrowBadge: true, ...(badgeColor ? { badgeColor } : {}) } : {}),
       heading,
-      text: body.length > 1 ? body[1] : body[0],
+      text,
+      ...(buttonLabel ? { buttonLabel, ...(buttonUrl ? { buttonUrl } : {}), ...(buttonColor ? { buttonColor } : {}) } : {}),
       bg: bg.trim(),
-      color: headingMatch ? styleProp(headingMatch[1], "color") : undefined,
+      color: headingColor,
       align: "left",
     });
   });
@@ -758,12 +822,21 @@ function renderBlock(block: TemplateBlock, t: EmailTheme = FALLBACK_THEME): stri
       const padH = clampPad(block.padH, 24);
       const rows: string[] = [];
       if (block.eyebrow) {
-        rows.push(
-          `<tr><td style="padding:${padV}px ${padH}px 0;font-family:${FONT};font-size:13px;line-height:1.4;color:${esc(fade(fg))};text-align:${align};">${escText(block.eyebrow)}</td></tr>`,
-        );
+        if (block.eyebrowBadge) {
+          // Rounded pill. Outlook desktop drops border-radius but still shows the
+          // fill, so the badge degrades to a solid rectangle rather than breaking.
+          const badgeBg = block.badgeColor ?? LINK_COLOR;
+          rows.push(
+            `<tr><td style="padding:${padV}px ${padH}px 0;text-align:${align};"><span style="display:inline-block;background:${esc(badgeBg)};color:#ffffff;font-family:${FONT};font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:0.06em;padding:5px 12px;border-radius:20px;">${escText(block.eyebrow)}</span></td></tr>`,
+          );
+        } else {
+          rows.push(
+            `<tr><td style="padding:${padV}px ${padH}px 0;font-family:${FONT};font-size:13px;line-height:1.4;color:${esc(fade(fg))};text-align:${align};">${escText(block.eyebrow)}</td></tr>`,
+          );
+        }
       }
       if (block.heading) {
-        const top = block.eyebrow ? 4 : padV;
+        const top = block.eyebrow ? (block.eyebrowBadge ? 12 : 4) : padV;
         rows.push(
           `<tr><td style="padding:${top}px ${padH}px 0;font-family:${FONT};font-size:${headingSize}px;line-height:1.3;font-weight:bold;color:${esc(fg)};text-align:${align};">${linkWrap(escText(block.heading), block.url, fg)}</td></tr>`,
         );
@@ -772,6 +845,15 @@ function renderBlock(block: TemplateBlock, t: EmailTheme = FALLBACK_THEME): stri
         rows.push(
           `<tr><td style="padding:8px ${padH}px 0;font-family:${FONT};font-size:15px;line-height:1.6;color:${esc(fade(fg))};text-align:${align};">${escText(block.text)}</td></tr>`,
         );
+      }
+      if (block.buttonLabel) {
+        const href = safeUrl(block.buttonUrl ?? "");
+        if (href !== "#") {
+          const btnBg = block.buttonColor ?? LINK_COLOR;
+          rows.push(
+            `<tr><td style="padding:16px ${padH}px 0;text-align:${align};"><a href="${esc(href)}" style="display:inline-block;background:${esc(btnBg)};color:#ffffff;font-family:${FONT};font-size:14px;font-weight:bold;text-decoration:none;padding:11px 20px;border-radius:8px;">${escText(block.buttonLabel)}</a></td></tr>`,
+          );
+        }
       }
       rows.push(`<tr><td style="height:${padV}px;font-size:0;line-height:0;">&nbsp;</td></tr>`);
       const band = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${esc(bg)};">${rows.join("")}</table>`;
@@ -978,7 +1060,8 @@ export function renderBlocksToText(blocks: TemplateBlock[]): string {
     else if (b.type === "button") lines.push(`${b.label}: ${safeUrl(b.url)}`);
     else if (b.type === "divider") lines.push("---");
     else if (b.type === "section") {
-      lines.push([b.eyebrow, b.heading, b.text].filter(Boolean).join("\n"));
+      const cta = b.buttonLabel && safeUrl(b.buttonUrl ?? "") !== "#" ? `${b.buttonLabel}: ${safeUrl(b.buttonUrl ?? "")}` : b.buttonLabel;
+      lines.push([b.eyebrow, b.heading, b.text, cta].filter(Boolean).join("\n"));
     } else if (b.type === "callout") lines.push([b.eyebrow, b.heading, b.text].filter(Boolean).join("\n"));
     else if (b.type === "list") {
       lines.push(b.items.filter((i) => i.trim()).map((i, n) => (b.ordered ? `${n + 1}. ${i}` : `- ${i}`)).join("\n"));

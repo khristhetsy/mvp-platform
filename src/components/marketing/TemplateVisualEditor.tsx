@@ -159,7 +159,7 @@ export function TemplateVisualEditor({
         : type === "spacer"
         ? { ...base, type: "spacer", height: 20 }
         : type === "section"
-        ? { ...base, type: "section", eyebrow: "Eyebrow", heading: "Band heading", bg: "#0c2340", color: "#ffffff", align: "left" }
+        ? { ...base, type: "section", eyebrow: "Now live", eyebrowBadge: true, badgeColor: "#2E78F5", heading: "Band heading", text: "Supporting sentence for the band.", buttonLabel: "Browse your matches →", buttonUrl: "https://icapos.com", buttonColor: "#2E78F5", bg: "#0c2340", color: "#ffffff", align: "left" }
         : type === "callout"
         ? { ...base, type: "callout", text: "Something worth pulling out." }
         : type === "list"
@@ -426,22 +426,34 @@ export function TemplateVisualEditor({
               ) : b.type === "section" ? (
                 <div className="px-6 py-4" style={{ background: b.bg ?? "#0c2340", textAlign: b.align ?? "left" }}>
                   {b.eyebrow ? (
-                    <div
-                      contentEditable
-                      suppressContentEditableWarning
-                      onBlur={(e) => update(b.id, { eyebrow: e.currentTarget.textContent ?? "" })}
-                      className="text-[12.5px] outline-none"
-                      style={{ color: "#9fb3d1" }}
-                    >
-                      {b.eyebrow}
-                    </div>
+                    b.eyebrowBadge ? (
+                      <span
+                        contentEditable
+                        suppressContentEditableWarning
+                        onBlur={(e) => update(b.id, { eyebrow: e.currentTarget.textContent ?? "" })}
+                        className="inline-block rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white outline-none"
+                        style={{ background: b.badgeColor ?? "#2E78F5" }}
+                      >
+                        {b.eyebrow}
+                      </span>
+                    ) : (
+                      <div
+                        contentEditable
+                        suppressContentEditableWarning
+                        onBlur={(e) => update(b.id, { eyebrow: e.currentTarget.textContent ?? "" })}
+                        className="text-[12.5px] outline-none"
+                        style={{ color: "#9fb3d1" }}
+                      >
+                        {b.eyebrow}
+                      </div>
+                    )
                   ) : null}
                   <div
                     contentEditable
                     suppressContentEditableWarning
                     onBlur={(e) => update(b.id, { heading: e.currentTarget.textContent ?? "" })}
                     className="font-bold outline-none"
-                    style={{ fontSize: b.headingSize ?? 23, color: b.color ?? "#ffffff" }}
+                    style={{ fontSize: b.headingSize ?? 23, color: b.color ?? "#ffffff", marginTop: b.eyebrow ? 10 : 0 }}
                   >
                     {b.heading}
                   </div>
@@ -455,6 +467,17 @@ export function TemplateVisualEditor({
                     >
                       {b.text}
                     </div>
+                  ) : null}
+                  {b.buttonLabel ? (
+                    <span
+                      contentEditable
+                      suppressContentEditableWarning
+                      onBlur={(e) => update(b.id, { buttonLabel: e.currentTarget.textContent ?? "" })}
+                      className="mt-3 inline-block rounded-lg px-4 py-2.5 text-[13.5px] font-bold text-white outline-none"
+                      style={{ background: b.buttonColor ?? "#2E78F5" }}
+                    >
+                      {b.buttonLabel}
+                    </span>
                   ) : null}
                 </div>
               ) : b.type === "callout" ? (
@@ -1001,6 +1024,74 @@ export function TemplateVisualEditor({
 
             {selected.type === "section" ? (
               <>
+                <label className="block text-[11px] font-semibold text-slate-600">
+                  Eyebrow <span className="font-normal text-slate-400">(small label, optional)</span>
+                  <input
+                    value={selected.eyebrow ?? ""}
+                    onChange={(e) => update(selected.id, { eyebrow: e.target.value || undefined })}
+                    className="mt-1 w-full rounded-md border border-slate-200 px-2 py-1.5 text-[12px]"
+                    placeholder="e.g. NOW LIVE"
+                  />
+                </label>
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-600">Eyebrow style</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <div className="flex flex-1 gap-1">
+                      {([
+                        { on: false, label: "Plain" },
+                        { on: true, label: "Pill badge" },
+                      ] as const).map((o) => (
+                        <button
+                          key={o.label}
+                          type="button"
+                          onClick={() => update(selected.id, { eyebrowBadge: o.on })}
+                          className={`flex-1 rounded-md border py-1.5 text-[11px] font-semibold ${
+                            Boolean(selected.eyebrowBadge) === o.on
+                              ? "border-[#2E78F5] bg-[#eef4ff] text-[#2E78F5]"
+                              : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                    {selected.eyebrowBadge ? (
+                      <input
+                        type="color"
+                        aria-label="Badge colour"
+                        value={selected.badgeColor ?? "#2E78F5"}
+                        onChange={(e) => update(selected.id, { badgeColor: e.target.value })}
+                        className="h-8 w-9 rounded-md border border-slate-200"
+                      />
+                    ) : null}
+                  </div>
+                </div>
+                <div className="rounded-md border border-slate-100 bg-slate-50/60 p-2">
+                  <p className="text-[11px] font-semibold text-slate-600">In-band button <span className="font-normal text-slate-400">(optional)</span></p>
+                  <input
+                    value={selected.buttonLabel ?? ""}
+                    onChange={(e) => update(selected.id, { buttonLabel: e.target.value || undefined })}
+                    className="mt-1 w-full rounded-md border border-slate-200 px-2 py-1.5 text-[12px]"
+                    placeholder="Button label, e.g. Browse your matches →"
+                  />
+                  {selected.buttonLabel ? (
+                    <div className="mt-1.5 flex items-center gap-1.5">
+                      <input
+                        value={selected.buttonUrl ?? ""}
+                        onChange={(e) => update(selected.id, { buttonUrl: e.target.value || undefined })}
+                        className="flex-1 rounded-md border border-slate-200 px-2 py-1.5 text-[12px]"
+                        placeholder="https://…"
+                      />
+                      <input
+                        type="color"
+                        aria-label="Button colour"
+                        value={selected.buttonColor ?? "#2E78F5"}
+                        onChange={(e) => update(selected.id, { buttonColor: e.target.value })}
+                        className="h-8 w-9 rounded-md border border-slate-200"
+                      />
+                    </div>
+                  ) : null}
+                </div>
                 <label className="block text-[11px] font-semibold text-slate-600">
                   Background
                   <input
