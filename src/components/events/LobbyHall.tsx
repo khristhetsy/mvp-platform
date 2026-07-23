@@ -47,8 +47,12 @@ export function LobbyHall({
   tracksHref?: string;
 }) {
   const t = useTranslations("eventsCmp");
-  const { byRoom, total } = useEventPresence();
+  const { byRoom, total, members, me } = useEventPresence();
   const [openKey, setOpenKey] = useState<string | null>(null);
+
+  // Real attendees currently standing in the Lobby become the figures. Falls
+  // back to a few decorative figures before presence has synced (or if empty).
+  const lobbyMembers = members.filter((m) => m.room === "Lobby").slice(0, FIG_POS.length);
   const hrefFor = (key: string) => venueZones(slug, tracksHref).find((z) => z.key === key)?.href ?? `/events/${slug}`;
 
   return (
@@ -117,17 +121,39 @@ export function LobbyHall({
             </div>
           </div>
 
-          {FIG_POS.map((p, i) => (
-            <div
-              key={i}
-              className={styles.fig}
-              aria-hidden
-              style={{ left: p.left, top: p.top, transform: `translateZ(${p.z}px) scale(${p.s})` }}
-            >
-              <span className={styles.figH} style={{ background: FIGS[i % FIGS.length] }} />
-              <span className={styles.figB} style={{ background: FIGS[i % FIGS.length] }} />
-            </div>
-          ))}
+          {lobbyMembers.length > 0
+            ? lobbyMembers.map((m, i) => {
+                const p = FIG_POS[i];
+                const isMe = m.id === me.id;
+                const color = isMe ? "#2E78F5" : FIGS[i % FIGS.length];
+                return (
+                  <div
+                    key={m.id}
+                    className={`${styles.fig} ${styles.figLive} ${isMe ? styles.figMe : ""}`}
+                    style={{
+                      left: p.left,
+                      top: p.top,
+                      transform: `translateZ(${p.z}px) scale(${p.s})`,
+                      animationDelay: `${(i % 5) * 0.8}s`,
+                    }}
+                  >
+                    <span className={styles.figName}>{isMe ? `${m.name} (you)` : m.name}</span>
+                    <span className={styles.figH} style={{ background: color }} />
+                    <span className={styles.figB} style={{ background: color }} />
+                  </div>
+                );
+              })
+            : FIG_POS.map((p, i) => (
+                <div
+                  key={i}
+                  className={styles.fig}
+                  aria-hidden
+                  style={{ left: p.left, top: p.top, transform: `translateZ(${p.z}px) scale(${p.s})` }}
+                >
+                  <span className={styles.figH} style={{ background: FIGS[i % FIGS.length] }} />
+                  <span className={styles.figB} style={{ background: FIGS[i % FIGS.length] }} />
+                </div>
+              ))}
           <div className={styles.desk}>{t("help_info_desk")}</div>
         </div>
       </div>
