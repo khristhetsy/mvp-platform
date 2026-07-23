@@ -304,6 +304,48 @@ export function EventDetailManager({
   const [sStartsAt, setSStartsAt] = useState<string>("");
   const [addingSession, setAddingSession] = useState(false);
 
+  // inline session editing
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editType, setEditType] = useState<SessionType>("keynote");
+  const [editSector, setEditSector] = useState<string>("");
+  const [editAbstract, setEditAbstract] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  function startEdit(s: EventSession) {
+    setEditId(s.id);
+    setEditTitle(s.title);
+    setEditType(s.type);
+    setEditSector(s.sectorSlug ?? "");
+    setEditAbstract(s.abstract ?? "");
+    setError(null);
+  }
+  async function saveEdit() {
+    if (!editId) return;
+    setSavingEdit(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/sessions/${editId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editTitle,
+          type: editType,
+          sectorSlug: editSector || null,
+          abstract: editAbstract || null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(formatApiError(json.error, "Could not save session."));
+      onSessionUpdated(json.session as EventSession);
+      setEditId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save session.");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
   // sponsor attach
   const [sponsorId, setSponsorId] = useState<string>(sponsorCatalog[0]?.id ?? "");
   const [placement, setPlacement] = useState<"presenting" | "track" | "logo">("logo");
@@ -648,46 +690,98 @@ export function EventDetailManager({
           ) : (
             sessions.map((s) => {
               const TypeIcon = SESSION_ICONS[s.type] ?? Mic;
+              const editing = editId === s.id;
               return (
               <div
                 key={s.id}
-                className={`rounded-lg border border-[var(--border-subtle)] px-3 py-2 transition ${dragId === s.id ? "opacity-50" : ""}`}
-                draggable={canEdit}
-                onDragStart={canEdit ? () => setDragId(s.id) : undefined}
-                onDragOver={canEdit ? (e) => { e.preventDefault(); reorderTo(s.id); } : undefined}
-                onDrop={canEdit ? (e) => { e.preventDefault(); commitOrder(); } : undefined}
-                onDragEnd={canEdit ? commitOrder : undefined}
+                className={`rounded-lg border px-3 py-2 transition ${editing ? "border-[#bcd3fb] bg-[#f6faff]" : "border-[var(--border-subtle)]"} ${dragId === s.id ? "opacity-50" : ""}`}
+                draggable={canEdit && !editing}
+                onDragStart={canEdit && !editing ? () => setDragId(s.id) : undefined}
+                onDragOver={canEdit && !editing ? (e) => { e.preventDefault(); reorderTo(s.id); } : undefined}
+                onDrop={canEdit && !editing ? (e) => { e.preventDefault(); commitOrder(); } : undefined}
+                onDragEnd={canEdit && !editing ? commitOrder : undefined}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {canEdit && (
-                      <span className="cursor-grab text-slate-300 active:cursor-grabbing" title="Drag to reorder" aria-hidden>
-                        <GripVertical className="h-4 w-4" />
-                      </span>
+                {editing ? (
+                  <div className="grid gap-3 py-1">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--blue)]">
+                      <TypeIcon className="h-4 w-4" /> Editing session
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <input
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        placeholder={t("sessionTitlePh")}
+                        className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+                      />
+                      <select value={editType} onChange={(e) => setEditType(e.target.value as SessionType)} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm">
+                        {SESSION_TYPE_VALUES.map((v) => (
+                          <option key={v} value={v}>{t(`type.${v}`)}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {event.sectors.length > 0 && (
+                      <select value={editSector} onChange={(e) => setEditSector(e.target.value)} className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm">
+                        <option value="">{t("noSpecificTrack")}</option>
+                        {event.sectors.map((sec) => (
+                          <option key={sec.id} value={sec.sectorSlug}>{sec.label}</option>
+                        ))}
+                      </select>
                     )}
-                    <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--indigo-soft)] text-[var(--indigo)]" aria-hidden>
-                      <TypeIcon className="h-4 w-4" />
-                    </span>
-                    <div>
-                      <span className="rounded bg-[var(--indigo-soft)] px-2 py-0.5 text-xs font-medium text-[var(--indigo)]">
-                        {t(`type.${s.type}`)}
-                      </span>
-                      <span className="ml-2 text-sm font-medium text-[var(--navy)]">{s.title}</span>
-                      {s.sectorSlug && <span className="ml-2 text-xs text-[var(--text-muted)]">{sectorLabel(s.sectorSlug)}</span>}
-                      {s.recordingPath && (
-                        <span className="ml-2 rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">{t("recorded")}</span>
-                      )}
+                    <textarea
+                      value={editAbstract}
+                      onChange={(e) => setEditAbstract(e.target.value)}
+                      rows={2}
+                      placeholder="Short description shown on the agenda (optional)"
+                      className="rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button type="button" onClick={() => setEditId(null)} disabled={savingEdit} className="rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium disabled:opacity-50">
+                        Cancel
+                      </button>
+                      <button type="button" onClick={saveEdit} disabled={savingEdit || !editTitle.trim()} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
+                        {savingEdit ? t("saving") : t("saveChanges")}
+                      </button>
                     </div>
                   </div>
-                  {canEdit && (
-                    <button onClick={() => removeSession(s.id)} className="text-xs text-rose-600 hover:underline">
-                      {t("remove")}
-                    </button>
-                  )}
-                </div>
-                {canEdit && <SessionLiveControls session={s} onUpdated={onSessionUpdated} liveConfigured={liveVideoConfigured} />}
-                {canEdit && <SessionVideoUpload eventId={event.id} session={s} onUpdated={onSessionUpdated} />}
-                {canEdit && s.type === "talk_show" && <GuestRoster sessionId={s.id} eventId={event.id} />}
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {canEdit && (
+                          <span className="cursor-grab text-slate-300 active:cursor-grabbing" title="Drag to reorder" aria-hidden>
+                            <GripVertical className="h-4 w-4" />
+                          </span>
+                        )}
+                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--indigo-soft)] text-[var(--indigo)]" aria-hidden>
+                          <TypeIcon className="h-4 w-4" />
+                        </span>
+                        <div>
+                          <span className="rounded bg-[var(--indigo-soft)] px-2 py-0.5 text-xs font-medium text-[var(--indigo)]">
+                            {t(`type.${s.type}`)}
+                          </span>
+                          <span className="ml-2 text-sm font-medium text-[var(--navy)]">{s.title}</span>
+                          {s.sectorSlug && <span className="ml-2 text-xs text-[var(--text-muted)]">{sectorLabel(s.sectorSlug)}</span>}
+                          {s.recordingPath && (
+                            <span className="ml-2 rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">{t("recorded")}</span>
+                          )}
+                        </div>
+                      </div>
+                      {canEdit && (
+                        <div className="flex items-center gap-3">
+                          <button onClick={() => startEdit(s)} className="text-xs font-medium text-[var(--blue)] hover:underline">
+                            Edit
+                          </button>
+                          <button onClick={() => removeSession(s.id)} className="text-xs text-rose-600 hover:underline">
+                            {t("remove")}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {canEdit && <SessionLiveControls session={s} onUpdated={onSessionUpdated} liveConfigured={liveVideoConfigured} />}
+                    {canEdit && <SessionVideoUpload eventId={event.id} session={s} onUpdated={onSessionUpdated} />}
+                    {canEdit && s.type === "talk_show" && <GuestRoster sessionId={s.id} eventId={event.id} />}
+                  </>
+                )}
               </div>
               );
             })
