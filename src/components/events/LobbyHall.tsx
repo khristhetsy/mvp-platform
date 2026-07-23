@@ -3,14 +3,15 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { Presentation, Users, Tv, Store } from "lucide-react";
+import { Presentation, Users, Tv, Store, Mic, Trophy } from "lucide-react";
 import { venueZones } from "@/lib/icfo-events/venue";
 import { useEventPresence } from "@/components/events/EventPresenceProvider";
 import styles from "./LobbyHall.module.css";
 
 type DoorDef = {
   key: string;
-  room: "Main Stage" | "Networking" | "On-Demand" | "Sponsor Hall";
+  /** Presence room this door reflects. Omitted for nav-only doors (e.g. Leaderboard). */
+  room?: "Main Stage" | "Networking" | "On-Demand" | "Sponsor Hall";
   label: string;
   Icon: typeof Presentation;
   meta: (n: number) => { text: string; color: string };
@@ -18,9 +19,11 @@ type DoorDef = {
 
 const DOORS: DoorDef[] = [
   { key: "sessions", room: "Main Stage", label: "SESSIONS", Icon: Presentation, meta: (n) => ({ text: `${n} watching`, color: "#A32D2D" }) },
+  { key: "talkshow", room: "Main Stage", label: "TALK SHOW", Icon: Mic, meta: (n) => ({ text: n > 0 ? `${n} watching` : "live soon", color: "#A32D2D" }) },
   { key: "networking", room: "Networking", label: "NETWORKING", Icon: Users, meta: (n) => ({ text: `${n} here · tables open`, color: "#0F6E56" }) },
   { key: "ondemand", room: "On-Demand", label: "ON-DEMAND", Icon: Tv, meta: (n) => ({ text: `${n} browsing`, color: "#185FA5" }) },
   { key: "sponsors", room: "Sponsor Hall", label: "EXPO HALL", Icon: Store, meta: (n) => ({ text: `${n} at booths`, color: "#2E78F5" }) },
+  { key: "leaderboard", label: "LEADERBOARD", Icon: Trophy, meta: () => ({ text: "See standings", color: "#BA7517" }) },
 ];
 
 const FIGS = ["#34507a", "#5DCAA5", "#85B7EB", "#AFA9EC", "#F0997B", "#9FE1CB", "#2E78F5"];
@@ -79,7 +82,7 @@ export function LobbyHall({
             </div>
             <div className={styles.doors}>
               {DOORS.map((d) => {
-                const n = byRoom[d.room] ?? 0;
+                const n = d.room ? byRoom[d.room] ?? 0 : 0;
                 const meta = d.meta(n);
                 const open = openKey === d.key;
                 return (
