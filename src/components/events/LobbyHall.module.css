@@ -150,9 +150,17 @@
   white-space: nowrap; opacity: 0; transition: opacity .12s; pointer-events: none; z-index: 20;
 }
 .fig:hover .figName, .fig:focus-visible .figName { opacity: 1; }
-.you { position: absolute; left: 48%; top: 64%; width: 15px; height: 27px; border-radius: 8px 8px 3px 3px; background: var(--you); z-index: 8; cursor: pointer; box-shadow: 0 5px 10px rgba(0,0,0,.4); border: none; padding: 0; }
+.you { position: absolute; left: 48%; top: 64%; width: 15px; height: 27px; border-radius: 8px 8px 3px 3px; background: var(--you); z-index: 8; cursor: pointer; box-shadow: 0 0 14px rgba(245,164,36,.75), 0 5px 10px rgba(0,0,0,.4); border: none; padding: 0; }
 .you::before { content: ""; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 12px; height: 12px; border-radius: 50%; background: var(--you); }
-.youPin { position: absolute; left: 48%; top: 58%; transform: translateX(-50%); z-index: 9; font-size: 8px; font-weight: 800; color: #fff; background: var(--you); padding: 2px 7px; border-radius: 8px; pointer-events: none; }
+/* pulse halo: expanding rings on the floor around the viewer */
+.youHalo { position: absolute; left: 50%; bottom: -3px; width: 15px; height: 15px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--you); opacity: .5; z-index: 7; pointer-events: none; animation: youPing 1.7s ease-out infinite; }
+.youHalo2 { animation-delay: .85s; }
+@keyframes youPing { 0% { transform: translate(-50%, -50%) scale(1); opacity: .5; } 100% { transform: translate(-50%, -50%) scale(6); opacity: 0; } }
+/* bobbing "YOU" pin above the viewer's head */
+.youPin { position: absolute; left: 48%; top: 55%; transform: translateX(-50%); z-index: 9; text-align: center; pointer-events: none; animation: youBob 1.2s ease-in-out infinite; }
+.youChip { display: inline-block; background: var(--you); color: #3a2600; font-size: 8px; font-weight: 900; letter-spacing: .06em; padding: 2px 7px; border-radius: 8px; box-shadow: 0 5px 12px rgba(245,164,36,.55); }
+.youTri { display: block; width: 0; height: 0; margin: 0 auto; border: 5px solid transparent; border-top-color: var(--you); }
+@keyframes youBob { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-5px); } }
 .plant { position: absolute; font-size: 15px; z-index: 4; pointer-events: none; }
 
 /* badges */

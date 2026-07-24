@@ -218,8 +218,14 @@ export function LobbyHall({
             className={styles.you}
             aria-label={`${name} (you)`}
             onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setSel({ member: meMember, x: r.left + r.width / 2, y: r.top }); }}
-          />
-          <span className={styles.youPin}>You are here</span>
+          >
+            <span className={styles.youHalo} aria-hidden />
+            <span className={`${styles.youHalo} ${styles.youHalo2}`} aria-hidden />
+          </button>
+          <span className={styles.youPin} aria-hidden>
+            <span className={styles.youChip}>YOU</span>
+            <span className={styles.youTri} />
+          </span>
 
           {/* status badges */}
           <div className={styles.youHere}>
