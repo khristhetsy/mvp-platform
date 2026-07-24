@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { requirePermissionPage } from "@/lib/api/permissions";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { CREDITS_ENABLED, listCatalog, listRedemptions } from "@/lib/icfo-events/credits";
+import { CREDITS_ENABLED, POINTS_EXPIRY_MONTHS, POINTS_USER_CAP, POINTS_PROGRAM_CAP, listCatalog, listRedemptions } from "@/lib/icfo-events/credits";
 import { CreditsCatalogManager } from "@/components/admin-events/CreditsCatalogManager";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +26,13 @@ export default async function AdminCreditsPage() {
         <h1 className="text-xl font-semibold text-[var(--navy)]">iCFO Points</h1>
         <p className="mt-1 text-sm text-[var(--text-muted)]">
           Closed-loop rewards earned 1:1 from gamification participation and redeemed for the services below.
+        </p>
+        <p className="mt-2 text-xs text-[var(--text-muted)]">
+          <span className="font-semibold">Guardrails:</span>{" "}
+          {POINTS_EXPIRY_MONTHS > 0 ? `Points expire after ${POINTS_EXPIRY_MONTHS} months` : "No expiry"} ·{" "}
+          {POINTS_USER_CAP > 0 ? `${POINTS_USER_CAP.toLocaleString()} per-member cap` : "No per-member cap"} ·{" "}
+          {POINTS_PROGRAM_CAP > 0 ? `${POINTS_PROGRAM_CAP.toLocaleString()} program cap` : "No program cap"}
+          {" "}(set via env).
         </p>
         <div className="mt-6">
           <CreditsCatalogManager initialItems={items} redemptions={redemptions} enabled={CREDITS_ENABLED} />

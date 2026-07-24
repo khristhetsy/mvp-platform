@@ -10,6 +10,14 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 /** Program feature flag. Keep off until counsel signs off; page + nav stay hidden. */
 export const CREDITS_ENABLED = process.env.CREDITS_ENABLED === "true";
 
+/** Guardrails (all optional; 0/unset = no limit, and no extra queries run).
+ *  - EXPIRY_MONTHS: earn lots expire this many months after they're earned.
+ *  - USER_CAP: max Points a single member can hold (earning stops at the cap).
+ *  - PROGRAM_CAP: max total outstanding Points across everyone (bounds liability). */
+export const POINTS_EXPIRY_MONTHS = Number(process.env.POINTS_EXPIRY_MONTHS ?? 0) || 0;
+export const POINTS_USER_CAP = Number(process.env.POINTS_USER_CAP ?? 0) || 0;
+export const POINTS_PROGRAM_CAP = Number(process.env.POINTS_PROGRAM_CAP ?? 0) || 0;
+
 function raw(supabase: SupabaseClient): SupabaseClient {
   return supabase;
 }
@@ -89,22 +97,103 @@ export async function awardCredits(
   if (!CREDITS_ENABLED || amount <= 0 || !profileId) return;
   try {
     const admin = createServiceRoleClient() as unknown as SupabaseClient;
+    let grant = amount;
+
+    // Per-member cap: never let a balance exceed the cap (only queried if set).
+    if (POINTS_USER_CAP > 0) {
+      const bal = await getBalance(admin as unknown as SupabaseClient<Database>, profileId);
+      grant = Math.min(grant, Math.max(0, POINTS_USER_CAP - bal));
+    }
+    // Program-wide cap on total outstanding Points (only queried if set).
+    if (grant > 0 && POINTS_PROGRAM_CAP > 0) {
+      const { data } = await raw(admin).from("credit_ledger").select("delta");
+      const total = ((data ?? []) as Row[]).reduce((s, r) => s + Number(r.delta ?? 0), 0);
+      grant = Math.min(grant, Math.max(0, POINTS_PROGRAM_CAP - total));
+    }
+    if (grant <= 0) return;
+
+    // Default expiry for earn lots (redeem/reversal entries never expire).
+    let expiresAt = opts.expiresAt ?? null;
+    if (!expiresAt && POINTS_EXPIRY_MONTHS > 0 && reason.startsWith("earn")) {
+      const d = new Date();
+      d.setMonth(d.getMonth() + POINTS_EXPIRY_MONTHS);
+      expiresAt = d.toISOString();
+    }
+
     await raw(admin)
       .from("credit_ledger")
       .upsert(
         {
           profile_id: profileId,
-          delta: amount,
+          delta: grant,
           reason,
           ref,
           event_id: opts.eventId ?? null,
-          expires_at: opts.expiresAt ?? null,
+          expires_at: expiresAt,
         },
         { onConflict: "profile_id,reason,ref", ignoreDuplicates: true },
       );
   } catch {
     // swallow — credits must never block the primary action
   }
+}
+
+/**
+ * Expire unspent Points from lots past their expiry (FIFO). Idempotent per day:
+ * a member's expired-but-unspent balance is computed by replaying the ledger
+ * FIFO, so re-running never double-expires. Best-effort; returns a summary.
+ */
+export async function runPointsExpiry(): Promise<{ usersProcessed: number; expiredTotal: number }> {
+  if (!CREDITS_ENABLED || POINTS_EXPIRY_MONTHS <= 0) return { usersProcessed: 0, expiredTotal: 0 };
+  const admin = createServiceRoleClient() as unknown as SupabaseClient;
+  const now = Date.now();
+  const dayRef = `expire:${new Date().toISOString().slice(0, 10)}`;
+
+  const { data: userRows } = await raw(admin).from("credit_ledger").select("profile_id");
+  const ids = [...new Set(((userRows ?? []) as Row[]).map((r) => String(r.profile_id)))];
+
+  let usersProcessed = 0;
+  let expiredTotal = 0;
+  for (const pid of ids) {
+    const { data: rows } = await raw(admin)
+      .from("credit_ledger")
+      .select("delta, reason, expires_at, created_at")
+      .eq("profile_id", pid)
+      .order("created_at", { ascending: true });
+    const entries = (rows ?? []) as Row[];
+
+    // Replay FIFO: positive entries are lots (earns carry an expiry), negative
+    // entries consume the oldest lots first.
+    const lots: { remaining: number; expiresAt: number | null }[] = [];
+    for (const e of entries) {
+      const delta = Number(e.delta ?? 0);
+      const reason = String(e.reason ?? "");
+      if (delta > 0) {
+        const exp = e.expires_at ? Date.parse(String(e.expires_at)) : null;
+        lots.push({ remaining: delta, expiresAt: reason.startsWith("earn") ? exp : null });
+      } else if (delta < 0) {
+        let need = -delta;
+        for (const lot of lots) {
+          if (need <= 0) break;
+          const take = Math.min(lot.remaining, need);
+          lot.remaining -= take;
+          need -= take;
+        }
+      }
+    }
+    const expireNow = lots
+      .filter((l) => l.expiresAt !== null && (l.expiresAt as number) <= now && l.remaining > 0)
+      .reduce((s, l) => s + l.remaining, 0);
+    if (expireNow > 0) {
+      await raw(admin).from("credit_ledger").upsert(
+        { profile_id: pid, delta: -expireNow, reason: "expire", ref: dayRef },
+        { onConflict: "profile_id,reason,ref", ignoreDuplicates: true },
+      );
+      expiredTotal += expireNow;
+      usersProcessed++;
+    }
+  }
+  return { usersProcessed, expiredTotal };
 }
 
 /** Current balance = sum of all ledger deltas for the profile. */
