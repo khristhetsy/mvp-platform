@@ -310,6 +310,25 @@ export function WorkspaceSidebar({
     };
   }, []);
 
+  // iCFO Points balance for the nav badge (polled). `enabled=false` hides the item.
+  const [points, setPoints] = useState<{ enabled: boolean; balance: number }>({ enabled: false, balance: 0 });
+  useEffect(() => {
+    let active = true;
+    const fetchPoints = async () => {
+      try {
+        const res = await fetch("/api/credits/balance");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (active) setPoints({ enabled: Boolean(data.enabled), balance: Number(data.balance ?? 0) });
+      } catch {
+        // ignore — item just stays hidden
+      }
+    };
+    void fetchPoints();
+    const id = setInterval(() => void fetchPoints(), 60_000);
+    return () => { active = false; clearInterval(id); };
+  }, []);
+
   function tLabel(label: string): string {
     if (locale !== "es") return label;
     return NAV_ES[label] ?? label;
@@ -364,6 +383,7 @@ export function WorkspaceSidebar({
 
   const items = useMemo(() => {
     const hidden = new Set(disabledHrefs);
+    if (!points.enabled) hidden.add("/credits");
     return getWorkspaceNav(workspace)
       .filter(canShowNavItem)
       .map((item) => {
@@ -378,7 +398,7 @@ export function WorkspaceSidebar({
         if (!item.children?.length && (hidden.has(item.href) || !deptAllows(item.href))) return false;
         return true;
       });
-  }, [canShowNavItem, deptAllows, workspace, disabledHrefs]);
+  }, [canShowNavItem, deptAllows, workspace, disabledHrefs, points.enabled]);
 
   const sections = useMemo(() => {
     const source =
@@ -389,6 +409,7 @@ export function WorkspaceSidebar({
           : getInvestorWorkspaceNavSections();
     if (!source) return null;
     const hidden = new Set(disabledHrefs);
+    if (!points.enabled) hidden.add("/credits");
     return source
       .map((section) => ({
         ...section,
@@ -403,7 +424,7 @@ export function WorkspaceSidebar({
           }),
       }))
       .filter((section) => section.items.length > 0);
-  }, [canShowNavItem, deptAllows, workspace, disabledHrefs]);
+  }, [canShowNavItem, deptAllows, workspace, disabledHrefs, points.enabled]);
 
   const label = workspaceLabel(workspace);
 
@@ -496,6 +517,10 @@ export function WorkspaceSidebar({
         ) : item.href.endsWith("/inbox") && unreadEmail > 0 ? (
           <span className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#2E78F5] px-1.5 text-[11px] font-semibold text-white">
             {unreadEmail > 99 ? "99+" : unreadEmail}
+          </span>
+        ) : item.href === "/credits" && points.balance > 0 ? (
+          <span className="ml-auto inline-flex h-5 items-center justify-center rounded-full bg-[#0c2340] px-2 text-[11px] font-semibold text-white">
+            {points.balance > 9999 ? "9999+" : points.balance.toLocaleString()}
           </span>
         ) : null}
       </Link>

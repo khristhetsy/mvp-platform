@@ -377,6 +377,7 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     title: "Account",
     items: [
+      { href: "/credits", label: "iCFO Points" },
       {
         href: "/founder/settings",
         label: "Settings",
@@ -472,6 +473,7 @@ export const investorWorkspaceNavSections: WorkspaceNavSection[] = [
       },
       { href: "/investor/learning", label: "Learning" },
       { href: "/investor/analytics", label: "Analytics" },
+      { href: "/credits", label: "iCFO Points" },
       { href: "/notifications", label: "Notifications" },
       { href: "/investor/settings", label: "Settings" },
     ],

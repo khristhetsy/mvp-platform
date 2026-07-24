@@ -1,6 +1,7 @@
 import {
   Activity,
   AlertTriangle,
+  Award,
   BarChart3,
   Building2,
   CreditCard,
@@ -61,6 +62,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/investor/messages": MessageSquare,
   "/investor/analytics": Activity,
   "/investor/settings": Settings,
+  "/credits": Award,
   "/admin/dashboard": LayoutDashboard,
   "/admin/actions": ListTodo,
   "/admin/companies": Building2,
