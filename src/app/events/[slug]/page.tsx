@@ -23,8 +23,10 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { getEventBySlug } from "@/lib/icfo-events/queries";
-import { getLeaderboard, getMemberStats } from "@/lib/icfo-events/gamification";
+import { getLeaderboard, getMemberStats, getPointRules } from "@/lib/icfo-events/gamification";
 import type { LeaderboardEntry, MemberStats } from "@/lib/icfo-events/gamification";
+import { CREDITS_ENABLED } from "@/lib/icfo-events/credits";
+import { PointsChip } from "@/components/events/PointsChip";
 import { getMissionProgress } from "@/lib/icfo-events/missions";
 import type { MissionProgress } from "@/lib/icfo-events/missions";
 import { listEventPresenters } from "@/lib/icfo-events/applications";
@@ -232,6 +234,10 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
 
+  // "Watch a session" Points value (configured), shown as an earn chip when the
+  // iCFO Points program is enabled.
+  const watchPts = CREDITS_ENABLED ? (await getPointRules(supabase).catch(() => null))?.session_viewed ?? 15 : 0;
+
   // Live-session interaction (Q&A + chat) — only for signed-in viewers, live sessions.
   const isStaffViewer = ["admin", "analyst"].includes(role);
   const liveData = new Map<string, { questions: SessionQuestion[]; chat: SessionChatMessage[]; queue: CallInEntry[] }>();
@@ -428,7 +434,15 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             <p className="mt-3 text-sm text-[var(--text-muted)]">{t("sessions_will_be_announced_soon")}</p>
           ) : (
             <ol className="mt-4 space-y-3">
-              {visibleSessions.map((s) => (
+              {visibleSessions.map((s) => {
+                // A live session opens to attendees only once its start time is
+                // reached — unless an admin has opened the doors early, or the
+                // viewer is staff (who can always enter to rehearse).
+                const startMs = s.startsAt ? new Date(s.startsAt).getTime() : null;
+                const startedForAttendee = startMs === null || nowMs >= startMs;
+                const liveJoinable = s.status === "live" && (isStaffViewer || s.doorsOpen || startedForAttendee);
+                const liveWaiting = s.status === "live" && !liveJoinable;
+                return (
                 <li
                   key={s.id}
                   className="rounded-xl border border-[var(--border-subtle)] bg-white px-5 py-4 shadow-[var(--shadow-panel)]"
@@ -446,14 +460,26 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                     <p className="mt-0.5 text-xs text-[var(--text-muted)]">Hosted by {sponsorNames.get(s.hostSponsorId)}</p>
                   )}
                   {s.abstract && <p className="mt-1 text-sm text-[var(--text-secondary)]">{s.abstract}</p>}
-                  {s.status === "live" && s.videoProvider === "whereby" && s.videoRef ? (
+                  {CREDITS_ENABLED && watchPts > 0 && (
+                    <div className="mt-2"><PointsChip points={watchPts} action="for watching this session" /></div>
+                  )}
+                  {liveWaiting ? (
+                    <div className="mt-3 rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--surface-sunken)] px-4 py-6 text-center">
+                      <p className="text-sm font-medium text-[var(--navy)]">
+                        {startMs
+                          ? `Doors open ${new Date(s.startsAt as string).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`
+                          : "Doors open soon"}
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">The live room opens to attendees at the scheduled start time.</p>
+                    </div>
+                  ) : liveJoinable && s.videoProvider === "whereby" && s.videoRef ? (
                     <iframe
                       title={s.title}
                       src={getVideoProvider("whereby").embedUrl(s.videoRef)}
                       allow="camera; microphone; fullscreen; speaker; display-capture; autoplay"
                       className="mt-3 aspect-video w-full rounded-lg border border-[var(--border-subtle)]"
                     />
-                  ) : s.status === "live" && s.videoProvider === "external" && s.videoRef ? (
+                  ) : liveJoinable && s.videoProvider === "external" && s.videoRef ? (
                     embeddableLiveUrl(s.videoRef) ? (
                       <iframe
                         title={s.title}
@@ -483,8 +509,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                       <SessionVideo src={playback.get(s.id) as string} eventId={event.id} sessionId={s.id} />
                     )
                   ) : null}
-                  {s.status === "live" && s.type === "talk_show" && <OnStageGuests sessionId={s.id} />}
-                  {s.status === "live" && profile && s.type === "talk_show" && (
+                  {liveJoinable && s.type === "talk_show" && <OnStageGuests sessionId={s.id} />}
+                  {liveJoinable && profile && s.type === "talk_show" && (
                     <CallInBar
                       sessionId={s.id}
                       eventId={event.id}
@@ -494,7 +520,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                       initialQueue={liveData.get(s.id)?.queue ?? []}
                     />
                   )}
-                  {s.status === "live" && profile && (
+                  {liveJoinable && profile && (
                     <LiveSessionPanel
                       sessionId={s.id}
                       eventId={event.id}
@@ -502,10 +528,12 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                       isStaff={isStaffViewer}
                       initialQuestions={liveData.get(s.id)?.questions ?? []}
                       initialChat={liveData.get(s.id)?.chat ?? []}
+                      chatEnabled={s.chatEnabled}
                     />
                   )}
                 </li>
-              ))}
+                );
+              })}
             </ol>
           )}
         </div>

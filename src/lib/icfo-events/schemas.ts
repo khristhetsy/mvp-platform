@@ -78,6 +78,8 @@ export const sessionInput = z.object({
   recordingPath: z.string().max(500).nullable().optional(),
   hostSponsorId: z.string().uuid().nullable().optional(),
   position: z.number().default(0),
+  doorsOpen: z.boolean().optional(),
+  chatEnabled: z.boolean().optional(),
 });
 export type SessionInput = z.infer<typeof sessionInput>;
 

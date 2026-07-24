@@ -80,6 +80,8 @@ function mapSession(r: EventRow): EventSession {
     recordingPath: (r.recording_path as string | null) ?? null,
     hostSponsorId: (r.host_sponsor_id as string | null) ?? null,
     position: Number(r.position ?? 0),
+    doorsOpen: Boolean(r.doors_open),
+    chatEnabled: r.chat_enabled !== false,
   };
 }
 

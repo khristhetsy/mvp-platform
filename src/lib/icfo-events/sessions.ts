@@ -27,6 +27,8 @@ function mapSession(r: Row): EventSession {
     recordingPath: (r.recording_path as string | null) ?? null,
     hostSponsorId: (r.host_sponsor_id as string | null) ?? null,
     position: Number(r.position ?? 0),
+    doorsOpen: Boolean(r.doors_open),
+    chatEnabled: r.chat_enabled !== false,
   };
 }
 
@@ -72,6 +74,8 @@ export async function updateSession(
   if (input.recordingPath !== undefined) patch.recording_path = input.recordingPath;
   if (input.hostSponsorId !== undefined) patch.host_sponsor_id = input.hostSponsorId;
   if (input.position !== undefined) patch.position = input.position;
+  if (input.doorsOpen !== undefined) patch.doors_open = input.doorsOpen;
+  if (input.chatEnabled !== undefined) patch.chat_enabled = input.chatEnabled;
   const { data, error } = await raw(supabase)
     .from("sessions")
     .update(patch)
@@ -110,7 +114,9 @@ export async function setSessionLiveRoom(
 ): Promise<EventSession> {
   const { data, error } = await raw(supabase)
     .from("sessions")
-    .update({ video_provider: provider, video_ref: ref, status: "live" })
+    // Each new live start opens closed — attendees wait for the scheduled start
+    // time until an admin explicitly opens early access.
+    .update({ video_provider: provider, video_ref: ref, status: "live", doors_open: false })
     .eq("id", id)
     .select("*")
     .single();
@@ -125,7 +131,7 @@ export async function endLiveSession(
 ): Promise<EventSession> {
   const { data, error } = await raw(supabase)
     .from("sessions")
-    .update({ status: "ended" })
+    .update({ status: "ended", doors_open: false })
     .eq("id", id)
     .select("*")
     .single();

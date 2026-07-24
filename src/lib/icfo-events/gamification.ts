@@ -5,6 +5,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { awardCredits } from "./credits";
 
 function raw(supabase: SupabaseClient): SupabaseClient {
   return supabase;
@@ -92,6 +93,10 @@ export async function awardPoints(
         { event_id: eventId, profile_id: profileId, action, ref, points },
         { onConflict: "event_id,profile_id,action,ref", ignoreDuplicates: true },
       );
+    // Fund iCFO Credits 1:1 from the same action (idempotent, best-effort, and a
+    // no-op unless the Credits program is enabled). Points stay per-event; Credits
+    // accrue per profile and carry across events.
+    await awardCredits(profileId, points, `earn:${action}`, `${eventId}:${action}:${ref}`, { eventId });
   } catch {
     // swallow — gamification must never block the primary action
   }

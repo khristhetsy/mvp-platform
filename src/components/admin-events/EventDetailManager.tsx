@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, GripVertical, Mic, Users, Radio, Presentation, Wrench } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -119,6 +119,47 @@ function SessionLiveControls({
     }
   }
 
+  // Open/close the room to attendees before the scheduled start time. Staff can
+  // always enter early; this flag only affects attendees.
+  async function toggleDoors() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/sessions/${session.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ doorsOpen: !session.doorsOpen }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Couldn't update early access.");
+      onUpdated(json.session as EventSession);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't update early access.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Show/hide the attendee Chat tab in this session's live panel (Q&A always on).
+  async function toggleChat() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/sessions/${session.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatEnabled: !session.chatEnabled }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Couldn't update chat.");
+      onUpdated(json.session as EventSession);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't update chat.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="mt-2">
       <div className="flex flex-wrap items-center gap-2">
@@ -133,6 +174,19 @@ function SessionLiveControls({
             <button onClick={endLive} disabled={busy} className="text-xs font-medium text-rose-600 hover:underline disabled:opacity-50">
               {busy ? "…" : t("endSession")}
             </button>
+            <span aria-hidden className="text-slate-300">·</span>
+            {session.doorsOpen ? (
+              <span className="inline-flex items-center gap-1.5">
+                <span className="rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Early access open</span>
+                <button onClick={toggleDoors} disabled={busy} className="text-xs font-medium text-[var(--text-muted)] hover:underline disabled:opacity-50">
+                  Close
+                </button>
+              </span>
+            ) : (
+              <button onClick={toggleDoors} disabled={busy} className="text-xs font-medium text-[var(--blue)] hover:underline disabled:opacity-50" title="Let attendees join before the scheduled start time">
+                {busy ? "…" : "Open early access"}
+              </button>
+            )}
           </>
         ) : session.status !== "ended" ? (
           <>
@@ -171,6 +225,22 @@ function SessionLiveControls({
           </button>
         </div>
       )}
+
+      <div className="mt-2 flex items-center gap-2 text-xs">
+        <span className="text-[var(--text-muted)]">Attendee chat</span>
+        <button
+          onClick={toggleChat}
+          disabled={busy}
+          role="switch"
+          aria-checked={session.chatEnabled}
+          title={session.chatEnabled ? "Chat is on — click to show Q&A only" : "Chat is off (Q&A only) — click to enable"}
+          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold disabled:opacity-50 ${
+            session.chatEnabled ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+          }`}
+        >
+          {session.chatEnabled ? "On" : "Off · Q&A only"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -413,17 +483,52 @@ export function EventDetailManager({
     });
   }
 
-  async function removeSession(id: string) {
+  // Remove a session, but keep it in hand so it can be restored via an Undo
+  // toast (a delete is otherwise unrecoverable).
+  const [removedSession, setRemovedSession] = useState<EventSession | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  async function removeSession(s: EventSession) {
     setError(null);
     try {
-      const res = await fetch(`/api/admin/events/sessions/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/events/sessions/${s.id}`, { method: "DELETE" });
       if (!res.ok) {
         const json = await res.json();
         throw new Error(typeof json.error === "string" ? json.error : "Could not delete session.");
       }
-      setSessions((prev) => prev.filter((s) => s.id !== id));
+      setSessions((prev) => prev.filter((x) => x.id !== s.id));
+      setRemovedSession(s);
+      if (undoTimer.current) clearTimeout(undoTimer.current);
+      undoTimer.current = setTimeout(() => setRemovedSession(null), 7000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not delete session.");
+    }
+  }
+
+  async function undoRemove() {
+    const s = removedSession;
+    if (!s) return;
+    setRemovedSession(null);
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    try {
+      const res = await fetch(`/api/admin/events/${event.id}/sessions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: s.title,
+          type: s.type,
+          abstract: s.abstract,
+          sectorSlug: s.sectorSlug,
+          hostSponsorId: s.hostSponsorId,
+          startsAt: s.startsAt,
+          position: s.position,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(typeof json.error === "string" ? json.error : "Could not restore session.");
+      setSessions((prev) => [...prev, json.session as EventSession].sort((a, b) => a.position - b.position));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not restore session.");
     }
   }
 
@@ -771,7 +876,7 @@ export function EventDetailManager({
                           <button onClick={() => startEdit(s)} className="text-xs font-medium text-[var(--blue)] hover:underline">
                             Edit
                           </button>
-                          <button onClick={() => removeSession(s.id)} className="text-xs text-rose-600 hover:underline">
+                          <button onClick={() => removeSession(s)} className="text-xs text-rose-600 hover:underline">
                             {t("remove")}
                           </button>
                         </div>
@@ -898,6 +1003,15 @@ export function EventDetailManager({
           </form>
         )}
       </section>
+
+      {removedSession && (
+        <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-lg bg-[var(--navy)] px-4 py-2.5 text-sm text-white shadow-lg">
+          <span>Session “{removedSession.title}” removed</span>
+          <button onClick={undoRemove} className="font-semibold text-[#7fdcc0] hover:underline">
+            Undo
+          </button>
+        </div>
+      )}
     </div>
   );
 }

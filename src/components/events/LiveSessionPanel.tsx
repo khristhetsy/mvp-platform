@@ -3,12 +3,25 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { ThumbsUp, Heart, Sparkles, TrendingUp, Lightbulb, ChevronUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { SessionQuestion, SessionChatMessage } from "@/lib/icfo-events/live-session";
 
 type Me = { id: string; name: string };
 type Row = Record<string, unknown>;
-const REACTIONS = ["👏", "❤️", "🎉", "🔥", "💡"];
+
+// Professional line-icon reactions (replaces emoji). Each broadcasts a stable
+// key so the floating animation can render the matching icon + colour.
+const REACTIONS = [
+  { key: "applaud", Icon: ThumbsUp, color: "#4f46e5", label: "Applaud" },
+  { key: "appreciate", Icon: Heart, color: "#e0537d", label: "Appreciate" },
+  { key: "celebrate", Icon: Sparkles, color: "#c07a1e", label: "Celebrate" },
+  { key: "insight", Icon: TrendingUp, color: "#0f8f6a", label: "Insightful" },
+  { key: "idea", Icon: Lightbulb, color: "#2563eb", label: "Idea" },
+] as const;
+const REACTION_BY_KEY: Record<string, (typeof REACTIONS)[number]> = Object.fromEntries(
+  REACTIONS.map((r) => [r.key, r]),
+);
 
 function raw(c: ReturnType<typeof createClient>): SupabaseClient {
   return c as unknown as SupabaseClient;
@@ -21,6 +34,7 @@ export function LiveSessionPanel({
   isStaff,
   initialQuestions,
   initialChat,
+  chatEnabled = true,
 }: {
   sessionId: string;
   eventId: string;
@@ -28,14 +42,18 @@ export function LiveSessionPanel({
   isStaff: boolean;
   initialQuestions: SessionQuestion[];
   initialChat: SessionChatMessage[];
+  /** When false, the Chat tab is hidden (Q&A stays). Controlled per session. */
+  chatEnabled?: boolean;
 }) {
   const t = useTranslations("eventsCmp");
   const [tab, setTab] = useState<"qa" | "chat">("qa");
+  const showChat = chatEnabled !== false;
+  const activeTab = showChat ? tab : "qa";
   const [questions, setQuestions] = useState<SessionQuestion[]>(initialQuestions);
   const [chat, setChat] = useState<SessionChatMessage[]>(initialChat);
   const [qInput, setQInput] = useState("");
   const [cInput, setCInput] = useState("");
-  const [floats, setFloats] = useState<{ id: number; emoji: string }[]>([]);
+  const [floats, setFloats] = useState<{ id: number; key: string }[]>([]);
   const channelRef = useRef<ReturnType<ReturnType<typeof createClient>["channel"]> | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const nameById = useRef<Map<string, string>>(new Map([[me.id, me.name]]));
@@ -140,9 +158,9 @@ export function LiveSessionPanel({
         },
       )
       .on("broadcast", { event: "reaction" }, (payload) => {
-        const emoji = String((payload.payload as { emoji?: string })?.emoji ?? "👏");
+        const key = String((payload.payload as { reaction?: string })?.reaction ?? "applaud");
         const id = Date.now() + Math.random();
-        setFloats((prev) => [...prev, { id, emoji }]);
+        setFloats((prev) => [...prev, { id, key }]);
         setTimeout(() => setFloats((prev) => prev.filter((f) => f.id !== id)), 2400);
       })
       .subscribe();
@@ -193,8 +211,8 @@ export function LiveSessionPanel({
       .insert({ session_id: sessionId, event_id: eventId, profile_id: me.id, body });
   }
 
-  function react(emoji: string) {
-    channelRef.current?.send({ type: "broadcast", event: "reaction", payload: { emoji } });
+  function react(key: string) {
+    channelRef.current?.send({ type: "broadcast", event: "reaction", payload: { reaction: key } });
   }
 
   const sortedQuestions = [...questions].sort(
@@ -205,42 +223,53 @@ export function LiveSessionPanel({
     <div className="relative mt-3 rounded-xl border border-[var(--border-subtle)] bg-white">
       {/* floating reactions */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {floats.map((f) => (
-          <span
-            key={f.id}
-            className="absolute bottom-12 right-6 text-2xl"
-            style={{ animation: "cap-float 2.4s ease-out forwards" }}
-          >
-            {f.emoji}
-          </span>
-        ))}
+        {floats.map((f) => {
+          const R = REACTION_BY_KEY[f.key] ?? REACTIONS[0];
+          return (
+            <span
+              key={f.id}
+              className="absolute bottom-12 right-6"
+              style={{ animation: "cap-float 2.4s ease-out forwards", color: R.color }}
+            >
+              <R.Icon className="h-6 w-6" aria-hidden />
+            </span>
+          );
+        })}
       </div>
 
       <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-3 py-2">
         <div className="flex gap-1">
           <button
             onClick={() => setTab("qa")}
-            className={`rounded-md px-3 py-1 text-sm font-medium ${tab === "qa" ? "bg-[var(--indigo-soft)] text-[var(--indigo)]" : "text-[var(--text-secondary)]"}`}
+            className={`rounded-md px-3 py-1 text-sm font-medium ${activeTab === "qa" ? "bg-[var(--indigo-soft)] text-[var(--indigo)]" : "text-[var(--text-secondary)]"}`}
           >
             Q&amp;A
           </button>
-          <button
-            onClick={() => setTab("chat")}
-            className={`rounded-md px-3 py-1 text-sm font-medium ${tab === "chat" ? "bg-[var(--indigo-soft)] text-[var(--indigo)]" : "text-[var(--text-secondary)]"}`}
-          >
-            Chat
-          </button>
+          {showChat && (
+            <button
+              onClick={() => setTab("chat")}
+              className={`rounded-md px-3 py-1 text-sm font-medium ${activeTab === "chat" ? "bg-[var(--indigo-soft)] text-[var(--indigo)]" : "text-[var(--text-secondary)]"}`}
+            >
+              Chat
+            </button>
+          )}
         </div>
-        <div className="flex gap-1">
-          {REACTIONS.map((e) => (
-            <button key={e} onClick={() => react(e)} className="rounded-md px-1.5 py-1 text-lg hover:bg-slate-50" aria-label={`React ${e}`}>
-              {e}
+        <div className="flex gap-0.5">
+          {REACTIONS.map((r) => (
+            <button
+              key={r.key}
+              onClick={() => react(r.key)}
+              className="rounded-md p-1.5 text-[var(--text-muted)] transition-colors hover:bg-slate-100 hover:text-[var(--indigo)]"
+              aria-label={r.label}
+              title={r.label}
+            >
+              <r.Icon className="h-4 w-4" aria-hidden />
             </button>
           ))}
         </div>
       </div>
 
-      {tab === "qa" ? (
+      {activeTab === "qa" ? (
         <div className="p-3">
           <div className="flex gap-2">
             <input
@@ -268,7 +297,8 @@ export function LiveSessionPanel({
                     }`}
                     aria-label="Upvote"
                   >
-                    ▲<span>{q.upvotes}</span>
+                    <ChevronUp className="h-3.5 w-3.5" aria-hidden />
+                    <span>{q.upvotes}</span>
                   </button>
                   <div className="flex-1">
                     <p className="text-sm text-[var(--text-primary)]">{q.body}</p>

@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TipOfTheDay } from "@/components/tips/TipOfTheDay";
+import { PointsSummaryCard } from "@/components/events/PointsSummaryCard";
 import { StageUnlockBanner } from "@/components/founder/StageUnlockBanner";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { FounderOnboardingProgressCard } from "@/components/FounderOnboardingProgressCard";
@@ -177,6 +178,8 @@ export default async function FounderDashboardPage() {
         <StageUnlockBanner />
 
         <TipOfTheDay profileId={profile.id} audience="founder" />
+
+        <PointsSummaryCard profileId={profile.id} />
 
         {onboardingProgress ? <FounderOnboardingProgressCard progress={onboardingProgress} /> : null}
 

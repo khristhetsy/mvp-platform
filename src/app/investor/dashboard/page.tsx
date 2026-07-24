@@ -2,6 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getTranslations } from "next-intl/server";
 import { TipOfTheDay } from "@/components/tips/TipOfTheDay";
+import { PointsSummaryCard } from "@/components/events/PointsSummaryCard";
 import { InvestorOnboardingProgressCard } from "@/components/InvestorOnboardingProgressCard";
 import { investorCompanyLabel, loadInvestorWorkspacePageData } from "@/lib/data/investor-workspace-page";
 import { loadInvestorRecommendedMatches } from "@/lib/matching/load-investor-recommendations";
@@ -58,6 +59,8 @@ export default async function InvestorDashboardPage() {
       />
 
       <TipOfTheDay profileId={profile.id} audience="investor" />
+
+      <PointsSummaryCard profileId={profile.id} />
 
       {journey ? <InvestorJourneyTracker stageView={journey.stageView} coach={journey.coach} /> : null}
 

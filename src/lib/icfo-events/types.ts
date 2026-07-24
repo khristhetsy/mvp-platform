@@ -30,6 +30,12 @@ export interface EventSession {
   recordingPath: string | null;
   hostSponsorId: string | null;
   position: number;
+  /** When true, attendees may join this live session before its start time.
+   *  When false, only staff can enter early (attendees wait until startsAt). */
+  doorsOpen: boolean;
+  /** When true, the live panel shows the attendee Chat tab (in addition to
+   *  Q&A). When false, Q&A only. */
+  chatEnabled: boolean;
 }
 
 export interface EventRecord {
