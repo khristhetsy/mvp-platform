@@ -20,8 +20,17 @@
 
 /* ===== stage ===== */
 .hall { position: relative; }
+/* Panels flank the floor in side columns so they never cover a booth.
+   DOM order is stage, sideL, sideR; `order` puts the left column first. */
+.frame { display: flex; align-items: stretch; }
+.sideL, .sideR { flex: 0 0 208px; background: #f7f9fc; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.sideL { order: 1; border-right: 1px solid var(--line); }
+.sideR { order: 3; border-left: 1px solid var(--line); }
 .stage {
+  order: 2;
   position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
   height: 600px;
   overflow: hidden;
   background: linear-gradient(180deg, var(--wall) 0%, var(--wall) 30%, var(--floor) 30%, var(--floor) 86%, var(--navy) 86%);
@@ -104,10 +113,10 @@
 .sign:hover { filter: brightness(1.15); }
 .signStem { position: absolute; left: 50%; bottom: -11px; width: 3px; height: 11px; background: var(--navy); transform: translateX(-50%); }
 
-/* nav rail */
+/* nav rail (flows in the right side column) */
 .nav {
-  position: absolute; top: 12px; right: 12px; width: 174px; z-index: 12; background: #fff;
-  border: 1px solid var(--line); border-radius: 13px; box-shadow: 0 14px 32px rgba(12,35,64,.16); overflow: hidden;
+  background: #fff; border: 1px solid var(--line); border-radius: 13px;
+  box-shadow: 0 6px 18px rgba(12,35,64,.08); overflow: hidden;
 }
 .navMe { display: flex; gap: 9px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); }
 .navAv { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
@@ -119,10 +128,10 @@
 .navIc { width: 14px; display: inline-flex; align-items: center; justify-content: center; opacity: .85; }
 .navLeave { display: block; margin: 7px 12px 10px; background: var(--accent); color: #fff; font-size: 10.5px; font-weight: 700; text-align: center; padding: 7px 0; border-radius: 8px; cursor: pointer; text-decoration: none; }
 
-/* panels */
+/* panels (flow in the side columns) */
 .panel {
-  position: absolute; z-index: 11; background: #fff; border: 1px solid var(--line); border-radius: 13px;
-  box-shadow: 0 12px 28px rgba(12,35,64,.14); padding: 11px; width: 206px;
+  background: #fff; border: 1px solid var(--line); border-radius: 13px;
+  box-shadow: 0 6px 18px rgba(12,35,64,.08); padding: 11px;
 }
 .panelTitle { font-size: 9px; font-weight: 800; letter-spacing: .08em; color: var(--accent); margin: 0 0 8px; }
 .agRow { display: flex; justify-content: space-between; gap: 8px; font-size: 10.5px; padding: 5px 0; border-bottom: 1px solid var(--line); color: var(--navy); }
@@ -169,7 +178,7 @@
   background: var(--navy); color: #e7edf6; font-size: 9.5px; font-weight: 700; padding: 4px 11px; border-radius: 20px;
 }
 .youHere { left: 12px; }
-.countPill { right: 196px; background: var(--navy2); }
+.countPill { right: 12px; background: var(--navy2); }
 .caption { margin: 0; padding: 9px 12px; text-align: center; font-size: 11px; background: #fff; color: var(--muted); }
 
 /* live ticker */
@@ -196,8 +205,11 @@
 .profAct button:first-child { background: var(--accent); color: #fff; border-color: var(--accent); }
 .waveToast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); background: var(--navy); color: #fff; font-size: 13px; font-weight: 600; padding: 10px 16px; border-radius: 10px; z-index: 62; box-shadow: 0 10px 30px rgba(12,35,64,.4); }
 
-/* responsive: drop side chrome on narrow screens */
+/* responsive: stack the side columns below the floor on narrow screens */
 @media (max-width: 900px) {
-  .panel, .nav, .countPill { display: none; }
+  .frame { flex-direction: column; }
+  .sideL, .sideR { flex: auto; order: 0; border: none; border-top: 1px solid var(--line); }
+  .sideL, .sideR { flex-direction: row; flex-wrap: wrap; }
+  .sideL .panel, .sideR .panel, .sideR .nav { flex: 1 1 220px; }
   .welcome { max-width: 82%; }
 }

@@ -27,12 +27,12 @@ type DoorDef = {
 };
 
 const DOORS: DoorDef[] = [
-  { key: "sessions", room: "Main Stage", label: "SESSIONS", Icon: Presentation, left: 10, top: 44, meta: (n) => `${n} watching` },
-  { key: "talkshow", room: "Main Stage", label: "TALK SHOW", Icon: Mic, left: 25, top: 31, meta: (n) => (n > 0 ? `${n} watching` : "live soon") },
-  { key: "networking", room: "Networking", label: "NETWORKING", Icon: Users, left: 41, top: 25, meta: (n) => `${n} here · tables open` },
-  { key: "ondemand", room: "On-Demand", label: "ON-DEMAND", Icon: Tv, left: 57, top: 25, meta: (n) => `${n} browsing` },
-  { key: "sponsors", room: "Sponsor Hall", label: "EXPO HALL", Icon: Store, left: 74, top: 31, meta: (n) => `${n} at booths` },
-  { key: "leaderboard", label: "LEADERBOARD", Icon: Trophy, left: 88, top: 44, meta: () => "See standings" },
+  { key: "sessions", room: "Main Stage", label: "SESSIONS", Icon: Presentation, left: 14, top: 52, meta: (n) => `${n} watching` },
+  { key: "talkshow", room: "Main Stage", label: "TALK SHOW", Icon: Mic, left: 29, top: 40, meta: (n) => (n > 0 ? `${n} watching` : "live soon") },
+  { key: "networking", room: "Networking", label: "NETWORKING", Icon: Users, left: 43, top: 31, meta: (n) => `${n} here · tables open` },
+  { key: "ondemand", room: "On-Demand", label: "ON-DEMAND", Icon: Tv, left: 57, top: 31, meta: (n) => `${n} browsing` },
+  { key: "sponsors", room: "Sponsor Hall", label: "EXPO HALL", Icon: Store, left: 71, top: 40, meta: (n) => `${n} at booths` },
+  { key: "leaderboard", label: "LEADERBOARD", Icon: Trophy, left: 86, top: 52, meta: () => "See standings" },
 ];
 
 const NAV_ICONS: Record<VenueZone["icon"], LucideIcon> = {
@@ -115,6 +115,7 @@ export function LobbyHall({
   const name = viewerName || me.name || "Guest";
   const openDesk = () => window.dispatchEvent(new Event("icfo:open-info-desk"));
   const meMember: PresenceMember = { id: me.id, name, room: "Lobby" };
+  const hasSide = agenda.length > 0 || Boolean(quickLinks && quickLinks.length > 0);
 
   return (
     <div className={styles.root}>
@@ -132,6 +133,7 @@ export function LobbyHall({
       )}
 
       <div className={styles.hall}>
+        <div className={styles.frame}>
         <div className={styles.stage}>
           <div className={styles.gridLines} aria-hidden />
 
@@ -237,7 +239,37 @@ export function LobbyHall({
             {total} in the venue
           </div>
 
-          {/* nav rail */}
+        </div>
+
+        {hasSide && (
+          <aside className={styles.sideL}>
+            {agenda.length > 0 && (
+              <div className={styles.panel}>
+                <p className={styles.panelTitle}>AGENDA</p>
+                {agenda.map((s) => (
+                  <div key={s.id} className={styles.agRow}><b>{s.title}</b><span>{fmtTime(s.startsAt)}</span></div>
+                ))}
+                <Link href={tracksHref ?? `/events/${slug}/tracks`} className={styles.pBtn}>View Full Agenda</Link>
+              </div>
+            )}
+            {quickLinks && quickLinks.length > 0 && (
+              <div className={styles.panel}>
+                <p className={styles.panelTitle}>QUICK LINKS</p>
+                {quickLinks.map((q) => {
+                  const Icon = QL_ICONS[q.icon] ?? UserIcon;
+                  return (
+                    <Link key={q.label} href={q.href} className={styles.ql}>
+                      <span className={styles.qlIc}><Icon style={{ width: 14, height: 14 }} aria-hidden /></span>
+                      {q.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </aside>
+        )}
+
+        <aside className={styles.sideR}>
           <nav className={styles.nav} aria-label="Venue navigation">
             <div className={styles.navMe}>
               <span className={styles.navAv}>{initials(name)}</span>
@@ -258,21 +290,8 @@ export function LobbyHall({
             })}
             <Link href={`/events/${slug}`} className={styles.navLeave}>Back to event</Link>
           </nav>
-
-          {/* agenda panel (real sessions) */}
-          {agenda.length > 0 && (
-            <div className={styles.panel} style={{ top: 78, left: 12 }}>
-              <p className={styles.panelTitle}>AGENDA</p>
-              {agenda.map((s) => (
-                <div key={s.id} className={styles.agRow}><b>{s.title}</b><span>{fmtTime(s.startsAt)}</span></div>
-              ))}
-              <Link href={tracksHref ?? `/events/${slug}/tracks`} className={styles.pBtn}>View Full Agenda</Link>
-            </div>
-          )}
-
-          {/* upcoming sessions panel (real sessions) */}
           {upcoming.length > 0 && (
-            <div className={styles.panel} style={{ bottom: 14, right: 12 }}>
+            <div className={styles.panel}>
               <p className={styles.panelTitle}>UPCOMING SESSIONS</p>
               {upcoming.map((s) => (
                 <Link key={s.id} href={hrefFor("sessions")} className={styles.sRow}>
@@ -288,22 +307,7 @@ export function LobbyHall({
               <Link href={tracksHref ?? `/events/${slug}/tracks`} className={styles.pBtn}>View All Sessions</Link>
             </div>
           )}
-
-          {/* quick links panel (optional, real routes) */}
-          {quickLinks && quickLinks.length > 0 && (
-            <div className={styles.panel} style={{ bottom: 14, left: 12, width: 166 }}>
-              <p className={styles.panelTitle}>QUICK LINKS</p>
-              {quickLinks.map((q) => {
-                const Icon = QL_ICONS[q.icon] ?? UserIcon;
-                return (
-                  <Link key={q.label} href={q.href} className={styles.ql}>
-                    <span className={styles.qlIc}><Icon style={{ width: 14, height: 14 }} aria-hidden /></span>
-                    {q.label}
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+        </aside>
         </div>
 
         <p className={styles.caption}>Hover or tap a doorway to look inside, then enter.</p>
