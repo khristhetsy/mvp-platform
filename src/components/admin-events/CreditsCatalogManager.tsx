@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 type Item = { id: string; title: string; description: string | null; cost: number; active: boolean; sort: number };
-type Redemption = { id: string; title: string; cost: number; status: string; createdAt: string };
+type Redemption = { id: string; title: string; cost: number; status: string; createdAt: string; attendeeName: string | null };
 
 export function CreditsCatalogManager({
   initialItems,
@@ -15,11 +15,30 @@ export function CreditsCatalogManager({
   enabled: boolean;
 }) {
   const [items, setItems] = useState<Item[]>(initialItems);
+  const [reds, setReds] = useState<Redemption[]>(redemptions);
+  const [redBusy, setRedBusy] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [cost, setCost] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function redemptionAction(id: string, action: "fulfill" | "reverse") {
+    setRedBusy(id);
+    try {
+      const res = await fetch("/api/admin/events/credits/redemptions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action }),
+      });
+      const json = await res.json();
+      if (res.ok && json.redemption) {
+        setReds((prev) => prev.map((r) => (r.id === id ? (json.redemption as Redemption) : r)));
+      }
+    } finally {
+      setRedBusy(null);
+    }
+  }
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -118,20 +137,42 @@ export function CreditsCatalogManager({
 
       <section>
         <h2 className="text-base font-semibold text-[var(--navy)]">Recent redemptions</h2>
-        {redemptions.length === 0 ? (
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
+          <b>Fulfil</b> once you&apos;ve applied the reward to the member&apos;s account. <b>Reverse</b> refunds their Points.
+        </p>
+        {reds.length === 0 ? (
           <p className="mt-2 text-sm text-[var(--text-muted)]">No redemptions yet.</p>
         ) : (
           <ul className="mt-3 divide-y divide-[var(--border-subtle)] rounded-xl border border-[var(--border-subtle)] bg-white">
-            {redemptions.map((r) => (
-              <li key={r.id} className="flex items-center justify-between px-4 py-3 text-sm">
-                <span className="text-[var(--navy)]">{r.title}</span>
-                <span className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
-                  <span>{new Date(r.createdAt).toLocaleDateString()}</span>
-                  <span className="font-semibold text-rose-600">−{r.cost.toLocaleString()} Points</span>
-                  <span className="capitalize">{r.status}</span>
-                </span>
-              </li>
-            ))}
+            {reds.map((r) => {
+              const badge =
+                r.status === "fulfilled" ? "bg-emerald-50 text-emerald-700"
+                : r.status === "reversed" ? "bg-slate-100 text-slate-500"
+                : "bg-amber-50 text-amber-700";
+              return (
+                <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+                  <span className="min-w-[160px] flex-1">
+                    <span className="font-medium text-[var(--navy)]">{r.title}</span>
+                    <span className="ml-2 text-xs text-[var(--text-muted)]">{r.attendeeName ?? "Member"}</span>
+                  </span>
+                  <span className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
+                    <span>{new Date(r.createdAt).toLocaleDateString()}</span>
+                    <span className="font-semibold text-rose-600">−{r.cost.toLocaleString()} Points</span>
+                    <span className={`rounded-full px-2 py-0.5 font-semibold capitalize ${badge}`}>{r.status}</span>
+                    {r.status === "pending" && (
+                      <button onClick={() => redemptionAction(r.id, "fulfill")} disabled={redBusy === r.id} className="font-semibold text-[var(--blue)] hover:underline disabled:opacity-50">
+                        {redBusy === r.id ? "…" : "Fulfil"}
+                      </button>
+                    )}
+                    {r.status !== "reversed" && (
+                      <button onClick={() => redemptionAction(r.id, "reverse")} disabled={redBusy === r.id} className="font-semibold text-rose-600 hover:underline disabled:opacity-50">
+                        Reverse
+                      </button>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

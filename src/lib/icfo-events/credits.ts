@@ -36,8 +36,9 @@ export interface CreditRedemption {
   itemId: string;
   title: string;
   cost: number;
-  status: string;
+  status: string; // 'pending' | 'fulfilled' | 'reversed'
   createdAt: string;
+  attendeeName: string | null;
 }
 
 function mapEntry(r: Row): CreditEntry {
@@ -60,14 +61,16 @@ function mapItem(r: Row): CreditItem {
   };
 }
 function mapRedemption(r: Row): CreditRedemption {
+  const p = r.profiles as { full_name?: string | null; email?: string | null } | null;
   return {
     id: String(r.id),
     profileId: String(r.profile_id),
     itemId: String(r.item_id),
     title: String(r.title),
     cost: Number(r.cost ?? 0),
-    status: String(r.status ?? "fulfilled"),
+    status: String(r.status ?? "pending"),
     createdAt: String(r.created_at),
+    attendeeName: p?.full_name ?? p?.email ?? null,
   };
 }
 
@@ -145,7 +148,10 @@ export async function listCatalog(
 export async function redeem(
   profileId: string,
   itemId: string,
-): Promise<{ ok: true; redemptionId: string; balance: number } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; redemptionId: string; balance: number; title: string; cost: number }
+  | { ok: false; error: string }
+> {
   if (!CREDITS_ENABLED) return { ok: false, error: "Points are not enabled." };
   const admin = createServiceRoleClient() as unknown as SupabaseClient;
 
@@ -159,7 +165,8 @@ export async function redeem(
 
   const { data: redRow, error: redErr } = await raw(admin)
     .from("credit_redemptions")
-    .insert({ profile_id: profileId, item_id: item.id, title: item.title, cost: item.cost })
+    // status starts 'pending' — an admin fulfils (or reverses) it.
+    .insert({ profile_id: profileId, item_id: item.id, title: item.title, cost: item.cost, status: "pending" })
     .select("id")
     .single();
   if (redErr || !redRow) return { ok: false, error: "Couldn't record the redemption." };
@@ -178,7 +185,65 @@ export async function redeem(
     return { ok: false, error: "Couldn't debit Points — please try again." };
   }
 
-  return { ok: true, redemptionId, balance: balance - item.cost };
+  return { ok: true, redemptionId, balance: balance - item.cost, title: item.title, cost: item.cost };
+}
+
+/** Fetch one redemption (with the member's name). */
+export async function getRedemption(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<CreditRedemption | null> {
+  const { data } = await raw(supabase as unknown as SupabaseClient)
+    .from("credit_redemptions")
+    .select("*, profiles:profile_id(full_name,email)")
+    .eq("id", id)
+    .maybeSingle();
+  return data ? mapRedemption(data as Row) : null;
+}
+
+/** Mark a redemption fulfilled (staff). */
+export async function fulfillRedemption(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<CreditRedemption | null> {
+  const { data } = await raw(supabase as unknown as SupabaseClient)
+    .from("credit_redemptions")
+    .update({ status: "fulfilled" })
+    .eq("id", id)
+    .neq("status", "reversed")
+    .select("*, profiles:profile_id(full_name,email)")
+    .maybeSingle();
+  return data ? mapRedemption(data as Row) : null;
+}
+
+/** Reverse a redemption (staff): refund the Points and mark it reversed. Safe to
+ *  call once — the ledger refund is idempotent on (profile_id, reason, ref). */
+export async function reverseRedemption(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<{ ok: true; redemption: CreditRedemption } | { ok: false; error: string }> {
+  const admin = createServiceRoleClient() as unknown as SupabaseClient;
+  const existing = await getRedemption(admin as unknown as SupabaseClient<Database>, id);
+  if (!existing) return { ok: false, error: "Redemption not found." };
+  if (existing.status === "reversed") return { ok: false, error: "Already reversed." };
+
+  await raw(admin).from("credit_ledger").upsert(
+    {
+      profile_id: existing.profileId,
+      delta: existing.cost,
+      reason: "reversal",
+      ref: id,
+      redemption_id: id,
+    },
+    { onConflict: "profile_id,reason,ref", ignoreDuplicates: true },
+  );
+  const { data } = await raw(admin)
+    .from("credit_redemptions")
+    .update({ status: "reversed" })
+    .eq("id", id)
+    .select("*, profiles:profile_id(full_name,email)")
+    .maybeSingle();
+  return { ok: true, redemption: data ? mapRedemption(data as Row) : existing };
 }
 
 // ── admin catalog management ────────────────────────────────────────────────
@@ -222,7 +287,7 @@ export async function listRedemptions(
 ): Promise<CreditRedemption[]> {
   const { data } = await raw(supabase as unknown as SupabaseClient)
     .from("credit_redemptions")
-    .select("*")
+    .select("*, profiles:profile_id(full_name,email)")
     .order("created_at", { ascending: false })
     .limit(limit);
   return ((data ?? []) as Row[]).map(mapRedemption);

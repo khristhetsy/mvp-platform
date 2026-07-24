@@ -40,7 +40,7 @@ create table if not exists public.credit_redemptions (
   item_id     uuid not null references public.credit_catalog(id),
   title       text not null,     -- snapshot
   cost        integer not null,  -- snapshot
-  status      text not null default 'fulfilled',  -- 'fulfilled' | 'reversed'
+  status      text not null default 'pending',  -- 'pending' | 'fulfilled' | 'reversed'
   created_at  timestamptz not null default now()
 );
 create index if not exists credit_redemptions_profile_idx on public.credit_redemptions (profile_id, created_at desc);

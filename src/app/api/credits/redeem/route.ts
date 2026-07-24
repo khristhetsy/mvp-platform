@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { getCurrentUserProfile } from "@/lib/supabase/auth";
 import { CREDITS_ENABLED, redeem } from "@/lib/icfo-events/credits";
+import { createNotification, notifyStaff } from "@/lib/notifications/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,29 @@ export async function POST(req: NextRequest): Promise<Response> {
     if (!itemId) return NextResponse.json({ error: "Missing item." }, { status: 400 });
     const result = await redeem(profile.id, itemId);
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
+
+    // Notify the team to fulfil, and confirm to the member. Best-effort.
+    const who = profile.full_name ?? profile.email ?? "A member";
+    await Promise.all([
+      notifyStaff({
+        type: "points_redemption",
+        title: "iCFO Points redeemed",
+        message: `${who} redeemed “${result.title}” (${result.cost} Points). Fulfil or reverse it in the rewards catalog.`,
+        entityType: "credit_redemption",
+        entityId: result.redemptionId,
+        deepLink: "/admin/events/credits",
+      }),
+      createNotification({
+        recipientUserId: profile.id,
+        type: "points_redemption",
+        title: "Redemption received",
+        message: `We’ve received your redemption of “${result.title}”. Our team will apply it to your account shortly.`,
+        entityType: "credit_redemption",
+        entityId: result.redemptionId,
+        deepLink: "/credits",
+      }),
+    ]);
+
     return NextResponse.json(result);
   } catch (err) {
     Sentry.captureException(err);
