@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Sparkles, X, Send } from "lucide-react";
 
@@ -25,6 +25,14 @@ export function EventInfoDesk({ slug }: { slug: string }) {
   const [busy, setBusy] = useState(false);
   const [notified, setNotified] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+
+  // Let other venue surfaces (e.g. the Lobby's Help & Info Desk) open the
+  // assistant by dispatching `window.dispatchEvent(new Event("icfo:open-info-desk"))`.
+  useEffect(() => {
+    const openDesk = () => setOpen(true);
+    window.addEventListener("icfo:open-info-desk", openDesk);
+    return () => window.removeEventListener("icfo:open-info-desk", openDesk);
+  }, []);
 
   async function notifyDesk() {
     if (notified) return;

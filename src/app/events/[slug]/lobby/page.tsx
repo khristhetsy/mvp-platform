@@ -49,6 +49,20 @@ export default async function EventLobbyPage({ params }: { params: Promise<{ slu
 
   const tracksHref = `/events/${slug}/tracks`;
 
+  // Personal quick-links resolve to the viewer's own workspace (founders and
+  // investors have these routes; other roles get none). Panels fed real data
+  // populate automatically and hide when empty.
+  const roleBase = profile?.role === "founder" ? "founder" : profile?.role === "investor" ? "investor" : null;
+  const quickLinks = roleBase
+    ? ([
+        { label: "Edit Profile", href: `/${roleBase}/settings`, icon: "profile" },
+        { label: "My Meetings", href: `/${roleBase}/calendar`, icon: "calendar" },
+        { label: "Messages", href: `/${roleBase}/messages`, icon: "message" },
+        { label: "Notifications", href: `/${roleBase}/inbox`, icon: "bell" },
+      ] as const)
+    : undefined;
+  const viewerRole = profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : null;
+
   return (
     <MarketingShell>
       <section className="mx-auto max-w-5xl px-4 py-8">
@@ -64,7 +78,16 @@ export default async function EventLobbyPage({ params }: { params: Promise<{ slu
         <EventPresenceProvider eventId={event.id} slug={slug} room="Lobby" me={me}>
           <div className="mt-5 overflow-hidden rounded-2xl border border-[var(--border-subtle)] shadow-[var(--shadow-card)]">
             <EventVenueHeader slug={slug} current="lobby" tracksHref={tracksHref} />
-            <LobbyHall slug={slug} eventTitle={event.title} tracksHref={tracksHref} />
+            <LobbyHall
+              slug={slug}
+              eventTitle={event.title}
+              tracksHref={tracksHref}
+              sessions={event.sessions}
+              timezone={event.timezone}
+              viewerName={me?.name ?? null}
+              viewerRole={viewerRole}
+              quickLinks={quickLinks ? [...quickLinks] : undefined}
+            />
           </div>
           <EventPollWidget slug={slug} />
           <LiveAnnouncementPopup />
