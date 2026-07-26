@@ -31,6 +31,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       scheduleAt?: string | null;
       bookletUrl?: string;
       bookletEditionId?: string;
+      bodyHtml?: string;
     };
     const { eventId, type = "invite", subject } = body;
     // Recipient-facing booklet link: prefer an explicit URL, else the public
@@ -71,7 +72,10 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const merge = await loadEventMergeData(auth.supabase, eventId, { baseUrl: BASE_URL, campaignId: `evt-${eventId}` });
     if (!merge) return NextResponse.json({ error: "Couldn't build merge data." }, { status: 500 });
-    const html = renderEventEmail(merge, { type, includeBanner: body.includeBanner, includeLobby: body.includeLobby, bookletUrl });
+    // Prefer the inline-edited HTML when the wizard sends it; else render fresh.
+    const html = body.bodyHtml?.trim()
+      ? body.bodyHtml
+      : renderEventEmail(merge, { type, includeBanner: body.includeBanner, includeLobby: body.includeLobby, bookletUrl });
 
     const input = {
       name: `${event.title} — ${type.replace("_", " ")}`,

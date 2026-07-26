@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { TemplateVisualEditor } from "@/components/marketing/TemplateVisualEditor";
+import { buildEventEmailBlocks, finalizeEventEmailHtml, eventEmailTheme } from "@/lib/event-email/blocks";
+import type { EventMergeData } from "@/lib/event-email/merge";
+import type { TemplateBlock } from "@/lib/marketing/template-blocks";
+import type { TemplateTheme } from "@/lib/marketing/template-theme";
 
 type PickerEvent = { id: string; title: string; slug: string; status: string; startsAt: string | null; coverUrl: string | null };
 type MergeData = {
@@ -42,8 +46,10 @@ export function EventEmailWizard({
   const [html, setHtml] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [designBusy, setDesignBusy] = useState(false);
-  const router = useRouter();
+  // Inline block editor (whole email becomes editable Marketing blocks).
+  const [editMode, setEditMode] = useState(false);
+  const [editBlocks, setEditBlocks] = useState<TemplateBlock[] | null>(null);
+  const [blockTheme, setBlockTheme] = useState<TemplateTheme>(eventEmailTheme());
 
   // step 3 — audience & send
   const [lists, setLists] = useState<{ id: string; name: string }[]>([]);
@@ -83,6 +89,7 @@ export function EventEmailWizard({
         body: JSON.stringify({
           eventId, type, includeBanner, includeLobby: includeLobby || lobbyForced,
           bookletEditionId,
+          bodyHtml: editedHtml ?? undefined,
           audienceKind, listId, registrantStatuses: regStatuses, subject: subject.trim(),
           scheduleAt: scheduleMode === "later" && scheduleAt ? new Date(scheduleAt).toISOString() : null,
         }),
@@ -97,23 +104,19 @@ export function EventEmailWizard({
     }
   }
 
-  // Hand off the rendered email to the Marketing Hub visual editor.
-  async function editInDesigner() {
-    if (!eventId) return;
-    setDesignBusy(true); setError(null);
-    try {
-      const res = await fetch("/api/admin/events/email/to-template", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId, type, includeBanner, includeLobby: includeLobby || lobbyForced, bookletUrl, subject: subject.trim() || undefined }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Couldn't open in designer.");
-      router.push(`/admin/marketing/templates?edit=${json.templateId}`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't open in designer.");
-      setDesignBusy(false);
+  // Seed the block document from the event, then edit it inline. Once seeded,
+  // edits are a snapshot — changing the email type won't reseed until Reset.
+  function startEditing() {
+    if (editBlocks === null && merge) {
+      setEditBlocks(buildEventEmailBlocks(merge as unknown as EventMergeData, type, { includeBanner, includeLobby: includeLobby || lobbyForced, bookletUrl }));
     }
+    setEditMode(true);
   }
+  function resetContent() {
+    if (!merge) return;
+    setEditBlocks(buildEventEmailBlocks(merge as unknown as EventMergeData, type, { includeBanner, includeLobby: includeLobby || lobbyForced, bookletUrl }));
+  }
+  const editedHtml = editBlocks ? finalizeEventEmailHtml(editBlocks, blockTheme) : null;
 
   // load picker
   useEffect(() => {
@@ -254,24 +257,45 @@ export function EventEmailWizard({
 
             <div className="flex gap-2">
               <button type="button" onClick={() => setStep(3)} className="cap-btn-primary flex-1 rounded-md px-4 py-2 text-sm font-medium">Continue to audience →</button>
-              <button type="button" onClick={editInDesigner} disabled={designBusy} className="rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium text-[var(--navy)] hover:border-[var(--blue)] disabled:opacity-50">{designBusy ? "Opening…" : "Edit in designer ↗"}</button>
+              {editMode ? (
+                <button type="button" onClick={() => setEditMode(false)} className="rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium text-[var(--navy)] hover:border-[var(--blue)]">Done editing</button>
+              ) : (
+                <button type="button" onClick={startEditing} disabled={!merge} className="rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium text-[var(--navy)] hover:border-[var(--blue)] disabled:opacity-50">Edit content</button>
+              )}
             </div>
-            <p className="text-[11px] text-[var(--text-muted)]">“Edit in designer” saves this email as a Marketing Hub template and opens it in the block editor. The event hero &amp; agenda become editable HTML there (they won’t re-pull if the event changes).</p>
+            {editBlocks && (
+              <p className="text-[11px] text-[var(--text-muted)]">
+                You’re editing every block inline. This is a snapshot — it won’t re-pull if the event changes.{" "}
+                <button type="button" onClick={resetContent} className="font-semibold text-[var(--blue)] underline">Reset to event content</button>
+              </p>
+            )}
           </div>
 
-          {/* preview */}
+          {/* preview / inline editor */}
           <div>
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Live preview {loading && <span className="font-normal">· rendering…</span>}</p>
-              <div className="inline-flex overflow-hidden rounded-lg border border-[var(--border-subtle)] text-xs">
-                {(["desktop", "mobile"] as const).map((d) => (
-                  <button key={d} type="button" onClick={() => setDevice(d)} className={`px-3 py-1 font-semibold capitalize ${device === d ? "bg-[var(--blue)] text-white" : "bg-white text-[var(--text-muted)]"}`}>{d}</button>
-                ))}
-              </div>
-            </div>
-            <div className="flex justify-center rounded-xl border border-[var(--border-subtle)] bg-slate-100 p-3">
-              <iframe title="Email preview" srcDoc={html} style={{ width: device === "mobile" ? 380 : "100%", maxWidth: 680, height: 640, border: "none", background: "#fff", borderRadius: 8 }} />
-            </div>
+            {editMode && editBlocks ? (
+              <>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Editing content · inline block editor</p>
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-2">
+                  <TemplateVisualEditor blocks={editBlocks} onChange={setEditBlocks} theme={blockTheme} onThemeChange={setBlockTheme} />
+                </div>
+                <p className="mt-2 text-[11px] text-[var(--text-muted)]">The compliance footer is added automatically on send and can’t be removed.</p>
+              </>
+            ) : (
+              <>
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Live preview {loading && <span className="font-normal">· rendering…</span>}</p>
+                  <div className="inline-flex overflow-hidden rounded-lg border border-[var(--border-subtle)] text-xs">
+                    {(["desktop", "mobile"] as const).map((d) => (
+                      <button key={d} type="button" onClick={() => setDevice(d)} className={`px-3 py-1 font-semibold capitalize ${device === d ? "bg-[var(--blue)] text-white" : "bg-white text-[var(--text-muted)]"}`}>{d}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex justify-center rounded-xl border border-[var(--border-subtle)] bg-slate-100 p-3">
+                  <iframe title="Email preview" srcDoc={editedHtml ?? html} style={{ width: device === "mobile" ? 380 : "100%", maxWidth: 680, height: 640, border: "none", background: "#fff", borderRadius: 8 }} />
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
