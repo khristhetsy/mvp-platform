@@ -56,6 +56,8 @@ export function BrochureCanvas({
   const [tw, th] = TRIM_POINTS[size];
   const scale = DISPLAY_W / tw;
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
   const [guides, setGuides] = useState<Guide[]>([]);
   const drag = useRef<{ id: string; mode: "move" | "resize"; sx: number; sy: number; ox: number; oy: number; ow: number; oh: number } | null>(null);
   const hist = useRef<{ past: FreeformBlock[][]; future: FreeformBlock[][] }>({ past: [], future: [] });
@@ -108,6 +110,25 @@ export function BrochureCanvas({
     beginChange();
     onChange(blocks.filter((b) => b.id !== selectedId));
     setSelectedId(null);
+  }
+  const TEXTY: FreeformBlockType[] = ["heading", "text", "callout"];
+  function startEdit(b: FreeformBlock) {
+    if (!TEXTY.includes(b.type)) return;
+    setSelectedId(b.id); setEditingId(b.id); setDraft(b.text ?? "");
+  }
+  function commitEdit() {
+    if (!editingId) return;
+    beginChange();
+    update(editingId, { text: draft });
+    setEditingId(null);
+  }
+  function reorderSelected(where: "front" | "back") {
+    if (!selectedId) return;
+    const b = blocks.find((x) => x.id === selectedId);
+    if (!b) return;
+    const rest = blocks.filter((x) => x.id !== selectedId);
+    beginChange();
+    onChange(where === "front" ? [...rest, b] : [b, ...rest]);
   }
 
   function onPointerDown(e: React.PointerEvent, b: FreeformBlock, mode: "move" | "resize") {
@@ -191,27 +212,40 @@ export function BrochureCanvas({
               position: "absolute", left: b.x * scale, top: b.y * scale, width: b.w * scale, height: b.h * scale,
               outline: isSel ? "1.5px solid #2E78F5" : "1px dashed transparent", cursor: "move", boxSizing: "border-box",
             };
+            const editing = editingId === b.id;
+            const fontPx = (b.fontSize ?? 13) * scale;
+            const textColor = b.color ?? (b.type === "heading" ? "#0c2340" : "#1e2a3a");
             let inner: React.ReactNode = null;
             if (b.type === "divider") inner = <div style={{ width: "100%", height: "100%", background: b.color ?? "#0c2340" }} />;
             else if (b.type === "image") inner = b.imageUrl
               ? <img src={b.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               : <div style={{ width: "100%", height: "100%", background: "#eef2f8", border: "1px dashed #aab4c6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#6a7690" }}>Image</div>;
+            else if (editing) inner = (
+              <textarea
+                autoFocus value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={commitEdit}
+                onPointerDown={(e) => e.stopPropagation()}
+                onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); setEditingId(null); } e.stopPropagation(); }}
+                style={{ width: "100%", height: "100%", resize: "none", border: "none", outline: "none", textAlign: b.align ?? "left", fontSize: fontPx, color: textColor, fontWeight: b.type === "heading" ? 700 : 400, lineHeight: 1.35, background: b.type === "callout" ? (b.bg ?? "#f2f6fc") : "transparent", borderRadius: b.type === "callout" ? 6 : 0, padding: b.type === "callout" ? 8 * scale : 0, fontFamily: "inherit" }}
+              />
+            );
             else inner = (
-              <div style={{ width: "100%", height: "100%", textAlign: b.align ?? "left", fontSize: (b.fontSize ?? 13) * scale, color: b.color ?? (b.type === "heading" ? "#0c2340" : "#1e2a3a"), fontWeight: b.type === "heading" ? 700 : 400, lineHeight: 1.35, background: b.type === "callout" ? (b.bg ?? "#f2f6fc") : "transparent", borderRadius: b.type === "callout" ? 6 : 0, padding: b.type === "callout" ? 8 * scale : 0, overflow: "hidden" }}>
+              <div style={{ width: "100%", height: "100%", textAlign: b.align ?? "left", fontSize: fontPx, color: textColor, fontWeight: b.type === "heading" ? 700 : 400, lineHeight: 1.35, background: b.type === "callout" ? (b.bg ?? "#f2f6fc") : "transparent", borderRadius: b.type === "callout" ? 6 : 0, padding: b.type === "callout" ? 8 * scale : 0, overflow: "hidden" }}>
                 {b.text}
               </div>
             );
             return (
-              <div key={b.id} style={common} onPointerDown={(e) => onPointerDown(e, b, "move")}>
+              <div key={b.id} style={common} onPointerDown={(e) => { if (!editing) onPointerDown(e, b, "move"); }} onDoubleClick={() => startEdit(b)}>
                 {inner}
-                {isSel && (
+                {isSel && !editing && (
                   <span onPointerDown={(e) => onPointerDown(e, b, "resize")} style={{ position: "absolute", right: -5, bottom: -5, width: 11, height: 11, background: "#2E78F5", borderRadius: 2, cursor: "nwse-resize" }} />
                 )}
               </div>
             );
           })}
         </div>
-        <p className="mt-2 text-center text-[11px] text-[var(--text-muted)]">Drag to move (snaps to edges &amp; centers) · corner handle resizes · arrows nudge · Delete removes. Footer &amp; disclaimers stay locked.</p>
+        <p className="mt-2 text-center text-[11px] text-[var(--text-muted)]">Drag to move (snaps to edges &amp; centers) · double-click text to edit · corner handle resizes · arrows nudge · Delete removes. Footer &amp; disclaimers stay locked.</p>
       </div>
 
       <div className="space-y-3">
@@ -250,6 +284,10 @@ export function BrochureCanvas({
                 <input type="color" value={selected.bg ?? "#f2f6fc"} onFocus={beginChange} onChange={(e) => update(selected.id, { bg: e.target.value })} />
               </div>
             )}
+            <div className="flex gap-1">
+              <button type="button" onClick={() => reorderSelected("front")} className="flex-1 rounded-md border border-[var(--border-subtle)] px-2 py-1 text-[11px]">Front</button>
+              <button type="button" onClick={() => reorderSelected("back")} className="flex-1 rounded-md border border-[var(--border-subtle)] px-2 py-1 text-[11px]">Back</button>
+            </div>
             <button type="button" onClick={removeSelected} className="w-full rounded-md border border-rose-200 px-2 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50">Delete block</button>
           </div>
         )}
