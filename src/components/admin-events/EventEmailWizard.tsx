@@ -50,6 +50,9 @@ export function EventEmailWizard({
   const [editMode, setEditMode] = useState(false);
   const [editBlocks, setEditBlocks] = useState<TemplateBlock[] | null>(null);
   const [blockTheme, setBlockTheme] = useState<TemplateTheme>(eventEmailTheme());
+  const editDirty = useRef(false);
+  const onBlocksChange = useCallback((next: TemplateBlock[]) => { editDirty.current = true; setEditBlocks(next); }, []);
+  const onThemeChange = useCallback((next: TemplateTheme) => { editDirty.current = true; setBlockTheme(next); }, []);
 
   // step 3 — audience & send
   const [lists, setLists] = useState<{ id: string; name: string }[]>([]);
@@ -108,12 +111,14 @@ export function EventEmailWizard({
   // edits are a snapshot — changing the email type won't reseed until Reset.
   function startEditing() {
     if (editBlocks === null && merge) {
+      editDirty.current = true;
       setEditBlocks(buildEventEmailBlocks(merge as unknown as EventMergeData, type, { includeBanner, includeLobby: includeLobby || lobbyForced, bookletUrl }));
     }
     setEditMode(true);
   }
   function resetContent() {
     if (!merge) return;
+    editDirty.current = true;
     setEditBlocks(buildEventEmailBlocks(merge as unknown as EventMergeData, type, { includeBanner, includeLobby: includeLobby || lobbyForced, bookletUrl }));
   }
   const editedHtml = editBlocks ? finalizeEventEmailHtml(editBlocks, blockTheme) : null;
@@ -170,6 +175,42 @@ export function EventEmailWizard({
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(() => void renderPreview(), 200);
   }, [step, eventId, renderPreview]);
+
+  // Load the saved inline-edit draft for this event + type (resets on type change).
+  useEffect(() => {
+    if (!eventId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/admin/events/email/draft?eventId=${eventId}&type=${type}`);
+        const json = await res.json();
+        if (cancelled) return;
+        editDirty.current = false;
+        const draft = json.draft as { blocks?: TemplateBlock[]; theme?: TemplateTheme } | null;
+        if (draft?.blocks?.length) {
+          setEditBlocks(draft.blocks);
+          if (draft.theme) setBlockTheme(draft.theme);
+        } else {
+          setEditBlocks(null);
+        }
+      } catch { /* ignore — treat as no draft */ }
+    })();
+    return () => { cancelled = true; };
+  }, [eventId, type]);
+
+  // Persist inline edits (debounced) once the user has actually edited.
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!eventId || !editDirty.current || !editBlocks) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      void fetch("/api/admin/events/email/draft", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId, type, subject: subject.trim() || null, blocks: editBlocks, theme: blockTheme, includeBanner, includeLobby: includeLobby || lobbyForced }),
+      });
+    }, 500);
+  }, [editBlocks, blockTheme, eventId, type, subject, includeBanner, includeLobby, lobbyForced]);
 
   function pick(id: string) { setEventId(id); setStep(2); }
 
@@ -265,7 +306,7 @@ export function EventEmailWizard({
             </div>
             {editBlocks && (
               <p className="text-[11px] text-[var(--text-muted)]">
-                You’re editing every block inline. This is a snapshot — it won’t re-pull if the event changes.{" "}
+                Edits are saved for this event + email type (a snapshot — won’t re-pull if the event changes).{" "}
                 <button type="button" onClick={resetContent} className="font-semibold text-[var(--blue)] underline">Reset to event content</button>
               </p>
             )}
@@ -277,7 +318,7 @@ export function EventEmailWizard({
               <>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Editing content · inline block editor</p>
                 <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-2">
-                  <TemplateVisualEditor blocks={editBlocks} onChange={setEditBlocks} theme={blockTheme} onThemeChange={setBlockTheme} />
+                  <TemplateVisualEditor blocks={editBlocks} onChange={onBlocksChange} theme={blockTheme} onThemeChange={onThemeChange} />
                 </div>
                 <p className="mt-2 text-[11px] text-[var(--text-muted)]">The compliance footer is added automatically on send and can’t be removed.</p>
               </>
