@@ -30,7 +30,53 @@ export function EventEmailWizard({ initialEventId }: { initialEventId?: string }
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // step 3 — audience & send
+  const [lists, setLists] = useState<{ id: string; name: string }[]>([]);
+  const [registrants, setRegistrants] = useState<{ registered: number; attended: number; no_show: number; total: number } | null>(null);
+  const [listId, setListId] = useState("");
+  const [subject, setSubject] = useState("");
+  const [scheduleMode, setScheduleMode] = useState<"now" | "later">("now");
+  const [scheduleAt, setScheduleAt] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [result, setResult] = useState<{ campaignId: string; status: string } | null>(null);
+
   const lobbyForced = type === "day_of";
+
+  // load audience options when entering step 3
+  useEffect(() => {
+    if (step !== 3 || !eventId) return;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/admin/events/email/audience?eventId=${eventId}`);
+        const json = await res.json();
+        if (res.ok) { setLists(json.lists ?? []); setRegistrants(json.registrants ?? null); }
+      } catch { /* ignore */ }
+    })();
+  }, [step, eventId]);
+
+  async function createCampaign() {
+    if (!eventId || !listId || !subject.trim()) return;
+    setCreating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/events/email/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId, type, includeBanner, includeLobby: includeLobby || lobbyForced,
+          listId, subject: subject.trim(),
+          scheduleAt: scheduleMode === "later" && scheduleAt ? new Date(scheduleAt).toISOString() : null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Couldn't create the campaign.");
+      setResult({ campaignId: json.campaignId, status: json.status });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't create the campaign.");
+    } finally {
+      setCreating(false);
+    }
+  }
 
   // load picker
   useEffect(() => {
@@ -52,7 +98,9 @@ export function EventEmailWizard({ initialEventId }: { initialEventId?: string }
         const res = await fetch(`/api/admin/events/email/${eventId}/merge`);
         const json = await res.json();
         if (!res.ok) throw new Error(json.error ?? "Couldn't load event data.");
-        setMerge(json.merge as MergeData);
+        const m = json.merge as MergeData;
+        setMerge(m);
+        setSubject((prev) => prev || `You're invited: ${m.title}`);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Couldn't load event data.");
       }
@@ -168,9 +216,8 @@ export function EventEmailWizard({ initialEventId }: { initialEventId?: string }
             <div className="rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-[var(--text-muted)]">🔒 Compliance footer is locked into every event template (education/community only — not an offer of securities).</div>
 
             <div className="flex gap-2">
-              <button type="button" disabled className="cap-btn-primary flex-1 rounded-md px-4 py-2 text-sm font-medium opacity-50" title="Audience + send lands in the next pass">Continue to audience →</button>
+              <button type="button" onClick={() => setStep(3)} className="cap-btn-primary flex-1 rounded-md px-4 py-2 text-sm font-medium">Continue to audience →</button>
             </div>
-            <p className="text-[11px] text-[var(--text-muted)]">Audience &amp; send (Step 3) is wired in the next pass. Preview is fully live now.</p>
           </div>
 
           {/* preview */}
@@ -187,6 +234,53 @@ export function EventEmailWizard({ initialEventId }: { initialEventId?: string }
               <iframe title="Email preview" srcDoc={html} style={{ width: device === "mobile" ? 380 : "100%", maxWidth: 680, height: 640, border: "none", background: "#fff", borderRadius: 8 }} />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* STEP 3 — audience & send */}
+      {step === 3 && (
+        <div className="max-w-xl">
+          <button type="button" onClick={() => setStep(2)} className="text-xs font-semibold text-[var(--blue)] hover:underline">← Back to content</button>
+          {result ? (
+            <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-800">
+              <p className="font-semibold">Campaign created ({result.status}).</p>
+              <p className="mt-1">It&apos;s in Marketing Hub with the rendered email, audience, and event linkage — ready to review and send.</p>
+              <a href="/admin/marketing/campaigns" className="mt-3 inline-block font-semibold underline">Open in Marketing Hub →</a>
+            </div>
+          ) : (
+            <div className="mt-4 space-y-4">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Audience list</label>
+                <select value={listId} onChange={(e) => setListId(e.target.value)} className="mt-1 block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm">
+                  <option value="">Select a CRM list…</option>
+                  {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </select>
+              </div>
+              {registrants && (
+                <div className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-[var(--text-muted)]">
+                  Event registrants — registered {registrants.registered} · attended {registrants.attended} · no-show {registrants.no_show} (total {registrants.total}). A registrant-only send list is the next increment; choose a CRM list for now.
+                </div>
+              )}
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Subject line</label>
+                <input value={subject} onChange={(e) => setSubject(e.target.value)} className="mt-1 block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Schedule</label>
+                <div className="mt-1 flex flex-wrap items-center gap-4 text-sm">
+                  <label className="flex items-center gap-1.5"><input type="radio" checked={scheduleMode === "now"} onChange={() => setScheduleMode("now")} /> Save as draft</label>
+                  <label className="flex items-center gap-1.5"><input type="radio" checked={scheduleMode === "later"} onChange={() => setScheduleMode("later")} /> Schedule for later</label>
+                </div>
+                {scheduleMode === "later" && (
+                  <input type="datetime-local" value={scheduleAt} onChange={(e) => setScheduleAt(e.target.value)} className="mt-2 rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
+                )}
+              </div>
+              <button type="button" onClick={createCampaign} disabled={creating || !listId || !subject.trim() || (scheduleMode === "later" && !scheduleAt)} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
+                {creating ? "Creating…" : scheduleMode === "later" ? "Schedule campaign" : "Create draft campaign"}
+              </button>
+              <p className="text-[11px] text-[var(--text-muted)]">The compliance footer is locked into the email. The campaign lands in Marketing Hub — final send happens there.</p>
+            </div>
+          )}
         </div>
       )}
     </div>
