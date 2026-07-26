@@ -26,7 +26,7 @@ export type BrochureStatus = "draft" | "generated" | "archived_import";
 
 export type BrochureEdition = {
   id: string;
-  eventId: string;
+  eventId: string | null;
   baseEditionId: string | null;
   title: string;
   status: BrochureStatus;

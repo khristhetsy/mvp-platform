@@ -12,7 +12,7 @@ type Row = Record<string, unknown>;
 function mapEdition(r: Row): BrochureEdition {
   return {
     id: String(r.id),
-    eventId: String(r.event_id),
+    eventId: (r.event_id as string | null) ?? null,
     baseEditionId: (r.base_edition_id as string | null) ?? null,
     title: String(r.title),
     status: r.status as BrochureEdition["status"],
@@ -80,6 +80,37 @@ export async function createEdition(
     .single();
   if (error) throw new Error(error.message);
   return mapEdition(data as Row);
+}
+
+/** Import a pre-platform booklet PDF into the library as an `archived_import`
+ *  edition (§4). No merge_snapshot, not regenerable — view/download/link only. */
+export async function importArchive(
+  supabase: SupabaseClient<Database>,
+  input: { title: string; eventId?: string | null; bytes: Buffer; createdBy?: string },
+): Promise<BrochureEdition> {
+  const { data, error } = await raw(supabase)
+    .from("event_brochures")
+    .insert({
+      event_id: input.eventId ?? null,
+      title: input.title,
+      status: "archived_import",
+      page_config: [],
+      size: "letter",
+      created_by: input.createdBy ?? null,
+    })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  const edition = mapEdition(data as Row);
+  const path = await uploadBrochurePdf(supabase, edition.id, "digital", input.bytes);
+  const { data: updated, error: uErr } = await raw(supabase)
+    .from("event_brochures")
+    .update({ pdf_digital_path: path, updated_at: new Date().toISOString() })
+    .eq("id", edition.id)
+    .select("*")
+    .single();
+  if (uErr) throw new Error(uErr.message);
+  return mapEdition(updated as Row);
 }
 
 export async function updateEdition(

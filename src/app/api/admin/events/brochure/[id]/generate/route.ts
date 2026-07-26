@@ -20,6 +20,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     const { id } = await params;
     const edition = await getEdition(auth.supabase, id);
     if (!edition) return NextResponse.json({ error: "Edition not found." }, { status: 404 });
+    if (!edition.eventId) return NextResponse.json({ error: "Archived imports can't be regenerated." }, { status: 400 });
     const merge = await loadEventMergeData(auth.supabase, edition.eventId, { baseUrl: BASE_URL, campaignId: `brochure-${id}` });
     if (!merge) return NextResponse.json({ error: "Couldn't build merge data." }, { status: 500 });
 

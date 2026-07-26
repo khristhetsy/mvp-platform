@@ -16,8 +16,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const published = body.published !== false;
     const edition = await getEdition(auth.supabase, id);
     if (!edition) return NextResponse.json({ error: "Edition not found." }, { status: 404 });
-    if (published && (edition.status !== "generated" || !edition.pdfDigitalPath)) {
-      return NextResponse.json({ error: "Generate the booklet PDF before publishing." }, { status: 400 });
+    const hasPdf = (edition.status === "generated" || edition.status === "archived_import") && edition.pdfDigitalPath;
+    if (published && !hasPdf) {
+      return NextResponse.json({ error: "Generate or import the booklet PDF before publishing." }, { status: 400 });
     }
     const updated = await setPublished(auth.supabase, id, published);
     return NextResponse.json({ edition: updated });
