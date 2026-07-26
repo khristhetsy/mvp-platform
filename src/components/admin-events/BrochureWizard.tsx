@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { LOCKED_PAGES, PAGE_LABEL, type BrochurePage, type BrochureSize } from "@/lib/event-hub/brochure/types";
+import { LOCKED_PAGES, PAGE_LABEL, newFreeformPage, type BrochurePage, type BrochureSize, type FreeformBlock } from "@/lib/event-hub/brochure/types";
+import { BrochureCanvas } from "./BrochureCanvas";
 
 type PickerEvent = { id: string; title: string; slug: string; status: string; startsAt: string | null; coverUrl: string | null };
 type Preflight = { warnings: { level: string; text: string }[]; excludePresenters: boolean };
@@ -22,6 +23,7 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [generated, setGenerated] = useState(false);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
   const [pdfWarning, setPdfWarning] = useState<string | null>(null);
   const [published, setPublished] = useState(false);
 
@@ -128,10 +130,20 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
     setPages(next); persist({ pages: next });
   }
   function removePage(i: number) {
-    if (pages[i].type !== "custom") return;
+    if (pages[i].type !== "custom" && pages[i].type !== "freeform") return;
     const next = pages.filter((_, idx) => idx !== i);
     setPages(next); persist({ pages: next });
   }
+  function addDesignPage() {
+    const key = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `design-${Date.now()}`;
+    const next = [...pages, newFreeformPage(key)];
+    setPages(next); persist({ pages: next }); setEditingKey(key);
+  }
+  function setBlocks(key: string, blocks: FreeformBlock[]) {
+    const next = pages.map((pg) => (pg.key === key ? { ...pg, blocks } : pg));
+    setPages(next); persist({ pages: next });
+  }
+  const editingPage = pages.find((p) => p.key === editingKey && p.type === "freeform") ?? null;
   /** Resolve a carried-over custom page (§7): keep the copy or reset it blank, then clear the flag. */
   function reviewCarried(i: number, action: "keep" | "reset") {
     const next = pages.map((pg, idx) => {
@@ -287,16 +299,19 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
                 {pages.map((p, i) => {
                   const locked = LOCKED_PAGES.includes(p.type);
                   const isCustom = p.type === "custom";
+                  const isFreeform = p.type === "freeform";
+                  const label = isCustom ? (p.custom?.heading || "Custom page") : isFreeform ? "Design page" : PAGE_LABEL[p.type];
                   return (
-                    <li key={p.key} className="rounded-lg border border-[var(--border-subtle)] bg-white px-3 py-2 text-sm">
+                    <li key={p.key} className={`rounded-lg border bg-white px-3 py-2 text-sm ${editingKey === p.key ? "border-[var(--blue)]" : "border-[var(--border-subtle)]"}`}>
                       <div className="flex items-center gap-2">
                         <input type="checkbox" checked={p.included} disabled={locked} onChange={() => toggleInclude(i)} />
-                        <span className={`flex-1 ${p.included ? "text-[var(--navy)]" : "text-[var(--text-muted)] line-through"}`}>{isCustom ? (p.custom?.heading || "Custom page") : PAGE_LABEL[p.type]}</span>
+                        <span className={`flex-1 ${p.included ? "text-[var(--navy)]" : "text-[var(--text-muted)] line-through"}`}>{label}</span>
                         {locked ? <span className="text-[10px] font-semibold text-[var(--text-muted)]">🔒 required</span> : (
-                          <span className="flex gap-1">
+                          <span className="flex items-center gap-1">
+                            {isFreeform && <button type="button" onClick={() => setEditingKey(editingKey === p.key ? null : p.key)} className="mr-1 text-xs font-semibold text-[var(--blue)]">{editingKey === p.key ? "Done" : "Design"}</button>}
                             <button type="button" onClick={() => move(i, -1)} disabled={i <= 2} className="text-xs text-[var(--text-muted)] disabled:opacity-30">↑</button>
                             <button type="button" onClick={() => move(i, 1)} disabled={i >= pages.length - 1} className="text-xs text-[var(--text-muted)] disabled:opacity-30">↓</button>
-                            {isCustom && <button type="button" onClick={() => removePage(i)} className="text-xs text-rose-500" title="Remove page">✕</button>}
+                            {(isCustom || isFreeform) && <button type="button" onClick={() => { if (editingKey === p.key) setEditingKey(null); removePage(i); }} className="text-xs text-rose-500" title="Remove page">✕</button>}
                           </span>
                         )}
                       </div>
@@ -310,7 +325,10 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
                   );
                 })}
               </ul>
-              <button type="button" onClick={addCustomPage} className="mt-2 text-xs font-semibold text-[var(--blue)] hover:underline">＋ Add custom page</button>
+              <div className="mt-2 flex gap-3">
+                <button type="button" onClick={addCustomPage} className="text-xs font-semibold text-[var(--blue)] hover:underline">＋ Add custom page</button>
+                <button type="button" onClick={addDesignPage} className="text-xs font-semibold text-[var(--blue)] hover:underline">＋ Add design page</button>
+              </div>
             </div>
 
             {generated ? (
@@ -343,12 +361,23 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
             <p className="text-[11px] text-[var(--text-muted)]">Disclaimers &amp; footer are locked into every edition. Edit event data at the source, not here.</p>
           </div>
 
-          {/* preview */}
+          {/* preview / canvas */}
           <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Booklet preview {busy && <span className="font-normal">· rendering…</span>}</p>
-            <div className="rounded-xl border border-[var(--border-subtle)] bg-slate-200 p-3">
-              <iframe title="Booklet preview" srcDoc={html} style={{ width: "100%", height: 720, border: "none", background: "#dfe3ea", borderRadius: 8 }} />
-            </div>
+            {editingPage ? (
+              <>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Design page · free-form canvas</p>
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-slate-100 p-3">
+                  <BrochureCanvas size={size} blocks={editingPage.blocks ?? []} onChange={(b) => setBlocks(editingPage.key, b)} />
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Booklet preview {busy && <span className="font-normal">· rendering…</span>}</p>
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-slate-200 p-3">
+                  <iframe title="Booklet preview" srcDoc={html} style={{ width: "100%", height: 720, border: "none", background: "#dfe3ea", borderRadius: 8 }} />
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

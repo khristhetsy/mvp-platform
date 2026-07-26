@@ -110,6 +110,30 @@ function sponsorsContactPage(m: EventMergeData, qrDataUrl?: string): string {
     <p class="bk-p">${esc(m.organizerLine)}</p>${qr}</div>`;
 }
 
+function freeformPage(page: BrochurePage): string {
+  const blocks = page.blocks ?? [];
+  const parts = blocks.map((b) => {
+    const pos = `position:absolute;left:${b.x}pt;top:${b.y}pt;width:${b.w}pt;`;
+    const align = `text-align:${b.align ?? "left"};`;
+    if (b.type === "divider") {
+      return `<div style="${pos}height:${Math.max(b.h, 1)}pt;background:${b.color ?? NAVY};"></div>`;
+    }
+    if (b.type === "image") {
+      return b.imageUrl
+        ? `<img src="${esc(b.imageUrl)}" alt="" style="${pos}height:${b.h}pt;object-fit:cover;border-radius:4px;">`
+        : `<div style="${pos}height:${b.h}pt;background:#eef2f8;border:1px dashed #aab4c6;border-radius:4px;"></div>`;
+    }
+    const fs = b.fontSize ?? (b.type === "heading" ? 22 : 13);
+    const color = b.color ?? (b.type === "heading" ? NAVY : "#1e2a3a");
+    const weight = b.type === "heading" ? "font-weight:bold;" : "";
+    const box = b.type === "callout"
+      ? `background:${b.bg ?? "#f2f6fc"};border-radius:6px;padding:10pt;`
+      : "";
+    return `<div style="${pos}${align}${box}font-size:${fs}pt;color:${color};${weight}line-height:1.35;">${esc(b.text ?? "")}</div>`;
+  }).join("");
+  return `<div class="bk-freeform">${parts}</div>`;
+}
+
 function customPage(page: BrochurePage): string {
   const c = page.custom ?? { layout: "text" as const };
   const img = c.imageUrl ? `<img class="bk-custom-img" src="${esc(c.imageUrl)}" alt="">` : "";
@@ -187,6 +211,7 @@ export function renderBookletHTML(
     .bk-spon-tier-h { font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; letter-spacing: .05em; text-transform: uppercase; color: #6a7690; margin-bottom: 6px; }
     .bk-spon-row { display: flex; flex-wrap: wrap; gap: 8px; }
     .bk-spon { font-size: 13px; font-weight: bold; color: ${NAVY}; background: #f2f6fc; padding: 6px 12px; border-radius: 6px; }
+    .bk-freeform { position: absolute; inset: 0; }
     .bk-qr { position: absolute; right: 0.8in; bottom: 0.9in; text-align: center; }
     .bk-qr-cap { font-family: Arial, sans-serif; font-size: 9px; color: #6a7690; margin-top: 4px; width: 104px; }
     .bk-custom-img { width: 100%; border-radius: 6px; margin-top: 10px; }
@@ -197,6 +222,7 @@ export function renderBookletHTML(
 
 function labelFor(p: BrochurePage): string {
   if (p.type === "custom") return p.custom?.heading || "Custom page";
+  if (p.type === "freeform") return "Design page";
   const map: Record<string, string> = {
     contents: "Contents", introduction: "Introduction", agenda: "Agenda",
     presenters: "Presenters", team: "MC & Team", sponsors_contact: "Sponsors & Contact",
@@ -221,6 +247,7 @@ function renderOne(
     case "team": return teamPage();
     case "sponsors_contact": return sponsorsContactPage(m, qrDataUrl);
     case "custom": return customPage(p);
+    case "freeform": return freeformPage(p);
     default: return `<div class="bk-body"></div>`;
   }
 }
