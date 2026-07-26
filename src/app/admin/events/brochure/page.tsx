@@ -6,6 +6,7 @@ import { listEditions } from "@/lib/event-hub/brochure/editions";
 import { BrochurePublishToggle } from "@/components/admin-events/BrochurePublishToggle";
 import { BrochureImportButton } from "@/components/admin-events/BrochureImportButton";
 import { BrochureDeleteButton } from "@/components/admin-events/BrochureDeleteButton";
+import { BrochureDistribute } from "@/components/admin-events/BrochureDistribute";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Event Brochure — editions" };
@@ -53,7 +54,7 @@ export default async function BrochureLibraryPage() {
                         <a href={`/api/admin/events/brochure/${e.id}/qr`} target="_blank" rel="noreferrer" className="text-xs font-semibold text-[var(--blue)] hover:underline">QR</a>
                         <BrochurePublishToggle id={e.id} published={e.published} />
                         {e.published && e.eventId && (
-                          <Link href={`/admin/events/email?eventId=${e.eventId}&type=booklet&bookletEditionId=${e.id}`} className="text-xs font-semibold text-[var(--blue)] hover:underline">Send booklet →</Link>
+                          <BrochureDistribute id={e.id} eventId={e.eventId} />
                         )}
                       </>
                     )}

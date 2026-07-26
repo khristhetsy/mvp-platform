@@ -54,6 +54,8 @@ export function EventEmailWizard({
   const [testEmail, setTestEmail] = useState("");
   const [testBusy, setTestBusy] = useState(false);
   const [testMsg, setTestMsg] = useState<string | null>(null);
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [pulledOpen, setPulledOpen] = useState(true);
   const onBlocksChange = useCallback((next: TemplateBlock[]) => { editDirty.current = true; setEditBlocks(next); }, []);
   const onThemeChange = useCallback((next: TemplateTheme) => { editDirty.current = true; setBlockTheme(next); }, []);
 
@@ -283,17 +285,25 @@ export function EventEmailWizard({
 
       {/* STEP 2 — content & preview */}
       {step === 2 && (
-        <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
+        <div className={`grid gap-5 ${panelOpen ? "lg:grid-cols-[320px_1fr]" : "grid-cols-1"}`}>
+          {panelOpen && (
           <div className="space-y-4">
             <button type="button" onClick={() => setStep(1)} className="text-xs font-semibold text-[var(--blue)] hover:underline">← Change event</button>
 
-            {/* pulled data card */}
+            {/* pulled data card (collapsible) */}
             {merge && (
               <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-4">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Pulled from event record</p>
-                <p className="mt-1 text-sm font-semibold text-[var(--navy)]">{merge.title}</p>
-                <p className="text-xs text-[var(--text-muted)]">{merge.dateLabel}{merge.timeRange ? ` · ${merge.timeRange}` : ""}</p>
-                <p className="text-xs text-[var(--text-muted)]">{merge.formatLine} · {merge.sessions.length} session{merge.sessions.length === 1 ? "" : "s"}</p>
+                <button type="button" onClick={() => setPulledOpen((v) => !v)} className="flex w-full items-center justify-between text-left">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Pulled from event record</span>
+                  <span className="text-xs text-[var(--text-muted)]">{pulledOpen ? "▾" : "▸"}</span>
+                </button>
+                {pulledOpen && (
+                  <>
+                    <p className="mt-1 text-sm font-semibold text-[var(--navy)]">{merge.title}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{merge.dateLabel}{merge.timeRange ? ` · ${merge.timeRange}` : ""}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{merge.formatLine} · {merge.sessions.length} session{merge.sessions.length === 1 ? "" : "s"}</p>
+                  </>
+                )}
               </div>
             )}
 
@@ -343,9 +353,13 @@ export function EventEmailWizard({
               </p>
             )}
           </div>
+          )}
 
           {/* preview / inline editor */}
           <div>
+            <div className="mb-2 flex justify-end">
+              <button type="button" onClick={() => setPanelOpen((v) => !v)} className="text-xs font-semibold text-[var(--blue)] hover:underline">{panelOpen ? "⟨ Hide panel" : "Show panel ⟩"}</button>
+            </div>
             {editMode && editBlocks ? (
               <>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Editing content · inline block editor</p>

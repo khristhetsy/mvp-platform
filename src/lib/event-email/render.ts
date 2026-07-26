@@ -11,6 +11,8 @@ export type RenderOptions = {
   logoUrl?: string;
   /** For the 'booklet' type — link to the digital brochure PDF. */
   bookletUrl?: string;
+  /** Optional personal note rendered above the hero (merged-booklet distribute). */
+  coverNote?: string;
 };
 
 const NAVY = "#0c2340";
@@ -90,6 +92,7 @@ export function renderEventEmail(merge: EventMergeData, options: RenderOptions):
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f5;padding:20px 0;"><tr><td align="center">
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f2;">
       <tr><td style="padding:16px 30px;font-family:Arial,sans-serif;"><img src="${esc(logo)}" alt="iCapOS" height="26" style="height:26px;"></td></tr>
+      ${options.coverNote?.trim() ? `<tr><td style="padding:0 30px 16px;font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#33415a;">${esc(options.coverNote.trim()).replace(/\n/g, "<br>")}</td></tr>` : ""}
       <tr>${hero}</tr>
       <tr><td style="padding:24px 30px;font-family:Arial,sans-serif;">
         ${registerBtn}
