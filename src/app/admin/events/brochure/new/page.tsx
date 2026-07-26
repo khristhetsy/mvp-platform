@@ -15,7 +15,7 @@ export default async function BrochureBuilderPage({
 
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Event Brochure">
-      <div className="mx-auto max-w-5xl px-1 py-2">
+      <div className="w-full max-w-6xl px-4 py-2">
         <h1 className="text-xl font-semibold text-[var(--navy)]">Event Brochure — builder</h1>
         <p className="mt-1 text-sm text-[var(--text-muted)]">
           {baseEditionId

@@ -215,7 +215,7 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
       )}
 
       {step === 2 && (
-        <div className="grid gap-5 lg:grid-cols-[300px_1fr]">
+        <div className="grid items-start gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
           <div className="space-y-4">
             <div className="text-sm font-semibold text-[var(--navy)]">{title}</div>
 
