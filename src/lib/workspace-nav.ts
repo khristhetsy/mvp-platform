@@ -122,6 +122,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/admin/events/applications", label: "Applications" },
           { href: "/admin/events/sponsors",     label: "Sponsors"     },
           { href: "/admin/events/email",        label: "Event Template" },
+          { href: "/admin/events/brochure",     label: "Event Brochure" },
           { href: "/admin/events/analytics",    label: "Analytics"    },
           { href: "/admin/events/gamification", label: "Gamification" },
         ],

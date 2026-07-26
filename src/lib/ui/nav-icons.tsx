@@ -65,6 +65,7 @@ export const workspaceNavIconByHref: Record<string, LucideIcon> = {
   "/investor/settings": Settings,
   "/credits": Award,
   "/admin/events/email": Mail,
+  "/admin/events/brochure": FileText,
   "/admin/dashboard": LayoutDashboard,
   "/admin/actions": ListTodo,
   "/admin/companies": Building2,

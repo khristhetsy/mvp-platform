@@ -9,6 +9,7 @@ import type { EventWithDetail, EventSession } from "@/lib/icfo-events/types";
 import { getEventById } from "@/lib/icfo-events/queries";
 import { bannerPublicUrl } from "@/lib/icfo-events/banner";
 import { listEventSponsors } from "@/lib/icfo-events/sponsors";
+import { listEventPresenters } from "@/lib/icfo-events/applications";
 
 export const ORGANIZER_LINE = "iCFO Capital Global, Inc. · (619) 956-9114 · info@myicfos.com";
 export const EVENT_BADGE = "iCFO Capital · Ecosystem Showcase";
@@ -40,8 +41,25 @@ export const eventMergeSchema = z.object({
   ),
   sponsorLockup: z.string().nullable(),
   organizerLine: z.string(),
+  // ── brochure-only additions (email ignores these) ──
+  presenters: z.array(
+    z.object({
+      name: z.string(),
+      role: z.string(),
+      company: z.string(),
+      headshotUrl: z.string().nullable(),
+      initials: z.string(),
+    }),
+  ),
+  sponsorTiers: z.object({
+    presenting: z.array(z.object({ name: z.string(), logoUrl: z.string().nullable() })),
+    track: z.array(z.object({ name: z.string(), logoUrl: z.string().nullable() })),
+    community: z.array(z.object({ name: z.string(), logoUrl: z.string().nullable() })),
+  }),
 });
 export type EventMergeData = z.infer<typeof eventMergeSchema>;
+
+const initialsOf = (n: string) => n.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ") : s);
 
@@ -57,9 +75,17 @@ function fmt(iso: string | null, tz: string | null, opts: Intl.DateTimeFormatOpt
 /** Pure mapper: EventWithDetail (+ resolved extras) → EventMergeData. Testable. */
 export function buildEventMergeData(
   event: EventWithDetail,
-  extras: { baseUrl: string; campaignId?: string; bannerUrl: string | null; presentingSponsors?: string[] },
+  extras: {
+    baseUrl: string;
+    campaignId?: string;
+    bannerUrl: string | null;
+    presentingSponsors?: string[];
+    presenters?: EventMergeData["presenters"];
+    sponsorTiers?: EventMergeData["sponsorTiers"];
+  },
 ): EventMergeData {
   const { baseUrl, campaignId = "preview", bannerUrl, presentingSponsors = [] } = extras;
+  const emptyTiers = { presenting: [], track: [], community: [] };
   const tz = event.timezone;
   const dateLabel = fmt(event.startsAt, tz, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
   const start = fmt(event.startsAt, tz, { hour: "numeric", minute: "2-digit" });
@@ -91,6 +117,8 @@ export function buildEventMergeData(
     sessions,
     sponsorLockup: presentingSponsors.length ? `Presented with ${presentingSponsors.join(", ")}` : null,
     organizerLine: ORGANIZER_LINE,
+    presenters: extras.presenters ?? [],
+    sponsorTiers: extras.sponsorTiers ?? emptyTiers,
   };
 }
 
@@ -103,7 +131,22 @@ export async function loadEventMergeData(
   const event = await getEventById(supabase, eventId).catch(() => null);
   if (!event) return null;
   const bannerUrl = bannerPublicUrl(supabase, event.coverPath);
-  const sponsors = await listEventSponsors(supabase, eventId).catch(() => []);
+  const [sponsors, presenterRows] = await Promise.all([
+    listEventSponsors(supabase, eventId).catch(() => []),
+    listEventPresenters(supabase, eventId).catch(() => []),
+  ]);
   const presentingSponsors = sponsors.filter((s) => s.placement === "presenting").map((s) => s.name);
-  return buildEventMergeData(event, { baseUrl: opts.baseUrl, campaignId: opts.campaignId, bannerUrl, presentingSponsors });
+  const tierOf = (p: string) => (p === "presenting" ? "presenting" : p === "track" ? "track" : "community");
+  const sponsorTiers: EventMergeData["sponsorTiers"] = { presenting: [], track: [], community: [] };
+  for (const s of sponsors) sponsorTiers[tierOf(s.placement)].push({ name: s.name, logoUrl: s.logoUrl ?? null });
+  const presenters = presenterRows
+    .sort((a, b) => a.position - b.position)
+    .map((p) => ({
+      name: p.displayName,
+      role: p.roleLabel ?? "",
+      company: p.headline ?? "",
+      headshotUrl: null as string | null,
+      initials: initialsOf(p.displayName),
+    }));
+  return buildEventMergeData(event, { baseUrl: opts.baseUrl, campaignId: opts.campaignId, bannerUrl, presentingSponsors, presenters, sponsorTiers });
 }
