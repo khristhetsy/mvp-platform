@@ -30,8 +30,13 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
     const qrDataUrl = await brochureQrDataUrl(BASE_URL, id).catch(() => undefined);
     const html = renderBookletHTML(pages, merge, edition.overrides, edition.size, { qrDataUrl, theme: edition.theme });
-    // Source values for the copy editor's "differs from event record" markers (§6).
-    const source = { title: merge.title, tagline: merge.tagline };
+    // Source values for the copy editor's markers (§6) + cover-customize seeding.
+    const source = {
+      title: merge.title,
+      tagline: merge.tagline,
+      dateLabel: `${merge.dateLabel}${merge.timeRange ? ` · ${merge.timeRange}` : ""}`,
+      badge: merge.badge,
+    };
     return NextResponse.json({ html, preflight, source });
   } catch (err) {
     Sentry.captureException(err);

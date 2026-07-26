@@ -172,6 +172,13 @@ export async function setPublished(
 
 export const BROCHURE_BUCKET = "event-brochures";
 
+/** Permanently delete an edition and its stored PDFs. */
+export async function deleteEdition(supabase: SupabaseClient<Database>, id: string): Promise<void> {
+  await raw(supabase).storage.from(BROCHURE_BUCKET).remove([`${id}/print.pdf`, `${id}/digital.pdf`]).catch(() => undefined);
+  const { error } = await raw(supabase).from("event_brochures").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
 /** Upload a generated PDF and return its storage path. */
 export async function uploadBrochurePdf(
   supabase: SupabaseClient<Database>,

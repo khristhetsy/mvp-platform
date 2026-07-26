@@ -241,7 +241,7 @@ function renderOne(
   primary = NAVY,
 ): string {
   switch (p.type) {
-    case "cover": return coverPage(m, o, primary);
+    case "cover": return p.blocks?.length ? freeformPage(p) : coverPage(m, o, primary);
     case "disclaimers": return disclaimersPage();
     case "contents": return contentsPage(toc);
     case "introduction": return introPage(m, o);

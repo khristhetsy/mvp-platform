@@ -92,11 +92,32 @@ export function renderBrochurePdf(
     doc.moveDown(0.8);
   };
 
+  const drawBlocks = (list: NonNullable<BrochurePage["blocks"]>) => {
+    for (const b of list) {
+      const bx = ox + b.x;
+      const by = oy + b.y;
+      if (b.type === "divider") { doc.save().rect(bx, by, b.w, Math.max(b.h, 1)).fill(b.color ?? NAVY).restore(); continue; }
+      if (b.type === "image") {
+        if (b.imageUrl && /^data:image\//.test(b.imageUrl)) {
+          try { doc.image(Buffer.from(b.imageUrl.split(",")[1] ?? "", "base64"), bx, by, { width: b.w, height: b.h }); } catch { /* ignore */ }
+        } else { doc.save().rect(bx, by, b.w, b.h).fill("#eef2f8").restore(); }
+        continue;
+      }
+      const fs = b.fontSize ?? (b.type === "heading" ? 22 : 13);
+      const color = b.color ?? (b.type === "heading" ? NAVY : INK);
+      const font = b.type === "heading" ? "Helvetica-Bold" : "Helvetica";
+      let tx = bx, ty = by, tw2 = b.w;
+      if (b.type === "callout") { doc.save().roundedRect(bx, by, b.w, b.h, 6).fill(b.bg ?? "#f2f6fc").restore(); tx = bx + 10; ty = by + 10; tw2 = b.w - 20; }
+      doc.font(font).fontSize(fs).fillColor(color).text(b.text ?? "", tx, ty, { width: tw2, align: b.align ?? "left" });
+    }
+  };
+
   for (const p of included) {
     newPage();
     cropMarks();
     switch (p.type) {
       case "cover": {
+        if (p.blocks?.length) { drawBlocks(p.blocks); break; } // customized layout, no footer
         doc.rect(ox, oy, tw, th).fill(primary);
         doc.fillColor(theme.coverBadge).font("Helvetica-Bold").fontSize(11).text(merge.badge.toUpperCase(), ox + MARGIN, oy + th - 220, { width: contentW, characterSpacing: 1.5 });
         doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(34).text(ov("cover", "title", merge.title), ox + MARGIN, doc.y + 6, { width: contentW });
@@ -211,31 +232,7 @@ export function renderBrochurePdf(
         break;
       }
       case "freeform": {
-        for (const b of p.blocks ?? []) {
-          const bx = ox + b.x;
-          const by = oy + b.y;
-          if (b.type === "divider") {
-            doc.save().rect(bx, by, b.w, Math.max(b.h, 1)).fill(b.color ?? NAVY).restore();
-            continue;
-          }
-          if (b.type === "image") {
-            if (b.imageUrl && /^data:image\//.test(b.imageUrl)) {
-              try { doc.image(Buffer.from(b.imageUrl.split(",")[1] ?? "", "base64"), bx, by, { width: b.w, height: b.h }); } catch { /* ignore */ }
-            } else {
-              doc.save().rect(bx, by, b.w, b.h).fill("#eef2f8").restore();
-            }
-            continue;
-          }
-          const fs = b.fontSize ?? (b.type === "heading" ? 22 : 13);
-          const color = b.color ?? (b.type === "heading" ? NAVY : INK);
-          const font = b.type === "heading" ? "Helvetica-Bold" : "Helvetica";
-          let tx = bx, ty = by, tw2 = b.w;
-          if (b.type === "callout") {
-            doc.save().roundedRect(bx, by, b.w, b.h, 6).fill(b.bg ?? "#f2f6fc").restore();
-            tx = bx + 10; ty = by + 10; tw2 = b.w - 20;
-          }
-          doc.font(font).fontSize(fs).fillColor(color).text(b.text ?? "", tx, ty, { width: tw2, align: b.align ?? "left" });
-        }
+        drawBlocks(p.blocks ?? []);
         footer();
         break;
       }

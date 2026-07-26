@@ -114,6 +114,25 @@ export const PAGE_LABEL: Record<BrochurePageType, string> = {
   freeform: "Design page",
 };
 
+/** Seed cover blocks from the current cover data, so "Customize layout" starts
+ *  from the standard cover and lets the user rearrange it freely. */
+export function coverToFreeformBlocks(
+  size: BrochureSize,
+  primary: string,
+  badgeColor: string,
+  data: { title: string; tagline: string; dateLabel: string; badge: string },
+): FreeformBlock[] {
+  const [tw, th] = TRIM_POINTS[size];
+  const w = tw - 108;
+  return [
+    { id: "cover-bg", type: "divider", x: 0, y: 0, w: tw, h: th, color: primary },
+    { id: "cover-badge", type: "text", x: 54, y: th - 232, w, h: 16, text: data.badge.toUpperCase(), fontSize: 11, color: badgeColor, align: "left" },
+    { id: "cover-title", type: "heading", x: 54, y: th - 206, w, h: 90, text: data.title, fontSize: 34, color: "#ffffff", align: "left" },
+    { id: "cover-tagline", type: "text", x: 54, y: th - 112, w, h: 24, text: data.tagline, fontSize: 14, color: "#d7e4f5", align: "left" },
+    { id: "cover-date", type: "text", x: 54, y: th - 82, w, h: 20, text: data.dateLabel, fontSize: 13, color: "#eaf1fb", align: "left" },
+  ];
+}
+
 /** A blank free-form design page seeded with a heading + text block. */
 export function newFreeformPage(key: string): BrochurePage {
   return {

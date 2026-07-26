@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { LOCKED_PAGES, PAGE_LABEL, THEMES, THEME_LABEL, newFreeformPage, type BrochurePage, type BrochureSize, type BrochureTheme, type FreeformBlock } from "@/lib/event-hub/brochure/types";
+import { LOCKED_PAGES, PAGE_LABEL, THEMES, THEME_LABEL, coverToFreeformBlocks, newFreeformPage, type BrochurePage, type BrochureSize, type BrochureTheme, type FreeformBlock } from "@/lib/event-hub/brochure/types";
 import { BrochureCanvas } from "./BrochureCanvas";
 
 type PickerEvent = { id: string; title: string; slug: string; status: string; startsAt: string | null; coverUrl: string | null };
@@ -18,7 +18,7 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
   const [theme, setTheme] = useState<BrochureTheme>("navy");
   const [title, setTitle] = useState("");
   const [overrides, setOverrides] = useState<Record<string, Record<string, string>>>({});
-  const [source, setSource] = useState<{ title: string; tagline: string } | null>(null);
+  const [source, setSource] = useState<{ title: string; tagline: string; dateLabel: string; badge: string } | null>(null);
   const [html, setHtml] = useState("");
   const [preflight, setPreflight] = useState<Preflight | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +70,7 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
     try {
       const res = await fetch(`/api/admin/events/brochure/${id}/preview`, { method: "POST" });
       const json = await res.json();
-      if (res.ok) { setHtml(json.html as string); setPreflight(json.preflight as Preflight); if (json.source) setSource(json.source as { title: string; tagline: string }); }
+      if (res.ok) { setHtml(json.html as string); setPreflight(json.preflight as Preflight); if (json.source) setSource(json.source as { title: string; tagline: string; dateLabel: string; badge: string }); }
     } finally { setBusy(false); }
   }, []);
 
@@ -146,7 +146,27 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
     const next = pages.map((pg) => (pg.key === key ? { ...pg, blocks } : pg));
     setPages(next); persist({ pages: next });
   }
-  const editingPage = pages.find((p) => p.key === editingKey && p.type === "freeform") ?? null;
+  /** Convert the cover to an editable free-form layout seeded from its data. */
+  function customizeCover() {
+    if (!source) return;
+    const t = THEMES[theme];
+    const blocks = coverToFreeformBlocks(size, t.primary, t.coverBadge, {
+      title: overrides.cover?.title || source.title,
+      tagline: overrides.cover?.tagline || source.tagline,
+      dateLabel: source.dateLabel,
+      badge: source.badge,
+    });
+    const next = pages.map((pg) => (pg.type === "cover" ? { ...pg, blocks } : pg));
+    setPages(next); persist({ pages: next });
+    const cover = next.find((p) => p.type === "cover");
+    if (cover) setEditingKey(cover.key);
+  }
+  function resetCover() {
+    const next = pages.map((pg) => (pg.type === "cover" ? { ...pg, blocks: [] } : pg));
+    setPages(next); persist({ pages: next });
+    setEditingKey(null);
+  }
+  const editingPage = pages.find((p) => p.key === editingKey && (p.type === "freeform" || (p.type === "cover" && (p.blocks?.length ?? 0) > 0))) ?? null;
   /** Resolve a carried-over custom page (§7): keep the copy or reset it blank, then clear the flag. */
   function reviewCarried(i: number, action: "keep" | "reset") {
     const next = pages.map((pg, idx) => {
@@ -322,7 +342,23 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
                       <div className="flex items-center gap-2">
                         <input type="checkbox" checked={p.included} disabled={locked} onChange={() => toggleInclude(i)} />
                         <span className={`flex-1 ${p.included ? "text-[var(--navy)]" : "text-[var(--text-muted)] line-through"}`}>{label}</span>
-                        {locked ? <span className="text-[10px] font-semibold text-[var(--text-muted)]">🔒 required</span> : (
+                        {locked ? (
+                          <span className="flex items-center gap-2">
+                            {p.type === "cover" && source && (
+                              editingKey === p.key ? (
+                                <button type="button" onClick={() => setEditingKey(null)} className="text-xs font-semibold text-[var(--blue)]">Done</button>
+                              ) : (p.blocks?.length ?? 0) > 0 ? (
+                                <>
+                                  <button type="button" onClick={() => setEditingKey(p.key)} className="text-xs font-semibold text-[var(--blue)]">Design</button>
+                                  <button type="button" onClick={resetCover} className="text-xs text-[var(--text-muted)] hover:underline">Reset</button>
+                                </>
+                              ) : (
+                                <button type="button" onClick={customizeCover} className="text-xs font-semibold text-[var(--blue)]">Customize</button>
+                              )
+                            )}
+                            <span className="text-[10px] font-semibold text-[var(--text-muted)]">🔒 required</span>
+                          </span>
+                        ) : (
                           <span className="flex items-center gap-1">
                             {isFreeform && <button type="button" onClick={() => setEditingKey(editingKey === p.key ? null : p.key)} className="mr-1 text-xs font-semibold text-[var(--blue)]">{editingKey === p.key ? "Done" : "Design"}</button>}
                             <button type="button" onClick={() => move(i, -1)} disabled={i <= 2} className="text-xs text-[var(--text-muted)] disabled:opacity-30">↑</button>
@@ -381,7 +417,7 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
           <div>
             {editingPage ? (
               <>
-                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Design page · free-form canvas</p>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">{editingPage.type === "cover" ? "Cover · custom layout" : "Design page · free-form canvas"}</p>
                 <div className="rounded-xl border border-[var(--border-subtle)] bg-slate-100 p-3">
                   <BrochureCanvas size={size} blocks={editingPage.blocks ?? []} onChange={(b) => setBlocks(editingPage.key, b)} />
                 </div>

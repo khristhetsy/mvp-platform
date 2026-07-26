@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { requirePermissionApi } from "@/lib/api/permissions";
-import { getEdition, updateEdition } from "@/lib/event-hub/brochure/editions";
+import { getEdition, updateEdition, deleteEdition } from "@/lib/event-hub/brochure/editions";
 import type { BrochurePage, BrochureSize, BrochureTheme } from "@/lib/event-hub/brochure/types";
 
 export const dynamic = "force-dynamic";
@@ -35,5 +35,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   } catch (err) {
     Sentry.captureException(err);
     return NextResponse.json({ error: "Couldn't save the edition." }, { status: 500 });
+  }
+}
+
+/** Permanently delete an edition (and its stored PDFs). */
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+  const auth = await requirePermissionApi("manage_events");
+  if ("error" in auth) return auth.error ?? NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const { id } = await params;
+    await deleteEdition(auth.supabase, id);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    Sentry.captureException(err);
+    return NextResponse.json({ error: "Couldn't delete the edition." }, { status: 500 });
   }
 }

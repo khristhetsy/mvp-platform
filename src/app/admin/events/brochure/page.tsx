@@ -5,6 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { listEditions } from "@/lib/event-hub/brochure/editions";
 import { BrochurePublishToggle } from "@/components/admin-events/BrochurePublishToggle";
 import { BrochureImportButton } from "@/components/admin-events/BrochureImportButton";
+import { BrochureDeleteButton } from "@/components/admin-events/BrochureDeleteButton";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Event Brochure — editions" };
@@ -16,7 +17,7 @@ export default async function BrochureLibraryPage() {
 
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Event Brochure">
-      <div className="mx-auto max-w-4xl px-1 py-2">
+      <div className="w-full max-w-5xl px-4 py-2">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-[var(--navy)]">Event Brochure</h1>
@@ -62,6 +63,7 @@ export default async function BrochureLibraryPage() {
                         <Link href={`/admin/events/brochure/new?editionId=${e.id}`} className="text-xs font-semibold text-[var(--blue)] hover:underline">Open →</Link>
                       </>
                     )}
+                    <BrochureDeleteButton id={e.id} title={e.title} />
                   </div>
                 </li>
                 );
