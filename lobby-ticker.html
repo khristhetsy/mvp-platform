@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>iCapOS Lobby — registration / conference ticker</title>
+<style>
+  :root{--navy:#0c2340;--blue:#2E78F5;--teal:#0F6E56;--amber:#BA7517;--line:#e5e9f0;--ink:#1e293b;--muted:#64748b;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:#eef1f6;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:24px;}
+  .wrap{max-width:1040px;margin:0 auto;}
+  h1{font-size:21px;font-weight:700;margin:0 0 3px;}
+  .lede{font-size:13px;color:var(--muted);margin:0 0 16px;}
+  .frame{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;}
+  /* TICKER */
+  .ticker{display:flex;align-items:stretch;background:var(--navy);color:#fff;border-radius:10px;overflow:hidden;height:40px;position:relative;}
+  .ticker .lab{background:var(--teal);font-size:10px;font-weight:800;letter-spacing:.06em;padding:0 13px;display:flex;align-items:center;gap:7px;white-space:nowrap;flex:0 0 auto;z-index:3;}
+  .ticker .lab .dt{width:7px;height:7px;border-radius:50%;background:#fff;animation:blink 1.1s infinite;}
+  @keyframes blink{50%{opacity:.3;}}
+  .track{overflow:hidden;flex:1;position:relative;-webkit-mask-image:linear-gradient(90deg,transparent,#000 4%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 4%,#000 88%,transparent);}
+  .marquee{display:flex;gap:34px;white-space:nowrap;position:absolute;top:0;height:100%;align-items:center;padding-left:20px;animation:scroll 34s linear infinite;}
+  .marquee:hover{animation-play-state:paused;}
+  @keyframes scroll{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+  .ti{font-size:12px;display:inline-flex;align-items:center;gap:7px;}
+  .ti b{font-size:13px;}
+  .ti .k{color:#7fdcc0;font-weight:700;}
+  .ti.reg .k{color:#ffd36b;}
+  .ticker .stat{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:0 14px 0 10px;background:linear-gradient(90deg,transparent,var(--navy) 22%);z-index:3;}
+  .stat b{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .stat span{font-size:9px;color:#9fb3d1;display:block;letter-spacing:.03em;}
+  /* new-registration pop */
+  .pop{position:absolute;right:150px;top:50%;transform:translateY(-50%) translateX(30px);background:#0F6E56;color:#fff;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;display:flex;align-items:center;gap:7px;opacity:0;transition:.4s cubic-bezier(.2,.8,.2,1);z-index:4;white-space:nowrap;box-shadow:0 6px 16px rgba(12,35,64,.4);}
+  .pop.on{opacity:1;transform:translateY(-50%) translateX(0);}
+  .pop .av{width:20px;height:20px;border-radius:50%;background:#fff;color:#0F6E56;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+  /* HALL */
+  .hall{position:relative;height:326px;border-radius:10px;overflow:hidden;margin-top:12px;background:linear-gradient(#cfe0f2 0%,#e9f1fb 46%,#f4f8fd 100%);}
+  .ceiling{position:absolute;top:0;left:0;right:0;height:22%;background:linear-gradient(#0c2340,#274a7d 60%,#2b4f80);}
+  .ring{position:absolute;border:2px solid rgba(150,190,240,.5);border-radius:50%;top:10px;left:50%;transform:translateX(-50%);}
+  .ring.r1{width:240px;height:34px;}.ring.r2{width:150px;height:22px;top:17px;}
+  .win{position:absolute;top:22%;width:11%;height:32%;background:repeating-linear-gradient(90deg,#bcd8f0,#bcd8f0 10px,#a9cbe8 10px,#a9cbe8 12px);border:2px solid #dfe9f5;}
+  .win.l{left:0;}.win.r{right:0;}
+  .portal{position:absolute;left:41.5%;width:17%;top:21%;height:26%;background:linear-gradient(#12294c,#0c2340);border-radius:8px 8px 0 0;border:2px solid #2b4f80;}
+  .portal .plabel{position:absolute;bottom:0;left:0;right:0;background:#0a1c34;color:#fff;font-size:9px;font-weight:800;letter-spacing:.1em;text-align:center;padding:3px 0;}
+  .screen{position:absolute;width:18%;height:14%;top:26%;border-radius:6px;border:3px solid #fff;box-shadow:0 6px 16px rgba(12,35,64,.2);}
+  .screen.l{left:20%;background:linear-gradient(120deg,#3a7bd5,#4facfe);}
+  .screen.r{right:20%;background:linear-gradient(120deg,#ff9d6c,#bb4e75);}
+  .hallblk{position:absolute;width:14%;height:8%;top:39%;background:#12294c;border-radius:5px;color:#fff;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;text-align:center;}
+  .hallblk.a{left:20.5%;}.hallblk.b{right:20.5%;}
+  .floor{position:absolute;left:0;right:0;top:48%;bottom:0;background:repeating-linear-gradient(90deg,transparent,transparent 46px,rgba(120,150,190,.16) 46px,rgba(120,150,190,.16) 47px),repeating-linear-gradient(0deg,transparent,transparent 30px,rgba(120,150,190,.13) 30px,rgba(120,150,190,.13) 31px),linear-gradient(#eaf1fa,#dbe7f5);clip-path:polygon(20% 0,80% 0,100% 100%,0% 100%);}
+  .desk{position:absolute;left:5%;bottom:9%;width:20%;height:11%;background:linear-gradient(#2E78F5,#1c5fd0);border-radius:0 40px 0 0;opacity:.9;}
+  .plant{position:absolute;bottom:8%;left:31%;font-size:20px;}
+  .hot{position:absolute;z-index:6;transform:translate(-50%,-50%);cursor:pointer;text-align:center;}
+  .hot .dot{width:32px;height:32px;border-radius:50%;background:rgba(46,120,245,.94);border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 4px 12px rgba(12,35,64,.4);animation:pulse 1.9s infinite;margin:0 auto;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(46,120,245,.5);}70%{box-shadow:0 0 0 12px rgba(46,120,245,0);}100%{box-shadow:0 0 0 0 rgba(46,120,245,0);}}
+  .hot .l{margin-top:3px;font-size:9px;font-weight:800;color:#fff;background:rgba(12,35,64,.85);padding:2px 7px;border-radius:8px;white-space:nowrap;display:inline-block;}
+  .fig{position:absolute;width:11px;height:20px;border-radius:6px 6px 3px 3px;box-shadow:0 3px 5px rgba(0,0,0,.2);transition:left 2.4s linear;}
+  .fig::before{content:"";position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:inherit;}
+  .you{position:absolute;left:48%;bottom:14%;width:15px;height:28px;border-radius:8px 8px 3px 3px;background:#2E78F5;z-index:7;}
+  .you::before{content:"";position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:12px;height:12px;border-radius:50%;background:#2E78F5;}
+  .youpin{position:absolute;left:48%;bottom:25%;transform:translateX(-50%);z-index:7;font-size:8.5px;font-weight:800;color:#fff;background:#2E78F5;padding:2px 6px;border-radius:7px;}
+  .tag{font-size:11px;color:var(--muted);text-align:center;margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>iCapOS Lobby — registration &amp; conference ticker</h1>
+  <p class="lede">A live ticker runs across the top: registration count, new sign-ups as they happen, and conference announcements. Hover the ticker to pause it.</p>
+
+  <div class="frame">
+    <div class="ticker">
+      <div class="lab"><span class="dt"></span>REGISTRATIONS · LIVE</div>
+      <div class="track"><div class="marquee" id="mq"></div></div>
+      <div class="pop" id="pop"></div>
+      <div class="stat"><div><b id="regN">128</b><span>REGISTERED</span></div><div><b id="onN">18</b><span>ONLINE</span></div></div>
+    </div>
+
+    <div class="hall" id="hall">
+      <div class="ceiling"></div><div class="ring r1"></div><div class="ring r2"></div>
+      <div class="win l"></div><div class="win r"></div>
+      <div class="portal"><div class="plabel">AUDITORIUM</div></div>
+      <div class="screen l"></div><div class="screen r"></div>
+      <div class="hallblk a">EXHIBIT HALL A</div><div class="hallblk b">EXHIBIT HALL B</div>
+      <div class="floor"></div><div class="plant">🪴</div><div class="desk"></div>
+      <div class="you"></div><div class="youpin">You are here</div>
+    </div>
+  </div>
+  <p class="tag">Mockup · sample registration feed animates locally. Education &amp; community — not an offer of securities.</p>
+</div>
+
+<script>
+(function(){
+  const COLORS=["#334155","#475569","#1e3a5f","#3b4a63","#5b4be0","#0f6e56","#8a5a2b","#b03a5b"];
+  const NAMES=["Maya Rao","Robert Ruiz","Daniela Felix","Johnny Rivera","Sam Okoye","Priya Nair","Leo Kramer","Ana García","Tom Bishop","Wei Lin","Ivy Chen","Noah Park"];
+  const COMPS=["North Peak","Meridian VC","Cedar Family Office","BlueHarbor","Vertex Labs","Summit LP","Kline Ventures","Arlyn Capital"];
+  const pick=a=>a[Math.floor(Math.random()*a.length)];const rand=(a,b)=>a+Math.random()*(b-a);
+  const initials=n=>n.split(" ").map(w=>w[0]).join("").slice(0,2);
+
+  // ticker items: mix of announcements + registrations
+  const ITEMS=[
+    ['📢','<span class="k">Keynote:</span> The 2026 Capital Outlook — 9:30 AM · Auditorium'],
+    ['🎟','reg','128 registered for the ICFO Private Equity Virtual Expo'],
+    ['🤝','<span class="k">Networking Lounge</span> is now open'],
+    ['🎟','reg','Maya Rao · North Peak just registered'],
+    ['🏛','<span class="k">Sponsor Hall</span> — 12 booths live'],
+    ['⭐','<span class="k">Talk Show</span> live now on the main screen'],
+    ['🎟','reg','Robert Ruiz · Meridian VC just registered'],
+    ['📅','<span class="k">Founder Pitch Block A</span> — 10:15 AM · Exhibit Hall A'],
+    ['🏆','<span class="k">Leaderboard</span> updated — top networker: Daniela F.'],
+  ];
+  function itemHTML(it){const reg=it[1]==='reg';return `<span class="ti${reg?' reg':''}"><b>${it[0]}</b>${reg?'<span class="k">NEW ·</span> '+it[2]:it[1]}</span>`;}
+  const html=ITEMS.map(itemHTML).join('<span style="opacity:.3">•</span>');
+  document.getElementById("mq").innerHTML=html+'<span style="opacity:.3">•</span>'+html; // duplicate for seamless loop
+
+  // hotspots (even fan arc)
+  const DEST=[["Auditorium","🖥",12,56],["Exhibit Hall A","🗂",30,44],["Talk Show","🎙",45,34],["Exhibit Hall B","🏛",58,34],["Networking","🤝",73,44],["Info Desk","ℹ️",88,56]];
+  const hall=document.getElementById("hall");
+  DEST.forEach(d=>{const h=document.createElement("div");h.className="hot";h.style.cssText=`left:${d[2]}%;top:${d[3]}%`;h.innerHTML=`<div class="dot">${d[1]}</div><div class="l">${d[0]}</div>`;hall.appendChild(h);});
+  [[24,50,.85],[36,44,.8],[60,47,.85],[70,52,.9],[52,30,1],[64,26,1]].forEach(s=>{const f=document.createElement("div");f.className="fig";f.style.cssText=`left:${s[0]}%;bottom:${s[1]}%;background:${pick(COLORS)};transform:scale(${s[2]})`;f.dataset.base=s[0];hall.appendChild(f);});
+
+  // live: registration counter + "just registered" pop
+  const pop=document.getElementById("pop"),regN=document.getElementById("regN"),onN=document.getElementById("onN");
+  let reg=128,on=18;
+  function newReg(){
+    const n=pick(NAMES),c=pick(COMPS);reg++;regN.textContent=reg;
+    pop.innerHTML=`<span class="av">${initials(n)}</span>🎉 ${n} · ${c} just registered`;pop.classList.add("on");
+    setTimeout(()=>pop.classList.remove("on"),3200);
+  }
+  setInterval(newReg,4800);setTimeout(newReg,900);
+  setInterval(()=>{on=Math.max(9,Math.min(40,on+Math.round(rand(-2,3))));onN.textContent=on;
+    hall.querySelectorAll(".fig").forEach(f=>{if(Math.random()<0.5)f.style.left=(+f.dataset.base+rand(-4,4))+"%";});},2600);
+})();
+</script>
+</body>
+</html>

@@ -9,6 +9,8 @@ export type RenderOptions = {
   includeBanner?: boolean;
   includeLobby?: boolean;
   logoUrl?: string;
+  /** For the 'booklet' type — link to the digital brochure PDF. */
+  bookletUrl?: string;
 };
 
 const NAVY = "#0c2340";
@@ -38,16 +40,20 @@ function sessionCard(s: EventMergeData["sessions"][number]): string {
 
 export function renderEventEmail(merge: EventMergeData, options: RenderOptions): string {
   const dayOf = options.type === "day_of";
+  const booklet = options.type === "booklet";
   const lobbyPrimary = dayOf || Boolean(options.includeLobby);
   const showBanner = options.includeBanner !== false && Boolean(merge.bannerUrl);
   const logo = options.logoUrl || "https://icapos.com/logo-email.png";
+  const bookletUrl = options.bookletUrl || merge.registerUrl;
 
   const bottomCta =
     options.type === "reminder"
       ? "Three days to go — register now →"
       : dayOf
         ? "We're live today — enter the lobby ↗"
-        : `See you ${merge.dateLabel || "there"} →`;
+        : booklet
+          ? "Download the event booklet ↓"
+          : `See you ${merge.dateLabel || "there"} →`;
 
   const heroInner = `
     <div style="font-family:Arial,sans-serif;color:#ffffff;padding:34px 30px;">
@@ -62,10 +68,14 @@ export function renderEventEmail(merge: EventMergeData, options: RenderOptions):
     ? `<td background="${esc(merge.bannerUrl as string)}" bgcolor="${NAVY}" valign="top" style="background-image:linear-gradient(135deg,rgba(12,35,64,.86),rgba(12,35,64,.7)),url('${esc(merge.bannerUrl as string)}');background-size:cover;background-position:center;">${heroInner}</td>`
     : `<td bgcolor="${NAVY}" valign="top" style="background:${NAVY};">${heroInner}</td>`;
 
-  const registerBtn = ctaButton(merge.registerUrl, options.type === "reminder" ? "Register now →" : "Register to attend →", !lobbyPrimary);
-  const lobbyBtn = (lobbyPrimary || options.includeLobby)
-    ? ctaButton(merge.lobbyUrl, "Enter lobby ↗", lobbyPrimary)
-    : "";
+  const registerBtn = booklet
+    ? ctaButton(bookletUrl, "Download the booklet (PDF) ↓", true)
+    : ctaButton(merge.registerUrl, options.type === "reminder" ? "Register now →" : "Register to attend →", !lobbyPrimary);
+  const lobbyBtn = booklet
+    ? ctaButton(merge.registerUrl, "Register to attend →", false)
+    : (lobbyPrimary || options.includeLobby)
+      ? ctaButton(merge.lobbyUrl, "Enter lobby ↗", lobbyPrimary)
+      : "";
 
   const sessionsBlock = merge.sessions.length
     ? `<div style="font-family:Arial,sans-serif;font-size:13px;font-weight:bold;letter-spacing:.05em;text-transform:uppercase;color:#6a7690;margin:6px 0 10px;">Agenda</div>${merge.sessions.map(sessionCard).join("")}`
@@ -88,7 +98,7 @@ export function renderEventEmail(merge: EventMergeData, options: RenderOptions):
         ${sessionsBlock}
         ${sponsorRow}
         <div style="height:18px;"></div>
-        ${ctaButton(lobbyPrimary ? merge.lobbyUrl : merge.registerUrl, bottomCta, true)}
+        ${ctaButton(booklet ? bookletUrl : lobbyPrimary ? merge.lobbyUrl : merge.registerUrl, bottomCta, true)}
       </td></tr>
       <tr><td style="padding:18px 30px;border-top:1px solid #e2e8f2;font-family:Arial,sans-serif;">
         <div style="font-size:12px;color:#33415a;">${esc(merge.organizerLine)}</div>

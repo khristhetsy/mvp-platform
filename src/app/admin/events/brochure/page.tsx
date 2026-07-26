@@ -34,7 +34,15 @@ export default async function BrochureLibraryPage() {
                     <p className="text-sm font-semibold text-[var(--navy)]">{e.title}</p>
                     <p className="text-xs text-[var(--text-muted)]">{e.status} · {new Date(e.createdAt).toLocaleDateString()}</p>
                   </div>
-                  <Link href={`/admin/events/brochure/new?editionId=${e.id}`} className="text-xs font-semibold text-[var(--blue)] hover:underline">Open →</Link>
+                  <div className="flex items-center gap-4">
+                    {e.status === "generated" && e.pdfDigitalPath && (
+                      <a href={`/api/admin/events/brochure/${e.id}/download?variant=digital`} className="text-xs font-semibold text-[var(--blue)] hover:underline">Download PDF</a>
+                    )}
+                    {e.status === "generated" && e.pdfDigitalPath && (
+                      <Link href={`/admin/events/email?eventId=${e.eventId}&type=booklet&bookletEditionId=${e.id}`} className="text-xs font-semibold text-[var(--blue)] hover:underline">Send booklet →</Link>
+                    )}
+                    <Link href={`/admin/events/brochure/new?editionId=${e.id}`} className="text-xs font-semibold text-[var(--blue)] hover:underline">Open →</Link>
+                  </div>
                 </li>
               ))}
             </ul>

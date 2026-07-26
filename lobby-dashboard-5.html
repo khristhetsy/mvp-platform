@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ICAPOS Lobby — dashboard styles · 5 samples</title>
+<style>
+  :root{--line:#e5e9f0;--ink:#1e293b;--muted:#64748b;--navy:#0c2340;--blue:#2E78F5;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:#eef1f6;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:24px;}
+  .wrap{max-width:1000px;margin:0 auto;}
+  h1{font-size:21px;font-weight:700;margin:0 0 3px;}.lede{font-size:13px;color:var(--muted);margin:0 0 18px;}
+  .sample{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:20px;}
+  .stag{display:inline-flex;gap:6px;background:#EDEBFB;color:#5B4BE0;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:20px;margin-left:2px;}
+  .sh{font-size:14px;font-weight:600;margin:7px 2px 10px;}
+  .stage{position:relative;height:400px;border-radius:12px;overflow:hidden;background:var(--bg);}
+  /* brand hero */
+  .brand{position:absolute;left:50%;top:14%;transform:translateX(-50%);text-align:center;z-index:3;}
+  .brand .bn{font-size:30px;font-weight:900;letter-spacing:.04em;color:var(--brandc);}
+  .brand .bt{font-size:11px;font-weight:600;color:var(--brandsub);letter-spacing:.02em;margin-top:-2px;}
+  .desk{position:absolute;left:50%;bottom:26%;transform:translateX(-50%);width:34%;height:12%;background:var(--desk);border-radius:8px 8px 4px 4px;z-index:2;display:flex;align-items:center;justify-content:center;color:var(--desktext);font-size:12px;font-weight:700;box-shadow:0 10px 20px rgba(12,35,64,.2),var(--deskglow);}
+  .plant{position:absolute;font-size:20px;z-index:2;}
+  .chair{position:absolute;bottom:26%;width:34px;height:30px;border-radius:12px 12px 6px 6px;background:var(--chair);z-index:2;box-shadow:0 6px 12px rgba(12,35,64,.2);}
+  .holo{position:absolute;left:50%;top:20%;transform:translateX(-50%);width:22%;height:44%;border-radius:60px;background:linear-gradient(160deg,#5B4BE0,#2E78F5 60%,#0c2340);z-index:2;box-shadow:0 0 40px rgba(91,75,224,.6);display:flex;align-items:center;justify-content:center;}
+  .fire{position:absolute;left:50%;top:22%;transform:translateX(-50%);width:20%;height:30%;background:radial-gradient(circle at 50% 80%,#ffb347,#c0392b 70%,#3a1a0a);border-radius:6px;z-index:1;box-shadow:0 0 40px rgba(255,140,40,.5);}
+  .greenwall{position:absolute;left:0;top:0;width:34%;height:78%;background:repeating-linear-gradient(35deg,#2f7d32,#2f7d32 8px,#3a9d3e 8px,#3a9d3e 16px);z-index:1;}
+  /* panels */
+  .panel{position:absolute;width:26%;background:var(--panel);border:1px solid var(--panelbd);border-radius:12px;padding:11px;z-index:5;box-shadow:0 10px 22px rgba(12,35,64,.18);color:var(--paneltext);}
+  .panel.left{left:2.5%;top:16%;}.panel.right{right:2.5%;top:16%;}
+  .pt{font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--pmuted);margin-bottom:8px;}
+  .srow{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--panelbd);cursor:pointer;}
+  .srow:hover{opacity:.85;}
+  .sav{width:24px;height:24px;border-radius:50%;background:var(--brandc);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .sn{font-size:10.5px;font-weight:600;line-height:1.2;}.stime{font-size:9px;color:var(--pmuted);}
+  .pbtn{margin-top:9px;width:100%;background:var(--brandc);color:#fff;border:none;border-radius:8px;font-size:10px;font-weight:700;padding:7px 0;cursor:pointer;}
+  .ann{font-size:12px;font-weight:600;line-height:1.4;padding:8px 0;}.ann2{font-size:10.5px;color:var(--pmuted);}
+  .trow{font-size:10.5px;padding:6px 0;border-bottom:1px solid var(--panelbd);cursor:pointer;}.trow b{color:var(--brandc);margin-right:6px;}
+  .sponrow{font-size:11px;font-weight:700;padding:6px 0;border-bottom:1px solid var(--panelbd);cursor:pointer;}
+  .statr{display:flex;align-items:baseline;gap:6px;padding:5px 0;}.statr b{font-size:17px;font-weight:800;color:var(--brandc);}.statr span{font-size:10px;color:var(--pmuted);}
+  .lrow{font-size:11px;font-weight:600;padding:7px 0;border-bottom:1px solid var(--panelbd);cursor:pointer;display:flex;gap:7px;align-items:center;}
+  .lrow::before{content:"›";color:var(--brandc);font-weight:800;}
+  /* center tile grid (dark style) */
+  .tiles{position:absolute;left:50%;top:34%;transform:translateX(-50%);display:grid;grid-template-columns:repeat(4,1fr);gap:8px;z-index:4;width:40%;}
+  .tile{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:9px 4px;text-align:center;color:#fff;cursor:pointer;transition:.15s;}
+  .tile:hover{background:rgba(255,255,255,.14);}
+  .tile .ti{font-size:16px;}.tile .tl{font-size:7.5px;font-weight:700;margin-top:3px;line-height:1.1;}
+  /* nav bar */
+  .nav{position:absolute;left:0;right:0;bottom:0;background:var(--nav);display:flex;justify-content:center;gap:2px;padding:8px 6px;z-index:6;flex-wrap:wrap;}
+  .ni{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--navtext);font-size:8.5px;font-weight:600;padding:5px 11px;border-radius:9px;cursor:pointer;min-width:56px;}
+  .ni.on{background:var(--navon);}.ni:hover:not(.on){background:rgba(255,255,255,.12);}
+  .ni .g{font-size:15px;}
+  .cap{font-size:10.5px;color:var(--muted);text-align:center;padding:8px;}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#0c2340;color:#fff;font-size:13px;font-weight:600;padding:10px 17px;border-radius:10px;opacity:0;transition:.25s;z-index:100;box-shadow:0 10px 30px rgba(12,35,64,.4);}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+  /* AI popup */
+  .ai{position:fixed;right:26px;bottom:26px;width:290px;max-width:calc(100vw - 40px);z-index:101;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 20px 50px rgba(12,35,64,.32);overflow:hidden;opacity:0;transform:translateY(14px) scale(.97);transition:.16s;pointer-events:none;}
+  .ai.on{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}
+  .ai .ah{background:linear-gradient(120deg,#0c2340,#5B4BE0);color:#fff;padding:11px 13px;display:flex;align-items:center;gap:9px;}
+  .ai .ah .av{width:28px;height:28px;border-radius:50%;background:conic-gradient(#2E78F5,#5B4BE0,#0F6E56,#2E78F5);display:flex;align-items:center;justify-content:center;font-size:13px;}
+  .ai .ah .t1{font-size:12.5px;font-weight:700;}.ai .ah .t2{font-size:9px;color:#cfc7f5;}
+  .ai .ah .x{margin-left:auto;cursor:pointer;}
+  .ai .body{padding:11px;max-height:230px;overflow-y:auto;background:#f7f7fd;}
+  .ai .msg{font-size:12px;line-height:1.5;padding:8px 11px;border-radius:12px;margin-bottom:8px;max-width:88%;}
+  .ai .msg.bot{background:#fff;border:1px solid var(--line);color:#0c2340;}.ai .msg.me{background:#5B4BE0;color:#fff;margin-left:auto;}
+  .ai .chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .ai .chip{font-size:10px;font-weight:600;color:#5B4BE0;background:#EDEBFB;border:1px solid #d6d0f6;border-radius:20px;padding:5px 9px;cursor:pointer;}
+  .ai .in{display:flex;border-top:1px solid var(--line);}
+  .ai .in input{flex:1;border:none;padding:10px 12px;font-size:12px;outline:none;font-family:inherit;}
+  .ai .in button{border:none;background:#5B4BE0;color:#fff;font-size:12px;font-weight:700;padding:0 14px;cursor:pointer;}
+  /* themes */
+  .t1{--bg:linear-gradient(#f0eef7,#e6e2f2);--brandc:#5B4BE0;--brandsub:#6b6480;--desk:linear-gradient(#f4f2fb,#e0daf2);--desktext:#5B4BE0;--deskglow:0 0 24px rgba(91,75,224,.35);--chair:#5B4BE0;--panel:#211a3a;--panelbd:#3a3158;--paneltext:#fff;--pmuted:#a99fce;--nav:#5B4BE0;--navtext:#e6e2f7;--navon:rgba(255,255,255,.2);}
+  .t2{--bg:linear-gradient(120deg,#1a1520,#241a2e 55%,#2b3550);--brandc:#8a6bf0;--brandsub:#cfc7f5;--desk:linear-gradient(#3a2c22,#241a12);--desktext:#fff;--deskglow:0 0 24px rgba(255,200,120,.3);--panel:#0f0d16;--panelbd:#2a2438;--paneltext:#fff;--pmuted:#9a90b8;--nav:#0f0d16;--navtext:#cfc7f5;--navon:rgba(138,107,240,.3);}
+  .t3{--bg:linear-gradient(#eaf3ee,#f6faf7);--brandc:#2f7d32;--brandsub:#5a6b5f;--desk:#ffffff;--desktext:#2f7d32;--deskglow:none;--panel:#12261a;--panelbd:#2a4632;--paneltext:#fff;--pmuted:#9fc7ac;--nav:#1a5a2e;--navtext:#dff0e4;--navon:rgba(255,255,255,.18);}
+  .t4{--bg:linear-gradient(#e9edf7,#f4f7fd);--brandc:#5B4BE0;--brandsub:#5f6b80;--desk:linear-gradient(#eef2fb,#dbe4f5);--desktext:#5B4BE0;--deskglow:0 0 30px rgba(91,75,224,.4);--panel:#ffffff;--panelbd:#e5e9f0;--paneltext:#0c2340;--pmuted:#64748b;--nav:#0c2340;--navtext:#cdd6e4;--navon:#5B4BE0;}
+  .t5{--bg:linear-gradient(#3a2c22,#2a2018);--brandc:#e8c9a0;--brandsub:#c9b49a;--desk:linear-gradient(#4a3a2c,#2e2318);--desktext:#e8c9a0;--deskglow:0 0 24px rgba(255,160,60,.3);--panel:#1a130d;--panelbd:#3a2c1e;--paneltext:#f3ece0;--pmuted:#bfa98c;--nav:#1a130d;--navtext:#e8dccb;--navon:rgba(232,201,160,.25);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ICAPOS Lobby — 5 dashboard styles</h1>
+  <p class="lede">Following the 5 concepts, rebuilt as functional mockups. All keep the functions: nav bar, Upcoming Sessions, Announcements / Schedule, Sponsors, Event Overview, Quick Access, and a Help Desk that opens the AI assistant. Everything's clickable.</p>
+  <section class="sample" id="s1"></section><section class="sample" id="s2"></section><section class="sample" id="s3"></section>
+  <section class="sample" id="s4"></section><section class="sample" id="s5"></section>
+  <p class="lede" style="text-align:center">Mockups · stylized recreations. Education &amp; community — not an offer of securities.</p>
+</div>
+<div class="toast" id="toast"></div>
+<div class="ai" id="ai">
+  <div class="ah"><div class="av">✨</div><div><div class="t1">ICAPOS Assistant</div><div class="t2">Help Desk · online</div></div><div class="x" id="aix">✕</div></div>
+  <div class="body" id="aibody"><div class="msg bot">👋 Hi! I'm your event guide. Ask about sessions, people, sponsors, or the agenda.</div><div class="chips" id="aichips"></div></div>
+  <div class="in"><input id="aiin" placeholder="Ask me anything…" /><button id="aisend">Send</button></div>
+</div>
+
+<script>
+  let tt;const toast=document.getElementById("toast");
+  const go=n=>{toast.textContent=n;toast.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>toast.classList.remove("on"),1500);};
+  const SP=[["Keynote: The Future of Venture Capital","10:00 – 11:00 AM","VC"],["Founder Spotlight","11:30 AM – 12:30 PM","FS"],["Investor Panel","2:00 – 3:00 PM","IP"]];
+  const SCH=[["9:00","Opening Remarks"],["10:00","Innovation in AI"],["11:30","Founder Fireside Chat"],["2:00","VC Outlook 2026"]];
+  const SPON=["Sequoia","Andreessen Horowitz","Tiger Global","SoftBank Vision Fund"];
+  const WH=[["Live Keynote","9:00 AM"],["Breakout Session","10:30 AM"],["Investor Roundtable","12:30 PM"],["Startup Pitches","2:00 PM"]];
+  const OV=[["1,250+","Attendees"],["150+","Investors"],["75+","Speakers"],["40+","Countries"]];
+  const QA=["Exhibit Hall","Auditorium","Networking Lounge","Resource Center","Help Desk"];
+
+  const P={
+    sessions:()=>`<div class="panel left"><div class="pt">UPCOMING SESSIONS</div>${SP.map(s=>`<div class="srow" data-go="${s[0]}"><span class="sav">${s[2]}</span><div><div class="sn">${s[0]}</div><div class="stime">${s[1]}</div></div></div>`).join("")}<button class="pbtn" data-go="View all sessions →">View all sessions</button></div>`,
+    sessionsR:()=>`<div class="panel right"><div class="pt">UPCOMING SESSIONS</div>${SP.map(s=>`<div class="srow" data-go="${s[0]}"><span class="sav">${s[2]}</span><div><div class="sn">${s[0]}</div><div class="stime">${s[1]}</div></div></div>`).join("")}<button class="pbtn" data-go="View all sessions →">View full schedule</button></div>`,
+    announce:()=>`<div class="panel right"><div class="pt">ANNOUNCEMENTS</div><div class="ann">Welcome to the ICAPOS Investor Summit 2026! 🎉</div><div class="ann2">Keynote begins at 10:00 AM on the Main Stage.</div></div>`,
+    schedule:()=>`<div class="panel left"><div class="pt">EVENT SCHEDULE</div>${SCH.map(s=>`<div class="trow" data-go="${s[1]}"><b>${s[0]}</b>${s[1]}</div>`).join("")}<button class="pbtn" data-go="Full schedule →">View full schedule</button></div>`,
+    sponsors:()=>`<div class="panel right"><div class="pt">EVENT SPONSORS</div>${SPON.map(s=>`<div class="sponrow" data-go="${s} booth">${s}</div>`).join("")}<button class="pbtn" data-go="All sponsors →">View all sponsors</button></div>`,
+    whats:()=>`<div class="panel right"><div class="pt">WHAT'S HAPPENING</div>${WH.map(s=>`<div class="trow" data-go="${s[0]}">${s[0]} · <span style="opacity:.7">${s[1]}</span></div>`).join("")}<button class="pbtn" data-go="Full agenda →">View full agenda</button></div>`,
+    overview:()=>`<div class="panel left"><div class="pt">EVENT OVERVIEW</div>${OV.map(s=>`<div class="statr"><b>${s[0]}</b><span>${s[1]}</span></div>`).join("")}</div>`,
+    quick:(side)=>`<div class="panel ${side}"><div class="pt">${side==="left"?"QUICK LINKS":"QUICK ACCESS"}</div>${QA.map(l=>`<div class="lrow" data-go="${l}">${l}</div>`).join("")}</div>`,
+  };
+  const ICN={Lobby:"🏠","Exhibit Hall":"🎁",Auditorium:"🏛","Networking Lounge":"👥","Resource Center":"📋","Help Desk":"❓","My Profile":"👤",Messages:"✉️",Chat:"💬",Attendees:"👥",Sponsors:"⭐"};
+  const navbar=(items)=>`<div class="nav">${items.map(x=>`<span class="ni${x==="Lobby"?" on":""}" ${x==="Help Desk"?'data-ai':'data-go="'+x+'"'}><span class="g">${ICN[x]||"•"}</span>${x}</span>`).join("")}</div>`;
+
+  const heroBlock=(sub)=>`<div class="brand"><div class="bn">ICAPOS</div><div class="bt">${sub||"Connect. Invest. Grow."}</div></div>`;
+
+  const SAMPLES=[
+    ["s1","t1","Style 1 · Purple modern reception",
+      heroBlock()+`<div class="desk">Welcome to ICAPOS</div><div class="chair" style="left:16%"></div><div class="chair" style="right:16%"></div><div class="plant" style="left:34%;bottom:30%">🪴</div><div class="plant" style="right:34%;bottom:30%">🌿</div>`+P.sessions()+P.announce(),
+      ["Lobby","Exhibit Hall","Auditorium","Networking Lounge","Resource Center","Help Desk","My Profile"]],
+    ["s2","t2","Style 2 · Dark premium + sponsors",
+      heroBlock()+`<div class="tiles">${["Exhibit Hall","Auditorium","Networking Lounge","Resource Center","Sponsors","Attendees","Messages","Help Desk"].map(x=>`<div class="tile" ${x==="Help Desk"?'data-ai':'data-go="'+x+'"'}><div class="ti">${ICN[x]||"•"}</div><div class="tl">${x}</div></div>`).join("")}</div><div class="desk" style="bottom:14%">Welcome</div>`+P.schedule()+P.sponsors(),
+      ["Lobby","Exhibit Hall","Auditorium","Networking Lounge","Resource Center","Help Desk","My Profile"]],
+    ["s3","t3","Style 3 · Bright biophilic",
+      `<div class="greenwall"></div>`+`<div class="brand" style="left:17%;transform:none;top:30%"><div class="bn">ICAPOS</div><div class="bt">Connect. Invest. Grow.</div></div><div class="desk" style="left:20%;transform:none;bottom:26%;width:22%">Welcome</div>`+P.whats(),
+      ["Exhibit Hall","Auditorium","Networking Lounge","Resource Center","Attendees","Chat","My Profile"]],
+    ["s4","t4","Style 4 · Futuristic hologram",
+      `<div class="holo">${heroBlock().replace('class="brand"','class="brand" style="position:static;transform:none"')}</div><div class="desk">Welcome to ICAPOS Summit</div>`+P.overview()+P.quick("right"),
+      ["Lobby","Exhibit Hall","Auditorium","Networking Lounge","Resource Center","Messages","My Profile"]],
+    ["s5","t5","Style 5 · Warm fireplace lounge",
+      `<div class="fire"></div>`+heroBlock()+`<div class="desk" style="bottom:20%">Welcome! We're glad you're here.</div>`+P.quick("left")+P.sessionsR(),
+      ["Lobby","Exhibit Hall","Auditorium","Networking Lounge","Resource Center","Chat","Attendees"]],
+  ];
+  SAMPLES.forEach(([id,theme,title,inner,nav])=>{
+    const host=document.getElementById(id);
+    host.innerHTML=`<span class="stag">${title.split(" · ")[0]}</span><div class="sh">${title.split(" · ")[1]}</div><div class="stage ${theme}">${inner}${navbar(nav)}</div><div class="cap">Click nav, sessions, sponsors, quick links · Help Desk opens the AI assistant.</div>`;
+    host.querySelectorAll("[data-go]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();go(/→/.test(el.dataset.go)?el.dataset.go:("Entering "+el.dataset.go+" →"));}));
+    host.querySelectorAll("[data-ai]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openAI();}));
+  });
+
+  /* AI */
+  const ai=document.getElementById("ai"),aibody=document.getElementById("aibody"),aiin=document.getElementById("aiin");
+  const openAI=()=>{ai.classList.add("on");aiin.focus();};
+  document.getElementById("aix").addEventListener("click",()=>ai.classList.remove("on"));
+  const CHIPS=["Where's the keynote?","How do I network?","Show me the agenda","Find a sponsor"];
+  document.getElementById("aichips").innerHTML=CHIPS.map(c=>`<span class="chip">${c}</span>`).join("");
+  function addMsg(t,w){const d=document.createElement("div");d.className="msg "+w;d.innerHTML=t;aibody.appendChild(d);aibody.scrollTop=aibody.scrollHeight;}
+  function answer(q){const s=q.toLowerCase();
+    if(/keynote|session|stage/.test(s))return "The keynote is on the <b>Main Stage</b> at 10:00 AM. Want me to take you there?";
+    if(/network|meet|people/.test(s))return "Head to the <b>Networking Lounge</b> — click any attendee to Wave or Say hi.";
+    if(/agenda|schedule|when/.test(s))return "Opening Remarks 9:00, Innovation in AI 10:00, Founder Fireside 11:30, VC Outlook 2:00.";
+    if(/sponsor|exhibit|booth/.test(s))return "Sponsors are in the <b>Exhibit Hall</b> — Sequoia, a16z, Tiger Global, SoftBank. Which sector interests you?";
+    return "I can help with sessions, people, sponsors, or the agenda — try a suggestion above.";}
+  function send(q){if(!q.trim())return;addMsg(q,"me");aiin.value="";setTimeout(()=>addMsg(answer(q),"bot"),350);}
+  document.getElementById("aisend").addEventListener("click",()=>send(aiin.value));
+  aiin.addEventListener("keydown",e=>{if(e.key==="Enter")send(aiin.value);});
+  aibody.addEventListener("click",e=>{const c=e.target.closest(".chip");if(c)send(c.textContent);});
+</script>
+</body>
+</html>

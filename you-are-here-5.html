@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>"You are here" — 5 styles</title>
+<style>
+  :root{--navy:#0c2340;--blue:#2E78F5;--you:#f5a524;--floor:#eef2f8;--wall:#e4e9f2;--ink:#16233c;--muted:#6a7690;--line:#e2e8f2;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:#f3f5f7;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:24px;}
+  .wrap{max-width:1100px;margin:0 auto;}
+  h1{font-size:19px;font-weight:800;color:var(--navy);margin:0 0 3px;}
+  .lede{font-size:13px;color:var(--muted);margin:0 0 18px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 6px 20px rgba(12,35,64,.06);}
+  .chead{display:flex;align-items:baseline;gap:8px;padding:11px 14px 8px;}
+  .cn{width:22px;height:22px;border-radius:6px;background:var(--blue);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .ct{font-size:13.5px;font-weight:700;color:var(--navy);}
+  .cd{font-size:11px;color:var(--muted);padding:0 14px 8px;}
+  .stage{position:relative;height:230px;overflow:hidden;background:linear-gradient(180deg,var(--wall) 0%,var(--wall) 24%,var(--floor) 24%,var(--floor) 86%,var(--navy) 86%);}
+  .grd{position:absolute;left:0;right:0;top:24%;bottom:14%;background-image:linear-gradient(rgba(12,35,64,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(12,35,64,.06) 1px,transparent 1px);background-size:38px 30px;transform:perspective(700px) rotateX(46deg);transform-origin:50% 0;}
+  .tile{position:absolute;width:46px;text-align:center;}
+  .tile .b{width:40px;height:32px;border-radius:8px;background:var(--navy);margin:0 auto;box-shadow:0 8px 14px rgba(12,35,64,.3);}
+  .tile .n{font-size:7px;font-weight:800;color:var(--navy);margin-top:4px;letter-spacing:.03em;}
+  /* generic attendee */
+  .fig{position:absolute;width:12px;height:22px;border-radius:6px 6px 3px 3px;background:#8792a8;box-shadow:0 4px 7px rgba(0,0,0,.3);}
+  .fig::before{content:"";position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:9px;height:9px;border-radius:50%;background:#8792a8;}
+  /* ===== the "you" base ===== */
+  .you{position:absolute;left:47%;top:60%;z-index:8;}
+  .body{width:15px;height:27px;border-radius:8px 8px 3px 3px;background:var(--you);box-shadow:0 5px 10px rgba(0,0,0,.4);position:relative;margin:0 auto;}
+  .body::before{content:"";position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:12px;height:12px;border-radius:50%;background:var(--you);}
+
+  /* 1 — pulse halo */
+  .s1 .halo{position:absolute;left:50%;top:78%;width:16px;height:16px;transform:translate(-50%,-50%);border-radius:50%;background:var(--you);opacity:.6;animation:ping 1.6s ease-out infinite;z-index:6;}
+  .s1 .halo.d{animation-delay:.8s;}
+  @keyframes ping{0%{transform:translate(-50%,-50%) scale(1);opacity:.55;}100%{transform:translate(-50%,-50%) scale(6);opacity:0;}}
+
+  /* 2 — bobbing pin + YOU chip */
+  .s2 .pin{position:absolute;left:50%;bottom:118%;transform:translateX(-50%);z-index:9;animation:bob 1.2s ease-in-out infinite;text-align:center;}
+  .s2 .chip{background:var(--you);color:#3a2600;font-size:9px;font-weight:900;letter-spacing:.06em;padding:3px 8px;border-radius:8px;box-shadow:0 5px 12px rgba(245,164,36,.5);}
+  .s2 .tri{width:0;height:0;margin:0 auto;border:5px solid transparent;border-top-color:var(--you);}
+  @keyframes bob{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(-5px);}}
+
+  /* 3 — floor spotlight glow */
+  .s3 .spot{position:absolute;left:50%;top:82%;width:70px;height:34px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(245,164,36,.75),rgba(245,164,36,0));z-index:5;animation:breathe 2.2s ease-in-out infinite;}
+  .s3 .body{box-shadow:0 0 16px rgba(245,164,36,.9),0 5px 10px rgba(0,0,0,.4);}
+  @keyframes breathe{0%,100%{opacity:.65;transform:translate(-50%,-50%) scale(1);}50%{opacity:1;transform:translate(-50%,-50%) scale(1.12);}}
+
+  /* 4 — avatar disc + label */
+  .s4 .av{width:38px;height:38px;border-radius:50%;background:var(--you);color:#3a2600;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center;margin:0 auto;border:3px solid #fff;box-shadow:0 6px 16px rgba(245,164,36,.6);}
+  .s4 .av::after{content:"";position:absolute;left:50%;top:100%;width:0;height:0;transform:translateX(-50%);border:6px solid transparent;border-top-color:#fff;}
+  .s4 .lbl{margin-top:9px;font-size:9px;font-weight:800;color:#fff;background:var(--navy);padding:2px 8px;border-radius:8px;white-space:nowrap;text-align:center;}
+
+  /* 5 — beacon beam */
+  .s5 .beam{position:absolute;left:50%;bottom:60%;width:20px;height:120px;transform:translateX(-50%);background:linear-gradient(to top,rgba(245,164,36,.55),rgba(245,164,36,0));clip-path:polygon(38% 100%,62% 100%,80% 0,20% 0);z-index:6;animation:flick 2s ease-in-out infinite;}
+  .s5 .base{position:absolute;left:50%;top:80%;width:44px;height:20px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(245,164,36,.7),transparent);z-index:5;}
+  @keyframes flick{0%,100%{opacity:.7;}50%{opacity:1;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>"You are here" — 5 ways to make it stand out</h1>
+  <p class="lede">Same amber marker on the lobby floor, five treatments. Gray figures are other attendees, for contrast. Pick one (or mix — e.g. spotlight + label).</p>
+  <div class="grid" id="grid"></div>
+</div>
+
+<script>
+  // shared floor bits: 2 booths + 2 gray attendees
+  const bits = `
+    <div class="grd"></div>
+    <div class="tile" style="left:16%;top:34%"><div class="b"></div><div class="n">SESSIONS</div></div>
+    <div class="tile" style="left:70%;top:34%"><div class="b"></div><div class="n">EXPO HALL</div></div>
+    <div class="fig" style="left:30%;top:56%"></div>
+    <div class="fig" style="left:64%;top:60%"></div>`;
+
+  const SAMPLES = [
+    ["Pulse halo (radar ping)","Expanding rings on the floor draw the eye — subtle but alive.","s1",
+      `<div class="halo"></div><div class="halo d"></div><div class="you"><div class="body"></div></div>`],
+    ["Bobbing pin + YOU chip","A labeled pin bobs above your head — unmistakable, reads instantly.","s2",
+      `<div class="you"><div class="pin"><div class="chip">YOU</div><div class="tri"></div></div><div class="body"></div></div>`],
+    ["Floor spotlight glow","A warm glow disc under you plus a glowing body — cinematic.","s3",
+      `<div class="spot"></div><div class="you"><div class="body"></div></div>`],
+    ["Avatar disc + label","Your initials in a ringed avatar with a 'You are here' tag — most personal.","s4",
+      `<div class="you" style="top:52%"><div class="av">KT</div><div class="lbl">You are here</div></div>`],
+    ["Beacon beam","A column of light rises from your spot — visible across the whole floor.","s5",
+      `<div class="beam"></div><div class="base"></div><div class="you"><div class="body"></div></div>`],
+  ];
+
+  document.getElementById("grid").innerHTML = SAMPLES.map((s,i)=>`
+    <div class="card">
+      <div class="chead"><span class="cn">${i+1}</span><span class="ct">${s[0]}</span></div>
+      <div class="cd">${s[1]}</div>
+      <div class="stage ${s[2]}">${bits}${s[3]}</div>
+    </div>`).join("");
+</script>
+</body>
+</html>

@@ -35,6 +35,7 @@ export type BrochureEdition = {
   size: BrochureSize;
   coverThumbPath: string | null;
   pdfDigitalPath: string | null;
+  pdfPrintPath: string | null;
   generatedAt: string | null;
   createdAt: string;
   updatedAt: string;

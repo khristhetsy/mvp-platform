@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ICAPOS Virtual Lobby</title>
+  <style>
+    :root{
+      --bg:#090b12;--panel:rgba(20,22,32,0.88);--panel-2:rgba(34,28,55,0.9);
+      --text:#fff;--muted:#b8b8c7;--accent:#7c3aed;--accent-2:#a78bfa;
+      --line:rgba(255,255,255,0.12);--glow:0 0 40px rgba(124,58,237,0.28);--radius:24px;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;min-height:100vh;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--text);
+      background:radial-gradient(circle at top left,rgba(124,58,237,.18),transparent 34%),linear-gradient(135deg,#080910,#11131e 65%,#0a0d14);}
+    button{font:inherit;}
+    .app{width:min(1500px,100%);margin:0 auto;padding:20px;}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px;flex-wrap:wrap;}
+    .brand h1{margin:0;font-size:clamp(1.4rem,2.4vw,2rem);letter-spacing:.08em;}
+    .brand p{margin:6px 0 0;color:var(--muted);font-size:.9rem;}
+    .venue{display:inline-flex;gap:7px;align-items:center;color:var(--muted);font-size:.82rem;margin-top:6px;}
+    .venue .dt{width:8px;height:8px;border-radius:50%;background:#34d399;}
+    .theme-switcher{display:flex;gap:8px;flex-wrap:wrap;}
+    .theme-btn{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);border-radius:999px;padding:9px 13px;cursor:pointer;transition:.2s ease;font-size:.82rem;}
+    .theme-btn:hover,.theme-btn.active{background:var(--accent);border-color:transparent;transform:translateY(-1px);}
+    .lobby{position:relative;min-height:760px;overflow:hidden;border:1px solid var(--line);border-radius:32px;
+      background:linear-gradient(rgba(0,0,0,.12),rgba(0,0,0,.45)),radial-gradient(circle at 50% 15%,rgba(255,255,255,.18),transparent 18%),linear-gradient(140deg,#1a1d2c,#0a0c12 70%);box-shadow:var(--glow);}
+    .lobby::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 79px,rgba(255,255,255,.035) 80px),repeating-linear-gradient(0deg,transparent 0 79px,rgba(255,255,255,.025) 80px);pointer-events:none;}
+    .ceiling{position:absolute;left:50%;top:-180px;width:720px;height:360px;transform:translateX(-50%);border:18px solid rgba(255,255,255,.11);border-radius:50%;box-shadow:inset 0 0 35px rgba(255,255,255,.1),0 0 60px color-mix(in srgb,var(--accent) 40%,transparent);}
+    .hero{position:relative;z-index:2;text-align:center;padding:60px 20px 10px;}
+    .hero-logo{font-size:clamp(2.2rem,6vw,4.6rem);font-weight:800;letter-spacing:.08em;color:var(--accent-2);text-shadow:0 0 28px color-mix(in srgb,var(--accent) 65%,transparent);}
+    .hero p{margin:8px 0 0;color:var(--muted);font-size:1rem;}
+    .scene{position:relative;z-index:2;display:grid;grid-template-columns:280px 1fr 280px;gap:22px;padding:22px;align-items:stretch;}
+    .screen,.center-stage,.nav-dock{border:1px solid var(--line);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);background:var(--panel);box-shadow:0 18px 60px rgba(0,0,0,.28);}
+    .screen{border-radius:var(--radius);padding:18px;min-height:400px;}
+    .screen h3{margin:0 0 14px;font-size:.82rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-2);}
+    .session{display:grid;grid-template-columns:44px 1fr;gap:11px;padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer;transition:.15s;}
+    .session:last-child{border-bottom:0;} .session:hover{opacity:.82;}
+    .time{color:var(--accent-2);font-weight:700;font-size:.74rem;}
+    .session strong{display:block;font-size:.9rem;} .session span{color:var(--muted);font-size:.78rem;}
+    .center-stage{border-radius:30px;padding:26px;display:flex;flex-direction:column;justify-content:space-between;min-height:400px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02)),var(--panel-2);}
+    .welcome{text-align:center;padding:14px 10px;}
+    .welcome .eyebrow{color:var(--accent-2);text-transform:uppercase;letter-spacing:.18em;font-size:.72rem;}
+    .welcome h2{margin:10px 0 8px;font-size:clamp(1.5rem,3vw,2.6rem);}
+    .welcome p{margin:0 auto;max-width:560px;color:var(--muted);line-height:1.6;font-size:.9rem;}
+    .quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-top:18px;}
+    .quick-card{border:1px solid var(--line);background:rgba(255,255,255,.045);color:var(--text);border-radius:16px;padding:15px 10px;cursor:pointer;transition:.2s ease;text-align:center;}
+    .quick-card:hover{transform:translateY(-3px);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,transparent);}
+    .quick-card .icon{display:block;font-size:1.5rem;margin-bottom:7px;} .quick-card small{font-size:.72rem;font-weight:600;}
+    .desk{width:72%;margin:20px auto 0;padding:16px;border-radius:30px 30px 12px 12px;text-align:center;background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(0,0,0,.18));border:1px solid var(--line);box-shadow:inset 0 -12px 30px rgba(0,0,0,.18);font-weight:600;}
+    .sponsor-list{display:grid;gap:11px;}
+    .sponsor{border:1px solid var(--line);border-radius:14px;padding:13px;background:rgba(255,255,255,.035);text-align:center;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:.15s;}
+    .sponsor:hover{border-color:var(--accent);}
+    .ann{font-size:.9rem;line-height:1.5;padding:6px 0;color:var(--text);} .ann small{color:var(--muted);}
+    .nav-dock{position:relative;z-index:3;display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin:0 22px 22px;padding:12px;border-radius:24px;}
+    .nav-item{border:0;background:transparent;color:var(--muted);border-radius:16px;padding:11px 6px;cursor:pointer;text-align:center;}
+    .nav-item:hover,.nav-item.active{color:#fff;background:color-mix(in srgb,var(--accent) 35%,transparent);}
+    .nav-item span{display:block;font-size:1.2rem;margin-bottom:4px;} .nav-item small{font-size:.66rem;font-weight:600;}
+    .toast{position:fixed;right:20px;bottom:20px;background:#11131b;color:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 17px;opacity:0;transform:translateY(12px);pointer-events:none;transition:.25s ease;z-index:20;}
+    .toast.show{opacity:1;transform:translateY(0);}
+    /* AI assistant */
+    .ai{position:fixed;right:20px;bottom:20px;width:300px;max-width:calc(100vw - 40px);z-index:30;background:#12121c;border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;opacity:0;transform:translateY(14px) scale(.97);transition:.16s;pointer-events:none;}
+    .ai.on{opacity:1;transform:none;pointer-events:auto;}
+    .ai .ah{background:linear-gradient(120deg,#241c37,var(--accent));padding:12px 14px;display:flex;align-items:center;gap:9px;}
+    .ai .ah .av{width:28px;height:28px;border-radius:50%;background:conic-gradient(var(--accent),var(--accent-2),#34d399,var(--accent));display:flex;align-items:center;justify-content:center;font-size:13px;}
+    .ai .ah .t1{font-size:12.5px;font-weight:700;} .ai .ah .t2{font-size:9px;color:var(--muted);}
+    .ai .ah .x{margin-left:auto;cursor:pointer;}
+    .ai .body{padding:11px;max-height:230px;overflow-y:auto;background:#0d0d15;}
+    .ai .msg{font-size:12px;line-height:1.5;padding:8px 11px;border-radius:12px;margin-bottom:8px;max-width:88%;}
+    .ai .msg.bot{background:#1a1a26;border:1px solid var(--line);} .ai .msg.me{background:var(--accent);margin-left:auto;}
+    .ai .chips{display:flex;flex-wrap:wrap;gap:6px;}
+    .ai .chip{font-size:10px;font-weight:600;color:var(--accent-2);background:rgba(124,58,237,.16);border:1px solid var(--line);border-radius:20px;padding:5px 9px;cursor:pointer;}
+    .ai .in{display:flex;border-top:1px solid var(--line);background:#12121c;}
+    .ai .in input{flex:1;border:none;background:transparent;color:#fff;padding:10px 12px;font-size:12px;outline:none;font-family:inherit;}
+    .ai .in button{border:none;background:var(--accent);color:#fff;font-size:12px;font-weight:700;padding:0 14px;cursor:pointer;}
+    .aifab{position:fixed;right:20px;bottom:20px;z-index:25;width:52px;height:52px;border-radius:50%;background:linear-gradient(120deg,var(--accent),var(--accent-2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 12px 26px rgba(124,58,237,.5);cursor:pointer;border:none;}
+    body[data-theme="2"]{--bg:#070707;--panel:rgba(8,8,8,.92);--panel-2:rgba(18,14,14,.94);--accent:#8b5cf6;--accent-2:#a78bfa;}
+    body[data-theme="2"] .lobby{background:linear-gradient(rgba(0,0,0,.18),rgba(0,0,0,.62)),linear-gradient(120deg,#17110d,#080808 60%,#15110d);}
+    body[data-theme="3"]{--panel:rgba(9,34,28,.87);--panel-2:rgba(18,48,38,.9);--accent:#059669;--accent-2:#6ee7b7;}
+    body[data-theme="3"] .lobby{background:radial-gradient(circle at 20% 20%,rgba(52,211,153,.18),transparent 26%),linear-gradient(130deg,#112d25,#091411 65%);}
+    body[data-theme="4"]{--panel:rgba(8,20,45,.86);--panel-2:rgba(8,29,67,.9);--accent:#2563eb;--accent-2:#60a5fa;}
+    body[data-theme="4"] .lobby{background:radial-gradient(circle at 50% 35%,rgba(37,99,235,.25),transparent 28%),linear-gradient(135deg,#061329,#030712 70%);}
+    body[data-theme="4"] .center-stage{border-radius:50% 50% 28px 28px / 18% 18% 28px 28px;}
+    body[data-theme="5"]{--panel:rgba(40,26,15,.88);--panel-2:rgba(70,43,24,.9);--accent:#92400e;--accent-2:#f59e0b;}
+    body[data-theme="5"] .lobby{background:radial-gradient(circle at 50% 60%,rgba(245,158,11,.14),transparent 20%),linear-gradient(130deg,#28190f,#0f0b08 70%);}
+    @media (max-width:1050px){.scene{grid-template-columns:1fr 1fr;}.center-stage{grid-column:1/-1;grid-row:1;}.nav-dock{grid-template-columns:repeat(4,1fr);}}
+    @media (max-width:700px){.app{padding:10px;}.topbar{align-items:flex-start;flex-direction:column;}.lobby{min-height:auto;border-radius:22px;}.scene{grid-template-columns:1fr;padding:12px;}.center-stage,.screen{min-height:auto;}.quick-grid{grid-template-columns:repeat(2,1fr);}.desk{width:100%;}.nav-dock{grid-template-columns:repeat(2,1fr);margin:0 12px 12px;}.ceiling{width:420px;}}
+  </style>
+</head>
+<body data-theme="1">
+  <main class="app">
+    <header class="topbar">
+      <div class="brand"><h1>ICAPOS</h1><p>Connect. Invest. Grow.</p><span class="venue"><span class="dt"></span><b id="vcount" style="all:unset;font-weight:700">1</b>&nbsp;in the venue</span></div>
+      <div class="theme-switcher" id="themes"></div>
+    </header>
+    <section class="lobby">
+      <div class="ceiling"></div>
+      <div class="hero"><div class="hero-logo">ICAPOS</div><p>Connect. Invest. Grow.</p></div>
+      <div class="scene">
+        <div class="screen">
+          <h3>Upcoming Sessions</h3>
+          <div id="sessions"></div>
+          <button class="quick-card" style="margin-top:14px;width:100%" data-go="View all sessions →">View all sessions</button>
+        </div>
+        <div class="center-stage">
+          <div class="welcome">
+            <div class="eyebrow">Welcome to</div>
+            <h2>ICAPOS Investor Summit 2026</h2>
+            <p>Newport Beach · Aug 25 · Live web event for investors and founders. Keynote begins at 10:00 AM on the Main Stage.</p>
+            <div class="quick-grid" id="quick"></div>
+          </div>
+          <div class="desk">Welcome to ICAPOS — the reception desk is here to help.</div>
+        </div>
+        <div class="screen">
+          <h3>Announcements</h3>
+          <div class="ann">🎉 Welcome to the ICAPOS Investor Summit 2026!<br><small>Keynote at 10:00 AM · Networking opens after lunch.</small></div>
+          <h3 style="margin-top:16px">Event Sponsors</h3>
+          <div class="sponsor-list" id="sponsors"></div>
+        </div>
+      </div>
+      <div class="nav-dock" id="nav"></div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <button class="aifab" id="aifab" title="ICAPOS Assistant">✨</button>
+  <div class="ai" id="ai">
+    <div class="ah"><div class="av">✨</div><div><div class="t1">ICAPOS Assistant</div><div class="t2">Help Desk · online</div></div><div class="x" id="aix">✕</div></div>
+    <div class="body" id="aibody"><div class="msg bot">👋 Hi! I'm your event guide. Ask about sessions, people, sponsors, or the agenda.</div><div class="chips" id="aichips"></div></div>
+    <div class="in"><input id="aiin" placeholder="Ask me anything…" /><button id="aisend">Send</button></div>
+  </div>
+
+<script>
+  let tt;const toast=document.getElementById("toast");
+  const go=n=>{toast.textContent=/→/.test(n)?n:("Entering "+n+" →");toast.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>toast.classList.remove("show"),1500);};
+
+  const THEMES=[["1","Purple modern"],["2","Executive dark"],["3","Green atrium"],["4","Futuristic"],["5","Mountain lodge"]];
+  document.getElementById("themes").innerHTML=THEMES.map(t=>`<button class="theme-btn${t[0]==="1"?" active":""}" data-t="${t[0]}">${t[1]}</button>`).join("");
+  document.getElementById("themes").addEventListener("click",e=>{const b=e.target.closest("[data-t]");if(!b)return;
+    document.body.dataset.theme=b.dataset.t;document.querySelectorAll(".theme-btn").forEach(x=>x.classList.toggle("active",x===b));});
+
+  const SESS=[["10:00 AM","Keynote: The Future of Venture Capital","Sarah Chen · Sequoia"],["11:30 AM","Founder Spotlight","Marcus Lee · Vertex"],["2:00 PM","Investor Panel","Panel · 4 speakers"]];
+  document.getElementById("sessions").innerHTML=SESS.map(s=>`<div class="session" data-go="${s[1]}"><div class="time">${s[0]}</div><div><strong>${s[1]}</strong><span>${s[2]}</span></div></div>`).join("");
+
+  const QUICK=[["🎁","Exhibit Hall"],["🏛","Auditorium"],["👥","Networking Lounge"],["📋","Resource Center"]];
+  document.getElementById("quick").innerHTML=QUICK.map(q=>`<div class="quick-card" data-go="${q[1]}"><span class="icon">${q[0]}</span><small>${q[1]}</small></div>`).join("");
+
+  const SPON=["Sequoia","Andreessen Horowitz","Tiger Global","SoftBank Vision Fund"];
+  document.getElementById("sponsors").innerHTML=SPON.map(s=>`<div class="sponsor" data-go="${s} booth">${s}</div>`).join("");
+
+  const NAV=[["🏠","Lobby"],["🎁","Exhibit Hall"],["🏛","Auditorium"],["👥","Networking Lounge"],["📋","Resource Center"],["❓","Help Desk"],["👤","My Profile"]];
+  document.getElementById("nav").innerHTML=NAV.map(n=>`<button class="nav-item${n[1]==="Lobby"?" active":""}" ${n[1]==="Help Desk"?'data-ai':'data-go="'+n[1]+'"'}><span>${n[0]}</span><small>${n[1]}</small></button>`).join("");
+  document.getElementById("nav").addEventListener("click",e=>{const b=e.target.closest(".nav-item");if(b&&!b.hasAttribute("data-ai")){document.querySelectorAll(".nav-item").forEach(x=>x.classList.remove("active"));b.classList.add("active");}});
+
+  document.querySelectorAll("[data-go]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();go(el.dataset.go);}));
+  document.querySelectorAll("[data-ai]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openAI();}));
+
+  const ai=document.getElementById("ai"),aibody=document.getElementById("aibody"),aiin=document.getElementById("aiin");
+  const openAI=()=>{ai.classList.add("on");aiin.focus();};
+  document.getElementById("aifab").addEventListener("click",openAI);
+  document.getElementById("aix").addEventListener("click",()=>ai.classList.remove("on"));
+  const CHIPS=["Where's the keynote?","How do I network?","Show me the agenda","Find a sponsor"];
+  document.getElementById("aichips").innerHTML=CHIPS.map(c=>`<span class="chip">${c}</span>`).join("");
+  function addMsg(t,w){const d=document.createElement("div");d.className="msg "+w;d.innerHTML=t;aibody.appendChild(d);aibody.scrollTop=aibody.scrollHeight;}
+  function answer(q){const s=q.toLowerCase();
+    if(/keynote|session|stage/.test(s))return "The keynote is on the <b>Main Stage</b> at 10:00 AM. Want me to take you there?";
+    if(/network|meet|people/.test(s))return "Head to the <b>Networking Lounge</b> — meet other attendees and investors there.";
+    if(/agenda|schedule|when/.test(s))return "Keynote 10:00, Founder Spotlight 11:30, Investor Panel 2:00. Open Upcoming Sessions for details.";
+    if(/sponsor|exhibit|booth/.test(s))return "Sponsors are in the <b>Exhibit Hall</b> — Sequoia, a16z, Tiger Global, SoftBank. Which one?";
+    return "I can help with sessions, people, sponsors, or the agenda — try a suggestion above.";}
+  function send(q){if(!q.trim())return;addMsg(q,"me");aiin.value="";setTimeout(()=>addMsg(answer(q),"bot"),350);}
+  document.getElementById("aisend").addEventListener("click",()=>send(aiin.value));
+  aiin.addEventListener("keydown",e=>{if(e.key==="Enter")send(aiin.value);});
+  aibody.addEventListener("click",e=>{const c=e.target.closest(".chip");if(c)send(c.textContent);});
+
+  // cosmetic venue count drift
+  setInterval(()=>{const v=document.getElementById("vcount");v.textContent=Math.max(1,Math.min(40,+v.textContent+Math.round((Math.random()-.4)*3)));},2600);
+</script>
+</body>
+</html>

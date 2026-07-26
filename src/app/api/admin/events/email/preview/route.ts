@@ -19,6 +19,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       type?: EventEmailType;
       includeBanner?: boolean;
       includeLobby?: boolean;
+      bookletUrl?: string;
     };
     if (!body.eventId) return NextResponse.json({ error: "Missing eventId." }, { status: 400 });
     const merge = await loadEventMergeData(auth.supabase, body.eventId, { baseUrl: BASE_URL });
@@ -27,6 +28,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       type: body.type ?? "invite",
       includeBanner: body.includeBanner,
       includeLobby: body.includeLobby,
+      bookletUrl: body.bookletUrl,
     });
     return NextResponse.json({ html });
   } catch (err) {

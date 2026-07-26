@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>iCapOS Virtual Lobby — realistic booths · 5 samples</title>
+<style>
+  :root{--navy:#0c2340;--blue:#2E78F5;--teal:#0F6E56;--line:#e5e9f0;--ink:#1e293b;--muted:#64748b;
+    --isobg:linear-gradient(#eef4fb,#dfeaf7);--ztop:linear-gradient(#8fc4ff,#5aa3f0);--zside:#1c5fd0;--zlabelink:#1c3e6b;--zlabelbg:rgba(255,255,255,.82);}
+  *{box-sizing:border-box;}
+  body{margin:0;background:#eef1f6;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:24px;}
+  .wrap{max-width:1040px;margin:0 auto;}
+  h1{font-size:21px;font-weight:700;margin:0 0 3px;}.lede{font-size:13px;color:var(--muted);margin:0 0 18px;}
+  .sample{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:20px;}
+  .stag{display:inline-flex;gap:6px;background:#E1F5EE;color:#0F6E56;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:20px;margin-left:2px;}
+  .sh{font-size:14px;font-weight:600;margin:7px 2px 10px;}
+  .lobby{border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .tabs{display:flex;align-items:center;gap:4px;background:#fff;border-bottom:1px solid var(--line);padding:6px 8px;flex-wrap:wrap;}
+  .tab{font-size:11px;font-weight:600;color:var(--muted);padding:5px 10px;border-radius:7px;display:inline-flex;gap:5px;align-items:center;cursor:pointer;}
+  .tab.on{background:var(--teal);color:#fff;}.tab:hover:not(.on){background:#f1f5f9;}
+  .venue{margin-left:auto;font-size:11px;color:var(--muted);display:inline-flex;gap:5px;align-items:center;}
+  .venue .dt{width:6px;height:6px;border-radius:50%;background:#5DCAA5;}
+  .ticker{display:flex;align-items:stretch;background:var(--navy);color:#fff;height:28px;overflow:hidden;}
+  .ticker .lab{background:var(--teal);font-size:9px;font-weight:800;letter-spacing:.05em;padding:0 10px;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+  .ticker .lab .dt{width:5px;height:5px;border-radius:50%;background:#fff;animation:blink 1.1s infinite;}
+  @keyframes blink{50%{opacity:.3;}}
+  .track{overflow:hidden;flex:1;position:relative;}
+  .mq{display:flex;gap:26px;white-space:nowrap;position:absolute;height:100%;align-items:center;padding-left:14px;animation:scroll 26s linear infinite;font-size:10.5px;color:#cdd6e4;}
+  @keyframes scroll{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+  .iso{position:relative;height:410px;overflow:hidden;background:var(--isobg);}
+  .zone{position:absolute;width:150px;height:96px;cursor:pointer;z-index:4;}
+  .zone .depth{position:absolute;inset:0;transform:translateY(11px);background:var(--zside);clip-path:polygon(50% 4%,100% 50%,50% 96%,0 50%);}
+  .zone .top{position:absolute;inset:0;background:var(--ztop);clip-path:polygon(50% 4%,100% 50%,50% 96%,0 50%);transition:.15s;}
+  .zone:hover .top{filter:brightness(1.05);transform:translateY(-3px);}
+  .zone .zl{position:absolute;left:50%;top:-10px;transform:translateX(-50%);white-space:nowrap;font-size:8px;font-weight:800;letter-spacing:.05em;color:var(--zlabelink);background:var(--zlabelbg);padding:2px 8px;border-radius:10px;z-index:3;}
+  /* ── realistic booth ── */
+  .bstand{position:absolute;left:50%;top:6%;transform:translateX(-50%);width:104px;height:82px;z-index:2;pointer-events:none;}
+  .bstand .wall{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);width:60px;height:44px;background:linear-gradient(#4aa3f0,#2E78F5);border-radius:4px 4px 0 0;box-shadow:0 6px 12px rgba(12,35,64,.3);}
+  .bstand.curved .wall{width:68px;border-radius:34px 34px 6px 6px;}
+  .bstand .wall .stripe{position:absolute;top:0;left:0;right:0;height:9px;background:#0c2340;border-radius:4px 4px 0 0;}
+  .bstand.curved .wall .stripe{border-radius:34px 34px 0 0;}
+  .bstand .brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;background:#fff;color:#2E78F5;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(12,35,64,.2);}
+  .bstand .counter{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:78px;height:16px;background:linear-gradient(#1c5fd0,#0c2340);border-radius:4px;box-shadow:0 6px 10px rgba(12,35,64,.35);}
+  .bstand.curved .counter{border-radius:16px;}
+  .bstand .counter::before{content:"";position:absolute;top:0;left:6%;right:6%;height:5px;background:#eef4fb;border-radius:3px;}
+  .bstand .screen{position:absolute;left:12px;bottom:20px;width:24px;height:18px;background:#0c2340;border:2px solid #fff;border-radius:2px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 8px rgba(12,35,64,.3);}
+  .bstand .canopy{position:absolute;left:50%;bottom:62px;transform:translateX(-50%);width:82px;height:9px;background:linear-gradient(#0c2340,#1c3e6b);border-radius:3px;box-shadow:0 5px 10px rgba(12,35,64,.3);}
+  .bstand .post{position:absolute;bottom:22px;width:4px;height:40px;background:#cfe0f2;}
+  .bstand .post.l{left:15px;}.bstand .post.r{right:15px;}
+  .bstand.pod .pod{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);width:74px;height:42px;border-radius:24px;background:radial-gradient(circle at 40% 28%,#8fc4ff,#2E78F5);box-shadow:0 8px 14px rgba(12,35,64,.3);}
+  .bstand.pod .pod .band{position:absolute;left:10%;right:10%;top:30%;height:36%;background:#0c2340;border-radius:6px;display:flex;align-items:center;justify-content:center;}
+  .bstand .stool{position:absolute;bottom:4px;width:12px;height:12px;border-radius:50%;background:#dbe8f5;box-shadow:0 3px 6px rgba(12,35,64,.2);}
+  .bstand .stool.a{left:20px;}.bstand .stool.b{right:20px;}
+  .bstand .bplant{position:absolute;bottom:6px;right:6px;font-size:12px;}
+  .kiosk{position:absolute;width:116px;height:78px;z-index:6;cursor:pointer;}
+  .kiosk .base{position:absolute;inset:0;background:var(--zside);clip-path:polygon(50% 6%,100% 50%,50% 94%,0 50%);transform:translateY(9px);}
+  .kiosk .box{position:absolute;left:50%;top:8%;transform:translateX(-50%);width:50px;height:40px;background:var(--navy);border-radius:4px;box-shadow:0 8px 14px rgba(12,35,64,.35);}
+  .kiosk .box::before{content:"";position:absolute;inset:22% 16% 16%;background:linear-gradient(120deg,#3a7bd5,#4facfe);border-radius:2px;}
+  .kiosk .kl{position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-size:8px;font-weight:800;color:var(--zlabelink);background:var(--zlabelbg);padding:2px 8px;border-radius:10px;white-space:nowrap;}
+  .plant{position:absolute;font-size:15px;z-index:3;}
+  .badge{position:absolute;top:10px;z-index:9;background:var(--navy);color:#e7edf6;font-size:9px;font-weight:700;padding:4px 10px;border-radius:20px;display:inline-flex;gap:6px;align-items:center;}
+  .badge.l{left:10px;}.badge.r{right:10px;background:#0f2e46;}.badge .dt{width:6px;height:6px;border-radius:50%;background:#3ddc97;}
+  .fig{position:absolute;width:11px;height:20px;border-radius:6px 6px 3px 3px;box-shadow:0 3px 6px rgba(0,0,0,.3);transition:left 2.4s linear;z-index:7;cursor:pointer;}
+  .fig::before{content:"";position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:inherit;}
+  .fig:hover{outline:2px solid #fff;outline-offset:1px;}
+  .you{position:absolute;left:46%;top:54%;width:14px;height:26px;border-radius:8px 8px 3px 3px;background:var(--blue);z-index:8;cursor:pointer;box-shadow:0 4px 8px rgba(0,0,0,.4);}
+  .you::before{content:"";position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:11px;height:11px;border-radius:50%;background:var(--blue);}
+  .youpin{position:absolute;left:46%;top:46%;transform:translateX(-50%);z-index:8;font-size:8px;font-weight:800;color:#fff;background:var(--blue);padding:2px 6px;border-radius:7px;}
+  .cap{font-size:10.5px;color:var(--muted);text-align:center;padding:8px;background:#fff;}
+  .zlab,.gtip{position:fixed;z-index:98;background:rgba(12,35,64,.94);color:#fff;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:7px;white-space:nowrap;opacity:0;transition:.1s;pointer-events:none;transform:translate(-50%,-100%);}
+  .zlab{transform:translate(-50%,-130%);}.zlab.on,.gtip.on{opacity:1;}
+  .gcard{position:fixed;z-index:99;width:206px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 34px rgba(12,35,64,.28);opacity:0;transform:translate(-50%,-100%) scale(.96);transition:.14s;pointer-events:none;overflow:hidden;}
+  .gcard.on{opacity:1;pointer-events:auto;transform:translate(-50%,-100%) scale(1);}
+  .gcard .hd{display:flex;gap:9px;align-items:center;padding:11px 12px 9px;}
+  .gcard .avb{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800;flex:0 0 auto;}
+  .gcard .nm{font-size:13px;font-weight:700;color:#0c2340;}.gcard .rl{font-size:10.5px;color:var(--muted);}
+  .gcard .whr{padding:5px 12px;background:#f4f7fc;font-size:10.5px;color:#0c2340;font-weight:600;border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+  .gcard .act{display:flex;gap:6px;padding:9px 12px;}
+  .gcard .act button{flex:1;font-size:10.5px;font-weight:700;border-radius:8px;padding:6px 0;cursor:pointer;border:1px solid var(--line);background:#fff;color:#0c2340;}
+  .gcard .act button.p{background:#2E78F5;color:#fff;border-color:#2E78F5;}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#0c2340;color:#fff;font-size:13px;font-weight:600;padding:10px 17px;border-radius:10px;opacity:0;transition:.25s;z-index:100;box-shadow:0 10px 30px rgba(12,35,64,.4);}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>iCapOS Virtual Lobby — realistic booths</h1>
+  <p class="lede">Layout 1 (scatter plaza) with all functions kept. Only the booth on each zone is redesigned into a realistic isometric exhibition stand — five styles below.</p>
+  <section class="sample" id="s1"></section><section class="sample" id="s2"></section><section class="sample" id="s3"></section>
+  <section class="sample" id="s4"></section><section class="sample" id="s5"></section>
+  <p class="lede" style="text-align:center">Mockups · stylized isometric booths. Education &amp; community — not an offer of securities.</p>
+</div>
+<div class="zlab" id="zlab"></div><div class="gtip" id="gtip"></div><div class="gcard" id="gcard"></div><div class="toast" id="toast"></div>
+
+<script>
+  const IC={
+    sessions:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></svg>',
+    talk:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/></svg>',
+    net:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.2"/><path d="M3 19c0-3 2.7-4.5 6-4.5s6 1.5 6 4.5"/></svg>',
+    ondemand:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9.5v5l4-2.5z" fill="#fff"/></svg>',
+    expo:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><path d="M4 9l1-4h14l1 4M4 9v10h16V9M9 19v-5h6v5"/></svg>',
+    leader:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><path d="M8 4h8v4a4 4 0 0 1-8 0zM12 12v4M8 20h8"/></svg>',
+  };
+  const ZONES=[["SESSIONS","sessions","Main Stage",4,30],["TALK SHOW","talk","Live",30,6],["NETWORKING","net","Lounge",62,8],["ON-DEMAND","ondemand","Replays",8,58],["LEADERBOARD","leader","Ranks",40,54],["EXPO HALL","expo","Sponsor Hall",64,52]];
+  const TABS=["🏠 Lobby|on","🖥 Main Stage","🎙 Talk Show","🗂 Tracks","🤝 Networking","🏛 Sponsor Hall","🏆 Leaderboard"];
+  const TICK=["Talk show — live soon","Networking — 0 here · tables open","On-demand — 0 browsing","Expo hall — 0 at booths","Sessions — 0 watching"];
+  const mqHtml=TICK.map(x=>`<span>${x}</span>`).join('<span style="opacity:.4">•</span>');
+  const COLORS=["#e0703a","#4a5568","#5b8fd6","#3ba05a","#5b4be0","#c05a8a","#7a5230","#2b3a4d"];
+  const NAMES=["Khris Thetsy","Robert Ruiz","Daniela Felix","Johnny Rivera","Maya Rao","Sam Okoye","Priya Nair","Leo Kramer","Ana García","Tom Bishop"];
+  const ROLES=["Angel investor","VC · Growth","Founder · Seed","Family office","LP · Institutional","Managing Partner","Advisor"];
+  const COMPS=["Arlyn Capital","North Peak","Meridian VC","Cedar Family Office","BlueHarbor","Vertex Labs","Summit LP"];
+  const GZ=["Lobby","Sessions","Networking","Expo Hall"];
+  const rand=(a,b)=>a+Math.random()*(b-a);const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const initials=n=>n.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+
+  const zlab=document.getElementById("zlab"),gtip=document.getElementById("gtip"),gcard=document.getElementById("gcard"),toast=document.getElementById("toast");let tt;
+  const go=n=>{toast.textContent="Entering "+n+" →";toast.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>toast.classList.remove("on"),1400);};
+  function showTip(el,name){const r=el.getBoundingClientRect();gtip.textContent=name;gtip.style.left=(r.left+r.width/2)+"px";gtip.style.top=(r.top-4)+"px";gtip.classList.add("on");}
+  const hideTip=()=>gtip.classList.remove("on");
+  function showCard(el,g){const r=el.getBoundingClientRect();
+    gcard.innerHTML=`<div class="hd"><div class="avb" style="background:${g.color}">${g.you?"★":initials(g.name)}</div><div><div class="nm">${g.name}${g.you?" (you)":""}</div><div class="rl">${g.role}${g.comp?" · "+g.comp:""}</div></div></div><div class="whr">📍 in the ${g.zone}</div>`+
+      (g.you?`<div class="act"><button class="p">Edit profile</button><button>Set status</button></div>`:`<div class="act"><button class="p">👋 Wave</button><button>💬 Say hi</button></div>`);
+    gcard.style.left=(r.left+r.width/2)+"px";gcard.style.top=(r.top-6)+"px";gcard.classList.add("on");}
+  const hideCard=()=>gcard.classList.remove("on");
+  document.addEventListener("click",e=>{if(!e.target.closest(".gcard")&&!e.target.closest(".fig")&&!e.target.closest(".you"))hideCard();},true);
+  window.addEventListener("scroll",()=>{hideCard();zlab.classList.remove("on");},true);
+  function bindGuest(el,g){el.addEventListener("mouseenter",()=>showTip(el,g.name+(g.you?" (you)":"")));el.addEventListener("mouseleave",hideTip);el.addEventListener("click",ev=>{ev.stopPropagation();hideTip();showCard(el,g);});}
+  function bindZones(root){root.querySelectorAll("[data-go]").forEach(el=>{
+    el.addEventListener("mouseenter",()=>{const r=el.getBoundingClientRect();zlab.textContent=el.dataset.lab||el.dataset.go;zlab.style.left=(r.left+r.width/2)+"px";zlab.style.top=(r.top+4)+"px";zlab.classList.add("on");});
+    el.addEventListener("mouseleave",()=>zlab.classList.remove("on"));
+    el.addEventListener("click",()=>go(el.dataset.go));});}
+  const SPOTS=[[18,50,.8],[34,28,.75],[48,20,.9],[54,44,.95],[60,30,.85],[70,52,.9],[26,64,.85],[44,60,1]];
+  function guests(iso){
+    const roster=[...NAMES].sort(()=>Math.random()-.5);
+    SPOTS.forEach((s,i)=>{const g={name:roster[i%roster.length],color:pick(COLORS),role:pick(ROLES),comp:pick(COMPS),zone:pick(GZ)};
+      const f=document.createElement("div");f.className="fig";f.style.cssText=`left:${s[0]}%;top:${s[1]}%;background:${g.color};transform:scale(${s[2]})`;f.dataset.base=s[0];iso.appendChild(f);bindGuest(f,g);});
+    bindGuest(iso.querySelector(".you"),{name:"Khris Thetsy",color:"#2E78F5",role:"Host · iCapOS",comp:"",zone:"Lobby",you:true});
+  }
+
+  // ── booth renderers (realistic isometric stands) ──
+  const BOOTH={
+    banner:(ic)=>`<div class="bstand banner"><div class="wall"><div class="stripe"></div><div class="brand">iC</div></div><div class="screen">${ic}</div><div class="counter"></div></div>`,
+    canopy:(ic)=>`<div class="bstand banner"><div class="canopy"></div><div class="post l"></div><div class="post r"></div><div class="wall"><div class="stripe"></div><div class="brand">iC</div></div><div class="screen">${ic}</div><div class="counter"></div></div>`,
+    curved:(ic)=>`<div class="bstand curved"><div class="wall"><div class="stripe"></div><div class="brand">iC</div></div><div class="screen">${ic}</div><div class="counter"></div></div>`,
+    pod:(ic)=>`<div class="bstand pod"><div class="pod"><div class="band">${ic}</div></div><div class="counter"></div></div>`,
+    lounge:(ic)=>`<div class="bstand lounge"><div class="screen" style="left:50%;transform:translateX(-50%);bottom:24px">${ic}</div><div class="counter" style="width:62px;height:12px;bottom:12px"></div><div class="stool a"></div><div class="stool b"></div><div class="bplant">🪴</div></div>`,
+  };
+
+  const iso=(boothKey)=>{
+    const zones=ZONES.map(z=>`<div class="zone" data-go="${z[0]}" data-lab="${z[0]} · ${z[2]}" style="left:${z[3]}%;top:${z[4]}%"><div class="depth"></div><div class="top"></div>${BOOTH[boothKey](IC[z[1]])}<div class="zl">${z[0]}</div></div>`).join("");
+    return `<div class="iso">
+      <div class="kiosk" data-go="Help & Info Desk" data-lab="Help &amp; Info Desk" style="left:42%;top:30%"><div class="base"></div><div class="box"></div><div class="kl">INFO DESK</div></div>
+      ${zones}
+      <div class="plant" style="left:22%;top:42%">🪴</div><div class="plant" style="right:22%;top:38%">🌿</div>
+      <div class="badge l"><span class="dt"></span>You are here · Lobby</div><div class="badge r"><span class="dt"></span>1 in the venue</div>
+      <div class="you"></div><div class="youpin">You</div></div>`;
+  };
+  const lobby=(boothKey)=>`
+    <div class="lobby">
+      <div class="tabs">${TABS.map(t=>{const[l,on]=t.split("|");return`<span class="tab${on?" on":""}">${l}</span>`;}).join("")}<span class="venue"><span class="dt"></span>1 in the venue</span></div>
+      <div class="ticker"><div class="lab"><span class="dt"></span>WHAT'S ON</div><div class="track"><div class="mq">${mqHtml}<span style="opacity:.4">•</span>${mqHtml}</div></div></div>
+      ${iso(boothKey)}
+      <div class="cap">Hover or tap a booth to look inside, then enter.</div>
+    </div>`;
+
+  const SAMPLES=[
+    ["s1","banner","Booth 1 · Banner stand","A branded back-wall banner, a reception counter, and a monitor — the classic expo booth."],
+    ["s2","canopy","Booth 2 · Canopy stand","Adds an overhead canopy on posts over the counter — a premium, sheltered feel."],
+    ["s3","curved","Booth 3 · Curved wall","A curved back wall and rounded counter — sleek and modern (like the reference's curved booth)."],
+    ["s4","pod","Booth 4 · Pod / kiosk","A rounded pod with a wraparound screen — compact and futuristic."],
+    ["s5","lounge","Booth 5 · Open lounge","A low counter with stools, a screen, and a plant — an inviting networking corner."],
+  ];
+  SAMPLES.forEach(([id,key,title,desc])=>{
+    const host=document.getElementById(id);
+    host.innerHTML=`<span class="stag">${title.split(" · ")[0]}</span><div class="sh">${title.split(" · ")[1]} — <span style="font-weight:400;color:#64748b">${desc}</span></div>${lobby(key)}`;
+    bindZones(host);guests(host.querySelector(".iso"));
+  });
+  setInterval(()=>{document.querySelectorAll(".fig").forEach(f=>{if(Math.random()<0.5)f.style.left=(+f.dataset.base+rand(-3,3))+"%";});},2400);
+</script>
+</body>
+</html>

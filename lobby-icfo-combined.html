@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>iCFO Lobby — live + render combined</title>
+<style>
+  :root{
+    --navy:#0c2340;--navy2:#0f2e46;--green:#0f6e56;--green2:#12a97e;
+    --floor:#eef0ea;--wall:#e6e9e2;--ink:#1e2a3a;--muted:#6a768a;--line:#e3e7ec;
+    --tile:#0c2340;--sign:#0c2340;--holo1:#12a97e;--holo2:#0c3a2e;--hologlow:rgba(18,169,126,.5);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#f3f5f7;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .page{max-width:1180px;margin:0 auto;padding:16px;}
+  .topbar{display:flex;align-items:center;padding:10px 4px;}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:16px;color:var(--navy);}
+  .brand .dot{width:20px;height:20px;border-radius:5px;background:var(--green);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:11px;}
+  .topnav{margin-left:26px;display:flex;gap:18px;font-size:12.5px;color:#41506a;}
+  .topnav span{cursor:pointer;}
+  .topright{margin-left:auto;display:flex;gap:14px;align-items:center;font-size:12.5px;}
+  .login{color:#41506a;cursor:pointer;}.signup{background:var(--green);color:#fff;font-weight:700;padding:7px 15px;border-radius:8px;cursor:pointer;}
+  .crumbs{display:flex;justify-content:space-between;align-items:center;padding:8px 4px 12px;font-size:13px;}
+  .crumbs a{color:#41506a;text-decoration:none;font-weight:600;cursor:pointer;}
+  .crumbs .skip{color:var(--green);font-weight:700;}
+  /* lobby shell */
+  .lobby{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 8px 26px rgba(12,35,64,.06);}
+  .tabs{display:flex;align-items:center;gap:3px;background:#fff;border-bottom:1px solid var(--line);padding:6px 8px;flex-wrap:wrap;}
+  .tab{font-size:11.5px;font-weight:600;color:var(--muted);padding:6px 11px;border-radius:8px;display:inline-flex;gap:5px;align-items:center;cursor:pointer;}
+  .tab.on{background:var(--green);color:#fff;}.tab:hover:not(.on){background:#f1f5f3;}
+  .venue{margin-left:auto;font-size:11.5px;color:var(--muted);display:inline-flex;gap:6px;align-items:center;}
+  .venue .dt{width:6px;height:6px;border-radius:50%;background:#3ddc97;}
+  .ticker{display:flex;height:28px;background:var(--navy);overflow:hidden;}
+  .ticker .lab{background:var(--green);color:#fff;font-size:9px;font-weight:800;letter-spacing:.05em;padding:0 11px;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+  .ticker .lab .dt{width:5px;height:5px;border-radius:50%;background:#fff;animation:blink 1.1s infinite;}
+  @keyframes blink{50%{opacity:.3;}}
+  .track{overflow:hidden;flex:1;position:relative;}
+  .mq{position:absolute;display:flex;gap:26px;white-space:nowrap;height:100%;align-items:center;padding-left:14px;animation:scroll 26s linear infinite;font-size:10.5px;color:#cdd6e4;}
+  @keyframes scroll{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+  /* stage */
+  .stage{position:relative;height:600px;overflow:hidden;background:
+     linear-gradient(180deg,var(--wall) 0%,var(--wall) 30%,var(--floor) 30%,var(--floor) 86%,var(--navy) 86%);}
+  .grid-lines{position:absolute;left:0;right:0;top:30%;bottom:14%;background-image:linear-gradient(rgba(12,35,64,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(12,35,64,.06) 1px,transparent 1px);background-size:52px 40px;transform:perspective(900px) rotateX(48deg);transform-origin:50% 0;pointer-events:none;}
+  /* welcome banner on back wall */
+  .welcome{position:absolute;left:50%;top:16px;transform:translateX(-50%);z-index:4;background:var(--navy);color:#eaf0f7;border-radius:12px;padding:12px 26px;text-align:center;box-shadow:0 12px 28px rgba(12,35,64,.28);max-width:60%;}
+  .welcome .ey{font-size:8.5px;font-weight:800;letter-spacing:.18em;color:var(--green2);}
+  .welcome .ti{font-size:14px;font-weight:700;margin-top:3px;}
+  /* zone tile (ours) */
+  .tile{position:absolute;z-index:5;cursor:pointer;text-align:center;transition:.15s;}
+  .tile .box{width:74px;height:60px;border-radius:11px;background:var(--tile);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 22px rgba(12,35,64,.30);margin:0 auto;position:relative;transition:.15s;}
+  .tile:hover .box{transform:translateY(-4px);box-shadow:0 18px 30px rgba(12,35,64,.42);}
+  .tile .nm{font-size:9.5px;font-weight:800;letter-spacing:.04em;color:var(--navy);margin-top:6px;}
+  .tile .hot{position:absolute;top:-7px;right:-7px;font-size:7.5px;font-weight:800;color:#fff;background:#e0533b;padding:1px 6px;border-radius:9px;display:none;}
+  .tile.live .hot{display:block;}
+  /* help & info desk */
+  .desk{position:absolute;left:50%;top:70%;transform:translateX(-50%);z-index:6;cursor:pointer;text-align:center;}
+  .desk .box{width:96px;height:64px;border-radius:12px;background:linear-gradient(160deg,#153a5c,#0c2340);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 14px 26px rgba(12,35,64,.34);transition:.15s;}
+  .desk:hover .box{transform:translateY(-4px);}
+  .desk .nm{font-size:9px;font-weight:800;color:var(--navy);margin-top:5px;line-height:1.2;}
+  .desk .hint{font-size:7.5px;font-weight:800;color:var(--green);background:#d9f2e8;padding:1px 7px;border-radius:9px;display:inline-block;margin-top:3px;}
+  /* center pillar (render) */
+  .pillar{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);z-index:5;text-align:center;cursor:pointer;}
+  .pillar .glass{width:60px;height:74px;border-radius:10px;background:linear-gradient(160deg,var(--holo1),var(--holo2));box-shadow:0 0 30px var(--hologlow),inset 0 0 16px rgba(255,255,255,.28);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:800;}
+  .pillar .base{width:88px;height:14px;margin:5px auto 0;border-radius:50%;background:radial-gradient(var(--hologlow),transparent 70%);}
+  .pillar .tag{margin-top:2px;font-size:8px;font-weight:800;letter-spacing:.12em;color:var(--green);}
+  /* floating signs (render) */
+  .sign{position:absolute;z-index:6;background:var(--sign);color:#fff;font-size:9.5px;font-weight:800;letter-spacing:.03em;padding:6px 11px;border-radius:9px;box-shadow:0 8px 16px rgba(12,35,64,.3);cursor:pointer;white-space:nowrap;}
+  .sign:hover{filter:brightness(1.15);}
+  .sign .stem{position:absolute;left:50%;bottom:-11px;width:3px;height:11px;background:var(--navy);transform:translateX(-50%);}
+  /* nav rail (render) */
+  .nav{position:absolute;top:12px;right:12px;width:174px;z-index:12;background:#fff;border:1px solid var(--line);border-radius:13px;box-shadow:0 14px 32px rgba(12,35,64,.16);overflow:hidden;}
+  .nav .me{display:flex;gap:9px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);}
+  .nav .me .av{width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+  .nav .me .nm{font-size:12px;font-weight:700;color:var(--navy);}.nav .me .rl{font-size:9.5px;color:var(--muted);}
+  .nav .ni{display:flex;gap:9px;align-items:center;padding:6px 12px;font-size:11px;font-weight:600;color:#33415a;cursor:pointer;}
+  .nav .ni:hover{background:#f4f7f5;}.nav .ni.on{background:#e6f4ee;color:var(--green);}
+  .nav .ni .ic{width:14px;text-align:center;opacity:.8;}
+  .nav .lo{margin:7px 12px 10px;background:var(--green);color:#fff;font-size:10.5px;font-weight:700;text-align:center;padding:7px 0;border-radius:8px;cursor:pointer;}
+  /* panels (render) */
+  .panel{position:absolute;z-index:11;background:#fff;border:1px solid var(--line);border-radius:13px;box-shadow:0 12px 28px rgba(12,35,64,.14);padding:11px;width:206px;}
+  .panel .pt{font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--green);margin:0 0 8px;}
+  .agrow{display:flex;justify-content:space-between;gap:8px;font-size:10.5px;padding:5px 0;border-bottom:1px solid var(--line);color:var(--navy);}
+  .agrow b{font-weight:700;}.agrow span{color:var(--muted);white-space:nowrap;}
+  .srow{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);cursor:pointer;}
+  .srow:hover{opacity:.85;}
+  .srow .sa{width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .srow .sn{font-size:10px;font-weight:600;color:var(--navy);line-height:1.2;}.srow .st{font-size:8.5px;color:var(--muted);}
+  .srow .join{margin-left:auto;font-size:8.5px;font-weight:800;color:#fff;background:var(--green);padding:3px 8px;border-radius:7px;}
+  .ql{display:flex;gap:9px;align-items:center;padding:5px 0;font-size:10.5px;color:var(--navy);cursor:pointer;}
+  .ql:hover{color:var(--green);}.ql .b2{margin-left:auto;font-size:8px;font-weight:800;color:#fff;background:#e0533b;border-radius:10px;padding:1px 6px;}
+  .pbtn{margin-top:8px;width:100%;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:10px;font-weight:800;padding:7px 0;cursor:pointer;}
+  /* attendees */
+  .fig{position:absolute;width:12px;height:22px;border-radius:6px 6px 3px 3px;box-shadow:0 4px 7px rgba(0,0,0,.32);transition:left 2.6s linear,top 2.6s linear;z-index:7;cursor:pointer;}
+  .fig::before{content:"";position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:9px;height:9px;border-radius:50%;background:inherit;}
+  .fig:hover{outline:2px solid #fff;outline-offset:1px;}
+  .you{position:absolute;left:48%;top:64%;width:15px;height:27px;border-radius:8px 8px 3px 3px;background:#2E78F5;z-index:8;cursor:pointer;box-shadow:0 5px 10px rgba(0,0,0,.4);}
+  .you::before{content:"";position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:12px;height:12px;border-radius:50%;background:#2E78F5;}
+  .youpin{position:absolute;left:48%;top:58%;transform:translateX(-50%);z-index:9;font-size:8px;font-weight:800;color:#fff;background:#2E78F5;padding:2px 7px;border-radius:8px;}
+  .plant{position:absolute;font-size:15px;z-index:4;}
+  /* badges */
+  .badge{position:absolute;top:12px;z-index:10;background:var(--navy);color:#e7edf6;font-size:9.5px;font-weight:700;padding:4px 11px;border-radius:20px;display:inline-flex;gap:6px;align-items:center;}
+  .badge.l{left:12px;}.badge .dt{width:6px;height:6px;border-radius:50%;background:#3ddc97;}
+  .cap{font-size:10.5px;color:var(--muted);text-align:center;padding:9px;background:#fff;}
+  .disc{font-size:11px;color:var(--muted);text-align:center;padding:16px;}
+  .fab{position:fixed;right:24px;bottom:24px;z-index:100;background:var(--navy);color:#fff;font-size:12.5px;font-weight:700;padding:11px 16px;border-radius:24px;box-shadow:0 12px 26px rgba(12,35,64,.4);cursor:pointer;display:inline-flex;gap:8px;align-items:center;}
+  .fab .sp{color:var(--green2);}
+  /* overlays */
+  .zlab,.gtip{position:fixed;z-index:98;background:rgba(12,35,64,.95);color:#fff;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:7px;white-space:nowrap;opacity:0;transition:.1s;pointer-events:none;transform:translate(-50%,-130%);}
+  .zlab.on,.gtip.on{opacity:1;}
+  .gcard{position:fixed;z-index:99;width:210px;background:#fff;border-radius:13px;box-shadow:0 16px 40px rgba(12,35,64,.32);opacity:0;transform:translate(-50%,-100%) scale(.96);transition:.14s;pointer-events:none;overflow:hidden;}
+  .gcard.on{opacity:1;pointer-events:auto;transform:translate(-50%,-100%) scale(1);}
+  .gcard .hd{display:flex;gap:9px;align-items:center;padding:11px 12px 9px;}
+  .gcard .avb{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800;flex:0 0 auto;}
+  .gcard .nm{font-size:13px;font-weight:700;color:#141a2b;}.gcard .rl{font-size:10.5px;color:#6a748a;}
+  .gcard .whr{padding:5px 12px;background:#e9f4ef;font-size:10.5px;color:var(--green);font-weight:600;}
+  .gcard .act{display:flex;gap:6px;padding:9px 12px;}
+  .gcard .act button{flex:1;font-size:10.5px;font-weight:700;border-radius:8px;padding:6px 0;cursor:pointer;border:1px solid var(--line);background:#fff;color:#141a2b;}
+  .gcard .act button.p{background:var(--green);color:#fff;border-color:var(--green);}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--navy);color:#fff;font-size:13px;font-weight:600;padding:10px 18px;border-radius:10px;opacity:0;transition:.25s;z-index:101;box-shadow:0 12px 34px rgba(12,35,64,.45);}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+  .ai{position:fixed;right:24px;bottom:24px;width:300px;max-width:calc(100vw - 40px);z-index:102;background:#fff;border-radius:16px;box-shadow:0 22px 54px rgba(12,35,64,.4);overflow:hidden;opacity:0;transform:translateY(14px) scale(.97);transition:.16s;pointer-events:none;}
+  .ai.on{opacity:1;transform:none;pointer-events:auto;}
+  .ai .ah{background:linear-gradient(120deg,var(--navy),var(--green));color:#fff;padding:11px 13px;display:flex;align-items:center;gap:9px;}
+  .ai .ah .av{width:28px;height:28px;border-radius:50%;background:conic-gradient(var(--green2),#2E78F5,var(--navy),var(--green2));display:flex;align-items:center;justify-content:center;font-size:13px;}
+  .ai .ah .t1{font-size:12.5px;font-weight:700;}.ai .ah .t2{font-size:9px;color:#bfe6d9;}
+  .ai .ah .x{margin-left:auto;cursor:pointer;}
+  .ai .body{padding:11px;max-height:240px;overflow-y:auto;background:#f5faf8;}
+  .ai .msg{font-size:12px;line-height:1.5;padding:8px 11px;border-radius:12px;margin-bottom:8px;max-width:88%;}
+  .ai .msg.bot{background:#fff;border:1px solid #e3efe9;color:#141a2b;}.ai .msg.me{background:var(--green);color:#fff;margin-left:auto;}
+  .ai .chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .ai .chip2{font-size:10px;font-weight:600;color:var(--green);background:#e6f4ee;border:1px solid #cfe9df;border-radius:20px;padding:5px 9px;cursor:pointer;}
+  .ai .in{display:flex;border-top:1px solid #e3efe9;}
+  .ai .in input{flex:1;border:none;padding:10px 12px;font-size:12px;outline:none;font-family:inherit;}
+  .ai .in button{border:none;background:var(--green);color:#fff;font-size:12px;font-weight:700;padding:0 14px;cursor:pointer;}
+  @media(max-width:900px){.panel,.nav{display:none;}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="topbar">
+    <div class="brand"><span class="dot">iC</span>iCapOS</div>
+    <div class="topnav"><span>Overview</span><span>Marketplace</span><span>Founders</span><span>Investors</span><span>Pricing</span><span>Submit Company</span></div>
+    <div class="topright"><span class="login">Login</span><span class="signup">Sign up</span></div>
+  </div>
+  <div class="crumbs"><a>&larr; Back to event</a><a class="skip">Skip lobby &rarr;</a></div>
+
+  <div class="lobby" id="lobby"></div>
+  <div class="disc">The lobby is a navigation aid only. Education &amp; community — not an offer of securities.</div>
+</div>
+
+<div class="fab" id="fab"><span class="sp">✨</span> Info Desk</div>
+<div class="zlab" id="zlab"></div><div class="gtip" id="gtip"></div><div class="gcard" id="gcard"></div><div class="toast" id="toast"></div>
+<div class="ai" id="ai">
+  <div class="ah"><div class="av">✨</div><div><div class="t1">iCFO Assistant</div><div class="t2">Help &amp; Info Desk · online</div></div><div class="x" id="aix">✕</div></div>
+  <div class="body" id="aibody"><div class="msg bot">👋 Welcome to the iCFO Virtual Private Equity Expo. Ask me about sessions, the expo hall, networking, or the agenda.</div><div class="chips" id="aichips"></div></div>
+  <div class="in"><input id="aiin" placeholder="Ask me anything…" /><button id="aisend">Send</button></div>
+</div>
+
+<script>
+  const rand=(a,b)=>a+Math.random()*(b-a);const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const initials=n=>n.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+  // iCFO icons
+  const IC={
+    sessions:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></svg>',
+    talk:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/></svg>',
+    net:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.2"/><path d="M3 19c0-3 2.7-4.5 6-4.5s6 1.5 6 4.5"/></svg>',
+    ondemand:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9.5v5l4-2.5z" fill="#fff"/></svg>',
+    expo:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><path d="M4 9l1-4h14l1 4M4 9v10h16V9M9 19v-5h6v5"/></svg>',
+    leader:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7"><path d="M8 4h8v4a4 4 0 0 1-8 0zM12 12v4M8 20h8"/></svg>',
+  };
+  // ours: exact 6 zones + positions arc across the floor
+  const ZONES=[
+    ["SESSIONS","sessions","Main Stage",false,10,44],
+    ["TALK SHOW","talk","Live · starting soon",false,25,31],
+    ["NETWORKING","net","Lounge · tables open",false,41,25],
+    ["ON-DEMAND","ondemand","Replays",false,57,25],
+    ["EXPO HALL","expo","Sponsor Hall",false,74,31],
+    ["LEADERBOARD","leader","Ranks",false,88,44],
+  ];
+  const TABS=["🏠 Lobby|1","🖥 Main Stage|0","🎙 Talk Show|0","🗂 Tracks|0","🤝 Networking|0","🏛 Sponsor Hall|0","🏆 Leaderboard|0"];
+  const TICK=["On-demand — 0 browsing","Expo hall — 0 at booths","Sessions — 0 watching","Talk show — live soon","Networking — 0 here · tables open"];
+  const SIGNS=[["EXPO HALL ►",70,52],["◄ SESSIONS",22,52],["HELP DESK ►",50,63]];
+  const NAV=[["🏠","Lobby",1],["🖥","Main Stage",0],["🎙","Talk Show",0],["🗂","Tracks",0],["🤝","Networking",0],["🏛","Sponsor Hall",0],["🏆","Leaderboard",0],["💬","Help Desk",0]];
+  const AGENDA=[["Keynote Session","10:00 AM"],["Panel Discussion","11:30 AM"],["Investor Roundtable","1:00 PM"],["Pitch Showcase","3:00 PM"],["Networking Mixer","5:00 PM"]];
+  const SESS=[["The Future of Private Equity","10:00–10:45 AM","PE"],["Building Scalable Portfolios","11:30–12:15 PM","SP"],["Investor Expectations 2025","1:00–1:45 PM","IE"]];
+  const QLINKS=[["👤","Edit Profile",0],["📅","My Meetings",0],["💬","Messages",3],["🔔","Notifications",5]];
+  const NAMES=["Robert Ruiz","Daniela Felix","Johnny Rivera","Maya Rao","Sam Okoye","Priya Nair","Leo Kramer","Ana García","Tom Bishop","Wei Chen","Nadia Haddad","Marcus Bell"];
+  const ROLES=["Angel investor","VC · Growth","Founder · Seed","Family office","LP · Institutional","Managing Partner","Advisor"];
+  const COMPS=["Alpha Capital","Beta Ventures","Summit Partners","NextWave","Meridian PE","Cedar Family Office","BlueHarbor"];
+  const COLORS=["#e0703a","#4a5568","#5b8fd6","#3ba05a","#5b4be0","#c05a8a","#7a5230","#2b3a4d","#0f8f6a"];
+  const GZONES=["Lobby","Sessions","Networking","Expo Hall","On-Demand"];
+  const SPOTS=[[20,58],[33,42],[47,34],[57,46],[63,36],[70,56],[30,66],[52,60],[43,48],[66,64]];
+
+  const zlab=document.getElementById("zlab"),gtip=document.getElementById("gtip"),gcard=document.getElementById("gcard"),toast=document.getElementById("toast");let tt;
+  function go(n){toast.textContent=/→|►|Wave|hi|Waved|Said/.test(n)?n.replace(/►/,"→"):("Entering "+n+" →");toast.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>toast.classList.remove("on"),1500);}
+  function showTip(el,t){const r=el.getBoundingClientRect();gtip.textContent=t;gtip.style.left=(r.left+r.width/2)+"px";gtip.style.top=(r.top-2)+"px";gtip.classList.add("on");}
+  const hideTip=()=>gtip.classList.remove("on");
+  function showZ(el,t){const r=el.getBoundingClientRect();zlab.textContent=t;zlab.style.left=(r.left+r.width/2)+"px";zlab.style.top=(r.top+2)+"px";zlab.classList.add("on");}
+  const hideZ=()=>zlab.classList.remove("on");
+  function showCard(el,g){const r=el.getBoundingClientRect();
+    gcard.innerHTML=`<div class="hd"><div class="avb" style="background:${g.color}">${g.you?"★":initials(g.name)}</div><div><div class="nm">${g.name}${g.you?" (you)":""}</div><div class="rl">${g.role}${g.comp?" · "+g.comp:""}</div></div></div><div class="whr">📍 in the ${g.zone}</div>`+
+      (g.you?`<div class="act"><button class="p">Edit profile</button><button>Set status</button></div>`:`<div class="act"><button class="p">👋 Wave</button><button>💬 Say hi</button></div>`);
+    gcard.style.left=(r.left+r.width/2)+"px";gcard.style.top=(r.top-6)+"px";gcard.classList.add("on");
+    gcard.querySelectorAll(".act button").forEach(b=>b.addEventListener("click",()=>{go((b.textContent.includes("Wave")?"👋 Waved at ":b.textContent.includes("hi")?"💬 Said hi to ":"✔ ")+g.name);hideCard();}));}
+  const hideCard=()=>gcard.classList.remove("on");
+  document.addEventListener("click",e=>{if(!e.target.closest(".gcard")&&!e.target.closest(".fig")&&!e.target.closest(".you"))hideCard();},true);
+  window.addEventListener("scroll",()=>{hideCard();hideZ();hideTip();},true);
+  function bindGuest(el,g){el.addEventListener("mouseenter",()=>showTip(el,g.name+(g.you?" (you)":"")));el.addEventListener("mouseleave",hideTip);el.addEventListener("click",ev=>{ev.stopPropagation();hideTip();showCard(el,g);});}
+
+  const stage=document.createElement("div");stage.className="stage";
+  stage.innerHTML=`<div class="grid-lines"></div>
+    <div class="welcome"><div class="ey">WELCOME TO</div><div class="ti">The iCFO Virtual Private Equity Expo: Newport Beach — Aug 25</div></div>`;
+  // zone tiles
+  ZONES.forEach(z=>{const d=document.createElement("div");d.className="tile"+(z[3]?" live":"");
+    d.style.cssText=`left:${z[4]}%;top:${z[5]}%`;d.dataset.go=z[0];d.dataset.z=`${z[0]} · ${z[2]}`;
+    d.innerHTML=`<div class="box">${IC[z[1]]}<div class="hot">● LIVE</div></div><div class="nm">${z[0]}</div>`;stage.appendChild(d);});
+  // signs
+  SIGNS.forEach(s=>{const d=document.createElement("div");d.className="sign";d.style.cssText=`left:${s[1]}%;top:${s[2]}%`;
+    const target=s[0].replace(/[►◄]/g,"").trim();d.dataset.go=target;d.dataset.z=target;d.dataset.ai=target==="HELP DESK"?"1":"";
+    d.innerHTML=`${s[0]}<span class="stem"></span>`;stage.appendChild(d);});
+  // pillar
+  const pil=document.createElement("div");pil.className="pillar";pil.dataset.go="Explore · Connect · Grow";pil.dataset.z="iCapOS Hub";
+  pil.innerHTML=`<div class="glass">iC</div><div class="base"></div><div class="tag">EXPLORE · CONNECT · GROW</div>`;stage.appendChild(pil);
+  // help & info desk
+  const desk=document.createElement("div");desk.className="desk";desk.dataset.ai="1";desk.dataset.z="Help & Info Desk";
+  desk.innerHTML=`<div class="box">💬</div><div class="nm">HELP &amp; INFO<br>DESK</div><div class="hint">✨ Ask AI</div>`;stage.appendChild(desk);
+  // plants
+  [["16%","33%"],["82%","33%"],["14%","62%"],["84%","62%"]].forEach(p=>{const pl=document.createElement("div");pl.className="plant";pl.style.cssText=`left:${p[0]};top:${p[1]}`;pl.textContent=pick(["🪴","🌿","🌱"]);stage.appendChild(pl);});
+  // attendees
+  const roster=[...NAMES].sort(()=>Math.random()-.5);
+  SPOTS.forEach((s,i)=>{const g={name:roster[i%roster.length],color:pick(COLORS),role:pick(ROLES),comp:pick(COMPS),zone:pick(GZONES)};
+    const f=document.createElement("div");f.className="fig";f.style.cssText=`left:${s[0]}%;top:${s[1]}%;background:${g.color}`;f.dataset.bx=s[0];f.dataset.by=s[1];stage.appendChild(f);bindGuest(f,g);});
+  const you=document.createElement("div");you.className="you";stage.appendChild(you);
+  bindGuest(you,{name:"Alex Morgan",color:"#2E78F5",role:"Founder · iCapOS",comp:"",zone:"Lobby",you:true});
+  const yp=document.createElement("div");yp.className="youpin";yp.textContent="You are here";stage.appendChild(yp);
+  // badges
+  const hb=document.createElement("div");hb.className="badge l";hb.innerHTML=`<span class="dt"></span>You are here · Lobby`;stage.appendChild(hb);
+  // nav rail
+  const nav=document.createElement("div");nav.className="nav";
+  nav.innerHTML=`<div class="me"><div class="av">A</div><div><div class="nm">Hello, Alex</div><div class="rl">Founder</div></div></div>`+
+    NAV.map(n=>`<div class="ni${n[2]?" on":""}" data-go="${n[1]}" data-ai="${n[1]==="Help Desk"?"1":""}"><span class="ic">${n[0]}</span>${n[1]}</div>`).join("")+`<div class="lo" data-go="Log Out →">⏻ Log Out</div>`;
+  stage.appendChild(nav);
+  // panels
+  const agenda=document.createElement("div");agenda.className="panel";agenda.style.cssText="top:78px;left:12px";
+  agenda.innerHTML=`<div class="pt">AGENDA</div>`+AGENDA.map(a=>`<div class="agrow"><b>${a[0]}</b><span>${a[1]}</span></div>`).join("")+`<button class="pbtn" data-go="View full agenda →">View Full Agenda</button>`;
+  stage.appendChild(agenda);
+  const sess=document.createElement("div");sess.className="panel";sess.style.cssText="bottom:14px;right:12px";
+  sess.innerHTML=`<div class="pt">UPCOMING SESSIONS</div>`+SESS.map(s=>`<div class="srow" data-go="${s[0]}"><span class="sa">${s[2]}</span><div><div class="sn">${s[0]}</div><div class="st">${s[1]}</div></div><span class="join">JOIN</span></div>`).join("")+`<button class="pbtn" data-go="View all sessions →">View All Sessions</button>`;
+  stage.appendChild(sess);
+  const ql=document.createElement("div");ql.className="panel";ql.style.cssText="bottom:14px;left:12px;width:166px";
+  ql.innerHTML=`<div class="pt">QUICK LINKS</div>`+QLINKS.map(q=>`<div class="ql" data-go="${q[1]}"><span>${q[0]}</span>${q[1]}${q[2]?`<span class="b2">${q[2]}</span>`:""}</div>`).join("");
+  stage.appendChild(ql);
+  const cap=document.createElement("div");cap.className="cap";cap.textContent="Hover or tap a doorway to look inside, then enter.";
+
+  // assemble lobby
+  const mq=TICK.map(x=>`<span>${x}</span>`).join('<span style="opacity:.4">•</span>');
+  const lobby=document.getElementById("lobby");
+  lobby.innerHTML=`
+    <div class="tabs">${TABS.map(t=>{const[l,on]=t.split("|");return`<span class="tab${on==="1"?" on":""}" data-go="${l.replace(/^[^ ]+ /,'')}">${l}</span>`;}).join("")}<span class="venue"><span class="dt"></span>1 in the venue</span></div>
+    <div class="ticker"><div class="lab"><span class="dt"></span>WHAT'S ON</div><div class="track"><div class="mq">${mq}<span style="opacity:.4">•</span>${mq}</div></div></div>`;
+  // count badge (top-right, above nav)
+  const cb=document.createElement("div");cb.className="badge";cb.style.cssText="right:196px;background:#0f2e46";cb.innerHTML=`<span class="dt"></span>${SPOTS.length+1} in the venue`;stage.appendChild(cb);
+  lobby.appendChild(stage);lobby.appendChild(cap);
+
+  // bind interactions
+  stage.querySelectorAll("[data-z]").forEach(el=>{el.addEventListener("mouseenter",()=>showZ(el,el.dataset.z));el.addEventListener("mouseleave",hideZ);});
+  document.querySelectorAll("[data-go]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();if(el.dataset.ai){openAI();return;}go(el.dataset.go);}));
+  stage.querySelectorAll("[data-ai='1']").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();openAI();}));
+  document.getElementById("fab").addEventListener("click",openAI);
+  setInterval(()=>{stage.querySelectorAll(".fig").forEach(f=>{if(Math.random()<0.55){f.style.left=(+f.dataset.bx+rand(-4,4))+"%";f.style.top=(+f.dataset.by+rand(-3,3))+"%";}});},2600);
+
+  /* AI */
+  const ai=document.getElementById("ai"),aibody=document.getElementById("aibody"),aiin=document.getElementById("aiin");
+  function openAI(){ai.classList.add("on");document.getElementById("fab").style.opacity=0;aiin.focus();}
+  document.getElementById("aix").addEventListener("click",()=>{ai.classList.remove("on");document.getElementById("fab").style.opacity=1;});
+  const CHIPS=["Where's the keynote?","How do I network?","Show the agenda","Find a sponsor"];
+  document.getElementById("aichips").innerHTML=CHIPS.map(c=>`<span class="chip2">${c}</span>`).join("");
+  function addMsg(t,w){const d=document.createElement("div");d.className="msg "+w;d.innerHTML=t;aibody.appendChild(d);aibody.scrollTop=aibody.scrollHeight;}
+  function answer(q){const s=q.toLowerCase();
+    if(/keynote|session|stage|main/.test(s))return "The keynote runs on the <b>Main Stage / Sessions</b> at 10:00 AM. Want me to take you there?";
+    if(/network|meet|people|lounge/.test(s))return "Head to <b>Networking</b> — hover any attendee for their name, click to Wave or Say hi.";
+    if(/agenda|schedule|when/.test(s))return "Keynote 10:00, Panel 11:30, Roundtable 1:00, Pitch 3:00, Mixer 5:00. See the Agenda panel.";
+    if(/sponsor|expo|booth/.test(s))return "Sponsors are in the <b>Expo Hall</b> — Alpha Capital, Beta Ventures, Summit Partners, NextWave.";
+    if(/talk show/.test(s))return "The <b>Talk Show</b> is starting soon — check the ticker for the go-live.";
+    return "I can help with sessions, the expo hall, networking, or the agenda — try a suggestion above.";}
+  function send(q){if(!q.trim())return;addMsg(q,"me");aiin.value="";setTimeout(()=>addMsg(answer(q),"bot"),350);}
+  document.getElementById("aisend").addEventListener("click",()=>send(aiin.value));
+  aiin.addEventListener("keydown",e=>{if(e.key==="Enter")send(aiin.value);});
+  aibody.addEventListener("click",e=>{const c=e.target.closest(".chip2");if(c)send(c.textContent);});
+</script>
+</body>
+</html>

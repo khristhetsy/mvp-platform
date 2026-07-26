@@ -23,7 +23,7 @@ export const SESSION_ACCENT: Record<string, string> = {
   talk_show: "#0c2340",
 };
 
-export type EventEmailType = "invite" | "reminder" | "day_of";
+export type EventEmailType = "invite" | "reminder" | "day_of" | "booklet";
 
 export const eventMergeSchema = z.object({
   eventId: z.string(),

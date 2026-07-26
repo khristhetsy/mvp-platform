@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Event Hub — Duplicate event · mockup</title>
+<style>
+  :root{--blue:#2E78F5;--navy:#0c2340;--muted:#64748b;--line:#e5e9f0;--ink:#1e293b;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:#f4f6fa;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:24px;}
+  .wrap{max-width:960px;margin:0 auto;}
+  .crumb{font-size:12px;color:var(--muted);margin-bottom:14px;}
+  .crumb b{color:var(--navy);font-weight:600;}
+  .hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
+  h1{font-size:20px;font-weight:700;margin:0 0 3px;}
+  .sub{font-size:12.5px;color:var(--muted);margin:0;}
+  .btn{font-family:inherit;cursor:pointer;font-size:12px;font-weight:600;border-radius:8px;padding:8px 14px;border:1px solid var(--line);background:#fff;color:var(--navy);}
+  .btn.p{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .btn.sm{padding:5px 11px;font-size:11.5px;}
+  .btn.ghost{color:var(--muted);}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+  table{width:100%;border-collapse:collapse;}
+  th{font-size:10.5px;font-weight:700;color:var(--muted);letter-spacing:.04em;text-align:left;padding:12px 16px;border-bottom:1px solid var(--line);}
+  td{padding:14px 16px;border-bottom:1px solid #f1f5f9;font-size:13px;vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .ename{font-weight:600;color:var(--navy);}
+  .eslug{font-size:11px;color:var(--muted);margin-top:2px;}
+  .badge{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;}
+  .b-pub{background:#E1F5EE;color:#0F6E56;}
+  .b-draft{background:#eef2f7;color:#475569;}
+  .acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;}
+  .dup{border-color:#bcd3fb!important;background:#f2f7ff!important;color:var(--blue)!important;}
+  /* modal */
+  .backdrop{position:fixed;inset:0;background:rgba(12,35,64,.5);display:flex;align-items:center;justify-content:center;padding:24px;z-index:50;opacity:0;pointer-events:none;transition:.15s;}
+  .backdrop.on{opacity:1;pointer-events:auto;}
+  .modal{background:#fff;border-radius:16px;width:100%;max-width:480px;max-height:90vh;overflow:auto;box-shadow:0 20px 50px rgba(12,35,64,.3);transform:translateY(8px);transition:.15s;}
+  .backdrop.on .modal{transform:translateY(0);}
+  .mhd{padding:16px 18px 12px;border-bottom:1px solid var(--line);}
+  .mhd h2{font-size:16px;font-weight:700;margin:0 0 2px;}
+  .mhd p{font-size:12px;color:var(--muted);margin:0;}
+  .src{display:flex;align-items:center;gap:9px;background:#f4f7fc;border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin:14px 18px 4px;}
+  .src .ic{width:30px;height:30px;border-radius:7px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;}
+  .src .t{font-size:12.5px;font-weight:600;color:var(--navy);}
+  .src .s{font-size:10.5px;color:var(--muted);}
+  .fld{padding:0 18px;margin-top:12px;}
+  .fld label{display:block;font-size:11.5px;font-weight:600;color:var(--navy);margin-bottom:5px;}
+  .fld input{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;}
+  .fld .row{display:grid;grid-template-columns:1fr 130px;gap:8px;}
+  .section{padding:14px 18px 4px;}
+  .section .sl{font-size:10.5px;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;}
+  .opt{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;margin-bottom:7px;cursor:pointer;transition:.12s;}
+  .opt:hover{background:#f8fafc;}
+  .opt .ck{width:18px;height:18px;border-radius:5px;border:1.5px solid #cbd5e1;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;}
+  .opt.on{border-color:#bcd3fb;background:#f6faff;}
+  .opt.on .ck{background:var(--blue);border-color:var(--blue);}
+  .opt .oi{font-size:15px;}
+  .opt .ot{font-size:12.5px;font-weight:600;color:var(--navy);}
+  .opt .od{font-size:10.5px;color:var(--muted);}
+  .note{margin:10px 18px 0;background:#fff8e6;border:1px solid #f3e2b3;border-radius:9px;padding:9px 11px;font-size:11px;color:#8a6d1f;}
+  .mact{display:flex;justify-content:flex-end;gap:8px;padding:14px 18px 18px;position:sticky;bottom:0;background:#fff;}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--navy);color:#fff;font-size:13px;font-weight:600;padding:11px 18px;border-radius:10px;opacity:0;transition:.25s;z-index:60;box-shadow:0 10px 30px rgba(12,35,64,.4);}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="crumb">Admin Workspace / Dashboard / <b>Events</b></p>
+  <div class="hd">
+    <div><h1>Event Hub</h1><p class="sub">Create and publish iCFO Events. Education &amp; community only — no securities offerings here.</p></div>
+    <button class="btn p">+ New event</button>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead><tr><th>EVENT</th><th>FORMAT</th><th>STARTS</th><th>STATUS</th><th style="text-align:right">ACTIONS</th></tr></thead>
+      <tbody id="rows">
+        <tr>
+          <td><div class="ename">ICFO Private Equity Virtual Expo</div><div class="eslug">/live-web-event-july-21st-the-icfo-private-equity-virtual-expo</div></td>
+          <td>Webinar</td><td>Jul 21, 2026</td><td><span class="badge b-pub">Published</span></td>
+          <td><div class="acts">
+            <button class="btn sm dup" onclick="openDup('ICFO Private Equity Virtual Expo')"><span aria-hidden>⧉</span> Duplicate</button>
+            <button class="btn sm">Manage</button><button class="btn sm ghost">Unpublish</button><button class="btn sm ghost">Archive</button>
+          </div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="backdrop" id="bd">
+  <div class="modal">
+    <div class="mhd"><h2>Duplicate event</h2><p>Start a new event from an existing one — carry over the setup you choose.</p></div>
+    <div class="src"><div class="ic">⧉</div><div><div class="t" id="srcName">ICFO Private Equity Virtual Expo</div><div class="s">Source event · Webinar · Published</div></div></div>
+
+    <div class="fld"><label>New event name</label><input id="newName" value="Copy of ICFO Private Equity Virtual Expo" /></div>
+    <div class="fld"><label>URL slug</label><input value="copy-of-icfo-private-equity-virtual-expo" /></div>
+    <div class="fld"><label>Details</label><div class="row"><input placeholder="Format" value="Webinar" /><input type="date" /></div></div>
+
+    <div class="section">
+      <div class="sl">What to copy over</div>
+      <div class="opt on" onclick="tog(this)"><div class="ck">✓</div><span class="oi">🏛</span><div><div class="ot">Halls &amp; booths</div><div class="od">Sessions, Talk Show, Expo Hall, E-Poster layout</div></div></div>
+      <div class="opt on" onclick="tog(this)"><div class="ck">✓</div><span class="oi">📅</span><div><div class="ot">Sessions &amp; agenda</div><div class="od">Schedule blocks and tracks (times reset to new date)</div></div></div>
+      <div class="opt on" onclick="tog(this)"><div class="ck">✓</div><span class="oi">🤝</span><div><div class="ot">Sponsors &amp; banners</div><div class="od">Sponsor tiers, logos, and banner placements</div></div></div>
+      <div class="opt on" onclick="tog(this)"><div class="ck">✓</div><span class="oi">🎨</span><div><div class="ot">Branding &amp; lobby design</div><div class="od">Theme, lobby layout, welcome copy</div></div></div>
+      <div class="opt on" onclick="tog(this)"><div class="ck">✓</div><span class="oi">📝</span><div><div class="ot">Registration form</div><div class="od">Fields and questions attendees fill in</div></div></div>
+      <div class="opt" onclick="tog(this)"><div class="ck"></div><span class="oi">🏆</span><div><div class="ot">Gamification setup</div><div class="od">Points rules, quests, leaderboard config</div></div></div>
+      <div class="opt" onclick="tog(this)"><div class="ck"></div><span class="oi">🎙</span><div><div class="ot">Speakers</div><div class="od">Speaker profiles and session assignments</div></div></div>
+    </div>
+    <div class="note">Attendees, registrations, poll results, and analytics are never copied — the new event starts fresh, as a <b>Draft</b>.</div>
+    <div class="mact"><button class="btn" onclick="closeDup()">Cancel</button><button class="btn p" onclick="createCopy()">Create copy</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+  const bd=document.getElementById("bd");
+  function openDup(name){document.getElementById("srcName").textContent=name;document.getElementById("newName").value="Copy of "+name;bd.classList.add("on");}
+  function closeDup(){bd.classList.remove("on");}
+  function tog(el){el.classList.toggle("on");el.querySelector(".ck").textContent=el.classList.contains("on")?"✓":"";}
+  bd.addEventListener("click",e=>{if(e.target===bd)closeDup();});
+  function createCopy(){
+    const name=document.getElementById("newName").value||"Copy of event";
+    const rows=document.getElementById("rows");
+    const tr=document.createElement("tr");
+    tr.innerHTML='<td><div class="ename">'+name+'</div><div class="eslug">/copy-of-icfo-private-equity-virtual-expo · created just now</div></td><td>Webinar</td><td>—</td><td><span class="badge b-draft">Draft</span></td><td><div class="acts"><button class="btn sm dup">⧉ Duplicate</button><button class="btn sm">Manage</button><button class="btn sm ghost">Publish</button></div></td>';
+    rows.appendChild(tr);
+    closeDup();
+    const t=document.getElementById("toast");t.textContent="✓ Draft created from copy — opening in Manage…";t.classList.add("on");setTimeout(()=>t.classList.remove("on"),2600);
+  }
+</script>
+</body>
+</html>

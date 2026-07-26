@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>iCFO Points — wallet + admin mockup</title>
+<style>
+  :root{--navy:#0c2340;--blue:#2E78F5;--ink:#1e2a3a;--muted:#6a7690;--line:#e3e7ec;--bg:#f3f5f7;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:26px;}
+  .wrap{max-width:760px;margin:0 auto;}
+  h1{font-size:20px;font-weight:700;margin:0 0 3px;color:var(--navy);}
+  .lede{font-size:13px;color:var(--muted);margin:0 0 16px;}
+  .switch{display:inline-flex;gap:6px;background:#fff;border:1px solid var(--line);border-radius:22px;padding:4px;margin-bottom:18px;}
+  .switch button{border:none;background:transparent;font-size:12px;font-weight:700;color:var(--muted);padding:7px 15px;border-radius:18px;cursor:pointer;}
+  .switch button.on{background:var(--blue);color:#fff;}
+  .view{display:none;}.view.on{display:block;}
+  /* balance */
+  .balance{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 8px 26px rgba(12,35,64,.06);}
+  .balance .lab{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
+  .balance .amt{font-size:38px;font-weight:800;color:var(--navy);margin-top:3px;}
+  .balance .amt small{font-size:17px;font-weight:700;color:#4a5568;}
+  .balance .sub{font-size:12px;color:var(--muted);margin-top:4px;}
+  .balance .sub a{color:var(--blue);}
+  .toast{margin-top:14px;border-radius:10px;padding:11px 14px;font-size:13px;display:none;}
+  .toast.ok{background:#e7f6f0;color:#0a6b4e;display:block;}
+  .toast.err{background:#fdeaea;color:#b42318;display:block;}
+  h2{font-size:16px;font-weight:700;color:var(--navy);margin:26px 0 10px;}
+  .grid{display:grid;gap:12px;grid-template-columns:1fr 1fr;}
+  @media(max-width:560px){.grid{grid-template-columns:1fr;}}
+  .item{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:13px;padding:15px;}
+  .item .t{font-size:14px;font-weight:700;color:var(--navy);}
+  .item .d{font-size:12.5px;color:#4a5568;margin-top:4px;flex:1;line-height:1.45;}
+  .item .row{display:flex;align-items:center;justify-content:space-between;margin-top:12px;}
+  .item .cost{font-size:13px;font-weight:800;color:var(--navy);}
+  .redeem{background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;padding:7px 15px;cursor:pointer;}
+  .redeem:disabled{opacity:.45;cursor:not-allowed;}
+  .hist{border:1px solid var(--line);border-radius:13px;background:#fff;overflow:hidden;}
+  .hrow{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;font-size:13.5px;border-top:1px solid var(--line);}
+  .hrow:first-child{border-top:none;}
+  .hrow .r{display:flex;align-items:center;gap:14px;}
+  .hrow .date{font-size:11.5px;color:var(--muted);}
+  .pos{color:#0f8f6a;font-weight:800;}.neg{color:#d64550;font-weight:800;}
+  /* admin */
+  .warn{background:#fff7e6;color:#8a5a00;border-radius:10px;padding:11px 14px;font-size:12.5px;margin-bottom:16px;}
+  .warn code{background:#f3e3c0;padding:1px 5px;border-radius:4px;}
+  .arow{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 15px;margin-bottom:8px;}
+  .arow .info{flex:1;min-width:180px;}
+  .arow .info .t{font-size:13.5px;font-weight:700;color:var(--navy);}
+  .arow .info .d{font-size:11.5px;color:var(--muted);}
+  .arow input[type=number]{width:74px;border:1px solid var(--line);border-radius:7px;padding:5px 8px;font-size:13px;}
+  .pill{border:none;border-radius:20px;padding:4px 11px;font-size:11.5px;font-weight:700;cursor:pointer;}
+  .pill.act{background:#e7f6f0;color:#0a6b4e;}.pill.inact{background:#eef0f4;color:#7a8496;}
+  .addform{display:grid;grid-template-columns:1fr 1fr 96px auto;gap:8px;border-top:1px solid var(--line);padding-top:14px;margin-top:8px;}
+  @media(max-width:560px){.addform{grid-template-columns:1fr;}}
+  .addform input{border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13px;}
+  .addform button{background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;padding:0 16px;cursor:pointer;}
+  .muted{font-size:12.5px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>iCFO Points</h1>
+  <p class="lede">Live mockup of what was built — the member wallet (Points-only balance, redeem, history) and the admin rewards catalog. Toggle between the two views.</p>
+
+  <div class="switch" id="switch">
+    <button data-v="wallet" class="on">Member wallet</button>
+    <button data-v="admin">Admin catalog</button>
+  </div>
+
+  <!-- ================= WALLET ================= -->
+  <div class="view on" id="v-wallet">
+    <div class="balance">
+      <div class="lab">Your balance</div>
+      <div class="amt"><span id="bal">250</span> <small>Points</small></div>
+      <div class="sub">No cash value · redeemable for iCFO services · <a>program terms</a></div>
+    </div>
+    <div class="toast" id="toast"></div>
+
+    <h2>Redeem</h2>
+    <div class="grid" id="catalog"></div>
+
+    <h2>History</h2>
+    <div class="hist" id="hist"></div>
+  </div>
+
+  <!-- ================= ADMIN ================= -->
+  <div class="view" id="v-admin">
+    <div class="warn">The Points program is currently <b>disabled</b> (<code>CREDITS_ENABLED=false</code>). You can prepare the catalog now; nothing is earnable or redeemable until it's enabled and counsel has signed off.</div>
+    <h2 style="margin-top:0">Rewards catalog</h2>
+    <p class="muted" style="margin-top:-4px">Prices are in Points — never dollars. Don't add anything that offsets investment or deal costs.</p>
+    <div id="admlist"></div>
+    <div class="addform">
+      <input placeholder="Reward title" />
+      <input placeholder="Description (optional)" />
+      <input type="number" placeholder="Cost" />
+      <button>Add reward</button>
+    </div>
+
+    <h2>Recent redemptions</h2>
+    <div class="hist" id="redlist"></div>
+  </div>
+</div>
+
+<script>
+  const CATALOG=[
+    ["Premium tools — 30 days","Unlock the founder analytics & diligence toolset for a month.",150],
+    ["Self-paced course credit","Any one iCFO learning course of your choice.",100],
+    ["Priority event access","Front-row/priority seating + early room entry at the next expo.",75],
+    ["Featured profile boost","Highlight your profile in the networking directory for a week.",120],
+  ];
+  let balance=250;
+  const bal=document.getElementById("bal"),toast=document.getElementById("toast");
+  const HIST=[
+    ["Approved to present",50,"Aug 2"],["Watched a session",15,"Aug 2"],
+    ["Accepted a connection",15,"Aug 1"],["Registered for an event",10,"Jul 28"],
+    ["Opted into networking",5,"Jul 28"],
+  ];
+  const REDS=[["Priority event access",75,"Aug 3"],["Self-paced course credit",100,"Jul 30"]];
+
+  function fmt(n){return n.toLocaleString();}
+  function renderCatalog(){
+    document.getElementById("catalog").innerHTML=CATALOG.map((c,i)=>{
+      const afford=balance>=c[2];
+      return `<div class="item"><div class="t">${c[0]}</div><div class="d">${c[1]}</div>
+        <div class="row"><span class="cost">${fmt(c[2])} Points</span>
+        <button class="redeem" data-i="${i}" ${afford?"":"disabled"}>${afford?"Redeem":"Not enough"}</button></div></div>`;
+    }).join("");
+  }
+  function renderHist(){
+    document.getElementById("hist").innerHTML=HIST.map(h=>`<div class="hrow"><span>${h[0]}</span>
+      <span class="r"><span class="date">${h[2]}</span><span class="${h[1]>=0?'pos':'neg'}">${h[1]>=0?'+':''}${fmt(h[1])}</span></span></div>`).join("");
+  }
+  function showToast(kind,text){toast.className="toast "+kind;toast.textContent=text;setTimeout(()=>toast.className="toast",3200);}
+  document.getElementById("catalog").addEventListener("click",e=>{
+    const b=e.target.closest(".redeem");if(!b||b.disabled)return;
+    const c=CATALOG[+b.dataset.i];if(balance<c[2])return;
+    balance-=c[2];bal.textContent=fmt(balance);
+    HIST.unshift([`Redeemed — ${c[0]}`,-c[2],"now"]);
+    renderCatalog();renderHist();
+    showToast("ok",`Redeemed ${c[0]}. Our team will apply it to your account.`);
+  });
+
+  function renderAdmin(){
+    document.getElementById("admlist").innerHTML=CATALOG.map((c,i)=>`
+      <div class="arow"><div class="info"><div class="t">${c[0]}</div><div class="d">${c[1]}</div></div>
+        <label class="muted">Cost <input type="number" value="${c[2]}" min="1"> Points</label>
+        <button class="pill ${i===3?'inact':'act'}">${i===3?'Inactive':'Active'}</button></div>`).join("");
+    document.getElementById("redlist").innerHTML=REDS.map(r=>`<div class="hrow"><span>${r[0]}</span>
+      <span class="r"><span class="date">${r[2]}</span><span class="neg">−${fmt(r[1])} Points</span><span class="muted">fulfilled</span></span></div>`).join("");
+  }
+  document.getElementById("admlist")?.addEventListener("click",e=>{const p=e.target.closest(".pill");if(!p)return;
+    const on=p.classList.toggle("act");p.classList.toggle("inact",!on);p.textContent=on?"Active":"Inactive";});
+
+  document.getElementById("switch").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+    document.querySelectorAll("#switch button").forEach(x=>x.classList.toggle("on",x===b));
+    document.querySelectorAll(".view").forEach(v=>v.classList.remove("on"));
+    document.getElementById("v-"+b.dataset.v).classList.add("on");});
+
+  renderCatalog();renderHist();renderAdmin();
+</script>
+</body>
+</html>

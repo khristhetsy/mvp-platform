@@ -5,9 +5,14 @@ import { EventEmailWizard } from "@/components/admin-events/EventEmailWizard";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Event Template — Email" };
 
-export default async function EventEmailPage({ searchParams }: { searchParams: Promise<{ eventId?: string }> }) {
+export default async function EventEmailPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ eventId?: string; type?: string; bookletEditionId?: string }>;
+}) {
   const { profile } = await requirePermissionPage("manage_events");
-  const { eventId } = await searchParams;
+  const { eventId, type, bookletEditionId } = await searchParams;
+  const emailType = (["invite", "reminder", "day_of", "booklet"] as const).find((t) => t === type);
 
   return (
     <AppShell
@@ -23,7 +28,7 @@ export default async function EventEmailPage({ searchParams }: { searchParams: P
           existing Marketing Hub send pipeline.
         </p>
         <div className="mt-6">
-          <EventEmailWizard initialEventId={eventId} />
+          <EventEmailWizard initialEventId={eventId} initialType={emailType} bookletEditionId={bookletEditionId} />
         </div>
       </div>
     </AppShell>

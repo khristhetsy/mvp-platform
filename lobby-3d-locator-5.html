@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>iCapOS 3D Lobby — "You are here" locator · 5 samples</title>
+<style>
+  :root{--navy:#0c2340;--blue:#2E78F5;--sky:#2FA4E7;--teal:#0F6E56;--line:#e5e9f0;--ink:#1e293b;--muted:#64748b;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:#eef1f6;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:24px;}
+  .wrap{max-width:1040px;margin:0 auto;}
+  h1{font-size:21px;font-weight:700;margin:0 0 3px;}
+  .lede{font-size:13px;color:var(--muted);margin:0 0 18px;}
+  .sample{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:20px;}
+  .stag{display:inline-flex;align-items:center;gap:7px;background:#E1F5EE;color:var(--teal);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:4px 11px;border-radius:20px;}
+  .sh{font-size:15px;font-weight:600;margin:8px 0 2px;}
+  .sd{font-size:12px;color:var(--muted);margin:0 0 12px;}
+  /* existing lobby nav (kept for integration) */
+  .lnav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .lnav b{font-size:11px;font-weight:600;color:var(--muted);background:#f4f7fc;border:1px solid var(--line);border-radius:8px;padding:6px 11px;display:inline-flex;gap:6px;align-items:center;}
+  .lnav b.on{background:var(--teal);color:#fff;border-color:var(--teal);}
+  .lnav .cnt{margin-left:auto;font-size:11px;color:var(--muted);}
+  /* HALL SCENE */
+  .hall{position:relative;height:344px;border-radius:12px;overflow:hidden;background:linear-gradient(#cfe0f2 0%,#e9f1fb 46%,#f4f8fd 100%);}
+  .ceiling{position:absolute;top:0;left:0;right:0;height:23%;background:linear-gradient(#0c2340,#274a7d 60%,#2b4f80);}
+  .ring{position:absolute;border:2px solid rgba(150,190,240,.55);border-radius:50%;top:12px;left:50%;transform:translateX(-50%);}
+  .ring.r1{width:260px;height:38px;}.ring.r2{width:170px;height:24px;top:20px;}.ring.r3{width:90px;height:14px;top:27px;}
+  .win{position:absolute;top:24%;width:11%;height:30%;background:repeating-linear-gradient(90deg,#bcd8f0,#bcd8f0 10px,#a9cbe8 10px,#a9cbe8 12px);border:2px solid #dfe9f5;}
+  .win.l{left:0;top:23%;height:34%;}.win.r{right:0;top:23%;height:34%;}
+  .screen{position:absolute;top:26%;width:20%;height:17%;border-radius:6px;border:3px solid #fff;box-shadow:0 6px 16px rgba(12,35,64,.2);display:flex;align-items:center;justify-content:center;font-size:30px;overflow:hidden;}
+  .screen.l{left:19%;background:linear-gradient(120deg,#3a7bd5,#4facfe);}
+  .screen.r{right:19%;background:linear-gradient(120deg,#ff9d6c,#bb4e75);}
+  .portal{position:absolute;left:41.5%;width:17%;top:22.5%;height:27%;background:linear-gradient(#12294c,#0c2340);border-radius:8px 8px 0 0;border:2px solid #2b4f80;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:12px;}
+  .brand{color:#fff;font-size:11px;font-weight:800;letter-spacing:.04em;text-align:center;line-height:1.25;}
+  .brand small{display:block;color:#7fb0e6;font-size:8px;font-weight:600;}
+  .plabel{position:absolute;bottom:-1px;left:0;right:0;background:#0a1c34;color:#fff;font-size:10px;font-weight:800;letter-spacing:.12em;text-align:center;padding:4px 0;}
+  .hlabel{position:absolute;top:44%;background:#12294c;color:#fff;font-size:9px;font-weight:800;letter-spacing:.08em;padding:4px 10px;border-radius:4px;}
+  .hlabel.a{left:20%;}.hlabel.b{right:20%;}
+  .floor{position:absolute;left:0;right:0;top:50%;bottom:0;background:
+     repeating-linear-gradient(90deg,transparent,transparent 46px,rgba(120,150,190,.16) 46px,rgba(120,150,190,.16) 47px),
+     repeating-linear-gradient(0deg,transparent,transparent 30px,rgba(120,150,190,.13) 30px,rgba(120,150,190,.13) 31px),
+     linear-gradient(#eaf1fa,#dbe7f5);clip-path:polygon(20% 0,80% 0,100% 100%,0% 100%);}
+  .infodesk{position:absolute;bottom:9%;left:5%;width:24%;height:12%;background:linear-gradient(#2E78F5,#1c5fd0);border-radius:0 40px 0 0;box-shadow:0 6px 14px rgba(12,35,64,.25);display:flex;align-items:flex-end;justify-content:center;color:#fff;font-size:11px;font-weight:800;letter-spacing:.08em;padding-bottom:6px;}
+  .lounge{position:absolute;bottom:16%;right:7%;width:12%;height:8%;border-radius:50%;background:#fff;box-shadow:0 4px 10px rgba(12,35,64,.15);}
+  .lounge.two{bottom:6%;right:12%;width:9%;height:6%;}
+  .plant{position:absolute;bottom:8%;left:30%;font-size:22px;}
+  /* people */
+  .fig{position:absolute;width:12px;height:22px;border-radius:7px 7px 3px 3px;box-shadow:0 3px 5px rgba(0,0,0,.22);}
+  .fig::before{content:"";position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:9px;height:9px;border-radius:50%;background:inherit;}
+  .fig.walk{transition:left 2.4s linear,bottom 2.4s linear;}
+  /* YOU + locators */
+  .you{position:absolute;width:16px;height:30px;border-radius:8px 8px 3px 3px;background:#2E78F5;box-shadow:0 4px 8px rgba(0,0,0,.3);z-index:8;}
+  .you::before{content:"";position:absolute;top:-11px;left:50%;transform:translateX(-50%);width:13px;height:13px;border-radius:50%;background:#2E78F5;}
+  .puck{position:absolute;width:44px;height:16px;border-radius:50%;background:radial-gradient(rgba(46,120,245,.55),rgba(46,120,245,0));z-index:7;animation:puck 1.6s infinite;}
+  @keyframes puck{0%,100%{transform:translateX(-50%) scale(1);opacity:.8;}50%{transform:translateX(-50%) scale(1.4);opacity:.35;}}
+  .pin{position:absolute;z-index:9;transform:translate(-50%,-100%);text-align:center;animation:bob 1.6s ease-in-out infinite;}
+  @keyframes bob{50%{transform:translate(-50%,-115%);}}
+  .pin .b{background:#2E78F5;color:#fff;font-size:10px;font-weight:800;padding:4px 9px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 10px rgba(12,35,64,.35);}
+  .pin .b small{display:block;font-weight:600;color:#cfe0ff;font-size:8px;}
+  .pin .tip{width:0;height:0;border:6px solid transparent;border-top-color:#2E78F5;margin:0 auto;}
+  .spotlight{position:absolute;inset:0;z-index:6;pointer-events:none;}
+  .chip{position:absolute;z-index:9;background:rgba(12,35,64,.9);color:#fff;font-size:10.5px;font-weight:700;padding:5px 11px;border-radius:20px;display:inline-flex;gap:6px;align-items:center;}
+  .chip .dt{width:7px;height:7px;border-radius:50%;background:#2E78F5;animation:blink 1.1s infinite;}
+  @keyframes blink{50%{opacity:.3;}}
+  /* minimap */
+  .mmap{position:absolute;top:10px;right:10px;width:150px;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:10px;padding:8px;z-index:9;box-shadow:0 6px 16px rgba(12,35,64,.18);}
+  .mmap .t{font-size:9px;font-weight:800;color:var(--muted);letter-spacing:.05em;margin-bottom:5px;}
+  .mfloor{position:relative;height:78px;background:#eef2f7;border-radius:6px;overflow:hidden;}
+  .mroom{position:absolute;border-radius:4px;background:rgba(12,35,64,.08);border:1px solid rgba(12,35,64,.18);font-size:7px;font-weight:700;color:var(--navy);padding:2px 3px;}
+  .mroom.here{background:rgba(46,120,245,.18);border-color:var(--blue);}
+  .mdot{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--blue);border:2px solid #cfe0ff;animation:puck 1.6s infinite;}
+  /* wayfinding HUD */
+  .hud{position:absolute;left:0;right:0;bottom:0;z-index:9;background:linear-gradient(transparent,rgba(12,35,64,.82));padding:26px 14px 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .hud .now{background:#2E78F5;color:#fff;font-size:11px;font-weight:800;padding:6px 12px;border-radius:20px;}
+  .way{background:rgba(255,255,255,.14);color:#fff;font-size:11px;font-weight:600;padding:6px 11px;border-radius:20px;border:1px solid rgba(255,255,255,.2);}
+  /* breadcrumb + arrows */
+  .crumb{position:absolute;top:10px;left:10px;z-index:9;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:9px;padding:6px 11px;font-size:11px;font-weight:600;color:var(--navy);}
+  .crumb b{color:var(--blue);}
+  .arrow{position:absolute;z-index:9;background:rgba(12,35,64,.86);color:#fff;font-size:10px;font-weight:700;padding:4px 9px;border-radius:20px;white-space:nowrap;}
+  .tag{font-size:11px;color:var(--muted);text-align:center;margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>iCapOS 3D Lobby — "You are here" locator</h1>
+  <p class="lede">The immersive hall from your reference, rebuilt to fit our lobby (same top nav), with 5 ways to show where you're standing. Avatars drift and the locator animates.</p>
+
+  <section class="sample" id="s1"></section>
+  <section class="sample" id="s2"></section>
+  <section class="sample" id="s3"></section>
+  <section class="sample" id="s4"></section>
+  <section class="sample" id="s5"></section>
+
+  <p class="tag">Mockup · stylized recreation of the reference render. Education &amp; community — not an offer of securities.</p>
+</div>
+
+<script>
+(function(){
+  const COLORS=["#334155","#475569","#1e3a5f","#3b4a63","#5b4be0","#0f6e56","#8a5a2b","#b03a5b"];
+  const rand=(a,b)=>a+Math.random()*(b-a);const pick=a=>a[Math.floor(Math.random()*a.length)];
+
+  const NAV=`<div class="lnav">
+    <b class="on">🏠 Lobby</b><b>🖥 Main Stage</b><b>🎙 Talk Show</b><b>🗂 Tracks</b><b>🤝 Networking</b><b>🏛 Sponsor Hall</b><b>🏆 Leaderboard</b>
+    <span class="cnt">● <b id="cnt-%I%" style="all:unset;font-weight:700;color:#0F6E56">18</b> in the venue</span></div>`;
+
+  const SCENE=`
+    <div class="ceiling"></div>
+    <div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div>
+    <div class="win l"></div><div class="win r"></div>
+    <div class="screen l">✈</div>
+    <div class="portal"><div class="brand">iCapOS<small>SUMMIT 2026</small></div><div class="plabel">AUDITORIUM</div></div>
+    <div class="screen r">🚢</div>
+    <div class="hlabel a">EXHIBIT HALL A</div><div class="hlabel b">EXHIBIT HALL B</div>
+    <div class="floor"></div>
+    <div class="plant">🪴</div>
+    <div class="infodesk">INFO DESK</div>
+    <div class="lounge"></div><div class="lounge two"></div>`;
+
+  // avatar positions: [leftPct, bottomPct, scale]
+  const SPOTS=[[24,50,.7],[30,44,.62],[44,54,.66],[56,49,.7],[62,42,.6],[70,52,.7],[76,44,.64],[38,30,.95],[64,26,1],[48,20,1.05],[30,18,1.02]];
+  function addPeople(hall,youLeft,youBottom){
+    SPOTS.forEach(s=>{const f=document.createElement("div");f.className="fig walk";f.style.background=pick(COLORS);
+      f.style.left=s[0]+"%";f.style.bottom=s[1]+"%";f.style.transform="scale("+s[2]+")";f.dataset.base=s[0];hall.appendChild(f);});
+    const you=document.createElement("div");you.className="you";you.style.left=youLeft+"%";you.style.bottom=youBottom+"%";hall.appendChild(you);
+  }
+
+  const LOC={
+    // 1: floating pin + glowing puck
+    pin:(L,B)=>`<div class="puck" style="left:${L}%;bottom:${B-2}%;"></div>
+      <div class="pin" style="left:${L}%;bottom:${B+9}%;"><div class="b">You are here<small>Lobby floor</small></div><div class="tip"></div></div>`,
+    // 2: spotlight beam + vignette
+    spot:(L,B)=>`<div class="spotlight" style="background:radial-gradient(160px 120px at ${L}% ${100-B-6}%, rgba(46,120,245,.0) 40%, rgba(8,18,36,.42) 100%);"></div>
+      <div class="puck" style="left:${L}%;bottom:${B-2}%;background:radial-gradient(rgba(46,120,245,.8),rgba(46,120,245,0));"></div>
+      <div class="chip" style="left:${L}%;bottom:${B+10}%;transform:translateX(-50%);"><span class="dt"></span>You're in the Lobby</div>`,
+    // 3: corner minimap
+    map:(L,B)=>`<div class="puck" style="left:${L}%;bottom:${B-2}%;"></div>
+      <div class="chip" style="left:${L}%;bottom:${B+9}%;transform:translateX(-50%);"><span class="dt"></span>You</div>
+      <div class="mmap"><div class="t">YOU ARE HERE · MAP</div><div class="mfloor">
+        <div class="mroom" style="left:6%;top:8%;width:34%;height:34%;">Hall A</div>
+        <div class="mroom" style="right:6%;top:8%;width:34%;height:34%;">Hall B</div>
+        <div class="mroom" style="left:37%;top:6%;width:26%;height:30%;">Auditorium</div>
+        <div class="mroom here" style="left:20%;bottom:6%;width:60%;height:40%;">Lobby ✦</div>
+        <div class="mdot" style="left:48%;bottom:16%;"></div></div></div>`,
+    // 4: breadcrumb + directional arrows
+    crumb:(L,B)=>`<div class="puck" style="left:${L}%;bottom:${B-2}%;"></div>
+      <div class="crumb">Expo › <b>Lobby — you are here</b></div>
+      <div class="arrow" style="left:47%;top:30%;">↑ Auditorium · 10m</div>
+      <div class="arrow" style="left:16%;top:44%;">↖ Exhibit Hall A</div>
+      <div class="arrow" style="right:16%;top:44%;">Exhibit Hall B ↗</div>
+      <div class="chip" style="left:${L}%;bottom:${B+9}%;transform:translateX(-50%);"><span class="dt"></span>You</div>`,
+    // 5: wayfinding HUD bar
+    hud:(L,B)=>`<div class="puck" style="left:${L}%;bottom:${B-2}%;"></div>
+      <div class="pin" style="left:${L}%;bottom:${B+9}%;"><div class="b" style="background:#0F6E56;">YOU</div><div class="tip" style="border-top-color:#0F6E56;"></div></div>
+      <div class="hud"><span class="now">📍 You are in: Lobby</span>
+        <span class="way">🖥 Auditorium ↑ 10m</span><span class="way">🏛 Exhibit Hall A ↖</span>
+        <span class="way">🏛 Exhibit Hall B ↗</span><span class="way">🤝 Networking →</span></div>`,
+  };
+
+  const SAMPLES=[
+    ["s1","Concept 1 · Floating “You are here” pin","A bobbing map pin over your avatar with a glowing floor puck — instantly readable in the 3D scene.","pin"],
+    ["s2","Concept 2 · Spotlight beam","A light pool highlights your spot while the rest of the hall dims slightly, so “you” always stand out.","spot"],
+    ["s3","Concept 3 · Corner minimap","A top-down mini floorplan overlays the scene with your live dot and the current room highlighted.","map"],
+    ["s4","Concept 4 · Breadcrumb + wayfinding arrows","A breadcrumb plus floating direction labels pointing to the Auditorium and Exhibit Halls with distances.","crumb"],
+    ["s5","Concept 5 · Wayfinding HUD","A game-style bottom bar: “You are in: Lobby” with one-tap directions to every destination.","hud"],
+  ];
+
+  const YOU_L=48, YOU_B=20;
+  SAMPLES.forEach(([id,title,desc,variant],idx)=>{
+    const host=document.getElementById(id);
+    host.innerHTML=`<span class="stag">${title.split(" · ")[0]}</span>
+      <div class="sh">${title.split(" · ")[1]}</div><div class="sd">${desc}</div>
+      ${NAV.replace("%I%",idx)}
+      <div class="hall" id="hall${idx}">${SCENE}${LOC[variant](YOU_L,YOU_B)}</div>`;
+    addPeople(document.getElementById("hall"+idx),YOU_L,YOU_B);
+  });
+
+  // gentle life: drift walkers + venue count
+  setInterval(()=>{
+    document.querySelectorAll(".fig.walk").forEach(f=>{if(Math.random()<0.5){const base=+f.dataset.base;f.style.left=(base+rand(-4,4))+"%";}});
+    document.querySelectorAll("[id^=cnt-]").forEach(c=>{c.textContent=Math.max(9,Math.min(40,+c.textContent+Math.round(rand(-2,3))));});
+  },2400);
+})();
+</script>
+</body>
+</html>

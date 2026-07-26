@@ -9,20 +9,32 @@ type MergeData = {
   sessions: { type: string; title: string; abstract: string; accent: string }[];
   sponsorLockup: string | null; organizerLine: string;
 };
-type EmailType = "invite" | "reminder" | "day_of";
+type EmailType = "invite" | "reminder" | "day_of" | "booklet";
 
 const TYPES: { key: EmailType; label: string; note: string }[] = [
   { key: "invite", label: "Invite", note: "Primary CTA: Register to attend" },
   { key: "reminder", label: "Reminder", note: "“Three days to go” urgency" },
   { key: "day_of", label: "Day-of", note: "Lobby CTA promoted to primary" },
+  { key: "booklet", label: "Booklet", note: "Primary CTA: Download the booklet PDF" },
 ];
 
-export function EventEmailWizard({ initialEventId }: { initialEventId?: string }) {
+export function EventEmailWizard({
+  initialEventId,
+  initialType,
+  bookletEditionId,
+}: {
+  initialEventId?: string;
+  initialType?: EmailType;
+  bookletEditionId?: string;
+}) {
   const [step, setStep] = useState(initialEventId ? 2 : 1);
   const [events, setEvents] = useState<PickerEvent[]>([]);
   const [eventId, setEventId] = useState<string | null>(initialEventId ?? null);
   const [merge, setMerge] = useState<MergeData | null>(null);
-  const [type, setType] = useState<EmailType>("invite");
+  const [type, setType] = useState<EmailType>(initialType ?? "invite");
+  const bookletUrl = bookletEditionId
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/events/brochure/${bookletEditionId}`
+    : undefined;
   const [includeBanner, setIncludeBanner] = useState(true);
   const [includeLobby, setIncludeLobby] = useState(false);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
@@ -67,6 +79,7 @@ export function EventEmailWizard({ initialEventId }: { initialEventId?: string }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           eventId, type, includeBanner, includeLobby: includeLobby || lobbyForced,
+          bookletEditionId,
           audienceKind, listId, registrantStatuses: regStatuses, subject: subject.trim(),
           scheduleAt: scheduleMode === "later" && scheduleAt ? new Date(scheduleAt).toISOString() : null,
         }),
@@ -103,12 +116,12 @@ export function EventEmailWizard({ initialEventId }: { initialEventId?: string }
         if (!res.ok) throw new Error(json.error ?? "Couldn't load event data.");
         const m = json.merge as MergeData;
         setMerge(m);
-        setSubject((prev) => prev || `You're invited: ${m.title}`);
+        setSubject((prev) => prev || (initialType === "booklet" ? `Your event booklet: ${m.title}` : `You're invited: ${m.title}`));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Couldn't load event data.");
       }
     })();
-  }, [eventId]);
+  }, [eventId, initialType]);
 
   // render preview on any change
   const renderPreview = useCallback(async () => {
@@ -118,14 +131,14 @@ export function EventEmailWizard({ initialEventId }: { initialEventId?: string }
       const res = await fetch("/api/admin/events/email/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId, type, includeBanner, includeLobby: includeLobby || lobbyForced }),
+        body: JSON.stringify({ eventId, type, includeBanner, includeLobby: includeLobby || lobbyForced, bookletUrl }),
       });
       const json = await res.json();
       if (res.ok) setHtml(json.html as string);
     } finally {
       setLoading(false);
     }
-  }, [eventId, type, includeBanner, includeLobby, lobbyForced]);
+  }, [eventId, type, includeBanner, includeLobby, lobbyForced, bookletUrl]);
 
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {

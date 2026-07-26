@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>iCapOS Lobby Redesign — 10 dynamic concepts</title>
+<style>
+  :root{
+    --navy:#0c2340;--navy2:#13294f;--blue:#2E78F5;--teal:#0F6E56;--tealbg:#E1F5EE;
+    --violet:#5B4BE0;--amber:#BA7517;--pink:#D4537E;--beige:#ece7dc;--line:#e5e9f0;--ink:#1e293b;--muted:#64748b;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#eef1f6;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:24px;}
+  .wrap{max-width:1140px;margin:0 auto;}
+  h1{font-size:21px;font-weight:700;margin:0 0 3px;}
+  .lede{font-size:13px;color:var(--muted);margin:0 0 16px;}
+  .idx{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:22px;}
+  .idx a{font-size:11.5px;font-weight:600;color:var(--navy);background:#fff;border:1px solid var(--line);border-radius:20px;padding:6px 12px;text-decoration:none;}
+  .idx a:hover{border-color:var(--blue);color:var(--blue);}
+  .sample{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:20px;scroll-margin-top:14px;}
+  .stag{display:inline-flex;align-items:center;gap:7px;background:var(--tealbg);color:var(--teal);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:4px 11px;border-radius:20px;}
+  .sh{font-size:15px;font-weight:600;margin:9px 0 2px;}
+  .sd{font-size:12px;color:var(--muted);margin:0 0 14px;}
+  button{font-family:inherit;cursor:pointer;}
+  .cta{background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;padding:8px 13px;}
+  .cta.teal{background:var(--teal);}
+  .ghost{background:#fff;border:1px solid var(--line);border-radius:8px;font-size:12px;font-weight:600;color:var(--muted);padding:7px 11px;}
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .live{background:#fdecec;color:#c0392b;}.live .dot{background:#e24b4a;animation:blink 1.1s infinite;}
+  @keyframes blink{50%{opacity:.25;}}
+  .av{width:22px;height:22px;border-radius:50%;border:2px solid #fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;}
+  .avrow{display:flex;}.avrow .av{margin-left:-7px;}.avrow .av:first-child{margin-left:0;}
+  .cap{height:6px;border-radius:6px;background:#eef2f7;overflow:hidden;}.cap>i{display:block;height:100%;border-radius:6px;background:var(--teal);transition:width .6s;}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .grid2{display:grid;grid-template-columns:1.1fr .9fr;gap:14px;}
+  .card{border:1px solid var(--line);border-radius:12px;padding:13px;transition:.15s;}
+  .card:hover{border-color:#bcd3fb;box-shadow:0 4px 14px rgba(15,23,42,.06);}
+  .card.reco{border:2px solid var(--blue);}
+  .icoT{width:34px;height:34px;border-radius:9px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;}
+  .floor{position:relative;background:var(--beige);border-radius:12px;height:290px;overflow:hidden;border:1px solid #dcd4c4;}
+  .room{position:absolute;border-radius:10px;background:rgba(12,35,64,.06);border:1.5px dashed rgba(12,35,64,.22);}
+  .rlabel{position:absolute;font-size:10px;font-weight:700;color:var(--navy);text-transform:uppercase;}
+  .occ{position:absolute;font-size:10px;font-weight:700;background:#fff;border:1px solid var(--line);border-radius:20px;padding:2px 7px;color:var(--navy);}
+  .ppl{position:absolute;width:11px;height:11px;border-radius:50%;transition:left 2.2s ease,top 2.2s ease;box-shadow:0 1px 2px rgba(0,0,0,.2);}
+  .me{width:15px;height:15px;background:var(--blue);border:3px solid #cfe0ff;z-index:5;}
+  .meTag{position:absolute;background:var(--blue);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;transform:translate(-50%,-150%);z-index:6;}
+  .iso{background:linear-gradient(#dfe7f0,#eef2f7);border-radius:12px;padding:20px;}
+  .isoRoom{background:var(--beige);border-radius:10px;padding:22px 16px 34px;clip-path:polygon(6% 0,94% 0,100% 100%,0 100%);}
+  .doors{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;}
+  .door{position:relative;width:92px;background:var(--navy);color:#fff;border-radius:10px;padding:13px 8px 9px;text-align:center;transition:.15s;}
+  .door:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(12,35,64,.28);background:var(--navy2);}
+  .door .di{font-size:19px;}.door .dn{font-size:9px;font-weight:700;margin-top:5px;text-transform:uppercase;color:#c7d2e6;}
+  .cbadge{position:absolute;top:-8px;right:-8px;background:var(--teal);color:#fff;font-size:10px;font-weight:700;border-radius:20px;padding:2px 7px;}
+  .fig{width:16px;height:26px;border-radius:8px 8px 4px 4px;position:relative;}
+  .fig::before{content:"";position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:11px;height:11px;border-radius:50%;background:inherit;}
+  .feed{border:1px solid var(--line);border-radius:12px;padding:4px 12px;height:250px;overflow:hidden;}
+  .fitem{display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #f1f5f9;font-size:12px;animation:slidein .4s;}
+  @keyframes slidein{from{opacity:0;transform:translateY(-6px);}}
+  .fitem .fi{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;flex:0 0 auto;}
+  .concierge{background:var(--navy);color:#fff;border-radius:12px;padding:16px;}
+  .count{font-size:29px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .dir{border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .drow{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:12px;}
+  .where{font-size:10.5px;color:var(--muted);}
+  .mini{position:relative;background:var(--beige);border-radius:12px;height:250px;border:1px solid #dcd4c4;overflow:hidden;}
+  /* timeline */
+  .tl{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;}
+  .slot{min-width:180px;border:1px solid var(--line);border-radius:12px;padding:12px;position:relative;}
+  .slot.now{border:2px solid var(--teal);background:#f4fbf8;}
+  .tlbar{height:5px;border-radius:6px;background:#eef2f7;margin-top:9px;overflow:hidden;}
+  .tlbar>i{display:block;height:100%;background:var(--teal);}
+  /* iso expo */
+  .expo{background:#e8edf4;border-radius:12px;padding:26px;height:290px;position:relative;overflow:hidden;}
+  .grid-iso{position:absolute;inset:0;transform:rotateX(52deg) rotateZ(45deg);transform-style:preserve-3d;top:60px;left:50%;margin-left:-140px;width:280px;height:280px;}
+  .booth{position:absolute;width:70px;height:70px;border-radius:8px;background:var(--navy);box-shadow:0 10px 0 #081729;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;transition:.2s;}
+  .booth:hover{background:var(--blue);}
+  .walker{position:absolute;width:12px;height:12px;border-radius:50%;transition:left 1.8s linear,top 1.8s linear;box-shadow:0 1px 3px rgba(0,0,0,.3);}
+  /* match */
+  .match{border:1px solid var(--line);border-radius:12px;padding:13px;text-align:center;}
+  .ring{--p:60;width:52px;height:52px;border-radius:50%;margin:0 auto 8px;background:conic-gradient(var(--teal) calc(var(--p)*1%),#eef2f7 0);display:flex;align-items:center;justify-content:center;}
+  .ring>span{width:40px;height:40px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--teal);}
+  .tagchip{font-size:9.5px;font-weight:600;background:#eef2f7;color:#475569;border-radius:20px;padding:2px 8px;}
+  /* spotlight */
+  .spot{background:var(--navy);border-radius:12px;padding:16px;}
+  .spotin{display:flex;align-items:center;gap:10px;background:#fff;border-radius:10px;padding:11px 14px;}
+  .spotin input{border:none;outline:none;font-size:14px;flex:1;font-family:inherit;}
+  .sres{margin-top:10px;background:#fff;border-radius:10px;overflow:hidden;max-height:220px;overflow-y:auto;}
+  .sres .r{display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid #f1f5f9;font-size:12.5px;cursor:pointer;}
+  .sres .r:hover{background:#f4f7fc;}
+  .kbd{font-size:10px;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:1px 6px;background:#f8fafc;}
+  /* gamified */
+  .quest{display:flex;align-items:center;gap:10px;padding:9px 0;font-size:12.5px;border-bottom:1px solid #f1f5f9;}
+  .qtick{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:0 0 auto;}
+  .lb{display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:9px;font-size:12px;transition:.4s;}
+  .tag{font-size:11px;color:var(--muted);text-align:center;margin-top:6px;}
+  @media(max-width:780px){.grid4{grid-template-columns:repeat(2,1fr);}.grid3{grid-template-columns:1fr;}.grid2{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>iCapOS Lobby Redesign — 10 dynamic concepts</h1>
+  <p class="lede">Live presence, auto-updating counts, and interaction throughout. Hover, type, and watch — the sample data animates on its own.</p>
+  <nav class="idx">
+    <a href="#c1">1 · Live floor map</a><a href="#c2">2 · Smart cards</a><a href="#c3">3 · Immersive doors</a>
+    <a href="#c4">4 · Concierge</a><a href="#c5">5 · Minimap + directory</a><a href="#c6">6 · Now &amp; Next timeline</a>
+    <a href="#c7">7 · Isometric expo</a><a href="#c8">8 · Networking matchmaker</a><a href="#c9">9 · Spotlight search</a>
+    <a href="#c10">10 · Gamified quests</a>
+  </nav>
+
+  <section class="sample" id="c1"><span class="stag">Concept 1 · Live floor map</span>
+    <div class="sh">Top-down venue with real-time attendee locations</div>
+    <p class="sd">Every attendee is a dot in the room they're in; occupancy pills update live; your position is always marked.</p>
+    <div class="floor" id="floor"></div>
+  </section>
+
+  <section class="sample" id="c2"><span class="stag">Concept 2 · Smart destination cards</span>
+    <div class="sh">Rooms that auto-rank by what's happening now</div>
+    <p class="sd">Live headcount, capacity, an auto-set status, and a recommended pick that re-sorts as the crowd moves.</p>
+    <div class="grid4" id="cards"></div>
+  </section>
+
+  <section class="sample" id="c3"><span class="stag">Concept 3 · Immersive doorways</span>
+    <div class="sh">Your room look, upgraded with live counts</div>
+    <p class="sd">Each doorway shows who's inside, lifts on hover, and real avatars mill in the lobby.</p>
+    <div class="iso">
+      <div style="text-align:center;color:var(--teal);font-size:11px;font-weight:700;">WELCOME TO</div>
+      <div style="text-align:center;color:var(--navy);font-size:16px;font-weight:700;margin-bottom:14px;">ICFO Private Equity Virtual Expo</div>
+      <div class="isoRoom"><div class="doors" id="doors"></div><div style="display:flex;gap:10px;justify-content:center;margin-top:14px;align-items:flex-end;" id="crowd"></div></div>
+    </div>
+  </section>
+
+  <section class="sample" id="c4"><span class="stag">Concept 4 · Auto-guide concierge</span>
+    <div class="sh">The lobby tells you where to go next</div>
+    <p class="sd">A best-next-move card with a live countdown, beside a self-updating activity stream.</p>
+    <div class="grid2">
+      <div class="concierge">
+        <div style="font-size:11px;color:#9fb3d1;font-weight:700;text-transform:uppercase;">Your next move</div>
+        <div style="font-size:17px;font-weight:600;margin:8px 0 2px;">Keynote: The 2026 Capital Outlook</div>
+        <div style="font-size:12px;color:#9fb3d1;">Main Stage · starts in</div>
+        <div class="count" id="cd" style="margin:6px 0 12px;">02:00</div>
+        <div style="display:flex;gap:8px;"><button class="cta teal">Join now</button><button class="ghost" style="background:transparent;color:#cfe0ff;border-color:#33507d;">Remind me</button></div>
+        <div style="border-top:1px solid #23406b;margin-top:14px;padding-top:11px;font-size:11.5px;color:#9fb3d1;"><b style="color:#fff;">Because:</b> you follow 3 speakers on this panel.</div>
+      </div>
+      <div class="feed" id="feed"></div>
+    </div>
+  </section>
+
+  <section class="sample" id="c5"><span class="stag">Concept 5 · Presence minimap + directory</span>
+    <div class="sh">See where everyone is — and jump to them</div>
+    <p class="sd">A minimap of your position among attendees, paired with a live who's-where directory.</p>
+    <div class="grid2"><div class="mini" id="mini"></div><div class="dir" id="dir"></div></div>
+  </section>
+
+  <section class="sample" id="c6"><span class="stag">Concept 6 · Now &amp; Next timeline</span>
+    <div class="sh">A live agenda that moves with the event</div>
+    <p class="sd">The current session is highlighted with a running progress bar; up-next slots show live sign-ups. Auto-advances.</p>
+    <div class="tl" id="tl"></div>
+  </section>
+
+  <section class="sample" id="c7"><span class="stag">Concept 7 · Isometric expo floor</span>
+    <div class="sh">A walkable 3D-style hall with moving attendees</div>
+    <p class="sd">Booths sit on an isometric floor; avatars wander between them. Hover a booth to highlight it.</p>
+    <div class="expo"><div class="grid-iso" id="expo"></div></div>
+  </section>
+
+  <section class="sample" id="c8"><span class="stag">Concept 8 · Networking matchmaker</span>
+    <div class="sh">People you should meet — surfaced automatically</div>
+    <p class="sd">Match scores, shared interests, and a live "wants to connect" queue that refreshes.</p>
+    <div class="grid3" id="match"></div>
+  </section>
+
+  <section class="sample" id="c9"><span class="stag">Concept 9 · Spotlight search</span>
+    <div class="sh">Type to teleport anywhere in the event</div>
+    <p class="sd">One search jumps to any room, person, or session. Try typing "net", "stage", or a name.</p>
+    <div class="spot">
+      <div class="spotin"><span style="font-size:15px;">🔍</span><input id="spotq" placeholder="Search rooms, people, sessions…" /><span class="kbd">⌘K</span></div>
+      <div class="sres" id="sres"></div>
+    </div>
+  </section>
+
+  <section class="sample" id="c10"><span class="stag">Concept 10 · Gamified quest lobby</span>
+    <div class="sh">Turn navigation into points, quests, and rank</div>
+    <p class="sd">Live points, an auto-tracked quest checklist, and a leaderboard that reshuffles as people engage.</p>
+    <div class="grid2">
+      <div>
+        <div class="card" style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+          <div class="ring" id="ptsRing" style="--p:64;"><span id="ptsPct">64%</span></div>
+          <div><div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;">Your points</div><div class="count" id="pts" style="font-size:24px;">1,280</div><div style="font-size:11px;color:var(--teal);font-weight:600;" id="ptsUp">▲ live</div></div>
+        </div>
+        <div id="quests"></div>
+      </div>
+      <div><div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:8px;">Leaderboard</div><div id="lb"></div></div>
+    </div>
+  </section>
+
+  <p class="tag">Mockup · sample data animates locally. Education &amp; community — not an offer of securities.</p>
+</div>
+
+<script>
+(function(){
+  const COLORS=["#2E78F5","#0F6E56","#5B4BE0","#BA7517","#D4537E","#1D9E75","#D85A30"];
+  const NAMES=["Khris T.","Robert R.","Daniela F.","Johnny R.","Maya R.","Sam O.","Priya N.","Leo K.","Ana G.","Tom B.","Wei L.","Ivy C."];
+  const initials=n=>n.split(" ").map(w=>w[0]).join("").slice(0,2);
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const ROOMS=[
+    {key:"stage",name:"Main Stage",x:4,y:6,w:44,h:40,count:24,cap:60,status:"live"},
+    {key:"net",name:"Networking",x:52,y:6,w:44,h:40,count:11,cap:40,status:"filling"},
+    {key:"tracks",name:"Tracks",x:4,y:52,w:44,h:42,count:7,cap:50,status:"quiet"},
+    {key:"expo",name:"Sponsor Hall",x:52,y:52,w:44,h:42,count:15,cap:80,status:"open"},
+  ];
+
+  // 1 floor map
+  const floor=document.getElementById("floor");const mapDots=[];
+  ROOMS.forEach(r=>{
+    const d=document.createElement("div");d.className="room";d.style.cssText=`left:${r.x}%;top:${r.y}%;width:${r.w}%;height:${r.h}%`;floor.appendChild(d);
+    const lab=document.createElement("div");lab.className="rlabel";lab.textContent=r.name;lab.style.cssText=`left:${r.x+2}%;top:${r.y+2}%`;floor.appendChild(lab);
+    const occ=document.createElement("div");occ.className="occ";occ.id="occ-"+r.key;occ.style.cssText=`left:${r.x+r.w-13}%;top:${r.y+2}%`;floor.appendChild(occ);
+    for(let i=0;i<r.count;i++){const p=document.createElement("div");p.className="ppl";p.style.background=pick(COLORS);p.dataset.room=r.key;floor.appendChild(p);mapDots.push(p);placeDot(p,r);}
+  });
+  function placeDot(p,r){p.style.left=rand(r.x+3,r.x+r.w-4)+"%";p.style.top=rand(r.y+9,r.y+r.h-5)+"%";}
+  const me=document.createElement("div");me.className="ppl me";me.style.cssText="left:49%;top:48%";floor.appendChild(me);
+  const meTag=document.createElement("div");meTag.className="meTag";meTag.textContent="You";meTag.style.cssText="left:49%;top:48%";floor.appendChild(meTag);
+  const refreshOcc=()=>ROOMS.forEach(r=>{const e=document.getElementById("occ-"+r.key);if(e)e.textContent="● "+r.count;});refreshOcc();
+
+  // 2 cards
+  const cardsEl=document.getElementById("cards");const STAT={live:"● Live now",filling:"Filling up",quiet:"Quiet",open:"Open"};const ICON={stage:"🎤",net:"🤝",tracks:"🗂",expo:"🏛"};
+  const score=r=>(r.status==="live"?100:0)+(r.status==="filling"?40:0)+r.count;
+  function renderCards(){const order=[...ROOMS].sort((a,b)=>score(b)-score(a));cardsEl.innerHTML="";order.forEach((r,idx)=>{
+    const c=document.createElement("div");c.className="card"+(idx===0?" reco":"");
+    const badge=r.status==="live"?'<span class="pill live"><span class="dot"></span>Live</span>':'<span class="pill" style="background:#eef2f7;color:#475569;">'+STAT[r.status]+'</span>';
+    let avs="";for(let i=0;i<Math.min(4,r.count);i++)avs+='<span class="av" style="background:'+COLORS[i%COLORS.length]+'">'+initials(NAMES[(i+idx)%NAMES.length])+'</span>';
+    c.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;"><div class="icoT">'+ICON[r.key]+'</div>'+badge+'</div>'+
+      (idx===0?'<div style="font-size:9.5px;font-weight:700;color:var(--blue);margin-top:8px;">RECOMMENDED</div>':'<div style="height:8px"></div>')+
+      '<div style="font-size:13px;font-weight:600;">'+r.name+'</div>'+
+      '<div style="display:flex;align-items:center;gap:6px;margin:8px 0;"><span class="avrow">'+avs+'</span><span style="font-size:11px;color:var(--muted);font-weight:600;">'+r.count+' inside</span></div>'+
+      '<div class="cap"><i style="width:'+Math.min(100,Math.round(r.count/r.cap*100))+'%"></i></div>'+
+      '<button class="cta'+(r.status==="live"?" teal":"")+'" style="width:100%;margin-top:11px;">Enter →</button>';cardsEl.appendChild(c);});}
+  renderCards();
+
+  // 3 doors
+  const doorsEl=document.getElementById("doors");const DOOR=[{k:"stage",i:"🎤",n:"Sessions"},{k:"net",i:"🤝",n:"Networking"},{k:"expo",i:"🏛",n:"Expo Hall"},{k:"tracks",i:"🎬",n:"On-Demand"}];
+  const renderDoors=()=>{doorsEl.innerHTML="";DOOR.forEach(d=>{const r=ROOMS.find(x=>x.key===d.k);const el=document.createElement("div");el.className="door";el.innerHTML='<span class="cbadge">'+r.count+'</span><div class="di">'+d.i+'</div><div class="dn">'+d.n+'</div>';doorsEl.appendChild(el);});};renderDoors();
+  const crowd=document.getElementById("crowd");for(let i=0;i<7;i++){const f=document.createElement("div");f.className="fig";f.style.background=COLORS[i%COLORS.length];f.title=NAMES[i];crowd.appendChild(f);}
+
+  // 4 feed + countdown
+  const feed=document.getElementById("feed");
+  const EV=[["🤝","%N joined Networking","#E1F5EE"],["🎤","Keynote starts soon on Main Stage","#E6F1FB"],["📊","Live poll closing","#FAEEDA"],["🏛","%N is browsing Sponsor Hall","#EDE9FE"],["⭐","%N followed you","#FBE4EC"],["👋","%N waved from Tracks","#E6F1FB"]];
+  function addFeed(){const e=pick(EV);const it=document.createElement("div");it.className="fitem";it.innerHTML='<span class="fi" style="background:'+e[2]+'">'+e[0]+'</span><div><div>'+e[1].replace("%N","<b>"+pick(NAMES)+"</b>")+'</div><div style="font-size:10px;color:var(--muted);">just now</div></div>';feed.prepend(it);while(feed.children.length>7)feed.removeChild(feed.lastChild);}
+  for(let i=0;i<5;i++)addFeed();
+  let secs=120;const cd=document.getElementById("cd");const tickCd=()=>{secs=secs<=0?120:secs-1;cd.textContent=String(Math.floor(secs/60)).padStart(2,"0")+":"+String(secs%60).padStart(2,"0");};
+
+  // 5 minimap + dir
+  const mini=document.getElementById("mini");
+  ROOMS.forEach(r=>{const d=document.createElement("div");d.className="room";d.style.cssText=`left:${r.x}%;top:${r.y}%;width:${r.w}%;height:${r.h}%`;mini.appendChild(d);const lab=document.createElement("div");lab.className="rlabel";lab.style.fontSize="9px";lab.textContent=r.name;lab.style.cssText=`left:${r.x+2}%;top:${r.y+2}%;font-size:9px`;mini.appendChild(lab);});
+  const miniDots=[];const people=NAMES.map((n,i)=>({name:n,color:COLORS[i%COLORS.length],room:pick(ROOMS)}));
+  people.forEach(pp=>{const d=document.createElement("div");d.className="ppl";d.style.cssText="width:9px;height:9px;background:"+pp.color;d.title=pp.name;mini.appendChild(d);miniDots.push({el:d,p:pp});moveMini(d,pp.room);});
+  const me2=document.createElement("div");me2.className="ppl me";me2.style.cssText="left:49%;top:48%";mini.appendChild(me2);
+  function moveMini(el,r){el.style.left=rand(r.x+3,r.x+r.w-4)+"%";el.style.top=rand(r.y+9,r.y+r.h-5)+"%";}
+  const dir=document.getElementById("dir");
+  function renderDir(){dir.innerHTML='<div style="padding:8px 12px;font-size:10.5px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--line);">WHO\'S HERE · '+people.length+' online</div>';people.slice(0,6).forEach(pp=>{const row=document.createElement("div");row.className="drow";row.innerHTML='<span class="av" style="background:'+pp.color+'">'+initials(pp.name)+'</span><div style="flex:1;"><div style="font-weight:600;">'+pp.name+'</div><div class="where">📍 in '+pp.room.name+'</div></div><button class="ghost" style="padding:5px 10px;">👋</button>';dir.appendChild(row);});}
+  renderDir();
+
+  // 6 timeline
+  const tlEl=document.getElementById("tl");
+  const SESS=[{t:"9:00",n:"Doors & Lobby",r:"Lobby",done:true},{t:"9:30",n:"Keynote: 2026 Capital Outlook",r:"Main Stage",now:true,prog:40,cnt:24},{t:"10:15",n:"Founder Pitch Block A",r:"Tracks",cnt:0},{t:"11:00",n:"Investor Roundtable",r:"Networking",cnt:0},{t:"11:45",n:"Sponsor Showcase",r:"Sponsor Hall",cnt:0}];
+  function renderTL(){tlEl.innerHTML="";SESS.forEach(s=>{const el=document.createElement("div");el.className="slot"+(s.now?" now":"");
+    const tag=s.done?'<span class="pill" style="background:#eef2f7;color:#475569;">Ended</span>':s.now?'<span class="pill live"><span class="dot"></span>Live now</span>':'<span class="pill" style="background:#E6F1FB;color:#185FA5;">Up next</span>';
+    el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:11px;font-weight:700;color:var(--muted);">'+s.t+'</span>'+tag+'</div>'+
+      '<div style="font-size:13px;font-weight:600;margin:7px 0 2px;">'+s.n+'</div><div style="font-size:11px;color:var(--muted);">📍 '+s.r+(s.cnt?' · '+s.cnt+' watching':'')+'</div>'+
+      (s.now?'<div class="tlbar"><i style="width:'+s.prog+'%"></i></div>':'')+
+      (s.done?'':'<button class="'+(s.now?'cta teal':'ghost')+'" style="width:100%;margin-top:9px;">'+(s.now?'Join live':'Add to plan')+'</button>');tlEl.appendChild(el);});}
+  renderTL();
+
+  // 7 iso expo
+  const expo=document.getElementById("expo");const boothPos=[[0,0],[95,0],[190,0],[0,95],[95,95],[190,95],[47,190],[142,190]];const BICON=["🏛","💼","📈","🤝","🏦","💡","🌐","📊"];
+  boothPos.forEach((p,i)=>{const b=document.createElement("div");b.className="booth";b.style.left=p[0]+"px";b.style.top=p[1]+"px";b.textContent=BICON[i];b.title="Booth "+(i+1);expo.appendChild(b);});
+  const walkers=[];for(let i=0;i<8;i++){const w=document.createElement("div");w.className="walker";w.style.background=COLORS[i%COLORS.length];expo.appendChild(w);walkers.push(w);moveWalker(w);}
+  function moveWalker(w){const p=pick(boothPos);w.style.left=(p[0]+rand(-14,60))+"px";w.style.top=(p[1]+rand(-14,60))+"px";}
+
+  // 8 matchmaker
+  const matchEl=document.getElementById("match");const TAGS=["SaaS","FinTech","Series A","Real estate","AI","Climate","Healthcare","Marketplaces"];const ROLE=["Angel investor","VC · Growth","Founder · Seed","Family office","LP","Founder · Series A"];
+  function renderMatch(){matchEl.innerHTML="";const pool=[...NAMES].sort(()=>Math.random()-.5).slice(0,3);pool.forEach((n,i)=>{const p=40+Math.round(rand(45,58));const el=document.createElement("div");el.className="match";
+    el.innerHTML='<div class="ring" style="--p:'+p+'"><span>'+p+'%</span></div><div style="font-weight:600;font-size:13px;">'+n+'</div><div style="font-size:11px;color:var(--muted);margin-bottom:8px;">'+pick(ROLE)+'</div>'+
+      '<div style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-bottom:10px;"><span class="tagchip">'+pick(TAGS)+'</span><span class="tagchip">'+pick(TAGS)+'</span></div>'+
+      '<button class="cta" style="width:100%;">Request intro</button>';matchEl.appendChild(el);});}
+  renderMatch();
+
+  // 9 spotlight
+  const ITEMS=[...ROOMS.map(r=>({t:"room",label:r.name,sub:"Room · "+r.count+" inside",ic:"🚪"})),
+    ...NAMES.slice(0,8).map(n=>({t:"person",label:n,sub:"Attendee",ic:"👤"})),
+    ...SESS.map(s=>({t:"session",label:s.n,sub:"Session · "+s.t,ic:"🎤"}))];
+  const sres=document.getElementById("sres");const spotq=document.getElementById("spotq");
+  function renderSpot(){const q=(spotq.value||"").toLowerCase();const list=(q?ITEMS.filter(x=>x.label.toLowerCase().includes(q)||x.sub.toLowerCase().includes(q)):ITEMS).slice(0,7);
+    sres.innerHTML=list.length?"":'<div class="r" style="color:var(--muted);">No matches — try "net", "stage", or a name.</div>';
+    list.forEach(x=>{const r=document.createElement("div");r.className="r";r.innerHTML='<span style="font-size:15px;">'+x.ic+'</span><div style="flex:1;"><div style="font-weight:600;">'+x.label+'</div><div style="font-size:10.5px;color:var(--muted);">'+x.sub+'</div></div><span class="kbd">Go ↵</span>';sres.appendChild(r);});}
+  spotq.addEventListener("input",renderSpot);renderSpot();
+
+  // 10 gamified
+  let pts=1280;const QUESTS=[{n:"Visit 3 sponsor booths",cur:2,tot:3},{n:"Attend a live session",cur:1,tot:1},{n:"Connect with 2 attendees",cur:1,tot:2},{n:"Answer the live poll",cur:0,tot:1}];
+  function renderQuests(){const el=document.getElementById("quests");el.innerHTML="";QUESTS.forEach(q=>{const done=q.cur>=q.tot;const d=document.createElement("div");d.className="quest";d.innerHTML='<span class="qtick" style="background:'+(done?"#E1F5EE":"#eef2f7")+';color:'+(done?"#0F6E56":"#94a3b8")+'">'+(done?"✓":q.cur)+'</span><div style="flex:1;"><div style="font-weight:600;">'+q.n+'</div><div style="font-size:10.5px;color:var(--muted);">'+q.cur+" / "+q.tot+(done?" · +50 pts":"")+'</div></div>';el.appendChild(d);});}
+  renderQuests();
+  const lbData=NAMES.slice(0,6).map((n,i)=>({name:n,pts:2200-i*180+Math.round(rand(-40,40))}));
+  function renderLB(){lbData.sort((a,b)=>b.pts-a.pts);const el=document.getElementById("lb");el.innerHTML="";lbData.forEach((p,i)=>{const you=p.name==="Khris T.";const d=document.createElement("div");d.className="lb";d.style.background=you?"#E6F1FB":(i===0?"#FAEEDA":"transparent");d.innerHTML='<span style="width:18px;font-weight:700;color:var(--muted);">'+(i+1)+'</span><span class="av" style="background:'+COLORS[i%COLORS.length]+'">'+initials(p.name)+'</span><span style="flex:1;font-weight:'+(you?700:500)+';">'+p.name+(you?" (you)":"")+'</span><span style="font-weight:700;color:var(--navy);">'+p.pts.toLocaleString()+'</span>';el.appendChild(d);});}
+  renderLB();
+
+  // shared tick
+  function tick(){
+    ROOMS.forEach(r=>{r.count=Math.max(3,Math.min(r.cap,r.count+Math.round(rand(-2,3))));});
+    mapDots.forEach(p=>{if(Math.random()<0.34){const r=ROOMS.find(x=>x.key===p.dataset.room);placeDot(p,r);}});
+    refreshOcc();renderCards();renderDoors();
+    miniDots.forEach(o=>{if(Math.random()<0.3){o.p.room=pick(ROOMS);moveMini(o.el,o.p.room);}});renderDir();
+    addFeed();
+    // timeline advance
+    const now=SESS.find(s=>s.now);if(now){now.prog=Math.min(100,now.prog+4);now.cnt=Math.max(0,now.cnt+Math.round(rand(-1,3)));renderTL();}
+    walkers.forEach(w=>{if(Math.random()<0.6)moveWalker(w);});
+    if(Math.random()<0.5)renderMatch();
+    // points + leaderboard
+    pts+=Math.round(rand(5,35));document.getElementById("pts").textContent=pts.toLocaleString();
+    const pct=Math.min(100,Math.round(pts/2000*100));document.getElementById("ptsPct").textContent=pct+"%";document.getElementById("ptsRing").style.setProperty("--p",pct);
+    lbData.forEach(p=>p.pts+=Math.round(rand(0,40)));renderLB();
+  }
+  setInterval(tick,2600);setInterval(tickCd,1000);
+})();
+</script>
+</body>
+</html>

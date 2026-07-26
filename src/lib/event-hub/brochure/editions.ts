@@ -21,6 +21,7 @@ function mapEdition(r: Row): BrochureEdition {
     size: (r.size as BrochureSize) ?? "letter",
     coverThumbPath: (r.cover_thumb_path as string | null) ?? null,
     pdfDigitalPath: (r.pdf_digital_path as string | null) ?? null,
+    pdfPrintPath: (r.pdf_print_path as string | null) ?? null,
     generatedAt: (r.generated_at as string | null) ?? null,
     createdAt: String(r.created_at),
     updatedAt: String(r.updated_at),
@@ -85,18 +86,43 @@ export async function updateEdition(
   return mapEdition(data as Row);
 }
 
-/** Freeze the merge snapshot and mark generated (PDF paths set by the PDF pass). */
+/** Freeze the merge snapshot and mark generated, optionally with PDF paths. */
 export async function markGenerated(
   supabase: SupabaseClient<Database>,
   id: string,
   mergeSnapshot: unknown,
+  paths?: { printPath?: string | null; digitalPath?: string | null },
 ): Promise<BrochureEdition> {
-  const { data, error } = await raw(supabase)
-    .from("event_brochures")
-    .update({ status: "generated", generated_at: new Date().toISOString(), merge_snapshot: mergeSnapshot, updated_at: new Date().toISOString() })
-    .eq("id", id)
-    .select("*")
-    .single();
+  const patch: Record<string, unknown> = {
+    status: "generated",
+    generated_at: new Date().toISOString(),
+    merge_snapshot: mergeSnapshot,
+    updated_at: new Date().toISOString(),
+  };
+  if (paths?.printPath !== undefined) patch.pdf_print_path = paths.printPath;
+  if (paths?.digitalPath !== undefined) patch.pdf_digital_path = paths.digitalPath;
+  const { data, error } = await raw(supabase).from("event_brochures").update(patch).eq("id", id).select("*").single();
   if (error) throw new Error(error.message);
   return mapEdition(data as Row);
+}
+
+export const BROCHURE_BUCKET = "event-brochures";
+
+/** Upload a generated PDF and return its storage path. */
+export async function uploadBrochurePdf(
+  supabase: SupabaseClient<Database>,
+  editionId: string,
+  variant: "print" | "digital",
+  bytes: Buffer,
+): Promise<string> {
+  const path = `${editionId}/${variant}.pdf`;
+  const { error } = await raw(supabase).storage.from(BROCHURE_BUCKET).upload(path, bytes, { contentType: "application/pdf", upsert: true });
+  if (error) throw new Error(error.message);
+  return path;
+}
+
+/** Signed URL for a stored brochure PDF (private bucket). */
+export async function brochureSignedUrl(supabase: SupabaseClient<Database>, path: string, ttl = 3600): Promise<string | null> {
+  const { data, error } = await raw(supabase).storage.from(BROCHURE_BUCKET).createSignedUrl(path, ttl);
+  return error ? null : data?.signedUrl ?? null;
 }

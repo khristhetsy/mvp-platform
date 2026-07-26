@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>iCapOS Event Lobby — 5 interactive concepts</title>
+<style>
+  :root{
+    --navy:#0c2340; --navy2:#13294f; --blue:#2E78F5; --teal:#0F6E56; --teal-bg:#E1F5EE;
+    --violet:#5B4BE0; --amber:#BA7517; --beige:#ece7dc; --line:#e2e8f0; --ink:#1e293b; --muted:#64748b;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#f1f5f9;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:26px;}
+  h1{font-size:20px;font-weight:600;margin:0 0 3px;}
+  .lede{font-size:13px;color:var(--muted);margin:0 0 22px;}
+  .wrap{max-width:1120px;margin:0 auto;}
+  .sample{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:20px;}
+  .stag{display:inline-flex;align-items:center;gap:7px;background:var(--teal-bg);color:var(--teal);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:4px 11px;border-radius:20px;}
+  .sh{font-size:15px;font-weight:600;margin:9px 0 2px;}
+  .sd{font-size:12px;color:var(--muted);margin:0 0 14px;}
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .live{background:#fdecec;color:#c0392b;}
+  .live .dot{background:#e24b4a;animation:blink 1.1s infinite;}
+  @keyframes blink{50%{opacity:.25;}}
+  button{font-family:inherit;cursor:pointer;}
+  .cta{background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;padding:8px 14px;}
+  .cta.teal{background:var(--teal);}
+  .ghost{background:#fff;border:1px solid var(--line);border-radius:8px;font-size:12px;font-weight:600;color:var(--muted);padding:7px 12px;}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .grid2{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;}
+  .av{width:22px;height:22px;border-radius:50%;border:2px solid #fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;}
+  .avrow{display:flex;}
+  .avrow .av{margin-left:-7px;}
+  .avrow .av:first-child{margin-left:0;}
+  .cap{height:6px;border-radius:6px;background:#eef2f7;overflow:hidden;}
+  .cap>i{display:block;height:100%;border-radius:6px;background:var(--teal);}
+  .card{border:1px solid var(--line);border-radius:12px;padding:13px;transition:.15s;}
+  .card:hover{border-color:#bcd3fb;box-shadow:0 4px 14px rgba(15,23,42,.06);}
+  .card.reco{border:2px solid var(--blue);}
+  .icoT{width:34px;height:34px;border-radius:9px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;}
+  /* floor map */
+  .floor{position:relative;background:var(--beige);border-radius:12px;height:300px;overflow:hidden;border:1px solid #dcd4c4;}
+  .room{position:absolute;border-radius:10px;background:rgba(12,35,64,.06);border:1.5px dashed rgba(12,35,64,.22);}
+  .rlabel{position:absolute;font-size:10.5px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.03em;}
+  .occ{position:absolute;font-size:10px;font-weight:700;background:#fff;border:1px solid var(--line);border-radius:20px;padding:2px 7px;color:var(--navy);}
+  .ppl{position:absolute;width:11px;height:11px;border-radius:50%;transition:left 2.2s ease,top 2.2s ease;box-shadow:0 1px 2px rgba(0,0,0,.2);}
+  .me{width:15px;height:15px;background:var(--blue);border:3px solid #cfe0ff;z-index:5;}
+  .meTag{position:absolute;background:var(--blue);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;transform:translate(-50%,-140%);z-index:6;}
+  /* iso lobby */
+  .iso{background:linear-gradient(#dfe7f0,#eef2f7);border-radius:12px;padding:22px;position:relative;overflow:hidden;}
+  .isoRoom{background:var(--beige);border-radius:10px;padding:26px 18px 40px;position:relative;clip-path:polygon(6% 0,94% 0,100% 100%,0 100%);}
+  .doors{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;}
+  .door{position:relative;width:96px;background:var(--navy);color:#fff;border-radius:10px;padding:14px 8px 10px;text-align:center;transition:.15s;border:1px solid rgba(255,255,255,.06);}
+  .door:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(12,35,64,.28);background:var(--navy2);}
+  .door .di{font-size:20px;}
+  .door .dn{font-size:9.5px;font-weight:700;letter-spacing:.03em;margin-top:5px;text-transform:uppercase;color:#c7d2e6;}
+  .cbadge{position:absolute;top:-8px;right:-8px;background:var(--teal);color:#fff;font-size:10px;font-weight:700;border-radius:20px;padding:2px 7px;box-shadow:0 2px 6px rgba(0,0,0,.25);}
+  .fig{width:16px;height:26px;border-radius:8px 8px 4px 4px;position:relative;}
+  .fig::before{content:"";position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:11px;height:11px;border-radius:50%;background:inherit;}
+  .crowd{display:flex;gap:10px;justify-content:center;margin-top:16px;align-items:flex-end;}
+  /* feed */
+  .feed{border:1px solid var(--line);border-radius:12px;padding:6px 12px;height:250px;overflow:hidden;}
+  .fitem{display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #f1f5f9;font-size:12px;animation:slidein .4s ease;}
+  @keyframes slidein{from{opacity:0;transform:translateY(-6px);}}
+  .fitem .fi{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;flex:0 0 auto;}
+  .concierge{background:var(--navy);color:#fff;border-radius:12px;padding:16px;}
+  .count{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.02em;}
+  .dir{border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .drow{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:12px;}
+  .where{font-size:10.5px;color:var(--muted);}
+  .mini{position:relative;background:var(--beige);border-radius:12px;height:250px;border:1px solid #dcd4c4;overflow:hidden;}
+  .tag{font-size:10px;color:var(--muted);}
+  @media(max-width:760px){.grid4{grid-template-columns:repeat(2,1fr);}.grid2{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>iCapOS Event Lobby — 5 interactive concepts</h1>
+  <p class="lede">Each concept adds live presence ("who's where") and automation to the lobby. Counts, dots, and feeds update on their own — hover and click to explore.</p>
+
+  <!-- CONCEPT 1 — LIVE FLOOR MAP -->
+  <section class="sample">
+    <span class="stag"><i>◔</i> Concept 1 · Live floor map</span>
+    <div class="sh">Top-down venue with real-time attendee locations</div>
+    <p class="sd">Every attendee is a dot inside the room they're in. Occupancy pills update live, and your position is always marked. Click a room to jump in.</p>
+    <div class="floor" id="floor"></div>
+  </section>
+
+  <!-- CONCEPT 2 — SMART DESTINATION CARDS -->
+  <section class="sample">
+    <span class="stag"><i>▤</i> Concept 2 · Smart destination cards</span>
+    <div class="sh">Auto-ranked rooms with live headcount and status</div>
+    <p class="sd">Rooms sort themselves by what's happening now. Each card shows who's inside, capacity, and a status the system sets automatically — with a recommended pick.</p>
+    <div class="grid4" id="cards"></div>
+  </section>
+
+  <!-- CONCEPT 3 — ENHANCED ISO LOBBY -->
+  <section class="sample">
+    <span class="stag"><i>◈</i> Concept 3 · Enhanced immersive lobby</span>
+    <div class="sh">Your current lobby, plus live counts and presence</div>
+    <p class="sd">Keeps the room feel you have now, but each doorway shows a live count badge, lifts on hover, and the avatars below are real attendees milling in the lobby.</p>
+    <div class="iso">
+      <div style="text-align:center;color:var(--teal);font-size:11px;font-weight:700;letter-spacing:.05em;margin-bottom:2px;">WELCOME TO</div>
+      <div style="text-align:center;color:var(--navy);font-size:16px;font-weight:700;margin-bottom:16px;">ICFO Private Equity Virtual Expo</div>
+      <div class="isoRoom">
+        <div class="doors" id="doors"></div>
+        <div class="crowd" id="crowd"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONCEPT 4 — CONCIERGE + ACTIVITY FEED -->
+  <section class="sample">
+    <span class="stag"><i>✦</i> Concept 4 · Auto-guide concierge</span>
+    <div class="sh">The lobby tells you where to go next</div>
+    <p class="sd">A concierge surfaces your next best move with a live countdown, while an activity stream shows the room filling and sessions starting — no hunting around.</p>
+    <div class="grid2">
+      <div class="concierge">
+        <div style="font-size:11px;color:#9fb3d1;font-weight:700;letter-spacing:.05em;text-transform:uppercase;">Your next move</div>
+        <div style="font-size:17px;font-weight:600;margin:8px 0 2px;">Keynote: The 2026 Capital Outlook</div>
+        <div style="font-size:12px;color:#9fb3d1;">Main Stage · starts in</div>
+        <div class="count" id="cd" style="margin:6px 0 12px;">02:00</div>
+        <div style="display:flex;gap:8px;">
+          <button class="cta teal">Join now</button>
+          <button class="ghost" style="background:transparent;color:#cfe0ff;border-color:#33507d;">Remind me</button>
+        </div>
+        <div style="border-top:1px solid #23406b;margin-top:14px;padding-top:11px;font-size:11.5px;color:#9fb3d1;">
+          <b style="color:#fff;">Because:</b> you follow 3 speakers on this panel and haven't visited Main Stage yet.
+        </div>
+      </div>
+      <div class="feed" id="feed"></div>
+    </div>
+  </section>
+
+  <!-- CONCEPT 5 — MINIMAP + LIVE DIRECTORY -->
+  <section class="sample">
+    <span class="stag"><i>◐</i> Concept 5 · Presence minimap + directory</span>
+    <div class="sh">See where everyone is — and jump to them</div>
+    <p class="sd">A compact minimap shows your position among attendees, paired with a live directory of who's here and which room they're in. Wave or follow someone into a session.</p>
+    <div class="grid2">
+      <div class="mini" id="mini"></div>
+      <div class="dir" id="dir"></div>
+    </div>
+  </section>
+
+  <p class="tag" style="text-align:center;margin-top:6px;">Mockup · sample data animates locally to show the interaction. Education &amp; community — not an offer of securities.</p>
+</div>
+
+<script>
+(function(){
+  const COLORS=["#2E78F5","#0F6E56","#5B4BE0","#BA7517","#D4537E","#1D9E75","#D85A30"];
+  const NAMES=["Khris T.","Robert R.","Daniela F.","Johnny R.","Maya R.","Sam O.","Priya N.","Leo K.","Ana G.","Tom B.","Wei L.","Ivy C."];
+  const initials=n=>n.split(" ").map(w=>w[0]).join("").slice(0,2);
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+
+  // Shared room model
+  const ROOMS=[
+    {key:"stage",name:"Main Stage",x:4,y:6,w:44,h:40,count:24,cap:60,status:"live"},
+    {key:"net",name:"Networking",x:52,y:6,w:44,h:40,count:11,cap:40,status:"filling"},
+    {key:"tracks",name:"Tracks",x:4,y:52,w:44,h:42,count:7,cap:50,status:"quiet"},
+    {key:"expo",name:"Sponsor Hall",x:52,y:52,w:44,h:42,count:15,cap:80,status:"open"},
+  ];
+
+  /* ---------- Concept 1: floor map ---------- */
+  const floor=document.getElementById("floor");
+  const mapDots=[];
+  ROOMS.forEach(r=>{
+    const d=document.createElement("div");d.className="room";
+    d.style.left=r.x+"%";d.style.top=r.y+"%";d.style.width=r.w+"%";d.style.height=r.h+"%";
+    d.onclick=()=>d.style.background="rgba(46,120,245,.16)";
+    floor.appendChild(d);
+    const lab=document.createElement("div");lab.className="rlabel";lab.textContent=r.name;
+    lab.style.left=(r.x+2)+"%";lab.style.top=(r.y+2)+"%";floor.appendChild(lab);
+    const occ=document.createElement("div");occ.className="occ";occ.id="occ-"+r.key;
+    occ.style.left=(r.x+r.w-13)+"%";occ.style.top=(r.y+2)+"%";floor.appendChild(occ);
+    for(let i=0;i<r.count;i++){
+      const p=document.createElement("div");p.className="ppl";p.style.background=pick(COLORS);
+      p.dataset.room=r.key;floor.appendChild(p);mapDots.push(p);placeDot(p,r);
+    }
+  });
+  function placeDot(p,r){p.style.left=rand(r.x+3,r.x+r.w-4)+"%";p.style.top=rand(r.y+9,r.y+r.h-5)+"%";}
+  // your marker
+  const me=document.createElement("div");me.className="ppl me";me.style.left="49%";me.style.top="48%";floor.appendChild(me);
+  const meTag=document.createElement("div");meTag.className="meTag";meTag.textContent="You · Lobby";meTag.style.left="49%";meTag.style.top="48%";floor.appendChild(meTag);
+  function refreshOcc(){ROOMS.forEach(r=>{const el=document.getElementById("occ-"+r.key);if(el)el.textContent="● "+r.count;});}
+  refreshOcc();
+
+  /* ---------- Concept 2: cards ---------- */
+  const cardsEl=document.getElementById("cards");
+  const STAT={live:["● Live now","live"],filling:["Filling up","fill"],quiet:["Quiet","q"],open:["Open","o"]};
+  const ICON={stage:"🎤",net:"🤝",tracks:"🗂",expo:"🏛"};
+  function renderCards(){
+    const order=[...ROOMS].sort((a,b)=>score(b)-score(a));
+    cardsEl.innerHTML="";
+    order.forEach((r,idx)=>{
+      const c=document.createElement("div");c.className="card"+(idx===0?" reco":"");
+      const badge=r.status==="live"?'<span class="pill live"><span class="dot"></span>Live</span>':
+        '<span class="pill" style="background:#eef2f7;color:#475569;">'+STAT[r.status][0]+'</span>';
+      let avs="";for(let i=0;i<Math.min(4,r.count);i++)avs+='<span class="av" style="background:'+COLORS[i%COLORS.length]+'">'+initials(NAMES[(i+idx)%NAMES.length])+'</span>';
+      c.innerHTML=
+        '<div style="display:flex;justify-content:space-between;align-items:center;">'+
+          '<div class="icoT">'+ICON[r.key]+'</div>'+badge+'</div>'+
+        (idx===0?'<div style="font-size:9.5px;font-weight:700;color:var(--blue);margin-top:8px;">RECOMMENDED FOR YOU</div>':'<div style="height:8px"></div>')+
+        '<div style="font-size:13px;font-weight:600;">'+r.name+'</div>'+
+        '<div style="display:flex;align-items:center;gap:6px;margin:8px 0;"><span class="avrow">'+avs+'</span>'+
+          '<span style="font-size:11px;color:var(--muted);font-weight:600;">'+r.count+' inside</span></div>'+
+        '<div class="cap"><i style="width:'+Math.min(100,Math.round(r.count/r.cap*100))+'%"></i></div>'+
+        '<button class="cta'+(r.status==="live"?" teal":"")+'" style="width:100%;margin-top:11px;">Enter →</button>';
+      cardsEl.appendChild(c);
+    });
+  }
+  function score(r){return (r.status==="live"?100:0)+(r.status==="filling"?40:0)+r.count;}
+  renderCards();
+
+  /* ---------- Concept 3: iso doors + crowd ---------- */
+  const doorsEl=document.getElementById("doors");
+  const DOOR=[{k:"stage",i:"🎤",n:"Sessions"},{k:"net",i:"🤝",n:"Networking"},{k:"expo",i:"🏛",n:"Expo Hall"},{k:"tracks",i:"🎬",n:"On-Demand"}];
+  function renderDoors(){
+    doorsEl.innerHTML="";
+    DOOR.forEach(d=>{
+      const r=ROOMS.find(x=>x.key===d.k);
+      const el=document.createElement("div");el.className="door";
+      el.innerHTML='<span class="cbadge">'+r.count+' in</span><div class="di">'+d.i+'</div><div class="dn">'+d.n+'</div>';
+      doorsEl.appendChild(el);
+    });
+  }
+  renderDoors();
+  const crowd=document.getElementById("crowd");
+  for(let i=0;i<7;i++){const f=document.createElement("div");f.className="fig";f.style.background=COLORS[i%COLORS.length];f.title=NAMES[i];crowd.appendChild(f);}
+
+  /* ---------- Concept 4: feed + countdown ---------- */
+  const feed=document.getElementById("feed");
+  const EV=[
+    ["🤝","%N joined Networking","#E1F5EE"],
+    ["🎤","Keynote starts in 2 min on Main Stage","#E6F1FB"],
+    ["📊","Live poll closing — 2 votes in","#FAEEDA"],
+    ["🏛","%N is viewing a booth in Sponsor Hall","#EDE9FE"],
+    ["⭐","%N followed you","#FBE4EC"],
+    ["🎬","New on-demand session published","#E1F5EE"],
+    ["👋","%N waved at you from Tracks","#E6F1FB"],
+  ];
+  function addFeed(){
+    const e=pick(EV);const it=document.createElement("div");it.className="fitem";
+    it.innerHTML='<span class="fi" style="background:'+e[2]+'">'+e[0]+'</span>'+
+      '<div><div>'+e[1].replace("%N","<b>"+pick(NAMES)+"</b>")+'</div>'+
+      '<div style="font-size:10px;color:var(--muted);margin-top:1px;">just now</div></div>';
+    feed.prepend(it);while(feed.children.length>7)feed.removeChild(feed.lastChild);
+  }
+  for(let i=0;i<5;i++)addFeed();
+  let secs=120;const cd=document.getElementById("cd");
+  function tickCd(){secs=secs<=0?120:secs-1;cd.textContent=String(Math.floor(secs/60)).padStart(2,"0")+":"+String(secs%60).padStart(2,"0");}
+
+  /* ---------- Concept 5: minimap + directory ---------- */
+  const mini=document.getElementById("mini");
+  ROOMS.forEach(r=>{const d=document.createElement("div");d.className="room";d.style.left=r.x+"%";d.style.top=r.y+"%";d.style.width=r.w+"%";d.style.height=r.h+"%";mini.appendChild(d);
+    const lab=document.createElement("div");lab.className="rlabel";lab.style.fontSize="9px";lab.textContent=r.name;lab.style.left=(r.x+2)+"%";lab.style.top=(r.y+2)+"%";mini.appendChild(lab);});
+  const miniDots=[];
+  const people=NAMES.map((n,i)=>({name:n,color:COLORS[i%COLORS.length],room:pick(ROOMS)}));
+  people.forEach(pp=>{const d=document.createElement("div");d.className="ppl";d.style.width="9px";d.style.height="9px";d.style.background=pp.color;d.title=pp.name;mini.appendChild(d);miniDots.push({el:d,p:pp});moveMini(d,pp.room);});
+  const me2=document.createElement("div");me2.className="ppl me";me2.style.left="49%";me2.style.top="48%";mini.appendChild(me2);
+  function moveMini(el,r){el.style.left=rand(r.x+3,r.x+r.w-4)+"%";el.style.top=rand(r.y+9,r.y+r.h-5)+"%";}
+  const dir=document.getElementById("dir");
+  function renderDir(){
+    dir.innerHTML='<div style="padding:8px 12px;font-size:10.5px;font-weight:700;color:var(--muted);letter-spacing:.04em;border-bottom:1px solid var(--line);">WHO\'S HERE · '+people.length+' online</div>';
+    people.slice(0,7).forEach(pp=>{
+      const row=document.createElement("div");row.className="drow";
+      row.innerHTML='<span class="av" style="background:'+pp.color+'">'+initials(pp.name)+'</span>'+
+        '<div style="flex:1;"><div style="font-weight:600;">'+pp.name+'</div><div class="where">📍 in '+pp.room.name+'</div></div>'+
+        '<button class="ghost" style="padding:5px 10px;">👋 Wave</button>';
+      dir.appendChild(row);
+    });
+  }
+  renderDir();
+
+  /* ---------- shared live tick ---------- */
+  function tick(){
+    // shuffle a few room counts
+    ROOMS.forEach(r=>{r.count=Math.max(3,Math.min(r.cap,r.count+Math.round(rand(-2,3))));});
+    // move ~1/3 of map dots
+    mapDots.forEach(p=>{if(Math.random()<0.34){const r=ROOMS.find(x=>x.key===p.dataset.room);placeDot(p,r);}});
+    refreshOcc();renderCards();renderDoors();
+    // move some directory people + minimap
+    miniDots.forEach(o=>{if(Math.random()<0.3){o.p.room=pick(ROOMS);moveMini(o.el,o.p.room);}});
+    renderDir();
+    addFeed();
+  }
+  setInterval(tick,2600);
+  setInterval(tickCd,1000);
+})();
+</script>
+</body>
+</html>

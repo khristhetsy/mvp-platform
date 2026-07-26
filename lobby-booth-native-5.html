@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>iCapOS Lobby — native booth style · 5 samples</title>
+<style>
+  :root{--line:#e5e9f0;--ink:#1e293b;--muted:#64748b;--accent:#2E78F5;--accent2:#0F6E56;--navy:#0c2340;--beige:#efe9db;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:#eef1f6;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:24px;}
+  .wrap{max-width:1040px;margin:0 auto;}
+  h1{font-size:21px;font-weight:700;margin:0 0 3px;}
+  .lede{font-size:13px;color:var(--muted);margin:0 0 18px;}
+  .sample{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:20px;}
+  .stag{display:inline-flex;gap:6px;background:#E1F5EE;color:#0F6E56;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:20px;margin-left:2px;}
+  .sh{font-size:14px;font-weight:600;margin:7px 2px 2px;}.sd{font-size:11.5px;color:var(--muted);margin:0 2px 10px;}
+  /* ticker */
+  .ticker{display:flex;align-items:stretch;background:#0c2340;color:#fff;border-radius:10px;overflow:hidden;height:36px;position:relative;margin-bottom:10px;}
+  .ticker .lab{background:var(--accent2);font-size:9.5px;font-weight:800;letter-spacing:.05em;padding:0 11px;display:flex;align-items:center;gap:6px;white-space:nowrap;z-index:3;}
+  .ticker .lab .dt{width:6px;height:6px;border-radius:50%;background:#fff;animation:blink 1.1s infinite;}@keyframes blink{50%{opacity:.3;}}
+  .track{overflow:hidden;flex:1;position:relative;-webkit-mask-image:linear-gradient(90deg,transparent,#000 4%,#000 90%,transparent);mask-image:linear-gradient(90deg,transparent,#000 4%,#000 90%,transparent);}
+  .marquee{display:flex;gap:30px;white-space:nowrap;position:absolute;height:100%;align-items:center;padding-left:16px;animation:scroll 32s linear infinite;}
+  .marquee:hover{animation-play-state:paused;}@keyframes scroll{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+  .ti{font-size:11.5px;display:inline-flex;gap:6px;}.ti .k{color:#7fdcc0;font-weight:700;}
+  .pop{position:absolute;right:12px;top:50%;transform:translateY(-50%) translateX(30px);background:var(--accent2);color:#fff;font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:20px;display:flex;gap:6px;align-items:center;opacity:0;transition:.4s cubic-bezier(.2,.8,.2,1);z-index:4;white-space:nowrap;box-shadow:0 6px 16px rgba(12,35,64,.4);}
+  .pop.on{opacity:1;transform:translateY(-50%) translateX(0);}
+  .pop .av{width:18px;height:18px;border-radius:50%;background:#fff;color:var(--accent2);font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+  /* perspective room */
+  .room{position:relative;height:400px;border-radius:10px;overflow:hidden;background:var(--beige);}
+  .wallT{position:absolute;top:0;left:0;right:0;height:16%;background:linear-gradient(#e4dcc9,#efe9db);clip-path:polygon(0 0,100% 0,82% 100%,18% 100%);}
+  .wallL{position:absolute;top:0;bottom:0;left:0;width:22%;background:linear-gradient(90deg,#d7ceb7,#efe9db);clip-path:polygon(0 0,100% 16%,100% 84%,0 100%);}
+  .wallR{position:absolute;top:0;bottom:0;right:0;width:22%;background:linear-gradient(270deg,#d7ceb7,#efe9db);clip-path:polygon(0 16%,100% 0,100% 100%,0 84%);}
+  .backwall{position:absolute;left:20%;right:20%;top:16%;bottom:20%;background:var(--beige);box-shadow:inset 0 0 40px rgba(120,110,90,.12);}
+  .floor{position:absolute;left:0;right:0;bottom:0;height:20%;background:linear-gradient(#13244c,#0a1730);clip-path:polygon(20% 0,80% 0,100% 100%,0 100%);}
+  .plines{position:absolute;inset:0;pointer-events:none;background:
+    linear-gradient(to right,transparent 20%,rgba(150,140,115,.16) 20%,transparent 20.2%),
+    linear-gradient(to right,transparent 80%,rgba(150,140,115,.16) 80%,transparent 80.2%);}
+  .badge{position:absolute;top:10px;z-index:8;background:var(--navy);color:#fff;font-size:9.5px;font-weight:700;padding:4px 10px;border-radius:20px;display:inline-flex;gap:6px;align-items:center;}
+  .badge.l{left:10px;background:#0f2e46;}.badge.r{right:10px;}
+  .badge .dt{width:6px;height:6px;border-radius:50%;background:#3ddc97;}
+  .welcome{position:absolute;left:50%;top:19%;transform:translateX(-50%);background:var(--navy);color:#fff;border-radius:10px;padding:8px 20px;text-align:center;z-index:6;box-shadow:0 8px 18px rgba(12,35,64,.25);}
+  .welcome .w1{font-size:7.5px;font-weight:800;letter-spacing:.14em;color:#5fd8b0;}
+  .welcome .w2{font-size:12px;font-weight:800;margin-top:2px;}
+  .boothrow{position:absolute;left:50%;top:40%;transform:translateX(-50%);display:flex;gap:20px;z-index:6;}
+  .booth{width:60px;text-align:center;cursor:pointer;}
+  .booth .tile{width:60px;height:56px;border-radius:12px;background:var(--navy);display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;box-shadow:0 8px 16px rgba(12,35,64,.28);transition:.15s;position:relative;}
+  .booth:hover .tile{transform:translateY(-4px);box-shadow:0 12px 22px rgba(12,35,64,.35);}
+  .booth .bl{margin-top:6px;font-size:8px;font-weight:800;letter-spacing:.08em;color:#5b6472;}
+  .infobooth{position:absolute;left:50%;top:60%;transform:translateX(-50%);text-align:center;cursor:pointer;z-index:6;}
+  .infobooth .tile{width:56px;height:44px;border-radius:10px;background:#12294c;color:#fff;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2;padding:4px;box-shadow:0 6px 14px rgba(12,35,64,.25);}
+  .wpanel{position:absolute;width:5%;height:12%;background:#0f1f3d;border:2px solid #26456e;border-radius:3px;z-index:5;top:44%;}
+  .wpanel.l{left:11%;}.wpanel.r{right:11%;}
+  .cap{position:absolute;left:0;right:0;bottom:2%;text-align:center;font-size:9px;color:#8ca0c0;z-index:6;}
+  /* booth style variants */
+  .b-live .tile .cnt{position:absolute;top:-7px;right:-7px;background:#3ddc97;color:#06301f;font-size:8px;font-weight:800;border-radius:20px;padding:1px 6px;box-shadow:0 2px 5px rgba(0,0,0,.25);}
+  .b-glass .tile{background:rgba(12,35,64,.42);backdrop-filter:blur(3px);border:1px solid rgba(255,255,255,.35);}
+  .b-accent .tile{border-bottom:4px solid var(--bc,#2E78F5);}
+  .b-accent .tile .ic{color:var(--bc,#fff);}
+  /* people */
+  .fig{position:absolute;width:11px;height:22px;border-radius:6px 6px 3px 3px;box-shadow:0 3px 6px rgba(0,0,0,.3);transition:left 2.4s linear;z-index:7;cursor:pointer;}
+  .fig::before{content:"";position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:inherit;}
+  .fig:hover{outline:2px solid #fff;outline-offset:1px;}
+  .you{position:absolute;left:49%;bottom:13%;width:15px;height:29px;border-radius:8px 8px 3px 3px;background:var(--accent);z-index:9;cursor:pointer;box-shadow:0 4px 8px rgba(0,0,0,.4);}
+  .you::before{content:"";position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:11px;height:11px;border-radius:50%;background:var(--accent);}
+  .youpin{position:absolute;left:49%;bottom:24%;transform:translateX(-50%);z-index:9;font-size:8.5px;font-weight:800;color:#fff;background:var(--accent);padding:2px 6px;border-radius:8px;animation:bob 1.6s ease-in-out infinite;}
+  @keyframes bob{50%{transform:translateX(-50%) translateY(-3px);}}
+  .youpin::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--accent);}
+  /* tip/card/toast */
+  .zlab,.gtip{position:fixed;z-index:98;background:rgba(12,35,64,.94);color:#fff;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:7px;white-space:nowrap;opacity:0;transition:.1s;pointer-events:none;transform:translate(-50%,-100%);}
+  .zlab{transform:translate(-50%,-130%);}.zlab.on,.gtip.on{opacity:1;}
+  .gcard{position:fixed;z-index:99;width:210px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 34px rgba(12,35,64,.28);opacity:0;transform:translate(-50%,-100%) scale(.96);transition:.14s;pointer-events:none;overflow:hidden;}
+  .gcard.on{opacity:1;pointer-events:auto;transform:translate(-50%,-100%) scale(1);}
+  .gcard .hd{display:flex;gap:10px;align-items:center;padding:11px 12px 9px;}
+  .gcard .avb{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800;flex:0 0 auto;}
+  .gcard .nm{font-size:13px;font-weight:700;line-height:1.2;}.gcard .rl{font-size:10.5px;color:var(--muted);}
+  .gcard .whr{padding:5px 12px;background:#f4f7fc;font-size:10.5px;color:#0c2340;font-weight:600;border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+  .gcard .act{display:flex;gap:6px;padding:9px 12px;}
+  .gcard .act button{flex:1;font-size:10.5px;font-weight:700;border-radius:8px;padding:6px 0;cursor:pointer;border:1px solid var(--line);background:#fff;color:#0c2340;}
+  .gcard .act button.p{background:#2E78F5;color:#fff;border-color:#2E78F5;}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#0c2340;color:#fff;font-size:13px;font-weight:600;padding:10px 17px;border-radius:10px;opacity:0;transition:.25s;z-index:99;box-shadow:0 10px 30px rgba(12,35,64,.4);}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+  .tag{font-size:11px;color:var(--muted);text-align:center;margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>iCapOS Lobby — booths styled like your live lobby</h1>
+  <p class="lede">Same perspective room and navy doorway tiles as your current lobby, with all the added functions kept: ticker, moving named guests (hover = name, click = profile), "you are here", and clickable booths. Five booth treatments below.</p>
+  <section class="sample" id="s1"></section>
+  <section class="sample" id="s2"></section>
+  <section class="sample" id="s3"></section>
+  <section class="sample" id="s4"></section>
+  <section class="sample" id="s5"></section>
+  <p class="tag">Mockups · stylized recreation of your lobby. Education &amp; community — not an offer of securities.</p>
+</div>
+<div class="zlab" id="zlab"></div><div class="gtip" id="gtip"></div><div class="gcard" id="gcard"></div><div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const COLORS=["#e0703a","#4a5568","#5b8fd6","#3ba05a","#5b4be0","#c05a8a","#7a5230","#2b3a4d"];
+  const NAMES=["Khris Thetsy","Robert Ruiz","Daniela Felix","Johnny Rivera","Maya Rao","Sam Okoye","Priya Nair","Leo Kramer","Ana García","Tom Bishop"];
+  const ROLES=["Angel investor","VC · Growth","Founder · Seed","Family office","LP · Institutional","Managing Partner","Advisor"];
+  const COMPS=["Arlyn Capital","North Peak","Meridian VC","Cedar Family Office","BlueHarbor","Vertex Labs","Summit LP"];
+  const ZONES=["Lobby","Sessions","Networking","Expo Hall"];
+  const rand=(a,b)=>a+Math.random()*(b-a);const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const initials=n=>n.split(" ").map(w=>w[0]).join("").slice(0,2);
+
+  const ih=[['📢','<span class="k">Keynote:</span> 2026 Capital Outlook — 9:30 · Main Stage'],['🤝','<span class="k">Networking</span> is now open'],['🏛','<span class="k">Expo Hall</span> — 12 booths live'],['🎬','<span class="k">On-Demand</span> replay published'],['🏆','<span class="k">Leaderboard</span> — top: Daniela F.']].map(it=>`<span class="ti"><b>${it[0]}</b>${it[1]}</span>`).join('<span style="opacity:.3">•</span>');
+  const TICKER=`<div class="ticker"><div class="lab"><span class="dt"></span>WHAT'S ON · LIVE</div><div class="track"><div class="marquee">${ih}<span style="opacity:.3">•</span>${ih}</div></div><div class="pop"></div></div>`;
+
+  // booth sets
+  const BASE4=[["Sessions","🖥","Main Stage",24,"#2E78F5"],["Networking","👥","Lounge",11,"#0F6E56"],["On-Demand","🎬","Replays",0,"#5B4BE0"],["Expo Hall","🏛","Sponsor Hall",15,"#BA7517"]];
+  const SIX=[...BASE4,["Talk Show","🎙","Live",7,"#D4537E"],["Leaderboard","🏆","Ranks",0,"#1D9E75"]];
+
+  function boothsHTML(list,styleCls){
+    return `<div class="boothrow ${styleCls}">`+list.map(b=>{
+      const cnt=styleCls.includes("b-live")&&b[3]?`<span class="cnt">${b[3]}</span>`:"";
+      const accent=styleCls.includes("b-accent")?`style="--bc:${b[4]}"`:"";
+      return `<div class="booth" data-go="${b[0]}" data-lab="${b[0]} · ${b[2]}"><div class="tile" ${accent}><span class="ic">${b[1]}</span>${cnt}</div><div class="bl">${b[0].toUpperCase()}</div></div>`;
+    }).join("")+`</div>`;
+  }
+  function scene(list,styleCls){return `
+    <div class="wallT"></div><div class="wallL"></div><div class="wallR"></div>
+    <div class="backwall"></div><div class="floor"></div><div class="plines"></div>
+    <div class="badge l"><span class="dt"></span>You are here · Lobby</div>
+    <div class="badge r"><span class="dt"></span><b style="all:unset;font-weight:800" class="vcount">18</b>&nbsp;in the venue</div>
+    <div class="wpanel l"></div><div class="wpanel r"></div>
+    <div class="welcome"><div class="w1">WELCOME TO</div><div class="w2">ICFO Private Equity Virtual Expo</div></div>
+    ${boothsHTML(list,styleCls)}
+    <div class="infobooth" data-go="Help & Info Desk" data-lab="Help &amp; Info Desk"><div class="tile">HELP &amp; INFO</div></div>
+    <div class="cap">Hover or tap a doorway to look inside, then enter.</div>
+    <div class="you"></div><div class="youpin">You</div>`;}
+
+  const zlab=document.getElementById("zlab"),gtip=document.getElementById("gtip"),gcard=document.getElementById("gcard"),toast=document.getElementById("toast");let tt;
+  const go=n=>{toast.textContent="Entering "+n+" →";toast.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>toast.classList.remove("on"),1400);};
+  function showTip(el,name){const r=el.getBoundingClientRect();gtip.textContent=name;gtip.style.left=(r.left+r.width/2)+"px";gtip.style.top=(r.top-6)+"px";gtip.classList.add("on");}
+  const hideTip=()=>gtip.classList.remove("on");
+  function showCard(el,g){const r=el.getBoundingClientRect();
+    gcard.innerHTML=`<div class="hd"><div class="avb" style="background:${g.color}">${g.you?"★":initials(g.name)}</div><div><div class="nm">${g.name}${g.you?" (you)":""}</div><div class="rl">${g.role}${g.comp?" · "+g.comp:""}</div></div></div><div class="whr">📍 in the ${g.zone}</div>`+
+      (g.you?`<div class="act"><button class="p">Edit profile</button><button>Set status</button></div>`:`<div class="act"><button class="p">👋 Wave</button><button>💬 Message</button></div>`);
+    gcard.style.left=(r.left+r.width/2)+"px";gcard.style.top=(r.top-8)+"px";gcard.classList.add("on");}
+  const hideCard=()=>gcard.classList.remove("on");
+  document.addEventListener("click",e=>{if(!e.target.closest(".gcard")&&!e.target.closest(".fig")&&!e.target.closest(".you"))hideCard();},true);
+  window.addEventListener("scroll",()=>{hideCard();zlab.classList.remove("on");},true);
+  function bindGuest(el,g){el.addEventListener("mouseenter",()=>showTip(el,g.name+(g.you?" (you)":"")));el.addEventListener("mouseleave",hideTip);el.addEventListener("click",ev=>{ev.stopPropagation();hideTip();showCard(el,g);});}
+  function bindZones(root){root.querySelectorAll("[data-go]").forEach(el=>{
+    el.addEventListener("mouseenter",()=>{const r=el.getBoundingClientRect();zlab.textContent=el.dataset.lab||el.dataset.go;zlab.style.left=(r.left+r.width/2)+"px";zlab.style.top=(r.top+2)+"px";zlab.classList.add("on");});
+    el.addEventListener("mouseleave",()=>zlab.classList.remove("on"));
+    el.addEventListener("click",()=>go(el.dataset.go));});}
+  const SPOTS=[[26,26,.85],[36,20,.8],[46,30,.95],[56,22,1],[62,28,.9],[70,20,1],[30,14,1.05],[64,13,1.05]];
+
+  const CFG=[
+    ["s1",BASE4,"","Sample 1 · Exact match","The four navy doorway tiles exactly like your live lobby — icon on top, small-caps label below."],
+    ["s2",SIX,"","Sample 2 · More destinations","Same tile style extended to six booths (adds Talk Show and Leaderboard) in one row."],
+    ["s3",BASE4,"b-live","Sample 3 · Live headcount","Navy tiles with a live attendee-count badge so people head to where the action is."],
+    ["s4",BASE4,"b-glass","Sample 4 · Frosted glass","Translucent glass tiles that let the hall show through — lighter, more premium."],
+    ["s5",BASE4,"b-accent","Sample 5 · Accent bars","Navy tiles with a colored accent bar + icon per booth for quicker visual sorting."],
+  ];
+  CFG.forEach(([id,list,styleCls,title,desc])=>{
+    const host=document.getElementById(id);
+    host.innerHTML=`<span class="stag">${title.split(" · ")[0]}</span><div class="sh">${title.split(" · ")[1]}</div><div class="sd">${desc}</div>${TICKER}<div class="room">${scene(list,styleCls)}</div>`;
+    const room=host.querySelector(".room");bindZones(host);
+    const roster=[...NAMES].sort(()=>Math.random()-.5);
+    SPOTS.forEach((s,i)=>{const g={name:roster[i%roster.length],color:pick(COLORS),role:pick(ROLES),comp:pick(COMPS),zone:pick(ZONES)};
+      const f=document.createElement("div");f.className="fig";f.style.cssText=`left:${s[0]}%;bottom:${s[1]}%;background:${g.color};transform:scale(${s[2]})`;f.dataset.base=s[0];room.appendChild(f);bindGuest(f,g);});
+    bindGuest(room.querySelector(".you"),{name:"Khris Thetsy",color:"#2E78F5",role:"Host · iCapOS",comp:"",zone:"Lobby",you:true});
+    const pop=host.querySelector(".pop");
+    const fire=()=>{const n=pick(NAMES),c=pick(COMPS);pop.innerHTML=`<span class="av">${initials(n)}</span>🎉 ${n} · ${c} just joined`;pop.classList.add("on");setTimeout(()=>pop.classList.remove("on"),2900);};
+    setTimeout(fire,rand(700,2200));setInterval(fire,rand(5200,6600));
+  });
+  setInterval(()=>{
+    document.querySelectorAll(".fig").forEach(f=>{if(Math.random()<0.5)f.style.left=(+f.dataset.base+rand(-4,4))+"%";});
+    document.querySelectorAll(".vcount").forEach(c=>{c.textContent=Math.max(9,Math.min(40,+c.textContent+Math.round(rand(-2,3))));});
+  },2400);
+})();
+</script>
+</body>
+</html>

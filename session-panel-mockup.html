@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Live session panel — professional icons</title>
+<style>
+  :root{--indigo:#4f46e5;--indigo-soft:#eef0fe;--navy:#0c2340;--ink:#1e2a3a;--muted:#6a7690;--line:#e7e9f2;--blue:#2563eb;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:#f3f5f7;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:26px;}
+  .wrap{max-width:760px;margin:0 auto;}
+  h1{font-size:20px;font-weight:700;margin:0 0 4px;}
+  .lede{font-size:13px;color:var(--muted);margin:0 0 18px;line-height:1.5;}
+  .switch{display:inline-flex;gap:6px;background:#fff;border:1px solid var(--line);border-radius:22px;padding:4px;margin-bottom:18px;}
+  .switch button{border:none;background:transparent;font-size:12px;font-weight:700;color:var(--muted);padding:7px 14px;border-radius:18px;cursor:pointer;}
+  .switch button.on{background:var(--indigo);color:#fff;}
+  /* session card */
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 8px 26px rgba(12,35,64,.06);}
+  .pill{display:inline-block;background:var(--indigo-soft);color:var(--indigo);font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;}
+  .title{font-size:17px;font-weight:700;color:var(--navy);margin:12px 0 6px;}
+  .abstract{font-size:13px;color:#4a5568;line-height:1.5;margin:0 0 14px;}
+  .join{display:inline-flex;align-items:center;gap:6px;background:var(--blue);color:#fff;font-size:13px;font-weight:600;padding:9px 16px;border-radius:9px;text-decoration:none;cursor:pointer;}
+  .queue{margin-top:14px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+  .queue .h{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--navy);}
+  .queue .s{font-size:12px;color:var(--muted);margin-top:3px;}
+  /* panel */
+  .panel{margin-top:14px;border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .ptabs{display:flex;align-items:center;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line);}
+  .ptab{border:none;background:transparent;font-size:13px;font-weight:600;color:var(--muted);padding:6px 12px;border-radius:8px;cursor:pointer;}
+  .ptab.on{background:var(--indigo-soft);color:var(--indigo);}
+  .reacts{margin-left:auto;display:flex;align-items:center;gap:4px;}
+  .react{position:relative;width:34px;height:30px;border:1px solid var(--line);background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#8a93a6;transition:.14s;}
+  .react:hover{border-color:var(--c);color:var(--c);background:#fbfbfe;transform:translateY(-1px);}
+  .react svg{width:16px;height:16px;}
+  .react .ct{position:absolute;top:-6px;right:-6px;background:var(--indigo);color:#fff;font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 3px;}
+  .react.hit .ct{display:flex;}
+  .body{padding:12px 14px;min-height:170px;}
+  /* Q&A */
+  .qrow{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);}
+  .up{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid var(--line);border-radius:8px;padding:5px 8px;cursor:pointer;color:var(--muted);min-width:38px;transition:.14s;}
+  .up:hover,.up.on{border-color:var(--indigo);color:var(--indigo);background:var(--indigo-soft);}
+  .up svg{width:14px;height:14px;}.up b{font-size:12px;font-weight:800;}
+  .qtext{font-size:13px;color:var(--ink);line-height:1.45;}
+  .qmeta{font-size:11px;color:var(--muted);margin-top:3px;}
+  .answered{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#0f8f6a;background:#e7f6f0;padding:1px 7px;border-radius:8px;margin-left:6px;}
+  .ask{display:flex;gap:8px;margin-top:12px;}
+  .ask input{flex:1;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13px;outline:none;font-family:inherit;}
+  .ask button{background:var(--blue);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;padding:0 18px;cursor:pointer;}
+  .empty{font-size:12px;color:var(--muted);padding:6px 0;}
+  /* chat */
+  .crow{display:flex;gap:9px;padding:8px 0;}
+  .cav{width:26px;height:26px;border-radius:50%;background:var(--indigo);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .cwho{font-size:12px;font-weight:700;color:var(--navy);}
+  .cmsg{font-size:12.5px;color:#4a5568;}
+  .note{font-size:11.5px;color:var(--muted);margin-top:12px;padding:10px 12px;background:#f7f8fb;border-radius:9px;line-height:1.5;}
+  .floatr{position:fixed;pointer-events:none;font-size:0;color:var(--indigo);opacity:0;transition:transform 1s ease,opacity 1s ease;z-index:60;}
+  .floatr svg{width:22px;height:22px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Live session panel — professional icons</h1>
+  <p class="lede">Emoji reactions (👏 ❤️ 🎉 🔥 💡) replaced with clean line icons that keep the same meanings — applause, appreciate, celebrate, trending, insight — in a muted style that lifts to color on hover. Toggle below to compare keeping Chat vs. a Q&amp;A-only layout, which reads cleaner for an investor audience.</p>
+
+  <div class="switch" id="switch">
+    <button data-mode="both" class="on">Q&amp;A + Chat</button>
+    <button data-mode="qa">Q&amp;A only (recommended)</button>
+  </div>
+
+  <div class="card">
+    <span class="pill">Talk Show</span>
+    <div class="title">Inside the Investor's Mind Vol. 2</div>
+    <p class="abstract">A candid conversation with a CEO, followed by a live investor panel asking the questions usually reserved for private diligence.</p>
+    <a class="join">Join the live session ↗</a>
+
+    <div class="queue">
+      <div class="h">✋ Call-in queue (0)</div>
+      <div class="s">No raised hands yet.</div>
+    </div>
+
+    <div class="panel">
+      <div class="ptabs" id="ptabs">
+        <button class="ptab on" data-tab="qa">Q&amp;A</button>
+        <button class="ptab" data-tab="chat" id="chatTab">Chat</button>
+        <div class="reacts" id="reacts"></div>
+      </div>
+      <div class="body" id="body"></div>
+    </div>
+  </div>
+
+  <p class="note" id="note"></p>
+</div>
+
+<script>
+  const IC={
+    clap:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 8.5 8"/><path d="m14 6-3 3"/><path d="M7 14a5 5 0 0 0 10 0"/><path d="M4.5 11.5 3 13a2 2 0 0 0 0 3l3.5 3.5a4 4 0 0 0 3 1.2h2.8a6 6 0 0 0 5.7-4.2l1.1-3.5a2 2 0 0 0-1.3-2.5"/><path d="M9 9 6.5 6.5a1.8 1.8 0 0 0-2.5 2.5L6 11"/></svg>',
+    heart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>',
+    celebrate:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v2"/><path d="M12 19v2"/><path d="m4.9 4.9 1.4 1.4"/><path d="m17.7 17.7 1.4 1.4"/><path d="M3 12h2"/><path d="M19 12h2"/><path d="M12 8a4 4 0 0 1 0 8 4 4 0 0 1 0-8Z"/></svg>',
+    trend:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></svg>',
+    idea:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>',
+    chevUp:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>',
+    check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  };
+  const REACTS=[["clap","Applaud","#4f46e5"],["heart","Appreciate","#e0537d"],["celebrate","Celebrate","#c07a1e"],["trend","Insightful","#0f8f6a"],["idea","Idea","#2563eb"]];
+  const reacts=document.getElementById("reacts");
+  reacts.innerHTML=REACTS.map((r,i)=>`<button class="react" title="${r[1]}" data-i="${i}" style="--c:${r[2]}">${IC[r[0]]}<span class="ct">0</span></button>`).join("");
+  reacts.addEventListener("click",e=>{const b=e.target.closest(".react");if(!b)return;
+    const ct=b.querySelector(".ct");b.classList.add("hit");ct.textContent=(+ct.textContent+1);
+    const r=b.getBoundingClientRect();const f=document.createElement("div");f.className="floatr";f.style.color=b.style.getPropertyValue("--c");
+    f.innerHTML=IC[REACTS[+b.dataset.i][0]];f.style.left=(r.left+6)+"px";f.style.top=(r.top-4)+"px";document.body.appendChild(f);
+    requestAnimationFrame(()=>{f.style.opacity=1;f.style.transform="translateY(-46px) scale(1.3)";});
+    setTimeout(()=>{f.style.opacity=0;},650);setTimeout(()=>f.remove(),1100);});
+
+  const QA=[
+    ["How do you weigh founder conviction vs. market timing when both point opposite ways?","Maya R. · 12 upvotes",12,true],
+    ["What single metric most changes your mind in diligence?","Sam O. · 8 upvotes",8,false],
+    ["For a first institutional round, how much traction is 'enough'?","Leo K. · 5 upvotes",5,false],
+  ];
+  const CHAT=[
+    ["DF","Daniela Felix","Great point on downside framing."],
+    ["JR","Johnny Rivera","Can someone drop the deck link?"],
+    ["PN","Priya Nair","👍 following"],
+  ];
+  const body=document.getElementById("body");
+  function renderQA(){
+    body.innerHTML=QA.map((q,i)=>`<div class="qrow">
+        <div class="up" data-i="${i}"><span>${IC.chevUp}</span><b>${q[2]}</b></div>
+        <div><div class="qtext">${q[0]}${q[3]?`<span class="answered">${IC.check} Answered</span>`:""}</div><div class="qmeta">${q[1].split("·")[0]}</div></div>
+      </div>`).join("")+
+      `<div class="ask"><input placeholder="Ask a question…" /><button>Ask</button></div>`;
+    body.querySelectorAll(".up").forEach(u=>u.addEventListener("click",()=>{const b=u.querySelector("b");const on=u.classList.toggle("on");b.textContent=+b.textContent+(on?1:-1);}));
+  }
+  function renderChat(){
+    body.innerHTML=CHAT.map(c=>`<div class="crow"><span class="cav">${c[0]}</span><div><div class="cwho">${c[1]}</div><div class="cmsg">${c[2]}</div></div></div>`).join("")+
+      `<div class="ask"><input placeholder="Message everyone…" /><button>Send</button></div>`;
+  }
+  let tab="qa";
+  document.getElementById("ptabs").addEventListener("click",e=>{const b=e.target.closest(".ptab");if(!b)return;
+    tab=b.dataset.tab;document.querySelectorAll(".ptab").forEach(x=>x.classList.toggle("on",x===b));
+    tab==="qa"?renderQA():renderChat();});
+
+  const note=document.getElementById("note");
+  function setMode(mode){
+    const chatTab=document.getElementById("chatTab");
+    if(mode==="qa"){chatTab.style.display="none";tab="qa";document.querySelectorAll(".ptab").forEach(x=>x.classList.toggle("on",x.dataset.tab==="qa"));renderQA();
+      note.textContent="Q&A-only: cleaner for investor sessions — structured, upvotable questions to the speaker/panel, no free-form chat to moderate. Reactions stay for lightweight signal.";}
+    else{chatTab.style.display="";
+      note.textContent="Q&A + Chat: keep both if you want live back-channel discussion. Chat adds moderation load, so consider enabling it only for casual or high-energy sessions.";}
+  }
+  document.getElementById("switch").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+    document.querySelectorAll("#switch button").forEach(x=>x.classList.toggle("on",x===b));setMode(b.dataset.mode);});
+
+  renderQA();setMode("both");
+</script>
+</body>
+</html>

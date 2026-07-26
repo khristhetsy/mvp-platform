@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>iCapOS — booth detail · 5 styles</title>
+<style>
+  :root{--navy:#0c2340;--blue:#2E78F5;--teal:#0F6E56;--line:#e5e9f0;--muted:#64748b;--ink:#1e293b;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:#eef1f6;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:24px;}
+  .wrap{max-width:1000px;margin:0 auto;}
+  h1{font-size:21px;font-weight:700;margin:0 0 3px;}.lede{font-size:13px;color:var(--muted);margin:0 0 18px;}
+  .sample{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:20px;}
+  .stag{display:inline-flex;gap:6px;background:#E1F5EE;color:#0F6E56;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:20px;margin-left:2px;}
+  .sh{font-size:14px;font-weight:600;margin:7px 2px 10px;}
+  /* booth stage */
+  .booth{position:relative;height:340px;border-radius:12px;overflow:hidden;background:var(--bg);}
+  .floor{position:absolute;left:0;right:0;bottom:0;height:16%;background:var(--floor);}
+  .wall{position:absolute;left:8%;right:8%;top:16%;bottom:16%;background:var(--wall);border-radius:var(--wallr);box-shadow:inset 0 0 60px rgba(0,0,0,.05);}
+  .header{position:absolute;left:8%;right:8%;top:8%;height:14%;background:var(--header);border-radius:var(--headr);display:flex;align-items:center;padding:0 20px;gap:10px;box-shadow:0 8px 16px rgba(12,35,64,.16);z-index:3;}
+  .header .logo{width:24px;height:24px;border-radius:50%;background:var(--brandc);position:relative;}
+  .header .logo::after{content:"";position:absolute;inset:6px;border-radius:50%;background:var(--header2,#fff);}
+  .header .bn{font-size:15px;font-weight:800;color:var(--headtext);letter-spacing:.02em;}
+  .header .stripes{margin-left:auto;width:70px;height:60%;background:repeating-linear-gradient(115deg,var(--stripe),var(--stripe) 5px,transparent 5px,transparent 11px);}
+  .hang{position:absolute;left:50%;top:2%;transform:translateX(-50%);background:var(--brandc);color:#fff;font-size:11px;font-weight:800;padding:5px 16px;border-radius:14px;z-index:4;box-shadow:0 6px 12px rgba(12,35,64,.25);}
+  .scr{position:absolute;border:5px solid var(--screenfr);border-radius:4px;box-shadow:0 8px 16px rgba(12,35,64,.2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;z-index:2;}
+  .scr.video{left:16%;top:30%;width:26%;height:26%;background:linear-gradient(120deg,#12294c,#1c3e6b);color:#cfe0f5;}
+  .scr.content{right:16%;top:30%;width:26%;height:26%;background:var(--content);color:var(--contenttext);text-align:center;line-height:1.3;}
+  .centerlogo{position:absolute;left:50%;top:33%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:var(--brandc);z-index:2;box-shadow:0 8px 16px rgba(12,35,64,.25);}
+  .centerlogo::after{content:"";position:absolute;inset:15px;border-radius:50%;background:#fff;}
+  .desk{position:absolute;left:50%;bottom:15%;transform:translateX(-50%);width:34%;height:16%;background:var(--desk);border-radius:6px 6px 3px 3px;z-index:3;display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;box-shadow:0 8px 16px rgba(12,35,64,.2);}
+  .desk .dlogo{color:var(--desktext);font-size:12px;font-weight:800;letter-spacing:.04em;}
+  .greeter{position:absolute;left:50%;bottom:31%;transform:translateX(-50%);width:22px;height:40px;border-radius:10px 10px 4px 4px;background:#2b3a4d;z-index:2;}
+  .greeter::before{content:"";position:absolute;top:-11px;left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;background:#e2b48c;}
+  .rollup{position:absolute;bottom:15%;width:10%;height:38%;border-radius:4px;color:#fff;padding:10px 8px;text-align:center;z-index:4;box-shadow:0 8px 16px rgba(12,35,64,.2);cursor:pointer;font-size:9px;font-weight:800;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;}
+  .rollup.l{left:10%;background:var(--roll1);}.rollup.r{right:10%;background:var(--roll2);}
+  .rollup .cta2{background:#fff;color:var(--navy);border-radius:10px;padding:3px 0;font-size:8px;}
+  .plant{position:absolute;bottom:16%;font-size:18px;z-index:3;}.plant.l{left:6%;}.plant.r{right:6%;}
+  /* functional overlay */
+  .back{position:absolute;left:10px;top:10px;z-index:9;background:rgba(12,35,64,.85);color:#fff;font-size:11px;font-weight:600;padding:5px 11px;border-radius:8px;cursor:pointer;}
+  .social{position:absolute;right:10px;top:10px;z-index:9;display:flex;gap:5px;}
+  .social span{width:22px;height:22px;border-radius:6px;background:rgba(12,35,64,.85);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .hot{position:absolute;z-index:8;transform:translate(-50%,-50%);cursor:pointer;text-align:center;}
+  .hot .c{width:30px;height:30px;border-radius:50%;background:var(--hotc);border:3px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;box-shadow:0 4px 10px rgba(12,35,64,.35);animation:pulse 1.9s infinite;margin:0 auto;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(230,150,40,.5);}70%{box-shadow:0 0 0 12px rgba(230,150,40,0);}100%{box-shadow:0 0 0 0 rgba(230,150,40,0);}}
+  .hot .l{margin-top:3px;font-size:8px;font-weight:800;color:#fff;background:var(--hotc);padding:2px 7px;border-radius:8px;white-space:nowrap;}
+  .cta{position:absolute;left:50%;bottom:20%;transform:translateX(-50%);z-index:8;background:var(--brandc);color:#fff;font-size:11px;font-weight:800;padding:7px 16px;border-radius:20px;cursor:pointer;box-shadow:0 6px 14px rgba(12,35,64,.3);}
+  .actions{position:absolute;left:50%;bottom:9px;transform:translateX(-50%);z-index:9;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;}
+  .actions .ab{background:var(--actionbg);color:var(--actiontext);font-size:11px;font-weight:600;padding:6px 13px;border-radius:var(--actionr);cursor:pointer;border:var(--actionbd);}
+  .actions .ab:hover{filter:brightness(1.08);}
+  /* left sidebar (LJ STAR style) */
+  .sidebar{position:absolute;left:0;top:0;bottom:0;width:22%;background:var(--sidebg);z-index:9;padding:10px;color:#fff;}
+  .sidebar .st{font-size:11px;font-weight:800;margin-bottom:8px;line-height:1.2;}
+  .sidebar .vw{display:flex;gap:7px;align-items:center;font-size:9px;font-weight:700;background:rgba(255,255,255,.14);border-radius:6px;padding:5px;margin-bottom:5px;cursor:pointer;}
+  .sidebar .vw .th{width:34px;height:22px;border-radius:3px;background:linear-gradient(120deg,#2e8fd6,#1c5fd0);flex:0 0 auto;}
+  .sidebar .vw.on{background:var(--brandc);}
+  .sidebar .ret{margin-top:6px;background:rgba(255,255,255,.16);border-radius:7px;text-align:center;font-size:9px;font-weight:800;padding:6px;cursor:pointer;}
+  .sidebar .ics{position:absolute;bottom:12px;left:10px;display:flex;gap:8px;}
+  .sidebar .ics span{width:24px;height:24px;border-radius:50%;border:1px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer;}
+  .booth.hasSidebar .wall,.booth.hasSidebar .header,.booth.hasSidebar .scr,.booth.hasSidebar .desk,.booth.hasSidebar .centerlogo,.booth.hasSidebar .rollup,.booth.hasSidebar .greeter,.booth.hasSidebar .plant,.booth.hasSidebar .cta,.booth.hasSidebar .actions{margin-left:11%;}
+  /* chat panel */
+  .chat{position:absolute;right:10px;bottom:44px;width:190px;z-index:10;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 30px rgba(12,35,64,.28);overflow:hidden;display:none;}
+  .chat.on{display:block;}
+  .chat .ch{background:var(--navy);color:#fff;font-size:11px;font-weight:700;padding:8px 11px;display:flex;justify-content:space-between;}
+  .chat .cb{padding:9px 11px;font-size:11px;color:var(--muted);}
+  .chat .msg{background:#f1f5f9;border-radius:8px;padding:6px 9px;margin-bottom:6px;color:#0c2340;}
+  .chat .in{display:flex;border-top:1px solid var(--line);}
+  .chat .in input{flex:1;border:none;padding:8px 10px;font-size:11px;outline:none;}
+  .chat .in button{border:none;background:var(--blue);color:#fff;font-size:11px;font-weight:700;padding:0 12px;cursor:pointer;}
+  .cap{font-size:10.5px;color:var(--muted);text-align:center;padding:8px;}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#0c2340;color:#fff;font-size:13px;font-weight:600;padding:10px 17px;border-radius:10px;opacity:0;transition:.25s;z-index:100;box-shadow:0 10px 30px rgba(12,35,64,.4);}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+  /* themes */
+  .t-orange{--bg:linear-gradient(#f7f7f7,#ececec);--floor:linear-gradient(#7a5a3a,#5a3f26);--wall:#ffffff;--wallr:6px;--header:linear-gradient(90deg,#ff8a3c,#ff5e8a);--headr:6px;--headtext:#fff;--brandc:#ff7a2f;--stripe:rgba(255,255,255,.6);--screenfr:#fff;--content:#fff;--contenttext:#ff5e2f;--desk:linear-gradient(#ffb15a,#ff7a2f);--desktext:#fff;--roll1:linear-gradient(#ff8a3c,#ff5e2f);--roll2:linear-gradient(#ff5e8a,#c0396a);--hotc:#ff7a2f;--actionbg:#ff7a2f;--actiontext:#fff;--actionr:8px;--actionbd:none;--sidebg:#0c2340;}
+  .t-white{--bg:linear-gradient(#dfe6ee,#eef2f7);--floor:linear-gradient(#c9d2dd,#aab6c4);--wall:#f7f9fc;--wallr:6px 60px 6px 6px;--header:linear-gradient(#e6ebf1,#d4dbe4);--headr:6px 40px 6px 6px;--headtext:#0c2340;--brandc:#2E78F5;--stripe:rgba(46,120,245,.4);--screenfr:#fff;--content:#e9eef4;--contenttext:#0c2340;--desk:#ffffff;--desktext:#0c2340;--roll1:linear-gradient(#5aa3f0,#2E78F5);--roll2:linear-gradient(#8aa0b8,#5f6b80);--hotc:#2E78F5;--actionbg:#12294c;--actiontext:#fff;--actionr:20px;--actionbd:none;--sidebg:#12294c;}
+  .t-blue{--bg:#2b2f36;--floor:linear-gradient(#3a3f47,#2b2f36);--wall:#f4f7fb;--wallr:60px 60px 8px 8px;--header:linear-gradient(#eaf2fb,#ffffff);--headr:60px 60px 0 0;--headtext:#1462a8;--brandc:#f0a500;--stripe:rgba(20,98,168,.3);--screenfr:#fff;--content:#0c1a30;--contenttext:#7fb0e6;--desk:linear-gradient(#2e8fd6,#1c5fd0);--desktext:#fff;--roll1:linear-gradient(#2e8fd6,#1c5fd0);--roll2:linear-gradient(#1462a8,#0a3a6b);--hotc:#f0a500;--actionbg:#1462a8;--actiontext:#fff;--actionr:8px;--actionbd:none;--sidebg:#1462a8;}
+  .t-dark{--bg:linear-gradient(#0a1428,#0e1c3a);--floor:linear-gradient(#0e2142,#081226);--wall:#101f3d;--wallr:8px;--header:linear-gradient(#0a2a5a,#04122a);--headr:8px;--headtext:#dbe8ff;--brandc:#19e3c0;--header2:#0a2a5a;--stripe:rgba(60,180,255,.4);--screenfr:#1c3358;--content:#0e1f3d;--contenttext:#7fdcc0;--desk:linear-gradient(#123a7a,#0a2a5a);--desktext:#dbe8ff;--roll1:linear-gradient(#1e7fff,#0a3fa0);--roll2:linear-gradient(#19a3d6,#0a6a7a);--hotc:#19e3c0;--actionbg:#19e3c0;--actiontext:#04122a;--actionr:20px;--actionbd:none;--sidebg:#04122a;}
+  .t-mint{--bg:linear-gradient(#eaf6f2,#f6fbf9);--floor:linear-gradient(#cfe0da,#b6ccc4);--wall:#ffffff;--wallr:6px;--header:linear-gradient(#2fc99e,#0F9E75);--headr:6px;--headtext:#fff;--brandc:#0F9E75;--stripe:rgba(255,255,255,.55);--screenfr:#fff;--content:#e8f6f1;--contenttext:#0a4a3a;--desk:linear-gradient(#5fd8b0,#0F9E75);--desktext:#fff;--roll1:linear-gradient(#2fc99e,#0F9E75);--roll2:linear-gradient(#3aa0d6,#1c6fb0);--hotc:#0F9E75;--actionbg:#0F9E75;--actiontext:#fff;--actionr:20px;--actionbd:none;--sidebg:#0a4a3a;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>iCapOS — sponsor booth detail</h1>
+  <p class="lede">The page you land on when you enter a booth, redesigned from your references. All keep the same functions: brand header, video + content screens, reception, product hotspots, a CTA, social, back-to-lobby, and the action bar (Chat / Info / Videos / Documents / Book meeting).</p>
+  <section class="sample" id="s1"></section><section class="sample" id="s2"></section><section class="sample" id="s3"></section>
+  <section class="sample" id="s4"></section><section class="sample" id="s5"></section>
+  <p class="lede" style="text-align:center">Mockups · stylized booth recreations. Education &amp; community — not an offer of securities.</p>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+  let tt;const toast=document.getElementById("toast");
+  const go=n=>{toast.textContent=n;toast.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>toast.classList.remove("on"),1500);};
+
+  const ACTIONS_BAR=`<div class="actions">
+    <span class="ab" data-chat>💬 Chat</span><span class="ab" data-go="Booth info">ℹ️ Info</span>
+    <span class="ab" data-go="Video library">🎬 Videos</span><span class="ab" data-go="Documents">📄 Documents</span>
+    <span class="ab" data-go="Book a meeting →">📅 Book meeting</span></div>`;
+  const CHAT=`<div class="chat"><div class="ch"><span>Chat with iCapOS</span><span data-chat style="cursor:pointer">✕</span></div>
+    <div class="cb"><div class="msg">👋 Hi! Ask us anything about the booth.</div></div>
+    <div class="in"><input placeholder="Type a message…"><button>Send</button></div></div>`;
+
+  const boothScene=(withGreeter)=>`
+    <div class="floor"></div><div class="wall"></div>
+    <div class="hang">iCapOS Booth</div>
+    <div class="header"><span class="logo"></span><span class="bn">iCapOS</span><span class="stripes"></span></div>
+    <div class="scr video">▶ Live demo</div>
+    <div class="scr content">Visit<br>icapos.com</div>
+    <div class="centerlogo"></div>
+    <div class="desk"><span class="dlogo">iCapOS</span></div>
+    ${withGreeter?'<div class="greeter"></div>':''}
+    <div class="rollup l" data-go="Virtual Expo — enter"><b>Virtual Expo 2026</b><span class="cta2">Click to go →</span></div>
+    <div class="rollup r" data-go="More info"><b>Virtual Expo 2026</b><span class="cta2">More info</span></div>
+    <div class="plant l">🪴</div><div class="plant r">🌿</div>
+    <div class="hot" data-go="Product demo" style="left:34%;top:46%"><div class="c">🔍</div><div class="l">Demo</div></div>
+    <div class="hot" data-go="Products & pricing" style="left:64%;top:52%"><div class="c">📦</div><div class="l">Products</div></div>
+    <div class="cta" data-go="Visit icapos.com →">Visit website →</div>
+    <a class="back" data-go="← Back to lobby">← Back to lobby</a>
+    <div class="social"><span data-go="Share · LinkedIn">in</span><span data-go="Share · X">X</span><span data-go="Share · Facebook">f</span></div>
+    ${ACTIONS_BAR}${CHAT}`;
+
+  const boothSidebar=()=>`
+    <div class="floor"></div><div class="wall"></div>
+    <div class="header"><span class="logo"></span><span class="bn">iCapOS</span><span class="stripes"></span></div>
+    <div class="scr video">▶ Live demo</div><div class="scr content">Visit<br>icapos.com</div>
+    <div class="desk"><span class="dlogo">iCapOS</span></div>
+    <div class="hot" data-go="Sight Flow Indicators" style="left:38%;top:46%"><div class="c">🔍</div><div class="l">Sessions</div></div>
+    <div class="hot" data-go="Clamps & Fittings" style="left:68%;top:54%"><div class="c">📦</div><div class="l">Products</div></div>
+    <div class="plant r">🪴</div>
+    <div class="sidebar">
+      <div class="st">Products for the<br>Capital-ready world</div>
+      <div class="vw on" data-go="View 1"><span class="th"></span>View 1</div>
+      <div class="vw" data-go="View 2"><span class="th"></span>View 2</div>
+      <div class="vw" data-go="View 3"><span class="th"></span>View 3</div>
+      <div class="ret" data-go="← Return to start">Return to start →</div>
+      <div class="ics"><span data-chat>💬</span><span data-go="Request quote">💲</span><span data-go="Catalog">📖</span></div>
+    </div>
+    <a class="back" data-go="← Back to lobby" style="left:24%">← Back to lobby</a>
+    <div class="cta" data-go="Visit icapos.com →">Visit website →</div>
+    ${ACTIONS_BAR}${CHAT}`;
+
+  const SAMPLES=[
+    ["s1","t-orange",false,"Style 1 · Orange modern (CircleDots)","Overhead brand header + hanging sign, circle-logo desk, roll-up banners with CTAs, wood stage."],
+    ["s2","t-white",true,"Style 2 · Clean white (LANSERA)","Curved white booth, video + content screens, a greeter at the reception counter, pill action bar."],
+    ["s3","t-blue",false,"Style 3 · Blue photoreal (LJ STAR)","Curved header, yellow product hotspots, and a left sidebar with View 1–3, Return to start, quote/catalog.","sidebar"],
+    ["s4","t-dark",true,"Style 4 · Dark premium","A dark booth with neon accents and glowing screens — sleek evening feel."],
+    ["s5","t-mint",false,"Style 5 · Fresh mint","Clean teal-and-white booth — bright and approachable."],
+  ];
+  SAMPLES.forEach(([id,theme,greeter,title,desc,mode])=>{
+    const host=document.getElementById(id);
+    const scene = mode==="sidebar" ? boothSidebar() : boothScene(greeter);
+    host.innerHTML=`<span class="stag">${title.split(" · ")[0]}</span><div class="sh">${title.split(" · ")[1]} — <span style="font-weight:400;color:#64748b">${desc}</span></div><div class="booth ${theme}${mode==="sidebar"?" hasSidebar":""}">${scene}</div><div class="cap">Click any control — Chat opens a panel; hotspots, banners, CTA, and the action bar all respond.</div>`;
+    const booth=host.querySelector(".booth");
+    booth.querySelectorAll("[data-go]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();go(el.dataset.go);}));
+    booth.querySelectorAll("[data-chat]").forEach(el=>el.addEventListener("click",e=>{e.stopPropagation();booth.querySelector(".chat").classList.toggle("on");}));
+  });
+</script>
+</body>
+</html>

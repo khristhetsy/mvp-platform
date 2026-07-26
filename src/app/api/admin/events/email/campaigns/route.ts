@@ -29,8 +29,15 @@ export async function POST(req: NextRequest): Promise<Response> {
       registrantStatuses?: RegistrantStatus[];
       subject?: string;
       scheduleAt?: string | null;
+      bookletUrl?: string;
+      bookletEditionId?: string;
     };
     const { eventId, type = "invite", subject } = body;
+    // Recipient-facing booklet link: prefer an explicit URL, else the public
+    // digital-view route for the chosen edition (stable, no signed-URL expiry).
+    const bookletUrl =
+      body.bookletUrl ||
+      (body.bookletEditionId ? `${BASE_URL}/events/brochure/${body.bookletEditionId}` : undefined);
     const audienceKind = body.audienceKind ?? "list";
     if (!eventId) return NextResponse.json({ error: "Missing event." }, { status: 400 });
     if (!subject?.trim()) return NextResponse.json({ error: "Enter a subject line." }, { status: 400 });
@@ -55,7 +62,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     // Guardrail (§9): invite/reminder can't be scheduled after the event has started.
     const sendAt = body.scheduleAt ? Date.parse(body.scheduleAt) : Date.now();
     const startsAt = event.startsAt ? Date.parse(event.startsAt) : null;
-    if (type !== "day_of" && startsAt && sendAt >= startsAt) {
+    if (type !== "day_of" && type !== "booklet" && startsAt && sendAt >= startsAt) {
       return NextResponse.json(
         { error: "That send time is at or after the event start — use the day-of type, or an earlier time." },
         { status: 400 },
@@ -64,7 +71,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     const merge = await loadEventMergeData(auth.supabase, eventId, { baseUrl: BASE_URL, campaignId: `evt-${eventId}` });
     if (!merge) return NextResponse.json({ error: "Couldn't build merge data." }, { status: 500 });
-    const html = renderEventEmail(merge, { type, includeBanner: body.includeBanner, includeLobby: body.includeLobby });
+    const html = renderEventEmail(merge, { type, includeBanner: body.includeBanner, includeLobby: body.includeLobby, bookletUrl });
 
     const input = {
       name: `${event.title} — ${type.replace("_", " ")}`,
