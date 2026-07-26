@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import type { MarketingTemplate } from "@/lib/marketing/types";
@@ -120,7 +120,7 @@ function RawEmailPreview({ template }: { template: Partial<MarketingTemplate> })
 type ViewMode = "grid" | "list";
 type SortKey = "edited" | "name" | "status";
 
-export function TemplatesClient({ templates }: { templates: MarketingTemplate[] }) {
+export function TemplatesClient({ templates, initialEditId }: { templates: MarketingTemplate[]; initialEditId?: string }) {
   const router = useRouter();
   const [editing, setEditing] = useState<Partial<MarketingTemplate> | null>(null);
   const [saving, setSaving] = useState(false);
@@ -169,6 +169,18 @@ export function TemplatesClient({ templates }: { templates: MarketingTemplate[] 
     setActiveTab(chosenTab);
     setEditSource(chosenTab === "write" ? "html" : "visual");
   }
+
+  // Deep-link: /admin/marketing/templates?edit=<id> opens that template once
+  // (used by Event Hub's "Edit in designer" handoff).
+  const openedDeepLink = useRef(false);
+  useEffect(() => {
+    if (openedDeepLink.current || !initialEditId) return;
+    const t = templates.find((x) => x.id === initialEditId);
+    if (!t) return;
+    openedDeepLink.current = true;
+    const id = setTimeout(() => openEditor(t), 0);
+    return () => clearTimeout(id);
+  }, [initialEditId, templates]);
 
   /**
    * Duplicate a template: copies subject/body/blocks into a new DRAFT named

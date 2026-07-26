@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type PickerEvent = { id: string; title: string; slug: string; status: string; startsAt: string | null; coverUrl: string | null };
 type MergeData = {
@@ -41,6 +42,8 @@ export function EventEmailWizard({
   const [html, setHtml] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [designBusy, setDesignBusy] = useState(false);
+  const router = useRouter();
 
   // step 3 — audience & send
   const [lists, setLists] = useState<{ id: string; name: string }[]>([]);
@@ -91,6 +94,24 @@ export function EventEmailWizard({
       setError(e instanceof Error ? e.message : "Couldn't create the campaign.");
     } finally {
       setCreating(false);
+    }
+  }
+
+  // Hand off the rendered email to the Marketing Hub visual editor.
+  async function editInDesigner() {
+    if (!eventId) return;
+    setDesignBusy(true); setError(null);
+    try {
+      const res = await fetch("/api/admin/events/email/to-template", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId, type, includeBanner, includeLobby: includeLobby || lobbyForced, bookletUrl, subject: subject.trim() || undefined }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Couldn't open in designer.");
+      router.push(`/admin/marketing/templates?edit=${json.templateId}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't open in designer.");
+      setDesignBusy(false);
     }
   }
 
@@ -233,7 +254,9 @@ export function EventEmailWizard({
 
             <div className="flex gap-2">
               <button type="button" onClick={() => setStep(3)} className="cap-btn-primary flex-1 rounded-md px-4 py-2 text-sm font-medium">Continue to audience →</button>
+              <button type="button" onClick={editInDesigner} disabled={designBusy} className="rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium text-[var(--navy)] hover:border-[var(--blue)] disabled:opacity-50">{designBusy ? "Opening…" : "Edit in designer ↗"}</button>
             </div>
+            <p className="text-[11px] text-[var(--text-muted)]">“Edit in designer” saves this email as a Marketing Hub template and opens it in the block editor. The event hero &amp; agenda become editable HTML there (they won’t re-pull if the event changes).</p>
           </div>
 
           {/* preview */}

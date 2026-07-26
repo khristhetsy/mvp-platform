@@ -35,6 +35,8 @@ export type MarketingTemplate = {
   text_body: string | null;
   /** Structured blocks for the visual editor; html_body is regenerated from these. */
   blocks?: unknown;
+  /** Library category (added in 20260725001); 'event' rows come from Event Hub. */
+  category?: "general" | "event";
   status: "draft" | "active" | "archived";
   created_by: string | null;
   created_at: string;
