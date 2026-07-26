@@ -51,6 +51,9 @@ export function EventEmailWizard({
   const [editBlocks, setEditBlocks] = useState<TemplateBlock[] | null>(null);
   const [blockTheme, setBlockTheme] = useState<TemplateTheme>(eventEmailTheme());
   const editDirty = useRef(false);
+  const [testEmail, setTestEmail] = useState("");
+  const [testBusy, setTestBusy] = useState(false);
+  const [testMsg, setTestMsg] = useState<string | null>(null);
   const onBlocksChange = useCallback((next: TemplateBlock[]) => { editDirty.current = true; setEditBlocks(next); }, []);
   const onThemeChange = useCallback((next: TemplateTheme) => { editDirty.current = true; setBlockTheme(next); }, []);
 
@@ -122,6 +125,25 @@ export function EventEmailWizard({
     setEditBlocks(buildEventEmailBlocks(merge as unknown as EventMergeData, type, { includeBanner, includeLobby: includeLobby || lobbyForced, bookletUrl }));
   }
   const editedHtml = editBlocks ? finalizeEventEmailHtml(editBlocks, blockTheme) : null;
+
+  // Quick proof send to the current staff member (or a supplied address); no campaign.
+  async function sendTest() {
+    if (!eventId) return;
+    setTestBusy(true); setTestMsg(null);
+    try {
+      const res = await fetch("/api/admin/events/email/test-send", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId, type, includeBanner, includeLobby: includeLobby || lobbyForced, bookletUrl, subject: subject.trim() || undefined, bodyHtml: editedHtml ?? undefined, toEmail: testEmail.trim() || undefined }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Send failed.");
+      setTestMsg(`Sent to ${json.to} ✓`);
+    } catch (e) {
+      setTestMsg(e instanceof Error ? e.message : "Send failed.");
+    } finally {
+      setTestBusy(false);
+    }
+  }
 
   // load picker
   useEffect(() => {
@@ -295,6 +317,16 @@ export function EventEmailWizard({
             </div>
 
             <div className="rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-[var(--text-muted)]">🔒 Compliance footer is locked into every event template (education/community only — not an offer of securities). A working unsubscribe link is added automatically on send.</div>
+
+            {/* quick proof send (§9) */}
+            <div className="rounded-lg border border-[var(--border-subtle)] p-2.5">
+              <p className="mb-1 text-[11px] font-semibold text-[var(--navy)]">Send yourself a test</p>
+              <div className="flex gap-2">
+                <input value={testEmail} onChange={(e) => setTestEmail(e.target.value)} placeholder="defaults to your account email" className="flex-1 rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs" />
+                <button type="button" onClick={sendTest} disabled={testBusy || !eventId} className="rounded-md border border-[var(--border-subtle)] px-3 py-1 text-xs font-semibold text-[var(--navy)] hover:border-[var(--blue)] disabled:opacity-50">{testBusy ? "Sending…" : "Send test"}</button>
+              </div>
+              {testMsg && <p className="mt-1 text-[11px] text-[var(--text-muted)]">{testMsg}</p>}
+            </div>
 
             <div className="flex gap-2">
               <button type="button" onClick={() => setStep(3)} className="cap-btn-primary flex-1 rounded-md px-4 py-2 text-sm font-medium">Continue to audience →</button>
