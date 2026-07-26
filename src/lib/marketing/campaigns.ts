@@ -85,8 +85,10 @@ export async function sendCampaignTest(
     .eq("id", campaignId)
     .single();
   if (ce || !campaign) throw new Error("Campaign not found");
+  // A campaign is sendable with either an attached template or a body_override
+  // (event emails carry their fully-rendered HTML in body_override, no template).
   const template = campaign.template;
-  if (!template) throw new Error("Template not attached");
+  if (!template && !campaign.body_override) throw new Error("Template not attached");
   if (!emailConfigured()) {
     throw new Error("Email provider not configured — set RESEND_API_KEY before sending.");
   }
@@ -100,8 +102,8 @@ export async function sendCampaignTest(
     .single();
   const contactId = (contactRow as { id: string } | null)?.id ?? null;
 
-  const subject = `[TEST] ${campaign.subject_override || template.subject}`;
-  let html = campaign.body_override || template.html_body || "<p>(This campaign has no body yet.)</p>";
+  const subject = `[TEST] ${campaign.subject_override || template?.subject || "(no subject)"}`;
+  let html = campaign.body_override || template?.html_body || "<p>(This campaign has no body yet.)</p>";
   if (!/<a\s/i.test(html)) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com";
     html += `<p style="margin-top:16px;"><a href="${appUrl}">Test link — click me to verify click tracking</a></p>`;
@@ -116,7 +118,7 @@ export async function sendCampaignTest(
     reply_to: campaign.reply_to,
     subject,
     html_body: html,
-    text_body: template.text_body,
+    text_body: template?.text_body ?? null,
     unsubscribe_token: makeUnsubscribeToken(email),
   });
 
@@ -148,8 +150,10 @@ export async function sendCampaign(campaignId: string): Promise<{
     .single();
   if (ce || !campaign) throw new Error("Campaign not found");
 
+  // A campaign is sendable with either an attached template or a body_override
+  // (event emails carry their fully-rendered HTML in body_override, no template).
   const template = campaign.template;
-  if (!template) throw new Error("Template not attached");
+  if (!template && !campaign.body_override) throw new Error("Template not attached");
 
   // Status gate. Previously any campaign sent regardless of status, so a cron
   // pass and a manual click could both fire the same campaign (double-sending to
@@ -211,9 +215,9 @@ export async function sendCampaign(campaignId: string): Promise<{
       from_email: campaign.from_email,
       reply_to: campaign.reply_to,
       // Per-campaign edits override the shared template when present.
-      subject: campaign.subject_override || template.subject,
-      html_body: campaign.body_override || template.html_body,
-      text_body: template.text_body,
+      subject: campaign.subject_override || template?.subject || "(no subject)",
+      html_body: campaign.body_override || template?.html_body || "",
+      text_body: template?.text_body ?? null,
       unsubscribe_token: token,
     });
 
