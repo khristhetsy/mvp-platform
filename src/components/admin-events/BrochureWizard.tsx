@@ -137,6 +137,17 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
     const next = pages.filter((_, idx) => idx !== i);
     setPages(next); persist({ pages: next });
   }
+  /** Duplicate a custom or design page, inserted right after it (fresh key + block ids). */
+  function duplicatePage(i: number) {
+    const src = pages[i];
+    if (src.type !== "custom" && src.type !== "freeform") return;
+    const key = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `dup-${Date.now()}`;
+    const copy: BrochurePage = src.type === "freeform"
+      ? { ...src, key, blocks: (src.blocks ?? []).map((b, bi) => ({ ...b, id: `${key}-${bi}` })) }
+      : { ...src, key, custom: src.custom ? { ...src.custom, carried: false } : undefined };
+    const next = [...pages.slice(0, i + 1), copy, ...pages.slice(i + 1)];
+    setPages(next); persist({ pages: next });
+  }
   function addDesignPage() {
     const key = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `design-${Date.now()}`;
     const next = [...pages, newFreeformPage(key)];
@@ -363,6 +374,7 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
                             {isFreeform && <button type="button" onClick={() => setEditingKey(editingKey === p.key ? null : p.key)} className="mr-1 text-xs font-semibold text-[var(--blue)]">{editingKey === p.key ? "Done" : "Design"}</button>}
                             <button type="button" onClick={() => move(i, -1)} disabled={i <= 2} className="text-xs text-[var(--text-muted)] disabled:opacity-30">↑</button>
                             <button type="button" onClick={() => move(i, 1)} disabled={i >= pages.length - 1} className="text-xs text-[var(--text-muted)] disabled:opacity-30">↓</button>
+                            {(isCustom || isFreeform) && <button type="button" onClick={() => duplicatePage(i)} className="text-xs text-[var(--text-muted)] hover:text-[var(--blue)]" title="Duplicate page">⧉</button>}
                             {(isCustom || isFreeform) && <button type="button" onClick={() => { if (editingKey === p.key) setEditingKey(null); removePage(i); }} className="text-xs text-rose-500" title="Remove page">✕</button>}
                           </span>
                         )}
