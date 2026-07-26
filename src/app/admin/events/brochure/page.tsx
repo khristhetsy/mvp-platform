@@ -48,6 +48,7 @@ export default async function BrochureLibraryPage() {
                         )}
                       </>
                     )}
+                    <Link href={`/admin/events/brochure/new?baseEditionId=${e.id}`} className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--blue)] hover:underline">Start from this</Link>
                     <Link href={`/admin/events/brochure/new?editionId=${e.id}`} className="text-xs font-semibold text-[var(--blue)] hover:underline">Open →</Link>
                   </div>
                 </li>

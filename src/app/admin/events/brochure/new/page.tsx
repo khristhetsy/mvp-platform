@@ -17,9 +17,13 @@ export default async function BrochureBuilderPage({
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Event Brochure">
       <div className="mx-auto max-w-5xl px-1 py-2">
         <h1 className="text-xl font-semibold text-[var(--navy)]">Event Brochure — builder</h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">Pick an event, arrange the booklet pages, and preview. Data pulls from the event record; disclaimers &amp; footer are locked.</p>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">
+          {baseEditionId
+            ? "Starting from a previous edition — pick the event to pull fresh data. Page layout and hand-written pages carry over for review."
+            : "Pick an event, arrange the booklet pages, and preview. Data pulls from the event record; disclaimers & footer are locked."}
+        </p>
         <div className="mt-6">
-          <BrochureWizard initialEventId={eventId} />
+          <BrochureWizard initialEventId={eventId} baseEditionId={baseEditionId} />
         </div>
       </div>
     </AppShell>
