@@ -5,9 +5,13 @@ import { BrochureWizard } from "@/components/admin-events/BrochureWizard";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Event Brochure — builder" };
 
-export default async function BrochureBuilderPage({ searchParams }: { searchParams: Promise<{ eventId?: string }> }) {
+export default async function BrochureBuilderPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ eventId?: string; baseEditionId?: string }>;
+}) {
   const { profile } = await requirePermissionPage("manage_events");
-  const { eventId } = await searchParams;
+  const { eventId, baseEditionId } = await searchParams;
 
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle="Event Brochure">

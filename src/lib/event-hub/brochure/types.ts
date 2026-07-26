@@ -18,7 +18,7 @@ export type BrochurePage = {
   type: BrochurePageType;
   included: boolean;
   /** custom pages only */
-  custom?: { layout: CustomLayout; heading?: string; body?: string; imageUrl?: string };
+  custom?: { layout: CustomLayout; heading?: string; body?: string; imageUrl?: string; carried?: boolean };
 };
 
 export type BrochureSize = "letter" | "a4" | "square";

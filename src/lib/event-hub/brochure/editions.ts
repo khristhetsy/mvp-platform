@@ -55,7 +55,16 @@ export async function createEdition(
   let size: BrochureSize = "letter";
   if (input.baseEditionId) {
     const base = await getEdition(supabase, input.baseEditionId);
-    if (base) { pageConfig = base.pageConfig; size = base.size; }
+    if (base) {
+      // Copy structure + hand-written prose only. Custom-page copy is flagged
+      // `carried` so the wizard forces a review (prevents stale city/date, §7).
+      pageConfig = base.pageConfig.map((p) =>
+        p.type === "custom" && p.custom
+          ? { ...p, custom: { ...p.custom, carried: true } }
+          : p,
+      );
+      size = base.size;
+    }
   }
   const { data, error } = await raw(supabase)
     .from("event_brochures")

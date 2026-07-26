@@ -7,7 +7,7 @@ import { LOCKED_PAGES, PAGE_LABEL, type BrochurePage, type BrochureSize } from "
 type PickerEvent = { id: string; title: string; slug: string; status: string; startsAt: string | null; coverUrl: string | null };
 type Preflight = { warnings: { level: string; text: string }[]; excludePresenters: boolean };
 
-export function BrochureWizard({ initialEventId }: { initialEventId?: string }) {
+export function BrochureWizard({ initialEventId, baseEditionId }: { initialEventId?: string; baseEditionId?: string }) {
   const [step, setStep] = useState(1);
   const [events, setEvents] = useState<PickerEvent[]>([]);
   const [editionId, setEditionId] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export function BrochureWizard({ initialEventId }: { initialEventId?: string }) 
     setError(null);
     try {
       const res = await fetch("/api/admin/events/brochure", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventId: evId }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventId: evId, baseEditionId }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Couldn't create the edition.");
@@ -50,7 +50,7 @@ export function BrochureWizard({ initialEventId }: { initialEventId?: string }) 
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't create the edition.");
     }
-  }, []);
+  }, [baseEditionId]);
 
   useEffect(() => {
     if (!initialEventId) return;
@@ -119,6 +119,18 @@ export function BrochureWizard({ initialEventId }: { initialEventId?: string }) 
     const next = pages.filter((_, idx) => idx !== i);
     setPages(next); persist({ pages: next });
   }
+  /** Resolve a carried-over custom page (§7): keep the copy or reset it blank, then clear the flag. */
+  function reviewCarried(i: number, action: "keep" | "reset") {
+    const next = pages.map((pg, idx) => {
+      if (idx !== i || pg.type !== "custom" || !pg.custom) return pg;
+      const custom = action === "reset"
+        ? { ...pg.custom, body: "", carried: false }
+        : { ...pg.custom, carried: false };
+      return { ...pg, custom };
+    });
+    setPages(next); persist({ pages: next });
+  }
+  const carried = pages.filter((p) => p.type === "custom" && p.custom?.carried);
 
   async function generate() {
     if (!editionId) return;
@@ -189,6 +201,29 @@ export function BrochureWizard({ initialEventId }: { initialEventId?: string }) 
               </div>
             )}
 
+            {/* carried-over copy review (§7) */}
+            {carried.length > 0 && (
+              <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+                <p className="text-xs font-bold text-indigo-800">Review carried-over copy</p>
+                <p className="mt-0.5 text-[11px] text-indigo-700">Hand-written pages copied from the previous edition. Confirm each so no stale city or date reaches print.</p>
+                <ul className="mt-2 space-y-2">
+                  {carried.map((p) => {
+                    const idx = pages.indexOf(p);
+                    return (
+                      <li key={p.key} className="rounded-md border border-indigo-200 bg-white px-2 py-1.5">
+                        <p className="text-xs font-semibold text-[var(--navy)]">{p.custom?.heading || "Custom page"}</p>
+                        {p.custom?.body && <p className="mt-0.5 line-clamp-2 text-[11px] text-[var(--text-muted)]">{p.custom.body}</p>}
+                        <div className="mt-1 flex gap-3">
+                          <button type="button" onClick={() => reviewCarried(idx, "keep")} className="text-[11px] font-semibold text-[var(--blue)] hover:underline">Keep</button>
+                          <button type="button" onClick={() => reviewCarried(idx, "reset")} className="text-[11px] font-semibold text-rose-500 hover:underline">Reset to blank</button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
             {/* size */}
             <div>
               <p className="mb-1 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Size</p>
@@ -254,8 +289,8 @@ export function BrochureWizard({ initialEventId }: { initialEventId?: string }) 
                 <Link href="/admin/events/brochure" className="inline-block text-sm font-semibold text-[var(--text-muted)] underline">Back to editions</Link>
               </div>
             ) : (
-              <button type="button" onClick={generate} disabled={busy} className="cap-btn-primary w-full rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
-                {busy ? "Working…" : "Save edition (freeze snapshot)"}
+              <button type="button" onClick={generate} disabled={busy || carried.length > 0} title={carried.length > 0 ? "Review carried-over copy first" : undefined} className="cap-btn-primary w-full rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
+                {busy ? "Working…" : carried.length > 0 ? `Review ${carried.length} carried page${carried.length > 1 ? "s" : ""} first` : "Generate edition (freeze snapshot + PDFs)"}
               </button>
             )}
             <p className="text-[11px] text-[var(--text-muted)]">Disclaimers &amp; footer are locked into every edition. Edit event data at the source, not here.</p>
