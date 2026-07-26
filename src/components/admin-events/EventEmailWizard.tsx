@@ -294,7 +294,7 @@ export function EventEmailWizard({
               <label className="flex items-center gap-2"><input type="checkbox" checked={includeLobby || lobbyForced} disabled={lobbyForced} onChange={(e) => setIncludeLobby(e.target.checked)} /> Lobby CTA {lobbyForced && <span className="text-xs text-[var(--text-muted)]">(forced on for day-of)</span>}</label>
             </div>
 
-            <div className="rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-[var(--text-muted)]">🔒 Compliance footer is locked into every event template (education/community only — not an offer of securities).</div>
+            <div className="rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-[var(--text-muted)]">🔒 Compliance footer is locked into every event template (education/community only — not an offer of securities). A working unsubscribe link is added automatically on send.</div>
 
             <div className="flex gap-2">
               <button type="button" onClick={() => setStep(3)} className="cap-btn-primary flex-1 rounded-md px-4 py-2 text-sm font-medium">Continue to audience →</button>
@@ -320,7 +320,7 @@ export function EventEmailWizard({
                 <div className="rounded-xl border border-[var(--border-subtle)] bg-white p-2">
                   <TemplateVisualEditor blocks={editBlocks} onChange={onBlocksChange} theme={blockTheme} onThemeChange={onThemeChange} />
                 </div>
-                <p className="mt-2 text-[11px] text-[var(--text-muted)]">The compliance footer is added automatically on send and can’t be removed.</p>
+                <p className="mt-2 text-[11px] text-[var(--text-muted)]">The compliance footer and a working unsubscribe link are added automatically on send and can’t be removed.</p>
               </>
             ) : (
               <>

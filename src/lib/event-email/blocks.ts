@@ -77,10 +77,12 @@ export function buildEventEmailBlocks(m: EventMergeData, type: EventEmailType, o
  *  unsubscribe footer as the final row so it always ships. */
 export function finalizeEventEmailHtml(blocks: TemplateBlock[], theme?: Partial<TemplateTheme>): string {
   const html = renderBlocksToEmailHtml(blocks, theme);
+  // The securities-compliance disclaimer only. The Marketing send pipeline appends
+  // the working unsubscribe link + brand footer, so we don't add one here (a body
+  // token like {{unsubscribe_url}} isn't interpolated and would render broken).
   const footer =
     `<tr><td style="padding:18px 24px;border-top:1px solid #e2e8f2;font-family:Arial,sans-serif;">` +
     `<div style="font-size:11px;color:#8a93a6;line-height:1.5;">${COMPLIANCE}</div>` +
-    `<div style="font-size:11px;color:#8a93a6;margin-top:8px;"><a href="{{unsubscribe_url}}" style="color:#8a93a6;">Unsubscribe</a></div>` +
     `</td></tr>`;
   const SUFFIX = "</table></td></tr></table>";
   return html.endsWith(SUFFIX) ? `${html.slice(0, -SUFFIX.length)}${footer}${SUFFIX}` : `${html}${footer}`;

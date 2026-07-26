@@ -103,7 +103,6 @@ export function renderEventEmail(merge: EventMergeData, options: RenderOptions):
       <tr><td style="padding:18px 30px;border-top:1px solid #e2e8f2;font-family:Arial,sans-serif;">
         <div style="font-size:12px;color:#33415a;">${esc(merge.organizerLine)}</div>
         <div style="font-size:11px;color:#8a93a6;line-height:1.5;margin-top:10px;">${esc(COMPLIANCE)}</div>
-        <div style="font-size:11px;color:#8a93a6;margin-top:10px;"><a href="{{UNSUBSCRIBE_URL}}" style="color:#8a93a6;">Unsubscribe</a></div>
       </td></tr>
     </table>
   </td></tr></table>
