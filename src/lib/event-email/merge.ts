@@ -1,0 +1,109 @@
+// Event Email — merge-field contract (build spec §5). Single source of truth for
+// turning a published event into email/brochure merge data. Zod-validated so
+// preview and send never drift. Shared with the future Brochure renderer (§12).
+
+import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/types";
+import type { EventWithDetail, EventSession } from "@/lib/icfo-events/types";
+import { getEventById } from "@/lib/icfo-events/queries";
+import { bannerPublicUrl } from "@/lib/icfo-events/banner";
+import { listEventSponsors } from "@/lib/icfo-events/sponsors";
+
+export const ORGANIZER_LINE = "iCFO Capital Global, Inc. · (619) 956-9114 · info@myicfos.com";
+export const EVENT_BADGE = "iCFO Capital · Ecosystem Showcase";
+
+/** Session accent by type — matches the approved template (§5). */
+export const SESSION_ACCENT: Record<string, string> = {
+  keynote: "#0D9488",
+  panel: "#0D9488",
+  workshop: "#0D9488",
+  founder_showcase: "#534AB7",
+  talk_show: "#0c2340",
+};
+
+export type EventEmailType = "invite" | "reminder" | "day_of";
+
+export const eventMergeSchema = z.object({
+  eventId: z.string(),
+  title: z.string(),
+  badge: z.string(),
+  tagline: z.string(),
+  dateLabel: z.string(),
+  timeRange: z.string(),
+  formatLine: z.string(),
+  bannerUrl: z.string().nullable(),
+  registerUrl: z.string(),
+  lobbyUrl: z.string(),
+  sessions: z.array(
+    z.object({ type: z.string(), title: z.string(), abstract: z.string(), accent: z.string() }),
+  ),
+  sponsorLockup: z.string().nullable(),
+  organizerLine: z.string(),
+});
+export type EventMergeData = z.infer<typeof eventMergeSchema>;
+
+const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ") : s);
+
+function fmt(iso: string | null, tz: string | null, opts: Intl.DateTimeFormatOptions): string {
+  if (!iso) return "";
+  try {
+    return new Intl.DateTimeFormat("en-US", { ...opts, timeZone: tz || undefined }).format(new Date(iso));
+  } catch {
+    return "";
+  }
+}
+
+/** Pure mapper: EventWithDetail (+ resolved extras) → EventMergeData. Testable. */
+export function buildEventMergeData(
+  event: EventWithDetail,
+  extras: { baseUrl: string; campaignId?: string; bannerUrl: string | null; presentingSponsors?: string[] },
+): EventMergeData {
+  const { baseUrl, campaignId = "preview", bannerUrl, presentingSponsors = [] } = extras;
+  const tz = event.timezone;
+  const dateLabel = fmt(event.startsAt, tz, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  const start = fmt(event.startsAt, tz, { hour: "numeric", minute: "2-digit" });
+  const end = fmt(event.endsAt, tz, { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+  const timeRange = start && end ? `${start} – ${end}` : start || "";
+  const formatLine = `${cap(event.format)} · ${event.visibility === "public" ? "Free registration" : "Members only"}`;
+  const utm = `utm_source=email&utm_campaign=${encodeURIComponent(campaignId)}`;
+  const sessions = (event.sessions ?? [])
+    .filter((s: EventSession) => s.status !== "draft")
+    .sort((a, b) => a.position - b.position)
+    .map((s) => ({
+      type: s.type,
+      title: s.title,
+      abstract: s.abstract ?? "",
+      accent: SESSION_ACCENT[s.type] ?? "#0D9488",
+    }));
+
+  return {
+    eventId: event.id,
+    title: event.title,
+    badge: event.bannerTitle || EVENT_BADGE,
+    tagline: event.summary ?? "",
+    dateLabel,
+    timeRange,
+    formatLine,
+    bannerUrl,
+    registerUrl: `${baseUrl}/events/${event.slug}?${utm}`,
+    lobbyUrl: `${baseUrl}/events/${event.slug}/lobby?${utm}`,
+    sessions,
+    sponsorLockup: presentingSponsors.length ? `Presented with ${presentingSponsors.join(", ")}` : null,
+    organizerLine: ORGANIZER_LINE,
+  };
+}
+
+/** Server loader: fetch the event + banner + presenting sponsors and build merge data. */
+export async function loadEventMergeData(
+  supabase: SupabaseClient<Database>,
+  eventId: string,
+  opts: { baseUrl: string; campaignId?: string },
+): Promise<EventMergeData | null> {
+  const event = await getEventById(supabase, eventId).catch(() => null);
+  if (!event) return null;
+  const bannerUrl = bannerPublicUrl(supabase, event.coverPath);
+  const sponsors = await listEventSponsors(supabase, eventId).catch(() => []);
+  const presentingSponsors = sponsors.filter((s) => s.placement === "presenting").map((s) => s.name);
+  return buildEventMergeData(event, { baseUrl: opts.baseUrl, campaignId: opts.campaignId, bannerUrl, presentingSponsors });
+}
