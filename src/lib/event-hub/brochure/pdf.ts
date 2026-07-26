@@ -5,7 +5,7 @@
 
 import PDFDocument from "pdfkit";
 import type { EventMergeData } from "@/lib/event-email/merge";
-import type { BrochurePage, BrochureSize } from "./types";
+import { THEMES, type BrochurePage, type BrochureSize, type BrochureTheme } from "./types";
 
 const NAVY = "#0c2340";
 const INK = "#1e2a3a";
@@ -33,8 +33,10 @@ export function renderBrochurePdf(
   pages: BrochurePage[],
   overrides: Record<string, Record<string, string>>,
   size: BrochureSize,
-  opts: { bleed?: boolean; qr?: Buffer } = {},
+  opts: { bleed?: boolean; qr?: Buffer; theme?: BrochureTheme } = {},
 ): Promise<Buffer> {
+  const theme = THEMES[opts.theme ?? "navy"];
+  const primary = theme.primary;
   const bleed = opts.bleed ? BLEED : 0;
   const [tw, th] = TRIM[size];
   const pw = tw + bleed * 2;
@@ -84,9 +86,9 @@ export function renderBrochurePdf(
     doc.moveTo(ox + MARGIN, y - 6).lineTo(ox + tw - MARGIN, y - 6).lineWidth(0.5).strokeColor("#e2e8f2").stroke();
   };
   const heading = (text: string) => {
-    doc.fillColor(NAVY).font("Helvetica-Bold").fontSize(20).text(text, ox + MARGIN, oy + MARGIN, { width: contentW });
+    doc.fillColor(primary).font("Helvetica-Bold").fontSize(20).text(text, ox + MARGIN, oy + MARGIN, { width: contentW });
     const y = doc.y + 4;
-    doc.moveTo(ox + MARGIN, y).lineTo(ox + tw - MARGIN, y).lineWidth(1.5).strokeColor(NAVY).stroke();
+    doc.moveTo(ox + MARGIN, y).lineTo(ox + tw - MARGIN, y).lineWidth(1.5).strokeColor(primary).stroke();
     doc.moveDown(0.8);
   };
 
@@ -95,8 +97,8 @@ export function renderBrochurePdf(
     cropMarks();
     switch (p.type) {
       case "cover": {
-        doc.rect(ox, oy, tw, th).fill(NAVY);
-        doc.fillColor("#9fd0ff").font("Helvetica-Bold").fontSize(11).text(merge.badge.toUpperCase(), ox + MARGIN, oy + th - 220, { width: contentW, characterSpacing: 1.5 });
+        doc.rect(ox, oy, tw, th).fill(primary);
+        doc.fillColor(theme.coverBadge).font("Helvetica-Bold").fontSize(11).text(merge.badge.toUpperCase(), ox + MARGIN, oy + th - 220, { width: contentW, characterSpacing: 1.5 });
         doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(34).text(ov("cover", "title", merge.title), ox + MARGIN, doc.y + 6, { width: contentW });
         if (merge.tagline) doc.fillColor("#d7e4f5").font("Helvetica").fontSize(14).text(ov("cover", "tagline", merge.tagline), ox + MARGIN, doc.y + 8, { width: contentW });
         doc.fillColor("#eaf1fb").font("Helvetica-Bold").fontSize(13).text(`${merge.dateLabel}${merge.timeRange ? ` · ${merge.timeRange}` : ""}`, ox + MARGIN, doc.y + 14, { width: contentW });
@@ -137,7 +139,7 @@ export function renderBrochurePdf(
         if (merge.sessions.length) {
           merge.sessions.forEach((s) => {
             doc.font("Helvetica-Bold").fontSize(9).fillColor(s.accent).text(s.type.replace(/_/g, " ").toUpperCase(), ox + MARGIN, doc.y, { width: contentW });
-            doc.font("Helvetica-Bold").fontSize(13).fillColor(NAVY).text(s.title, { width: contentW });
+            doc.font("Helvetica-Bold").fontSize(13).fillColor(primary).text(s.title, { width: contentW });
             if (s.abstract) doc.font("Helvetica").fontSize(10.5).fillColor("#4a5568").text(s.abstract, { width: contentW });
             doc.moveDown(0.7);
           });
@@ -155,9 +157,9 @@ export function renderBrochurePdf(
         for (const pr of merge.presenters) {
           const x = ox + MARGIN + col * (colW + 24);
           // avatar circle
-          doc.circle(x + 20, rowY + 20, 20).fill(NAVY);
+          doc.circle(x + 20, rowY + 20, 20).fill(primary);
           doc.fillColor("#fff").font("Helvetica-Bold").fontSize(13).text(pr.initials, x, rowY + 13, { width: 40, align: "center" });
-          doc.fillColor(NAVY).font("Helvetica-Bold").fontSize(12).text(pr.name, x + 48, rowY + 6, { width: colW - 48 });
+          doc.fillColor(primary).font("Helvetica-Bold").fontSize(12).text(pr.name, x + 48, rowY + 6, { width: colW - 48 });
           if (pr.role) doc.fillColor("#4a5568").font("Helvetica").fontSize(10).text(pr.role, x + 48, doc.y, { width: colW - 48 });
           if (pr.company) doc.fillColor(MUTED).font("Helvetica").fontSize(9.5).text(pr.company, x + 48, doc.y, { width: colW - 48 });
           col += 1;
@@ -178,7 +180,7 @@ export function renderBrochurePdf(
         const tier = (label: string, list: { name: string }[]) => {
           if (!list.length) return;
           doc.font("Helvetica-Bold").fontSize(11).fillColor(MUTED).text(label.toUpperCase(), ox + MARGIN, doc.y, { width: contentW, characterSpacing: 0.5 });
-          doc.font("Helvetica-Bold").fontSize(13).fillColor(NAVY).text(list.map((s) => s.name).join("   ·   "), { width: contentW });
+          doc.font("Helvetica-Bold").fontSize(13).fillColor(primary).text(list.map((s) => s.name).join("   ·   "), { width: contentW });
           doc.moveDown(0.6);
         };
         tier("Presenting partners", merge.sponsorTiers.presenting);
@@ -188,7 +190,7 @@ export function renderBrochurePdf(
           doc.font("Helvetica").fontSize(12).fillColor(INK).text("Sponsor lineup to be announced.", { width: contentW });
         }
         doc.moveDown(1);
-        doc.font("Helvetica-Bold").fontSize(20).fillColor(NAVY).text("Contact", ox + MARGIN, doc.y, { width: contentW });
+        doc.font("Helvetica-Bold").fontSize(20).fillColor(primary).text("Contact", ox + MARGIN, doc.y, { width: contentW });
         doc.moveDown(0.4);
         doc.font("Helvetica").fontSize(12).fillColor(INK).text(merge.organizerLine, { width: contentW });
         if (opts.qr) {

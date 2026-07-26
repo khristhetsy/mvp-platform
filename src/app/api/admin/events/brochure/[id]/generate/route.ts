@@ -37,8 +37,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     try {
       const qr = await brochureQrPng(BASE_URL, id).catch(() => undefined);
       const [printBuf, digitalBuf] = await Promise.all([
-        renderBrochurePdf(merge, pages, edition.overrides, edition.size, { bleed: true, qr }),
-        renderBrochurePdf(merge, pages, edition.overrides, edition.size, { bleed: false, qr }),
+        renderBrochurePdf(merge, pages, edition.overrides, edition.size, { bleed: true, qr, theme: edition.theme }),
+        renderBrochurePdf(merge, pages, edition.overrides, edition.size, { bleed: false, qr, theme: edition.theme }),
       ]);
       printPath = await uploadBrochurePdf(auth.supabase, id, "print", printBuf);
       digitalPath = await uploadBrochurePdf(auth.supabase, id, "digital", digitalBuf);

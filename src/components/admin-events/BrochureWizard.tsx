@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { LOCKED_PAGES, PAGE_LABEL, newFreeformPage, type BrochurePage, type BrochureSize, type FreeformBlock } from "@/lib/event-hub/brochure/types";
+import { LOCKED_PAGES, PAGE_LABEL, THEMES, THEME_LABEL, newFreeformPage, type BrochurePage, type BrochureSize, type BrochureTheme, type FreeformBlock } from "@/lib/event-hub/brochure/types";
 import { BrochureCanvas } from "./BrochureCanvas";
 
 type PickerEvent = { id: string; title: string; slug: string; status: string; startsAt: string | null; coverUrl: string | null };
@@ -15,6 +15,7 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
   const [eventId, setEventId] = useState<string | null>(null);
   const [pages, setPages] = useState<BrochurePage[]>([]);
   const [size, setSize] = useState<BrochureSize>("letter");
+  const [theme, setTheme] = useState<BrochureTheme>("navy");
   const [title, setTitle] = useState("");
   const [overrides, setOverrides] = useState<Record<string, Record<string, string>>>({});
   const [source, setSource] = useState<{ title: string; tagline: string } | null>(null);
@@ -49,6 +50,7 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
       setEventId(json.edition.eventId ?? evId);
       setPages(json.edition.pageConfig);
       setSize(json.edition.size);
+      setTheme(json.edition.theme ?? "navy");
       setTitle(json.edition.title);
       setOverrides(json.edition.overrides ?? {});
       setStep(2);
@@ -74,17 +76,17 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
 
   // persist page config + re-render (debounced)
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const persist = useCallback((next: { pages?: BrochurePage[]; size?: BrochureSize; overrides?: Record<string, Record<string, string>> }) => {
+  const persist = useCallback((next: { pages?: BrochurePage[]; size?: BrochureSize; overrides?: Record<string, Record<string, string>>; theme?: BrochureTheme }) => {
     if (!editionId) return;
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(async () => {
       await fetch(`/api/admin/events/brochure/${editionId}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pageConfig: next.pages ?? pages, size: next.size ?? size, overrides: next.overrides ?? overrides }),
+        body: JSON.stringify({ pageConfig: next.pages ?? pages, size: next.size ?? size, overrides: next.overrides ?? overrides, theme: next.theme ?? theme }),
       });
       await renderPreview(editionId);
     }, 250);
-  }, [editionId, pages, size, overrides, renderPreview]);
+  }, [editionId, pages, size, overrides, theme, renderPreview]);
 
   useEffect(() => {
     if (step !== 2 || !editionId) return;
@@ -107,6 +109,7 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
     setPages(next); persist({ pages: next });
   }
   function changeSize(s: BrochureSize) { setSize(s); persist({ size: s }); }
+  function changeTheme(t: BrochureTheme) { setTheme(t); persist({ theme: t }); }
 
   /** Set (or clear, when value is empty) a per-page override; blank falls back to source (§6). */
   function setOverride(page: string, field: string, value: string) {
@@ -248,6 +251,19 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
                 </ul>
               </div>
             )}
+
+            {/* theme preset */}
+            <div>
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Theme preset</p>
+              <div className="grid grid-cols-4 gap-1.5">
+                {(Object.keys(THEMES) as BrochureTheme[]).map((tk) => (
+                  <button key={tk} type="button" onClick={() => changeTheme(tk)} className={`rounded-lg border p-1.5 text-center ${theme === tk ? "border-[var(--blue)] ring-1 ring-[var(--blue)]" : "border-[var(--border-subtle)]"}`}>
+                    <span className="block h-5 w-full rounded" style={{ background: THEMES[tk].primary }} />
+                    <span className="mt-1 block text-[10px] text-[var(--text-muted)]">{THEME_LABEL[tk]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* size */}
             <div>

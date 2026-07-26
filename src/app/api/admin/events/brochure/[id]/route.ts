@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { requirePermissionApi } from "@/lib/api/permissions";
 import { getEdition, updateEdition } from "@/lib/event-hub/brochure/editions";
-import type { BrochurePage, BrochureSize } from "@/lib/event-hub/brochure/types";
+import type { BrochurePage, BrochureSize, BrochureTheme } from "@/lib/event-hub/brochure/types";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +28,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const { id } = await params;
     const body = (await req.json().catch(() => ({}))) as {
-      title?: string; pageConfig?: BrochurePage[]; overrides?: Record<string, Record<string, string>>; size?: BrochureSize;
+      title?: string; pageConfig?: BrochurePage[]; overrides?: Record<string, Record<string, string>>; size?: BrochureSize; theme?: BrochureTheme;
     };
     const edition = await updateEdition(auth.supabase, id, body);
     return NextResponse.json({ edition });

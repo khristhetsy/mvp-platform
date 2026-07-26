@@ -4,7 +4,7 @@
 // read no override key — the print expression of the "event ≠ offer" wall.
 
 import type { EventMergeData } from "@/lib/event-email/merge";
-import type { BrochurePage, BrochureSize } from "./types";
+import { THEMES, type BrochurePage, type BrochureSize, type BrochureTheme, type ThemeColors } from "./types";
 
 const NAVY = "#0c2340";
 const esc = (s: string) =>
@@ -36,10 +36,10 @@ function frame(inner: string, pageNo: number, showFooter: boolean): string {
   return `<section class="bk-page">${inner}${footer}</section>`;
 }
 
-function coverPage(m: EventMergeData, o: Record<string, Record<string, string>>): string {
+function coverPage(m: EventMergeData, o: Record<string, Record<string, string>>, primary: string): string {
   const bg = m.bannerUrl
     ? `background-image:linear-gradient(135deg,rgba(12,35,64,.82),rgba(12,35,64,.68)),url('${esc(m.bannerUrl)}');background-size:cover;background-position:center;`
-    : `background:${NAVY};`;
+    : `background:${primary};`;
   return `<div class="bk-cover" style="${bg}">
     <div class="bk-cover-badge">${esc(m.badge)}</div>
     <div class="bk-cover-title">${esc(ov(o, "cover", "title", m.title))}</div>
@@ -149,9 +149,11 @@ export function renderBookletHTML(
   merge: EventMergeData,
   overrides: Record<string, Record<string, string>>,
   size: BrochureSize,
-  opts: { qrDataUrl?: string } = {},
+  opts: { qrDataUrl?: string; theme?: BrochureTheme } = {},
 ): string {
   const dims = PAGE_DIMS[size];
+  const t: ThemeColors = THEMES[opts.theme ?? "navy"];
+  const primary = t.primary;
   const included = pages.filter((p) => p.included);
 
   // Build contents entries (numbered by final order, excluding cover=1/disclaimers).
@@ -165,7 +167,7 @@ export function renderBookletHTML(
   let pageNo = 0;
   for (const p of included) {
     pageNo += 1;
-    const inner = renderOne(p, merge, overrides, tocItems, opts.qrDataUrl);
+    const inner = renderOne(p, merge, overrides, tocItems, opts.qrDataUrl, primary);
     // presenters may return multiple pages joined by |||
     if (p.type === "presenters" && inner.includes("|||")) {
       const parts = inner.split("|||");
@@ -184,13 +186,13 @@ export function renderBookletHTML(
     body { margin: 0; font-family: Georgia, 'Times New Roman', serif; color: #1e2a3a; background: #dfe3ea; }
     .bk-page { position: relative; width: ${dims.w}; height: ${dims.h}; background: #fff; margin: 0 auto 14px; overflow: hidden; page-break-after: always; box-shadow: 0 6px 20px rgba(12,35,64,.12); }
     .bk-cover { width: 100%; height: 100%; color: #fff; display: flex; flex-direction: column; justify-content: flex-end; padding: 0.9in 0.8in; }
-    .bk-cover-badge { font-family: Arial, sans-serif; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #9fd0ff; }
+    .bk-cover-badge { font-family: Arial, sans-serif; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: ${t.coverBadge}; }
     .bk-cover-title { font-size: 40px; font-weight: bold; line-height: 1.1; margin-top: 10px; }
     .bk-cover-tag { font-size: 16px; color: #d7e4f5; margin-top: 10px; }
     .bk-cover-date { font-family: Arial, sans-serif; font-size: 14px; color: #eaf1fb; margin-top: 16px; font-weight: bold; }
     .bk-body { padding: 0.85in 0.8in 0.9in; }
     .bk-full { padding: 0; }
-    .bk-h2 { font-size: 22px; color: ${NAVY}; margin: 0 0 14px; border-bottom: 2px solid ${NAVY}; padding-bottom: 6px; }
+    .bk-h2 { font-size: 22px; color: ${primary}; margin: 0 0 14px; border-bottom: 2px solid ${primary}; padding-bottom: 6px; }
     .bk-p { font-size: 13.5px; line-height: 1.6; margin: 0 0 12px; }
     .bk-disc { font-size: 11.5px; line-height: 1.55; color: #4a5568; margin: 0 0 9px; }
     .bk-toc { display: flex; align-items: baseline; font-size: 13.5px; padding: 6px 0; }
@@ -198,19 +200,19 @@ export function renderBookletHTML(
     .bk-agenda-date { font-family: Arial, sans-serif; font-size: 12px; color: #6a7690; margin-bottom: 12px; }
     .bk-agenda { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #e2e8f2; }
     .bk-agenda-type { font-family: Arial, sans-serif; font-size: 10px; font-weight: bold; letter-spacing: .05em; text-transform: uppercase; min-width: 90px; }
-    .bk-agenda-title { font-size: 14px; font-weight: bold; color: ${NAVY}; }
+    .bk-agenda-title { font-size: 14px; font-weight: bold; color: ${primary}; }
     .bk-agenda-abs { font-size: 12px; color: #4a5568; margin-top: 3px; }
     .bk-pres-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .bk-pres { text-align: center; }
-    .bk-pres-av { width: 74px; height: 74px; border-radius: 50%; background: ${NAVY}; color: #fff; font-family: Arial, sans-serif; font-size: 22px; font-weight: bold; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; overflow: hidden; }
+    .bk-pres-av { width: 74px; height: 74px; border-radius: 50%; background: ${primary}; color: #fff; font-family: Arial, sans-serif; font-size: 22px; font-weight: bold; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; overflow: hidden; }
     .bk-pres-av img { width: 100%; height: 100%; object-fit: cover; }
-    .bk-pres-nm { font-size: 14px; font-weight: bold; color: ${NAVY}; }
+    .bk-pres-nm { font-size: 14px; font-weight: bold; color: ${primary}; }
     .bk-pres-rl { font-size: 12px; color: #4a5568; }
     .bk-pres-co { font-size: 11.5px; color: #6a7690; }
     .bk-spon-tier { margin-bottom: 14px; }
     .bk-spon-tier-h { font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; letter-spacing: .05em; text-transform: uppercase; color: #6a7690; margin-bottom: 6px; }
     .bk-spon-row { display: flex; flex-wrap: wrap; gap: 8px; }
-    .bk-spon { font-size: 13px; font-weight: bold; color: ${NAVY}; background: #f2f6fc; padding: 6px 12px; border-radius: 6px; }
+    .bk-spon { font-size: 13px; font-weight: bold; color: ${primary}; background: #f2f6fc; padding: 6px 12px; border-radius: 6px; }
     .bk-freeform { position: absolute; inset: 0; }
     .bk-qr { position: absolute; right: 0.8in; bottom: 0.9in; text-align: center; }
     .bk-qr-cap { font-family: Arial, sans-serif; font-size: 9px; color: #6a7690; margin-top: 4px; width: 104px; }
@@ -236,9 +238,10 @@ function renderOne(
   o: Record<string, Record<string, string>>,
   toc: { n: number; label: string }[],
   qrDataUrl?: string,
+  primary = NAVY,
 ): string {
   switch (p.type) {
-    case "cover": return coverPage(m, o);
+    case "cover": return coverPage(m, o, primary);
     case "disclaimers": return disclaimersPage();
     case "contents": return contentsPage(toc);
     case "introduction": return introPage(m, o);

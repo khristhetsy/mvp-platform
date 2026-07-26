@@ -29,7 +29,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       : edition.pageConfig;
 
     const qrDataUrl = await brochureQrDataUrl(BASE_URL, id).catch(() => undefined);
-    const html = renderBookletHTML(pages, merge, edition.overrides, edition.size, { qrDataUrl });
+    const html = renderBookletHTML(pages, merge, edition.overrides, edition.size, { qrDataUrl, theme: edition.theme });
     // Source values for the copy editor's "differs from event record" markers (§6).
     const source = { title: merge.title, tagline: merge.tagline };
     return NextResponse.json({ html, preflight, source });

@@ -19,6 +19,7 @@ function mapEdition(r: Row): BrochureEdition {
     pageConfig: Array.isArray(r.page_config) ? (r.page_config as BrochurePage[]) : [],
     overrides: (r.overrides as Record<string, Record<string, string>>) ?? {},
     size: (r.size as BrochureSize) ?? "letter",
+    theme: (r.theme as BrochureEdition["theme"]) ?? "navy",
     coverThumbPath: (r.cover_thumb_path as string | null) ?? null,
     pdfDigitalPath: (r.pdf_digital_path as string | null) ?? null,
     pdfPrintPath: (r.pdf_print_path as string | null) ?? null,
@@ -53,6 +54,7 @@ export async function createEdition(
 ): Promise<BrochureEdition> {
   let pageConfig: BrochurePage[] = defaultPageConfig();
   let size: BrochureSize = "letter";
+  let theme: BrochureEdition["theme"] = "navy";
   if (input.baseEditionId) {
     const base = await getEdition(supabase, input.baseEditionId);
     if (base) {
@@ -64,6 +66,7 @@ export async function createEdition(
           : p,
       );
       size = base.size;
+      theme = base.theme;
     }
   }
   const { data, error } = await raw(supabase)
@@ -74,6 +77,7 @@ export async function createEdition(
       title: input.title,
       page_config: pageConfig,
       size,
+      theme,
       created_by: input.createdBy ?? null,
     })
     .select("*")
@@ -116,13 +120,14 @@ export async function importArchive(
 export async function updateEdition(
   supabase: SupabaseClient<Database>,
   id: string,
-  patch: { title?: string; pageConfig?: BrochurePage[]; overrides?: Record<string, Record<string, string>>; size?: BrochureSize },
+  patch: { title?: string; pageConfig?: BrochurePage[]; overrides?: Record<string, Record<string, string>>; size?: BrochureSize; theme?: BrochureEdition["theme"] },
 ): Promise<BrochureEdition> {
   const p: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (patch.title !== undefined) p.title = patch.title;
   if (patch.pageConfig !== undefined) p.page_config = patch.pageConfig;
   if (patch.overrides !== undefined) p.overrides = patch.overrides;
   if (patch.size !== undefined) p.size = patch.size;
+  if (patch.theme !== undefined) p.theme = patch.theme;
   const { data, error } = await raw(supabase).from("event_brochures").update(p).eq("id", id).select("*").single();
   if (error) throw new Error(error.message);
   return mapEdition(data as Row);
