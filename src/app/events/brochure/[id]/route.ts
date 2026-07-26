@@ -13,7 +13,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const { id } = await params;
     const supabase = createServiceRoleClient();
     const edition = await getEdition(supabase, id);
-    if (!edition || edition.status !== "generated" || !edition.pdfDigitalPath) {
+    if (!edition || edition.status !== "generated" || !edition.published || !edition.pdfDigitalPath) {
       return new NextResponse("Booklet not available.", { status: 404 });
     }
     const url = await brochureSignedUrl(supabase, edition.pdfDigitalPath, 3600);

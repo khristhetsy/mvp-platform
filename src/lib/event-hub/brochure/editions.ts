@@ -22,6 +22,8 @@ function mapEdition(r: Row): BrochureEdition {
     coverThumbPath: (r.cover_thumb_path as string | null) ?? null,
     pdfDigitalPath: (r.pdf_digital_path as string | null) ?? null,
     pdfPrintPath: (r.pdf_print_path as string | null) ?? null,
+    published: Boolean(r.published),
+    publishedAt: (r.published_at as string | null) ?? null,
     generatedAt: (r.generated_at as string | null) ?? null,
     createdAt: String(r.created_at),
     updatedAt: String(r.updated_at),
@@ -102,6 +104,23 @@ export async function markGenerated(
   if (paths?.printPath !== undefined) patch.pdf_print_path = paths.printPath;
   if (paths?.digitalPath !== undefined) patch.pdf_digital_path = paths.digitalPath;
   const { data, error } = await raw(supabase).from("event_brochures").update(patch).eq("id", id).select("*").single();
+  if (error) throw new Error(error.message);
+  return mapEdition(data as Row);
+}
+
+/** Toggle whether the digital PDF is exposed on the public event page (§9).
+ *  Only generated editions with a stored digital PDF can be published. */
+export async function setPublished(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  published: boolean,
+): Promise<BrochureEdition> {
+  const { data, error } = await raw(supabase)
+    .from("event_brochures")
+    .update({ published, published_at: published ? new Date().toISOString() : null, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select("*")
+    .single();
   if (error) throw new Error(error.message);
   return mapEdition(data as Row);
 }
