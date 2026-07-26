@@ -11,6 +11,7 @@ export function BrochureWizard({ initialEventId }: { initialEventId?: string }) 
   const [step, setStep] = useState(1);
   const [events, setEvents] = useState<PickerEvent[]>([]);
   const [editionId, setEditionId] = useState<string | null>(null);
+  const [eventId, setEventId] = useState<string | null>(null);
   const [pages, setPages] = useState<BrochurePage[]>([]);
   const [size, setSize] = useState<BrochureSize>("letter");
   const [title, setTitle] = useState("");
@@ -19,6 +20,8 @@ export function BrochureWizard({ initialEventId }: { initialEventId?: string }) 
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [generated, setGenerated] = useState(false);
+  const [pdfWarning, setPdfWarning] = useState<string | null>(null);
+  const [published, setPublished] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -30,15 +33,16 @@ export function BrochureWizard({ initialEventId }: { initialEventId?: string }) 
     })();
   }, []);
 
-  const createEdition = useCallback(async (eventId: string) => {
+  const createEdition = useCallback(async (evId: string) => {
     setError(null);
     try {
       const res = await fetch("/api/admin/events/brochure", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventId }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventId: evId }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Couldn't create the edition.");
       setEditionId(json.edition.id);
+      setEventId(json.edition.eventId ?? evId);
       setPages(json.edition.pageConfig);
       setSize(json.edition.size);
       setTitle(json.edition.title);
@@ -99,6 +103,23 @@ export function BrochureWizard({ initialEventId }: { initialEventId?: string }) 
   }
   function changeSize(s: BrochureSize) { setSize(s); persist({ size: s }); }
 
+  function addCustomPage() {
+    const key = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `custom-${Date.now()}`;
+    const next: BrochurePage[] = [...pages, { key, type: "custom", included: true, custom: { layout: "text", heading: "New page", body: "" } }];
+    setPages(next); persist({ pages: next });
+  }
+  function editCustom(i: number, patch: { heading?: string; body?: string }) {
+    const next = pages.map((pg, idx) =>
+      idx === i ? { ...pg, custom: { layout: pg.custom?.layout ?? "text", heading: pg.custom?.heading ?? "", body: pg.custom?.body ?? "", ...patch } } : pg,
+    );
+    setPages(next); persist({ pages: next });
+  }
+  function removePage(i: number) {
+    if (pages[i].type !== "custom") return;
+    const next = pages.filter((_, idx) => idx !== i);
+    setPages(next); persist({ pages: next });
+  }
+
   async function generate() {
     if (!editionId) return;
     setBusy(true); setError(null);
@@ -106,9 +127,25 @@ export function BrochureWizard({ initialEventId }: { initialEventId?: string }) 
       const res = await fetch(`/api/admin/events/brochure/${editionId}/generate`, { method: "POST" });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Couldn't generate.");
+      setPdfWarning(json.pdfWarning ?? null);
       setGenerated(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't generate.");
+    } finally { setBusy(false); }
+  }
+
+  async function togglePublish() {
+    if (!editionId) return;
+    setBusy(true); setError(null);
+    try {
+      const res = await fetch(`/api/admin/events/brochure/${editionId}/publish`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ published: !published }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Couldn't update publish state.");
+      setPublished(Boolean(json.edition.published));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't update publish state.");
     } finally { setBusy(false); }
   }
 
@@ -168,27 +205,53 @@ export function BrochureWizard({ initialEventId }: { initialEventId?: string }) 
               <ul className="space-y-1">
                 {pages.map((p, i) => {
                   const locked = LOCKED_PAGES.includes(p.type);
+                  const isCustom = p.type === "custom";
                   return (
-                    <li key={p.key} className="flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-white px-3 py-2 text-sm">
-                      <input type="checkbox" checked={p.included} disabled={locked} onChange={() => toggleInclude(i)} />
-                      <span className={`flex-1 ${p.included ? "text-[var(--navy)]" : "text-[var(--text-muted)] line-through"}`}>{PAGE_LABEL[p.type]}</span>
-                      {locked ? <span className="text-[10px] font-semibold text-[var(--text-muted)]">🔒 required</span> : (
-                        <span className="flex gap-1">
-                          <button type="button" onClick={() => move(i, -1)} disabled={i <= 2} className="text-xs text-[var(--text-muted)] disabled:opacity-30">↑</button>
-                          <button type="button" onClick={() => move(i, 1)} disabled={i >= pages.length - 1} className="text-xs text-[var(--text-muted)] disabled:opacity-30">↓</button>
-                        </span>
+                    <li key={p.key} className="rounded-lg border border-[var(--border-subtle)] bg-white px-3 py-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" checked={p.included} disabled={locked} onChange={() => toggleInclude(i)} />
+                        <span className={`flex-1 ${p.included ? "text-[var(--navy)]" : "text-[var(--text-muted)] line-through"}`}>{isCustom ? (p.custom?.heading || "Custom page") : PAGE_LABEL[p.type]}</span>
+                        {locked ? <span className="text-[10px] font-semibold text-[var(--text-muted)]">🔒 required</span> : (
+                          <span className="flex gap-1">
+                            <button type="button" onClick={() => move(i, -1)} disabled={i <= 2} className="text-xs text-[var(--text-muted)] disabled:opacity-30">↑</button>
+                            <button type="button" onClick={() => move(i, 1)} disabled={i >= pages.length - 1} className="text-xs text-[var(--text-muted)] disabled:opacity-30">↓</button>
+                            {isCustom && <button type="button" onClick={() => removePage(i)} className="text-xs text-rose-500" title="Remove page">✕</button>}
+                          </span>
+                        )}
+                      </div>
+                      {isCustom && p.included && (
+                        <div className="mt-2 space-y-1.5">
+                          <input value={p.custom?.heading ?? ""} onChange={(e) => editCustom(i, { heading: e.target.value })} placeholder="Page heading" className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs" />
+                          <textarea value={p.custom?.body ?? ""} onChange={(e) => editCustom(i, { body: e.target.value })} placeholder="Body text" rows={3} className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs" />
+                        </div>
                       )}
                     </li>
                   );
                 })}
               </ul>
+              <button type="button" onClick={addCustomPage} className="mt-2 text-xs font-semibold text-[var(--blue)] hover:underline">＋ Add custom page</button>
             </div>
 
             {generated ? (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-                <p className="font-semibold">Edition saved.</p>
-                <p className="mt-1">Snapshot frozen. PDF export &amp; “Send booklet” land in the next pass.</p>
-                <Link href="/admin/events/brochure" className="mt-2 inline-block font-semibold underline">Back to editions →</Link>
+              <div className="space-y-2">
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                  <p className="font-semibold">Edition generated.</p>
+                  <p className="mt-1">Snapshot frozen; print &amp; digital PDFs rendered.</p>
+                </div>
+                {pdfWarning && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">{pdfWarning}</div>
+                )}
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                  <a href={`/api/admin/events/brochure/${editionId}/download?variant=digital`} className="font-semibold text-[var(--blue)] hover:underline">Digital PDF</a>
+                  <a href={`/api/admin/events/brochure/${editionId}/download?variant=print`} className="font-semibold text-[var(--blue)] hover:underline">Print PDF (bleed)</a>
+                  {!pdfWarning && (
+                    <button type="button" onClick={togglePublish} disabled={busy} className="font-semibold text-[var(--blue)] hover:underline disabled:opacity-50">{published ? "Unpublish" : "Publish to event page"}</button>
+                  )}
+                  {published && eventId && (
+                    <Link href={`/admin/events/email?eventId=${eventId}&type=booklet&bookletEditionId=${editionId}`} className="font-semibold text-[var(--blue)] hover:underline">Send booklet →</Link>
+                  )}
+                </div>
+                <Link href="/admin/events/brochure" className="inline-block text-sm font-semibold text-[var(--text-muted)] underline">Back to editions</Link>
               </div>
             ) : (
               <button type="button" onClick={generate} disabled={busy} className="cap-btn-primary w-full rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
