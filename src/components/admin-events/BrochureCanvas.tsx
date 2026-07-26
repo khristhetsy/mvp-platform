@@ -44,14 +44,18 @@ function snap1D(pos: number, size: number, targets: number[]): { pos: number; gu
   return best ? { pos: pos + best.d, guide: best.t } : { pos, guide: null };
 }
 
+const TITLE_BLOCK_ID = "cover-title"; // bound to the event title on a customized cover
+
 export function BrochureCanvas({
   size,
   blocks,
   onChange,
+  sourceTitle,
 }: {
   size: BrochureSize;
   blocks: FreeformBlock[];
   onChange: (blocks: FreeformBlock[]) => void;
+  sourceTitle?: string;
 }) {
   const [tw, th] = TRIM_POINTS[size];
   const scale = DISPLAY_W / tw;
@@ -65,6 +69,7 @@ export function BrochureCanvas({
   const [canRedo, setCanRedo] = useState(false);
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const selected = blocks.find((b) => b.id === selectedId) ?? null;
+  const differs = (b: FreeformBlock) => Boolean(sourceTitle) && b.id === TITLE_BLOCK_ID && (b.text ?? "") !== sourceTitle;
 
   const syncHist = useCallback(() => {
     setCanUndo(hist.current.past.length > 0);
@@ -238,6 +243,9 @@ export function BrochureCanvas({
             return (
               <div key={b.id} style={common} onPointerDown={(e) => { if (!editing) onPointerDown(e, b, "move"); }} onDoubleClick={() => startEdit(b)}>
                 {inner}
+                {differs(b) && (
+                  <span style={{ position: "absolute", left: 0, top: -14, background: "#f4c065", color: "#5c4708", fontSize: 9, fontWeight: 700, padding: "0 4px", borderRadius: 2, whiteSpace: "nowrap" }}>differs from event</span>
+                )}
                 {isSel && !editing && (
                   <span onPointerDown={(e) => onPointerDown(e, b, "resize")} style={{ position: "absolute", right: -5, bottom: -5, width: 11, height: 11, background: "#2E78F5", borderRadius: 2, cursor: "nwse-resize" }} />
                 )}
@@ -257,6 +265,12 @@ export function BrochureCanvas({
             <p className="text-[11px] font-semibold capitalize text-[var(--navy)]">{selected.type}</p>
             {(selected.type === "heading" || selected.type === "text" || selected.type === "callout") && (
               <>
+                {differs(selected) && (
+                  <div className="flex items-center justify-between rounded-md bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-800">
+                    <span>differs from event title</span>
+                    <button type="button" onClick={() => { beginChange(); update(selected.id, { text: sourceTitle ?? "" }); }} className="underline">revert</button>
+                  </div>
+                )}
                 <textarea value={selected.text ?? ""} onFocus={beginChange} onChange={(e) => update(selected.id, { text: e.target.value })} rows={3} className="w-full rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs" />
                 <div>
                   <label className="text-[10px] text-[var(--text-muted)]">Font size {selected.fontSize ?? 13}pt</label>

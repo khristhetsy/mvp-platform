@@ -419,7 +419,7 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
               <>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">{editingPage.type === "cover" ? "Cover · custom layout" : "Design page · free-form canvas"}</p>
                 <div className="rounded-xl border border-[var(--border-subtle)] bg-slate-100 p-3">
-                  <BrochureCanvas size={size} blocks={editingPage.blocks ?? []} onChange={(b) => setBlocks(editingPage.key, b)} />
+                  <BrochureCanvas size={size} blocks={editingPage.blocks ?? []} onChange={(b) => setBlocks(editingPage.key, b)} sourceTitle={editingPage.type === "cover" ? source?.title : undefined} />
                 </div>
               </>
             ) : (
