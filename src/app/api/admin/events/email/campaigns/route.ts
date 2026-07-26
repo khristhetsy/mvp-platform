@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { requirePermissionApi } from "@/lib/api/permissions";
 import { loadEventMergeData, type EventEmailType } from "@/lib/event-email/merge";
 import { renderEventEmail } from "@/lib/event-email/render";
+import { materializeRegistrantList, type RegistrantStatus } from "@/lib/event-email/segments";
 import { getEventById } from "@/lib/icfo-events/queries";
 import { createCampaign } from "@/lib/marketing/campaigns";
 import type { MarketingCampaign } from "@/lib/marketing/types";
@@ -24,16 +25,32 @@ export async function POST(req: NextRequest): Promise<Response> {
       includeBanner?: boolean;
       includeLobby?: boolean;
       listId?: string;
+      audienceKind?: "list" | "registrants";
+      registrantStatuses?: RegistrantStatus[];
       subject?: string;
       scheduleAt?: string | null;
     };
-    const { eventId, type = "invite", listId, subject } = body;
+    const { eventId, type = "invite", subject } = body;
+    const audienceKind = body.audienceKind ?? "list";
     if (!eventId) return NextResponse.json({ error: "Missing event." }, { status: 400 });
-    if (!listId) return NextResponse.json({ error: "Choose an audience list." }, { status: 400 });
     if (!subject?.trim()) return NextResponse.json({ error: "Enter a subject line." }, { status: 400 });
+    if (audienceKind === "list" && !body.listId) return NextResponse.json({ error: "Choose an audience list." }, { status: 400 });
 
     const event = await getEventById(auth.supabase, eventId).catch(() => null);
     if (!event) return NextResponse.json({ error: "Event not found." }, { status: 404 });
+
+    // Resolve the audience to a list_id. Registrants are materialized into a
+    // per-event marketing list (suppression honored) so the send pipeline can use it.
+    let listId = body.listId ?? null;
+    let registrantCount: number | null = null;
+    if (audienceKind === "registrants") {
+      const statuses = (body.registrantStatuses?.length ? body.registrantStatuses : ["registered"]) as RegistrantStatus[];
+      const res = await materializeRegistrantList(eventId, event.title, statuses);
+      listId = res.listId;
+      registrantCount = res.count;
+      if (res.count === 0) return NextResponse.json({ error: "No eligible registrants for the selected statuses (after suppression)." }, { status: 400 });
+    }
+    if (!listId) return NextResponse.json({ error: "No audience resolved." }, { status: 400 });
 
     // Guardrail (§9): invite/reminder can't be scheduled after the event has started.
     const sendAt = body.scheduleAt ? Date.parse(body.scheduleAt) : Date.now();
@@ -64,7 +81,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     } as unknown as Partial<MarketingCampaign>;
 
     const campaign = await createCampaign(input, auth.userId);
-    return NextResponse.json({ campaignId: campaign.id, status: campaign.status });
+    return NextResponse.json({ campaignId: campaign.id, status: campaign.status, registrantCount });
   } catch (err) {
     Sentry.captureException(err);
     const detail = err instanceof Error ? err.message : String(err);

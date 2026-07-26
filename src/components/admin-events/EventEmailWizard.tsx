@@ -34,6 +34,8 @@ export function EventEmailWizard({ initialEventId }: { initialEventId?: string }
   const [lists, setLists] = useState<{ id: string; name: string }[]>([]);
   const [registrants, setRegistrants] = useState<{ registered: number; attended: number; no_show: number; total: number } | null>(null);
   const [listId, setListId] = useState("");
+  const [audienceKind, setAudienceKind] = useState<"list" | "registrants">("list");
+  const [regStatuses, setRegStatuses] = useState<string[]>(["registered"]);
   const [subject, setSubject] = useState("");
   const [scheduleMode, setScheduleMode] = useState<"now" | "later">("now");
   const [scheduleAt, setScheduleAt] = useState("");
@@ -55,7 +57,8 @@ export function EventEmailWizard({ initialEventId }: { initialEventId?: string }
   }, [step, eventId]);
 
   async function createCampaign() {
-    if (!eventId || !listId || !subject.trim()) return;
+    if (!eventId || !subject.trim()) return;
+    if (audienceKind === "list" && !listId) return;
     setCreating(true);
     setError(null);
     try {
@@ -64,7 +67,7 @@ export function EventEmailWizard({ initialEventId }: { initialEventId?: string }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           eventId, type, includeBanner, includeLobby: includeLobby || lobbyForced,
-          listId, subject: subject.trim(),
+          audienceKind, listId, registrantStatuses: regStatuses, subject: subject.trim(),
           scheduleAt: scheduleMode === "later" && scheduleAt ? new Date(scheduleAt).toISOString() : null,
         }),
       });
@@ -250,15 +253,33 @@ export function EventEmailWizard({ initialEventId }: { initialEventId?: string }
           ) : (
             <div className="mt-4 space-y-4">
               <div>
-                <label className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Audience list</label>
-                <select value={listId} onChange={(e) => setListId(e.target.value)} className="mt-1 block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm">
+                <label className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Audience</label>
+                <div className="mt-1 flex flex-wrap items-center gap-4 text-sm">
+                  <label className="flex items-center gap-1.5"><input type="radio" checked={audienceKind === "list"} onChange={() => setAudienceKind("list")} /> CRM list</label>
+                  <label className="flex items-center gap-1.5"><input type="radio" checked={audienceKind === "registrants"} onChange={() => setAudienceKind("registrants")} /> Event registrants</label>
+                </div>
+              </div>
+
+              {audienceKind === "list" ? (
+                <select value={listId} onChange={(e) => setListId(e.target.value)} className="block w-full rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm">
                   <option value="">Select a CRM list…</option>
                   {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
                 </select>
-              </div>
-              {registrants && (
-                <div className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-[var(--text-muted)]">
-                  Event registrants — registered {registrants.registered} · attended {registrants.attended} · no-show {registrants.no_show} (total {registrants.total}). A registrant-only send list is the next increment; choose a CRM list for now.
+              ) : (
+                <div className="rounded-lg border border-[var(--border-subtle)] p-3">
+                  <p className="text-xs text-[var(--text-muted)]">Build a send list from this event&apos;s registrants (suppression honored). Include statuses:</p>
+                  <div className="mt-2 flex flex-wrap gap-3 text-sm">
+                    {(["registered", "attended", "no_show"] as const).map((s) => {
+                      const on = regStatuses.includes(s);
+                      const count = registrants ? registrants[s] : 0;
+                      return (
+                        <label key={s} className="flex items-center gap-1.5">
+                          <input type="checkbox" checked={on} onChange={(e) => setRegStatuses((prev) => (e.target.checked ? [...prev, s] : prev.filter((x) => x !== s)))} />
+                          {s.replace("_", "-")} <span className="text-xs text-[var(--text-muted)]">({count})</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
               <div>
@@ -275,7 +296,7 @@ export function EventEmailWizard({ initialEventId }: { initialEventId?: string }
                   <input type="datetime-local" value={scheduleAt} onChange={(e) => setScheduleAt(e.target.value)} className="mt-2 rounded-md border border-[var(--border-subtle)] px-3 py-2 text-sm" />
                 )}
               </div>
-              <button type="button" onClick={createCampaign} disabled={creating || !listId || !subject.trim() || (scheduleMode === "later" && !scheduleAt)} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
+              <button type="button" onClick={createCampaign} disabled={creating || !subject.trim() || (audienceKind === "list" && !listId) || (audienceKind === "registrants" && regStatuses.length === 0) || (scheduleMode === "later" && !scheduleAt)} className="cap-btn-primary rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50">
                 {creating ? "Creating…" : scheduleMode === "later" ? "Schedule campaign" : "Create draft campaign"}
               </button>
               <p className="text-[11px] text-[var(--text-muted)]">The compliance footer is locked into the email. The campaign lands in Marketing Hub — final send happens there.</p>
