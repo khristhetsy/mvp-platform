@@ -15,6 +15,8 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
   const [pages, setPages] = useState<BrochurePage[]>([]);
   const [size, setSize] = useState<BrochureSize>("letter");
   const [title, setTitle] = useState("");
+  const [overrides, setOverrides] = useState<Record<string, Record<string, string>>>({});
+  const [source, setSource] = useState<{ title: string; tagline: string } | null>(null);
   const [html, setHtml] = useState("");
   const [preflight, setPreflight] = useState<Preflight | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +48,7 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
       setPages(json.edition.pageConfig);
       setSize(json.edition.size);
       setTitle(json.edition.title);
+      setOverrides(json.edition.overrides ?? {});
       setStep(2);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't create the edition.");
@@ -63,23 +66,23 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
     try {
       const res = await fetch(`/api/admin/events/brochure/${id}/preview`, { method: "POST" });
       const json = await res.json();
-      if (res.ok) { setHtml(json.html as string); setPreflight(json.preflight as Preflight); }
+      if (res.ok) { setHtml(json.html as string); setPreflight(json.preflight as Preflight); if (json.source) setSource(json.source as { title: string; tagline: string }); }
     } finally { setBusy(false); }
   }, []);
 
   // persist page config + re-render (debounced)
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const persist = useCallback((next: { pages?: BrochurePage[]; size?: BrochureSize }) => {
+  const persist = useCallback((next: { pages?: BrochurePage[]; size?: BrochureSize; overrides?: Record<string, Record<string, string>> }) => {
     if (!editionId) return;
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(async () => {
       await fetch(`/api/admin/events/brochure/${editionId}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pageConfig: next.pages ?? pages, size: next.size ?? size }),
+        body: JSON.stringify({ pageConfig: next.pages ?? pages, size: next.size ?? size, overrides: next.overrides ?? overrides }),
       });
       await renderPreview(editionId);
     }, 250);
-  }, [editionId, pages, size, renderPreview]);
+  }, [editionId, pages, size, overrides, renderPreview]);
 
   useEffect(() => {
     if (step !== 2 || !editionId) return;
@@ -102,6 +105,16 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
     setPages(next); persist({ pages: next });
   }
   function changeSize(s: BrochureSize) { setSize(s); persist({ size: s }); }
+
+  /** Set (or clear, when value is empty) a per-page override; blank falls back to source (§6). */
+  function setOverride(page: string, field: string, value: string) {
+    const next: Record<string, Record<string, string>> = { ...overrides, [page]: { ...(overrides[page] ?? {}) } };
+    if (value.trim() === "") { delete next[page][field]; if (Object.keys(next[page]).length === 0) delete next[page]; }
+    else next[page][field] = value;
+    setOverrides(next); persist({ overrides: next });
+  }
+  const ovVal = (page: string, field: string) => overrides[page]?.[field] ?? "";
+  const titleDiffers = source != null && ovVal("cover", "title") !== "" && ovVal("cover", "title") !== source.title;
 
   function addCustomPage() {
     const key = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `custom-${Date.now()}`;
@@ -231,6 +244,39 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
                 {(["letter", "a4", "square"] as const).map((s) => (
                   <button key={s} type="button" onClick={() => changeSize(s)} className={`px-3 py-1 font-semibold uppercase ${size === s ? "bg-[var(--blue)] text-white" : "bg-white text-[var(--text-muted)]"}`}>{s}</button>
                 ))}
+              </div>
+            </div>
+
+            {/* copy & overrides (§6) */}
+            <div>
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Copy</p>
+              <div className="space-y-3 rounded-lg border border-[var(--border-subtle)] bg-white p-3">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-semibold text-[var(--navy)]">Cover title</label>
+                    {titleDiffers && (
+                      <span className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-700">
+                        differs from event
+                        <button type="button" onClick={() => setOverride("cover", "title", "")} className="underline">revert</button>
+                        {eventId && <a href={`/admin/events/${eventId}`} target="_blank" rel="noreferrer" className="underline">fix at source</a>}
+                      </span>
+                    )}
+                  </div>
+                  <input value={ovVal("cover", "title")} onChange={(e) => setOverride("cover", "title", e.target.value)} placeholder={source?.title ?? "Pulled from event"} className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs" />
+                  <p className="mt-0.5 text-[10px] text-[var(--text-muted)]">Pulled field — leave blank to use the event title.</p>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-[var(--navy)]">Cover tagline</label>
+                  <input value={ovVal("cover", "tagline")} onChange={(e) => setOverride("cover", "tagline", e.target.value)} placeholder={source?.tagline || "Optional tagline"} className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-[var(--navy)]">Introduction</label>
+                  <textarea value={ovVal("introduction", "body")} onChange={(e) => setOverride("introduction", "body", e.target.value)} placeholder="Welcome copy — leave blank for the default." rows={3} className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-[var(--navy)]">Audience line</label>
+                  <textarea value={ovVal("introduction", "audience")} onChange={(e) => setOverride("introduction", "audience", e.target.value)} placeholder="Who attends — leave blank for the default." rows={2} className="mt-1 w-full rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs" />
+                </div>
               </div>
             </div>
 

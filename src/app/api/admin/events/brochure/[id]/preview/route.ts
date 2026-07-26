@@ -28,7 +28,9 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       : edition.pageConfig;
 
     const html = renderBookletHTML(pages, merge, edition.overrides, edition.size);
-    return NextResponse.json({ html, preflight });
+    // Source values for the copy editor's "differs from event record" markers (§6).
+    const source = { title: merge.title, tagline: merge.tagline };
+    return NextResponse.json({ html, preflight, source });
   } catch (err) {
     Sentry.captureException(err);
     return NextResponse.json({ error: "Couldn't render the preview." }, { status: 500 });
