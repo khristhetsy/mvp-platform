@@ -4,6 +4,7 @@ import { requireUserProfile } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { track } from "@/lib/analytics/posthog";
 import { createNotification } from "@/lib/notifications/notifications";
+import { publishedBookletUrl } from "@/lib/event-hub/brochure/editions";
 import { getEventById } from "@/lib/icfo-events/queries";
 import { registerForEvent } from "@/lib/icfo-events/registrations";
 import { awardPoints } from "@/lib/icfo-events/gamification";
@@ -47,14 +48,19 @@ export async function POST(
     }
 
     if (created) {
+      // If a booklet is published for this event, point the confirmation straight
+      // at it so registrants can download it right away ("" baseUrl → relative path).
+      const bookletPath = await publishedBookletUrl(supabase, event.id, "").catch(() => null);
       await createNotification({
         recipientUserId: profile.id,
         type: "event_registration_confirmed",
         title: "You're registered",
-        message: `You're confirmed for "${event.title}". We'll share the agenda and joining details here.`,
+        message: bookletPath
+          ? `You're confirmed for "${event.title}". Your event booklet is ready — download it any time.`
+          : `You're confirmed for "${event.title}". We'll share the agenda and joining details here.`,
         entityType: "event",
         entityId: event.id,
-        deepLink: `/events/${event.slug}`,
+        deepLink: bookletPath ?? `/events/${event.slug}`,
       });
       track("event_registered", { userId: profile.id, eventId: event.id });
       await awardPoints(event.id, profile.id, "register");

@@ -41,6 +41,27 @@ export async function listEditions(
   return ((data ?? []) as Row[]).map(mapEdition);
 }
 
+/** Public download URL for an event's published booklet, or null if none is live.
+ *  A booklet is "live" when it's generated, published, and has a stored digital PDF. */
+export async function publishedBookletUrl(
+  supabase: SupabaseClient<Database>,
+  eventId: string,
+  baseUrl: string,
+): Promise<string | null> {
+  const { data } = await raw(supabase)
+    .from("event_brochures")
+    .select("id, status, published, pdf_digital_path")
+    .eq("event_id", eventId)
+    .eq("published", true)
+    .eq("status", "generated")
+    .not("pdf_digital_path", "is", null)
+    .order("generated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  return `${baseUrl.replace(/\/$/, "")}/events/brochure/${(data as { id: string }).id}`;
+}
+
 export async function getEdition(supabase: SupabaseClient<Database>, id: string): Promise<BrochureEdition | null> {
   const { data } = await raw(supabase).from("event_brochures").select("*").eq("id", id).maybeSingle();
   return data ? mapEdition(data as Row) : null;
