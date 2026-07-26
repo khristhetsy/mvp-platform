@@ -285,10 +285,22 @@ export function EventEmailWizard({
 
       {/* STEP 2 — content & preview */}
       {step === 2 && (
-        <div className={`grid gap-5 ${panelOpen ? "lg:grid-cols-[320px_1fr]" : "grid-cols-1"}`}>
-          {panelOpen && (
-          <div className="space-y-4">
-            <button type="button" onClick={() => setStep(1)} className="text-xs font-semibold text-[var(--blue)] hover:underline">← Change event</button>
+        <div className="flex items-start overflow-hidden">
+          {!panelOpen && (
+            <button type="button" onClick={() => setPanelOpen(true)} title="Show panel"
+              className="mr-3 shrink-0 rounded-lg border border-[var(--border-subtle)] bg-white px-1.5 py-3 text-[11px] font-semibold text-[var(--blue)] hover:border-[var(--blue)]"
+              style={{ writingMode: "vertical-rl" }}>
+              Show panel ›
+            </button>
+          )}
+          <div
+            className="shrink-0 space-y-4"
+            style={{ width: 320, marginLeft: panelOpen ? 0 : -336, marginRight: panelOpen ? 20 : 0, opacity: panelOpen ? 1 : 0, pointerEvents: panelOpen ? "auto" : "none", transition: "margin-left .35s ease, opacity .25s ease" }}
+          >
+            <div className="flex items-center justify-between">
+              <button type="button" onClick={() => setStep(1)} className="text-xs font-semibold text-[var(--blue)] hover:underline">← Change event</button>
+              <button type="button" onClick={() => setPanelOpen(false)} className="text-xs font-semibold text-[var(--blue)] hover:underline">‹ Hide</button>
+            </div>
 
             {/* pulled data card (collapsible) */}
             {merge && (
@@ -353,13 +365,9 @@ export function EventEmailWizard({
               </p>
             )}
           </div>
-          )}
 
           {/* preview / inline editor */}
-          <div>
-            <div className="mb-2 flex justify-end">
-              <button type="button" onClick={() => setPanelOpen((v) => !v)} className="text-xs font-semibold text-[var(--blue)] hover:underline">{panelOpen ? "⟨ Hide panel" : "Show panel ⟩"}</button>
-            </div>
+          <div className="min-w-0 flex-1">
             {editMode && editBlocks ? (
               <>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Editing content · inline block editor</p>

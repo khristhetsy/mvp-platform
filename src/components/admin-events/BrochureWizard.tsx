@@ -23,6 +23,7 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
   const [preflight, setPreflight] = useState<Preflight | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(true);
   const [generated, setGenerated] = useState(false);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [pdfWarning, setPdfWarning] = useState<string | null>(null);
@@ -246,9 +247,22 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
       )}
 
       {step === 2 && (
-        <div className="grid items-start gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
-          <div className="space-y-4">
-            <div className="text-sm font-semibold text-[var(--navy)]">{title}</div>
+        <div className="flex items-start overflow-hidden">
+          {!panelOpen && (
+            <button type="button" onClick={() => setPanelOpen(true)} title="Show menu"
+              className="mr-3 shrink-0 rounded-lg border border-[var(--border-subtle)] bg-white px-1.5 py-3 text-[11px] font-semibold text-[var(--blue)] hover:border-[var(--blue)]"
+              style={{ writingMode: "vertical-rl" }}>
+              Show menu ›
+            </button>
+          )}
+          <div
+            className="shrink-0 space-y-4"
+            style={{ width: 340, marginLeft: panelOpen ? 0 : -364, marginRight: panelOpen ? 24 : 0, opacity: panelOpen ? 1 : 0, pointerEvents: panelOpen ? "auto" : "none", transition: "margin-left .35s ease, opacity .25s ease" }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-[var(--navy)]">{title}</div>
+              <button type="button" onClick={() => setPanelOpen(false)} className="text-xs font-semibold text-[var(--blue)] hover:underline">‹ Hide</button>
+            </div>
 
             {/* preflight */}
             {preflight && preflight.warnings.length > 0 && (
@@ -426,7 +440,7 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
           </div>
 
           {/* preview / canvas */}
-          <div>
+          <div className="min-w-0 flex-1">
             {editingPage ? (
               <>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">{editingPage.type === "cover" ? "Cover · custom layout" : "Design page · free-form canvas"}</p>
