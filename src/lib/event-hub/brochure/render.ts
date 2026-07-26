@@ -95,16 +95,19 @@ function teamPage(): string {
     <p class="bk-p">Hosted and produced by the iCFO Capital Global events team. Master of ceremonies and coordinators are introduced on stage.</p></div>`;
 }
 
-function sponsorsContactPage(m: EventMergeData): string {
+function sponsorsContactPage(m: EventMergeData, qrDataUrl?: string): string {
   const tier = (label: string, list: { name: string; logoUrl: string | null }[]) =>
     list.length ? `<div class="bk-spon-tier"><div class="bk-spon-tier-h">${esc(label)}</div><div class="bk-spon-row">${list.map((s) => `<span class="bk-spon">${esc(s.name)}</span>`).join("")}</div></div>` : "";
+  const qr = qrDataUrl
+    ? `<div class="bk-qr"><img src="${esc(qrDataUrl)}" alt="Scan for the digital booklet" width="104" height="104"><div class="bk-qr-cap">Scan for the digital booklet</div></div>`
+    : "";
   return `<div class="bk-body"><h2 class="bk-h2">Sponsors</h2>
     ${tier("Presenting partners", m.sponsorTiers.presenting)}
     ${tier("Track sponsors", m.sponsorTiers.track)}
     ${tier("Community", m.sponsorTiers.community)}
     ${!m.sponsorTiers.presenting.length && !m.sponsorTiers.track.length && !m.sponsorTiers.community.length ? `<p class="bk-p">Sponsor lineup to be announced.</p>` : ""}
     <h2 class="bk-h2" style="margin-top:24px">Contact</h2>
-    <p class="bk-p">${esc(m.organizerLine)}</p></div>`;
+    <p class="bk-p">${esc(m.organizerLine)}</p>${qr}</div>`;
 }
 
 function customPage(page: BrochurePage): string {
@@ -122,6 +125,7 @@ export function renderBookletHTML(
   merge: EventMergeData,
   overrides: Record<string, Record<string, string>>,
   size: BrochureSize,
+  opts: { qrDataUrl?: string } = {},
 ): string {
   const dims = PAGE_DIMS[size];
   const included = pages.filter((p) => p.included);
@@ -137,7 +141,7 @@ export function renderBookletHTML(
   let pageNo = 0;
   for (const p of included) {
     pageNo += 1;
-    const inner = renderOne(p, merge, overrides, tocItems);
+    const inner = renderOne(p, merge, overrides, tocItems, opts.qrDataUrl);
     // presenters may return multiple pages joined by |||
     if (p.type === "presenters" && inner.includes("|||")) {
       const parts = inner.split("|||");
@@ -183,6 +187,8 @@ export function renderBookletHTML(
     .bk-spon-tier-h { font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; letter-spacing: .05em; text-transform: uppercase; color: #6a7690; margin-bottom: 6px; }
     .bk-spon-row { display: flex; flex-wrap: wrap; gap: 8px; }
     .bk-spon { font-size: 13px; font-weight: bold; color: ${NAVY}; background: #f2f6fc; padding: 6px 12px; border-radius: 6px; }
+    .bk-qr { position: absolute; right: 0.8in; bottom: 0.9in; text-align: center; }
+    .bk-qr-cap { font-family: Arial, sans-serif; font-size: 9px; color: #6a7690; margin-top: 4px; width: 104px; }
     .bk-custom-img { width: 100%; border-radius: 6px; margin-top: 10px; }
     .bk-full .bk-custom-img { border-radius: 0; height: 100%; object-fit: cover; }
     .bk-footer { position: absolute; bottom: 0.4in; left: 0.8in; right: 0.8in; display: flex; justify-content: space-between; font-family: Arial, sans-serif; font-size: 10px; color: #8a93a6; border-top: 1px solid #e2e8f2; padding-top: 6px; }
@@ -203,6 +209,7 @@ function renderOne(
   m: EventMergeData,
   o: Record<string, Record<string, string>>,
   toc: { n: number; label: string }[],
+  qrDataUrl?: string,
 ): string {
   switch (p.type) {
     case "cover": return coverPage(m, o);
@@ -212,7 +219,7 @@ function renderOne(
     case "agenda": return agendaPage(m);
     case "presenters": return presentersPages(m) || `<div class="bk-body"><h2 class="bk-h2">Presenters</h2><p class="bk-p">Presenter lineup to be announced.</p></div>`;
     case "team": return teamPage();
-    case "sponsors_contact": return sponsorsContactPage(m);
+    case "sponsors_contact": return sponsorsContactPage(m, qrDataUrl);
     case "custom": return customPage(p);
     default: return `<div class="bk-body"></div>`;
   }

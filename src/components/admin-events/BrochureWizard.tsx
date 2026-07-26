@@ -325,6 +325,7 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
                   <a href={`/api/admin/events/brochure/${editionId}/download?variant=digital`} className="font-semibold text-[var(--blue)] hover:underline">Digital PDF</a>
                   <a href={`/api/admin/events/brochure/${editionId}/download?variant=print`} className="font-semibold text-[var(--blue)] hover:underline">Print PDF (bleed)</a>
+                  <a href={`/api/admin/events/brochure/${editionId}/qr`} target="_blank" rel="noreferrer" className="font-semibold text-[var(--blue)] hover:underline">QR code</a>
                   {!pdfWarning && (
                     <button type="button" onClick={togglePublish} disabled={busy} className="font-semibold text-[var(--blue)] hover:underline disabled:opacity-50">{published ? "Unpublish" : "Publish to event page"}</button>
                   )}

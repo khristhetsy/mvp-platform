@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { requirePermissionApi } from "@/lib/api/permissions";
 import { getEdition, markGenerated, uploadBrochurePdf } from "@/lib/event-hub/brochure/editions";
 import { renderBrochurePdf } from "@/lib/event-hub/brochure/pdf";
+import { brochureQrPng } from "@/lib/event-hub/brochure/qr";
 import { computePreflight } from "@/lib/event-hub/brochure/preflight";
 import { loadEventMergeData } from "@/lib/event-email/merge";
 
@@ -34,9 +35,10 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     let digitalPath: string | null = null;
     let pdfWarning: string | null = null;
     try {
+      const qr = await brochureQrPng(BASE_URL, id).catch(() => undefined);
       const [printBuf, digitalBuf] = await Promise.all([
-        renderBrochurePdf(merge, pages, edition.overrides, edition.size, { bleed: true }),
-        renderBrochurePdf(merge, pages, edition.overrides, edition.size, { bleed: false }),
+        renderBrochurePdf(merge, pages, edition.overrides, edition.size, { bleed: true, qr }),
+        renderBrochurePdf(merge, pages, edition.overrides, edition.size, { bleed: false, qr }),
       ]);
       printPath = await uploadBrochurePdf(auth.supabase, id, "print", printBuf);
       digitalPath = await uploadBrochurePdf(auth.supabase, id, "digital", digitalBuf);

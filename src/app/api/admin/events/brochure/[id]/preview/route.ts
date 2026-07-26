@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { requirePermissionApi } from "@/lib/api/permissions";
 import { getEdition } from "@/lib/event-hub/brochure/editions";
 import { renderBookletHTML } from "@/lib/event-hub/brochure/render";
+import { brochureQrDataUrl } from "@/lib/event-hub/brochure/qr";
 import { computePreflight } from "@/lib/event-hub/brochure/preflight";
 import { loadEventMergeData } from "@/lib/event-email/merge";
 
@@ -27,7 +28,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       ? edition.pageConfig.map((p) => (p.type === "presenters" ? { ...p, included: false } : p))
       : edition.pageConfig;
 
-    const html = renderBookletHTML(pages, merge, edition.overrides, edition.size);
+    const qrDataUrl = await brochureQrDataUrl(BASE_URL, id).catch(() => undefined);
+    const html = renderBookletHTML(pages, merge, edition.overrides, edition.size, { qrDataUrl });
     // Source values for the copy editor's "differs from event record" markers (§6).
     const source = { title: merge.title, tagline: merge.tagline };
     return NextResponse.json({ html, preflight, source });

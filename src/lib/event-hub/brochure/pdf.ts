@@ -33,7 +33,7 @@ export function renderBrochurePdf(
   pages: BrochurePage[],
   overrides: Record<string, Record<string, string>>,
   size: BrochureSize,
-  opts: { bleed?: boolean } = {},
+  opts: { bleed?: boolean; qr?: Buffer } = {},
 ): Promise<Buffer> {
   const bleed = opts.bleed ? BLEED : 0;
   const [tw, th] = TRIM[size];
@@ -191,6 +191,13 @@ export function renderBrochurePdf(
         doc.font("Helvetica-Bold").fontSize(20).fillColor(NAVY).text("Contact", ox + MARGIN, doc.y, { width: contentW });
         doc.moveDown(0.4);
         doc.font("Helvetica").fontSize(12).fillColor(INK).text(merge.organizerLine, { width: contentW });
+        if (opts.qr) {
+          const qs = 96;
+          const qx = ox + tw - MARGIN - qs;
+          const qy = oy + th - 130;
+          try { doc.image(opts.qr, qx, qy, { width: qs, height: qs }); } catch { /* ignore bad image */ }
+          doc.font("Helvetica").fontSize(8).fillColor(MUTED).text("Scan for the digital booklet", qx - 20, qy + qs + 4, { width: qs + 40, align: "center" });
+        }
         footer();
         break;
       }

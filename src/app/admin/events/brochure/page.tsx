@@ -49,6 +49,7 @@ export default async function BrochureLibraryPage() {
                     {hasPdf && (
                       <>
                         <a href={`/api/admin/events/brochure/${e.id}/download?variant=digital`} className="text-xs font-semibold text-[var(--blue)] hover:underline">Download PDF</a>
+                        <a href={`/api/admin/events/brochure/${e.id}/qr`} target="_blank" rel="noreferrer" className="text-xs font-semibold text-[var(--blue)] hover:underline">QR</a>
                         <BrochurePublishToggle id={e.id} published={e.published} />
                         {e.published && e.eventId && (
                           <Link href={`/admin/events/email?eventId=${e.eventId}&type=booklet&bookletEditionId=${e.id}`} className="text-xs font-semibold text-[var(--blue)] hover:underline">Send booklet →</Link>
