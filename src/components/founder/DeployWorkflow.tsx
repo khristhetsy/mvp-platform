@@ -298,15 +298,17 @@ export function DeployWorkflow({
                 <span>
                   {scoreReady ? (
                     <>
-                      <b>Automated outreach is running.</b> Your Investable Score is {investableScore} (threshold{" "}
-                      {outreachThreshold}). Approved investors are surfaced automatically below — there is nothing to
-                      configure here. If your score drops below {outreachThreshold}, automation pauses on its own.
+                      <b>Automated outreach is on.</b> Your Investable Score is {investableScore} (threshold{" "}
+                      {outreachThreshold}), so your Founder Preview one-pager is shared automatically with newly
+                      matched investors — a limited batch per week, skipping anyone who has unsubscribed, and never
+                      the same investor twice. Nothing to configure here. If your score drops below {outreachThreshold},
+                      it pauses on its own.
                     </>
                   ) : (
                     <>
-                      <b>Automated outreach is paused.</b> It unlocks at an Investable Score of {outreachThreshold}; you
-                      are at {investableScore}. Raise your score in Qualify to switch this on — nothing to configure
-                      here, it runs automatically once you clear the threshold.
+                      <b>Automated outreach is paused.</b> It turns on at an Investable Score of {outreachThreshold}; you
+                      are at {investableScore}. Raise your score in Qualify to switch it on — once you clear the
+                      threshold, your Founder Preview is shared with matched investors automatically.
                     </>
                   )}
                 </span>

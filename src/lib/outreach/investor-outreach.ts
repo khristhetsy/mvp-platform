@@ -115,6 +115,33 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
   return { created: true };
 }
 
+/**
+ * Founder-automatic outreach: ensure the company has an outreach campaign and
+ * that it's approved, attributing the approval to the founder who owns it.
+ *
+ * This is the "runs automatically once your Investable Score clears the
+ * threshold" path — the founder's own authorization stands in for the admin
+ * approval step (counsel-approved). Idempotent: safe to call on every page load.
+ * Real email dispatch is still gated by INVESTOR_OUTREACH_LIVE; this only queues.
+ * A paused campaign is left paused (the founder's off switch is respected).
+ */
+export async function ensureFounderAutomatedOutreach(
+  companyId: string,
+  founderId: string,
+): Promise<void> {
+  await createDraftFromMatch(companyId);
+  await client()
+    .from("investor_outreach_campaigns")
+    .update({
+      status: "approved",
+      approved_by: founderId,
+      approved_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("company_id", companyId)
+    .eq("status", "pending_approval");
+}
+
 export async function approveCampaign(campaignId: string, adminId: string): Promise<boolean> {
   const { error } = await client()
     .from("investor_outreach_campaigns")
@@ -206,10 +233,20 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
       // and are excluded from outreach audiences.
       const { data: companyRow } = await db
         .from("companies")
-        .select("company_name, industry, revenue_stage")
+        .select("company_name, industry, revenue_stage, slug, is_published")
         .eq("id", campaign.company_id)
         .maybeSingle();
-      const comp = (companyRow ?? {}) as { company_name?: string; industry?: string | null; revenue_stage?: string | null };
+      const comp = (companyRow ?? {}) as {
+        company_name?: string;
+        industry?: string | null;
+        revenue_stage?: string | null;
+        slug?: string | null;
+        is_published?: boolean | null;
+      };
+
+      // Founder Preview one-pager link — only when the company has published it.
+      const appBase = (process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com").replace(/\/$/, "");
+      const previewUrl = comp.is_published && comp.slug ? `${appBase}/f/${comp.slug}` : null;
 
       const memberIds = batch.map((r) => r.investor_ref).filter((ref) => !isProspectInvestorId(ref));
       const contactById = new Map<string, { email: string | null; name: string | null }>();
@@ -239,6 +276,7 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
           stage: comp.revenue_stage ?? null,
           investorFirstName: firstName,
           unsubscribeUrl: buildUnsubscribeUrl(email),
+          previewUrl,
         });
         const ok = await sendEmail({ to: email, subject, html, text });
         if (ok) {

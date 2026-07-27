@@ -19,6 +19,7 @@ import { buildProfileCompletion } from "@/lib/data/founder-readiness";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { loadFounderInvestorHub } from "@/lib/founder-crm/load-founder-investor-hub";
 import { FounderInvestorHubPanels } from "@/components/FounderInvestorHubPanels";
+import { ensureFounderAutomatedOutreach } from "@/lib/outreach/investor-outreach";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
@@ -248,6 +249,19 @@ export default async function FounderDeployPage() {
     for (const row of pipelineList) {
       const score = scores.get(row.investorId);
       if (score) partnerViews.set(row.investorId, founderFacingPartnerView(score));
+    }
+  }
+
+  // Founder-automatic outreach: once the Investable Score clears the threshold,
+  // ensure the company's outreach campaign exists and is approved so the weekly
+  // send pass shares the Founder Preview with matched investors. Idempotent and
+  // non-blocking — the Deploy view must never fail on outreach setup. (Real email
+  // dispatch is still gated by INVESTOR_OUTREACH_LIVE.)
+  if (company && investableScore >= OUTREACH_THRESHOLD) {
+    try {
+      await ensureFounderAutomatedOutreach(company.id, profile.id);
+    } catch {
+      // Non-fatal.
     }
   }
 
