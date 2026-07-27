@@ -146,10 +146,10 @@ function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; labe
       aria-checked={on}
       aria-label={label}
       onClick={onClick}
-      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${on ? "bg-indigo-600" : "bg-slate-300"}`}
+      className={`relative h-[22px] w-10 shrink-0 rounded-full outline-none transition-colors focus-visible:ring-2 focus-visible:ring-indigo-300 ${on ? "bg-indigo-600" : "bg-slate-300"}`}
     >
       <span
-        className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${on ? "translate-x-4" : "translate-x-0.5"}`}
+        className={`absolute top-0.5 h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-transform ${on ? "translate-x-[20px]" : "translate-x-0.5"}`}
       />
     </button>
   );
@@ -166,14 +166,17 @@ function SettingsPanel() {
   return (
     <div className="space-y-5">
       {TOGGLE_GROUPS.map((g) => (
-        <div key={g.group} className="rounded-xl border border-slate-200 bg-white p-4">
-          <p className="mb-3 text-sm font-medium text-slate-900">{g.group}</p>
-          <div className="space-y-3">
+        <div key={g.group} className="rounded-xl border border-slate-200 bg-white px-4 py-1">
+          <p className="pt-3 pb-1.5 text-sm font-medium text-slate-900">{g.group}</p>
+          <div>
             {g.items.map((i) => (
-              <div key={i.key} className="flex items-center justify-between gap-4">
+              <div
+                key={i.key}
+                className="flex items-center justify-between gap-4 border-t border-slate-100 py-3 first:border-t-0"
+              >
                 <div className="min-w-0">
                   <p className="text-sm text-slate-700">{i.label}</p>
-                  {i.hint ? <p className="text-xs text-slate-400">{i.hint}</p> : null}
+                  {i.hint ? <p className="mt-0.5 text-xs text-slate-400">{i.hint}</p> : null}
                 </div>
                 <Toggle
                   on={state[i.key]}
