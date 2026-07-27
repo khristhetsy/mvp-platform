@@ -197,7 +197,7 @@ export function CreateListWizard() {
         <div>
           {isFounder ? (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
-              <div><label style={label}>Journey stage</label><select value={ff.stage} onChange={(e) => setFounder({ stage: e.target.value })} style={sel}><option value="">Any</option>{STAGES.map((s) => <option key={s} value={s}>{cap(s)}</option>)}</select></div>
+              <div><label style={label}>Progress stage</label><select value={ff.stage} onChange={(e) => setFounder({ stage: e.target.value })} style={sel}><option value="">Any</option>{STAGES.map((s) => <option key={s} value={s}>{cap(s)}</option>)}</select></div>
               <div><label style={label}>Sector</label><select value={ff.sector} onChange={(e) => setFounder({ sector: e.target.value })} style={sel}><option value="">Any</option>{EVENT_SECTORS.map((s) => <option key={s.slug} value={s.label}>{s.label}</option>)}</select></div>
               <div><label style={label}>Readiness ≥</label><select value={ff.minReadiness} onChange={(e) => setFounder({ minReadiness: e.target.value })} style={sel}><option value="">Any</option><option value="50">50</option><option value="60">60</option><option value="70">70</option><option value="80">80</option></select></div>
               <div><label style={label}>Jurisdiction</label><input value={ff.jurisdiction} onChange={(e) => setFounder({ jurisdiction: e.target.value })} placeholder="e.g. Delaware" style={sel} /></div>

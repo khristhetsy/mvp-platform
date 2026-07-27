@@ -137,7 +137,7 @@ export function AdminCompanyWorkspace({
         <div className="space-y-6">
           <CompanyWorkspaceMetrics data={data} />
 
-          <PageSection title="Founder Journey" subtitle="Current stage, gates, and what's pending to advance">
+          <PageSection title="Founder Progress" subtitle="Current stage, gates, and what's pending to advance">
             <FounderJourneyPanel journey={data.journey} companyId={data.company.id} />
           </PageSection>
 
