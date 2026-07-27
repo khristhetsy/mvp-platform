@@ -17,6 +17,8 @@ import { founderFacingPartnerView, type FounderFacingPartner } from "@/lib/inves
 import { loadFounderInvestorBoard } from "@/lib/founder/private-market";
 import { buildProfileCompletion } from "@/lib/data/founder-readiness";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
+import { loadFounderInvestorHub } from "@/lib/founder-crm/load-founder-investor-hub";
+import { FounderInvestorHubPanels } from "@/components/FounderInvestorHubPanels";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
@@ -202,21 +204,24 @@ export default async function FounderDeployPage() {
   // Founder-facing investor standing (tier + facts only — never the score).
   const partnerViews = new Map<string, FounderFacingPartner>();
   let board: Awaited<ReturnType<typeof loadFounderInvestorBoard>> | null = null;
+  let hub: Awaited<ReturnType<typeof loadFounderInvestorHub>> | null = null;
   let investableScore = 0;
 
   if (company) {
     const supabase = await createServerSupabaseClient();
     const serviceSupabase = createServiceRoleClient();
     const pledgeCompanyId = await getFounderPledgeCompanyId(serviceSupabase, profile.id, company.id);
-    const [activity, pledgeSummary, loadedBoard, journeyState] = await Promise.all([
+    const [activity, pledgeSummary, loadedBoard, journeyState, loadedHub] = await Promise.all([
       listFounderInvestorActivity(supabase, company.id),
       getCompanyPledgeSummary(serviceSupabase, pledgeCompanyId),
       loadFounderInvestorBoard(company),
       evaluateFounderJourney(supabase, profile.id),
+      loadFounderInvestorHub(company, profile.id),
     ]);
     crmView = buildFounderInvestorCrmView(activity, pledgeSummary);
     pipelineList = buildPipelineList(crmView);
     board = loadedBoard;
+    hub = loadedHub;
 
     // Investable Score — same composite the Qualify stage shows, so the gate here
     // matches what the founder saw there. Readiness-weighted, plus profile and gates.
@@ -381,9 +386,40 @@ export default async function FounderDeployPage() {
       />
     );
 
-  // ---- Step 2 · Outreach → Manual (Outreach & planning tools + pipeline) ----
+  // ---- Step 2 · Outreach → Manual (Investor CRM + Outreach & planning tools + pipeline) ----
   const manualNode = (
     <>
+      {company && hub ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="mb-3">
+            <h2 className="text-sm font-medium text-slate-900">Investor CRM</h2>
+            <p className="text-xs text-slate-500">
+              Add investors, import a CSV, and run your private outreach — all in one place.
+            </p>
+          </div>
+          <FounderInvestorHubPanels
+            companyName={company.company_name}
+            contacts={hub.contacts}
+            targets={hub.targets}
+            campaigns={hub.campaigns}
+            readiness={hub.readiness}
+            platformMatches={hub.platformMatches}
+            followUpCount={hub.followUpCount}
+            socialDrafts={hub.socialDrafts}
+            socialReadiness={hub.socialReadiness}
+            companySnapshot={{
+              companyName: company.company_name,
+              industry: company.industry ?? null,
+              businessDescription: company.business_description ?? null,
+              revenueStage: company.revenue_stage ?? null,
+              fundingAmount: company.funding_amount ? Number(company.funding_amount) : null,
+              geography: [company.state, company.country].filter(Boolean).join(", ") || null,
+              founderGoals: company.founder_goals ?? null,
+            }}
+          />
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {MANUAL_TOOLS.map((tool) => (
           <Link
