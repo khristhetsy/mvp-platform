@@ -8,6 +8,13 @@ import { BrochureCanvas } from "./BrochureCanvas";
 type PickerEvent = { id: string; title: string; slug: string; status: string; startsAt: string | null; coverUrl: string | null };
 type Preflight = { warnings: { level: string; text: string }[]; excludePresenters: boolean };
 
+// Natural page size in CSS px (96dpi) — the preview scales to fit the panel width.
+const PAGE_PX: Record<BrochureSize, [number, number]> = {
+  letter: [816, 1056],
+  a4: [794, 1123],
+  square: [768, 768],
+};
+
 export function BrochureWizard({ initialEventId, baseEditionId }: { initialEventId?: string; baseEditionId?: string }) {
   const [step, setStep] = useState(1);
   const [events, setEvents] = useState<PickerEvent[]>([]);
@@ -28,6 +35,17 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [pdfWarning, setPdfWarning] = useState<string | null>(null);
   const [published, setPublished] = useState(false);
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const [previewW, setPreviewW] = useState(0);
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+    const measure = () => setPreviewW(el.clientWidth);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [step, editingKey, panelOpen]);
 
   useEffect(() => {
     void (async () => {
@@ -450,9 +468,24 @@ export function BrochureWizard({ initialEventId, baseEditionId }: { initialEvent
               </>
             ) : (
               <>
-                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Booklet preview {busy && <span className="font-normal">· rendering…</span>}</p>
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Booklet preview {busy && <span className="font-normal">· rendering…</span>}</p>
+                  <span className="text-[10px] text-[var(--text-muted)]">Fit · {Math.round((previewW ? Math.min(1, previewW / PAGE_PX[size][0]) : 0.6) * 100)}%</span>
+                </div>
                 <div className="rounded-xl border border-[var(--border-subtle)] bg-slate-200 p-3">
-                  <iframe title="Booklet preview" srcDoc={html} style={{ width: "100%", height: 720, border: "none", background: "#dfe3ea", borderRadius: 8 }} />
+                  <div ref={previewRef} className="overflow-auto" style={{ maxHeight: 700 }}>
+                    {(() => {
+                      const [pw, ph] = PAGE_PX[size];
+                      const includedCount = Math.max(1, pages.filter((p) => p.included).length);
+                      const docH = includedCount * (ph + 16) + 24;
+                      const fit = previewW ? Math.min(1, previewW / pw) : 0.6;
+                      return (
+                        <div style={{ width: pw * fit, height: docH * fit, margin: "0 auto" }}>
+                          <iframe title="Booklet preview" srcDoc={html} style={{ width: pw, height: docH, transform: `scale(${fit})`, transformOrigin: "top left", border: "none", background: "#dfe3ea", display: "block" }} />
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
               </>
             )}
