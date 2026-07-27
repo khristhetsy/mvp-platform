@@ -20,6 +20,7 @@ import {
   Terminal,
   User,
 } from "lucide-react";
+import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import { NotificationBellDropdown } from "@/components/NotificationBellDropdown";
 import { WorkspaceBreadcrumbs } from "@/components/ui/WorkspaceBreadcrumbs";
 import type { WorkspaceId } from "@/lib/workspace-nav";
@@ -152,6 +153,13 @@ function ProfileDropdown({
   }, [open]);
 
   async function handleSignOut() {
+    const ok = await confirmDialog({
+      title: "Log out of iCapOS?",
+      message: "You'll be signed out of your workspace. Any saved work stays safe.",
+      confirmLabel: "Log out",
+      cancelLabel: "Stay signed in",
+    });
+    if (!ok) return;
     setSigningOut(true);
     try {
       await fetch("/auth/logout", { method: "POST" });

@@ -7,6 +7,7 @@ import type { Company } from "@/lib/supabase/types";
 import { FormField } from "@/components/ui/FormField";
 import { AIFieldHelper } from "@/components/ui/AIFieldHelper";
 import { useFormValidation, type ZodFlatErrors } from "@/hooks/useFormValidation";
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 import { industryOptionsFor } from "@/lib/industries";
 
 /* ── Revenue stage options ──────────────────────────────────── */
@@ -157,6 +158,19 @@ export function CompanySettingsForm({ company }: Props) {
   const [logoDragging, setLogoDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Unsaved-changes guard: compare the live form against the last-saved baseline.
+  const [savedBaseline, setSavedBaseline] = useState<string>("");
+  const currentSnapshot = JSON.stringify([
+    companyName, description, website, industry, logoUrl, revenueStage,
+    fundingAmount, useOfFunds, founderGoals, teamSummary, country, state,
+    incorporationJurisdiction,
+  ]);
+  if (savedBaseline === "") {
+    // Capture the initial values once, on first render.
+    setSavedBaseline(currentSnapshot);
+  }
+  useUnsavedChanges(savedBaseline !== "" && currentSnapshot !== savedBaseline);
+
   const uploadLogo = useCallback(async (file: File) => {
     if (!company) return;
     setLogoUploading(true);
@@ -254,6 +268,12 @@ export function CompanySettingsForm({ company }: Props) {
     }
 
     setMessage({ type: "success", text: "Settings saved." });
+    // Clear the unsaved-changes guard — the current values are now the baseline.
+    setSavedBaseline(JSON.stringify([
+      companyName, description, website, industry, logoUrl, revenueStage,
+      fundingAmount, useOfFunds, founderGoals, teamSummary, country, state,
+      incorporationJurisdiction,
+    ]));
     router.refresh();
   }
 
