@@ -274,7 +274,7 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     title: "Investors",
     items: [
-      { href: "/founder/private-market", label: "Private Market", minStage: "qualify" },
+      // Private Market relocated into Deploy → Outreach → Automated (single entry point).
       { href: "/founder/matches", label: "Investor matches", minStage: "qualify" },
       // Reg CF founders only — private (Reg D) founders are never prompted toward
       // public exposure (dual-lane spec §3.2). Gated in WorkspaceSidebar.
@@ -317,16 +317,7 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/founder/kpi-glossary", label: "KPI glossary", minStage: "qualify" },
         ],
       },
-      {
-        href: "/founder/email-sequence",
-        label: "Outreach & planning",
-        children: [
-          { href: "/founder/email-sequence", label: "Email sequences", minStage: "qualify" },
-          { href: "/founder/investor-update", label: "Investor update builder", minStage: "qualify" },
-          { href: "/founder/funding-timeline", label: "Funding timeline", minStage: "qualify" },
-          { href: "/founder/due-diligence", label: "Due diligence checklist", minStage: "qualify" },
-        ],
-      },
+      // Outreach & planning relocated into Deploy → Outreach → Manual (single entry point).
       { href: "/events", label: "Events", minStage: "qualify" },
     ],
   },

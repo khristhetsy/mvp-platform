@@ -14,16 +14,31 @@ import {
 } from "@/lib/data/investor-pledges";
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 import { founderFacingPartnerView, type FounderFacingPartner } from "@/lib/investor-rating/founder-view";
+import { loadFounderInvestorBoard } from "@/lib/founder/private-market";
+import { buildProfileCompletion } from "@/lib/data/founder-readiness";
+import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
 import { FounderFacingInvestorTier } from "@/components/founder/FounderFacingInvestorTier";
+import { FounderPrivateMarketBoard } from "@/components/founder/FounderPrivateMarketBoard";
+import { FounderPrivateMarketSummaryCards } from "@/components/founder/FounderPrivateMarketSummaryCards";
+import { FounderPrivateMarketTicker } from "@/components/founder/FounderPrivateMarketTicker";
+import { DeployWorkflow, type DeployAnalytics, type DeployInsight } from "@/components/founder/DeployWorkflow";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 export const dynamic = "force-dynamic";
 
-type FunnelStage = { label: string; value: number };
+const OUTREACH_THRESHOLD = 70;
+
+/** Outreach & planning tools — relocated from the sidebar into Deploy → Outreach → Manual. */
+const MANUAL_TOOLS: { href: string; label: string; blurb: string }[] = [
+  { href: "/founder/email-sequence", label: "Email sequences", blurb: "Build a multi-step, personalised investor sequence." },
+  { href: "/founder/investor-update", label: "Investor update builder", blurb: "Draft and send a polished monthly update." },
+  { href: "/founder/funding-timeline", label: "Funding timeline", blurb: "Map milestones and target close dates." },
+  { href: "/founder/due-diligence", label: "Due diligence checklist", blurb: "Track what investors will ask for before they commit." },
+];
 
 const STAGE_BADGE: Record<FounderInvestorRelationRow["actionType"], string> = {
   pledged: "bg-emerald-50 text-emerald-700 ring-emerald-100",
@@ -75,50 +90,106 @@ function buildPipelineList(view: ReturnType<typeof buildFounderInvestorCrmView>)
   return result;
 }
 
-function FunnelBar({ stages }: { stages: FunnelStage[] }) {
-  const max = Math.max(1, ...stages.map((s) => s.value));
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {stages.map((stage) => (
-        <div key={stage.label} className="rounded-xl border border-slate-200 bg-white p-4">
-          <p className="text-2xl font-semibold text-slate-900">{stage.value}</p>
-          <p className="mt-0.5 text-xs text-slate-500">{stage.label}</p>
-          <div className="mt-2 h-1.5 rounded-full bg-slate-100">
-            <div
-              className="h-1.5 rounded-full bg-indigo-500"
-              style={{ width: `${Math.round((stage.value / max) * 100)}%` }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+/** Turn the real pipeline numbers into expandable AI insight cards for the Analytics step. */
+function buildDeployInsights(input: {
+  investableScore: number;
+  followUpsNeeded: number;
+  interestedCount: number;
+  pledgedCount: number;
+  reachedOut: number;
+  strongCount: number;
+  published: boolean;
+}): DeployInsight[] {
+  const insights: DeployInsight[] = [];
 
-function ToolLaunchers() {
-  const tools = [
-    { label: "Sequence builder", topic: "Build a multi-step outreach sequence" },
-    { label: "Outreach coach", topic: "Get coaching on investor messaging" },
-    { label: "Update broadcaster", topic: "Send an investor update" },
-  ];
-  return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      {tools.map((tool) => (
-        <div
-          key={tool.label}
-          className="flex flex-col rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-4"
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-700">{tool.label}</p>
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-              Soon
-            </span>
-          </div>
-          <p className="mt-1 text-xs text-slate-500">{tool.topic}</p>
-        </div>
-      ))}
-    </div>
-  );
+  if (input.investableScore < OUTREACH_THRESHOLD) {
+    insights.push({
+      id: "score-gate",
+      title: `Investable Score is ${input.investableScore} — automation is paused`,
+      summary: `Automated outreach unlocks at ${OUTREACH_THRESHOLD}. You are ${OUTREACH_THRESHOLD - input.investableScore} point${OUTREACH_THRESHOLD - input.investableScore === 1 ? "" : "s"} away.`,
+      recommendations: [
+        "Finish any missing profile fields — description, funding amount, and use of funds move the score most.",
+        "Upload the remaining required documents in Readiness to lift the readiness component.",
+        "Until then, work the Manual tab so momentum doesn't stall.",
+      ],
+      tone: "warn",
+    });
+  } else {
+    insights.push({
+      id: "score-ok",
+      title: "Automated outreach is live",
+      summary: `Your Investable Score of ${input.investableScore} clears the ${OUTREACH_THRESHOLD} threshold.`,
+      recommendations: [
+        "No action needed — approved investors are surfaced automatically.",
+        "Keep your profile current so the score stays above the threshold.",
+      ],
+      tone: "good",
+    });
+  }
+
+  if (!input.published) {
+    insights.push({
+      id: "not-published",
+      title: "Your public profile isn't published",
+      summary: "Investors can't see your one-pager until you publish it, which caps both outreach lanes.",
+      recommendations: [
+        "Open Step 1 · Public Profile and toggle Publish once the preview looks right.",
+        "Confirm the description and raise amount read well before you flip it live.",
+      ],
+      tone: "warn",
+    });
+  }
+
+  if (input.followUpsNeeded > 0) {
+    insights.push({
+      id: "followups",
+      title: `${input.followUpsNeeded} investor${input.followUpsNeeded === 1 ? "" : "s"} waiting on a follow-up`,
+      summary: "Follow-up debt is the fastest thing to lose a warm investor over.",
+      recommendations: [
+        "Clear the follow-ups in the Manual tab first — they're already interested.",
+        "Turn on follow-up reminders in Settings so none slip again.",
+      ],
+      tone: "warn",
+    });
+  }
+
+  if (input.strongCount > 0 && input.reachedOut === 0) {
+    insights.push({
+      id: "strong-untouched",
+      title: `${input.strongCount} strong-fit investor${input.strongCount === 1 ? "" : "s"} not yet contacted`,
+      summary: "High-fit matches are surfaced but no outreach has gone out to them.",
+      recommendations: [
+        "If automation is live, it will reach them on the next pass — no action needed.",
+        "For the very best fits, add a personal manual note to stand out.",
+      ],
+      tone: "info",
+    });
+  }
+
+  if (input.interestedCount > 0 && input.pledgedCount === 0) {
+    insights.push({
+      id: "no-pledge",
+      title: "Interest, but no pledges yet",
+      summary: `${input.interestedCount} interested and zero pledged — the ask may need sharpening.`,
+      recommendations: [
+        "Use the Investor update builder to share a concrete milestone and a clear ask.",
+        "Make sure your funding timeline shows a close date investors can rally to.",
+      ],
+      tone: "info",
+    });
+  }
+
+  if (insights.length === 0) {
+    insights.push({
+      id: "steady",
+      title: "Nothing urgent — keep the cadence",
+      summary: "No gaps in outreach right now.",
+      recommendations: ["Check back after your next batch of activity for fresh recommendations."],
+      tone: "good",
+    });
+  }
+
+  return insights;
 }
 
 export default async function FounderDeployPage() {
@@ -130,17 +201,36 @@ export default async function FounderDeployPage() {
   let pipelineList: FounderInvestorRelationRow[] = [];
   // Founder-facing investor standing (tier + facts only — never the score).
   const partnerViews = new Map<string, FounderFacingPartner>();
+  let board: Awaited<ReturnType<typeof loadFounderInvestorBoard>> | null = null;
+  let investableScore = 0;
 
   if (company) {
     const supabase = await createServerSupabaseClient();
     const serviceSupabase = createServiceRoleClient();
     const pledgeCompanyId = await getFounderPledgeCompanyId(serviceSupabase, profile.id, company.id);
-    const [activity, pledgeSummary] = await Promise.all([
+    const [activity, pledgeSummary, loadedBoard, journeyState] = await Promise.all([
       listFounderInvestorActivity(supabase, company.id),
       getCompanyPledgeSummary(serviceSupabase, pledgeCompanyId),
+      loadFounderInvestorBoard(company),
+      evaluateFounderJourney(supabase, profile.id),
     ]);
     crmView = buildFounderInvestorCrmView(activity, pledgeSummary);
     pipelineList = buildPipelineList(crmView);
+    board = loadedBoard;
+
+    // Investable Score — same composite the Qualify stage shows, so the gate here
+    // matches what the founder saw there. Readiness-weighted, plus profile and gates.
+    const readiness = journeyState.conditions.readinessScore ?? 0;
+    const profilePercent = buildProfileCompletion(company).percent;
+    investableScore = Math.round(
+      Math.min(
+        100,
+        0.6 * readiness +
+          0.3 * profilePercent +
+          (journeyState.conditions.onboardingComplete ? 5 : 0) +
+          (journeyState.conditions.requiredDocsUploaded ? 5 : 0),
+      ),
+    );
 
     // Founder-safe Partner view for each shown investor. Reads cached partner-score
     // snapshots in a single query (refreshed by the daily orchestration cron), with
@@ -156,13 +246,238 @@ export default async function FounderDeployPage() {
     }
   }
 
-  const funnel: FunnelStage[] = [
-    { label: "Interested", value: crmView?.summary.totalInterestedInvestors ?? 0 },
-    { label: "Intro requested", value: crmView?.summary.introRequests ?? 0 },
-    { label: "Follow-up", value: crmView?.summary.followUpsNeeded ?? 0 },
-    { label: "Pledged", value: crmView?.sections.pledged.length ?? 0 },
-  ];
   const followUpsNeeded = crmView?.summary.followUpsNeeded ?? 0;
+  const pledgedCount = crmView?.sections.pledged.length ?? 0;
+  const interestedCount = crmView?.summary.totalInterestedInvestors ?? 0;
+  const introRequests = crmView?.summary.introRequests ?? 0;
+
+  // Analytics: automated (Private Market reach) vs. manual (CRM funnel), with
+  // AI insight cards derived from the real numbers.
+  const analytics: DeployAnalytics = {
+    automated: [
+      { label: "Universe", value: board?.summary.investorUniverse ?? 0 },
+      { label: "Surfaced", value: board?.rows.length ?? 0 },
+      { label: "Reached out", value: board?.summary.reachedOut ?? 0 },
+      { label: "Strong fit", value: board?.summary.strongCount ?? 0 },
+    ],
+    manual: [
+      { label: "Interested", value: interestedCount },
+      { label: "Intro req.", value: introRequests },
+      { label: "Follow-up", value: followUpsNeeded },
+      { label: "Pledged", value: pledgedCount },
+    ],
+    insights: buildDeployInsights({
+      investableScore,
+      followUpsNeeded,
+      interestedCount,
+      pledgedCount,
+      reachedOut: board?.summary.reachedOut ?? 0,
+      strongCount: board?.summary.strongCount ?? 0,
+      published: company?.is_published ?? false,
+    }),
+  };
+
+  // ---- Step 1 · Public Profile (preview snapshot + publish state + links) ----
+  const isPublished = company?.is_published ?? false;
+  const publicHref = company?.slug ? `/f/${company.slug}` : null;
+  const profileSnapshot: { label: string; value: string }[] = company
+    ? [
+        { label: "Company", value: company.company_name ?? "—" },
+        { label: "Industry", value: company.industry ?? "—" },
+        {
+          label: "Raise",
+          value: company.funding_amount ? formatPledgeTotal(company.funding_amount, "USD") : "—",
+        },
+        { label: "Revenue stage", value: company.revenue_stage ?? "—" },
+      ]
+    : [];
+
+  const publicProfileNode = (
+    <>
+      <div
+        className={`flex flex-col gap-3 rounded-xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${
+          isPublished ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"
+        }`}
+      >
+        <div>
+          <p className={`text-sm font-semibold ${isPublished ? "text-emerald-900" : "text-amber-900"}`}>
+            {isPublished ? "Published — investors can see your one-pager" : "Not published yet"}
+          </p>
+          <p className={`text-xs ${isPublished ? "text-emerald-700" : "text-amber-700"}`}>
+            {isPublished
+              ? "This is what appears when an investor opens your profile."
+              : "Publish from your profile settings once the preview looks right — investors can't see it until you do."}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Link
+            href="/founder/preview"
+            className="rounded-full border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            View public page
+          </Link>
+          <Link
+            href="/founder/settings"
+            className="rounded-full bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-500"
+          >
+            Edit profile ↗
+          </Link>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <p className="mb-3 text-sm font-medium text-slate-900">Profile snapshot</p>
+        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {profileSnapshot.map((item) => (
+            <div key={item.label}>
+              <dt className="text-xs text-slate-400">{item.label}</dt>
+              <dd className="truncate text-sm font-medium text-slate-800">{item.value}</dd>
+            </div>
+          ))}
+        </dl>
+        {company?.business_description ? (
+          <p className="mt-3 line-clamp-3 text-sm text-slate-600">{company.business_description}</p>
+        ) : null}
+        <p className="mt-3 text-xs text-slate-400">
+          Editing happens in one place — your profile settings — so the preview, your public page, and investor
+          matching always stay in sync.
+        </p>
+        {publicHref && isPublished ? (
+          <a
+            href={publicHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-block text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+          >
+            Open live link {publicHref} ↗
+          </a>
+        ) : null}
+      </div>
+    </>
+  );
+
+  // ---- Step 2 · Outreach → Automated (Private Market embed, relocated here) ----
+  const automatedNode =
+    company && board ? (
+      <>
+        <FounderPrivateMarketTicker rows={board.rows} />
+        <FounderPrivateMarketSummaryCards summary={board.summary} rankedCount={board.rows.length} />
+        <div className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-600">
+          <span aria-hidden="true">ⓘ</span>
+          <span>
+            <b className="text-slate-800">Information display only.</b> Match scores reflect rules-based fit to your
+            company profile. Contact details are hidden and introductions run through iCapOS. Nothing here is investment
+            advice, a solicitation, or a guarantee of funding.
+          </span>
+        </div>
+        <FounderPrivateMarketBoard rows={board.rows} />
+      </>
+    ) : (
+      <EmptyState
+        title="Link a company to see automated matches"
+        description="Complete your company setup so investors can be ranked to your raise here."
+        secondaryActionLabel="Edit profile"
+        secondaryActionHref="/founder/settings"
+      />
+    );
+
+  // ---- Step 2 · Outreach → Manual (Outreach & planning tools + pipeline) ----
+  const manualNode = (
+    <>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {MANUAL_TOOLS.map((tool) => (
+          <Link
+            key={tool.href}
+            href={tool.href}
+            className="flex flex-col rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50/40"
+          >
+            <span className="flex items-center justify-between">
+              <span className="text-sm font-medium text-slate-900">{tool.label}</span>
+              <span className="text-slate-400">→</span>
+            </span>
+            <span className="mt-1 text-xs text-slate-500">{tool.blurb}</span>
+          </Link>
+        ))}
+      </div>
+
+      {followUpsNeeded > 0 ? (
+        <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-amber-900">
+            {followUpsNeeded} investor{followUpsNeeded === 1 ? "" : "s"} need a follow-up — pick targets from your
+            matches and keep the raise moving.
+          </p>
+          <Link
+            href="/founder/investors"
+            className="shrink-0 rounded-full bg-amber-600 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-amber-500"
+          >
+            Review follow-ups →
+          </Link>
+        </div>
+      ) : null}
+
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-slate-900">{t("investor_pipeline_2")}</h2>
+          <Link href="/founder/investors" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+            Open full investor CRM →
+          </Link>
+        </div>
+        {pipelineList.length === 0 ? (
+          <EmptyState
+            title={t("no_investor_activity_yet")}
+            description={t("as_investors_express_interest_or_request_intro")}
+            secondaryActionLabel="Open investor CRM"
+            secondaryActionHref="/founder/investors"
+          />
+        ) : (
+          <ul className="space-y-2">
+            {pipelineList.map((row) => {
+              const amount = formatRowAmount(row);
+              const isFollowUp = row.actionType === "follow_up" || row.pipelineStage === "follow_up";
+              return (
+                <li
+                  key={row.id}
+                  className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3.5"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-xs font-semibold text-indigo-700">
+                    {initials(row.investorName)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-slate-900">{row.investorName}</p>
+                    <p className="text-xs text-slate-500">
+                      {amount ? `${amount} · ` : ""}
+                      {formatDate(row.lastActivityAt)}
+                    </p>
+                    {partnerViews.has(row.investorId) ? (
+                      <div className="mt-1.5">
+                        <FounderFacingInvestorTier view={partnerViews.get(row.investorId)!} showFacts={false} />
+                      </div>
+                    ) : null}
+                  </div>
+                  <span
+                    className={[
+                      "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset",
+                      STAGE_BADGE[row.actionType],
+                    ].join(" ")}
+                  >
+                    {row.actionLabel}
+                  </span>
+                  {isFollowUp ? (
+                    <Link
+                      href="/founder/investors"
+                      className="shrink-0 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                    >
+                      Nudge
+                    </Link>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+    </>
+  );
 
   return (
     <FounderAppShell
@@ -184,101 +499,19 @@ export default async function FounderDeployPage() {
             eyebrow={t("stage_3_deploy")}
             title={t("run_your_raise")}
             description={t("track_your_investor_pipeline_keep_momentum_wit")}
-            actions={
-              <Link
-                href="/founder/investors"
-                className="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-500"
-              >
-                Open full investor CRM →
-              </Link>
-            }
           />
 
-          {/* Pipeline funnel */}
-          <FunnelBar stages={funnel} />
-
-          {/* Follow-up nudge */}
-          {followUpsNeeded > 0 ? (
-            <div className="mt-5 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-amber-900">
-                {followUpsNeeded} investor{followUpsNeeded === 1 ? "" : "s"} need a follow-up — keep your raise
-                moving.
-              </p>
-              <Link
-                href="/founder/investors"
-                className="shrink-0 rounded-full bg-amber-600 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-amber-500"
-              >
-                Review follow-ups →
-              </Link>
-            </div>
-          ) : null}
-
-          {/* Investor pipeline list */}
-          <section className="mt-6">
-            <h2 className="mb-3 text-sm font-medium text-slate-900">{t("investor_pipeline_2")}</h2>
-            {pipelineList.length === 0 ? (
-              <EmptyState
-                title={t("no_investor_activity_yet")}
-                description={t("as_investors_express_interest_or_request_intro")}
-                secondaryActionLabel="Open investor CRM"
-                secondaryActionHref="/founder/investors"
-              />
-            ) : (
-              <ul className="space-y-2">
-                {pipelineList.map((row) => {
-                  const amount = formatRowAmount(row);
-                  const isFollowUp = row.actionType === "follow_up" || row.pipelineStage === "follow_up";
-                  return (
-                    <li
-                      key={row.id}
-                      className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3.5"
-                    >
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-xs font-semibold text-indigo-700">
-                        {initials(row.investorName)}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-slate-900">{row.investorName}</p>
-                        <p className="text-xs text-slate-500">
-                          {amount ? `${amount} · ` : ""}
-                          {formatDate(row.lastActivityAt)}
-                        </p>
-                        {partnerViews.has(row.investorId) ? (
-                          <div className="mt-1.5">
-                            <FounderFacingInvestorTier
-                              view={partnerViews.get(row.investorId)!}
-                              showFacts={false}
-                            />
-                          </div>
-                        ) : null}
-                      </div>
-                      <span
-                        className={[
-                          "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset",
-                          STAGE_BADGE[row.actionType],
-                        ].join(" ")}
-                      >
-                        {row.actionLabel}
-                      </span>
-                      {isFollowUp ? (
-                        <Link
-                          href="/founder/investors"
-                          className="shrink-0 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100"
-                        >
-                          Nudge
-                        </Link>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
-
-          {/* Outreach tools */}
-          <section className="mt-6">
-            <h2 className="mb-3 text-sm font-medium text-slate-900">{t("outreach_tools")}</h2>
-            <ToolLaunchers />
-          </section>
+          <div className="mt-4">
+            <DeployWorkflow
+              companyName={company?.company_name ?? "Your company"}
+              investableScore={investableScore}
+              outreachThreshold={OUTREACH_THRESHOLD}
+              publicProfile={publicProfileNode}
+              automated={automatedNode}
+              manual={manualNode}
+              analytics={analytics}
+            />
+          </div>
         </FounderFeatureGate>
       </FounderJourneyGate>
     </FounderAppShell>
