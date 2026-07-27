@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { getTranslations } from "next-intl/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
+import { buildProfileCompletion } from "@/lib/data/founder-readiness";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -110,6 +111,25 @@ function getQualifyRequirements(state: FounderJourneyState): Requirement[] {
   ];
 }
 
+// Investable Score gates automated investor outreach at this level.
+const OUTREACH_THRESHOLD = 70;
+
+/** Circular 0–100 score gauge (server-rendered SVG). */
+function ScoreGauge({ score, stroke }: { score: number; stroke: string }) {
+  const r = 33;
+  const C = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(100, score));
+  const offset = C * (1 - clamped / 100);
+  return (
+    <svg viewBox="0 0 80 80" className="h-16 w-16 flex-shrink-0" role="img" aria-label={`Score ${score} of 100`}>
+      <circle cx="40" cy="40" r={r} fill="none" stroke="#eef2f8" strokeWidth={9} />
+      <circle cx="40" cy="40" r={r} fill="none" stroke={stroke} strokeWidth={9} strokeLinecap="round" strokeDasharray={C} strokeDashoffset={offset} transform="rotate(-90 40 40)" />
+      <text x="40" y="38" textAnchor="middle" fontSize="20" fontWeight="600" fill="#0f172a">{score}</text>
+      <text x="40" y="52" textAnchor="middle" fontSize="8" fill="#94a3b8">/ 100</text>
+    </svg>
+  );
+}
+
 function RequirementRow({ label, met }: Requirement) {
   return (
     <li className="flex items-center gap-2 text-sm">
@@ -203,6 +223,22 @@ export default async function FounderJourneyPage() {
   const currentIndex = state.stageIndex;
   const qualifyRequirements = getQualifyRequirements(state);
 
+  // Investable Score: a composite of the founder's real signals (readiness,
+  // profile completeness, onboarding, documents). Gates automated outreach.
+  const readiness = state.conditions.readinessScore ?? 0;
+  const profilePercent = buildProfileCompletion(company).percent;
+  const investableScore = Math.round(
+    Math.min(
+      100,
+      0.6 * readiness +
+        0.3 * profilePercent +
+        (state.conditions.onboardingComplete ? 5 : 0) +
+        (state.conditions.requiredDocsUploaded ? 5 : 0),
+    ),
+  );
+  const outreachReady = investableScore >= OUTREACH_THRESHOLD;
+  const outreachGap = OUTREACH_THRESHOLD - investableScore;
+
   return (
     <FounderAppShell
       profileName={profile.full_name ?? profile.email ?? "Founder"}
@@ -270,18 +306,44 @@ export default async function FounderJourneyPage() {
                       </ul>
 
                       {state.conditions.readinessScore !== null ? (
-                        <p className="text-sm text-slate-600">
-                          Readiness score:{" "}
-                          <span
-                            className={[
-                              "font-semibold",
-                              state.conditions.readinessQualified ? "text-emerald-600" : "text-amber-600",
-                            ].join(" ")}
-                          >
-                            {state.conditions.readinessScore}
-                          </span>
-                          <span className="text-slate-400"> / 100</span>
-                        </p>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
+                            <ScoreGauge score={readiness} stroke="#10b981" />
+                            <div className="min-w-0">
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Readiness score</p>
+                              <p className={state.conditions.readinessQualified ? "text-sm font-semibold text-emerald-600" : "text-sm font-semibold text-amber-600"}>
+                                {state.conditions.readinessQualified ? "Qualified ✓" : "Building"}
+                              </p>
+                              <p className="mt-0.5 text-[10px] text-slate-400">Threshold ≥ 75</p>
+                            </div>
+                          </div>
+
+                          <div className="rounded-xl border-2 border-indigo-200 bg-white p-3">
+                            <div className="flex items-center gap-3">
+                              <ScoreGauge score={investableScore} stroke="#6366f1" />
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Investable Score</p>
+                                <p className="text-sm font-semibold text-indigo-600">
+                                  {outreachReady ? "Outreach ready" : `Building · ${outreachGap} to go`}
+                                </p>
+                                <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] text-slate-500">
+                                  <span>Readiness <b className="text-slate-800">{readiness}</b></span>
+                                  <span>Profile <b className="text-slate-800">{profilePercent}</b></span>
+                                  <span>Documents <b className="text-slate-800">{state.conditions.requiredDocsUploaded ? "✓" : "—"}</b></span>
+                                  <span>Onboarding <b className="text-slate-800">{state.conditions.onboardingComplete ? "✓" : "—"}</b></span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className={outreachReady ? "mt-2.5 rounded-lg bg-emerald-50 px-3 py-2 text-[11px] text-emerald-800" : "mt-2.5 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-800"}>
+                              {outreachReady ? (
+                                <><b>Investor outreach is unlocked.</b> Your Investable Score is at or above {OUTREACH_THRESHOLD} — matched investors can be reached.</>
+                              ) : (
+                                <><b>Reach {OUTREACH_THRESHOLD} to unlock investor outreach.</b> You&apos;re {outreachGap} point{outreachGap === 1 ? "" : "s"} away — raise your lowest signal to qualify.</>
+                              )}
+                            </div>
+                            <p className="mt-1.5 text-[10px] text-slate-400">Education &amp; community — not an offer of securities; no funding outcome is promised.</p>
+                          </div>
+                        </div>
                       ) : null}
 
                       {state.pendingApproval ? (
