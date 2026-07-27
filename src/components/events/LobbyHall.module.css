@@ -61,7 +61,7 @@
   transition: .15s; text-decoration: none; border: none; background: transparent; padding: 0;
 }
 .tileBox {
-  width: 74px; height: 60px; border-radius: 11px; background: var(--tile);
+  width: 54px; height: 46px; border-radius: 11px; background: var(--tile);
   display: flex; align-items: center; justify-content: center; color: #fff;
   box-shadow: 0 12px 22px rgba(12,35,64,.30); margin: 0 auto; position: relative; transition: .15s;
 }
@@ -82,13 +82,13 @@
 
 /* help & info desk */
 .desk {
-  position: absolute; left: 50%; top: 70%; transform: translateX(-50%); z-index: 6;
+  position: absolute; left: 50%; top: 53%; transform: translate(-50%, -50%); z-index: 6;
   cursor: pointer; text-align: center; border: none; background: transparent; padding: 0;
 }
 .deskBox {
-  width: 96px; height: 64px; border-radius: 12px; background: linear-gradient(160deg, #153a5c, #0c2340);
-  display: flex; align-items: center; justify-content: center; font-size: 22px;
-  box-shadow: 0 14px 26px rgba(12,35,64,.34); transition: .15s;
+  width: 54px; height: 46px; border-radius: 12px; background: linear-gradient(160deg, #153a5c, #0c2340);
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+  box-shadow: 0 14px 26px rgba(46,120,245,.34); outline: 2px solid var(--accent); outline-offset: 1px; transition: .15s;
 }
 .desk:hover .deskBox, .desk:focus-visible .deskBox { transform: translateY(-4px); }
 .deskNm { font-size: 9px; font-weight: 800; color: var(--navy); margin-top: 5px; line-height: 1.2; }
@@ -159,14 +159,14 @@
   white-space: nowrap; opacity: 0; transition: opacity .12s; pointer-events: none; z-index: 20;
 }
 .fig:hover .figName, .fig:focus-visible .figName { opacity: 1; }
-.you { position: absolute; left: 48%; top: 64%; width: 15px; height: 27px; border-radius: 8px 8px 3px 3px; background: var(--you); z-index: 8; cursor: pointer; box-shadow: 0 0 14px rgba(245,164,36,.75), 0 5px 10px rgba(0,0,0,.4); border: none; padding: 0; }
+.you { position: absolute; left: 48%; top: 64%; width: 15px; height: 27px; border-radius: 8px 8px 3px 3px; background: var(--you); z-index: 8; cursor: pointer; box-shadow: 0 0 14px rgba(245,164,36,.75), 0 5px 10px rgba(0,0,0,.4); border: none; padding: 0; transition: left .5s ease, top .5s ease; }
 .you::before { content: ""; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 12px; height: 12px; border-radius: 50%; background: var(--you); }
 /* pulse halo: expanding rings on the floor around the viewer */
 .youHalo { position: absolute; left: 50%; bottom: -3px; width: 15px; height: 15px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--you); opacity: .5; z-index: 7; pointer-events: none; animation: youPing 1.7s ease-out infinite; }
 .youHalo2 { animation-delay: .85s; }
 @keyframes youPing { 0% { transform: translate(-50%, -50%) scale(1); opacity: .5; } 100% { transform: translate(-50%, -50%) scale(6); opacity: 0; } }
 /* bobbing "YOU" pin above the viewer's head */
-.youPin { position: absolute; left: 48%; top: 55%; transform: translateX(-50%); z-index: 9; text-align: center; pointer-events: none; animation: youBob 1.2s ease-in-out infinite; }
+.youPin { position: absolute; left: 48%; top: 55%; transform: translateX(-50%); z-index: 9; text-align: center; pointer-events: none; animation: youBob 1.2s ease-in-out infinite; transition: left .5s ease, top .5s ease; }
 .youChip { display: inline-block; background: var(--you); color: #3a2600; font-size: 8px; font-weight: 900; letter-spacing: .06em; padding: 2px 7px; border-radius: 8px; box-shadow: 0 5px 12px rgba(245,164,36,.55); }
 .youTri { display: block; width: 0; height: 0; margin: 0 auto; border: 5px solid transparent; border-top-color: var(--you); }
 @keyframes youBob { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-5px); } }

@@ -26,13 +26,14 @@ type DoorDef = {
   meta: (n: number) => string;
 };
 
+// Two rows spread across the floor; the Help Desk sits centered between them.
 const DOORS: DoorDef[] = [
-  { key: "sessions", room: "Main Stage", label: "SESSIONS", Icon: Presentation, left: 14, top: 52, meta: (n) => `${n} watching` },
-  { key: "talkshow", room: "Main Stage", label: "TALK SHOW", Icon: Mic, left: 29, top: 40, meta: (n) => (n > 0 ? `${n} watching` : "live soon") },
-  { key: "networking", room: "Networking", label: "NETWORKING", Icon: Users, left: 43, top: 31, meta: (n) => `${n} here · tables open` },
-  { key: "ondemand", room: "On-Demand", label: "ON-DEMAND", Icon: Tv, left: 57, top: 31, meta: (n) => `${n} browsing` },
-  { key: "sponsors", room: "Sponsor Hall", label: "EXPO HALL", Icon: Store, left: 71, top: 40, meta: (n) => `${n} at booths` },
-  { key: "leaderboard", label: "LEADERBOARD", Icon: Trophy, left: 86, top: 52, meta: () => "See standings" },
+  { key: "sessions", room: "Main Stage", label: "SESSIONS", Icon: Presentation, left: 16, top: 40, meta: (n) => `${n} watching` },
+  { key: "talkshow", room: "Main Stage", label: "TALK SHOW", Icon: Mic, left: 50, top: 40, meta: (n) => (n > 0 ? `${n} watching` : "live soon") },
+  { key: "networking", room: "Networking", label: "NETWORKING", Icon: Users, left: 84, top: 40, meta: (n) => `${n} here · tables open` },
+  { key: "ondemand", room: "On-Demand", label: "ON-DEMAND", Icon: Tv, left: 16, top: 68, meta: (n) => `${n} browsing` },
+  { key: "sponsors", room: "Sponsor Hall", label: "EXPO HALL", Icon: Store, left: 50, top: 68, meta: (n) => `${n} at booths` },
+  { key: "leaderboard", label: "LEADERBOARD", Icon: Trophy, left: 84, top: 68, meta: () => "See standings" },
 ];
 
 const NAV_ICONS: Record<VenueZone["icon"], LucideIcon> = {
@@ -49,9 +50,9 @@ const FIG_POS = [
 ];
 
 const SIGNS: { text: string; key: "sessions" | "sponsors" | "help"; left: number; top: number }[] = [
-  { text: "◄ SESSIONS", key: "sessions", left: 22, top: 52 },
-  { text: "EXPO HALL ►", key: "sponsors", left: 70, top: 52 },
-  { text: "HELP DESK ►", key: "help", left: 50, top: 63 },
+  { text: "◄ SESSIONS", key: "sessions", left: 30, top: 54 },
+  { text: "EXPO HALL ►", key: "sponsors", left: 70, top: 54 },
+  { text: "HELP DESK ►", key: "help", left: 63, top: 55 },
 ];
 
 export type QuickLink = { label: string; href: string; icon: keyof typeof QL_ICONS };
@@ -78,6 +79,11 @@ export function LobbyHall({
   const t = useTranslations("eventsCmp");
   const { byRoom, total, members, me, announcement, incomingWave, dismissWave, sendWave } = useEventPresence();
   const [sel, setSel] = useState<{ member: PresenceMember; x: number; y: number } | null>(null);
+  // The YOU marker walks to a hovered booth; clicking the doorway enters the room.
+  const [youPos, setYouPos] = useState<{ left: number; top: number }>({ left: 50, top: 82 });
+  const [leftOpen, setLeftOpen] = useState(true);
+  const [rightOpen, setRightOpen] = useState(true);
+  const walkTo = (left: number, top: number) => setYouPos({ left, top: top + 9 });
 
   // Other attendees standing in the Lobby become the drifting figures (the
   // viewer is drawn separately as the fixed "you" marker).
@@ -153,6 +159,8 @@ export function LobbyHall({
                 className={styles.tile}
                 style={{ left: `${d.left}%`, top: `${d.top}%` }}
                 aria-label={`${cap(d.label)} — ${d.meta(n)}`}
+                onMouseEnter={() => walkTo(d.left, d.top)}
+                onFocus={() => walkTo(d.left, d.top)}
               >
                 <span className={styles.tip}>{cap(d.label)} · {d.meta(n)}</span>
                 <span className={styles.tileBox}>
@@ -176,13 +184,6 @@ export function LobbyHall({
               </Link>
             ),
           )}
-
-          {/* center pillar */}
-          <div className={styles.pillar} aria-hidden>
-            <div className={styles.pillarGlass}>iC</div>
-            <div className={styles.pillarBase} />
-            <p className={styles.pillarTag}>EXPLORE · CONNECT · GROW</p>
-          </div>
 
           {/* help & info desk → opens the AI assistant */}
           <button type="button" className={styles.desk} onClick={openDesk}>
@@ -214,17 +215,18 @@ export function LobbyHall({
             );
           })}
 
-          {/* the viewer */}
+          {/* the viewer — walks to a clicked booth */}
           <button
             type="button"
             className={styles.you}
+            style={{ left: `${youPos.left}%`, top: `${youPos.top}%` }}
             aria-label={`${name} (you)`}
             onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); setSel({ member: meMember, x: r.left + r.width / 2, y: r.top }); }}
           >
             <span className={styles.youHalo} aria-hidden />
             <span className={`${styles.youHalo} ${styles.youHalo2}`} aria-hidden />
           </button>
-          <span className={styles.youPin} aria-hidden>
+          <span className={styles.youPin} style={{ left: `${youPos.left}%`, top: `${youPos.top - 9}%` }} aria-hidden>
             <span className={styles.youChip}>YOU</span>
             <span className={styles.youTri} />
           </span>
@@ -241,8 +243,17 @@ export function LobbyHall({
 
         </div>
 
+        {hasSide && !leftOpen && (
+          <button type="button" onClick={() => setLeftOpen(true)} aria-label="Show agenda panel"
+            style={{ order: 0, flex: "0 0 auto", alignSelf: "stretch", writingMode: "vertical-rl", background: "#f7f9fc", border: "none", borderRight: "1px solid var(--line)", color: "var(--accent)", fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "0 4px" }}>
+            Agenda ›
+          </button>
+        )}
         {hasSide && (
-          <aside className={styles.sideL}>
+          <aside className={styles.sideL} style={{ flexBasis: leftOpen ? 208 : 0, paddingLeft: leftOpen ? 12 : 0, paddingRight: leftOpen ? 12 : 0, borderRightWidth: leftOpen ? 1 : 0, opacity: leftOpen ? 1 : 0, overflow: "hidden", transition: "flex-basis .35s ease, padding .35s ease, opacity .25s ease" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button type="button" onClick={() => setLeftOpen(false)} style={{ background: "none", border: "none", color: "var(--accent)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>‹ Hide</button>
+            </div>
             {agenda.length > 0 && (
               <div className={styles.panel}>
                 <p className={styles.panelTitle}>AGENDA</p>
@@ -269,14 +280,15 @@ export function LobbyHall({
           </aside>
         )}
 
-        <aside className={styles.sideR}>
+        <aside className={styles.sideR} style={{ flexBasis: rightOpen ? 208 : 0, paddingLeft: rightOpen ? 12 : 0, paddingRight: rightOpen ? 12 : 0, borderLeftWidth: rightOpen ? 1 : 0, opacity: rightOpen ? 1 : 0, overflow: "hidden", transition: "flex-basis .35s ease, padding .35s ease, opacity .25s ease" }}>
           <nav className={styles.nav} aria-label="Venue navigation">
             <div className={styles.navMe}>
               <span className={styles.navAv}>{initials(name)}</span>
-              <div>
+              <div style={{ flex: 1 }}>
                 <div className={styles.navNm}>Hello, {name.split(" ")[0]}</div>
                 <div className={styles.navRl}>{viewerRole || "Attendee"}</div>
               </div>
+              <button type="button" onClick={() => setRightOpen(false)} style={{ background: "none", border: "none", color: "var(--accent)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Hide ›</button>
             </div>
             {zones.map((z) => {
               const Icon = NAV_ICONS[z.icon];
@@ -308,6 +320,12 @@ export function LobbyHall({
             </div>
           )}
         </aside>
+        {!rightOpen && (
+          <button type="button" onClick={() => setRightOpen(true)} aria-label="Show menu panel"
+            style={{ order: 4, flex: "0 0 auto", alignSelf: "stretch", writingMode: "vertical-rl", background: "#f7f9fc", border: "none", borderLeft: "1px solid var(--line)", color: "var(--accent)", fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "0 4px" }}>
+            ‹ Menu
+          </button>
+        )}
         </div>
 
         <p className={styles.caption}>Hover or tap a doorway to look inside, then enter.</p>
