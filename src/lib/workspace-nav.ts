@@ -246,7 +246,7 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
   {
     title: "My raise",
     items: [
-      { href: "/founder/journey", label: "My Journey" },
+      { href: "/founder/journey", label: "My Progress" },
       { href: "/founder/command-center", label: "Command Center" },
       { href: "/founder/actions", label: "Action Center" },
       { href: "/founder/tasks", label: "Tasks", minStage: "qualify" },

@@ -25,7 +25,7 @@ export interface FeatureDef {
  */
 export const FEATURES: FeatureDef[] = [
   // ── Workspace ──────────────────────────────────────────────────────────
-  { key: "journey", label: "My Journey", group: "Workspace", hrefs: { founder: ["/founder/journey"] } },
+  { key: "journey", label: "My Progress", group: "Workspace", hrefs: { founder: ["/founder/journey"] } },
   { key: "command_center", label: "Command Center", group: "Workspace", hrefs: { founder: ["/founder/command-center"] } },
   { key: "action_center", label: "Action Center", group: "Workspace", hrefs: { founder: ["/founder/actions"], investor: ["/investor/actions"], admin: ["/admin/actions"] } },
   { key: "onboarding", label: "Onboarding", group: "Workspace", hrefs: { investor: ["/investor/onboarding"] } },

@@ -91,7 +91,7 @@ const NAV_ES: Record<string, string> = {
   "Messages": "Mensajes",
   "Milestones": "Hitos",
   "Missing documents": "Documentos faltantes",
-  "My Journey": "Mi trayecto",
+  "My Progress": "Mi progreso",
   "My Profile": "Mi perfil",
   "My Schedule": "Mi agenda",
   "My learning plan": "Mi plan de aprendizaje",
