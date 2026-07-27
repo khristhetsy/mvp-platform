@@ -4,6 +4,8 @@ import { getTranslations } from "next-intl/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { loadInvestableScore } from "@/lib/founder/investable-score";
+import { InvestableScoreBadge } from "@/components/founder/InvestableScoreBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +82,9 @@ export default async function FounderPreviewPage() {
 
   const isPublished = pub.is_published;
   const hasSlug = Boolean(pub.slug);
+
+  // Same Investable Score investors will see on the live one-pager.
+  const investableScore = await loadInvestableScore(admin, profile.id);
 
   return (
     <div style={{ minHeight: "100vh", background: "#F8F9FC", fontFamily: "system-ui, sans-serif" }}>
@@ -253,6 +258,11 @@ export default async function FounderPreviewPage() {
                 )}
               </div>
             </div>
+            {investableScore != null ? (
+              <div style={{ alignSelf: "center" }}>
+                <InvestableScoreBadge score={investableScore} />
+              </div>
+            ) : null}
           </div>
           {pub.business_description && (
             <p style={{ fontSize: 15, color: "#374151", lineHeight: 1.65, margin: "24px 0 0", borderTop: "1px solid #f3f4f6", paddingTop: 20 }}>
