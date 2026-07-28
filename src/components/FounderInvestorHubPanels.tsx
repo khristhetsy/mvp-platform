@@ -9,6 +9,7 @@ import { FounderSocialDraftsPanel } from "@/components/FounderSocialDraftsPanel"
 import { InvestorOutreachCoach } from "@/components/founder/InvestorOutreachCoach";
 import type { OutreachCoachSnapshot } from "@/components/founder/InvestorOutreachCoach";
 import { FollowUpNudgesPanel } from "@/components/founder/FollowUpNudgesPanel";
+import { ManualOutreachBuilder } from "@/components/founder/ManualOutreachBuilder";
 import type { EnrichedOutreachTarget } from "@/lib/founder-crm/outreach";
 import type { OutreachReadinessResult } from "@/lib/founder-crm/outreach-readiness";
 import type { SocialOutreachReadinessResult } from "@/lib/founder-crm/social-outreach-readiness";
@@ -54,8 +55,6 @@ export function FounderInvestorHubPanels({
   targets: initialTargets,
   campaigns: initialCampaigns,
   readiness,
-  platformMatches,
-  followUpCount,
   socialDrafts,
   socialReadiness,
   companySnapshot,
@@ -101,16 +100,6 @@ export function FounderInvestorHubPanels({
     for (const row of targets) {
       if (row.contact_id) {
         map.set(row.contact_id, row);
-      }
-    }
-    return map;
-  }, [targets]);
-
-  const platformInPipeline = useMemo(() => {
-    const map = new Map<string, EnrichedOutreachTarget>();
-    for (const row of targets) {
-      if (row.platform_investor_id) {
-        map.set(row.platform_investor_id, row);
       }
     }
     return map;
@@ -490,69 +479,14 @@ export function FounderInvestorHubPanels({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">{t("platform_matched_investors")}</h2>
-        <p className="mt-1 text-sm text-slate-600">iCapOS registered investors — separate from your private CRM.</p>
-        <div className="mt-4 divide-y divide-slate-100">
-          {platformMatches.length === 0 ? (
-            <p className="py-3 text-sm text-slate-500">{t("no_platform_matches_available_yet")}</p>
-          ) : (
-            platformMatches.map((row) => {
-              const pipelineTarget = platformInPipeline.get(row.platformInvestorId);
-              return (
-                <div key={row.platformInvestorId} className="py-3 text-sm">
-                  <p className="font-medium text-slate-900">
-                    {row.label} · {row.matchScore}% match
-                  </p>
-                  <p className="mt-1 text-xs text-slate-600">{row.matchReasons.slice(0, 2).join(" · ")}</p>
-                  {pipelineTarget ? (
-                    <p className="mt-1 text-xs text-indigo-600">In pipeline · {pipelineTarget.status}</p>
-                  ) : null}
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      disabled={loading}
-                      onClick={() =>
-                        void postOutreachTarget({
-                          action: "select",
-                          platformInvestorId: row.platformInvestorId,
-                          matchScore: row.matchScore,
-                        }).then((ok) => {
-                          if (ok) {
-                            setMessage("Platform investor selected for outreach.");
-                          }
-                        })
-                      }
-                      className="rounded border px-2 py-0.5 text-xs"
-                    >
-                      Select for outreach
-                    </button>
-                    <button
-                      type="button"
-                      disabled={loading}
-                      onClick={() =>
-                        void postOutreachTarget({
-                          action: "move_to_pipeline",
-                          platformInvestorId: row.platformInvestorId,
-                          matchScore: row.matchScore,
-                        }).then((ok) => {
-                          if (ok) {
-                            setMessage("Moved to outreach pipeline.");
-                            setHubTab("pipeline");
-                          }
-                        })
-                      }
-                      className="rounded border px-2 py-0.5 text-xs"
-                    >
-                      Move to pipeline
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </section>
+      <ManualOutreachBuilder
+        contacts={contacts.map((c) => ({
+          id: c.id,
+          name: c.investor_name,
+          email: c.email,
+          detail: [c.firm_name, c.investor_type].filter(Boolean).join(" · ") || c.email,
+        }))}
+      />
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-950">{t("outreach_campaigns_draft_queue_only")}</h2>
