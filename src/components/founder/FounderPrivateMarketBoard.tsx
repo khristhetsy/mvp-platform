@@ -18,7 +18,8 @@ const PRICE: Record<string, string> = {
 const BAND_LABEL: Record<string, string> = { high: "Strong", mid: "Moderate", low: "Building" };
 
 const OUTREACH_META: Record<OutreachStatus, { label: string; className: string; dot: string }> = {
-  reached_out: { label: "Reached out", className: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" },
+  opened: { label: "Opened", className: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" },
+  reached_out: { label: "Reached out", className: "bg-indigo-50 text-indigo-700", dot: "bg-indigo-500" },
   queued: { label: "Queued", className: "bg-amber-50 text-amber-700", dot: "bg-amber-500" },
   skipped: { label: "Skipped", className: "bg-slate-100 text-slate-500", dot: "bg-slate-400" },
   none: { label: "Not contacted", className: "bg-slate-100 text-slate-500", dot: "bg-slate-300" },
