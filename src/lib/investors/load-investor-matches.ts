@@ -63,6 +63,34 @@ function hasAnyPreference(p: InvestorPreferences): boolean {
   );
 }
 
+/** Load one investor contact's structured preferences (raw + overrides). */
+export async function loadContactPreferences(
+  contactId: string,
+): Promise<{ id: string; name: string; preferences: InvestorPreferences } | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = createServiceRoleClient() as any;
+  const { data: c } = await db
+    .from("crm_contacts")
+    .select("id, name, email, raw, overrides")
+    .eq("id", contactId)
+    .maybeSingle();
+  if (!c) return null;
+
+  const raw = (c.raw as Record<string, unknown> | null) ?? null;
+  const overrides = (c.overrides as Record<string, unknown> | null) ?? null;
+  const extra = flattenExtra(raw);
+  if (overrides) {
+    for (const [label, v] of Object.entries(overrides)) {
+      if (v == null) continue;
+      const values = (Array.isArray(v) ? v.map((x) => String(x)) : [String(v)]).map((s) => s.trim()).filter(Boolean);
+      const idx = extra.findIndex((e) => e.label.trim().toLowerCase() === label.trim().toLowerCase());
+      if (idx >= 0) extra[idx] = { label, values };
+      else extra.push({ label, values });
+    }
+  }
+  return { id: String(c.id), name: (c.name as string) ?? (c.email as string) ?? "Investor", preferences: extractInvestorPreferences(extra) };
+}
+
 /**
  * Load investor contacts (those with structured preferences). When `scoreAgainst`
  * is given, each is scored and the list is sorted by match, highest first.
