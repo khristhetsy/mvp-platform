@@ -145,6 +145,20 @@ export default async function InvestorOnePagerPage({
       {/* Content */}
       <main style={{ maxWidth: 760, margin: "0 auto", padding: "40px 20px 80px" }}>
 
+        {/* Compliance disclaimer */}
+        <div style={{
+          display: "flex", gap: 8, alignItems: "flex-start",
+          background: "#F1EFE8", border: "1px solid #D3D1C7", borderRadius: 10,
+          padding: "10px 14px", marginBottom: 20, fontSize: 12, lineHeight: 1.5, color: "#5F5E5A",
+        }}>
+          <span aria-hidden="true">ⓘ</span>
+          <span>
+            <b>Informational only.</b> This profile is not an offer to sell or a solicitation to buy securities, and
+            not investment advice. Introductions are facilitated by iCapOS between the company and verified investors;
+            any transaction occurs directly between the parties on their own terms.
+          </span>
+        </div>
+
         {/* Header card */}
         <div style={{
           background: "white",
@@ -228,8 +242,8 @@ export default async function InvestorOnePagerPage({
           gap: 12, marginBottom: 20,
         }}>
           <MetricCard
-            label={t("funding_ask")}
-            value={formatFunding(company.funding_amount)}
+            label="Round context (illustrative)"
+            value={company.funding_amount ? `~${formatFunding(company.funding_amount)}` : "TBD"}
             accent
           />
           <MetricCard
@@ -250,7 +264,7 @@ export default async function InvestorOnePagerPage({
 
         {/* Use of funds */}
         {company.use_of_funds && (
-          <Section title={t("use_of_funds")} icon={
+          <Section title="Planned use of capital (illustrative)" icon={
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ACCENT} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
@@ -280,10 +294,10 @@ export default async function InvestorOnePagerPage({
           borderRadius: 16, padding: "32px 36px", textAlign: "center", marginTop: 8,
         }}>
           <p style={{ fontSize: 18, fontWeight: 700, color: "white", margin: "0 0 8px" }}>
-            Interested in {company.company_name}?
+            Want to learn more about {company.company_name}?
           </p>
           <p style={{ fontSize: 13, color: "rgba(255,255,255,0.80)", margin: "0 0 24px", lineHeight: 1.5 }}>
-            Join iCapOS to review documents, submit an intro request, or connect with the founding team.
+            Verified investors can request an introduction through iCapOS.
           </p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <Link
@@ -295,7 +309,7 @@ export default async function InvestorOnePagerPage({
                 fontWeight: 700, fontSize: 14, textDecoration: "none",
               }}
             >
-              Sign in as investor
+              Request an introduction
             </Link>
             <Link
               href="/pricing"

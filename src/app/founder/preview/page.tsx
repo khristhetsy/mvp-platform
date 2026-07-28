@@ -192,6 +192,20 @@ export default async function FounderPreviewPage({
       {/* Content — mirrors /f/[slug] exactly */}
       <main style={{ maxWidth: 760, margin: "0 auto", padding: "40px 20px 80px" }}>
 
+        {/* Compliance disclaimer */}
+        <div style={{
+          display: "flex", gap: 8, alignItems: "flex-start",
+          background: "#F1EFE8", border: "1px solid #D3D1C7", borderRadius: 10,
+          padding: "10px 14px", marginBottom: 20, fontSize: 12, lineHeight: 1.5, color: "#5F5E5A",
+        }}>
+          <span aria-hidden="true">ⓘ</span>
+          <span>
+            <b>Informational only.</b> This profile is not an offer to sell or a solicitation to buy securities, and
+            not investment advice. Introductions are facilitated by iCapOS between the company and verified investors;
+            any transaction occurs directly between the parties on their own terms.
+          </span>
+        </div>
+
         {/* Not-published notice */}
         {!isPublished && (
           <div style={{
@@ -284,7 +298,7 @@ export default async function FounderPreviewPage({
 
         {/* Key metrics */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20 }}>
-          <MetricCard label={t("funding_ask")} value={formatFunding(pub.funding_amount)} accent />
+          <MetricCard label="Round context (illustrative)" value={pub.funding_amount ? `~${formatFunding(pub.funding_amount)}` : "TBD"} accent />
           <MetricCard label={t("revenue_stage")} value={stageLabel ?? "—"} />
           {geography && <MetricCard label={t("location")} value={geography} />}
           {pub.website && (
@@ -297,7 +311,7 @@ export default async function FounderPreviewPage({
         </div>
 
         {pub.use_of_funds && (
-          <Section title={t("use_of_funds")} icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="#374151" strokeWidth="2"/><path d="M12 6v2m0 8v2M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke="#374151" strokeWidth="2" strokeLinecap="round"/></svg>}>
+          <Section title="Planned use of capital (illustrative)" icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="#374151" strokeWidth="2"/><path d="M12 6v2m0 8v2M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" stroke="#374151" strokeWidth="2" strokeLinecap="round"/></svg>}>
             <FormattedText text={pub.use_of_funds} />
           </Section>
         )}
@@ -325,14 +339,14 @@ export default async function FounderPreviewPage({
             </span>
           </div>
           <p style={{ fontSize: 18, fontWeight: 700, color: "white", margin: "0 0 8px" }}>
-            Interested in {pub.company_name}?
+            Want to learn more about {pub.company_name}?
           </p>
           <p style={{ fontSize: 13, color: "rgba(255,255,255,0.80)", margin: "0 0 24px" }}>
-            Join iCapOS to review documents, submit an intro request, or connect with the founding team.
+            Verified investors can request an introduction through iCapOS.
           </p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <span style={{ display: "inline-block", background: "white", color: ACCENT, padding: "11px 28px", borderRadius: 10, fontWeight: 700, fontSize: 14 }}>
-              Sign in as investor
+              Request an introduction
             </span>
             <span style={{ display: "inline-block", background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.35)", padding: "11px 28px", borderRadius: 10, fontWeight: 600, fontSize: 14 }}>
               Learn more
