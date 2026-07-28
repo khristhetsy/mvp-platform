@@ -366,7 +366,9 @@ export default async function FounderDeployPage() {
   const automatedNode =
     company && board ? (
       <>
-        {outreachActive ? <AutomatedOutreachToggle initialPaused={outreachPaused} /> : null}
+        {investableScore >= OUTREACH_THRESHOLD ? (
+          <AutomatedOutreachToggle active={outreachActive} initialPaused={outreachPaused} />
+        ) : null}
         <FounderPrivateMarketTicker rows={board.rows} />
         <FounderPrivateMarketSummaryCards summary={board.summary} rankedCount={board.rows.length} />
         <div className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-600">

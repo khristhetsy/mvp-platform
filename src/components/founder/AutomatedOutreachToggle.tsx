@@ -7,12 +7,34 @@ import { useState } from "react";
  * /api/founder/outreach/pause. "On" means outreach runs; toggling off pauses the
  * company's campaign so the weekly send pass skips it — no env change needed.
  */
-export function AutomatedOutreachToggle({ initialPaused }: { initialPaused: boolean }) {
+export function AutomatedOutreachToggle({
+  initialPaused,
+  active,
+}: {
+  initialPaused: boolean;
+  /** Whether an outreach campaign exists yet (needs a strong-fit match). When
+   *  false, there's nothing to pause — show a "waiting" state instead. */
+  active: boolean;
+}) {
   const [paused, setPaused] = useState(initialPaused);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const on = !paused;
+
+  if (!active) {
+    return (
+      <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-slate-900">Automated outreach</p>
+          <p className="text-xs text-slate-500">
+            On — waiting for a strong-fit investor (match ≥ 70). It starts automatically as soon as one appears.
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">Waiting</span>
+      </div>
+    );
+  }
 
   async function toggle() {
     const nextPaused = !paused;
