@@ -102,6 +102,55 @@ export function ManualOutreachBuilder({
   const [message, setMessage] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [recipients, setRecipients] = useState<RecipientStatus[]>([]);
+  const [contactList, setContactList] = useState<OutreachAudienceContact[]>(contacts);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addName, setAddName] = useState("");
+  const [addEmail, setAddEmail] = useState("");
+  const [adding, setAdding] = useState(false);
+
+  async function refreshContacts() {
+    try {
+      const res = await fetch("/api/founder/investor-contacts");
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        contacts?: Array<{ id: string; investor_name: string; email: string | null; firm_name: string | null; investor_type: string | null }>;
+      };
+      if (Array.isArray(data.contacts)) {
+        setContactList(
+          data.contacts.map((c) => ({
+            id: c.id,
+            name: c.investor_name,
+            email: c.email,
+            detail: [c.firm_name, c.investor_type].filter(Boolean).join(" · ") || c.email,
+          })),
+        );
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function addContact() {
+    if (!addName.trim()) return;
+    setAdding(true);
+    try {
+      const res = await fetch("/api/founder/investor-contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ investor_name: addName.trim(), email: addEmail.trim() || "" }),
+      });
+      if (res.ok) {
+        setAddName("");
+        setAddEmail("");
+        setAddOpen(false);
+        await refreshContacts();
+      } else {
+        setMessage("Couldn't add that investor. Check the email and try again.");
+      }
+    } finally {
+      setAdding(false);
+    }
+  }
 
   // Load any previously-saved campaign + recipient statuses (unless a snapshot
   // was passed in).
@@ -263,16 +312,51 @@ export function ManualOutreachBuilder({
         {/* Audience */}
         {tab === 0 ? (
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">
-              Your investors <span className="text-slate-400">— tap to add or remove from this campaign</span>
-            </label>
-            {contacts.length === 0 ? (
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <label className="block text-xs font-medium text-slate-600">
+                Your investors <span className="text-slate-400">— tap to add or remove from this campaign</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setAddOpen((v) => !v)}
+                className="shrink-0 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              >
+                {addOpen ? "Close" : "+ Add investor"}
+              </button>
+            </div>
+
+            {addOpen ? (
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                <input
+                  value={addName}
+                  onChange={(e) => setAddName(e.target.value)}
+                  placeholder="Investor name"
+                  className="min-w-[120px] flex-1 rounded-md border border-slate-200 px-2.5 py-1.5 text-sm"
+                />
+                <input
+                  value={addEmail}
+                  onChange={(e) => setAddEmail(e.target.value)}
+                  placeholder="Email (optional)"
+                  className="min-w-[140px] flex-1 rounded-md border border-slate-200 px-2.5 py-1.5 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => void addContact()}
+                  disabled={adding || !addName.trim()}
+                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+                >
+                  {adding ? "Adding…" : "Add"}
+                </button>
+              </div>
+            ) : null}
+
+            {contactList.length === 0 ? (
               <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
-                No investors in your list yet. Add contacts or import a CSV in the CRM above, then build your campaign here.
+                No investors in your list yet. Use “+ Add investor” above to start, then build your campaign.
               </p>
             ) : (
               <ul className="divide-y divide-slate-100">
-                {contacts.map((c) => {
+                {contactList.map((c) => {
                   const on = selected.has(c.id);
                   return (
                     <li key={c.id}>

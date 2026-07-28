@@ -5,25 +5,17 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import { buildFounderInvestorCrmView } from "@/lib/data/investor-crm";
-import type { FounderInvestorRelationRow } from "@/lib/data/investor-crm";
 import { listFounderInvestorActivity } from "@/lib/data/investor-interests";
-import {
-  formatPledgeTotal,
-  getCompanyPledgeSummary,
-  getFounderPledgeCompanyId,
-} from "@/lib/data/investor-pledges";
-import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
-import { founderFacingPartnerView, type FounderFacingPartner } from "@/lib/investor-rating/founder-view";
+import { getCompanyPledgeSummary, getFounderPledgeCompanyId } from "@/lib/data/investor-pledges";
 import { loadFounderInvestorBoard } from "@/lib/founder/private-market";
 import { buildProfileCompletion } from "@/lib/data/founder-readiness";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { loadFounderInvestorHub } from "@/lib/founder-crm/load-founder-investor-hub";
-import { FounderInvestorHubPanels } from "@/components/FounderInvestorHubPanels";
+import { ManualOutreachBuilder } from "@/components/founder/ManualOutreachBuilder";
 import { ensureFounderAutomatedOutreach, getFounderOutreachStatus } from "@/lib/outreach/investor-outreach";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
-import { FounderFacingInvestorTier } from "@/components/founder/FounderFacingInvestorTier";
 import { FounderPrivateMarketBoard } from "@/components/founder/FounderPrivateMarketBoard";
 import { FounderPrivateMarketSummaryCards } from "@/components/founder/FounderPrivateMarketSummaryCards";
 import { FounderPrivateMarketTicker } from "@/components/founder/FounderPrivateMarketTicker";
@@ -34,64 +26,6 @@ import { EmptyState } from "@/components/ui/EmptyState";
 export const dynamic = "force-dynamic";
 
 const OUTREACH_THRESHOLD = 70;
-
-/** Outreach & planning tools — relocated from the sidebar into Deploy → Outreach → Manual. */
-const MANUAL_TOOLS: { href: string; label: string; blurb: string }[] = [
-  { href: "/founder/email-sequence", label: "Email sequences", blurb: "Build a multi-step, personalised investor sequence." },
-  { href: "/founder/investor-update", label: "Investor update builder", blurb: "Draft and send a polished monthly update." },
-  { href: "/founder/funding-timeline", label: "Funding timeline", blurb: "Map milestones and target close dates." },
-  { href: "/founder/due-diligence", label: "Due diligence checklist", blurb: "Track what investors will ask for before they commit." },
-];
-
-const STAGE_BADGE: Record<FounderInvestorRelationRow["actionType"], string> = {
-  pledged: "bg-emerald-50 text-emerald-700 ring-emerald-100",
-  indicative_interest: "bg-indigo-50 text-indigo-700 ring-indigo-100",
-  intro_requested: "bg-indigo-50 text-indigo-700 ring-indigo-100",
-  interested: "bg-slate-50 text-slate-600 ring-slate-200",
-  saved_deal: "bg-slate-50 text-slate-600 ring-slate-200",
-  follow_up: "bg-amber-50 text-amber-800 ring-amber-100",
-};
-
-function formatRowAmount(row: FounderInvestorRelationRow): string | null {
-  const currency = row.pledgeCurrency ?? "USD";
-  if (row.pledgeAmount && row.pledgeAmount > 0) return formatPledgeTotal(row.pledgeAmount, currency);
-  if (row.interestAmount && row.interestAmount > 0) return formatPledgeTotal(row.interestAmount, currency);
-  return null;
-}
-
-function formatDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("") || "?";
-}
-
-/** Prioritised, de-duplicated investor list: follow-ups first, then intros, new interest, pledged. */
-function buildPipelineList(view: ReturnType<typeof buildFounderInvestorCrmView>): FounderInvestorRelationRow[] {
-  const ordered = [
-    ...view.sections.followUpNeeded,
-    ...view.sections.introRequested,
-    ...view.sections.newInterest,
-    ...view.sections.pledged,
-  ];
-  const seen = new Set<string>();
-  const result: FounderInvestorRelationRow[] = [];
-  for (const row of ordered) {
-    if (seen.has(row.investorId)) continue;
-    seen.add(row.investorId);
-    result.push(row);
-    if (result.length >= 12) break;
-  }
-  return result;
-}
 
 /** Turn the real pipeline numbers into expandable AI insight cards for the Analytics step. */
 function buildDeployInsights(input: {
@@ -186,9 +120,6 @@ export default async function FounderDeployPage() {
   const company = await ensureFounderCompanyForUser(profile);
 
   let crmView: ReturnType<typeof buildFounderInvestorCrmView> | null = null;
-  let pipelineList: FounderInvestorRelationRow[] = [];
-  // Founder-facing investor standing (tier + facts only — never the score).
-  const partnerViews = new Map<string, FounderFacingPartner>();
   let board: Awaited<ReturnType<typeof loadFounderInvestorBoard>> | null = null;
   let hub: Awaited<ReturnType<typeof loadFounderInvestorHub>> | null = null;
   let investableScore = 0;
@@ -205,7 +136,6 @@ export default async function FounderDeployPage() {
       loadFounderInvestorHub(company, profile.id),
     ]);
     crmView = buildFounderInvestorCrmView(activity, pledgeSummary);
-    pipelineList = buildPipelineList(crmView);
     board = loadedBoard;
     hub = loadedHub;
 
@@ -222,19 +152,6 @@ export default async function FounderDeployPage() {
           (journeyState.conditions.requiredDocsUploaded ? 5 : 0),
       ),
     );
-
-    // Founder-safe Partner view for each shown investor. Reads cached partner-score
-    // snapshots in a single query (refreshed by the daily orchestration cron), with
-    // a live-compute fallback for any investor not yet snapshotted. Service role: a
-    // founder can't read other investors' data directly.
-    const scores = await loadPartnerScoresBatch(
-      serviceSupabase,
-      pipelineList.map((row) => row.investorId),
-    );
-    for (const row of pipelineList) {
-      const score = scores.get(row.investorId);
-      if (score) partnerViews.set(row.investorId, founderFacingPartnerView(score));
-    }
   }
 
   // Founder-automatic outreach: once the Investable Score clears the threshold,
@@ -388,134 +305,25 @@ export default async function FounderDeployPage() {
       />
     );
 
-  // ---- Step 2 · Outreach → Manual (Investor CRM + Outreach & planning tools + pipeline) ----
-  const manualNode = (
-    <>
-      {company && hub ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="mb-3">
-            <h2 className="text-sm font-medium text-slate-900">Investor CRM</h2>
-            <p className="text-xs text-slate-500">
-              Add investors, import a CSV, and run your private outreach — all in one place.
-            </p>
-          </div>
-          <FounderInvestorHubPanels
-            companyName={company.company_name}
-            contacts={hub.contacts}
-            targets={hub.targets}
-            campaigns={hub.campaigns}
-            readiness={hub.readiness}
-            platformMatches={hub.platformMatches}
-            followUpCount={hub.followUpCount}
-            socialDrafts={hub.socialDrafts}
-            socialReadiness={hub.socialReadiness}
-            companySnapshot={{
-              companyName: company.company_name,
-              industry: company.industry ?? null,
-              businessDescription: company.business_description ?? null,
-              revenueStage: company.revenue_stage ?? null,
-              fundingAmount: company.funding_amount ? Number(company.funding_amount) : null,
-              geography: [company.state, company.country].filter(Boolean).join(", ") || null,
-              founderGoals: company.founder_goals ?? null,
-            }}
-          />
-        </div>
-      ) : null}
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {MANUAL_TOOLS.map((tool) => (
-          <Link
-            key={tool.href}
-            href={tool.href}
-            className="flex flex-col rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50/40"
-          >
-            <span className="flex items-center justify-between">
-              <span className="text-sm font-medium text-slate-900">{tool.label}</span>
-              <span className="text-slate-400">→</span>
-            </span>
-            <span className="mt-1 text-xs text-slate-500">{tool.blurb}</span>
-          </Link>
-        ))}
-      </div>
-
-      {followUpsNeeded > 0 ? (
-        <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-amber-900">
-            {followUpsNeeded} investor{followUpsNeeded === 1 ? "" : "s"} need a follow-up — pick targets from your
-            matches and keep the raise moving.
-          </p>
-          <Link
-            href="/founder/investors"
-            className="shrink-0 rounded-full bg-amber-600 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-amber-500"
-          >
-            Review follow-ups →
-          </Link>
-        </div>
-      ) : null}
-
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-slate-900">{t("investor_pipeline_2")}</h2>
-          <Link href="/founder/investors" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
-            Open full investor CRM →
-          </Link>
-        </div>
-        {pipelineList.length === 0 ? (
-          <EmptyState
-            title={t("no_investor_activity_yet")}
-            description={t("as_investors_express_interest_or_request_intro")}
-            secondaryActionLabel="Open investor CRM"
-            secondaryActionHref="/founder/investors"
-          />
-        ) : (
-          <ul className="space-y-2">
-            {pipelineList.map((row) => {
-              const amount = formatRowAmount(row);
-              const isFollowUp = row.actionType === "follow_up" || row.pipelineStage === "follow_up";
-              return (
-                <li
-                  key={row.id}
-                  className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3.5"
-                >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-xs font-semibold text-indigo-700">
-                    {initials(row.investorName)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-900">{row.investorName}</p>
-                    <p className="text-xs text-slate-500">
-                      {amount ? `${amount} · ` : ""}
-                      {formatDate(row.lastActivityAt)}
-                    </p>
-                    {partnerViews.has(row.investorId) ? (
-                      <div className="mt-1.5">
-                        <FounderFacingInvestorTier view={partnerViews.get(row.investorId)!} showFacts={false} />
-                      </div>
-                    ) : null}
-                  </div>
-                  <span
-                    className={[
-                      "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset",
-                      STAGE_BADGE[row.actionType],
-                    ].join(" ")}
-                  >
-                    {row.actionLabel}
-                  </span>
-                  {isFollowUp ? (
-                    <Link
-                      href="/founder/investors"
-                      className="shrink-0 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100"
-                    >
-                      Nudge
-                    </Link>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-    </>
-  );
+  // ---- Step 2 · Outreach → Manual (Investor outreach wizard only) ----
+  const manualNode =
+    company && hub ? (
+      <ManualOutreachBuilder
+        contacts={hub.contacts.map((c) => ({
+          id: c.id,
+          name: c.investor_name,
+          email: c.email,
+          detail: [c.firm_name, c.investor_type].filter(Boolean).join(" · ") || c.email,
+        }))}
+      />
+    ) : (
+      <EmptyState
+        title="Link a company to run outreach"
+        description="Complete your company setup, then build and send your investor outreach here."
+        secondaryActionLabel="Edit profile"
+        secondaryActionHref="/founder/settings"
+      />
+    );
 
   return (
     <FounderAppShell
