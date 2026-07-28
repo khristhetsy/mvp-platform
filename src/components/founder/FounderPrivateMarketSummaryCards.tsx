@@ -1,16 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Send, HandCoins, Gauge, type LucideIcon } from "lucide-react";
+import { Users, Send, Gauge, type LucideIcon } from "lucide-react";
 import type { FounderPrivateMarketSummary } from "@/lib/founder/private-market";
 
-type CardKey = "contacts" | "reached" | "pledged" | "score";
-
-function money(n: number): string {
-  return n > 0
-    ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: n >= 1_000_000 ? "compact" : "standard", maximumFractionDigits: n >= 1_000_000 ? 1 : 0 }).format(n)
-    : "$0";
-}
+type CardKey = "contacts" | "reached" | "score";
 
 export function FounderPrivateMarketSummaryCards({
   summary,
@@ -21,7 +15,6 @@ export function FounderPrivateMarketSummaryCards({
   const cards: { key: CardKey; icon: LucideIcon; label: string; value: string; sub: string; tint: string; bg: string }[] = [
     { key: "contacts", icon: Users, label: "Total investor contacts", value: summary.totalContacts.toLocaleString(), sub: "in the iCapOS network", tint: "var(--indigo)", bg: "var(--indigo-soft)" },
     { key: "reached", icon: Send, label: "Reached out", value: String(summary.reachedOut), sub: `of ${summary.investorUniverse} contacted`, tint: "var(--teal)", bg: "var(--teal-muted)" },
-    { key: "pledged", icon: HandCoins, label: "Pledged", value: money(summary.pledgedTotal), sub: "soft commitments", tint: "var(--navy)", bg: "var(--navy-muted)" },
     { key: "score", icon: Gauge, label: "Avg investor score", value: summary.avgScore != null ? String(summary.avgScore) : "—", sub: "across rated investors", tint: "var(--navy)", bg: "var(--navy-muted)" },
   ];
 
@@ -52,16 +45,6 @@ export function FounderPrivateMarketSummaryCards({
           : `${summary.reachedOut} investor${summary.reachedOut === 1 ? "" : "s"} contacted. Respond quickly to any replies — speed is a strong predictor of a close.`,
       ],
     },
-    pledged: {
-      title: "Pledged",
-      sub: "Soft, non-binding commitments",
-      rows: [["Total pledged", money(summary.pledgedTotal)]],
-      advice: [
-        summary.pledgedTotal === 0
-          ? "Pledges follow document access. Upload your financial model and cap table — investors rarely pledge before reviewing them."
-          : "Turn soft pledges into commitments by scheduling calls with each pledging investor this week.",
-      ],
-    },
     score: {
       title: "Avg investor score",
       sub: "Platform partner-quality rating",
@@ -78,7 +61,7 @@ export function FounderPrivateMarketSummaryCards({
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => {
           const Icon = c.icon;
           return (
