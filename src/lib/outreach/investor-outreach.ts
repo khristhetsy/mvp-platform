@@ -10,7 +10,10 @@ import { renderIntroEmail } from "@/lib/outreach/intro-template";
 import { buildUnsubscribeUrl, filterUnsubscribed } from "@/lib/outreach/unsubscribe";
 import { isProspectInvestorId } from "@/lib/matching/prospect-investors";
 
-const STRONG_MATCH_THRESHOLD = 70;
+// Automated outreach targets in-industry investors: a 50+ match whose sector
+// aligns with the company. (Was a blanket 70+ — lowered so sector-aligned
+// "Moderate" matches qualify, while off-sector investors are still excluded.)
+const OUTREACH_MATCH_THRESHOLD = 50;
 const DEFAULT_WEEKLY_CAP = 10;
 const MAX_AUDIENCE = 50;
 
@@ -72,8 +75,9 @@ export async function getCampaignRecipients(campaignId: string): Promise<Outreac
 }
 
 /**
- * Auto-drafts a pending-approval campaign for a company from its strong member
- * matches, if one doesn't already exist. Idempotent (one campaign per company).
+ * Auto-drafts a pending-approval campaign for a company from its in-industry
+ * member matches (score >= 50 and sector-aligned), if one doesn't already
+ * exist. Idempotent (one campaign per company).
  * Prospects are excluded — outreach targets real, approved investors only.
  */
 export async function createDraftFromMatch(companyId: string): Promise<{ created: boolean }> {
@@ -92,8 +96,9 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
   const company = companies.find((c) => c.id === companyId);
   if (!company) return { created: false };
 
-  const ranked = rankInvestorsForCompany(company, investors, MAX_AUDIENCE)
-    .filter((row) => row.match.matchScore >= STRONG_MATCH_THRESHOLD);
+  const ranked = rankInvestorsForCompany(company, investors, MAX_AUDIENCE).filter(
+    (row) => row.match.matchScore >= OUTREACH_MATCH_THRESHOLD && row.match.matchReasons.includes("Sector alignment"),
+  );
   if (ranked.length === 0) return { created: false };
 
   const { data: campaign } = await db
