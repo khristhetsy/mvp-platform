@@ -4,6 +4,7 @@ import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-set
 import {
   getManualOutreach,
   saveManualOutreach,
+  enrollManualRecipients,
   type ManualOutreach,
   type ManualSequenceStep,
 } from "@/lib/outreach/manual-outreach";
@@ -72,6 +73,16 @@ export async function POST(request: Request) {
       { error: "Couldn't save. If this persists, the outreach table may need its migration run." },
       { status: 500 },
     );
+  }
+
+  // Starting the sequence enrolls the selected contacts into the send queue;
+  // the cron send pass then dispatches each due step. Never block the response.
+  if (body.action === "start") {
+    try {
+      await enrollManualRecipients(company.id, recipientIds);
+    } catch {
+      // Non-fatal — the campaign is saved; enrollment retries on next start.
+    }
   }
 
   return NextResponse.json({ status: payload.status });

@@ -19,6 +19,7 @@ import { processBoundedIntegrationRetries } from "@/lib/integrations/delivery";
 import { runScheduledDigestPass } from "@/lib/notifications/scheduled/digest-scheduler";
 import { runMatchNotificationPass } from "@/lib/notifications/match-notifications";
 import { processApprovedOutreach } from "@/lib/outreach/investor-outreach";
+import { processManualOutreach } from "@/lib/outreach/manual-outreach";
 import type { Database } from "@/lib/supabase/types";
 
 export type CronOrchestrationResponse = {
@@ -110,6 +111,13 @@ export async function runCronOrchestrationPass(options?: {
   } catch (error) {
     failuresCount += 1;
     errors.push({ step: "investor_outreach_send", message: safeErrorMessage(error) });
+  }
+
+  try {
+    await processManualOutreach();
+  } catch (error) {
+    failuresCount += 1;
+    errors.push({ step: "manual_outreach_send", message: safeErrorMessage(error) });
   }
 
   let escalationsDetected = 0;
