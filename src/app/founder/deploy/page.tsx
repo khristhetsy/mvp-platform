@@ -98,8 +98,6 @@ function buildPipelineList(view: ReturnType<typeof buildFounderInvestorCrmView>)
 function buildDeployInsights(input: {
   investableScore: number;
   followUpsNeeded: number;
-  interestedCount: number;
-  pledgedCount: number;
   reachedOut: number;
   strongCount: number;
   published: boolean;
@@ -165,19 +163,6 @@ function buildDeployInsights(input: {
       recommendations: [
         "If automation is live, it will reach them on the next pass — no action needed.",
         "For the very best fits, add a personal manual note to stand out.",
-      ],
-      tone: "info",
-    });
-  }
-
-  if (input.interestedCount > 0 && input.pledgedCount === 0) {
-    insights.push({
-      id: "no-pledge",
-      title: "Interest, but no pledges yet",
-      summary: `${input.interestedCount} interested and zero pledged — the ask may need sharpening.`,
-      recommendations: [
-        "Use the Investor update builder to share a concrete milestone and a clear ask.",
-        "Make sure your funding timeline shows a close date investors can rally to.",
       ],
       tone: "info",
     });
@@ -272,7 +257,6 @@ export default async function FounderDeployPage() {
   }
 
   const followUpsNeeded = crmView?.summary.followUpsNeeded ?? 0;
-  const pledgedCount = crmView?.sections.pledged.length ?? 0;
   const interestedCount = crmView?.summary.totalInterestedInvestors ?? 0;
   const introRequests = crmView?.summary.introRequests ?? 0;
 
@@ -289,13 +273,10 @@ export default async function FounderDeployPage() {
       { label: "Interested", value: interestedCount },
       { label: "Intro req.", value: introRequests },
       { label: "Follow-up", value: followUpsNeeded },
-      { label: "Pledged", value: pledgedCount },
     ],
     insights: buildDeployInsights({
       investableScore,
       followUpsNeeded,
-      interestedCount,
-      pledgedCount,
       reachedOut: board?.summary.reachedOut ?? 0,
       strongCount: board?.summary.strongCount ?? 0,
       published: company?.is_published ?? false,
