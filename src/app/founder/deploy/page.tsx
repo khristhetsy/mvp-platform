@@ -282,20 +282,9 @@ export default async function FounderDeployPage() {
     }),
   };
 
-  // ---- Step 1 · Public Profile (preview snapshot + publish state + links) ----
+  // ---- Step 1 · Public Profile (embedded live preview + publish state + links) ----
   const isPublished = company?.is_published ?? false;
   const publicHref = company?.slug ? `/f/${company.slug}` : null;
-  const profileSnapshot: { label: string; value: string }[] = company
-    ? [
-        { label: "Company", value: company.company_name ?? "—" },
-        { label: "Industry", value: company.industry ?? "—" },
-        {
-          label: "Raise",
-          value: company.funding_amount ? formatPledgeTotal(company.funding_amount, "USD") : "—",
-        },
-        { label: "Revenue stage", value: company.revenue_stage ?? "—" },
-      ]
-    : [];
 
   const publicProfileNode = (
     <>
@@ -330,34 +319,30 @@ export default async function FounderDeployPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <p className="mb-3 text-sm font-medium text-slate-900">Profile snapshot</p>
-        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {profileSnapshot.map((item) => (
-            <div key={item.label}>
-              <dt className="text-xs text-slate-400">{item.label}</dt>
-              <dd className="truncate text-sm font-medium text-slate-800">{item.value}</dd>
-            </div>
-          ))}
-        </dl>
-        {company?.business_description ? (
-          <p className="mt-3 line-clamp-3 text-sm text-slate-600">{company.business_description}</p>
-        ) : null}
-        <p className="mt-3 text-xs text-slate-400">
-          Editing happens in one place — your profile settings — so the preview, your public page, and investor
-          matching always stay in sync.
-        </p>
-        {publicHref && isPublished ? (
-          <a
-            href={publicHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 inline-block text-xs font-semibold text-indigo-600 hover:text-indigo-700"
-          >
-            Open live link {publicHref} ↗
-          </a>
-        ) : null}
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2">
+          <span className="text-xs font-medium text-slate-500">Live preview — exactly what investors see</span>
+          {publicHref && isPublished ? (
+            <a
+              href={publicHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+            >
+              Open live link ↗
+            </a>
+          ) : null}
+        </div>
+        <iframe
+          src="/founder/preview?embed=1"
+          title="Investor one-pager preview"
+          className="h-[640px] w-full border-0"
+        />
       </div>
+      <p className="text-xs text-slate-400">
+        Editing happens in one place — your profile settings — so this preview, your public page, and investor
+        matching always stay in sync.
+      </p>
     </>
   );
 

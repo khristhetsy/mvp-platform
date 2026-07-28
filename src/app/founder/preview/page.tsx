@@ -59,7 +59,14 @@ function formatFunding(amount: number | null): string {
   return `$${amount.toLocaleString()}`;
 }
 
-export default async function FounderPreviewPage() {
+export default async function FounderPreviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ embed?: string }>;
+}) {
+  // Embedded mode (?embed=1) drops the founder chrome so the one-pager can be
+  // shown inline on the Deploy → Public Profile tab.
+  const isEmbed = (await searchParams).embed === "1";
   const profile = await requireRole(["founder"]);
   const t = await getTranslations("appPages");
   const company = await ensureFounderCompanyForUser(profile);
@@ -89,6 +96,7 @@ export default async function FounderPreviewPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#F8F9FC", fontFamily: "system-ui, sans-serif" }}>
       {/* Preview banner */}
+      {!isEmbed && (
       <div style={{
         background: "#1e1b4b",
         padding: "10px 24px",
@@ -155,8 +163,10 @@ export default async function FounderPreviewPage() {
           </Link>
         </div>
       </div>
+      )}
 
       {/* Simulated investor nav bar */}
+      {!isEmbed && (
       <div style={{
         background: "white",
         borderBottom: "1px solid #e5e7eb",
@@ -177,6 +187,7 @@ export default async function FounderPreviewPage() {
           Sign in to connect
         </span>
       </div>
+      )}
 
       {/* Content — mirrors /f/[slug] exactly */}
       <main style={{ maxWidth: 760, margin: "0 auto", padding: "40px 20px 80px" }}>
