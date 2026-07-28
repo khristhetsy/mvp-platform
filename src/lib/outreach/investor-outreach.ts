@@ -142,6 +142,46 @@ export async function ensureFounderAutomatedOutreach(
     .eq("status", "pending_approval");
 }
 
+/** Founder-facing outreach state for a company's campaign. */
+export async function getFounderOutreachStatus(
+  companyId: string,
+): Promise<{ exists: boolean; paused: boolean }> {
+  const { data } = await client()
+    .from("investor_outreach_campaigns")
+    .select("paused")
+    .eq("company_id", companyId)
+    .maybeSingle();
+  if (!data) return { exists: false, paused: false };
+  return { exists: true, paused: Boolean((data as { paused: boolean }).paused) };
+}
+
+/**
+ * Founder pause/resume for their OWN company's automated outreach — the
+ * founder-facing off switch that doesn't need an env change. Verifies the
+ * founder owns the company before touching anything. Returns false if the
+ * founder doesn't own the company or has no campaign yet.
+ */
+export async function setFounderOutreachPaused(
+  companyId: string,
+  founderId: string,
+  paused: boolean,
+): Promise<boolean> {
+  const db = client();
+  const { data: owned } = await db
+    .from("companies")
+    .select("id")
+    .eq("id", companyId)
+    .eq("founder_id", founderId)
+    .maybeSingle();
+  if (!owned) return false;
+
+  const { error } = await db
+    .from("investor_outreach_campaigns")
+    .update({ paused, updated_at: new Date().toISOString() })
+    .eq("company_id", companyId);
+  return !error;
+}
+
 export async function approveCampaign(campaignId: string, adminId: string): Promise<boolean> {
   const { error } = await client()
     .from("investor_outreach_campaigns")

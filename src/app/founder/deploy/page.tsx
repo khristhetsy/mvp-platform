@@ -19,7 +19,8 @@ import { buildProfileCompletion } from "@/lib/data/founder-readiness";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { loadFounderInvestorHub } from "@/lib/founder-crm/load-founder-investor-hub";
 import { FounderInvestorHubPanels } from "@/components/FounderInvestorHubPanels";
-import { ensureFounderAutomatedOutreach } from "@/lib/outreach/investor-outreach";
+import { ensureFounderAutomatedOutreach, getFounderOutreachStatus } from "@/lib/outreach/investor-outreach";
+import { AutomatedOutreachToggle } from "@/components/founder/AutomatedOutreachToggle";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
@@ -257,9 +258,14 @@ export default async function FounderDeployPage() {
   // send pass shares the Founder Preview with matched investors. Idempotent and
   // non-blocking — the Deploy view must never fail on outreach setup. (Real email
   // dispatch is still gated by INVESTOR_OUTREACH_LIVE.)
+  let outreachPaused = false;
+  let outreachActive = false;
   if (company && investableScore >= OUTREACH_THRESHOLD) {
     try {
       await ensureFounderAutomatedOutreach(company.id, profile.id);
+      const status = await getFounderOutreachStatus(company.id);
+      outreachActive = status.exists;
+      outreachPaused = status.paused;
     } catch {
       // Non-fatal.
     }
@@ -379,6 +385,7 @@ export default async function FounderDeployPage() {
   const automatedNode =
     company && board ? (
       <>
+        {outreachActive ? <AutomatedOutreachToggle initialPaused={outreachPaused} /> : null}
         <FounderPrivateMarketTicker rows={board.rows} />
         <FounderPrivateMarketSummaryCards summary={board.summary} rankedCount={board.rows.length} />
         <div className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-600">
