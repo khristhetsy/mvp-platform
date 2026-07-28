@@ -32,7 +32,6 @@ export function InvestorDealActions({
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [indicativeInterestAmount, setIndicativeInterestAmount] = useState("");
   const [message, setMessage] = useState("");
 
   async function callApi(path: string, body: Record<string, unknown>) {
@@ -68,22 +67,9 @@ export function InvestorDealActions({
   }
 
   async function expressInterest() {
-    const amount = indicativeInterestAmount.trim();
-    if (amount && Number(amount) <= 0) {
-      setError("Enter an indicative interest amount greater than zero.");
-      return;
-    }
-
+    // Pledge (indicative dollar commitment) is hidden — expressing interest is a
+    // non-binding signal only, no amount captured.
     await runAction("interest", async () => {
-      if (amount) {
-        await callApi("/api/investor/pledge", {
-          companyId,
-          companySlug,
-          pledgeAmount: Number(amount),
-          pledgeCurrency: "USD",
-        });
-      }
-
       await callApi("/api/investor/interests", {
         companyId,
         companySlug,
@@ -186,16 +172,6 @@ export function InvestorDealActions({
       {success ? <p className="mt-3 text-sm text-emerald-700">{success}</p> : null}
 
       <div className="mt-5 grid gap-4">
-        <label className="grid gap-2 text-sm">
-          <span className="font-medium text-slate-800">{t("indicative_interest_amount")}</span>
-          <input
-            value={indicativeInterestAmount}
-            onChange={(event) => setIndicativeInterestAmount(event.target.value)}
-            className="rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-            placeholder={t("enter_indicative_interest_amount_usd")}
-            inputMode="decimal"
-          />
-        </label>
         <textarea
           value={message}
           onChange={(event) => setMessage(event.target.value)}
