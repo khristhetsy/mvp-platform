@@ -3,6 +3,7 @@ import { requireApiProfile } from "@/lib/api/auth";
 import { ensureFounderCompanyForUser } from "@/lib/onboarding/ensure-founder-setup";
 import {
   getManualOutreach,
+  getManualRecipients,
   saveManualOutreach,
   enrollManualRecipients,
   type ManualOutreach,
@@ -17,10 +18,13 @@ export async function GET() {
   if ("error" in auth) return auth.error;
 
   const company = await ensureFounderCompanyForUser(auth.profile);
-  if (!company) return NextResponse.json({ campaign: null });
+  if (!company) return NextResponse.json({ campaign: null, recipients: [] });
 
-  const campaign = await getManualOutreach(company.id);
-  return NextResponse.json({ campaign });
+  const [campaign, recipients] = await Promise.all([
+    getManualOutreach(company.id),
+    getManualRecipients(company.id),
+  ]);
+  return NextResponse.json({ campaign, recipients });
 }
 
 function parseSequence(value: unknown): ManualSequenceStep[] {

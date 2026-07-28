@@ -116,6 +116,48 @@ export async function saveManualOutreach(
   return !error;
 }
 
+export type ManualRecipientStatus = {
+  name: string | null;
+  email: string;
+  status: string;
+  sentAt: string | null;
+  openedAt: string | null;
+  clickedAt: string | null;
+  repliedAt: string | null;
+};
+
+/** Per-recipient send/engagement status for the builder, most recent first. */
+export async function getManualRecipients(companyId: string): Promise<ManualRecipientStatus[]> {
+  const { data } = await client()
+    .from("founder_manual_outreach_recipients")
+    .select("name, email, status, last_sent_at, opened_at, clicked_at, replied_at")
+    .eq("company_id", companyId);
+  const rows = (data ?? []) as Array<{
+    name: string | null;
+    email: string;
+    status: string;
+    last_sent_at: string | null;
+    opened_at: string | null;
+    clicked_at: string | null;
+    replied_at: string | null;
+  }>;
+  return rows
+    .map((r) => ({
+      name: r.name,
+      email: r.email,
+      status: r.status,
+      sentAt: r.last_sent_at,
+      openedAt: r.opened_at,
+      clickedAt: r.clicked_at,
+      repliedAt: r.replied_at,
+    }))
+    .sort((a, b) => {
+      const at = a.repliedAt ?? a.clickedAt ?? a.openedAt ?? a.sentAt;
+      const bt = b.repliedAt ?? b.clickedAt ?? b.openedAt ?? b.sentAt;
+      return (bt ? Date.parse(bt) : 0) - (at ? Date.parse(at) : 0);
+    });
+}
+
 /**
  * Enroll the selected contacts into the campaign's send queue and stop anyone
  * who was deselected. New contacts start at step 0; existing recipients keep

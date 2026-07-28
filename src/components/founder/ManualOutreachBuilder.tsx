@@ -22,6 +22,31 @@ export type OutreachAudienceContact = {
 
 type Tab = 0 | 1 | 2 | 3;
 type SeqStep = { label: string; dayOffset: number };
+type RecipientStatus = {
+  name: string | null;
+  email: string;
+  status: string;
+  sentAt: string | null;
+  openedAt: string | null;
+  clickedAt: string | null;
+  repliedAt: string | null;
+};
+
+function recipientStage(r: RecipientStatus): { label: string; cls: string; at: string | null } {
+  if (r.repliedAt) return { label: "Replied", cls: "bg-teal-50 text-teal-700", at: r.repliedAt };
+  if (r.clickedAt) return { label: "Clicked", cls: "bg-teal-50 text-teal-700", at: r.clickedAt };
+  if (r.openedAt) return { label: "Opened", cls: "bg-emerald-50 text-emerald-700", at: r.openedAt };
+  if (r.status === "skipped") return { label: "Skipped", cls: "bg-slate-100 text-slate-500", at: null };
+  if (r.status === "stopped") return { label: "Stopped", cls: "bg-slate-100 text-slate-500", at: r.sentAt };
+  if (r.sentAt) return { label: "Sent", cls: "bg-indigo-50 text-indigo-700", at: r.sentAt };
+  return { label: "Queued", cls: "bg-amber-50 text-amber-700", at: null };
+}
+
+function shortDate(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
 
 const TABS = ["Audience", "Compose", "Sequence", "Review & send"];
 const CONTINUE_LABELS = ["Continue → Compose", "Continue → Sequence", "Continue → Review", ""];
@@ -76,22 +101,32 @@ export function ManualOutreachBuilder({
   const [status, setStatus] = useState<"draft" | "queued">(initial?.status ?? "draft");
   const [message, setMessage] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [recipients, setRecipients] = useState<RecipientStatus[]>([]);
 
-  // Load any previously-saved campaign (unless a snapshot was passed in).
+  // Load any previously-saved campaign + recipient statuses (unless a snapshot
+  // was passed in).
   useEffect(() => {
     if (initial) return;
     let active = true;
     void fetch("/api/founder/outreach/manual")
       .then((r) => (r.ok ? r.json() : null))
-      .then((data: { campaign?: { status?: string; emailSubject?: string; emailBody?: string; sequence?: SeqStep[]; recipientIds?: string[]; stopOnReply?: boolean } | null } | null) => {
-        const c = data?.campaign;
-        if (!active || !c) return;
-        if (c.emailSubject) setSubject(c.emailSubject);
-        if (c.emailBody) setEmailBody(c.emailBody);
-        if (Array.isArray(c.recipientIds)) setSelected(new Set(c.recipientIds));
-        if (typeof c.stopOnReply === "boolean") setStopOnReply(c.stopOnReply);
-        if (c.status === "queued") setStatus("queued");
-      })
+      .then(
+        (data: {
+          campaign?: { status?: string; emailSubject?: string; emailBody?: string; sequence?: SeqStep[]; recipientIds?: string[]; stopOnReply?: boolean } | null;
+          recipients?: RecipientStatus[];
+        } | null) => {
+          if (!active) return;
+          const c = data?.campaign;
+          if (c) {
+            if (c.emailSubject) setSubject(c.emailSubject);
+            if (c.emailBody) setEmailBody(c.emailBody);
+            if (Array.isArray(c.recipientIds)) setSelected(new Set(c.recipientIds));
+            if (typeof c.stopOnReply === "boolean") setStopOnReply(c.stopOnReply);
+            if (c.status === "queued") setStatus("queued");
+          }
+          if (Array.isArray(data?.recipients)) setRecipients(data.recipients);
+        },
+      )
       .catch(() => {});
     return () => {
       active = false;
@@ -390,6 +425,35 @@ export function ManualOutreachBuilder({
                 Send test to me
               </button>
             </div>
+
+            {recipients.length > 0 ? (
+              <div className="mt-6">
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-slate-900">Recipient activity</h3>
+                  <span className="text-xs text-slate-400">{recipients.length} enrolled</span>
+                </div>
+                <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+                  {recipients.map((r) => {
+                    const stage = recipientStage(r);
+                    return (
+                      <li key={r.email} className="flex items-center gap-3 px-3 py-2.5">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[11px] font-medium text-indigo-700">
+                          {(r.name ?? r.email).slice(0, 2).toUpperCase()}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm text-slate-800">{r.name ?? r.email}</span>
+                          {r.name ? <span className="block truncate text-xs text-slate-400">{r.email}</span> : null}
+                        </span>
+                        {stage.at ? <span className="shrink-0 text-xs text-slate-400">{shortDate(stage.at)}</span> : null}
+                        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${stage.cls}`}>
+                          {stage.label}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>
