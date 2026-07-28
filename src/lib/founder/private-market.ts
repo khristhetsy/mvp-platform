@@ -7,7 +7,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 import { TIER_LABELS, type PartnerScore } from "@/lib/investor-rating/types";
 
-export type OutreachStatus = "opened" | "reached_out" | "queued" | "skipped" | "none";
+export type OutreachStatus = "clicked" | "opened" | "reached_out" | "queued" | "skipped" | "none";
 
 export type InvestorMomentum = "active" | "warm" | "quiet";
 
@@ -165,7 +165,10 @@ export async function loadFounderInvestorBoard(
 
   // Outreach status + last-contact time per investor from this founder's own
   // campaign (admin-run).
-  const outreachByInvestor = new Map<string, { status: string; sentAt: string | null; openedAt: string | null }>();
+  const outreachByInvestor = new Map<
+    string,
+    { status: string; sentAt: string | null; openedAt: string | null; clickedAt: string | null }
+  >();
   {
     const { data: campaign } = await rawAdmin
       .from("investor_outreach_campaigns")
@@ -176,15 +179,21 @@ export async function loadFounderInvestorBoard(
     if (campaignId) {
       const { data: recips } = await rawAdmin
         .from("investor_outreach_recipients")
-        .select("investor_ref, status, sent_at, opened_at")
+        .select("investor_ref, status, sent_at, opened_at, clicked_at")
         .eq("campaign_id", campaignId);
       for (const row of (recips ?? []) as Array<{
         investor_ref: string;
         status: string;
         sent_at: string | null;
         opened_at: string | null;
+        clicked_at: string | null;
       }>) {
-        outreachByInvestor.set(row.investor_ref, { status: row.status, sentAt: row.sent_at, openedAt: row.opened_at });
+        outreachByInvestor.set(row.investor_ref, {
+          status: row.status,
+          sentAt: row.sent_at,
+          openedAt: row.opened_at,
+          clickedAt: row.clicked_at,
+        });
       }
     }
   }
@@ -211,15 +220,17 @@ export async function loadFounderInvestorBoard(
     const lastMs = agg && agg.last ? now - agg.last : null;
     const rawOutreachEntry = investor.profile_id ? outreachByInvestor.get(investor.profile_id) : undefined;
     const rawOutreach = rawOutreachEntry?.status;
-    const outreach: OutreachStatus = rawOutreachEntry?.openedAt
-      ? "opened"
-      : rawOutreach === "sent"
-        ? "reached_out"
-        : rawOutreach === "queued"
-          ? "queued"
-          : rawOutreach === "skipped"
-            ? "skipped"
-            : "none";
+    const outreach: OutreachStatus = rawOutreachEntry?.clickedAt
+      ? "clicked"
+      : rawOutreachEntry?.openedAt
+        ? "opened"
+        : rawOutreach === "sent"
+          ? "reached_out"
+          : rawOutreach === "queued"
+            ? "queued"
+            : rawOutreach === "skipped"
+              ? "skipped"
+              : "none";
     const ps = investor.profile_id ? scoreMap.get(investor.profile_id) : undefined;
     const pid = investor.profile_id ?? "";
     const rawName = isProspectInvestorId(pid)
@@ -247,7 +258,8 @@ export async function loadFounderInvestorBoard(
       momentum: lastMs != null ? momentumFor(lastMs) : null,
       trend: null,
       outreach,
-      outreachActivityAt: rawOutreachEntry?.openedAt ?? rawOutreachEntry?.sentAt ?? null,
+      outreachActivityAt:
+        rawOutreachEntry?.clickedAt ?? rawOutreachEntry?.openedAt ?? rawOutreachEntry?.sentAt ?? null,
       investorScore: ps?.score ?? null,
       scoreTier: ps ? TIER_LABELS[ps.tier] : null,
       scoreRated: ps?.status === "rated",

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { recordEmailOpen } from "@/lib/outreach/email-events";
+import { recordEmailOpen, recordEmailClick } from "@/lib/outreach/email-events";
 
 export const dynamic = "force-dynamic";
 
@@ -33,14 +33,15 @@ export async function POST(request: Request) {
   if (!payload) return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
 
   const type = typeof payload.type === "string" ? payload.type : "";
-  if (type !== "email.opened") {
+  if (type !== "email.opened" && type !== "email.clicked") {
     // Acknowledge other events (delivered, bounced, etc.) without acting on them.
     return NextResponse.json({ ok: true, ignored: type || "unknown" });
   }
 
   const data = (payload.data as Record<string, unknown>) ?? {};
   const toEmails = [...collectEmails(data.to), ...collectEmails(payload.to)];
-  const { marked } = await recordEmailOpen(toEmails);
+  const { marked } =
+    type === "email.clicked" ? await recordEmailClick(toEmails) : await recordEmailOpen(toEmails);
 
   return NextResponse.json({ ok: true, marked });
 }
