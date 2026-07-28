@@ -20,7 +20,6 @@ import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { loadFounderInvestorHub } from "@/lib/founder-crm/load-founder-investor-hub";
 import { FounderInvestorHubPanels } from "@/components/FounderInvestorHubPanels";
 import { ensureFounderAutomatedOutreach, getFounderOutreachStatus } from "@/lib/outreach/investor-outreach";
-import { AutomatedOutreachToggle } from "@/components/founder/AutomatedOutreachToggle";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
@@ -367,7 +366,21 @@ export default async function FounderDeployPage() {
     company && board ? (
       <>
         {investableScore >= OUTREACH_THRESHOLD ? (
-          <AutomatedOutreachToggle active={outreachActive} initialPaused={outreachPaused} />
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-slate-900">Automated outreach</p>
+              <p className="text-xs text-slate-500">
+                {!outreachActive
+                  ? "On — waiting for a strong-fit investor. It starts automatically as soon as one appears."
+                  : outreachPaused
+                    ? "Paused by an administrator. It will resume when the iCapOS team re-enables it."
+                    : "Running — your Founder Preview is being shared with matched investors."}
+              </p>
+            </div>
+            <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
+              🔒 View only · Managed by iCapOS
+            </span>
+          </div>
         ) : null}
         <FounderPrivateMarketTicker rows={board.rows} />
         <FounderPrivateMarketSummaryCards summary={board.summary} rankedCount={board.rows.length} />

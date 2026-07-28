@@ -38,6 +38,8 @@ export type FounderInvestorRow = {
   trend: null;
   /** Where the admin-run introduction campaign stands with this investor. */
   outreach: OutreachStatus;
+  /** When this investor was last contacted by the campaign (ISO), or null. */
+  outreachActivityAt: string | null;
   /** Platform partner score (0–100), null when the investor is unrated ("New"). */
   investorScore: number | null;
   scoreTier: string | null;
@@ -161,8 +163,9 @@ export async function loadFounderInvestorBoard(
   }
   const cleanName = (value: string) => value.replace(/ · prospect$/, "");
 
-  // Outreach status per investor from this founder's own campaign (admin-run).
-  const outreachByInvestor = new Map<string, string>();
+  // Outreach status + last-contact time per investor from this founder's own
+  // campaign (admin-run).
+  const outreachByInvestor = new Map<string, { status: string; sentAt: string | null }>();
   {
     const { data: campaign } = await rawAdmin
       .from("investor_outreach_campaigns")
@@ -173,10 +176,10 @@ export async function loadFounderInvestorBoard(
     if (campaignId) {
       const { data: recips } = await rawAdmin
         .from("investor_outreach_recipients")
-        .select("investor_ref, status")
+        .select("investor_ref, status, sent_at")
         .eq("campaign_id", campaignId);
-      for (const row of (recips ?? []) as Array<{ investor_ref: string; status: string }>) {
-        outreachByInvestor.set(row.investor_ref, row.status);
+      for (const row of (recips ?? []) as Array<{ investor_ref: string; status: string; sent_at: string | null }>) {
+        outreachByInvestor.set(row.investor_ref, { status: row.status, sentAt: row.sent_at });
       }
     }
   }
@@ -201,7 +204,8 @@ export async function loadFounderInvestorBoard(
       String(index + 1).padStart(4, "0");
     const agg = investor.profile_id ? activity.get(investor.profile_id) : undefined;
     const lastMs = agg && agg.last ? now - agg.last : null;
-    const rawOutreach = investor.profile_id ? outreachByInvestor.get(investor.profile_id) : undefined;
+    const rawOutreachEntry = investor.profile_id ? outreachByInvestor.get(investor.profile_id) : undefined;
+    const rawOutreach = rawOutreachEntry?.status;
     const outreach: OutreachStatus =
       rawOutreach === "sent"
         ? "reached_out"
@@ -237,10 +241,19 @@ export async function loadFounderInvestorBoard(
       momentum: lastMs != null ? momentumFor(lastMs) : null,
       trend: null,
       outreach,
+      outreachActivityAt: rawOutreachEntry?.sentAt ?? null,
       investorScore: ps?.score ?? null,
       scoreTier: ps ? TIER_LABELS[ps.tier] : null,
       scoreRated: ps?.status === "rated",
     };
+  });
+
+  // Surface the most recently-contacted investors first; those with no outreach
+  // activity keep their match-ranked order below (stable sort).
+  rows.sort((a, b) => {
+    const at = a.outreachActivityAt ? Date.parse(a.outreachActivityAt) : -Infinity;
+    const bt = b.outreachActivityAt ? Date.parse(b.outreachActivityAt) : -Infinity;
+    return bt - at;
   });
 
   const shownScores = scored.map((s) => s.match.matchScore);

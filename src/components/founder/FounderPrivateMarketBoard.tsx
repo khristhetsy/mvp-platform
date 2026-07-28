@@ -37,6 +37,12 @@ function initials(name: string): string {
   return name.split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase() || "IN";
 }
 
+function formatActivityDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 /** Deterministic, rule-based positioning advice derived from the fit factors. */
 function buildAdvice(r: FounderInvestorRow): string[] {
   const factors = [
@@ -226,8 +232,11 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
               <div className="mt-1 font-mono text-[9px] uppercase tracking-wide text-slate-400">{BAND_LABEL[r.band]}</div>
             </div>
 
-            <div className="flex items-center justify-start sm:justify-center">
+            <div className="flex flex-col items-start gap-1 sm:items-center">
               <OutreachPill status={r.outreach} />
+              {r.outreachActivityAt ? (
+                <span className="font-mono text-[10px] text-slate-400">{formatActivityDate(r.outreachActivityAt)}</span>
+              ) : null}
             </div>
 
             <div className="text-left sm:text-center">
