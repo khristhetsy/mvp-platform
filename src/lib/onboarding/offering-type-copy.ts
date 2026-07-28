@@ -24,8 +24,8 @@ export const offeringTypeCopy = {
   title: "What's your capital structure?",
   subtitle: "This determines how iCapOS connects you with investors.",
   disclosure: {
-    heading: "Only Reg CF offerings appear in the public iCapOS Marketplace.",
-    body: "Reg CF permits public advertising of your raise; private offerings (Reg D) do not. If you select a private structure, iCapOS connects you with investors through private, permissioned matching instead — your profile is never publicly visible.",
+    heading: "iCapOS connects you with investors through private, permissioned matching.",
+    body: "Your profile is shown only to fit-matched investors through iCapOS — it is never publicly advertised, and you approve every introduction.",
   },
   options: {
     reg_cf: {
@@ -102,5 +102,9 @@ export const offeringTypeCopy = {
   stepLabel: "Founder onboarding",
 } as const;
 
-/** Fixed option order per spec: Reg CF, 506(b), 506(c), Not raising. */
-export const OPTION_ORDER: OfferingType[] = ["reg_cf", "reg_d_506b", "reg_d_506c", "not_raising"];
+/**
+ * Options shown in the picker. Reg CF (public crowdfunding) is hidden while the
+ * platform is private-placement only — restore by adding "reg_cf" back here. The
+ * copy maps above keep reg_cf so existing reg_cf founders still render correctly.
+ */
+export const OPTION_ORDER: OfferingType[] = ["reg_d_506b", "reg_d_506c", "not_raising"];

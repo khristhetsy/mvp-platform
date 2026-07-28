@@ -276,9 +276,9 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
     items: [
       // Private Market relocated into Deploy → Outreach → Automated (single entry point).
       { href: "/founder/matches", label: "Investor matches", minStage: "qualify" },
-      // Reg CF founders only — private (Reg D) founders are never prompted toward
-      // public exposure (dual-lane spec §3.2). Gated in WorkspaceSidebar.
-      { href: "/founder/marketplace/new", label: "List on marketplace", minStage: "deploy", requiresRegCf: true },
+      // Hidden while the platform is private-placement only (crowdfunding paused).
+      // Route still resolves; restore by uncommenting.
+      // { href: "/founder/marketplace/new", label: "List on marketplace", minStage: "deploy", requiresRegCf: true },
       // Hidden from nav (routes still resolve). Restore by uncommenting.
       // {
       //   href: "/founder/investors",
@@ -303,7 +303,8 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/founder/pitch-deck", label: "Pitch deck", minStage: "qualify" },
           { href: "/founder/financial-model", label: "Financial model", minStage: "qualify" },
           { href: "/founder/cap-table", label: "Cap table", minStage: "qualify" },
-          { href: "/founder/reg-cf", label: "Reg CF materials", minStage: "deploy" },
+          // Hidden while crowdfunding is paused (private-placement only). Restore by uncommenting.
+          // { href: "/founder/reg-cf", label: "Reg CF materials", minStage: "deploy" },
         ],
       },
       {
