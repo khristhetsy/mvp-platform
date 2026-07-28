@@ -8,6 +8,24 @@ import { renderManualEmail } from "@/lib/outreach/manual-template";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
+ * Reply-to address that encodes the recipient, e.g. replies+<id>@icapos.com, so
+ * an inbound reply can be traced back to the exact sequence recipient. Returns
+ * null when OUTREACH_REPLY_ADDRESS isn't configured (reply-stop then inactive).
+ */
+export function replyAddressFor(recipientId: string): string | null {
+  const base = process.env.OUTREACH_REPLY_ADDRESS;
+  if (!base || !base.includes("@")) return null;
+  const [local, domain] = base.split("@");
+  return `${local}+${recipientId}@${domain}`;
+}
+
+/** Extract the recipient id from a replies+<id>@domain address. */
+export function parseReplyRecipientId(toAddress: string): string | null {
+  const m = toAddress.match(/\+([0-9a-fA-F-]{36})@/);
+  return m ? m[1] : null;
+}
+
+/**
  * Founder-built manual outreach campaign — the Marketing-Hub-style builder in
  * Outreach → Manual. One campaign per company (draft that the founder edits).
  *
@@ -259,7 +277,15 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
         previewUrl,
         unsubscribeUrl: buildUnsubscribeUrl(r.email),
       });
-      const ok = await sendEmail({ to: r.email, subject, html, text });
+      const ok = await sendEmail({
+        to: r.email,
+        subject,
+        html,
+        text,
+        // Route replies to the tokenized inbound address so the sequence can stop
+        // on reply (falls back to no reply-to when inbound isn't configured).
+        replyTo: replyAddressFor(r.id) ?? undefined,
+      });
       if (ok) {
         sent += 1;
       } else {
@@ -273,4 +299,79 @@ export async function processManualOutreach(): Promise<{ sent: number; liveSend:
   }
 
   return { sent, liveSend: live };
+}
+
+/**
+ * Record an inbound reply and stop that recipient's remaining sequence steps
+ * when the campaign has stop-on-reply enabled. Matches by recipient token first
+ * (precise), falling back to the sender's email address.
+ */
+export async function handleInboundReply(input: {
+  recipientId?: string | null;
+  fromEmail?: string | null;
+}): Promise<{ stopped: number }> {
+  const db = client();
+  type R = { id: string; company_id: string; status: string };
+  let recipients: R[] = [];
+
+  if (input.recipientId) {
+    const { data } = await db
+      .from("founder_manual_outreach_recipients")
+      .select("id, company_id, status")
+      .eq("id", input.recipientId)
+      .maybeSingle();
+    if (data) recipients = [data as R];
+  } else if (input.fromEmail) {
+    const { data } = await db
+      .from("founder_manual_outreach_recipients")
+      .select("id, company_id, status")
+      .ilike("email", input.fromEmail.trim())
+      .eq("status", "active");
+    recipients = (data ?? []) as R[];
+  }
+
+  let stopped = 0;
+  const nowIso = new Date().toISOString();
+  for (const r of recipients) {
+    const { data: camp } = await db
+      .from("founder_manual_outreach")
+      .select("stop_on_reply")
+      .eq("company_id", r.company_id)
+      .maybeSingle();
+    const stop = (camp as { stop_on_reply?: boolean } | null)?.stop_on_reply !== false;
+    await db
+      .from("founder_manual_outreach_recipients")
+      .update({ replied_at: nowIso, status: stop ? "stopped" : r.status, updated_at: nowIso })
+      .eq("id", r.id);
+    if (stop) stopped += 1;
+  }
+  return { stopped };
+}
+
+/** Look up who to forward an inbound reply to (the founder who owns the campaign). */
+export async function resolveReplyForward(
+  recipientId: string,
+): Promise<{ founderEmail: string; investorName: string | null; companyName: string | null } | null> {
+  const db = client();
+  const { data: r } = await db
+    .from("founder_manual_outreach_recipients")
+    .select("company_id, name, email")
+    .eq("id", recipientId)
+    .maybeSingle();
+  if (!r) return null;
+  const rec = r as { company_id: string; name: string | null; email: string };
+
+  const { data: c } = await db
+    .from("companies")
+    .select("company_name, founder_id")
+    .eq("id", rec.company_id)
+    .maybeSingle();
+  const comp = c as { company_name: string | null; founder_id: string | null } | null;
+  if (!comp?.founder_id) return null;
+
+  const { data: p } = await db.from("profiles").select("email").eq("id", comp.founder_id).maybeSingle();
+  const email = (p as { email: string | null } | null)?.email;
+  if (!email) return null;
+
+  return { founderEmail: email, investorName: rec.name ?? rec.email, companyName: comp.company_name };
 }
