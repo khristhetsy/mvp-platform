@@ -48,8 +48,8 @@ function shortDate(iso: string | null): string {
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-const TABS = ["Audience", "Compose", "Sequence", "Review & send"];
-const CONTINUE_LABELS = ["Continue → Compose", "Continue → Sequence", "Continue → Review", ""];
+const TABS = ["Create list", "Compose", "Sequence", "Review & send"];
+const CREATE_SUBSTEPS = ["1 Source", "2 Select", "3 Name & save"];
 
 const DEFAULT_SUBJECT = "{{first_name}}, a quick intro to {{company}}";
 const DEFAULT_BODY =
@@ -108,6 +108,81 @@ export function ManualOutreachBuilder({
   const [addEmail, setAddEmail] = useState("");
   const [adding, setAdding] = useState(false);
   const [testing, setTesting] = useState(false);
+
+  // Create-list sub-flow (Source → Select → Name & save) + reusable saved lists.
+  const [createSub, setCreateSub] = useState<0 | 1 | 2>(0);
+  const [listSource, setListSource] = useState<"contacts" | "file">("contacts");
+  const [listName, setListName] = useState("");
+  const [activeListId, setActiveListId] = useState<string | null>(null);
+  const [savedLists, setSavedLists] = useState<{ id: string; name: string; contactIds: string[] }[]>([]);
+  const [csvText, setCsvText] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [savingList, setSavingList] = useState(false);
+
+  async function loadLists() {
+    try {
+      const res = await fetch("/api/founder/outreach/lists");
+      if (!res.ok) return;
+      const data = (await res.json()) as { lists?: { id: string; name: string; contactIds: string[] }[] };
+      if (Array.isArray(data.lists)) setSavedLists(data.lists);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function loadSavedList(list: { id: string; name: string; contactIds: string[] }) {
+    setSelected(new Set(list.contactIds));
+    setActiveListId(list.id);
+    setListName(list.name);
+    setDirty(true);
+    setMessage(null);
+  }
+
+  async function saveList() {
+    if (!listName.trim()) return;
+    setSavingList(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/founder/outreach/lists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: activeListId, name: listName.trim(), contactIds: [...selected] }),
+      });
+      const data = (await res.json().catch(() => null)) as { id?: string; error?: string } | null;
+      if (res.ok) {
+        if (data?.id) setActiveListId(data.id);
+        await loadLists();
+        setMessage("List saved.");
+      } else {
+        setMessage(data?.error ?? "Couldn't save the list.");
+      }
+    } finally {
+      setSavingList(false);
+    }
+  }
+
+  async function importCsv() {
+    if (!csvText.trim()) return;
+    setImporting(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/founder/investor-contacts/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows: csvText, confirm: true }),
+      });
+      if (res.ok) {
+        setCsvText("");
+        await refreshContacts();
+        setMessage("Import complete — review your list below.");
+      } else {
+        const d = (await res.json().catch(() => null)) as { error?: string } | null;
+        setMessage(d?.error ?? "Import failed. Check the CSV columns and try again.");
+      }
+    } finally {
+      setImporting(false);
+    }
+  }
 
   async function sendTest() {
     setTesting(true);
@@ -170,6 +245,20 @@ export function ManualOutreachBuilder({
       setAdding(false);
     }
   }
+
+  // Load saved contact lists once on mount.
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/founder/outreach/lists")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { lists?: { id: string; name: string; contactIds: string[] }[] } | null) => {
+        if (active && Array.isArray(data?.lists)) setSavedLists(data.lists);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Load any previously-saved campaign + recipient statuses (unless a snapshot
   // was passed in).
@@ -328,86 +417,216 @@ export function ManualOutreachBuilder({
       </div>
 
       <div className="mt-4 min-h-[200px]">
-        {/* Audience */}
+        {/* Create list — Source → Select → Name & save */}
         {tab === 0 ? (
           <div>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <label className="block text-xs font-medium text-slate-600">
-                Your investors <span className="text-slate-400">— tap to add or remove from this campaign</span>
-              </label>
-              <button
-                type="button"
-                onClick={() => setAddOpen((v) => !v)}
-                className="shrink-0 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-              >
-                {addOpen ? "Close" : "+ Add investor"}
-              </button>
+            <div className="mb-3 flex gap-4 text-xs">
+              {CREATE_SUBSTEPS.map((label, si) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => setCreateSub(si as 0 | 1 | 2)}
+                  className={createSub === si ? "font-medium text-indigo-600" : "text-slate-400 hover:text-slate-600"}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
-            {addOpen ? (
-              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
-                <input
-                  value={addName}
-                  onChange={(e) => setAddName(e.target.value)}
-                  placeholder="Investor name"
-                  className="min-w-[120px] flex-1 rounded-md border border-slate-200 px-2.5 py-1.5 text-sm"
-                />
-                <input
-                  value={addEmail}
-                  onChange={(e) => setAddEmail(e.target.value)}
-                  placeholder="Email (optional)"
-                  className="min-w-[140px] flex-1 rounded-md border border-slate-200 px-2.5 py-1.5 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => void addContact()}
-                  disabled={adding || !addName.trim()}
-                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
-                >
-                  {adding ? "Adding…" : "Add"}
-                </button>
+            <div className="mb-4 flex gap-2 rounded-r-lg border border-l-[3px] border-slate-200 border-l-indigo-500 bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
+              <span aria-hidden="true">ⓘ</span>
+              <span>
+                Manual outreach is for your own investors only. Platform-matched investors are handled automatically
+                under <b>Automated</b>.
+              </span>
+            </div>
+
+            {/* Sub-step 1 · Source */}
+            {createSub === 0 ? (
+              <div>
+                {savedLists.length > 0 ? (
+                  <div className="mb-4">
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Load a saved list</label>
+                    <select
+                      value={activeListId ?? ""}
+                      onChange={(e) => {
+                        const l = savedLists.find((x) => x.id === e.target.value);
+                        if (l) loadSavedList(l);
+                        else setActiveListId(null);
+                      }}
+                      className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                    >
+                      <option value="">— New list —</option>
+                      {savedLists.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.name} ({l.contactIds.length})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+                <p className="mb-2 text-sm text-slate-700">Where should this list come from?</p>
+                <div className="flex flex-wrap gap-2">
+                  {(["contacts", "file"] as const).map((src) => (
+                    <button
+                      key={src}
+                      type="button"
+                      onClick={() => setListSource(src)}
+                      className={`rounded-lg border px-4 py-2 text-sm font-medium ${
+                        listSource === src
+                          ? "border-indigo-600 bg-indigo-600 text-white"
+                          : "border-slate-300 text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      {src === "contacts" ? "My contacts" : "File upload"}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  {listSource === "contacts"
+                    ? "Investors already in your CRM — people you've added or who became your investors."
+                    : "Import a CSV; rows are added to your contacts. Columns: investor_name, firm_name, email."}
+                </p>
               </div>
             ) : null}
 
-            {contactList.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
-                No investors in your list yet. Use “+ Add investor” above to start, then build your campaign.
-              </p>
-            ) : (
-              <ul className="divide-y divide-slate-100">
-                {contactList.map((c) => {
-                  const on = selected.has(c.id);
-                  return (
-                    <li key={c.id}>
-                      <button
-                        type="button"
-                        onClick={() => toggleContact(c.id)}
-                        className="flex w-full items-center gap-3 py-2 text-left"
-                      >
-                        <span
-                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded ${on ? "bg-indigo-600 text-[11px] text-white" : "border-[1.5px] border-slate-300"}`}
-                        >
-                          {on ? "✓" : ""}
-                        </span>
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[11px] font-medium text-indigo-700">
-                          {c.name.slice(0, 2).toUpperCase()}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium text-slate-900">{c.name}</span>
-                          <span className="block truncate text-xs text-slate-500">
-                            {c.detail ?? c.email ?? "No email on file"}
-                          </span>
-                        </span>
-                        {!c.email ? <span className="text-[10px] text-amber-600">No email</span> : null}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            <p className="mt-3 text-xs text-slate-500">
-              <b className="text-slate-800">{selectedCount} selected</b> · they will enter the sequence.
-            </p>
+            {/* Sub-step 2 · Select */}
+            {createSub === 1 ? (
+              <div>
+                {listSource === "file" ? (
+                  <div className="mb-4">
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Paste CSV</label>
+                    <textarea
+                      value={csvText}
+                      onChange={(e) => setCsvText(e.target.value)}
+                      rows={4}
+                      placeholder="investor_name,firm_name,email&#10;Ada Lovelace,Analytical Ventures,ada@av.com"
+                      className="w-full rounded-md border border-slate-200 px-3 py-2 font-mono text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void importCsv()}
+                      disabled={importing || !csvText.trim()}
+                      className="mt-2 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+                    >
+                      {importing ? "Importing…" : "Import CSV"}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <label className="block text-xs font-medium text-slate-600">
+                      Your investors <span className="text-slate-400">— tap to select</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setAddOpen((v) => !v)}
+                      className="shrink-0 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      {addOpen ? "Close" : "+ Add investor"}
+                    </button>
+                  </div>
+                )}
+
+                {listSource === "contacts" && addOpen ? (
+                  <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                    <input
+                      value={addName}
+                      onChange={(e) => setAddName(e.target.value)}
+                      placeholder="Investor name"
+                      className="min-w-[120px] flex-1 rounded-md border border-slate-200 px-2.5 py-1.5 text-sm"
+                    />
+                    <input
+                      value={addEmail}
+                      onChange={(e) => setAddEmail(e.target.value)}
+                      placeholder="Email (optional)"
+                      className="min-w-[140px] flex-1 rounded-md border border-slate-200 px-2.5 py-1.5 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void addContact()}
+                      disabled={adding || !addName.trim()}
+                      className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+                    >
+                      {adding ? "Adding…" : "Add"}
+                    </button>
+                  </div>
+                ) : null}
+
+                {contactList.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                    No investors yet. Add one above or import a CSV, then select who enters the sequence.
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-slate-100">
+                    {contactList.map((c) => {
+                      const on = selected.has(c.id);
+                      return (
+                        <li key={c.id}>
+                          <button
+                            type="button"
+                            onClick={() => toggleContact(c.id)}
+                            className="flex w-full items-center gap-3 py-2 text-left"
+                          >
+                            <span
+                              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded ${on ? "bg-indigo-600 text-[11px] text-white" : "border-[1.5px] border-slate-300"}`}
+                            >
+                              {on ? "✓" : ""}
+                            </span>
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[11px] font-medium text-indigo-700">
+                              {c.name.slice(0, 2).toUpperCase()}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-medium text-slate-900">{c.name}</span>
+                              <span className="block truncate text-xs text-slate-500">
+                                {c.detail ?? c.email ?? "No email on file"}
+                              </span>
+                            </span>
+                            {!c.email ? <span className="text-[10px] text-amber-600">No email</span> : null}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                <p className="mt-3 text-xs text-slate-500">
+                  <b className="text-slate-800">{selectedCount} selected</b> · they will enter the sequence.
+                </p>
+              </div>
+            ) : null}
+
+            {/* Sub-step 3 · Name & save */}
+            {createSub === 2 ? (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">List name</label>
+                <input
+                  value={listName}
+                  onChange={(e) => setListName(e.target.value)}
+                  placeholder="e.g. Warm angels — Q3"
+                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                />
+                <div className="mt-3 flex justify-between border-t border-slate-100 py-2 text-sm">
+                  <span className="text-slate-500">Investors</span>
+                  <span className="font-medium text-slate-800">{selectedCount} selected</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-100 py-2 text-sm">
+                  <span className="text-slate-500">Source</span>
+                  <span className="font-medium text-slate-800">
+                    {listSource === "contacts" ? "My contacts" : "File upload"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void saveList()}
+                  disabled={savingList || !listName.trim()}
+                  className="mt-3 rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {savingList ? "Saving…" : activeListId ? "Update list" : "Save list"}
+                </button>
+                <p className="mt-2 text-xs text-slate-400">
+                  Saved lists are reusable — load this list for a future campaign from the Source step.
+                </p>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -570,24 +789,38 @@ export function ManualOutreachBuilder({
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
         <button
           type="button"
-          onClick={() => setTab((t) => (t > 0 ? ((t - 1) as Tab) : t))}
-          className={`rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 ${tab === 0 ? "invisible" : ""}`}
+          onClick={() => {
+            if (tab === 0 && createSub > 0) setCreateSub((s) => (s - 1) as 0 | 1 | 2);
+            else if (tab > 0) setTab((t) => (t - 1) as Tab);
+          }}
+          className={`rounded-md border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 ${tab === 0 && createSub === 0 ? "invisible" : ""}`}
         >
           ← Back
         </button>
         <div className="ml-auto flex items-center gap-3">
           {message ? <span className="text-xs text-slate-500">{message}</span> : null}
-          {tab === 0 && selectedCount === 0 ? (
-            <span className="text-xs text-slate-400">Add at least one investor to continue</span>
+          {tab === 0 && createSub >= 1 && selectedCount === 0 ? (
+            <span className="text-xs text-slate-400">Select at least one investor to continue</span>
           ) : null}
           {tab < 3 ? (
             <button
               type="button"
-              onClick={() => goto((tab + 1) as Tab)}
-              disabled={tab === 0 && selectedCount === 0}
+              onClick={() => {
+                if (tab === 0 && createSub < 2) setCreateSub((s) => (s + 1) as 0 | 1 | 2);
+                else goto((tab + 1) as Tab);
+              }}
+              disabled={tab === 0 && createSub >= 1 && selectedCount === 0}
               className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
             >
-              {CONTINUE_LABELS[tab]}
+              {tab === 0
+                ? createSub === 0
+                  ? "Continue → Select"
+                  : createSub === 1
+                    ? "Continue → Name & save"
+                    : "Continue → Compose"
+                : tab === 1
+                  ? "Continue → Sequence"
+                  : "Continue → Review"}
             </button>
           ) : null}
         </div>
