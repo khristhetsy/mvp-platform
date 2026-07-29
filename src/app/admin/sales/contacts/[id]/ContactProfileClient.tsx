@@ -75,7 +75,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean }) {
+export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null }) {
   const assignableStaff = leadStaff ?? staff;
   const router = useRouter();
   const [contact, setContact] = useState<Contact>(initialContact);
@@ -110,7 +110,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     city: initialContact.city ?? "", state: initialContact.state ?? "", zip: initialContact.zip ?? "", country: initialContact.country ?? "",
     tags: initialContact.tags.join(", "),
   });
-  const [section, setSection] = useState<"details" | "activity">("details");
+  const [section, setSection] = useState<"details" | "activity" | "onepager">("details");
   const [actFilter, setActFilter] = useState<"all" | "call" | "note" | "task" | "stage">("all");
   const [acts, setActs] = useState<Activity[]>(activity);
   const [call, setCall] = useState({ outcome: "connected", duration: "", notes: "" });
@@ -263,6 +263,9 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
         <div style={{ display: "flex", gap: 0, padding: "0 16px", borderBottom: "0.5px solid #eef1f5" }}>
           <button onClick={() => setSection("details")} style={{ fontSize: 12.5, fontWeight: section === "details" ? 600 : 400, color: section === "details" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === "details" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Details</button>
           <button onClick={() => setSection("activity")} style={{ fontSize: 12.5, fontWeight: section === "activity" ? 600 : 400, color: section === "activity" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === "activity" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Activity {acts.length ? `· ${acts.length}` : ""}</button>
+          {onePager ? (
+            <button onClick={() => setSection("onepager")} style={{ fontSize: 12.5, fontWeight: section === "onepager" ? 600 : 400, color: section === "onepager" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === "onepager" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>One pager</button>
+          ) : null}
         </div>
 
         {section === "details" && (<>
@@ -506,6 +509,24 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
         </div>
 
         </>)}
+
+        {section === "onepager" && onePager && (
+          <div style={{ padding: "14px 16px" }}>
+            {onePager.slug && onePager.published ? (
+              <div style={{ border: "0.5px solid #eef1f5", borderRadius: 10, overflow: "hidden" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--surface-1, #f7f8fa)", borderBottom: "0.5px solid #eef1f5", padding: "7px 12px" }}>
+                  <span style={{ fontSize: 11.5, color: "var(--muted-foreground)" }}>One pager — what investors see</span>
+                  <a href={`/f/${onePager.slug}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11.5, fontWeight: 600, color: "#2E78F5", textDecoration: "none" }}>Open ↗</a>
+                </div>
+                <iframe src={`/f/${onePager.slug}`} title="One pager" style={{ width: "100%", height: 620, border: "none" }} />
+              </div>
+            ) : (
+              <p style={{ fontSize: 12.5, color: "var(--muted-foreground)", padding: "24px 0", textAlign: "center" }}>
+                {onePager.companyName ? `${onePager.companyName} hasn't published a one-pager yet.` : "This contact has no published one-pager."}
+              </p>
+            )}
+          </div>
+        )}
 
         {section === "activity" && (
         <div style={{ padding: "14px 16px" }}>
