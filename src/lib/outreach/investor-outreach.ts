@@ -1,14 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { rankInvestorsForCompany } from "@/lib/matching/investor-company-matching";
-import {
-  loadAdminCompanyMatchProfiles,
-  loadApprovedInvestorMatchProfiles,
-} from "@/lib/matching/load-matching-data";
+import { loadInvestorContacts } from "@/lib/investors/load-investor-matches";
 import { sendEmail } from "@/lib/email/send-email";
 import { renderIntroEmail } from "@/lib/outreach/intro-template";
 import { buildUnsubscribeUrl, filterUnsubscribed } from "@/lib/outreach/unsubscribe";
-import { isProspectInvestorId } from "@/lib/matching/prospect-investors";
 import { getOutreachAutomationEnabled } from "@/lib/settings/platform-settings";
 
 /** Formats a raise amount as a compact "~$2M" / "~$500K" string. */
@@ -85,9 +80,10 @@ export async function getCampaignRecipients(campaignId: string): Promise<Outreac
 
 /**
  * Auto-drafts a pending-approval campaign for a company from its in-industry
- * member matches (score >= 50 and sector-aligned), if one doesn't already
- * exist. Idempotent (one campaign per company).
- * Prospects are excluded — outreach targets real, approved investors only.
+ * matches (structured profile fit >= threshold) that have an email, if one
+ * doesn't already exist. Idempotent (one campaign per company). Targets the same
+ * investor set the founder sees on the board — CRM investor contacts, scored by
+ * their live profile — not just approved platform accounts.
  */
 export async function createDraftFromMatch(companyId: string): Promise<{ created: boolean }> {
   const db = client();
@@ -98,16 +94,24 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
     .maybeSingle();
   if (existing) return { created: false };
 
-  const [companies, investors] = await Promise.all([
-    loadAdminCompanyMatchProfiles(),
-    loadApprovedInvestorMatchProfiles(),
-  ]);
-  const company = companies.find((c) => c.id === companyId);
-  if (!company) return { created: false };
+  const { data: comp } = await db
+    .from("companies")
+    .select("funding_amount, revenue_stage, use_of_funds, industry")
+    .eq("id", companyId)
+    .maybeSingle();
+  if (!comp) return { created: false };
+  const c = comp as { funding_amount: number | null; revenue_stage: string | null; use_of_funds: string | null; industry: string | null };
 
-  const ranked = rankInvestorsForCompany(company, investors, MAX_AUDIENCE).filter(
-    (row) => row.match.matchScore >= OUTREACH_MATCH_THRESHOLD && row.match.matchReasons.includes("Sector alignment"),
-  );
+  // Score every investor's live structured profile against the company (same
+  // engine as the founder board). Enroll the top matches that have an email.
+  const scored = await loadInvestorContacts({
+    scoreAgainst: { fundingAmount: c.funding_amount, revenue: null, revenueStage: c.revenue_stage, useOfFunds: c.use_of_funds, industry: c.industry },
+    investorsOnly: true,
+    limit: 3000,
+  });
+  const ranked = scored
+    .filter((s) => (s.match?.score ?? 0) >= OUTREACH_MATCH_THRESHOLD && (s.email ?? "").trim())
+    .slice(0, MAX_AUDIENCE);
   if (ranked.length === 0) return { created: false };
 
   const { data: campaign } = await db
@@ -117,11 +121,12 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
     .single();
   if (!campaign) return { created: false };
 
-  const rows = ranked.map((row) => ({
+  const rows = ranked.map((s) => ({
     campaign_id: (campaign as { id: string }).id,
-    investor_ref: row.investor.profile_id,
-    investor_name: row.investor.investor_type ?? "Investor",
-    match_score: row.match.matchScore,
+    investor_ref: s.id, // crm_contact id
+    investor_name: s.name,
+    email: s.email,
+    match_score: s.match?.score ?? 0,
     status: "queued",
   }));
   await db.from("investor_outreach_recipients").upsert(rows, { onConflict: "campaign_id,investor_ref", ignoreDuplicates: true });
@@ -272,13 +277,13 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
 
     const { data: queued } = await db
       .from("investor_outreach_recipients")
-      .select("id, investor_ref, investor_name")
+      .select("id, investor_ref, investor_name, email")
       .eq("campaign_id", campaign.id)
       .eq("status", "queued")
       .order("match_score", { ascending: false })
       .limit(campaign.weekly_cap);
 
-    const batch = (queued ?? []) as Array<{ id: string; investor_ref: string; investor_name: string }>;
+    const batch = (queued ?? []) as Array<{ id: string; investor_ref: string; investor_name: string; email: string | null }>;
     if (batch.length === 0) {
       await db.from("investor_outreach_campaigns").update({ status: "completed", updated_at: new Date().toISOString() }).eq("id", campaign.id);
       continue;
@@ -324,28 +329,19 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
       const raise = formatRaise(comp.funding_amount);
       const location = [comp.state, comp.country].filter(Boolean).join(", ") || null;
 
-      const memberIds = batch.map((r) => r.investor_ref).filter((ref) => !isProspectInvestorId(ref));
-      const contactById = new Map<string, { email: string | null; name: string | null }>();
-      if (memberIds.length > 0) {
-        const { data: profs } = await db.from("profiles").select("id, email, full_name").in("id", memberIds);
-        for (const p of (profs ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>) {
-          contactById.set(p.id, { email: p.email, name: p.full_name });
-        }
-      }
-
-      // CAN-SPAM: never send to a suppressed address.
-      const emails = [...contactById.values()].map((c) => c.email).filter((e): e is string => Boolean(e));
+      // CAN-SPAM: never send to a suppressed address. The email is stored on the
+      // recipient at enroll time (the matched investor's CRM email).
+      const emails = batch.map((r) => r.email).filter((e): e is string => Boolean(e));
       const suppressed = await filterUnsubscribed(emails);
 
       for (const r of batch) {
-        const contact = contactById.get(r.investor_ref);
-        const email = contact?.email ?? null;
+        const email = r.email;
         // No email or suppressed (unsubscribed) → terminal skip.
         if (!email || suppressed.has(email.trim().toLowerCase())) {
           await db.from("investor_outreach_recipients").update({ status: "skipped" }).eq("id", r.id);
           continue;
         }
-        const firstName = (contact?.name ?? "").trim().split(/\s+/)[0] || null;
+        const firstName = (r.investor_name ?? "").trim().split(/\s+/)[0] || null;
         const { subject, html, text } = renderIntroEmail({
           company: comp.company_name ?? "a company",
           sector: comp.industry ?? null,

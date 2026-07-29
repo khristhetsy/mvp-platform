@@ -191,7 +191,8 @@ export async function loadFounderInvestorBoard(
     const code = String(s.id).replace(/[^a-z0-9]/gi, "").slice(-4).toUpperCase() || String(index + 1).padStart(4, "0");
     const agg = pid ? activity.get(pid) : undefined;
     const lastMs = agg && agg.last ? now - agg.last : null;
-    const oe = pid ? outreachByInvestor.get(pid) : undefined;
+    // Outreach recipients are keyed by the CRM contact id (same id as s.id).
+    const oe = outreachByInvestor.get(s.id);
     const outreach: OutreachStatus = oe?.clickedAt
       ? "clicked"
       : oe?.openedAt
