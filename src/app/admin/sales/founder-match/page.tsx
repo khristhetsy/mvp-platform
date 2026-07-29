@@ -1,7 +1,12 @@
 import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { loadInvestorContacts, loadContactPreferences } from "@/lib/investors/load-investor-matches";
+import {
+  loadInvestorContacts,
+  loadContactPreferences,
+  computeInformativeFields,
+  maskPreferences,
+} from "@/lib/investors/load-investor-matches";
 import { scoreInvestorPreferenceMatch } from "@/lib/investors/preference-match";
 import { SalesHubHeader } from "../SalesHubHeader";
 import { FounderMatchClient, type MatchInvestor, type FounderRow } from "./FounderMatchClient";
@@ -28,11 +33,15 @@ export default async function FounderMatchPage({
   // Investor picker: contacts that carry structured preferences.
   const investorContacts = await loadInvestorContacts({ limit: 800 });
   const investors: MatchInvestor[] = investorContacts.map((i) => ({ id: i.id, name: i.name, company: i.company }));
+  // Only score on fields that discriminate across the directory (drops
+  // non-discriminating "everyone has every band" data).
+  const informative = computeInformativeFields(investorContacts.map((i) => i.preferences));
 
   let rows: FounderRow[] = [];
   if (investorId) {
     const inv = await loadContactPreferences(investorId);
     if (inv) {
+      const investorPref = maskPreferences(inv.preferences, informative);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const db = createServiceRoleClient() as any;
       const { data } = await db
@@ -50,7 +59,7 @@ export default async function FounderMatchPage({
               useOfFunds: c.use_of_funds,
               industry: c.industry,
             },
-            inv.preferences,
+            investorPref,
           );
           return {
             id: c.id,

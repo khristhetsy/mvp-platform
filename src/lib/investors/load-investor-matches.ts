@@ -50,6 +50,56 @@ function flattenExtra(raw: Record<string, unknown> | null): InvestorExtraField[]
   return out;
 }
 
+const MASKABLE_KEYS = [
+  "investmentSize",
+  "useOfFunds",
+  "dealsPerYear",
+  "revenueRange",
+  "ebitdaRange",
+  "managementTeam",
+  "activeRating",
+  "contactPreference",
+] as const;
+type MaskKey = (typeof MASKABLE_KEYS)[number];
+
+function fieldSignature(p: InvestorPreferences, k: MaskKey): string {
+  const v = p[k];
+  return Array.isArray(v) ? [...v].map((s) => s.toLowerCase()).sort().join("|") : (v ?? "∅").toLowerCase();
+}
+
+/**
+ * Fields that actually vary across investors carry signal. A field where every
+ * investor has the identical value (e.g. all the option bands checked for
+ * everyone — a common Odoo import artifact) is non-discriminating and is dropped
+ * so it can't inflate every match to 100%.
+ */
+export function computeInformativeFields(prefs: InvestorPreferences[]): Set<MaskKey> {
+  const informative = new Set<MaskKey>();
+  if (prefs.length < 2) return new Set(MASKABLE_KEYS); // can't tell — keep all
+  for (const k of MASKABLE_KEYS) {
+    const sigs = new Set(prefs.map((p) => fieldSignature(p, k)));
+    sigs.delete("∅");
+    sigs.delete("");
+    if (sigs.size > 1) informative.add(k);
+  }
+  return informative;
+}
+
+/** Blank out fields that carry no signal so the scorer ignores them. */
+export function maskPreferences(p: InvestorPreferences, informative: Set<MaskKey>): InvestorPreferences {
+  return {
+    ...p,
+    investmentSize: informative.has("investmentSize") ? p.investmentSize : [],
+    useOfFunds: informative.has("useOfFunds") ? p.useOfFunds : [],
+    dealsPerYear: informative.has("dealsPerYear") ? p.dealsPerYear : null,
+    revenueRange: informative.has("revenueRange") ? p.revenueRange : [],
+    ebitdaRange: informative.has("ebitdaRange") ? p.ebitdaRange : [],
+    managementTeam: informative.has("managementTeam") ? p.managementTeam : [],
+    activeRating: informative.has("activeRating") ? p.activeRating : null,
+    contactPreference: informative.has("contactPreference") ? p.contactPreference : null,
+  };
+}
+
 function hasAnyPreference(p: InvestorPreferences): boolean {
   return (
     p.investmentSize.length > 0 ||
@@ -137,11 +187,17 @@ export async function loadInvestorContacts(opts?: {
       email: (c.email as string) ?? null,
       company: (c.company as string) ?? null,
       preferences,
-      match: opts?.scoreAgainst ? scoreInvestorPreferenceMatch(opts.scoreAgainst, preferences) : null,
+      match: null,
     });
   }
 
+  // Score only on fields that actually discriminate between investors, so
+  // non-discriminating data (everyone identical) doesn't peg every match to 100%.
   if (opts?.scoreAgainst) {
+    const informative = computeInformativeFields(rows.map((r) => r.preferences));
+    for (const r of rows) {
+      r.match = scoreInvestorPreferenceMatch(opts.scoreAgainst, maskPreferences(r.preferences, informative));
+    }
     rows.sort((a, b) => (b.match?.score ?? 0) - (a.match?.score ?? 0));
   }
   return rows;
