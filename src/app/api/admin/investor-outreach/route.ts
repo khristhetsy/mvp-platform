@@ -5,9 +5,9 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import {
   listOutreachCampaigns,
   getCampaignRecipients,
-  isOutreachLiveSendEnabled,
   type OutreachCampaign,
 } from "@/lib/outreach/investor-outreach";
+import { getOutreachAutomationEnabled, setOutreachAutomationEnabled } from "@/lib/settings/platform-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -81,5 +81,19 @@ export async function GET(): Promise<Response> {
     }),
   );
 
-  return NextResponse.json({ campaigns: summaries, liveSend: isOutreachLiveSendEnabled() });
+  return NextResponse.json({ campaigns: summaries, liveSend: await getOutreachAutomationEnabled() });
+}
+
+// PATCH — flip the outreach automation master switch on/off (admin-controlled).
+export async function PATCH(req: Request): Promise<Response> {
+  const gate = await requireStaff();
+  if ("error" in gate) return gate.error;
+
+  const body = (await req.json().catch(() => null)) as { action?: string; enabled?: unknown } | null;
+  if (body?.action !== "set_automation" || typeof body.enabled !== "boolean") {
+    return NextResponse.json({ error: "Expected { action: 'set_automation', enabled: boolean }." }, { status: 400 });
+  }
+
+  const ok = await setOutreachAutomationEnabled(body.enabled, gate.userId);
+  return NextResponse.json({ ok, liveSend: body.enabled });
 }

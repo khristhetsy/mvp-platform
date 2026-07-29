@@ -21,7 +21,7 @@ export default async function AdminInvestorOutreachPage() {
         <PageHeader
           eyebrow="Matching"
           title="Investor outreach approvals"
-          description="AI-drafted introductions to strong-fit investors. Every campaign requires admin approval before it can queue, is capped per week, and live email sending stays disabled until the flag is enabled and the copy is counsel-approved."
+          description="AI-matched introductions to strong-fit investors. Each investor receives the founder's published one-pager. Flip Automation on to auto-approve and send on the weekly pass, capped per week; suppression and unsubscribe always apply."
         />
 
         <InvestorOutreachManager />

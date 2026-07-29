@@ -17,8 +17,14 @@ export type IntroTemplateFields = {
   investorFirstName: string | null;
   unsubscribeUrl?: string | null;
   /** Link to the company's public Founder Preview one-pager (/f/[slug]). When
-   *  present, the email leads with a "View the one-pager" button. */
+   *  present, the email leads with an embedded one-pager preview card + button. */
   previewUrl?: string | null;
+  /** One-line tagline (company business_description), shown in the card. */
+  tagline?: string | null;
+  /** Formatted raise, e.g. "~$2M". */
+  raise?: string | null;
+  /** City / region, e.g. "New York". */
+  location?: string | null;
 };
 
 function escapeHtml(value: string): string {
@@ -46,16 +52,37 @@ export function renderIntroEmail(f: IntroTemplateFields): { subject: string; htm
 
   const subject = `${companyRaw} — a Founder Preview that fits your focus`;
 
-  const previewButtonHtml = previewUrl
-    ? `<p style="margin:20px 0"><a href="${previewUrl}" style="display:inline-block;background:#4338CA;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:11px 22px;border-radius:8px">View the one-pager</a></p>`
+  const tagline = f.tagline ? escapeHtml(f.tagline.trim()) : null;
+  const raise = f.raise ? escapeHtml(f.raise.trim()) : null;
+  const location = f.location ? escapeHtml(f.location.trim()) : null;
+  const initial = companyRaw.slice(0, 1).toUpperCase();
+  const metaCells = [
+    raise ? `<td style="padding:0 18px 0 0;vertical-align:top"><div style="font-size:11px;color:#8a93a5">Raising</div><div style="font-size:13px;color:#22304a;font-weight:600">${raise}</div></td>` : "",
+    stage !== "an early" ? `<td style="padding:0 18px 0 0;vertical-align:top"><div style="font-size:11px;color:#8a93a5">Stage</div><div style="font-size:13px;color:#22304a;font-weight:600">${stage}${sector !== "its sector" ? ` · ${sector}` : ""}</div></td>` : "",
+    location ? `<td style="padding:0;vertical-align:top"><div style="font-size:11px;color:#8a93a5">Location</div><div style="font-size:13px;color:#22304a;font-weight:600">${location}</div></td>` : "",
+  ].join("");
+
+  // The email IS the Founder Preview: an embedded one-pager card + a link to the
+  // full page. Rendered only when the company has a published one-pager.
+  const cardHtml = previewUrl
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border:1px solid #e6e9f0;border-radius:12px;margin:18px 0">
+    <tr><td style="padding:16px 18px">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+        <td style="width:40px;vertical-align:middle"><div style="width:40px;height:40px;border-radius:9px;background:#EEEDFE;color:#3C3489;font-weight:700;font-size:16px;text-align:center;line-height:40px">${initial}</div></td>
+        <td style="padding-left:12px;vertical-align:middle"><div style="font-size:15px;font-weight:600;color:#22304a">${company}</div>${tagline ? `<div style="font-size:13px;color:#5b6577">${tagline}</div>` : ""}</td>
+      </tr></table>
+      ${metaCells ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:14px"><tr>${metaCells}</tr></table>` : ""}
+      <div style="margin-top:16px"><a href="${previewUrl}" style="display:inline-block;background:#2E78F5;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 20px;border-radius:8px">View full one-pager →</a></div>
+    </td></tr>
+  </table>`
     : "";
-  const previewTextLine = f.previewUrl ? `\nView the one-pager: ${f.previewUrl}\n` : "";
+  const previewTextLine = f.previewUrl ? `\nView the full one-pager: ${f.previewUrl}\n` : "";
 
   const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#22304a;max-width:560px">
   <p>Hello ${name},</p>
-  <p>Based on your stated focus, our platform flagged a fit between your preferences and <strong>${company}</strong>, a ${sector} company at the ${stage} stage. We're sharing their <strong>Founder Preview</strong> — a one-pager the founding team put together — as an introduction based on fit signals, not a recommendation.</p>
-  ${previewButtonHtml}
-  <p>If you'd like an introduction to the team, simply reply and we'll coordinate. If not, no action is needed.</p>
+  <p>Our fit scoring matched <strong>${company}</strong> to your stated preferences. Here's their <strong>Founder Preview</strong> — no obligation.</p>
+  ${cardHtml}
+  <p>If it's a fit, simply reply and we'll make the introduction. If not, no action is needed.</p>
   <p>Warm regards,<br/>The iCapOS Introductions Team</p>
   <hr style="border:none;border-top:1px solid #e6e9f0;margin:20px 0 12px" />
   <p style="font-size:11px;color:#8a93a5">${LOCKED_DISCLAIMER} To stop receiving introductions, <a href="${unsub}" style="color:#8a93a5">unsubscribe</a>.</p>
@@ -63,9 +90,9 @@ export function renderIntroEmail(f: IntroTemplateFields): { subject: string; htm
 
   const text = `Hello ${name},
 
-Based on your stated focus, our platform flagged a fit between your preferences and ${companyRaw}, a ${(f.sector ?? "its sector").trim() || "its sector"} company at the ${(f.stage ?? "an early").trim() || "an early"} stage. We're sharing their Founder Preview one-pager as an introduction based on fit signals, not a recommendation.
+Our fit scoring matched ${companyRaw}${f.tagline ? ` — ${f.tagline.trim()}` : ""} to your stated preferences. Here's their Founder Preview one-pager — no obligation.
 ${previewTextLine}
-If you'd like an introduction to the team, simply reply and we'll coordinate. If not, no action is needed.
+If it's a fit, simply reply and we'll make the introduction. If not, no action is needed.
 
 Warm regards,
 The iCapOS Introductions Team

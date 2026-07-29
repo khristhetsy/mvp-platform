@@ -9,6 +9,15 @@ import { sendEmail } from "@/lib/email/send-email";
 import { renderIntroEmail } from "@/lib/outreach/intro-template";
 import { buildUnsubscribeUrl, filterUnsubscribed } from "@/lib/outreach/unsubscribe";
 import { isProspectInvestorId } from "@/lib/matching/prospect-investors";
+import { getOutreachAutomationEnabled } from "@/lib/settings/platform-settings";
+
+/** Formats a raise amount as a compact "~$2M" / "~$500K" string. */
+function formatRaise(amount: number | null | undefined): string | null {
+  if (!amount || amount <= 0) return null;
+  if (amount >= 1_000_000) return `~$${(amount / 1_000_000).toFixed(amount % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (amount >= 1_000) return `~$${Math.round(amount / 1_000)}K`;
+  return `~$${amount}`;
+}
 
 // Automated outreach targets in-industry investors: a 50+ match whose sector
 // aligns with the company. (Was a blanket 70+ — lowered so sector-aligned
@@ -221,8 +230,18 @@ export async function setCampaignWeeklyCap(campaignId: string, cap: number): Pro
  */
 export async function processApprovedOutreach(): Promise<{ campaignsRun: number; recipientsSent: number; liveSend: boolean }> {
   const db = client();
-  const live = isOutreachLiveSendEnabled();
+  const live = await getOutreachAutomationEnabled();
   const sixDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Admin automation ON = fully automatic: auto-approve any drafts still pending
+  // so flipping the switch picks up existing (and future) matches with no gate.
+  if (live) {
+    await db
+      .from("investor_outreach_campaigns")
+      .update({ status: "approved", approved_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("status", "pending_approval")
+      .eq("paused", false);
+  }
 
   const { data: campaigns } = await db
     .from("investor_outreach_campaigns")
@@ -278,7 +297,7 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
       // and are excluded from outreach audiences.
       const { data: companyRow } = await db
         .from("companies")
-        .select("company_name, industry, revenue_stage, slug, is_published")
+        .select("company_name, industry, revenue_stage, slug, is_published, business_description, funding_amount, country, state")
         .eq("id", campaign.company_id)
         .maybeSingle();
       const comp = (companyRow ?? {}) as {
@@ -287,11 +306,23 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
         revenue_stage?: string | null;
         slug?: string | null;
         is_published?: boolean | null;
+        business_description?: string | null;
+        funding_amount?: number | null;
+        country?: string | null;
+        state?: string | null;
       };
 
-      // Founder Preview one-pager link — only when the company has published it.
+      // The email IS the Founder Preview one-pager. If the founder hasn't
+      // published one, there's nothing to send — leave recipients queued so they
+      // go out on a later run once the page is live (never burned as "skipped").
       const appBase = (process.env.NEXT_PUBLIC_APP_URL ?? "https://icapos.com").replace(/\/$/, "");
       const previewUrl = comp.is_published && comp.slug ? `${appBase}/f/${comp.slug}` : null;
+      if (!previewUrl) {
+        continue;
+      }
+      const tagline = comp.business_description ?? null;
+      const raise = formatRaise(comp.funding_amount);
+      const location = [comp.state, comp.country].filter(Boolean).join(", ") || null;
 
       const memberIds = batch.map((r) => r.investor_ref).filter((ref) => !isProspectInvestorId(ref));
       const contactById = new Map<string, { email: string | null; name: string | null }>();
@@ -322,6 +353,9 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
           investorFirstName: firstName,
           unsubscribeUrl: buildUnsubscribeUrl(email),
           previewUrl,
+          tagline,
+          raise,
+          location,
         });
         const ok = await sendEmail({ to: email, subject, html, text });
         if (ok) {

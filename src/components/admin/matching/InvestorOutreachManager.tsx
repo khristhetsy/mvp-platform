@@ -61,12 +61,12 @@ const RECIPIENT_STATUS_LABEL: Record<OutreachRecipient["status"], string> = {
 };
 
 const FLOW_STEPS = [
-  { label: "Match", sub: "Fit ≥ 70%", state: "done" },
+  { label: "Match", sub: "Fit ≥ 50%", state: "done" },
   { label: "Notify", sub: "Founder + Admin", state: "done" },
   { label: "Draft", sub: "Auto-generated", state: "done" },
-  { label: "Approve", sub: "Admin gate", state: "current" },
+  { label: "Approve", sub: "Auto when on", state: "current" },
   { label: "Queue", sub: "X / week", state: "todo" },
-  { label: "Send + log", sub: "Per recipient", state: "todo" },
+  { label: "Send + log", sub: "One-pager", state: "todo" },
 ] as const;
 
 function FlowStepper() {
@@ -106,40 +106,61 @@ function FlowStepper() {
   );
 }
 
-function LockedTemplatePreview() {
+function OnePagerEmailPreview() {
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-900">
-          Locked template · <span className="font-mono text-xs">intro_fit_v1</span>
-        </h3>
-        <span className="inline-flex items-center rounded-md bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600">
-          locked · counsel-approved
+        <h3 className="text-sm font-semibold text-slate-900">What the investor receives</h3>
+        <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
+          Founder One-Pager
         </span>
       </div>
       <p className="mt-1 text-xs text-slate-500">
-        Read-only preview. Only company / sector / stage are substituted at send time — the body and
-        disclaimer are fixed.
+        Pulled live from the founder&apos;s published one-pager — company, tagline, raise, and stage
+        stay in sync. Sends only when the founder has published their preview.
       </p>
       <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700">
-        <p className="font-medium text-slate-900">
-          Subject: A potential fit for your thesis — {"{{company}}"} ({"{{stage}}"}, {"{{sector}}"})
-        </p>
+        <p className="text-[11px] text-slate-400">Subject</p>
+        <p className="font-medium text-slate-900">Docuverse — a Founder Preview that fits your focus</p>
         <p className="mt-3">Hi there,</p>
         <p className="mt-2">
-          Our fit scoring flagged <span className="font-medium">{"{{company}}"}</span>, a{" "}
-          {"{{stage}}"} company in {"{{sector}}"}, as a strong match for your stated preferences. We
-          thought a light-touch introduction might be worthwhile.
+          Our fit scoring matched <span className="font-medium">Docuverse</span> to your stated
+          preferences. Here&apos;s their Founder Preview — no obligation.
         </p>
-        <p className="mt-2">
-          If you&apos;d like the overview, reply here and we&apos;ll share what the founder has made
-          available. No obligation either way.
-        </p>
-        <p className="mt-2">Best regards,<br />The iCFO team</p>
+        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/70 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 font-semibold text-indigo-800">
+              D
+            </div>
+            <div>
+              <div className="font-semibold text-slate-900">Docuverse</div>
+              <div className="text-xs text-slate-500">AI document workflows for legal teams</div>
+            </div>
+          </div>
+          <div className="mt-3 flex gap-6 text-xs">
+            <div>
+              <div className="text-slate-400">Raising</div>
+              <div className="font-semibold text-slate-800">~$2M</div>
+            </div>
+            <div>
+              <div className="text-slate-400">Stage</div>
+              <div className="font-semibold text-slate-800">Seed · Legal tech</div>
+            </div>
+            <div>
+              <div className="text-slate-400">Location</div>
+              <div className="font-semibold text-slate-800">New York</div>
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white">
+              View full one-pager →
+            </span>
+          </div>
+        </div>
+        <p className="mt-3">If it&apos;s a fit, simply reply and we&apos;ll make the introduction.</p>
         <p className="mt-4 border-t border-slate-200 pt-3 text-[11px] leading-5 text-slate-400">
-          This message is an introduction based on fit scoring and is not investment advice, a
-          recommendation, or a solicitation to buy or sell any security. Locked · counsel-approved
-          disclaimer.
+          Introduction generated from platform fit scoring — not investment advice, an offer, or a
+          solicitation to buy or sell any security. Every send includes an unsubscribe link.
         </p>
       </div>
     </div>
@@ -324,6 +345,7 @@ function CampaignCard({
 export function InvestorOutreachManager() {
   const [campaigns, setCampaigns] = useState<OutreachCampaignSummary[]>([]);
   const [liveSend, setLiveSend] = useState<boolean>(false);
+  const [savingAuto, setSavingAuto] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -355,6 +377,29 @@ export function InvestorOutreachManager() {
     };
   }, [load]);
 
+  const toggleAutomation = useCallback(async () => {
+    if (savingAuto) return;
+    const next = !liveSend;
+    setSavingAuto(true);
+    try {
+      const res = await fetch("/api/admin/investor-outreach", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_automation", enabled: next }),
+      });
+      if (!res.ok) {
+        setError("Couldn't update automation. Please try again.");
+        return;
+      }
+      setLiveSend(next);
+      await load();
+    } catch {
+      setError("Network error updating automation.");
+    } finally {
+      setSavingAuto(false);
+    }
+  }, [liveSend, savingAuto, load]);
+
   const handleAction = useCallback(
     async (id: string, action: CampaignAction, cap?: number) => {
       const res = await fetch(`/api/admin/investor-outreach/${id}`, {
@@ -373,28 +418,51 @@ export function InvestorOutreachManager() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm leading-6 text-amber-900">
-        <p>
-          These are introductions based on fit scoring — <span className="font-medium">not</span>{" "}
-          investment advice or solicitation. Copy is a locked, counsel-approved template; only
-          company / sector / stage are dynamic.
-        </p>
-        <p className="mt-2 flex items-center gap-2 font-medium">
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-              liveSend ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"
+      <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-slate-900">Automation</span>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                liveSend ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${liveSend ? "bg-emerald-500" : "bg-slate-400"}`} />
+              {liveSend ? "Live — sending on" : "Off — nothing sends"}
+            </span>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            When on, strong-fit drafts (≥ 50) auto-approve and send the founder&apos;s one-pager on the
+            weekly pass — no per-campaign approval. Suppression list and unsubscribe apply on every send.
+          </p>
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-2.5">
+          <span className={`text-xs font-semibold ${liveSend ? "text-emerald-700" : "text-slate-400"}`}>
+            {liveSend ? "On" : "Off"}
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={liveSend}
+            aria-label="Toggle outreach automation"
+            onClick={toggleAutomation}
+            disabled={savingAuto}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-60 ${
+              liveSend ? "bg-emerald-600" : "bg-slate-300"
             }`}
           >
-            <span className={`h-2 w-2 rounded-full ${liveSend ? "bg-red-500" : "bg-emerald-500"}`} />
-            Live email sending: {liveSend ? "ON — real emails will be sent" : "OFF (safe / test mode)"}
-          </span>
-          <span className="font-mono text-xs text-amber-800">INVESTOR_OUTREACH_LIVE</span>
-        </p>
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                liveSend ? "translate-x-5" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
       </div>
 
       <FlowStepper />
 
-      <LockedTemplatePreview />
+      <OnePagerEmailPreview />
 
       {loading ? (
         <p className="text-sm text-slate-500">Loading campaigns…</p>
