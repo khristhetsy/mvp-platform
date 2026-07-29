@@ -171,7 +171,37 @@ function EditablePrefRow({
   );
 }
 
-export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null }) {
+export type LinkedCompany = {
+  companyName: string | null;
+  industry: string | null;
+  revenueStage: string | null;
+  fundingAmount: number | null;
+  description: string | null;
+  website: string | null;
+  country: string | null;
+  state: string | null;
+  useOfFunds: string | null;
+};
+
+const STAGE_LABELS: Record<string, string> = {
+  pre_revenue: "Pre-revenue",
+  early_revenue: "Early revenue",
+  growing: "Growing · $100K–$1M ARR",
+  scaling: "Scaling · $1M+ ARR",
+};
+
+// Read-only display row for linked / recap sections (not click-to-edit).
+function RoRow({ label, children }: { label: string; children: React.ReactNode }) {
+  const empty = children == null || children === "" || children === "—";
+  return (
+    <div style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "5px 0", fontSize: 12.5, borderBottom: "0.5px solid #f1f5f9" }}>
+      <span style={{ width: 150, flexShrink: 0, color: "var(--muted-foreground)" }}>{label}</span>
+      <span style={{ flex: 1, minWidth: 0, color: empty ? "var(--muted-foreground)" : "var(--foreground)", display: "flex", flexWrap: "wrap", gap: 5, wordBreak: "break-word" }}>{empty ? "—" : children}</span>
+    </div>
+  );
+}
+
+export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null, company = null }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null; company?: LinkedCompany | null }) {
   const assignableStaff = leadStaff ?? staff;
   const router = useRouter();
   const [contact, setContact] = useState<Contact>(initialContact);
@@ -573,6 +603,24 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       <i className="ti ti-click" aria-hidden="true" /> Click any field to edit
                     </span>
                   </div>
+                  {company && (
+                    <div style={{ marginTop: 6 }}>
+                      <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#0F6E56", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5", display: "flex", alignItems: "center", gap: 6 }}>
+                        Company{company.companyName ? ` · ${company.companyName}` : ""}
+                        <span style={{ fontSize: 8.5, background: "#E1F5EE", color: "#0F6E56", borderRadius: 8, padding: "1px 6px", letterSpacing: 0, textTransform: "none" }}>linked record</span>
+                      </p>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 28px" }}>
+                        <RoRow label="Industry">{company.industry ? <span style={{ fontSize: 11, background: "#EEEDFE", color: "#3C3489", borderRadius: 12, padding: "2px 9px" }}>{company.industry}</span> : null}</RoRow>
+                        <RoRow label="Revenue stage">{company.revenueStage ? <span style={{ fontSize: 11, background: "#EEEDFE", color: "#3C3489", borderRadius: 12, padding: "2px 9px" }}>{STAGE_LABELS[company.revenueStage] ?? company.revenueStage}</span> : null}</RoRow>
+                        <RoRow label="Funding target">{company.fundingAmount ? `$${Number(company.fundingAmount).toLocaleString()}` : null}</RoRow>
+                        <RoRow label="Website">{company.website ? <a href={company.website} target="_blank" rel="noopener noreferrer" style={{ color: "#185FA5", textDecoration: "none" }}>{company.website}</a> : null}</RoRow>
+                        <RoRow label="Location">{[company.state, company.country].filter(Boolean).join(", ") || null}</RoRow>
+                        <RoRow label="One-pager">{onePager?.slug ? <a href={`/f/${onePager.slug}`} target="_blank" rel="noopener noreferrer" style={{ color: "#185FA5", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>/f/{onePager.slug}{onePager.published ? <span style={{ fontSize: 10, background: "#E1F5EE", color: "#0F6E56", borderRadius: 8, padding: "1px 6px" }}>Published</span> : <span style={{ fontSize: 10, background: "#F1EFE8", color: "#5F5E5A", borderRadius: 8, padding: "1px 6px" }}>Draft</span>}</a> : null}</RoRow>
+                        <div style={{ gridColumn: "1 / -1" }}><RoRow label="Use of funds">{company.useOfFunds || null}</RoRow></div>
+                        <div style={{ gridColumn: "1 / -1" }}><RoRow label="Description">{company.description || null}</RoRow></div>
+                      </div>
+                    </div>
+                  )}
                   {profile.sections.map((sec) => {
                     const rating = sec.title.toLowerCase().includes("rating");
                     return (
@@ -610,6 +658,20 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       </div>
                     );
                   })()}
+                  <div style={{ marginTop: 14 }}>
+                    <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>Contact &amp; lead</p>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 28px" }}>
+                      <RoRow label="Email">{contact.email ? <a href={`mailto:${contact.email}`} style={{ color: "#185FA5", textDecoration: "none" }}>{contact.email}</a> : null}</RoRow>
+                      <RoRow label="Job position">{contact.job_position || null}</RoRow>
+                      <RoRow label="Lead source">{contact.lead_source || null}</RoRow>
+                      <RoRow label="Owner">{contact.owner || null}</RoRow>
+                      <RoRow label="Membership">{contact.membership || null}</RoRow>
+                      <RoRow label="Created on">{contact.created_on ? contact.created_on.slice(0, 10) : null}</RoRow>
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <RoRow label="Tags">{contact.tags && contact.tags.length ? contact.tags.map((t) => <span key={t} style={{ fontSize: 11, background: "#EEEDFE", color: "#3C3489", borderRadius: 12, padding: "2px 9px" }}>{t}</span>) : null}</RoRow>
+                      </div>
+                    </div>
+                  </div>
                   </>)}
                   {profileSub === "notelog" && (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, paddingTop: 4 }}>

@@ -8,7 +8,7 @@ import { listContactActivity } from "@/lib/sales/activity";
 import { getSalesScope } from "@/lib/sales/scope";
 import { isSuperAdmin } from "@/lib/rbac/effective-permissions";
 import { SalesHubHeader } from "../../SalesHubHeader";
-import { ContactProfileClient } from "./ContactProfileClient";
+import { ContactProfileClient, type LinkedCompany } from "./ContactProfileClient";
 
 export const dynamic = "force-dynamic";
 
@@ -27,9 +27,10 @@ export default async function ContactProfilePage({ params }: { params: Promise<{
     : [[] as { id: string; name: string }[], [] as { id: string; name: string }[]];
   const activity = await listContactActivity(id);
 
-  // Link this CRM contact to a platform company (by the founder's email) so we
-  // can show their One pager. Null when the contact has no platform account.
+  // Link this CRM contact to a platform company (by the founder's email) so we can
+  // show their linked company record + One pager. Null when there's no account.
   let onePager: { slug: string | null; published: boolean; companyName: string | null } | null = null;
+  let linkedCompany: LinkedCompany | null = null;
   if (data.contact.email) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const admin = createServiceRoleClient() as any;
@@ -37,11 +38,22 @@ export default async function ContactProfilePage({ params }: { params: Promise<{
     if (prof?.id) {
       const { data: comp } = await admin
         .from("companies")
-        .select("slug, is_published, company_name")
+        .select("slug, is_published, company_name, industry, revenue_stage, funding_amount, business_description, website, country, state, use_of_funds")
         .eq("founder_id", prof.id)
         .maybeSingle();
       if (comp) {
         onePager = { slug: comp.slug ?? null, published: Boolean(comp.is_published), companyName: comp.company_name ?? null };
+        linkedCompany = {
+          companyName: comp.company_name ?? null,
+          industry: comp.industry ?? null,
+          revenueStage: comp.revenue_stage ?? null,
+          fundingAmount: comp.funding_amount ?? null,
+          description: comp.business_description ?? null,
+          website: comp.website ?? null,
+          country: comp.country ?? null,
+          state: comp.state ?? null,
+          useOfFunds: comp.use_of_funds ?? null,
+        };
       }
     }
   }
@@ -49,7 +61,7 @@ export default async function ContactProfilePage({ params }: { params: Promise<{
   return (
     <AppShell role="ADMIN" workspace="admin" profileName={profile.full_name ?? profile.email ?? "Admin"} profileSubtitle={profile.role} profileEmail={profile.email ?? undefined}>
       <SalesHubHeader />
-      <ContactProfileClient contact={data.contact} opportunities={data.opportunities} staff={staff} leadStaff={leadStaff} activity={activity} isSuperAdmin={isSuperAdmin(profile)} onePager={onePager} />
+      <ContactProfileClient contact={data.contact} opportunities={data.opportunities} staff={staff} leadStaff={leadStaff} activity={activity} isSuperAdmin={isSuperAdmin(profile)} onePager={onePager} company={linkedCompany} />
     </AppShell>
   );
 }
