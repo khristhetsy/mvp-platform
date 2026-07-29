@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { groupContactProfile } from "@/lib/sales/contact-profile-sections";
 
 type Contact = {
   id: string; source: string; name: string; email: string | null; company: string | null; phone: string | null; phone2: string | null;
@@ -405,9 +406,11 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                 <Row icon="ti-map-pin" label="Location" value={address} />
               </Section>
             </div>
-            {contact.extra.length > 0 && (
+            {contact.extra.length > 0 && (() => {
+              const profile = groupContactProfile(contact.extra);
+              return (
               <div style={{ gridColumn: "1 / -1" }}>
-                <Section title="Additional details">
+                <Section title={profile.title}>
                   <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
                     {prefEditing ? (
                       <div style={{ display: "flex", gap: 6 }}>
@@ -420,35 +423,50 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       <button onClick={() => setPrefEditing(true)} style={outlineBtn}><i className="ti ti-edit" aria-hidden="true" /> Edit details</button>
                     )}
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 28px", marginTop: 4 }}>
-                    {prefEditing
-                      ? Object.entries(prefEdits).map(([label, csv]) => (
-                          <div key={label} style={{ display: "flex", gap: 10, alignItems: "center", padding: "3px 0", fontSize: 12.5 }}>
-                            <span style={{ width: 190, flexShrink: 0, color: "var(--muted-foreground)" }}>{label}</span>
-                            <input
-                              value={csv}
-                              onChange={(e) => setPrefEdits((p) => ({ ...p, [label]: e.target.value }))}
-                              placeholder="comma-separated"
-                              style={{ flex: 1, minWidth: 0, border: "0.5px solid #d7dbe3", borderRadius: 6, padding: "5px 8px", fontSize: 12 }}
-                            />
+                  {prefEditing ? (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 28px", marginTop: 4 }}>
+                      {Object.entries(prefEdits).map(([label, csv]) => (
+                        <div key={label} style={{ display: "flex", gap: 10, alignItems: "center", padding: "3px 0", fontSize: 12.5 }}>
+                          <span style={{ width: 210, flexShrink: 0, color: "var(--muted-foreground)" }}>{label}</span>
+                          <input
+                            value={csv}
+                            onChange={(e) => setPrefEdits((p) => ({ ...p, [label]: e.target.value }))}
+                            placeholder="comma-separated"
+                            style={{ flex: 1, minWidth: 0, border: "0.5px solid #d7dbe3", borderRadius: 6, padding: "5px 8px", fontSize: 12 }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    profile.sections.map((sec) => {
+                      const rating = sec.title.toLowerCase().includes("rating");
+                      return (
+                        <div key={sec.title} style={{ marginTop: 14 }}>
+                          <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 7px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>{sec.title}</p>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px 28px" }}>
+                            {sec.fields.map((f) => (
+                              <div key={f.label} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "3px 0", fontSize: 12.5 }}>
+                                <span style={{ width: 210, flexShrink: 0, color: "var(--muted-foreground)" }}>{f.label}</span>
+                                <span style={{ display: "flex", flexWrap: "wrap", gap: 5, minWidth: 0 }}>
+                                  {f.values.length === 0 ? (
+                                    <span style={{ color: "var(--muted-foreground)" }}>—</span>
+                                  ) : f.values.length === 1 && f.values[0].length > 40 ? (
+                                    <span style={{ color: "var(--foreground)" }}>{f.values[0]}</span>
+                                  ) : f.values.map((v) => (
+                                    <span key={v} style={{ fontSize: 11, background: rating ? "#E1F5EE" : "#EEEDFE", color: rating ? "#0F6E56" : "#3C3489", borderRadius: 12, padding: "2px 9px", whiteSpace: "nowrap" }}>{v}</span>
+                                  ))}
+                                </span>
+                              </div>
+                            ))}
                           </div>
-                        ))
-                      : contact.extra.map((f) => (
-                          <div key={f.label} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "4px 0", fontSize: 12.5 }}>
-                            <span style={{ width: 190, flexShrink: 0, color: "var(--muted-foreground)" }}>{f.label}</span>
-                            <span style={{ display: "flex", flexWrap: "wrap", gap: 5, minWidth: 0 }}>
-                              {f.values.length === 1 && f.values[0].length > 40 ? (
-                                <span style={{ color: "var(--foreground)" }}>{f.values[0]}</span>
-                              ) : f.values.map((v) => (
-                                <span key={v} style={{ fontSize: 11, background: "#F1EFE8", color: "#5F5E5A", borderRadius: 12, padding: "2px 9px", whiteSpace: "nowrap" }}>{v}</span>
-                              ))}
-                            </span>
-                          </div>
-                        ))}
-                  </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </Section>
               </div>
-            )}
+              );
+            })()}
           </div>
         )}
 
