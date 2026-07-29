@@ -56,7 +56,7 @@ export function OnePagerShareCard({
         </div>
         <div>
           <p style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: 0 }}>
-            Your investor one-pager is live
+            Your one-pager is live
           </p>
           <p style={{ fontSize: 11, color: "#6b7280", margin: "2px 0 0" }}>
             Share this link with investors — no login required

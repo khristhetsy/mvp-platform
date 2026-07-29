@@ -8,6 +8,7 @@ import { CollaborationDiscussionPanel } from "@/components/collaboration/Collabo
 import { CompanySettingsForm } from "./settings-form";
 import { SettingsSidebarNav } from "./SettingsSidebarNav";
 import { OnePagerPublishCard } from "@/components/founder/OnePagerPublishCard";
+import { FounderProfileTabs } from "@/components/founder/FounderProfileTabs";
 import { TipsPreferenceToggle } from "@/components/tips/TipsPreferenceToggle";
 import { SignatureSettings } from "@/components/email/SignatureSettings";
 
@@ -48,38 +49,60 @@ export default async function FounderSettingsPage() {
 
       <SettingsSidebarNav active="company" />
 
-      {company && (
-        <OnePagerPublishCard
-          initialIsPublished={company.is_published ?? false}
-          initialSlug={company.slug ?? null}
-          companyName={company.company_name}
-        />
-      )}
+      <FounderProfileTabs
+        profileTab={
+          <>
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
+                <h2 className="text-sm font-semibold text-slate-900">{t("company_profile")}</h2>
+                <p className="mt-0.5 text-xs text-slate-500">{t("edit_your_public_listing_and_company_details")}</p>
+              </div>
+              <div className="p-6">
+                <CompanySettingsForm company={company} />
+                {company ? (
+                  <div className="mt-8">
+                    <CollaborationDiscussionPanel
+                      entityType="company"
+                      entityId={company.id}
+                      title={t("company_discussion")}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </section>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div className="border-b border-slate-100 bg-slate-50 px-6 py-4">
-          <h2 className="text-sm font-semibold text-slate-900">{t("company_profile")}</h2>
-          <p className="mt-0.5 text-xs text-slate-500">{t("edit_your_public_listing_and_company_details")}</p>
-        </div>
-        <div className="p-6">
-          <CompanySettingsForm company={company} />
-          {company ? (
-            <div className="mt-8">
-              <CollaborationDiscussionPanel
-                entityType="company"
-                entityId={company.id}
-                title={t("company_discussion")}
+            <section className="mt-6 space-y-3">
+              <h2 className="text-sm font-semibold text-slate-900">{t("preferences")}</h2>
+              <TipsPreferenceToggle />
+              <SignatureSettings />
+            </section>
+          </>
+        }
+        onePagerTab={
+          <div className="space-y-4">
+            {company && (
+              <OnePagerPublishCard
+                initialIsPublished={company.is_published ?? false}
+                initialSlug={company.slug ?? null}
+                companyName={company.company_name}
+              />
+            )}
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2">
+                <span className="text-xs font-medium text-slate-500">One pager — exactly what investors see</span>
+                <Link href="/founder/preview" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+                  Open full page ↗
+                </Link>
+              </div>
+              <iframe
+                src="/founder/preview?embed=1"
+                title="One pager preview"
+                className="h-[640px] w-full border-0"
               />
             </div>
-          ) : null}
-        </div>
-      </section>
-
-      <section className="mt-6 space-y-3">
-        <h2 className="text-sm font-semibold text-slate-900">{t("preferences")}</h2>
-        <TipsPreferenceToggle />
-        <SignatureSettings />
-      </section>
+          </div>
+        }
+      />
     </FounderAppShell>
   );
 }

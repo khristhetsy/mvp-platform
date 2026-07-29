@@ -38,7 +38,7 @@ const STEPS = [
   {
     step: 3,
     icon: "🚀",
-    title: "Share your investor one-pager",
+    title: "Share your one-pager",
     description: "Publish your company profile and send a shareable link to investors — no login required on their end.",
     action: { label: "Go to Settings", href: "/founder/settings" },
   },

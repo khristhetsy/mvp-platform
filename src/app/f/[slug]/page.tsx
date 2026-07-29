@@ -69,7 +69,7 @@ export async function generateMetadata({
   const company = await getPublishedCompanyBySlug(slug);
   if (!company) return { title: "Company not found" };
   return {
-    title: `${company.company_name} — Investor One-Pager | iCapOS`,
+    title: `${company.company_name} — One-Pager | iCapOS`,
     description: company.business_description?.slice(0, 160) ?? undefined,
     openGraph: {
       title: company.company_name,

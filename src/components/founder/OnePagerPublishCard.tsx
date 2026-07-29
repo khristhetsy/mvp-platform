@@ -110,7 +110,7 @@ export function OnePagerPublishCard({
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <p style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: 0 }}>
-                Investor one-pager
+                One pager
               </p>
               <span style={{
                 fontSize: 10, fontWeight: 700,
