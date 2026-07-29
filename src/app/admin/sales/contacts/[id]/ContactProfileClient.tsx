@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { groupContactProfile } from "@/lib/sales/contact-profile-sections";
@@ -75,15 +75,60 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-// One click-to-edit profile field: click the value to turn it into an input
-// with inline save (✓) and undo. Enter saves, Escape reverts the field.
+// One click-to-edit profile field. In edit mode, fields with a known option list
+// (Odoo selection / many2many) show a searchable checkbox dropdown with chips
+// (Option 1); free-text fields fall back to a plain input. Inline save (✓) + undo.
 function EditablePrefRow({
-  label, value, changed, editing, rating, onOpen, onChange, onSave, onUndo,
+  label, value, changed, editing, rating, options, onOpen, onChange, onSave, onUndo,
 }: {
-  label: string; value: string; changed: boolean; editing: boolean; rating: boolean;
+  label: string; value: string; changed: boolean; editing: boolean; rating: boolean; options: string[];
   onOpen: () => void; onChange: (v: string) => void; onSave: () => void; onUndo: () => void;
 }) {
   const [hover, setHover] = useState(false);
+  const [search, setSearch] = useState("");
+  const selected = value.split(",").map((s) => s.trim()).filter(Boolean);
+
+  if (editing && options.length > 0) {
+    const selSet = new Set(selected);
+    const allOpts = [...new Set([...options, ...selected])];
+    const filtered = allOpts.filter((o) => o.toLowerCase().includes(search.trim().toLowerCase()));
+    const toggle = (o: string) => onChange((selSet.has(o) ? selected.filter((x) => x !== o) : [...selected, o]).join(", "));
+    const chipBg = rating ? "#E1F5EE" : "#EEEDFE";
+    const chipFg = rating ? "#0F6E56" : "#3C3489";
+    return (
+      <div style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "5px 8px", background: "#F7F8FA", borderRadius: 8, fontSize: 12.5 }}>
+        <span style={{ width: 150, flexShrink: 0, color: "var(--muted-foreground)", paddingTop: 6 }}>{label}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
+            <div style={{ flex: 1, minWidth: 0, border: "0.5px solid #4338CA", borderRadius: 6, padding: "5px 8px", boxShadow: "0 0 0 2px #EEEDFE", display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", background: "#fff" }}>
+              {selected.length === 0 && <span style={{ color: "var(--muted-foreground)" }}>Select…</span>}
+              {selected.map((v) => (
+                <span key={v} style={{ fontSize: 11, background: chipBg, color: chipFg, borderRadius: 10, padding: "2px 8px", display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+                  {v}
+                  <i className="ti ti-x" onClick={() => toggle(v)} style={{ fontSize: 11, cursor: "pointer" }} aria-hidden="true" />
+                </span>
+              ))}
+            </div>
+            <button onClick={onSave} aria-label="Save field" style={{ width: 30, height: 30, flexShrink: 0, background: "#0F6E56", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>
+            <button onClick={onUndo} aria-label="Undo field" style={{ width: 30, height: 30, flexShrink: 0, background: "none", border: "0.5px solid #d7dbe3", borderRadius: 6, cursor: "pointer", color: "var(--muted-foreground)" }}><i className="ti ti-arrow-back-up" aria-hidden="true" /></button>
+          </div>
+          <div style={{ marginTop: 5, border: "0.5px solid var(--border)", borderRadius: 8, background: "#fff", padding: 5, maxWidth: 320 }}>
+            <input autoFocus value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…" style={{ width: "100%", boxSizing: "border-box", height: 28, fontSize: 12, border: "0.5px solid var(--border)", borderRadius: 5, padding: "0 8px", marginBottom: 4 }} />
+            <div style={{ maxHeight: 176, overflowY: "auto" }}>
+              {filtered.length === 0 && <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", padding: "4px 6px" }}>No matches.</div>}
+              {filtered.map((o) => (
+                <label key={o} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 6px", fontSize: 12, cursor: "pointer" }}>
+                  <input type="checkbox" checked={selSet.has(o)} onChange={() => toggle(o)} style={{ width: 14, height: 14 }} />
+                  <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (editing) {
     return (
       <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "5px 8px", background: "#F7F8FA", borderRadius: 8, fontSize: 12.5 }}>
@@ -93,7 +138,7 @@ function EditablePrefRow({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") onSave(); if (e.key === "Escape") onUndo(); }}
-          placeholder="comma-separated"
+          placeholder="Type a value…"
           style={{ flex: 1, minWidth: 0, height: 30, fontSize: 12, border: "0.5px solid #4338CA", borderRadius: 6, padding: "0 8px", boxShadow: "0 0 0 2px #EEEDFE" }}
         />
         <button onClick={onSave} aria-label="Save field" style={{ width: 30, height: 30, flexShrink: 0, background: "#0F6E56", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>
@@ -152,6 +197,16 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [editingKey, setEditingKey] = useState<string | null>(null);
   // Sub-tab strip at the profile position: Profile · Note Log · Activity.
   const [profileSub, setProfileSub] = useState<"profile" | "notelog">("profile");
+  // Option lists per profile field (Odoo selection / many2many) for the pickers.
+  const [fieldOptions, setFieldOptions] = useState<Record<string, string[]>>({});
+  useEffect(() => {
+    let active = true;
+    fetch("/api/sales/contacts/field-options")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (active && d?.options) setFieldOptions(d.options as Record<string, string[]>); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
   // Read-view "Lead assign" control (super admin only) — saves assignees directly.
   const [leadOpen, setLeadOpen] = useState(false);
   const [leadSel, setLeadSel] = useState<string[]>(initialContact.assignee_ids ?? []);
@@ -499,6 +554,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               key={f.saveKey}
                               label={f.label}
                               rating={rating}
+                              options={fieldOptions[f.saveKey] ?? []}
                               value={prefEdits[f.saveKey] ?? ""}
                               changed={(prefEdits[f.saveKey] ?? "") !== (prefOrig[f.saveKey] ?? "")}
                               editing={editingKey === f.saveKey}

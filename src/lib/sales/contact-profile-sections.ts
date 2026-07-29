@@ -25,7 +25,7 @@ export type ContactProfile = { title: string; type: "investor" | "founder" | "ge
 
 /** display = label shown; match = keyword to find the synced field; odoo = the
  *  canonical Odoo label to save a *blank* field's edit under. */
-type FieldDef = { display: string; match: string; odoo: string };
+export type FieldDef = { display: string; match: string; odoo: string };
 type SectionDef = { title: string; fields: FieldDef[] };
 
 const FOUNDER_SCHEMA: SectionDef[] = [
@@ -98,6 +98,9 @@ const INVESTOR_SCHEMA: SectionDef[] = [
     ],
   },
 ];
+
+/** Every schema field across both profile types (for option-list mapping). */
+export const ALL_SCHEMA_FIELDS: FieldDef[] = [...FOUNDER_SCHEMA, ...INVESTOR_SCHEMA].flatMap((s) => s.fields);
 
 function norm(s: string): string {
   return s.trim().toLowerCase();
