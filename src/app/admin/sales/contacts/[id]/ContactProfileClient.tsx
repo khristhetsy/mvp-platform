@@ -75,6 +75,57 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+// One click-to-edit profile field: click the value to turn it into an input
+// with inline save (✓) and undo. Enter saves, Escape reverts the field.
+function EditablePrefRow({
+  label, value, changed, editing, rating, onOpen, onChange, onSave, onUndo,
+}: {
+  label: string; value: string; changed: boolean; editing: boolean; rating: boolean;
+  onOpen: () => void; onChange: (v: string) => void; onSave: () => void; onUndo: () => void;
+}) {
+  const [hover, setHover] = useState(false);
+  if (editing) {
+    return (
+      <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "5px 8px", background: "#F7F8FA", borderRadius: 8, fontSize: 12.5 }}>
+        <span style={{ width: 150, flexShrink: 0, color: "var(--muted-foreground)" }}>{label}</span>
+        <input
+          autoFocus
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") onSave(); if (e.key === "Escape") onUndo(); }}
+          placeholder="comma-separated"
+          style={{ flex: 1, minWidth: 0, height: 30, fontSize: 12, border: "0.5px solid #4338CA", borderRadius: 6, padding: "0 8px", boxShadow: "0 0 0 2px #EEEDFE" }}
+        />
+        <button onClick={onSave} aria-label="Save field" style={{ width: 30, height: 30, flexShrink: 0, background: "#0F6E56", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}><i className="ti ti-check" aria-hidden="true" /></button>
+        <button onClick={onUndo} aria-label="Undo field" style={{ width: 30, height: 30, flexShrink: 0, background: "none", border: "0.5px solid #d7dbe3", borderRadius: 6, cursor: "pointer", color: "var(--muted-foreground)" }}><i className="ti ti-arrow-back-up" aria-hidden="true" /></button>
+      </div>
+    );
+  }
+  const values = value.split(",").map((s) => s.trim()).filter(Boolean);
+  return (
+    <div style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "5px 0", fontSize: 12.5 }}>
+      <span style={{ width: 150, flexShrink: 0, color: "var(--muted-foreground)" }}>{label}</span>
+      <span
+        onClick={onOpen}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        title="Click to edit"
+        style={{ flex: 1, minWidth: 0, cursor: "pointer", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 5, borderRadius: 6, padding: "2px 4px", margin: "-2px -4px", background: hover ? "#F1EFE8" : "transparent" }}
+      >
+        {values.length === 0 ? (
+          <span style={{ color: "var(--muted-foreground)" }}>—</span>
+        ) : values.length === 1 && values[0].length > 40 ? (
+          <span style={{ color: "var(--foreground)" }}>{values[0]}</span>
+        ) : values.map((v) => (
+          <span key={v} style={{ fontSize: 11, background: rating ? "#E1F5EE" : "#EEEDFE", color: rating ? "#0F6E56" : "#3C3489", borderRadius: 12, padding: "2px 9px", whiteSpace: "nowrap" }}>{v}</span>
+        ))}
+        <i className="ti ti-pencil" aria-hidden="true" style={{ fontSize: 12.5, color: "var(--muted-foreground)", opacity: hover ? 1 : 0, marginLeft: 2 }} />
+        {changed ? <span style={{ fontSize: 10, color: "#854F0B", background: "#FAEEDA", borderRadius: 10, padding: "1px 7px" }}>edited</span> : null}
+      </span>
+    </div>
+  );
+}
+
 export function ContactProfileClient({ contact: initialContact, opportunities, staff, leadStaff, activity, isSuperAdmin = false, onePager = null }: { contact: Contact; opportunities: LinkedOpp[]; staff: Staff[]; leadStaff?: Staff[]; activity: Activity[]; isSuperAdmin?: boolean; onePager?: { slug: string | null; published: boolean; companyName: string | null } | null }) {
   const assignableStaff = leadStaff ?? staff;
   const router = useRouter();
@@ -87,21 +138,18 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [savedNotes, setSavedNotes] = useState<string | null>(initialContact.note);
   const [editing, setEditing] = useState(false);
   // Self-contained editor for the structured "Additional details" fields.
-  const [prefEditing, setPrefEditing] = useState(false);
   const [prefBusy, setPrefBusy] = useState(false);
-  // Editor is seeded from the FULL profile (every schema field, keyed by its
-  // save-label), so blank fields are editable too.
+  // Click-to-edit: values are staged in prefEdits (keyed by save-label);
+  // prefOrig is the last-saved baseline for dirty detection + undo.
   const initialProfile = groupContactProfile(initialContact.extra, initialContact.membership);
-  const [prefEdits, setPrefEdits] = useState<Record<string, string>>(() => {
+  const seedPrefs = () => {
     const o: Record<string, string> = {};
     for (const s of initialProfile.sections) for (const f of s.fields) o[f.saveKey] = f.values.join(", ");
     return o;
-  });
-  const [prefLabels] = useState<Record<string, string>>(() => {
-    const o: Record<string, string> = {};
-    for (const s of initialProfile.sections) for (const f of s.fields) o[f.saveKey] = f.label;
-    return o;
-  });
+  };
+  const [prefEdits, setPrefEdits] = useState<Record<string, string>>(seedPrefs);
+  const [prefOrig, setPrefOrig] = useState<Record<string, string>>(seedPrefs);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
   // Sub-tab strip at the profile position: Profile · Note Log · Activity.
   const [profileSub, setProfileSub] = useState<"profile" | "notelog">("profile");
   // Read-view "Lead assign" control (super admin only) — saves assignees directly.
@@ -186,7 +234,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
           .map(([label, values]) => ({ label, values }))
           .filter((e) => e.values.length);
         setContact({ ...contact, extra: newExtra });
-        setPrefEditing(false);
+        setPrefOrig({ ...prefEdits });
+        setEditingKey(null);
       }
     } finally {
       setPrefBusy(false);
@@ -435,58 +484,47 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                     <button onClick={() => setSection("activity")} style={{ background: "none", border: "none", borderBottom: "2px solid transparent", color: "var(--muted-foreground)", fontSize: 12.5, fontWeight: 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Activity{acts.length ? ` · ${acts.length}` : ""}</button>
                   </div>
                   {profileSub === "profile" && (<>
-                  <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
-                    {prefEditing ? (
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={savePreferences} disabled={prefBusy} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 6, padding: "5px 11px", cursor: "pointer", opacity: prefBusy ? 0.5 : 1 }}>
-                          {prefBusy ? "Saving…" : "Save"}
-                        </button>
-                        <button onClick={() => setPrefEditing(false)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
-                      </div>
-                    ) : (
-                      <button onClick={() => setPrefEditing(true)} style={outlineBtn}><i className="ti ti-edit" aria-hidden="true" /> Edit details</button>
-                    )}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 4, minHeight: 18 }}>
+                    <span style={{ fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 5 }}>
+                      <i className="ti ti-click" aria-hidden="true" /> Click any field to edit
+                    </span>
                   </div>
-                  {prefEditing ? (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 28px", marginTop: 4 }}>
-                      {Object.entries(prefEdits).map(([key, csv]) => (
-                        <div key={key} style={{ display: "flex", gap: 10, alignItems: "center", padding: "3px 0", fontSize: 12.5 }}>
-                          <span style={{ width: 210, flexShrink: 0, color: "var(--muted-foreground)" }}>{prefLabels[key] ?? key}</span>
-                          <input
-                            value={csv}
-                            onChange={(e) => setPrefEdits((p) => ({ ...p, [key]: e.target.value }))}
-                            placeholder="comma-separated"
-                            style={{ flex: 1, minWidth: 0, border: "0.5px solid #d7dbe3", borderRadius: 6, padding: "5px 8px", fontSize: 12 }}
-                          />
+                  {profile.sections.map((sec) => {
+                    const rating = sec.title.toLowerCase().includes("rating");
+                    return (
+                      <div key={sec.title} style={{ marginTop: 14 }}>
+                        <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>{sec.title}</p>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 28px" }}>
+                          {sec.fields.map((f) => (
+                            <EditablePrefRow
+                              key={f.saveKey}
+                              label={f.label}
+                              rating={rating}
+                              value={prefEdits[f.saveKey] ?? ""}
+                              changed={(prefEdits[f.saveKey] ?? "") !== (prefOrig[f.saveKey] ?? "")}
+                              editing={editingKey === f.saveKey}
+                              onOpen={() => setEditingKey(f.saveKey)}
+                              onChange={(v) => setPrefEdits((p) => ({ ...p, [f.saveKey]: v }))}
+                              onSave={() => setEditingKey(null)}
+                              onUndo={() => { setPrefEdits((p) => ({ ...p, [f.saveKey]: prefOrig[f.saveKey] ?? "" })); setEditingKey(null); }}
+                            />
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    profile.sections.map((sec) => {
-                      const rating = sec.title.toLowerCase().includes("rating");
-                      return (
-                        <div key={sec.title} style={{ marginTop: 14 }}>
-                          <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 7px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>{sec.title}</p>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px 28px" }}>
-                            {sec.fields.map((f) => (
-                              <div key={f.label} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "3px 0", fontSize: 12.5 }}>
-                                <span style={{ width: 210, flexShrink: 0, color: "var(--muted-foreground)" }}>{f.label}</span>
-                                <span style={{ display: "flex", flexWrap: "wrap", gap: 5, minWidth: 0 }}>
-                                  {f.values.length === 0 ? (
-                                    <span style={{ color: "var(--muted-foreground)" }}>—</span>
-                                  ) : f.values.length === 1 && f.values[0].length > 40 ? (
-                                    <span style={{ color: "var(--foreground)" }}>{f.values[0]}</span>
-                                  ) : f.values.map((v) => (
-                                    <span key={v} style={{ fontSize: 11, background: rating ? "#E1F5EE" : "#EEEDFE", color: rating ? "#0F6E56" : "#3C3489", borderRadius: 12, padding: "2px 9px", whiteSpace: "nowrap" }}>{v}</span>
-                                  ))}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
+                      </div>
+                    );
+                  })}
+                  {(() => {
+                    const changedKeys = Object.keys(prefEdits).filter((k) => (prefEdits[k] ?? "") !== (prefOrig[k] ?? ""));
+                    if (changedKeys.length === 0) return null;
+                    return (
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, paddingTop: 12, borderTop: "0.5px solid #eef1f5" }}>
+                        <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{changedKeys.length} unsaved change{changedKeys.length === 1 ? "" : "s"}</span>
+                        <span style={{ marginLeft: "auto" }} />
+                        <button onClick={() => { setPrefEdits({ ...prefOrig }); setEditingKey(null); }} disabled={prefBusy} style={{ fontSize: 12, padding: "6px 12px", border: "0.5px solid #d7dbe3", borderRadius: 6, background: "none", color: "var(--muted-foreground)", cursor: "pointer" }}>Undo all</button>
+                        <button onClick={savePreferences} disabled={prefBusy} style={{ fontSize: 12, fontWeight: 600, padding: "6px 14px", border: "none", borderRadius: 6, background: "#0F6E56", color: "#fff", cursor: "pointer", opacity: prefBusy ? 0.5 : 1 }}>{prefBusy ? "Saving…" : "Save changes"}</button>
+                      </div>
+                    );
+                  })()}
                   </>)}
                   {profileSub === "notelog" && (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, paddingTop: 4 }}>
