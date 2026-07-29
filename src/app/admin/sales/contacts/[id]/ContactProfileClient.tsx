@@ -85,6 +85,12 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [task, setTask] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
   const [savedNotes, setSavedNotes] = useState<string | null>(initialContact.note);
   const [editing, setEditing] = useState(false);
+  // Self-contained editor for the structured "Additional details" fields.
+  const [prefEditing, setPrefEditing] = useState(false);
+  const [prefBusy, setPrefBusy] = useState(false);
+  const [prefEdits, setPrefEdits] = useState<Record<string, string>>(() =>
+    Object.fromEntries(initialContact.extra.map((f) => [f.label, f.values.join(", ")])),
+  );
   // Read-view "Lead assign" control (super admin only) — saves assignees directly.
   const [leadOpen, setLeadOpen] = useState(false);
   const [leadSel, setLeadSel] = useState<string[]>(initialContact.assignee_ids ?? []);
@@ -148,6 +154,30 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
       const res = await fetch(`/api/sales/contacts/${contact.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (res.ok) { setContact({ ...contact, ...body }); setEditing(false); }
     } finally { setBusy(false); }
+  }
+
+  async function savePreferences() {
+    setPrefBusy(true);
+    try {
+      const preferences: Record<string, string[]> = {};
+      for (const [label, csv] of Object.entries(prefEdits)) {
+        preferences[label] = csv.split(",").map((s) => s.trim()).filter(Boolean);
+      }
+      const res = await fetch(`/api/sales/contacts/${contact.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preferences }),
+      });
+      if (res.ok) {
+        const newExtra = Object.entries(preferences)
+          .map(([label, values]) => ({ label, values }))
+          .filter((e) => e.values.length);
+        setContact({ ...contact, extra: newExtra });
+        setPrefEditing(false);
+      }
+    } finally {
+      setPrefBusy(false);
+    }
   }
 
   async function saveLeadAssign() {
@@ -378,19 +408,43 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             {contact.extra.length > 0 && (
               <div style={{ gridColumn: "1 / -1" }}>
                 <Section title="Additional details">
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 28px", marginTop: 4 }}>
-                    {contact.extra.map((f) => (
-                      <div key={f.label} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "4px 0", fontSize: 12.5 }}>
-                        <span style={{ width: 190, flexShrink: 0, color: "var(--muted-foreground)" }}>{f.label}</span>
-                        <span style={{ display: "flex", flexWrap: "wrap", gap: 5, minWidth: 0 }}>
-                          {f.values.length === 1 && f.values[0].length > 40 ? (
-                            <span style={{ color: "var(--foreground)" }}>{f.values[0]}</span>
-                          ) : f.values.map((v) => (
-                            <span key={v} style={{ fontSize: 11, background: "#F1EFE8", color: "#5F5E5A", borderRadius: 12, padding: "2px 9px", whiteSpace: "nowrap" }}>{v}</span>
-                          ))}
-                        </span>
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+                    {prefEditing ? (
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button onClick={savePreferences} disabled={prefBusy} style={{ fontSize: 11.5, fontWeight: 600, color: "#fff", background: "#0F6E56", border: "none", borderRadius: 6, padding: "5px 11px", cursor: "pointer", opacity: prefBusy ? 0.5 : 1 }}>
+                          {prefBusy ? "Saving…" : "Save"}
+                        </button>
+                        <button onClick={() => setPrefEditing(false)} style={{ fontSize: 11.5, color: "var(--muted-foreground)", background: "none", border: "none", cursor: "pointer" }}>Cancel</button>
                       </div>
-                    ))}
+                    ) : (
+                      <button onClick={() => setPrefEditing(true)} style={outlineBtn}><i className="ti ti-edit" aria-hidden="true" /> Edit details</button>
+                    )}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 28px", marginTop: 4 }}>
+                    {prefEditing
+                      ? Object.entries(prefEdits).map(([label, csv]) => (
+                          <div key={label} style={{ display: "flex", gap: 10, alignItems: "center", padding: "3px 0", fontSize: 12.5 }}>
+                            <span style={{ width: 190, flexShrink: 0, color: "var(--muted-foreground)" }}>{label}</span>
+                            <input
+                              value={csv}
+                              onChange={(e) => setPrefEdits((p) => ({ ...p, [label]: e.target.value }))}
+                              placeholder="comma-separated"
+                              style={{ flex: 1, minWidth: 0, border: "0.5px solid #d7dbe3", borderRadius: 6, padding: "5px 8px", fontSize: 12 }}
+                            />
+                          </div>
+                        ))
+                      : contact.extra.map((f) => (
+                          <div key={f.label} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "4px 0", fontSize: 12.5 }}>
+                            <span style={{ width: 190, flexShrink: 0, color: "var(--muted-foreground)" }}>{f.label}</span>
+                            <span style={{ display: "flex", flexWrap: "wrap", gap: 5, minWidth: 0 }}>
+                              {f.values.length === 1 && f.values[0].length > 40 ? (
+                                <span style={{ color: "var(--foreground)" }}>{f.values[0]}</span>
+                              ) : f.values.map((v) => (
+                                <span key={v} style={{ fontSize: 11, background: "#F1EFE8", color: "#5F5E5A", borderRadius: 12, padding: "2px 9px", whiteSpace: "nowrap" }}>{v}</span>
+                              ))}
+                            </span>
+                          </div>
+                        ))}
                   </div>
                 </Section>
               </div>

@@ -32,11 +32,13 @@ function pickRaw(raw: Record<string, unknown> | null, keys: string[]): string | 
 // ordered label → values list for display. Skips empties and labels already surfaced
 // as first-class fields to avoid duplication.
 const EXTRA_SKIP = new Set(["lead status", "lead source", "membership type", "membership"]);
-function flattenExtra(raw: Record<string, unknown> | null): Array<{ label: string; values: string[] }> {
+function flattenExtra(
+  raw: Record<string, unknown> | null,
+  overrides?: Record<string, unknown> | null,
+): Array<{ label: string; values: string[] }> {
   const prof = (raw?.__profile as { extra?: Record<string, unknown> } | undefined) ?? undefined;
-  if (!prof?.extra) return [];
   const out: Array<{ label: string; values: string[] }> = [];
-  for (const [label, v] of Object.entries(prof.extra)) {
+  for (const [label, v] of Object.entries(prof?.extra ?? {})) {
     if (EXTRA_SKIP.has(label.trim().toLowerCase())) continue;
     let values: string[];
     if (Array.isArray(v)) {
@@ -49,6 +51,22 @@ function flattenExtra(raw: Record<string, unknown> | null): Array<{ label: strin
       values = [String(v).trim()].filter(Boolean);
     }
     if (values.length) out.push({ label, values });
+  }
+
+  // Apply array-valued overrides (structured "Additional details" edits): replace
+  // a matching label, or add it if new. Empty override = remove the field.
+  if (overrides) {
+    for (const [label, ov] of Object.entries(overrides)) {
+      if (!Array.isArray(ov)) continue; // string overrides are first-class fields
+      const values = ov.map((s) => String(s).trim()).filter(Boolean);
+      const idx = out.findIndex((e) => e.label.trim().toLowerCase() === label.trim().toLowerCase());
+      if (idx >= 0) {
+        if (values.length) out[idx] = { label: out[idx].label, values };
+        else out.splice(idx, 1);
+      } else if (values.length) {
+        out.push({ label, values });
+      }
+    }
   }
   return out;
 }
@@ -106,7 +124,7 @@ export async function getContactProfile(id: string): Promise<{ contact: ContactP
     country: pref("country", pickRaw(raw, ["country_id", "country"])),
     language: pref("language", pickRaw(raw, ["lang", "language"])), created_on: pickRaw(raw, ["create_date", "created_on"]) ?? (c.synced_at as string) ?? null,
     note,
-    extra: flattenExtra(raw),
+    extra: flattenExtra(raw, ov),
   };
   return { contact, opportunities };
 }
@@ -117,6 +135,9 @@ export type ContactPatch = {
   phone2?: string | null; lead_source?: string | null; membership?: string | null; job_position?: string | null;
   language?: string | null; street?: string | null; street2?: string | null; city?: string | null;
   state?: string | null; zip?: string | null; country?: string | null;
+  /** Structured "Additional details" edits, keyed by label → values. Stored as
+   *  array-valued overrides so they win over the Odoo-synced questionnaire. */
+  preferences?: Record<string, string[]>;
 };
 
 // Fields stored in the `overrides` jsonb (Odoo-sourced; no dedicated column).
@@ -136,10 +157,16 @@ export async function updateContact(id: string, patch: ContactPatch, actorId?: s
   if (patch.assignee_ids !== undefined) update.assignee_ids = Array.from(new Set((patch.assignee_ids ?? []).filter(Boolean))).slice(0, 50);
   if (patch.tags !== undefined) update.tags = patch.tags.map((t) => t.trim()).filter(Boolean).slice(0, 20);
 
-  const ovPatch: Record<string, string | null> = {};
+  const ovPatch: Record<string, string | null | string[]> = {};
   for (const k of OVERRIDE_KEYS) {
     const v = patch[k];
     if (v !== undefined) ovPatch[k] = (v as string) || null;
+  }
+  // Structured "Additional details" edits — array-valued overrides keyed by label.
+  if (patch.preferences) {
+    for (const [label, values] of Object.entries(patch.preferences)) {
+      ovPatch[label] = values.map((s) => s.trim()).filter(Boolean);
+    }
   }
   if (Object.keys(update).length === 0 && Object.keys(ovPatch).length === 0) return;
 
