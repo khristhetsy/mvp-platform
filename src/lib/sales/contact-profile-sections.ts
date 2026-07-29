@@ -10,39 +10,50 @@
  * trailing "Other details" section so nothing is lost.
  */
 
-export type ProfileField = { label: string; values: string[] };
+/** Raw synced field (input). */
+export type ExtraField = { label: string; values: string[] };
+
+export type ProfileField = {
+  label: string;
+  values: string[];
+  /** Exact label to save an edit under (the synced label if present, else the
+   *  canonical Odoo label) so overrides merge with the questionnaire field. */
+  saveKey: string;
+};
 export type ProfileSection = { title: string; fields: ProfileField[] };
 export type ContactProfile = { title: string; type: "investor" | "founder" | "generic"; sections: ProfileSection[] };
 
-type FieldDef = { display: string; match: string };
+/** display = label shown; match = keyword to find the synced field; odoo = the
+ *  canonical Odoo label to save a *blank* field's edit under. */
+type FieldDef = { display: string; match: string; odoo: string };
 type SectionDef = { title: string; fields: FieldDef[] };
 
 const FOUNDER_SCHEMA: SectionDef[] = [
   {
     title: "Entrepreneur information",
     fields: [
-      { display: "How did you hear about us?", match: "how did you hear" },
-      { display: "If other, referred you", match: "referred you" },
-      { display: "iCFO capital partner", match: "icfo capital partner" },
-      { display: "Assigned agent", match: "assigned agent" },
-      { display: "Contact preference", match: "contact preference" },
+      { display: "How did you hear about us?", match: "how did you hear", odoo: "Entrepreneur: How did you hear about us?" },
+      { display: "If other, referred you", match: "referred you", odoo: "Entrepreneur: If other, please tell us who referred you" },
+      { display: "iCFO capital partner", match: "icfo capital partner", odoo: "Entrepreneur: iCFO capital partner" },
+      { display: "Assigned agent", match: "assigned agent", odoo: "Entrepreneur assigned agent" },
+      { display: "Contact preference", match: "contact preference", odoo: "Entrepreneur contact preference" },
     ],
   },
   {
     title: "Seeking",
     fields: [
-      { display: "Type of investor(s)", match: "type of investor" },
-      { display: "Type(s) of capital", match: "type" },
-      { display: "Amount of capital", match: "amount" },
-      { display: "Use of funds", match: "use of funds" },
+      { display: "Type of investor(s)", match: "type of investor", odoo: "Entrepreneur seeking type of investor(s)?" },
+      { display: "Type(s) of capital", match: "type", odoo: "Entrepreneur seeking type(s) of capital?" },
+      { display: "Amount of capital", match: "amount", odoo: "Entrepreneur seeking amount of capital?" },
+      { display: "Use of funds", match: "use of funds", odoo: "Entrepreneur use of funds?" },
     ],
   },
   {
     title: "Agent field (internal)",
     fields: [
-      { display: "Note", match: "'s note" },
-      { display: "Request", match: "'s request" },
-      { display: "Pitch frame to use", match: "pitch" },
+      { display: "Note", match: "'s note", odoo: "Entrepreneur's note" },
+      { display: "Request", match: "'s request", odoo: "Entrepreneur's request" },
+      { display: "Pitch frame to use", match: "pitch", odoo: "Entrepreneur pitch frame to use" },
     ],
   },
 ];
@@ -51,39 +62,39 @@ const INVESTOR_SCHEMA: SectionDef[] = [
   {
     title: "Investor information",
     fields: [
-      { display: "How did you hear about us?", match: "how did you hear" },
-      { display: "If other, referred you", match: "referred you" },
-      { display: "iCFO capital partner", match: "icfo capital partner" },
-      { display: "Assigned agent", match: "assigned agent" },
-      { display: "Contact preference", match: "contact preference" },
+      { display: "How did you hear about us?", match: "how did you hear", odoo: "Investor: How did you hear about us?" },
+      { display: "If other, referred you", match: "referred you", odoo: "Investor: If other, please tell us who referred you" },
+      { display: "iCFO capital partner", match: "icfo capital partner", odoo: "Investor: iCFO capital partner" },
+      { display: "Assigned agent", match: "assigned agent", odoo: "Investor assigned agent" },
+      { display: "Contact preference", match: "contact preference", odoo: "Investor contact preference" },
     ],
   },
   {
     title: "Investor rating",
     fields: [
-      { display: "Active investor", match: "active investor" },
-      { display: "Participating in meetings & events", match: "participating in meeting" },
-      { display: "Responding to email & phone", match: "responding to email" },
-      { display: "Turnaround period", match: "turnaround" },
+      { display: "Active investor", match: "active investor", odoo: "Active investor" },
+      { display: "Participating in meetings & events", match: "participating in meeting", odoo: "Participating in meeting and event" },
+      { display: "Responding to email & phone", match: "responding to email", odoo: "Responding to email and phone call" },
+      { display: "Turnaround period", match: "turnaround", odoo: "Turnaround period" },
     ],
   },
   {
     title: "Investor preferences",
     fields: [
-      { display: "Investment size", match: "investment size" },
-      { display: "Use of funds", match: "use of funds" },
-      { display: "Deals per year", match: "deals per year" },
-      { display: "Annual revenue range", match: "revenue range" },
-      { display: "Annual EBITDA range", match: "ebitda" },
-      { display: "Management team", match: "management team" },
+      { display: "Investment size", match: "investment size", odoo: "Investor investment size?" },
+      { display: "Use of funds", match: "use of funds", odoo: "Investor preferences for use of funds?" },
+      { display: "Deals per year", match: "deals per year", odoo: "Investor preferences for the number of deals per year?" },
+      { display: "Annual revenue range", match: "revenue range", odoo: "Investor preferences for the company with an annual revenue range of?" },
+      { display: "Annual EBITDA range", match: "ebitda", odoo: "Investor preferences for company with annual EBITDA range of?" },
+      { display: "Management team", match: "management team", odoo: "Investor preferences for the management team?" },
     ],
   },
   {
     title: "Agent field (internal)",
     fields: [
-      { display: "Note", match: "'s note" },
-      { display: "Request", match: "'s request" },
-      { display: "Quick notes", match: "quick" },
+      { display: "Note", match: "'s note", odoo: "Investor's note" },
+      { display: "Request", match: "'s request", odoo: "Investor's request" },
+      { display: "Quick notes", match: "quick", odoo: "Investor quick notes" },
     ],
   },
 ];
@@ -100,7 +111,7 @@ function typeFromMembership(membership: string | null | undefined): "investor" |
   return null;
 }
 
-function detectTypeFromLabels(extra: ProfileField[]): "investor" | "founder" | "generic" {
+function detectTypeFromLabels(extra: ExtraField[]): "investor" | "founder" | "generic" {
   let inv = 0;
   let fnd = 0;
   for (const f of extra) {
@@ -113,35 +124,46 @@ function detectTypeFromLabels(extra: ProfileField[]): "investor" | "founder" | "
 }
 
 export function groupContactProfile(
-  extra: ProfileField[],
+  extra: ExtraField[],
   membership?: string | null,
 ): ContactProfile {
   const type = typeFromMembership(membership) ?? detectTypeFromLabels(extra);
   if (type === "generic") {
-    return { title: "Additional details", type, sections: extra.length ? [{ title: "Details", fields: extra }] : [] };
+    return {
+      title: "Additional details",
+      type,
+      sections: extra.length
+        ? [{ title: "Details", fields: extra.map((f) => ({ ...f, saveKey: f.label })) }]
+        : [],
+    };
   }
 
   const schema = type === "investor" ? INVESTOR_SCHEMA : FOUNDER_SCHEMA;
   const consumed = new Set<number>();
-  const take = (keyword: string): string[] => {
-    const k = norm(keyword);
+  // Returns the synced values + the label to save under (synced label if the
+  // field exists, else the canonical Odoo label so a blank field still saves).
+  const take = (f: FieldDef): { values: string[]; saveKey: string } => {
+    const k = norm(f.match);
     for (let i = 0; i < extra.length; i++) {
       if (consumed.has(i)) continue;
       if (norm(extra[i].label).includes(k)) {
         consumed.add(i);
-        return extra[i].values;
+        return { values: extra[i].values, saveKey: extra[i].label };
       }
     }
-    return [];
+    return { values: [], saveKey: f.odoo };
   };
 
   const sections: ProfileSection[] = schema.map((sec) => ({
     title: sec.title,
-    fields: sec.fields.map((f) => ({ label: f.display, values: take(f.match) })),
+    fields: sec.fields.map((f) => {
+      const { values, saveKey } = take(f);
+      return { label: f.display, values, saveKey };
+    }),
   }));
 
   const other = extra.filter((_, i) => !consumed.has(i));
-  if (other.length) sections.push({ title: "Other details", fields: other });
+  if (other.length) sections.push({ title: "Other details", fields: other.map((f) => ({ ...f, saveKey: f.label })) });
 
   return { title: type === "investor" ? "Investor Profile" : "Founder Profile", type, sections };
 }

@@ -89,9 +89,19 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   // Self-contained editor for the structured "Additional details" fields.
   const [prefEditing, setPrefEditing] = useState(false);
   const [prefBusy, setPrefBusy] = useState(false);
-  const [prefEdits, setPrefEdits] = useState<Record<string, string>>(() =>
-    Object.fromEntries(initialContact.extra.map((f) => [f.label, f.values.join(", ")])),
-  );
+  // Editor is seeded from the FULL profile (every schema field, keyed by its
+  // save-label), so blank fields are editable too.
+  const initialProfile = groupContactProfile(initialContact.extra, initialContact.membership);
+  const [prefEdits, setPrefEdits] = useState<Record<string, string>>(() => {
+    const o: Record<string, string> = {};
+    for (const s of initialProfile.sections) for (const f of s.fields) o[f.saveKey] = f.values.join(", ");
+    return o;
+  });
+  const [prefLabels] = useState<Record<string, string>>(() => {
+    const o: Record<string, string> = {};
+    for (const s of initialProfile.sections) for (const f of s.fields) o[f.saveKey] = f.label;
+    return o;
+  });
   // Read-view "Lead assign" control (super admin only) — saves assignees directly.
   const [leadOpen, setLeadOpen] = useState(false);
   const [leadSel, setLeadSel] = useState<string[]>(initialContact.assignee_ids ?? []);
@@ -429,12 +439,12 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                   </div>
                   {prefEditing ? (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 28px", marginTop: 4 }}>
-                      {Object.entries(prefEdits).map(([label, csv]) => (
-                        <div key={label} style={{ display: "flex", gap: 10, alignItems: "center", padding: "3px 0", fontSize: 12.5 }}>
-                          <span style={{ width: 210, flexShrink: 0, color: "var(--muted-foreground)" }}>{label}</span>
+                      {Object.entries(prefEdits).map(([key, csv]) => (
+                        <div key={key} style={{ display: "flex", gap: 10, alignItems: "center", padding: "3px 0", fontSize: 12.5 }}>
+                          <span style={{ width: 210, flexShrink: 0, color: "var(--muted-foreground)" }}>{prefLabels[key] ?? key}</span>
                           <input
                             value={csv}
-                            onChange={(e) => setPrefEdits((p) => ({ ...p, [label]: e.target.value }))}
+                            onChange={(e) => setPrefEdits((p) => ({ ...p, [key]: e.target.value }))}
                             placeholder="comma-separated"
                             style={{ flex: 1, minWidth: 0, border: "0.5px solid #d7dbe3", borderRadius: 6, padding: "5px 8px", fontSize: 12 }}
                           />
