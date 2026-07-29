@@ -1,7 +1,8 @@
 /**
  * Resolves the single most-recent "message communicated" for a page of contacts,
  * merging three real sources and picking whichever is newest per contact:
- *   - note   → the last dated entry in crm_contacts.note (internal log)
+ *   - note   → the last dated entry in crm_contact_annotations.notes (internal log,
+ *              keyed by source + external_id)
  *   - sent   → an outreach email sent to them (investor automated, by profile;
  *              founder manual, by email)
  *   - reply  → an inbound reply captured on a manual-outreach recipient
@@ -13,7 +14,7 @@
 export type LastMessageDirection = "sent" | "reply" | "note";
 export type LastMessage = { direction: LastMessageDirection; text: string; at: string };
 
-type Row = { id: string; email: string | null; note: string | null };
+type Row = { id: string; email: string | null; source: string | null; external_id: string | null };
 
 /** Extract the newest `[YYYY-MM-DD] text` line from a note blob (falls back to
  *  the last non-empty line, undated). */
@@ -39,6 +40,18 @@ export async function loadLastMessages(
 ): Promise<Map<string, LastMessage>> {
   const out = new Map<string, LastMessage>();
   const emails = [...new Set(rows.map((r) => norm(r.email)).filter(Boolean))];
+
+  // Internal notes: crm_contact_annotations.notes, keyed by source + external_id.
+  const notesByKey = new Map<string, string>();
+  const extIds = [...new Set(rows.map((r) => r.external_id).filter((v): v is string => Boolean(v)))];
+  if (extIds.length) {
+    try {
+      const { data } = await db.from("crm_contact_annotations").select("source, external_id, notes").in("external_id", extIds);
+      for (const a of (data ?? []) as Array<{ source: string | null; external_id: string | null; notes: string | null }>) {
+        if (a.notes) notesByKey.set(`${a.source}|${a.external_id}`, a.notes);
+      }
+    } catch { /* ignore */ }
+  }
 
   // email → platform profile id (for investor automated sends, keyed by profile).
   const profileByEmail = new Map<string, string>();
@@ -92,7 +105,8 @@ export async function loadLastMessages(
     const email = norm(r.email);
     const candidates: LastMessage[] = [];
 
-    const note = parseLastNote(r.note);
+    const noteBlob = r.source && r.external_id ? notesByKey.get(`${r.source}|${r.external_id}`) ?? null : null;
+    const note = parseLastNote(noteBlob);
     if (note) candidates.push({ direction: "note", text: note.text, at: note.at });
 
     const pid = email ? profileByEmail.get(email) : undefined;

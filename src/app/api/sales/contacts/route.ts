@@ -41,7 +41,7 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const scope = await getSalesScope(profile, p.get("viewAs"));
 
-  const cols = "id, name, email, company, phone, source, contact_type, country, created_on, assignee_ids, raw, note";
+  const cols = "id, name, email, company, phone, source, external_id, contact_type, country, created_on, assignee_ids, raw";
   let query = db().from("crm_contacts").select(cols, { count: "exact" });
   // Scoped users (and a super admin "viewing as" a rep) see a contact only if that
   // owner is one of its Lead-assigned members. Admins / "see all" depts see everything.
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);
 
   const { data, count } = await query;
-  const raw = (data ?? []) as Array<Row & { raw?: unknown; assignee_ids?: string[]; note?: string | null }>;
+  const raw = (data ?? []) as Array<Row & { raw?: unknown; assignee_ids?: string[]; external_id?: string | null }>;
 
   // Resolve assignee names for the Lead assign column in one lookup.
   const ids = [...new Set(raw.flatMap((r) => (Array.isArray(r.assignee_ids) ? r.assignee_ids : [])))];
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   // Latest "message communicated" per contact (notes + sends + replies), bulk.
   const lastMsg = await loadLastMessages(
     db(),
-    raw.map((r) => ({ id: r.id, email: r.email ?? null, note: r.note ?? null })),
+    raw.map((r) => ({ id: r.id, email: r.email ?? null, source: r.source ?? null, external_id: r.external_id ?? null })),
   );
 
   const rows = raw.map((r) => ({
