@@ -409,8 +409,9 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                 <Row icon="ti-map-pin" label="Location" value={address} />
               </Section>
             </div>
-            {contact.extra.length > 0 && (() => {
-              const profile = groupContactProfile(contact.extra);
+            {(() => {
+              const profile = groupContactProfile(contact.extra, contact.membership);
+              if (profile.sections.length === 0) return null;
               return (
               <div style={{ gridColumn: "1 / -1" }}>
                 <Section title={profile.title}>

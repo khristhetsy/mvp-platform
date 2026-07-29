@@ -36,4 +36,18 @@ describe("groupContactProfile", () => {
     expect(p.type).toBe("generic");
     expect(p.title).toBe("Additional details");
   });
+
+  it("titles by membership and shows the full field list even with no synced data", () => {
+    const p = groupContactProfile([], "Entrepreneur");
+    expect(p.title).toBe("Founder Profile");
+    expect(p.type).toBe("founder");
+    const seeking = p.sections.find((s) => s.title === "Seeking");
+    expect(seeking?.fields.map((f) => f.label)).toContain("Amount of capital");
+    expect(seeking?.fields.every((f) => f.values.length === 0)).toBe(true);
+  });
+
+  it("membership wins over field labels", () => {
+    const p = groupContactProfile([{ label: "Investor's note", values: ["x"] }], "Investor");
+    expect(p.title).toBe("Investor Profile");
+  });
 });
