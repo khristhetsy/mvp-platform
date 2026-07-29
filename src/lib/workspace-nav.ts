@@ -247,7 +247,6 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
     title: "My raise",
     items: [
       { href: "/founder/journey", label: "My Progress" },
-      { href: "/founder/command-center", label: "Command Center" },
       { href: "/founder/actions", label: "Action Center" },
       { href: "/founder/tasks", label: "Tasks", minStage: "qualify" },
     ],
@@ -275,7 +274,7 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
     title: "Investors",
     items: [
       // Private Market relocated into Deploy → Outreach → Automated (single entry point).
-      { href: "/founder/matches", label: "Investor matches", minStage: "qualify" },
+      // "Investor matches" removed from the nav (route /founder/matches still resolves).
       // Hidden while the platform is private-placement only (crowdfunding paused).
       // Route still resolves; restore by uncommenting.
       // { href: "/founder/marketplace/new", label: "List on marketplace", minStage: "deploy", requiresRegCf: true },

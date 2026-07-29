@@ -27,11 +27,8 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/supabase/auth";
 import { loadAndMergeNextBestActions } from "@/lib/next-best-actions/lifecycle";
-import { NextBestActionsPanel } from "@/components/next-best-actions/NextBestActionsPanel";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import { CapitalReadinessSection } from "@/components/founder/CapitalReadinessSection";
-import { DataRoomReadinessCard } from "@/components/founder/DataRoomReadinessCard";
-import { StageProgressCard } from "@/components/founder/StageProgressCard";
 import { advanceFounderJourney } from "@/lib/founder-journey/stage-gate";
 import { DashboardPipelinePanel } from "@/components/founder/DashboardPipelinePanel";
 import { UpcomingMeetingsCard } from "@/components/calendar/UpcomingMeetingsCard";
@@ -54,7 +51,8 @@ export default async function FounderDashboardPage() {
   const serviceSupabase = createServiceRoleClient();
   const { data: documents } = company ? await listCompanyDocuments(supabase, company.id) : { data: [] };
   const { data: diligenceReport } = company ? await getLatestDiligenceReport(supabase, company.id) : { data: null };
-  const journeyState = await advanceFounderJourney(supabase, profile.id);
+  // Side effect: advances the founder's journey stage (result no longer rendered).
+  await advanceFounderJourney(supabase, profile.id);
   const onboardingProgress = company
     ? computeFounderOnboardingProgress({
         company,
@@ -64,10 +62,11 @@ export default async function FounderDashboardPage() {
       })
     : null;
   const investorActivity = company ? await listFounderInvestorActivity(supabase, company.id) : null;
-  const [remediation, learningAccess, investorFit, nextBestActions] = await Promise.all([
+  const [remediation, learningAccess, investorFit] = await Promise.all([
     loadFounderRemediationPlan(profile),
     getFounderFeatureAccess("elearning"),
     company ? loadFounderCompanyMatchContext(company) : Promise.resolve(null),
+    // Side effect: syncs the founder's next-best-actions (panel removed here).
     loadAndMergeNextBestActions({ profile, supabase, options: { limit: 5, sync: true } }),
   ]);
   const learning = learningAccess.allowed ? await loadFounderLearningWorkspace(profile) : null;
@@ -183,16 +182,6 @@ export default async function FounderDashboardPage() {
 
         {onboardingProgress ? <FounderOnboardingProgressCard progress={onboardingProgress} /> : null}
 
-        {/* 0. Data room completion — the #1 priority: finish diligence docs */}
-        <div className="mb-8">
-          <DataRoomReadinessCard documents={documents ?? []} />
-        </div>
-
-        {/* 0b. Stage progress — what unlocks the next stage */}
-        <div className="mb-8">
-          <StageProgressCard state={journeyState} />
-        </div>
-
         {/* 1. Capital readiness */}
         <div className="mb-8">
           <CapitalReadinessSection
@@ -226,16 +215,6 @@ export default async function FounderDashboardPage() {
             investorActivityTotal={investorActivityTotal}
             companyCreatedAt={company?.created_at ?? null}
             founderName={profile.full_name ?? profile.email ?? "Founder"}
-          />
-        </div>
-
-        {/* 4. What to do next */}
-        <div className="mb-8">
-          <NextBestActionsPanel
-            role="founder"
-            initialActions={nextBestActions.actions}
-            limit={5}
-            viewAllHref="/founder/actions?tab=overdue&overdue=true"
           />
         </div>
 
