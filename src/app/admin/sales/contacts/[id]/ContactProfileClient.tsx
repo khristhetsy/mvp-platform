@@ -102,6 +102,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     for (const s of initialProfile.sections) for (const f of s.fields) o[f.saveKey] = f.label;
     return o;
   });
+  // Sub-tab strip at the profile position: Profile · Note Log · Activity.
+  const [profileSub, setProfileSub] = useState<"profile" | "notelog">("profile");
   // Read-view "Lead assign" control (super admin only) — saves assignees directly.
   const [leadOpen, setLeadOpen] = useState(false);
   const [leadSel, setLeadSel] = useState<string[]>(initialContact.assignee_ids ?? []);
@@ -424,7 +426,15 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
               if (profile.sections.length === 0) return null;
               return (
               <div style={{ gridColumn: "1 / -1" }}>
-                <Section title={profile.title}>
+                <div>
+                  {/* Founder/Investor Profile · Note Log · Activity strip */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 2, borderBottom: "0.5px solid #eef1f5", marginBottom: 10, flexWrap: "wrap" }}>
+                    {([["profile", profile.title], ["notelog", "Note Log"]] as const).map(([k, label]) => (
+                      <button key={k} onClick={() => setProfileSub(k)} style={{ background: "none", border: "none", borderBottom: profileSub === k ? "2px solid #4338CA" : "2px solid transparent", color: profileSub === k ? "#4338CA" : "var(--muted-foreground)", fontSize: 12.5, fontWeight: profileSub === k ? 600 : 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>{label}</button>
+                    ))}
+                    <button onClick={() => setSection("activity")} style={{ background: "none", border: "none", borderBottom: "2px solid transparent", color: "var(--muted-foreground)", fontSize: 12.5, fontWeight: 400, padding: "8px 12px", cursor: "pointer", marginBottom: "-0.5px" }}>Activity{acts.length ? ` · ${acts.length}` : ""}</button>
+                  </div>
+                  {profileSub === "profile" && (<>
                   <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
                     {prefEditing ? (
                       <div style={{ display: "flex", gap: 6 }}>
@@ -477,7 +487,24 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       );
                     })
                   )}
-                </Section>
+                  </>)}
+                  {profileSub === "notelog" && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, paddingTop: 4 }}>
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Log a note</div>
+                        <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add an internal note…" style={{ ...inp, width: "100%", minHeight: 56, resize: "vertical" }} />
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+                          <button onClick={saveNote} disabled={busy || !note.trim()} style={{ fontSize: 11, fontWeight: 600, color: "#185FA5", background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 6, padding: "5px 12px", cursor: "pointer", opacity: busy || !note.trim() ? 0.5 : 1 }}>Save note</button>
+                          {noteMsg && <span style={{ fontSize: 11, color: noteMsg === "Saved." ? "#0F6E56" : "#A32D2D" }}>{noteMsg}</span>}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Notes</div>
+                        <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "var(--muted)", borderRadius: 8, padding: 10, minHeight: 56 }}>{savedNotes || "No notes yet."}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               );
             })()}
@@ -503,7 +530,8 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
           </div>
         )}
 
-        {/* Log note + timeline */}
+        {/* Log note + timeline — profile contacts use the Note Log strip above */}
+        {groupContactProfile(contact.extra, contact.membership).sections.length === 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, padding: "14px 16px" }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6 }}>Log a note</div>
@@ -518,6 +546,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
             <div style={{ fontSize: 11.5, color: "var(--muted-foreground)", whiteSpace: "pre-wrap", lineHeight: 1.6, background: "var(--muted)", borderRadius: 8, padding: 10, minHeight: 56 }}>{savedNotes || "No notes yet."}</div>
           </div>
         </div>
+        )}
 
         </>)}
 
