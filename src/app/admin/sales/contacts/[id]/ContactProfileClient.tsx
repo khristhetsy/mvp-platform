@@ -297,6 +297,36 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     }
   }
 
+  // The ✓ on a row saves just that field immediately (writes only its override),
+  // then re-reads the profile so the grouping stays canonical and reseeds the
+  // editor baseline. This is what makes a single click-to-edit actually persist.
+  async function saveField(key: string) {
+    setPrefBusy(true);
+    try {
+      const values = (prefEdits[key] ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+      const res = await fetch(`/api/sales/contacts/${contact.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preferences: { [key]: values } }),
+      });
+      if (!res.ok) return;
+      const fresh = await fetch(`/api/sales/contacts/${contact.id}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      if (fresh?.contact) {
+        setContact(fresh.contact);
+        const grouped = groupContactProfile(fresh.contact.extra, fresh.contact.membership);
+        const o: Record<string, string> = {};
+        for (const s of grouped.sections) for (const f of s.fields) o[f.saveKey] = f.values.join(", ");
+        setPrefEdits(o);
+        setPrefOrig(o);
+      } else {
+        setPrefOrig((p) => ({ ...p, [key]: prefEdits[key] ?? "" }));
+      }
+      setEditingKey(null);
+    } finally {
+      setPrefBusy(false);
+    }
+  }
+
   async function saveLeadAssign() {
     setLeadSaving(true); setLeadMsg(null);
     try {
@@ -560,7 +590,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                               editing={editingKey === f.saveKey}
                               onOpen={() => setEditingKey(f.saveKey)}
                               onChange={(v) => setPrefEdits((p) => ({ ...p, [f.saveKey]: v }))}
-                              onSave={() => setEditingKey(null)}
+                              onSave={() => saveField(f.saveKey)}
                               onUndo={() => { setPrefEdits((p) => ({ ...p, [f.saveKey]: prefOrig[f.saveKey] ?? "" })); setEditingKey(null); }}
                             />
                           ))}
