@@ -323,7 +323,6 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
         {/* Tabs */}
         <div style={{ display: "flex", gap: 0, padding: "0 16px", borderBottom: "0.5px solid #eef1f5" }}>
           <button onClick={() => setSection("details")} style={{ fontSize: 12.5, fontWeight: section === "details" ? 600 : 400, color: section === "details" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === "details" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Details</button>
-          <button onClick={() => setSection("activity")} style={{ fontSize: 12.5, fontWeight: section === "activity" ? 600 : 400, color: section === "activity" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === "activity" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>Activity {acts.length ? `· ${acts.length}` : ""}</button>
           {onePager ? (
             <button onClick={() => setSection("onepager")} style={{ fontSize: 12.5, fontWeight: section === "onepager" ? 600 : 400, color: section === "onepager" ? "var(--foreground)" : "var(--muted-foreground)", background: "none", border: "none", padding: "10px 14px", borderBottom: section === "onepager" ? "2px solid #2E78F5" : "2px solid transparent", cursor: "pointer" }}>One pager</button>
           ) : null}
