@@ -61,6 +61,7 @@ function flattenExtra(raw: Record<string, unknown> | null): InvestorExtraField[]
 }
 
 const MASKABLE_KEYS = [
+  "sectors",
   "investmentSize",
   "useOfFunds",
   "dealsPerYear",
@@ -96,6 +97,7 @@ export function computeInformativeFields(prefs: InvestorPreferences[]): Set<Mask
 }
 
 const KEY_LABELS: Record<MaskKey, string> = {
+  sectors: "Sector focus",
   investmentSize: "Investment size",
   useOfFunds: "Use of funds",
   dealsPerYear: "Deals per year",
@@ -127,6 +129,7 @@ export function nonDiscriminatingFields(prefs: InvestorPreferences[]): string[] 
 export function maskPreferences(p: InvestorPreferences, informative: Set<MaskKey>): InvestorPreferences {
   return {
     ...p,
+    sectors: informative.has("sectors") ? p.sectors : [],
     investmentSize: informative.has("investmentSize") ? p.investmentSize : [],
     useOfFunds: informative.has("useOfFunds") ? p.useOfFunds : [],
     dealsPerYear: informative.has("dealsPerYear") ? p.dealsPerYear : null,
@@ -140,6 +143,7 @@ export function maskPreferences(p: InvestorPreferences, informative: Set<MaskKey
 
 function hasAnyPreference(p: InvestorPreferences): boolean {
   return (
+    p.sectors.length > 0 ||
     p.investmentSize.length > 0 ||
     p.useOfFunds.length > 0 ||
     p.revenueRange.length > 0 ||
@@ -217,17 +221,19 @@ export async function loadInvestorContacts(opts?: {
       }
     }
 
+    const prof = (raw?.__profile as Record<string, unknown> | undefined) ?? undefined;
+    const sectors = asList(prof?.industries);
     const preferences = extractInvestorPreferences(extra);
+    preferences.sectors = sectors;
     if (!hasAnyPreference(preferences)) continue;
 
-    const prof = (raw?.__profile as Record<string, unknown> | undefined) ?? undefined;
     rows.push({
       id: String(c.id),
       name: (c.name as string) ?? (c.email as string) ?? "Investor",
       email: (c.email as string) ?? null,
       company: (c.company as string) ?? null,
       investorType: asList(prof?.investorTypes)[0] ?? null,
-      sectors: asList(prof?.industries),
+      sectors,
       preferences,
       match: null,
     });

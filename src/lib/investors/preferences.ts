@@ -30,6 +30,8 @@ export type InvestorPreferences = {
   managementTeam: string[];
   /** e.g. "Verified" */
   contactPreference: string | null;
+  /** Focus sectors / industries (from the profile's industries list, not a label). */
+  sectors: string[];
   shortBio: string | null;
   workExperience: string | null;
   specialSkills: string | null;
@@ -45,6 +47,7 @@ export const EMPTY_PREFERENCES: InvestorPreferences = {
   ebitdaRange: [],
   managementTeam: [],
   contactPreference: null,
+  sectors: [],
   shortBio: null,
   workExperience: null,
   specialSkills: null,
@@ -110,6 +113,8 @@ export function extractInvestorPreferences(extra: InvestorExtraField[] | null | 
     ebitdaRange: find(LABELS.ebitdaRange),
     managementTeam: find(LABELS.managementTeam),
     contactPreference: first(LABELS.contactPreference),
+    // Sectors come from the profile's top-level industries list, set by the loader.
+    sectors: [],
     shortBio: first(LABELS.shortBio),
     workExperience: first(LABELS.workExperience),
     specialSkills: first(LABELS.specialSkills),

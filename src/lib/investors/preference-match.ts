@@ -69,6 +69,21 @@ export function scoreInvestorPreferenceMatch(
   let possible = 0;
   const reasons: string[] = [];
 
+  // Sector / industry focus vs. the company (weight 35). This is usually the
+  // field that actually varies between investors, so it drives real spread.
+  if (pref.sectors.length > 0 && company.industry) {
+    possible += 35;
+    const ind = company.industry.toLowerCase();
+    const hit = pref.sectors.some((s) => {
+      const sl = s.toLowerCase();
+      return sl.includes(ind) || ind.includes(sl);
+    });
+    if (hit) {
+      points += 35;
+      reasons.push("Sector focus matches");
+    }
+  }
+
   // Check size vs. raise (weight 35).
   if (pref.investmentSize.length > 0) {
     possible += 35;
