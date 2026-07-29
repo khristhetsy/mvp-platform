@@ -23,10 +23,20 @@ export type ScoredInvestorContact = {
   name: string;
   email: string | null;
   company: string | null;
+  /** Display helpers from the Odoo profile (not part of scoring). */
+  investorType: string | null;
+  sectors: string[];
   preferences: InvestorPreferences;
   /** Present only when scored against a company. */
   match: PreferenceMatch | null;
 };
+
+/** Coerce an Odoo value (array, [id,label] pairs, or string) to a string list. */
+function asList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map((x) => (Array.isArray(x) && x.length === 2 ? String(x[1]) : String(x))).map((s) => s.trim()).filter(Boolean);
+  if (typeof value === "string") return value.split(/[,;/|]+/).map((s) => s.trim()).filter(Boolean);
+  return [];
+}
 
 /** Read raw.__profile.extra (Odoo questionnaire) into label/value pairs. */
 function flattenExtra(raw: Record<string, unknown> | null): InvestorExtraField[] {
@@ -176,15 +186,16 @@ export async function loadContactPreferences(
 export async function loadInvestorContacts(opts?: {
   scoreAgainst?: CompanyMatchInput;
   limit?: number;
+  /** Restrict to CRM contacts in the investor module (faster, avoids founders). */
+  investorsOnly?: boolean;
 }): Promise<ScoredInvestorContact[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceRoleClient() as any;
   const limit = opts?.limit ?? 500;
 
-  const { data, error } = await db
-    .from("crm_contacts")
-    .select("id, name, email, company, raw, overrides")
-    .limit(limit);
+  let query = db.from("crm_contacts").select("id, name, email, company, raw, overrides").limit(limit);
+  if (opts?.investorsOnly) query = query.eq("module", "investor");
+  const { data, error } = await query;
   if (error || !Array.isArray(data)) return [];
 
   const rows: ScoredInvestorContact[] = [];
@@ -209,11 +220,14 @@ export async function loadInvestorContacts(opts?: {
     const preferences = extractInvestorPreferences(extra);
     if (!hasAnyPreference(preferences)) continue;
 
+    const prof = (raw?.__profile as Record<string, unknown> | undefined) ?? undefined;
     rows.push({
       id: String(c.id),
       name: (c.name as string) ?? (c.email as string) ?? "Investor",
       email: (c.email as string) ?? null,
       company: (c.company as string) ?? null,
+      investorType: asList(prof?.investorTypes)[0] ?? null,
+      sectors: asList(prof?.industries),
       preferences,
       match: null,
     });

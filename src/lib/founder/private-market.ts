@@ -1,8 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Company } from "@/lib/supabase/types";
-import { companyToMatchProfile, loadApprovedInvestorMatchProfiles } from "@/lib/matching/load-matching-data";
-import { loadProspectInvestorMatchProfiles, isProspectInvestorId } from "@/lib/matching/prospect-investors";
-import { matchInvestorToCompany } from "@/lib/matching/investor-company-matching";
+import { loadInvestorContacts } from "@/lib/investors/load-investor-matches";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 import { TIER_LABELS, type PartnerScore } from "@/lib/investor-rating/types";
@@ -62,23 +60,6 @@ function matchBand(score: number): "high" | "mid" | "low" {
   return "low";
 }
 
-function compact(n: number): string {
-  return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(n);
-}
-
-function formatCheck(min: number | null, max: number | null): string {
-  if (min != null && max != null) return `$${compact(min)}–$${compact(max)}`;
-  if (min != null) return `$${compact(min)}+`;
-  if (max != null) return `up to $${compact(max)}`;
-  return "—";
-}
-
-function tokens(value: unknown): string[] {
-  if (!value) return [];
-  const arr = Array.isArray(value) ? value.map(String) : String(value).split(/[,;]/);
-  return arr.map((s) => s.trim()).filter(Boolean).slice(0, 3);
-}
-
 function relativeShort(ms: number): string {
   const minutes = ms / 60000;
   if (minutes < 60) return `${Math.max(1, Math.round(minutes))}m`;
@@ -104,39 +85,43 @@ export async function loadFounderInvestorBoard(
   company: Company,
   limit = 50,
 ): Promise<{ rows: FounderInvestorRow[]; summary: FounderPrivateMarketSummary }> {
-  // Full network: approved members + enriched prospects, ranked by fit. Identities
-  // stay anonymized. Only members carry pledge / score / outreach enrichment.
-  const [members, prospectData] = await Promise.all([
-    loadApprovedInvestorMatchProfiles(),
-    loadProspectInvestorMatchProfiles(),
-  ]);
-  const investors = [...members, ...prospectData.profiles];
-  const memberCount = members.length;
-  const profile = companyToMatchProfile(company);
-
-  const scored = investors
-    .map((investor) => ({ investor, match: matchInvestorToCompany(investor, profile) }))
-    .sort((a, b) => b.match.matchScore - a.match.matchScore)
-    .slice(0, limit);
+  // Rank investors by their LIVE structured profile (same engine as the admin
+  // Investor-match page) scored against this company. Reads the editable CRM
+  // "Investor Profile" fields (raw questionnaire + local overrides).
+  const scoreAgainst = {
+    fundingAmount: company.funding_amount ?? null,
+    revenue: null,
+    revenueStage: company.revenue_stage ?? null,
+    useOfFunds: company.use_of_funds ?? null,
+    industry: company.industry ?? null,
+  };
+  const scored = (await loadInvestorContacts({ scoreAgainst, investorsOnly: true, limit: 3000 })).slice(0, limit);
 
   const admin = createServiceRoleClient();
   const rawAdmin = admin as unknown as SupabaseClient;
 
-  // Enrichment applies to real member investors only (prospects have no
-  // pledges, no partner score, and aren't outreach targets).
-  const memberIds = scored
-    .map((s) => s.investor.profile_id)
-    .filter((id): id is string => Boolean(id) && !isProspectInvestorId(id));
-  const ids = memberIds;
-  const activity = new Map<string, Activity>();
+  // Bridge CRM contacts to platform investor accounts by email so members keep
+  // their pledge / partner-score / outreach enrichment. Contacts with no account
+  // (prospects) simply stay unenriched.
+  const emails = [...new Set(scored.map((s) => s.email?.trim().toLowerCase()).filter((e): e is string => Boolean(e)))];
+  const profileByEmail = new Map<string, string>();
+  if (emails.length > 0) {
+    const { data } = await rawAdmin.from("profiles").select("id, email").in("email", emails);
+    for (const p of (data ?? []) as Array<{ id: string; email: string | null }>) {
+      if (p.email) profileByEmail.set(p.email.trim().toLowerCase(), p.id);
+    }
+  }
+  const pidOf = (email: string | null): string | null => (email ? profileByEmail.get(email.trim().toLowerCase()) ?? null : null);
+  const memberIds = [...new Set(scored.map((s) => pidOf(s.email)).filter((id): id is string => Boolean(id)))];
 
-  if (ids.length > 0) {
+  // Pledge activity (members only).
+  const activity = new Map<string, Activity>();
+  if (memberIds.length > 0) {
     const { data } = await admin
       .from("investor_interests")
       .select("investor_id, pledge_amount, pledge_amount_updated_at")
-      .in("investor_id", ids)
+      .in("investor_id", memberIds)
       .not("pledge_amount", "is", null);
-
     for (const row of data ?? []) {
       const id = row.investor_id;
       if (!id) continue;
@@ -149,22 +134,10 @@ export async function loadFounderInvestorBoard(
     }
   }
 
-  // Platform partner ("investor") scores, batched.
   const scoreMap: Map<string, PartnerScore> =
-    ids.length > 0 ? await loadPartnerScoresBatch(admin, ids) : new Map<string, PartnerScore>();
+    memberIds.length > 0 ? await loadPartnerScoresBatch(admin, memberIds) : new Map<string, PartnerScore>();
 
-  // Display names: members from profiles, prospects from the CRM-sourced names map.
-  const memberNameById = new Map<string, string>();
-  if (memberIds.length > 0) {
-    const { data: profs } = await admin.from("profiles").select("id, full_name, email").in("id", memberIds);
-    for (const p of (profs ?? []) as Array<{ id: string; full_name: string | null; email: string | null }>) {
-      memberNameById.set(p.id, p.full_name || p.email || "Investor");
-    }
-  }
-  const cleanName = (value: string) => value.replace(/ · prospect$/, "");
-
-  // Outreach status + last-contact time per investor from this founder's own
-  // campaign (admin-run).
+  // Outreach status per investor from this founder's own campaign (keyed by profile id).
   const outreachByInvestor = new Map<
     string,
     { status: string; sentAt: string | null; openedAt: string | null; clickedAt: string | null }
@@ -198,8 +171,8 @@ export async function loadFounderInvestorBoard(
     }
   }
 
-  // Total investor contacts in the network (investor CRM), for the reach stat.
-  let totalContacts = investors.length;
+  // Total investor contacts in the network, for the reach stat.
+  let totalContacts = scored.length;
   {
     const { count } = await rawAdmin
       .from("crm_contacts")
@@ -209,48 +182,41 @@ export async function loadFounderInvestorBoard(
   }
 
   const now = Date.now();
-  const rows: FounderInvestorRow[] = scored.map(({ investor, match }, index) => {
-    const sectors = tokens(investor.preferred_sectors);
-    const type = investor.investor_type ? String(investor.investor_type) : "Investor";
-    const rawId = (investor.profile_id ?? "").replace(/^prospect:/, "");
-    const code =
-      rawId.replace(/[^a-z0-9]/gi, "").slice(0, 4).toUpperCase() ||
-      String(index + 1).padStart(4, "0");
-    const agg = investor.profile_id ? activity.get(investor.profile_id) : undefined;
+  const rows: FounderInvestorRow[] = scored.map((s, index) => {
+    const pid = pidOf(s.email);
+    const reasons = new Set(s.match?.reasons ?? []);
+    const matchScore = s.match?.score ?? 50;
+    const sectors = s.sectors.slice(0, 3);
+    const type = s.investorType ?? "Investor";
+    const code = String(s.id).replace(/[^a-z0-9]/gi, "").slice(-4).toUpperCase() || String(index + 1).padStart(4, "0");
+    const agg = pid ? activity.get(pid) : undefined;
     const lastMs = agg && agg.last ? now - agg.last : null;
-    const rawOutreachEntry = investor.profile_id ? outreachByInvestor.get(investor.profile_id) : undefined;
-    const rawOutreach = rawOutreachEntry?.status;
-    const outreach: OutreachStatus = rawOutreachEntry?.clickedAt
+    const oe = pid ? outreachByInvestor.get(pid) : undefined;
+    const outreach: OutreachStatus = oe?.clickedAt
       ? "clicked"
-      : rawOutreachEntry?.openedAt
+      : oe?.openedAt
         ? "opened"
-        : rawOutreach === "sent"
+        : oe?.status === "sent"
           ? "reached_out"
-          : rawOutreach === "queued"
+          : oe?.status === "queued"
             ? "queued"
-            : rawOutreach === "skipped"
+            : oe?.status === "skipped"
               ? "skipped"
               : "none";
-    const ps = investor.profile_id ? scoreMap.get(investor.profile_id) : undefined;
-    const pid = investor.profile_id ?? "";
-    const rawName = isProspectInvestorId(pid)
-      ? cleanName(prospectData.names.get(pid) ?? "Network investor")
-      : memberNameById.get(pid) ?? "Investor";
-    const reasons = new Set(match.matchReasons);
-    const fitCheck = reasons.has("Check size fit") ? 100 : reasons.has("Partial check size overlap") ? 50 : 0;
+    const ps = pid ? scoreMap.get(pid) : undefined;
     return {
       symbol: `INV·${code}`,
-      name: rawName,
+      name: s.name,
       label: sectors.length ? `${type} · ${sectors.slice(0, 2).join(", ")} focus` : type,
-      matchScore: match.matchScore,
-      fitSector: reasons.has("Sector alignment") ? 100 : 0,
-      fitStage: reasons.has("Stage alignment") ? 100 : 0,
-      fitCheck,
-      fitGeo: reasons.has("Geography alignment") ? 100 : 0,
-      stages: tokens(investor.preferred_stages),
-      geographies: tokens(investor.preferred_geographies),
-      band: matchBand(match.matchScore),
-      checkSize: formatCheck(investor.check_size_min ?? null, investor.check_size_max ?? null),
+      matchScore,
+      fitSector: 0,
+      fitStage: reasons.has("Use-of-funds / stage fit") ? 100 : 0,
+      fitCheck: reasons.has("Check size fits the raise") ? 100 : 0,
+      fitGeo: 0,
+      stages: [],
+      geographies: [],
+      band: matchBand(matchScore),
+      checkSize: s.preferences.investmentSize[0] ?? "—",
       sectors,
       pledgeCount: agg?.count ?? 0,
       indicated: agg?.sum ?? 0,
@@ -258,26 +224,25 @@ export async function loadFounderInvestorBoard(
       momentum: lastMs != null ? momentumFor(lastMs) : null,
       trend: null,
       outreach,
-      outreachActivityAt:
-        rawOutreachEntry?.clickedAt ?? rawOutreachEntry?.openedAt ?? rawOutreachEntry?.sentAt ?? null,
+      outreachActivityAt: oe?.clickedAt ?? oe?.openedAt ?? oe?.sentAt ?? null,
       investorScore: ps?.score ?? null,
       scoreTier: ps ? TIER_LABELS[ps.tier] : null,
       scoreRated: ps?.status === "rated",
     };
   });
 
-  // Surface the most recently-contacted investors first; those with no outreach
-  // activity keep their match-ranked order below (stable sort).
+  // Surface the most recently-contacted investors first; the rest keep their
+  // match-ranked order below (stable sort).
   rows.sort((a, b) => {
     const at = a.outreachActivityAt ? Date.parse(a.outreachActivityAt) : -Infinity;
     const bt = b.outreachActivityAt ? Date.parse(b.outreachActivityAt) : -Infinity;
     return bt - at;
   });
 
-  const shownScores = scored.map((s) => s.match.matchScore);
+  const shownScores = scored.map((s) => s.match?.score ?? 50);
   const ratedScores = rows.map((r) => r.investorScore).filter((s): s is number => s != null);
   const summary: FounderPrivateMarketSummary = {
-    investorUniverse: memberCount,
+    investorUniverse: totalContacts,
     totalContacts,
     reachedOut: rows.filter((r) => r.outreach === "reached_out").length,
     pledgedTotal: rows.reduce((total, r) => total + r.indicated, 0),
