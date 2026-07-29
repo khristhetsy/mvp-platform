@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
-export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string; type: string; country: string; createdOn: string; assignees?: string[] };
+export type LastMessage = { direction: "sent" | "reply" | "note"; text: string; at: string };
+export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string; type: string; country: string; createdOn: string; assignees?: string[]; lastMessage?: LastMessage | null };
 type GroupState = { rows: SalesContact[]; total: number; loading: boolean };
 type Facets = { counts: Record<string, number>; countries: { value: string; n: number }[] };
 type TextFilters = { name: string; company: string; email: string; phone: string };
@@ -26,6 +27,7 @@ const ALL_COLUMNS: ColMeta[] = [
   { key: "type", label: "Type", width: "88px", kind: "none", sortable: false },
   { key: "phone", label: "Phone", width: "1fr", kind: "text", sortable: false },
   { key: "email", label: "Email", width: "1.4fr", kind: "text", sortable: true },
+  { key: "last_message", label: "Last message", width: "1.7fr", kind: "none", sortable: false },
   { key: "lead_assign", label: "Lead assign", width: "1.1fr", kind: "none", sortable: false },
   { key: "country", label: "Country", width: "100px", kind: "country", sortable: true },
   { key: "created_on", label: "Created on", width: "104px", kind: "none", sortable: true },
@@ -37,6 +39,24 @@ const TYPE_BADGE: Record<string, { t: string; c: string; bg: string }> = {
   advisor: { t: "Advisor", c: "#633806", bg: "#FAEEDA" },
   other: { t: "Other", c: "#444441", bg: "#F1EFE8" },
 };
+
+const MSG_DIR: Record<string, { label: string; icon: string; color: string }> = {
+  sent: { label: "Sent", icon: "ti-arrow-up-right", color: "#185FA5" },
+  reply: { label: "Reply", icon: "ti-arrow-down-left", color: "#0F6E56" },
+  note: { label: "Note", icon: "ti-note", color: "#854F0B" },
+};
+
+function relTime(at: string): string {
+  if (!at) return "";
+  const ms = Date.now() - new Date(at).getTime();
+  if (Number.isNaN(ms) || ms < 0) return "";
+  const day = 86_400_000;
+  if (ms < 3_600_000) return `${Math.max(1, Math.round(ms / 60_000))}m ago`;
+  if (ms < day) return `${Math.round(ms / 3_600_000)}h ago`;
+  if (ms < 7 * day) return `${Math.round(ms / day)}d ago`;
+  if (ms < 30 * day) return `${Math.round(ms / (7 * day))}w ago`;
+  return new Date(at).toISOString().slice(0, 10);
+}
 
 type FacetKey = "industries" | "capital" | "fundingStages" | "investorTypes" | "operatingStages";
 const FACET_LABEL: Record<FacetKey, string> = {
@@ -73,9 +93,9 @@ export function SalesContactsClient({ canBulkAssign = false }: { canBulkAssign?:
   const [textFilters, setTextFilters] = useState<TextFilters>({ name: "", company: "", email: "", phone: "" });
   const [countries, setCountries] = useState<string[]>([]);
   const [sort, setSort] = useState<Sort>(() => loadLS<Sort>("salesContacts.sort", { key: "name", dir: "asc" }));
-  // v2 key: bumped when the "Lead assign" column was added so a stale saved set
+  // v3 key: bumped when the "Last message" column was added so a stale saved set
   // (from before that column existed) doesn't hide it. Resets column prefs once.
-  const [visibleCols, setVisibleCols] = useState<string[]>(() => loadLS<string[]>("salesContacts.cols.v2", ALL_COLUMNS.map((c) => c.key)));
+  const [visibleCols, setVisibleCols] = useState<string[]>(() => loadLS<string[]>("salesContacts.cols.v3", ALL_COLUMNS.map((c) => c.key)));
 
   const [facets, setFacets] = useState<Facets>({ counts: {}, countries: [] });
   const [groups, setGroups] = useState<Record<string, GroupState>>({});
@@ -113,7 +133,7 @@ export function SalesContactsClient({ canBulkAssign = false }: { canBulkAssign?:
   const gridCols = useMemo(() => visibleColumns.map((c) => c.width).join(" "), [visibleColumns]);
   const gridColsSel = canBulkAssign ? `34px ${gridCols}` : gridCols;
 
-  useEffect(() => { try { window.localStorage.setItem("salesContacts.cols.v2", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
+  useEffect(() => { try { window.localStorage.setItem("salesContacts.cols.v3", JSON.stringify(visibleCols)); } catch { /* ignore */ } }, [visibleCols]);
   useEffect(() => { try { window.localStorage.setItem("salesContacts.sort", JSON.stringify(sort)); } catch { /* ignore */ } }, [sort]);
 
   const loadAll = useCallback(async (params: string, roleFilter: string) => {
@@ -247,6 +267,19 @@ export function SalesContactsClient({ canBulkAssign = false }: { canBulkAssign?:
       case "type": { const tb = TYPE_BADGE[c.type] ?? TYPE_BADGE.other; return <div><span style={{ fontSize: 10, fontWeight: 600, color: tb.c, background: tb.bg, borderRadius: 10, padding: "2px 8px" }}>{tb.t}</span></div>; }
       case "phone": return <div style={{ fontSize: 11.5, fontFamily: "var(--font-mono)", color: c.phone ? "var(--foreground)" : "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.phone || "—"}</div>;
       case "email": return <div style={{ color: "#185FA5", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.email || "—"}</div>;
+      case "last_message": {
+        const lm = c.lastMessage;
+        if (!lm) return <div style={{ color: "var(--muted-foreground)", fontSize: 11.5 }}>—</div>;
+        const meta = MSG_DIR[lm.direction] ?? MSG_DIR.note;
+        const rel = relTime(lm.at);
+        return (
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
+            <span style={{ fontSize: 10.5, color: meta.color, flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 3 }}><i className={`ti ${meta.icon}`} aria-hidden="true" />{meta.label}</span>
+            <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "var(--foreground)" }}>{lm.text}</span>
+            {rel && <span style={{ marginLeft: "auto", flexShrink: 0, color: "var(--muted-foreground)", fontSize: 11 }}>{rel}</span>}
+          </div>
+        );
+      }
       case "lead_assign": return c.assignees && c.assignees.length ? (
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap", overflow: "hidden" }}>
           {c.assignees.slice(0, 2).map((n) => <span key={n} style={{ fontSize: 10, background: "#E6F1FB", color: "#185FA5", borderRadius: 10, padding: "1px 7px", whiteSpace: "nowrap" }}>{n}</span>)}

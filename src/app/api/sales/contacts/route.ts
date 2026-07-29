@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSalesScope } from "@/lib/sales/scope";
 import { applyContactFilters } from "@/lib/sales/contact-filters";
+import { loadLastMessages } from "@/lib/sales/contact-last-message";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const scope = await getSalesScope(profile);
 
-  const cols = "id, name, email, company, phone, source, contact_type, country, created_on, assignee_ids, raw";
+  const cols = "id, name, email, company, phone, source, contact_type, country, created_on, assignee_ids, raw, note";
   let query = db().from("crm_contacts").select(cols, { count: "exact" });
   // Scoped users see a contact only if they are one of its Lead-assigned members.
   // Admins and "see all contacts" departments (e.g. Marketing) see everything.
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);
 
   const { data, count } = await query;
-  const raw = (data ?? []) as Array<Row & { raw?: unknown; assignee_ids?: string[] }>;
+  const raw = (data ?? []) as Array<Row & { raw?: unknown; assignee_ids?: string[]; note?: string | null }>;
 
   // Resolve assignee names for the Lead assign column in one lookup.
   const ids = [...new Set(raw.flatMap((r) => (Array.isArray(r.assignee_ids) ? r.assignee_ids : [])))];
@@ -61,6 +62,12 @@ export async function GET(req: NextRequest): Promise<Response> {
       nameById.set(pr.id, pr.full_name ?? pr.email ?? "Member");
     }
   }
+
+  // Latest "message communicated" per contact (notes + sends + replies), bulk.
+  const lastMsg = await loadLastMessages(
+    db(),
+    raw.map((r) => ({ id: r.id, email: r.email ?? null, note: r.note ?? null })),
+  );
 
   const rows = raw.map((r) => ({
     id: r.id,
@@ -73,6 +80,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     country: r.country ?? "",
     createdOn: r.created_on ?? "",
     assignees: (Array.isArray(r.assignee_ids) ? r.assignee_ids : []).map((id) => nameById.get(id)).filter(Boolean) as string[],
+    lastMessage: lastMsg.get(r.id) ?? null,
   }));
   return NextResponse.json({ contacts: rows, total: count ?? rows.length });
 }
