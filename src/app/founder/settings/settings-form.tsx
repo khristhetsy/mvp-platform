@@ -1,13 +1,10 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { z } from "zod";
 import type { Company } from "@/lib/supabase/types";
-import { FormField } from "@/components/ui/FormField";
 import { AIFieldHelper } from "@/components/ui/AIFieldHelper";
-import { useFormValidation, type ZodFlatErrors } from "@/hooks/useFormValidation";
-import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
+import { useFormValidation } from "@/hooks/useFormValidation";
 import { industryOptionsFor } from "@/lib/industries";
 
 /* ── Revenue stage options ──────────────────────────────────── */
@@ -79,97 +76,120 @@ function generateUseOfFundsDraft(company: Company | null): string {
   if (stage === "growing") {
     return `${amount} will accelerate ${name}'s path to scale over [18–24 months]:\n\n1. **Go-to-market** (~50%) — expand sales team, marketing, and [new channel / geography / vertical]\n2. **Product** (~30%) — [platform expansion, e.g. enterprise features / API / mobile]\n3. **Operations** (~20%) — hire [VP Sales / Head of Marketing / CTO] and build supporting infrastructure\n\nPrimary milestone: reaching [$1M ARR / Series A readiness] within [12 months of close].`;
   }
-  // scaling
   return `${amount} will fund ${name}'s next phase of growth:\n\n1. **Market expansion** (~40%) — enter [new geography / vertical / segment]\n2. **Team scaling** (~35%) — senior hires across [engineering / sales / operations]\n3. **Infrastructure & platform** (~25%) — [enterprise readiness / compliance / international infrastructure]\n\nPrimary milestone: [2–3× revenue growth / international launch / profitability path] within [18 months].`;
 }
 
 function generateFounderGoalsDraft(company: Company | null): string {
   const name = company?.company_name ?? "Your company";
   const stage = company?.revenue_stage ?? "pre_revenue";
-
-  const horizon = stage === "pre_revenue" || stage === "early_revenue"
-    ? "12–18 months"
-    : "18–24 months";
-
+  const horizon = stage === "pre_revenue" || stage === "early_revenue" ? "12–18 months" : "18–24 months";
   return `Over the next ${horizon}, ${name}'s primary goal is [your most important milestone, e.g. reaching $1M ARR / closing Series A / entering 3 new markets / achieving profitability].\n\nBeyond capital, we're looking for investors who can provide:\n• [Specific value-add #1, e.g. "enterprise sales network in the financial services space"]\n• [Specific value-add #2, e.g. "board-level experience scaling B2B SaaS to Series B"]\n• [Specific value-add #3, e.g. "portfolio synergies with other infrastructure / fintech companies"]\n\nLong-term, we're building ${name} to be [your vision: the category leader / a $X company / a default infrastructure layer for Y].`;
 }
 
-/* ── Benchmarks ─────────────────────────────────────────────── */
-
 const DESCRIPTION_BENCHMARK =
   "Investors spend ~8 seconds reading company descriptions. Lead with the problem you solve — not how you solve it. Replace each [bracket] with your specifics, then trim to 3–4 tight sentences.";
-
 const USE_OF_FUNDS_BENCHMARK =
   "Investors want to see capital efficiency. Show the % breakdown, name the primary milestone it funds, and tie the milestone to your next raise. Vague answers like 'marketing and engineering' fail.";
-
 const GOALS_BENCHMARK =
   "This is your chance to filter for the right investors. Be specific about the non-capital value you need — network, board experience, portfolio synergies. Generic answers ('grow the business') signal a first-time fundraiser.";
 
-/* ── Zod schema ─────────────────────────────────────────────── */
+/* ── Field definitions (one combined list) ──────────────────── */
 
-const settingsSchema = z.object({
-  company_name: z.string().min(2),
-  business_description: z.string().min(20),
-  industry: z.string().min(2),
-  website: z.string().url().optional().or(z.literal("")),
-  logo_url: z.string().url().optional().or(z.literal("")),
-  revenue_stage: z.string().optional(),
-  funding_amount: z.coerce.number().positive().optional().or(z.literal("")),
-  use_of_funds: z.string().optional(),
-  founder_goals: z.string().optional(),
-  team_summary: z.string().max(1000).optional(),
-  country: z.string().optional(),
-  state: z.string().optional(),
-  incorporation_jurisdiction: z.string().optional(),
-});
+type FieldType = "text" | "select-industry" | "select-stage" | "number" | "textarea" | "logo";
+type FieldDef = { key: string; label: string; type: FieldType; required?: boolean; placeholder?: string; ai?: "description" | "useOfFunds" | "goals" };
 
-type Props = {
-  company: Company | null;
-};
+const FIELDS: FieldDef[] = [
+  { key: "company_name", label: "Company name", type: "text", required: true },
+  { key: "industry", label: "Industry", type: "select-industry", required: true },
+  { key: "website", label: "Website", type: "text", placeholder: "https://example.com" },
+  { key: "logo_url", label: "Company logo", type: "logo" },
+  { key: "business_description", label: "Description", type: "textarea", required: true, ai: "description" },
+  { key: "revenue_stage", label: "Revenue stage", type: "select-stage" },
+  { key: "funding_amount", label: "Funding target (USD)", type: "number", placeholder: "e.g. 1500000" },
+  { key: "use_of_funds", label: "Use of funds", type: "textarea", ai: "useOfFunds" },
+  { key: "founder_goals", label: "Founder goals & investor fit", type: "textarea", ai: "goals" },
+  { key: "team_summary", label: "Team summary", type: "textarea" },
+  { key: "country", label: "Country", type: "text", placeholder: "e.g. United States" },
+  { key: "state", label: "State / Province", type: "text", placeholder: "e.g. California" },
+  { key: "incorporation_jurisdiction", label: "Country of incorporation", type: "text", placeholder: "e.g. Delaware C-Corp" },
+];
+
+type Props = { company: Company | null };
 
 export function CompanySettingsForm({ company }: Props) {
   const router = useRouter();
-  const { getError, inputCls, validate, setApiErrors, clearError } = useFormValidation();
+  const { getError, setApiErrors, clearError } = useFormValidation();
 
+  const seed = useMemo<Record<string, string>>(() => ({
+    company_name: company?.company_name ?? "",
+    business_description: company?.business_description ?? "",
+    website: company?.website ?? "",
+    industry: company?.industry ?? "",
+    logo_url: company?.logo_url ?? "",
+    revenue_stage: company?.revenue_stage ?? "",
+    funding_amount: company?.funding_amount ? String(Number(company.funding_amount)) : "",
+    use_of_funds: company?.use_of_funds ?? "",
+    founder_goals: company?.founder_goals ?? "",
+    team_summary: company?.team_summary ?? "",
+    country: company?.country ?? "",
+    state: company?.state ?? "",
+    incorporation_jurisdiction: company?.incorporation_jurisdiction ?? "",
+  }), [company]);
+
+  const [values, setValues] = useState<Record<string, string>>(seed);
+  const [orig, setOrig] = useState<Record<string, string>>(seed);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
-  // Basic fields
-  const [companyName, setCompanyName] = useState(company?.company_name ?? "");
-  const [description, setDescription] = useState(company?.business_description ?? "");
-  const [website, setWebsite] = useState(company?.website ?? "");
-  const [industry, setIndustry] = useState(company?.industry ?? "");
-  const [logoUrl, setLogoUrl] = useState(company?.logo_url ?? "");
-
-  // New fields
-  const [revenueStage, setRevenueStage] = useState(company?.revenue_stage ?? "");
-  const [fundingAmount, setFundingAmount] = useState(
-    company?.funding_amount ? String(Number(company.funding_amount)) : ""
-  );
-  const [useOfFunds, setUseOfFunds] = useState(company?.use_of_funds ?? "");
-  const [founderGoals, setFounderGoals] = useState(company?.founder_goals ?? "");
-  const [teamSummary, setTeamSummary] = useState(company?.team_summary ?? "");
-  const [country, setCountry] = useState(company?.country ?? "");
-  const [state, setState] = useState(company?.state ?? "");
-  const [incorporationJurisdiction, setIncorporationJurisdiction] = useState(company?.incorporation_jurisdiction ?? "");
-
-  // Logo upload
   const [logoUploading, setLogoUploading] = useState(false);
-  const [logoDragging, setLogoDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Unsaved-changes guard: compare the live form against the last-saved baseline.
-  const [savedBaseline, setSavedBaseline] = useState<string>("");
-  const currentSnapshot = JSON.stringify([
-    companyName, description, website, industry, logoUrl, revenueStage,
-    fundingAmount, useOfFunds, founderGoals, teamSummary, country, state,
-    incorporationJurisdiction,
-  ]);
-  if (savedBaseline === "") {
-    // Capture the initial values once, on first render.
-    setSavedBaseline(currentSnapshot);
+  const setVal = (k: string, v: string) => setValues((p) => ({ ...p, [k]: v }));
+
+  const liveSnapshot: Company | null = company
+    ? { ...company, industry: values.industry, revenue_stage: values.revenue_stage || company.revenue_stage, funding_amount: values.funding_amount ? Number(values.funding_amount) : company.funding_amount }
+    : null;
+
+  async function saveField(key: string) {
+    if (!company) { setMessage({ type: "error", text: "No company profile is linked to your account." }); return; }
+    const trimmed = (values[key] ?? "").trim();
+    if (trimmed === (orig[key] ?? "").trim()) { setEditingKey(null); return; }
+
+    const def = FIELDS.find((f) => f.key === key);
+    if (def?.required && trimmed.length < (key === "business_description" ? 20 : 2)) {
+      setApiErrors({ formErrors: [], fieldErrors: { [key]: [key === "business_description" ? "At least 20 characters." : "This field is required."] } });
+      return;
+    }
+
+    setIsSaving(true);
+    setMessage(null);
+    clearError(key);
+    const payload: Record<string, unknown> = key === "funding_amount"
+      ? (trimmed ? { funding_amount: Number(trimmed) } : {})
+      : { [key]: trimmed };
+    const res = await fetch(`/api/companies/${company.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const body = (await res.json().catch(() => null)) as { error?: string; details?: { formErrors: string[]; fieldErrors: Record<string, string[]> } } | null;
+    setIsSaving(false);
+    if (!res.ok) {
+      if (body?.details) setApiErrors(body.details);
+      else setMessage({ type: "error", text: body?.error ?? "Unable to save." });
+      return;
+    }
+    setOrig((p) => ({ ...p, [key]: values[key] ?? "" }));
+    setEditingKey(null);
+    setMessage({ type: "success", text: "Saved." });
+    router.refresh();
   }
-  useUnsavedChanges(savedBaseline !== "" && currentSnapshot !== savedBaseline);
+
+  function revert(key: string) {
+    setVal(key, orig[key] ?? "");
+    clearError(key);
+    setEditingKey(null);
+  }
 
   const uploadLogo = useCallback(async (file: File) => {
     if (!company) return;
@@ -180,365 +200,124 @@ export function CompanySettingsForm({ company }: Props) {
     const d = await r.json().catch(() => ({}));
     setLogoUploading(false);
     if (r.ok && d.logo_url) {
-      setLogoUrl(d.logo_url);
+      setVal("logo_url", d.logo_url);
+      setOrig((p) => ({ ...p, logo_url: d.logo_url }));
+      // Persist the URL onto the company record too.
+      await fetch(`/api/companies/${company.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ logo_url: d.logo_url }) }).catch(() => {});
       setMessage({ type: "success", text: "Logo uploaded." });
+      router.refresh();
     } else {
       setMessage({ type: "error", text: d.error ?? "Logo upload failed." });
     }
-  }, [company]);
+  }, [company, router]);
 
-  const handleFileDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setLogoDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) void uploadLogo(file);
-  }, [uploadLogo]);
-
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) void uploadLogo(file);
-  }, [uploadLogo]);
-
-  const BASE_INPUT = "rounded-xl border px-4 py-3 font-normal w-full";
-
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    setMessage(null);
-
-    if (!company) {
-      setMessage({ type: "error", text: "No company profile is linked to your account." });
-      return;
+  function displayNode(f: FieldDef) {
+    const v = values[f.key] ?? "";
+    if (!v) return <span className="text-slate-400">—</span>;
+    if (f.key === "funding_amount") return <span className="text-slate-800">${Number(v).toLocaleString()}</span>;
+    if (f.type === "select-stage") {
+      const s = STAGES.find((x) => x.id === v);
+      return <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] text-indigo-800">{s ? `${s.label} · ${s.sub}` : v}</span>;
     }
-
-    const ok = validate(settingsSchema, {
-      company_name: companyName.trim(),
-      business_description: description.trim(),
-      industry: industry.trim(),
-      website: website.trim(),
-      logo_url: logoUrl.trim(),
-      revenue_stage: revenueStage || undefined,
-      funding_amount: fundingAmount.trim() || undefined,
-      use_of_funds: useOfFunds.trim() || undefined,
-      founder_goals: founderGoals.trim() || undefined,
-      team_summary: teamSummary.trim() || undefined,
-      country: country.trim() || undefined,
-      state: state.trim() || undefined,
-      incorporation_jurisdiction: incorporationJurisdiction.trim() || undefined,
-    });
-    if (!ok) return;
-
-    setIsSaving(true);
-
-    const payload: Record<string, unknown> = {
-      company_name: companyName.trim(),
-      business_description: description.trim(),
-      website: website.trim() || undefined,
-      industry: industry.trim(),
-      logo_url: logoUrl.trim() || undefined,
-    };
-    if (revenueStage) payload.revenue_stage = revenueStage;
-    if (fundingAmount.trim()) payload.funding_amount = Number(fundingAmount);
-    if (useOfFunds.trim()) payload.use_of_funds = useOfFunds.trim();
-    if (founderGoals.trim()) payload.founder_goals = founderGoals.trim();
-    if (teamSummary.trim()) payload.team_summary = teamSummary.trim();
-    if (country.trim()) payload.country = country.trim();
-    if (state.trim()) payload.state = state.trim();
-    if (incorporationJurisdiction.trim()) payload.incorporation_jurisdiction = incorporationJurisdiction.trim();
-
-    const response = await fetch(`/api/companies/${company.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    const body = (await response.json().catch(() => null)) as {
-      error?: string;
-      details?: ZodFlatErrors;
-    } | null;
-
-    setIsSaving(false);
-
-    if (!response.ok) {
-      if (body?.details) {
-        setApiErrors(body.details);
-      } else {
-        setMessage({ type: "error", text: body?.error ?? "Unable to save company settings." });
-      }
-      return;
-    }
-
-    setMessage({ type: "success", text: "Settings saved." });
-    // Clear the unsaved-changes guard — the current values are now the baseline.
-    setSavedBaseline(JSON.stringify([
-      companyName, description, website, industry, logoUrl, revenueStage,
-      fundingAmount, useOfFunds, founderGoals, teamSummary, country, state,
-      incorporationJurisdiction,
-    ]));
-    router.refresh();
+    if (f.type === "select-industry") return <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] text-indigo-800">{v}</span>;
+    if (f.key === "website") return <span className="text-[#185FA5]">{v}</span>;
+    if (f.type === "logo") return <img src={v} alt="Company logo" className="h-8 w-8 rounded-lg object-contain ring-1 ring-slate-200" />;
+    if (f.type === "textarea") return <span className="whitespace-pre-wrap text-slate-800">{v.length > 220 ? `${v.slice(0, 220)}…` : v}</span>;
+    return <span className="text-slate-800">{v}</span>;
   }
 
-  // Snapshot for AI helpers that depend on current form state
-  const liveSnapshot: Company | null = company
-    ? { ...company, industry, revenue_stage: revenueStage || company.revenue_stage, funding_amount: fundingAmount ? Number(fundingAmount) : company.funding_amount }
-    : null;
+  const editInputCls = "w-full rounded-lg border border-indigo-400 px-3 py-2 text-sm outline-none";
+  const editRing: React.CSSProperties = { boxShadow: "0 0 0 2px #EEEDFE" };
+
+  function editControl(f: FieldDef) {
+    const v = values[f.key] ?? "";
+    if (f.type === "select-industry") {
+      return (
+        <select className={editInputCls} style={editRing} value={v} onChange={(e) => setVal(f.key, e.target.value)} autoFocus>
+          {!v ? <option value="">— Select an industry —</option> : null}
+          {industryOptionsFor(v).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+        </select>
+      );
+    }
+    if (f.type === "select-stage") {
+      return (
+        <select className={editInputCls} style={editRing} value={v} onChange={(e) => setVal(f.key, e.target.value)} autoFocus>
+          <option value="">— Select stage —</option>
+          {STAGES.map((s) => <option key={s.id} value={s.id}>{s.label} · {s.sub}</option>)}
+        </select>
+      );
+    }
+    if (f.type === "number") {
+      return <input type="number" min={0} step={50000} className={editInputCls} style={editRing} value={v} placeholder={f.placeholder} onChange={(e) => setVal(f.key, e.target.value)} autoFocus />;
+    }
+    if (f.type === "textarea") {
+      const draft = f.ai === "description" ? generateDescriptionDraft(liveSnapshot) : f.ai === "useOfFunds" ? generateUseOfFundsDraft(liveSnapshot) : generateFounderGoalsDraft(liveSnapshot);
+      const benchmark = f.ai === "description" ? DESCRIPTION_BENCHMARK : f.ai === "useOfFunds" ? USE_OF_FUNDS_BENCHMARK : GOALS_BENCHMARK;
+      return (
+        <>
+          <textarea rows={5} className={editInputCls} style={editRing} value={v} placeholder={f.placeholder} onChange={(e) => setVal(f.key, e.target.value)} autoFocus />
+          {f.ai ? <AIFieldHelper benchmark={benchmark} draft={draft} onInsert={(text) => setVal(f.key, text)} /> : null}
+        </>
+      );
+    }
+    if (f.type === "logo") {
+      return (
+        <div>
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-3 hover:border-indigo-300"
+          >
+            <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) void uploadLogo(file); }} />
+            {v ? <img src={v} alt="Company logo" className="h-10 w-10 rounded-lg object-contain ring-1 ring-slate-200" /> : <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white ring-1 ring-slate-200 text-lg">🏢</div>}
+            <span className="text-sm text-slate-600">{logoUploading ? "Uploading…" : v ? "Replace logo" : "Click to upload"} <span className="text-xs text-slate-400">· PNG, JPG, WebP, SVG · max 2 MB</span></span>
+          </div>
+          <input className={`${editInputCls} mt-2 text-xs`} value={v} placeholder="Or paste a logo URL: https://…" onChange={(e) => setVal(f.key, e.target.value)} />
+        </div>
+      );
+    }
+    return <input className={editInputCls} style={editRing} value={v} placeholder={f.placeholder} onChange={(e) => setVal(f.key, e.target.value)} autoFocus />;
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-8 grid gap-5">
-      {/* Row 1: Company name + Industry */}
-      <div className="grid gap-5 md:grid-cols-2">
-        <FormField label="Company name" error={getError("company_name")} required>
-          <input
-            className={`${BASE_INPUT} ${inputCls("company_name")}`}
-            value={companyName}
-            onChange={(e) => { setCompanyName(e.target.value); clearError("company_name"); }}
-            disabled={isSaving}
-          />
-        </FormField>
-
-        <FormField label="Industry" error={getError("industry")} required>
-          {/* Shared taxonomy — same options the admin sees, so the value never drifts. */}
-          <select
-            className={`${BASE_INPUT} ${inputCls("industry")}`}
-            value={industry}
-            onChange={(e) => { setIndustry(e.target.value); clearError("industry"); }}
-            disabled={isSaving}
-          >
-            {!industry ? <option value="">— Select an industry —</option> : null}
-            {industryOptionsFor(industry).map((opt) => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
-          </select>
-        </FormField>
+    <div className="mt-2">
+      <div className="mb-1 flex items-center justify-end">
+        <span className="text-xs text-slate-400">Click any field to edit</span>
       </div>
 
-      {/* Row 2: Website */}
-      <FormField label="Website" error={getError("website")} hint="Include https:// — e.g. https://example.com">
-        <input
-          className={`${BASE_INPUT} ${inputCls("website")}`}
-          value={website ?? ""}
-          onChange={(e) => { setWebsite(e.target.value); clearError("website"); }}
-          disabled={isSaving}
-          placeholder="https://example.com"
-        />
-      </FormField>
-
-      {/* Row 3: Logo */}
-      <FormField label="Company logo" error={getError("logo_url")} hint="PNG, JPG, WebP or SVG · max 2 MB">
-        <div
-          onDragOver={(e) => { e.preventDefault(); setLogoDragging(true); }}
-          onDragLeave={() => setLogoDragging(false)}
-          onDrop={handleFileDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className={`flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed px-6 py-5 transition-colors ${
-            logoDragging ? "border-indigo-400 bg-indigo-50" : "border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50/50"
-          }`}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-          {logoUrl ? (
-            <img src={logoUrl} alt="Company logo" className="h-14 w-14 rounded-lg object-contain ring-1 ring-slate-200" />
-          ) : (
-            <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-white ring-1 ring-slate-200">
-              <span className="text-2xl">🏢</span>
+      <div>
+        {FIELDS.map((f) => {
+          const editing = editingKey === f.key;
+          const err = getError(f.key);
+          if (editing) {
+            return (
+              <div key={f.key} className="flex flex-col gap-2 rounded-lg bg-slate-50 px-3 py-3 md:flex-row md:gap-4 md:items-start">
+                <span className="w-40 shrink-0 pt-2 text-sm text-slate-500">{f.label}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1">{editControl(f)}</div>
+                    <button onClick={() => saveField(f.key)} disabled={isSaving} aria-label="Save" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white disabled:opacity-50">✓</button>
+                    <button onClick={() => revert(f.key)} aria-label="Undo" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-300 text-slate-500">↩</button>
+                  </div>
+                  {err ? <p className="mt-1 text-xs text-red-600">{err}</p> : null}
+                </div>
+              </div>
+            );
+          }
+          return (
+            <div key={f.key} onClick={() => { setEditingKey(f.key); setMessage(null); }} className="group flex cursor-pointer items-start gap-4 border-b border-slate-100 py-2.5 last:border-0 hover:bg-slate-50/60 rounded-md px-1 -mx-1">
+              <span className="w-40 shrink-0 text-sm text-slate-500">{f.label}</span>
+              <span className="min-w-0 flex-1 text-sm">{displayNode(f)}</span>
+              <span className="opacity-0 group-hover:opacity-100 text-slate-400 text-xs pt-0.5">✎</span>
             </div>
-          )}
-          <div className="text-center">
-            {logoUploading ? (
-              <p className="text-sm font-medium text-indigo-600">Uploading…</p>
-            ) : (
-              <>
-                <p className="text-sm font-medium text-slate-700">
-                  {logoUrl ? "Replace logo" : "Drop logo here or click to upload"}
-                </p>
-                <p className="mt-0.5 text-xs text-slate-400">PNG, JPG, WebP, SVG · max 2 MB</p>
-              </>
-            )}
-          </div>
-        </div>
-        <input
-          className={`${BASE_INPUT} ${inputCls("logo_url")} mt-2 text-xs`}
-          value={logoUrl ?? ""}
-          onChange={(e) => { setLogoUrl(e.target.value); clearError("logo_url"); }}
-          disabled={isSaving}
-          placeholder="Or paste a logo URL: https://…"
-        />
-      </FormField>
-
-      {/* Row 4: Business description */}
-      <FormField label="Description" error={getError("business_description")} required hint="Min 20 characters">
-        <textarea
-          rows={6}
-          className={`${BASE_INPUT} ${inputCls("business_description")}`}
-          value={description}
-          onChange={(e) => { setDescription(e.target.value); clearError("business_description"); }}
-          disabled={isSaving}
-        />
-        <AIFieldHelper
-          benchmark={DESCRIPTION_BENCHMARK}
-          draft={generateDescriptionDraft(liveSnapshot)}
-          onInsert={(text) => { setDescription(text); clearError("business_description"); }}
-        />
-      </FormField>
-
-      {/* ── Fundraising section ───────────────────────────────── */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
-        <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Fundraising details</p>
-
-        {/* Revenue stage */}
-        <div className="grid gap-5 md:grid-cols-2">
-          <FormField label="Revenue stage" error={getError("revenue_stage")}>
-            <select
-              className={`${BASE_INPUT} ${inputCls("revenue_stage")} bg-white`}
-              value={revenueStage}
-              onChange={(e) => { setRevenueStage(e.target.value); clearError("revenue_stage"); }}
-              disabled={isSaving}
-            >
-              <option value="">— Select stage —</option>
-              {STAGES.map((s) => (
-                <option key={s.id} value={s.id}>{s.label} · {s.sub}</option>
-              ))}
-            </select>
-          </FormField>
-
-          {/* Funding amount */}
-          <FormField
-            label="Funding target (USD)"
-            error={getError("funding_amount")}
-            hint={
-              revenueStage === "pre_revenue" ? "Pre-seed: $150K–$750K · Seed: $500K–$3M" :
-              revenueStage === "early_revenue" ? "Seed: $500K–$3M · Series A starts at $3M+" :
-              revenueStage === "growing" ? "Series A: $3M–$15M" :
-              revenueStage === "scaling" ? "Series B+: $15M+" :
-              "Enter the amount you're raising"
-            }
-          >
-            <input
-              type="number"
-              min={0}
-              step={50000}
-              className={`${BASE_INPUT} ${inputCls("funding_amount")}`}
-              value={fundingAmount}
-              onChange={(e) => { setFundingAmount(e.target.value); clearError("funding_amount"); }}
-              disabled={isSaving}
-              placeholder="e.g. 1500000"
-            />
-          </FormField>
-        </div>
-
-        {/* Use of funds */}
-        <div className="mt-5">
-          <FormField label="Use of funds" error={getError("use_of_funds")} hint="How will you deploy this round?">
-            <textarea
-              rows={5}
-              className={`${BASE_INPUT} ${inputCls("use_of_funds")}`}
-              value={useOfFunds}
-              onChange={(e) => { setUseOfFunds(e.target.value); clearError("use_of_funds"); }}
-              disabled={isSaving}
-              placeholder="Break down how you'll allocate the capital (product, hiring, go-to-market, etc.)…"
-            />
-            <AIFieldHelper
-              benchmark={USE_OF_FUNDS_BENCHMARK}
-              draft={generateUseOfFundsDraft(liveSnapshot)}
-              onInsert={(text) => { setUseOfFunds(text); clearError("use_of_funds"); }}
-            />
-          </FormField>
-        </div>
-      </div>
-
-      {/* ── Investor goals section ────────────────────────────── */}
-      <FormField
-        label="Founder goals & investor fit"
-        error={getError("founder_goals")}
-        hint="What milestones are you targeting? What do you need beyond capital?"
-      >
-        <textarea
-          rows={6}
-          className={`${BASE_INPUT} ${inputCls("founder_goals")}`}
-          value={founderGoals}
-          onChange={(e) => { setFounderGoals(e.target.value); clearError("founder_goals"); }}
-          disabled={isSaving}
-          placeholder="Describe your 12–24 month goals and the kind of investors you're looking for…"
-        />
-        <AIFieldHelper
-          benchmark={GOALS_BENCHMARK}
-          draft={generateFounderGoalsDraft(liveSnapshot)}
-          onInsert={(text) => { setFounderGoals(text); clearError("founder_goals"); }}
-        />
-      </FormField>
-
-      {/* ── Team summary ─────────────────────────────────────── */}
-      <FormField
-        label="Team summary"
-        error={getError("team_summary")}
-        hint="Brief description of your founding team, key hires, and domain expertise."
-      >
-        <textarea
-          rows={5}
-          className={`${BASE_INPUT} ${inputCls("team_summary")}`}
-          value={teamSummary}
-          onChange={(e) => { setTeamSummary(e.target.value); clearError("team_summary"); }}
-          disabled={isSaving}
-          placeholder="Describe your founding team's background, key hires, and relevant domain expertise…"
-        />
-      </FormField>
-
-      {/* ── Location section ─────────────────────────────────── */}
-      <div className="grid gap-5 md:grid-cols-2">
-        <FormField label="Country" error={getError("country")}>
-          <input
-            className={`${BASE_INPUT} ${inputCls("country")}`}
-            value={country}
-            onChange={(e) => { setCountry(e.target.value); clearError("country"); }}
-            disabled={isSaving}
-            placeholder="e.g. United States"
-          />
-        </FormField>
-
-        <FormField label="State / Province" error={getError("state")}>
-          <input
-            className={`${BASE_INPUT} ${inputCls("state")}`}
-            value={state}
-            onChange={(e) => { setState(e.target.value); clearError("state"); }}
-            disabled={isSaving}
-            placeholder="e.g. California"
-          />
-        </FormField>
-
-        <FormField label="Country of incorporation" error={getError("incorporation_jurisdiction")} hint="The legal entity investors would invest into — often different from where you operate.">
-          <input
-            className={`${BASE_INPUT} ${inputCls("incorporation_jurisdiction")}`}
-            value={incorporationJurisdiction}
-            onChange={(e) => { setIncorporationJurisdiction(e.target.value); clearError("incorporation_jurisdiction"); }}
-            disabled={isSaving}
-            placeholder="e.g. Delaware C-Corp, UK Ltd, Singapore Pte"
-          />
-        </FormField>
+          );
+        })}
       </div>
 
       {message ? (
-        <p
-          className={
-            message.type === "success"
-              ? "rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800"
-              : "rounded-xl bg-red-50 p-3 text-sm text-red-700"
-          }
-        >
+        <p className={message.type === "success" ? "mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800" : "mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700"}>
           {message.text}
         </p>
       ) : null}
-
-      <button
-        className="cap-btn-primary inline-flex justify-center rounded-lg px-6 py-2.5 text-sm font-semibold disabled:opacity-60"
-        type="submit"
-        disabled={isSaving}
-      >
-        {isSaving ? "Saving..." : "Save settings"}
-      </button>
-    </form>
+    </div>
   );
 }
