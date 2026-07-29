@@ -123,20 +123,22 @@ export default async function FounderDeployPage() {
   let board: Awaited<ReturnType<typeof loadFounderInvestorBoard>> | null = null;
   let hub: Awaited<ReturnType<typeof loadFounderInvestorHub>> | null = null;
   let investableScore = 0;
+  let outreachPaused = false;
+  let outreachActive = false;
 
   if (company) {
     const supabase = await createServerSupabaseClient();
     const serviceSupabase = createServiceRoleClient();
     const pledgeCompanyId = await getFounderPledgeCompanyId(serviceSupabase, profile.id, company.id);
-    const [activity, pledgeSummary, loadedBoard, journeyState, loadedHub] = await Promise.all([
+    // Board is loaded AFTER outreach enrollment below, so newly-queued recipients
+    // show on first render (not just on refresh).
+    const [activity, pledgeSummary, journeyState, loadedHub] = await Promise.all([
       listFounderInvestorActivity(supabase, company.id),
       getCompanyPledgeSummary(serviceSupabase, pledgeCompanyId),
-      loadFounderInvestorBoard(company),
       evaluateFounderJourney(supabase, profile.id),
       loadFounderInvestorHub(company, profile.id),
     ]);
     crmView = buildFounderInvestorCrmView(activity, pledgeSummary);
-    board = loadedBoard;
     hub = loadedHub;
 
     // Investable Score — same composite the Qualify stage shows, so the gate here
@@ -152,24 +154,23 @@ export default async function FounderDeployPage() {
           (journeyState.conditions.requiredDocsUploaded ? 5 : 0),
       ),
     );
-  }
 
-  // Founder-automatic outreach: once the Investable Score clears the threshold,
-  // ensure the company's outreach campaign exists and is approved so the weekly
-  // send pass shares the Founder Preview with matched investors. Idempotent and
-  // non-blocking — the Deploy view must never fail on outreach setup. (Real email
-  // dispatch is still gated by INVESTOR_OUTREACH_LIVE.)
-  let outreachPaused = false;
-  let outreachActive = false;
-  if (company && investableScore >= OUTREACH_THRESHOLD) {
-    try {
-      await ensureFounderAutomatedOutreach(company.id, profile.id);
-      const status = await getFounderOutreachStatus(company.id);
-      outreachActive = status.exists;
-      outreachPaused = status.paused;
-    } catch {
-      // Non-fatal.
+    // Founder-automatic outreach: once the Investable Score clears the threshold,
+    // ensure the company's outreach campaign exists and is approved. Runs BEFORE
+    // the board load so queued recipients render immediately. Non-fatal; real
+    // email dispatch is still gated by the automation toggle + published one-pager.
+    if (investableScore >= OUTREACH_THRESHOLD) {
+      try {
+        await ensureFounderAutomatedOutreach(company.id, profile.id);
+        const status = await getFounderOutreachStatus(company.id);
+        outreachActive = status.exists;
+        outreachPaused = status.paused;
+      } catch {
+        // Non-fatal.
+      }
     }
+
+    board = await loadFounderInvestorBoard(company);
   }
 
   const followUpsNeeded = crmView?.summary.followUpsNeeded ?? 0;
