@@ -152,7 +152,7 @@ function ProfileModal({ r, onClose }: { r: FounderInvestorRow; onClose: () => vo
             <div className="flex justify-between border-b border-slate-100 py-2"><dt className="text-slate-500">Check size</dt><dd className="font-medium text-slate-800">{r.checkSize}</dd></div>
             <div className="flex justify-between border-b border-slate-100 py-2"><dt className="text-slate-500">Geography</dt><dd className="font-medium text-slate-800">{r.geographies.length ? r.geographies.join(", ") : "—"}</dd></div>
             <div className="flex justify-between border-b border-slate-100 py-2"><dt className="text-slate-500">Pledge activity</dt><dd className="font-medium text-slate-800">{r.pledgeCount > 0 ? `${r.pledgeCount} · ${money(r.indicated)} indicated` : "None yet"}</dd></div>
-            <div className="flex justify-between py-2"><dt className="text-slate-500">Investor score</dt><dd className="font-medium text-slate-800">{r.scoreRated && r.investorScore != null ? `${r.investorScore}${r.scoreTier ? ` · ${r.scoreTier}` : ""}` : "Insufficient data"}</dd></div>
+            <div className="flex justify-between py-2"><dt className="text-slate-500">Investor score</dt><dd className="font-medium text-slate-800">{r.scoreRated && r.investorScore != null ? `${r.investorScore}${r.scoreTier ? ` · ${r.scoreTier}` : ""}` : "New"}</dd></div>
           </dl>
 
           <div className="mt-4 rounded-xl p-4" style={{ background: "#0c2340" }}>
@@ -180,6 +180,11 @@ function ProfileModal({ r, onClose }: { r: FounderInvestorRow; onClose: () => vo
 export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInvestorRow[] }>) {
   const t = useTranslations("founderCmp");
   const [selected, setSelected] = useState<FounderInvestorRow | null>(null);
+  const [tab, setTab] = useState<"outreach" | "all">("outreach");
+  // "In outreach" = anyone queued or already contacted; sorted most-recent-first
+  // by the loader. "All matches" is the full ranked directory.
+  const inOutreach = rows.filter((r) => r.outreach !== "none");
+  const visible = tab === "outreach" ? inOutreach : rows;
 
   if (rows.length === 0) {
     return (
@@ -198,7 +203,11 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
           </span>
           <div>
             <h2 className="text-[15px] font-semibold text-[var(--navy)]">{t("investors")}</h2>
-            <p className="font-mono text-[11px] text-slate-400">{rows.length} ranked to your company · tap for profile</p>
+            <div className="mt-1 flex items-center gap-1">
+              <button type="button" onClick={() => setTab("outreach")} className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${tab === "outreach" ? "bg-[var(--navy)] text-white" : "text-slate-500 hover:bg-slate-100"}`}>In outreach · {inOutreach.length}</button>
+              <button type="button" onClick={() => setTab("all")} className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${tab === "all" ? "bg-[var(--navy)] text-white" : "text-slate-500 hover:bg-slate-100"}`}>All matches · {rows.length}</button>
+              {tab === "outreach" ? <span className="font-mono text-[10px] text-slate-400">· most recent first</span> : null}
+            </div>
           </div>
         </div>
         <span className="font-mono text-[11px] text-slate-400">🔒 Confidential directory</span>
@@ -212,7 +221,12 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
       </div>
 
       <div>
-        {rows.map((r, i) => (
+        {visible.length === 0 ? (
+          <div className="px-5 py-10 text-center">
+            <p className="text-[13px] font-semibold text-[var(--navy)]">No outreach yet</p>
+            <p className="mx-auto mt-1 max-w-md text-[12px] text-slate-500">Strong matches queue automatically once your Investable Score clears the threshold and automation is on. Switch to “All matches” to see your full ranked list.</p>
+          </div>
+        ) : visible.map((r, i) => (
           <button
             type="button"
             key={`${r.symbol}-${i}`}
@@ -248,7 +262,7 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
                   <div className="mt-1 font-mono text-[9px] uppercase tracking-wide text-slate-400">{r.scoreTier ?? "Rated"}</div>
                 </>
               ) : (
-                <div className="font-mono text-[10px] text-slate-400">Insufficient data</div>
+                <div className="font-mono text-[10px] text-slate-400">New</div>
               )}
             </div>
           </button>
