@@ -85,6 +85,34 @@ export function computeInformativeFields(prefs: InvestorPreferences[]): Set<Mask
   return informative;
 }
 
+const KEY_LABELS: Record<MaskKey, string> = {
+  investmentSize: "Investment size",
+  useOfFunds: "Use of funds",
+  dealsPerYear: "Deals per year",
+  revenueRange: "Revenue range",
+  ebitdaRange: "EBITDA range",
+  managementTeam: "Management team",
+  activeRating: "Active rating",
+  contactPreference: "Contact preference",
+};
+
+/**
+ * Fields that are PRESENT but identical across every investor — the tell-tale
+ * sign of an Odoo data problem (everyone tagged with the same/all options).
+ * These are dropped from scoring; surfacing them tells admins what to clean up.
+ */
+export function nonDiscriminatingFields(prefs: InvestorPreferences[]): string[] {
+  if (prefs.length < 2) return [];
+  const flat: string[] = [];
+  for (const k of MASKABLE_KEYS) {
+    const sigs = new Set(prefs.map((p) => fieldSignature(p, k)));
+    sigs.delete("∅");
+    sigs.delete("");
+    if (sigs.size === 1) flat.push(KEY_LABELS[k]);
+  }
+  return flat;
+}
+
 /** Blank out fields that carry no signal so the scorer ignores them. */
 export function maskPreferences(p: InvestorPreferences, informative: Set<MaskKey>): InvestorPreferences {
   return {

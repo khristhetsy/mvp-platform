@@ -29,10 +29,12 @@ export function InvestorMatchClient({
   companies,
   selectedId,
   rows,
+  flatFields = [],
 }: {
   companies: MatchCompany[];
   selectedId: string | null;
   rows: MatchRow[];
+  flatFields?: string[];
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -81,6 +83,17 @@ export function InvestorMatchClient({
           style={{ flex: 1, minWidth: 200, border: "0.5px solid var(--border, #d7dbe3)", borderRadius: 8, padding: "8px 12px", fontSize: 13, background: "#fff" }}
         />
       </div>
+
+      {flatFields.length > 0 ? (
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-start", background: "#FAEEDA", border: "0.5px solid #EF9F27", borderRadius: 8, padding: "9px 12px", marginBottom: 14, fontSize: 12, color: "#633806", lineHeight: 1.5 }}>
+          <i className="ti ti-alert-triangle" aria-hidden="true" style={{ marginTop: 1 }} />
+          <span>
+            <b>{flatFields.length} field{flatFields.length === 1 ? "" : "s"} ignored for scoring</b> — identical across
+            every investor, so {flatFields.length === 1 ? "it carries" : "they carry"} no signal (likely need cleanup in
+            Odoo): {flatFields.join(", ")}. Matches use only fields that actually differ between investors.
+          </span>
+        </div>
+      ) : null}
 
       {rows.length === 0 ? (
         <p style={{ fontSize: 13, color: "var(--muted-foreground)", padding: "24px 0" }}>

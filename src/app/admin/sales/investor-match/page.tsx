@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { loadInvestorContacts } from "@/lib/investors/load-investor-matches";
+import { loadInvestorContacts, nonDiscriminatingFields } from "@/lib/investors/load-investor-matches";
 import { SalesHubHeader } from "../SalesHubHeader";
 import { InvestorMatchClient, type MatchCompany, type MatchRow } from "./InvestorMatchClient";
 
@@ -41,6 +41,7 @@ export default async function InvestorMatchPage({
   const selected = selectedId ? companyRows.find((c) => c.id === selectedId) ?? null : null;
 
   let rows: MatchRow[] = [];
+  let flatFields: string[] = [];
   if (selected) {
     const scored = await loadInvestorContacts({
       scoreAgainst: {
@@ -52,6 +53,7 @@ export default async function InvestorMatchPage({
       },
       limit: 800,
     });
+    flatFields = nonDiscriminatingFields(scored.map((s) => s.preferences));
     rows = scored.map((s) => ({
       id: s.id,
       name: s.name,
@@ -76,7 +78,7 @@ export default async function InvestorMatchPage({
       profileEmail={profile.email ?? undefined}
     >
       <SalesHubHeader />
-      <InvestorMatchClient companies={companies} selectedId={selectedId} rows={rows} />
+      <InvestorMatchClient companies={companies} selectedId={selectedId} rows={rows} flatFields={flatFields} />
     </AppShell>
   );
 }
