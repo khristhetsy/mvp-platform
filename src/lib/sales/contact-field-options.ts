@@ -13,28 +13,36 @@ import { ALL_SCHEMA_FIELDS } from "@/lib/sales/contact-profile-sections";
 
 export type FieldOptions = Record<string, string[]>;
 
-type ExtraEntry = { label?: unknown; values?: unknown };
-
 function norm(s: string): string {
   return s.trim().toLowerCase();
 }
 
-/** Pure: fold rows of { extra: [{label, values}] } into distinct values per exact label. */
+// raw.__profile.extra is an OBJECT keyed by label; each value is a string,
+// boolean, or array (possibly of [id, label] pairs). Mirrors flattenExtra in
+// contacts.ts so options match what's displayed.
+function normalizeValues(v: unknown): string[] {
+  if (Array.isArray(v)) {
+    return v.map((x) => (Array.isArray(x) && x.length === 2 ? String(x[1]) : String(x))).map((s) => s.trim()).filter(Boolean);
+  }
+  if (typeof v === "boolean") return [v ? "Yes" : "No"];
+  if (v == null || v === "") return [];
+  return [String(v).trim()].filter(Boolean);
+}
+
+/** Pure: fold rows of { extra: { label: value } } into distinct values per label. */
 export function aggregateExactLabels(rows: Array<{ extra?: unknown }>): Map<string, Set<string>> {
   const byLabel = new Map<string, Set<string>>();
   for (const row of rows) {
     const extra = row.extra;
-    if (!Array.isArray(extra)) continue;
-    for (const item of extra as ExtraEntry[]) {
-      const label = typeof item?.label === "string" ? item.label.trim() : "";
+    if (!extra || typeof extra !== "object" || Array.isArray(extra)) continue;
+    for (const [rawLabel, v] of Object.entries(extra as Record<string, unknown>)) {
+      const label = rawLabel.trim();
       if (!label) continue;
-      const values = Array.isArray(item?.values) ? item.values : [];
+      const values = normalizeValues(v);
+      if (values.length === 0) continue;
       let set = byLabel.get(label);
       if (!set) { set = new Set(); byLabel.set(label, set); }
-      for (const v of values) {
-        const s = typeof v === "string" ? v.trim() : String(v ?? "").trim();
-        if (s) set.add(s);
-      }
+      for (const s of values) set.add(s);
     }
   }
   return byLabel;
