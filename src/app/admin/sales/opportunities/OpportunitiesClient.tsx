@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 type Stage = { id: string; name: string; sort_order: number; is_won: boolean };
 type Opp = {
@@ -29,17 +30,19 @@ export function OpportunitiesClient() {
   const [view, setView] = useState<View>("list");
   const [filter, setFilter] = useState<Filter>("open");
   const [busy, setBusy] = useState(false);
+  const viewAs = useSearchParams().get("viewAs");
+  const viewQ = viewAs ? `&viewAs=${encodeURIComponent(viewAs)}` : "";
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/sales/opportunities?archived=1`);
+      const res = await fetch(`/api/sales/opportunities?archived=1${viewQ}`);
       const data = res.ok ? await res.json() : { opportunities: [], stages: [] };
       setOpps(data.opportunities ?? []);
       setStages(data.stages ?? []);
     } catch { setOpps([]); }
     setLoading(false);
-  }, []);
+  }, [viewQ]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- load on mount
   useEffect(() => { void load(); }, [load]);

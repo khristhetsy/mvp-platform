@@ -6,18 +6,22 @@ import { listPipelines } from "@/lib/sales/pipelines";
 import { SalesHubHeader } from "./SalesHubHeader";
 import { SalesAdvisor } from "./SalesAdvisor";
 import { LifecycleStepper } from "@/components/admin/LifecycleStepper";
-import { getSalesScope } from "@/lib/sales/scope";
+import { getSalesScope, effectiveSalesOwner } from "@/lib/sales/scope";
 
 export const dynamic = "force-dynamic";
 
-export default async function SalesDashboardPage() {
+export default async function SalesDashboardPage({ searchParams }: { searchParams: Promise<{ viewAs?: string }> }) {
   const profile = await requireRole(["admin", "analyst"]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin: any = createServiceRoleClient();
-  const scope = await getSalesScope(profile);
+  const viewAs = (await searchParams).viewAs ?? null;
+  const scope = await getSalesScope(profile, viewAs);
+  const owner = effectiveSalesOwner(scope);
+  const withView = (href: string) =>
+    viewAs && viewAs !== "team" ? `${href}${href.includes("?") ? "&" : "?"}viewAs=${encodeURIComponent(viewAs)}` : href;
 
   let oppQuery = admin.from("sales_opportunities").select("status, value_cents, stage_id, billing, probability, updated_at");
-  if (!scope.isManager) oppQuery = oppQuery.eq("owner_id", scope.ownerId);
+  if (owner) oppQuery = oppQuery.eq("owner_id", owner);
   const { data: oppRows } = await oppQuery;
   const opps = (oppRows ?? []) as Array<{ status: string; value_cents: number | null; stage_id: string | null; billing: string | null; probability: number | null; updated_at: string | null }>;
   const open = opps.filter((o) => o.status === "open");
@@ -35,7 +39,9 @@ export default async function SalesDashboardPage() {
   const staleBefore = nowMs - stalledDays * 86400000;
   const stalledCount = open.filter((o) => o.updated_at && new Date(o.updated_at).getTime() < staleBefore).length;
   const today = new Date(nowMs).toISOString().slice(0, 10);
-  const { count: overdueCount } = await admin.from("sales_tasks").select("id", { count: "exact", head: true }).eq("status", "open").lt("due_date", today);
+  let overdueQuery = admin.from("sales_tasks").select("id", { count: "exact", head: true }).eq("status", "open").lt("due_date", today);
+  if (owner) overdueQuery = overdueQuery.eq("assignee_id", owner);
+  const { count: overdueCount } = await overdueQuery;
 
   const pipelines = await listPipelines();
   const stages = (pipelines.find((p) => p.is_default) ?? pipelines[0])?.stages ?? [];
@@ -44,7 +50,7 @@ export default async function SalesDashboardPage() {
   const lifecycleStages = stages
     .slice()
     .sort((a, b) => a.sort_order - b.sort_order)
-    .map((s) => ({ key: s.id, label: s.name, count: open.filter((o) => o.stage_id === s.id).length, href: `/admin/sales/pipeline?stage=${s.id}` }));
+    .map((s) => ({ key: s.id, label: s.name, count: open.filter((o) => o.stage_id === s.id).length, href: withView(`/admin/sales/pipeline?stage=${s.id}`) }));
 
   const tiles = [
     { label: "Open opportunities", value: open.length.toLocaleString(), href: "/admin/sales/opportunities", bg: "#E6F1FB", accent: "#185FA5", text: "#0C447C", icon: "ti-briefcase" },
@@ -65,7 +71,7 @@ export default async function SalesDashboardPage() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 12, marginBottom: 16 }}>
         {tiles.map((t) => (
-          <Link key={t.label} href={t.href} style={{ display: "block", background: t.bg, borderRadius: 14, padding: 16, textDecoration: "none" }}>
+          <Link key={t.label} href={withView(t.href)} style={{ display: "block", background: t.bg, borderRadius: 14, padding: 16, textDecoration: "none" }}>
             <div style={{ fontSize: 20, color: t.accent, lineHeight: 1 }}><i className={`ti ${t.icon}`} aria-hidden="true" /></div>
             <div style={{ fontSize: 26, fontWeight: 500, color: t.text, marginTop: 8 }}>{t.value}</div>
             <div style={{ fontSize: 11.5, color: t.accent, marginTop: 2 }}>{t.label} →</div>
@@ -78,7 +84,7 @@ export default async function SalesDashboardPage() {
         <div style={{ background: "#fff", border: "0.5px solid #e2e6ed", borderRadius: 12, padding: "16px 18px" }}>
           <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted-foreground)", marginBottom: 14 }}>Open pipeline by stage</div>
           {perStage.length === 0 ? <p style={{ fontSize: 12.5, color: "var(--muted-foreground)" }}>No stages yet.</p> : perStage.map((s) => (
-            <Link key={s.name} href="/admin/sales/pipeline" style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9, textDecoration: "none" }}>
+            <Link key={s.name} href={withView("/admin/sales/pipeline")} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9, textDecoration: "none" }}>
               <span style={{ width: 90, fontSize: 11.5, color: "var(--muted-foreground)", textAlign: "right", flexShrink: 0 }}>{s.name}</span>
               <div style={{ flex: 1, height: 24, background: "var(--muted)", borderRadius: 6, overflow: "hidden" }}>
                 <div style={{ height: "100%", width: `${Math.max((s.count / maxStage) * 100, 6)}%`, background: "#85B7EB", borderRadius: 6, display: "flex", alignItems: "center", paddingLeft: 10, fontSize: 12, fontWeight: 500, color: "#0C447C" }}>{s.count}</div>
@@ -87,12 +93,12 @@ export default async function SalesDashboardPage() {
           ))}
           {(stalledCount > 0 || (overdueCount ?? 0) > 0) && (
             <div style={{ display: "flex", gap: 8, marginTop: 14, paddingTop: 12, borderTop: "0.5px solid #eef1f5", flexWrap: "wrap" }}>
-              {stalledCount > 0 && <Link href="/admin/sales/opportunities" style={{ fontSize: 11, color: "#A32D2D", background: "#FCEBEB", borderRadius: 8, padding: "4px 9px", textDecoration: "none" }}><i className="ti ti-clock" aria-hidden="true" /> {stalledCount} stalled {stalledDays}d+</Link>}
-              {(overdueCount ?? 0) > 0 && <Link href="/admin/sales/tasks" style={{ fontSize: 11, color: "#854F0B", background: "#FAEEDA", borderRadius: 8, padding: "4px 9px", textDecoration: "none" }}><i className="ti ti-calendar-exclamation" aria-hidden="true" /> {overdueCount} task{overdueCount === 1 ? "" : "s"} overdue</Link>}
+              {stalledCount > 0 && <Link href={withView("/admin/sales/opportunities")} style={{ fontSize: 11, color: "#A32D2D", background: "#FCEBEB", borderRadius: 8, padding: "4px 9px", textDecoration: "none" }}><i className="ti ti-clock" aria-hidden="true" /> {stalledCount} stalled {stalledDays}d+</Link>}
+              {(overdueCount ?? 0) > 0 && <Link href={withView("/admin/sales/tasks")} style={{ fontSize: 11, color: "#854F0B", background: "#FAEEDA", borderRadius: 8, padding: "4px 9px", textDecoration: "none" }}><i className="ti ti-calendar-exclamation" aria-hidden="true" /> {overdueCount} task{overdueCount === 1 ? "" : "s"} overdue</Link>}
             </div>
           )}
         </div>
-        <SalesAdvisor />
+        <SalesAdvisor viewAs={owner ?? undefined} />
       </div>
     </AppShell>
   );

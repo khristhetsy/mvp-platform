@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 type Task = {
   id: string; title: string; task_type: string; summary: string | null; due_date: string | null;
@@ -35,16 +36,18 @@ export function TasksClient({ staff }: { staff: Staff[] }) {
   const [draft, setDraft] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
   const [editId, setEditId] = useState<string | null>(null);
   const [edit, setEdit] = useState({ title: "", taskType: "Call", dueDate: "", assigneeId: "" });
+  const viewAs = useSearchParams().get("viewAs");
+  const viewQ = viewAs ? `&viewAs=${encodeURIComponent(viewAs)}` : "";
 
   const load = useCallback(async (s: Scope) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/sales/tasks?scope=${s}`);
+      const res = await fetch(`/api/sales/tasks?scope=${s}${viewQ}`);
       const data = res.ok ? await res.json() : { tasks: [] };
       setTasks(data.tasks ?? []);
     } catch { setTasks([]); }
     setLoading(false);
-  }, []);
+  }, [viewQ]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- load on mount / scope change
   useEffect(() => { void load(scope); }, [scope, load]);

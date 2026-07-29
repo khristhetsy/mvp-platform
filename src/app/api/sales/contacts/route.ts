@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import { getSalesScope } from "@/lib/sales/scope";
+import { getSalesScope, effectiveContactsOwner } from "@/lib/sales/scope";
 import { applyContactFilters } from "@/lib/sales/contact-filters";
 import { loadLastMessages } from "@/lib/sales/contact-last-message";
 
@@ -39,13 +39,14 @@ export async function GET(req: NextRequest): Promise<Response> {
   const sort = p.get("sort") && SORTABLE.has(p.get("sort")!) ? p.get("sort")! : "name";
   const dir = p.get("dir") === "desc" ? false : true;
 
-  const scope = await getSalesScope(profile);
+  const scope = await getSalesScope(profile, p.get("viewAs"));
 
   const cols = "id, name, email, company, phone, source, contact_type, country, created_on, assignee_ids, raw, note";
   let query = db().from("crm_contacts").select(cols, { count: "exact" });
-  // Scoped users see a contact only if they are one of its Lead-assigned members.
-  // Admins and "see all contacts" departments (e.g. Marketing) see everything.
-  if (!scope.canSeeAllContacts) query = query.contains("assignee_ids", [scope.ownerId]);
+  // Scoped users (and a super admin "viewing as" a rep) see a contact only if that
+  // owner is one of its Lead-assigned members. Admins / "see all" depts see everything.
+  const contactsOwner = effectiveContactsOwner(scope);
+  if (contactsOwner) query = query.contains("assignee_ids", [contactsOwner]);
   if (group && (GROUPS as readonly string[]).includes(group)) query = query.eq("contact_type", group);
   query = applyContactFilters(query, p);
   query = query.order(sort, { ascending: dir, nullsFirst: false }).range(offset, offset + limit - 1);

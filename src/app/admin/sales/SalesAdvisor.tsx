@@ -6,17 +6,18 @@ type Facts = { open: number; won: number; pipelineValueUsd: number; wonValueUsd:
 type Msg = { role: "user" | "assistant"; content: string };
 const QUICK = ["What should I focus on today?", "Which deals are at risk?", "How do I move stalled opps?"];
 
-export function SalesAdvisor() {
+export function SalesAdvisor({ viewAs }: { viewAs?: string }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const viewQ = viewAs ? `?viewAs=${encodeURIComponent(viewAs)}` : "";
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/sales/assistant");
+      const res = await fetch(`/api/sales/assistant${viewQ}`);
       if (!res.ok) return;
       const data = await res.json();
       const f = data.status as Facts;
@@ -24,7 +25,7 @@ export function SalesAdvisor() {
       setSummary(line);
       setMessages([{ role: "assistant", content: `${line} Ask me where to focus.` }]);
     } catch { /* ignore */ }
-  }, []);
+  }, [viewQ]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- load status on mount
   useEffect(() => { void load(); }, [load]);
@@ -38,7 +39,7 @@ export function SalesAdvisor() {
     setMessages((p) => [...p, { role: "user", content: msg }]);
     setSending(true);
     try {
-      const res = await fetch("/api/sales/assistant", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: msg, history }) });
+      const res = await fetch(`/api/sales/assistant${viewQ}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: msg, history }) });
       const data = await res.json();
       setMessages((p) => [...p, { role: "assistant", content: data.reply ?? data.error ?? "No response." }]);
     } catch { setMessages((p) => [...p, { role: "assistant", content: "Something went wrong." }]); }

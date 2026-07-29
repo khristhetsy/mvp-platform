@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 type Stage = { id: string; pipeline_id: string; name: string; sort_order: number; is_won: boolean };
 type Pipeline = { id: string; name: string; is_default: boolean; stages: Stage[] };
@@ -19,15 +20,17 @@ export function PipelineClient() {
   const [view, setView] = useState<"board" | "stages">("board");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
+  const viewAs = useSearchParams().get("viewAs");
+  const viewQ = viewAs ? `?viewAs=${encodeURIComponent(viewAs)}` : "";
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/sales/pipelines");
+    const res = await fetch(`/api/sales/pipelines${viewQ}`);
     if (!res.ok) return;
     const data = await res.json();
     setPipelines(data.pipelines ?? []);
     setBoard(data.board ?? []);
     setSelId((cur) => cur || (data.pipelines?.[0]?.id ?? ""));
-  }, []);
+  }, [viewQ]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- load pipelines on mount
   useEffect(() => { void load(); }, [load]);

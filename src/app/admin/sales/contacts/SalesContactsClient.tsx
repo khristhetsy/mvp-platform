@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 export type LastMessage = { direction: "sent" | "reply" | "note"; text: string; at: string };
 export type SalesContact = { id: string; name: string; email: string; company: string; phone: string; source: string; type: string; country: string; createdOn: string; assignees?: string[]; lastMessage?: LastMessage | null };
@@ -128,6 +129,8 @@ export function SalesContactsClient({ canBulkAssign = false }: { canBulkAssign?:
   const [assignBusy, setAssignBusy] = useState(false);
   const [assignMsg, setAssignMsg] = useState<string | null>(null);
 
+  const viewAs = useSearchParams().get("viewAs");
+  const viewQ = viewAs ? `&viewAs=${encodeURIComponent(viewAs)}` : "";
   const paramsStr = useMemo(() => buildParams(q, textFilters, countries, sort, facetSel), [q, textFilters, countries, sort, facetSel]);
   const visibleColumns = useMemo(() => ALL_COLUMNS.filter((c) => c.always || visibleCols.includes(c.key)), [visibleCols]);
   const gridCols = useMemo(() => visibleColumns.map((c) => c.width).join(" "), [visibleColumns]);
@@ -147,7 +150,7 @@ export function SalesContactsClient({ canBulkAssign = false }: { canBulkAssign?:
     });
     const entries = await Promise.all(defs.map(async (g) => {
       try {
-        const res = await fetch(`/api/sales/contacts?group=${g.id}&offset=0&limit=${PAGE}${params ? `&${params}` : ""}`);
+        const res = await fetch(`/api/sales/contacts?group=${g.id}&offset=0&limit=${PAGE}${params ? `&${params}` : ""}${viewQ}`);
         const data = res.ok ? await res.json() : { contacts: [], total: 0 };
         return [g.id, { rows: data.contacts ?? [], total: data.total ?? 0, loading: false }] as const;
       } catch { return [g.id, { rows: [], total: 0, loading: false }] as const; }
@@ -158,14 +161,15 @@ export function SalesContactsClient({ canBulkAssign = false }: { canBulkAssign?:
       for (const g of GROUP_DEFS) if (roleFilter && g.id !== roleFilter) next[g.id] = { rows: [], total: 0, loading: false };
       return next;
     });
-  }, []);
+  }, [viewQ]);
 
   const loadFacets = useCallback(async (params: string) => {
     try {
-      const res = await fetch(`/api/sales/contacts/facets${params ? `?${params}` : ""}`);
+      const qs = [params, viewAs ? `viewAs=${encodeURIComponent(viewAs)}` : ""].filter(Boolean).join("&");
+      const res = await fetch(`/api/sales/contacts/facets${qs ? `?${qs}` : ""}`);
       if (res.ok) setFacets(await res.json());
     } catch { /* ignore */ }
-  }, []);
+  }, [viewAs]);
 
   useEffect(() => {
     const t = setTimeout(() => { void loadAll(paramsStr, role); void loadFacets(paramsStr); }, 300);
@@ -193,7 +197,7 @@ export function SalesContactsClient({ canBulkAssign = false }: { canBulkAssign?:
     if (!gs) return;
     setGroups((prev) => ({ ...prev, [groupId]: { ...prev[groupId], loading: true } }));
     try {
-      const res = await fetch(`/api/sales/contacts?group=${groupId}&offset=${gs.rows.length}&limit=${PAGE}${paramsStr ? `&${paramsStr}` : ""}`);
+      const res = await fetch(`/api/sales/contacts?group=${groupId}&offset=${gs.rows.length}&limit=${PAGE}${paramsStr ? `&${paramsStr}` : ""}${viewQ}`);
       const data = res.ok ? await res.json() : { contacts: [], total: gs.total };
       setGroups((prev) => ({ ...prev, [groupId]: { rows: [...prev[groupId].rows, ...(data.contacts ?? [])], total: data.total ?? prev[groupId].total, loading: false } }));
     } catch { setGroups((prev) => ({ ...prev, [groupId]: { ...prev[groupId], loading: false } })); }

@@ -4,6 +4,7 @@ import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { claudeComplete, isClaudeConfigured, CLAUDE_HAIKU } from "@/lib/claude";
 import { listPipelines } from "@/lib/sales/pipelines";
 import { daysSince } from "@/lib/operations/escalations";
+import { getSalesScope, effectiveSalesOwner } from "@/lib/sales/scope";
 
 export const dynamic = "force-dynamic";
 
@@ -14,10 +15,12 @@ type SalesFacts = {
   stalled: { title: string; days: number }[];
 };
 
-async function gatherSalesFacts(): Promise<SalesFacts> {
+async function gatherSalesFacts(owner: string | null): Promise<SalesFacts> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const admin: any = createServiceRoleClient();
-  const { data } = await admin.from("sales_opportunities").select("title, status, value_cents, stage_id, updated_at");
+  let q = admin.from("sales_opportunities").select("title, status, value_cents, stage_id, updated_at");
+  if (owner) q = q.eq("owner_id", owner);
+  const { data } = await q;
   const opps = (data ?? []) as Array<{ title: string; status: string; value_cents: number | null; stage_id: string | null; updated_at: string | null }>;
   const pipelines = await listPipelines();
   const stageName = new Map(pipelines.flatMap((p) => p.stages).map((s) => [s.id, s.name]));
@@ -55,10 +58,11 @@ function block(f: SalesFacts): string {
   ].join("\n");
 }
 
-export async function GET(): Promise<Response> {
+export async function GET(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
-  const facts = await gatherSalesFacts();
+  const scope = await getSalesScope(profile, req.nextUrl.searchParams.get("viewAs"));
+  const facts = await gatherSalesFacts(effectiveSalesOwner(scope));
   return NextResponse.json({ status: facts, aiConfigured: isClaudeConfigured() });
 }
 
@@ -69,7 +73,8 @@ export async function POST(req: NextRequest): Promise<Response> {
   const { message, history } = body as { message?: string; history?: { role: "user" | "assistant"; content: string }[] };
   if (!message?.trim()) return NextResponse.json({ error: "Message required." }, { status: 400 });
 
-  const facts = await gatherSalesFacts();
+  const scope = await getSalesScope(profile, req.nextUrl.searchParams.get("viewAs"));
+  const facts = await gatherSalesFacts(effectiveSalesOwner(scope));
   if (!isClaudeConfigured()) {
     return NextResponse.json({ reply: `AI isn't configured (add ANTHROPIC_API_KEY). Snapshot: ${facts.open} open opps worth $${facts.pipelineValueUsd.toLocaleString()}, ${facts.won} won. ${facts.stalled.length ? `${facts.stalled.length} stalled 14+ days.` : "Nothing stalled."}` });
   }

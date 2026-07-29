@@ -2,17 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/supabase/auth";
 import { listTasks, createTask } from "@/lib/sales/tasks";
+import { getSalesScope } from "@/lib/sales/scope";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/sales/tasks?scope=my|all|overdue — sales tasks/activities.
+// GET /api/sales/tasks?scope=my|all|overdue&viewAs= — sales tasks/activities.
 export async function GET(req: NextRequest): Promise<Response> {
   const profile = await requireRole(["admin", "analyst"]).catch(() => null);
   if (!profile) return NextResponse.json({ error: "Admins only." }, { status: 403 });
   const scope = (req.nextUrl.searchParams.get("scope") as "my" | "all" | "overdue" | null) ?? "all";
   const opportunityId = req.nextUrl.searchParams.get("opportunityId");
   const contactCrmId = req.nextUrl.searchParams.get("contactCrmId");
-  const tasks = await listTasks({ scope, assigneeId: profile.id, opportunityId, contactCrmId });
+  // Super-admin "viewing as": overrides the assignee filter (undefined = no override).
+  const sales = await getSalesScope(profile, req.nextUrl.searchParams.get("viewAs"));
+  const tasks = await listTasks({ scope, assigneeId: profile.id, viewOwner: sales.viewOwnerId, opportunityId, contactCrmId });
   return NextResponse.json({ tasks });
 }
 

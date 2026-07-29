@@ -8,12 +8,14 @@ import { ForecastClient } from "./ForecastClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function SalesForecastPage({ searchParams }: { searchParams: Promise<{ scope?: string }> }) {
+export default async function SalesForecastPage({ searchParams }: { searchParams: Promise<{ scope?: string; viewAs?: string }> }) {
   const profile = await requireRole(["admin", "analyst"]);
-  const scope = await getSalesScope(profile);
-  const { scope: scopeParam } = await searchParams;
+  const sp = await searchParams;
+  const scope = await getSalesScope(profile, sp.viewAs ?? null);
+  const scopeParam = sp.scope;
   const viewScope: "all" | "mine" = scope.isManager && scopeParam === "mine" ? "mine" : "all";
-  const ownerId = forecastOwnerId(scope, profile.id, scopeParam);
+  // Super-admin "viewing as" pins the owner; otherwise the Me/All toggle applies.
+  const ownerId = scope.viewOwnerId !== undefined ? scope.viewOwnerId : forecastOwnerId(scope, profile.id, scopeParam);
 
   const scenarios = await listScenarios();
   const active = scenarios.find((s) => s.is_active && s.kind === "base") ?? scenarios.find((s) => s.is_active) ?? scenarios[0] ?? null;

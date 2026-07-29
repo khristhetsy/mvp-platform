@@ -26,11 +26,17 @@ function mapRow(r: Record<string, unknown>): SalesTask {
   };
 }
 
-export async function listTasks(opts: { scope?: "my" | "all" | "overdue"; assigneeId?: string | null; opportunityId?: string | null; contactCrmId?: string | null } = {}): Promise<SalesTask[]> {
+export async function listTasks(opts: { scope?: "my" | "all" | "overdue"; assigneeId?: string | null; viewOwner?: string | null; opportunityId?: string | null; contactCrmId?: string | null } = {}): Promise<SalesTask[]> {
   let q = db().from("sales_tasks").select(SELECT).order("due_date", { ascending: true, nullsFirst: false }).order("created_at", { ascending: false });
   if (opts.opportunityId) q = q.eq("opportunity_id", opts.opportunityId);
   if (opts.contactCrmId) q = q.eq("contact_crm_id", opts.contactCrmId);
-  if (opts.scope === "my" && opts.assigneeId) q = q.eq("assignee_id", opts.assigneeId);
+  // Super-admin "viewing as" overrides the my/all assignee filter: a rep id pins to
+  // that assignee; null (Team) applies no assignee filter. undefined = no override.
+  if (opts.viewOwner !== undefined) {
+    if (opts.viewOwner) q = q.eq("assignee_id", opts.viewOwner);
+  } else if (opts.scope === "my" && opts.assigneeId) {
+    q = q.eq("assignee_id", opts.assigneeId);
+  }
   if (opts.scope === "overdue") q = q.eq("status", "open").lt("due_date", new Date().toISOString().slice(0, 10));
   const { data } = await q;
   return ((data ?? []) as Array<Record<string, unknown>>).map(mapRow);
