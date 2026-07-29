@@ -187,11 +187,25 @@ export async function loadContactPreferences(
  * Load investor contacts (those with structured preferences). When `scoreAgainst`
  * is given, each is scored and the list is sorted by match, highest first.
  */
+/** True when an investor's sector list overlaps the company industry. */
+function industryMatches(sectors: string[], industry: string | null): boolean {
+  if (!industry) return true; // nothing to match against → don't exclude
+  const ind = industry.trim().toLowerCase();
+  if (!ind) return true;
+  return sectors.some((s) => {
+    const sl = s.trim().toLowerCase();
+    return sl.includes(ind) || ind.includes(sl);
+  });
+}
+
 export async function loadInvestorContacts(opts?: {
   scoreAgainst?: CompanyMatchInput;
   limit?: number;
   /** Restrict to CRM contacts in the investor module (faster, avoids founders). */
   investorsOnly?: boolean;
+  /** Hard filter: drop investors whose sector focus doesn't match the company
+   *  industry (admin "Industry required" control). */
+  requireIndustryMatch?: boolean;
 }): Promise<ScoredInvestorContact[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceRoleClient() as any;
@@ -239,14 +253,21 @@ export async function loadInvestorContacts(opts?: {
     });
   }
 
+  // Industry required (admin control): drop investors whose sector focus doesn't
+  // overlap the company industry, so they never appear as matches.
+  const filtered =
+    opts?.requireIndustryMatch && opts.scoreAgainst?.industry
+      ? rows.filter((r) => industryMatches(r.sectors, opts.scoreAgainst!.industry))
+      : rows;
+
   // Score only on fields that actually discriminate between investors, so
   // non-discriminating data (everyone identical) doesn't peg every match to 100%.
   if (opts?.scoreAgainst) {
-    const informative = computeInformativeFields(rows.map((r) => r.preferences));
-    for (const r of rows) {
+    const informative = computeInformativeFields(filtered.map((r) => r.preferences));
+    for (const r of filtered) {
       r.match = scoreInvestorPreferenceMatch(opts.scoreAgainst, maskPreferences(r.preferences, informative));
     }
-    rows.sort((a, b) => (b.match?.score ?? 0) - (a.match?.score ?? 0));
+    filtered.sort((a, b) => (b.match?.score ?? 0) - (a.match?.score ?? 0));
   }
-  return rows;
+  return filtered;
 }

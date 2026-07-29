@@ -7,7 +7,14 @@ import {
   getCampaignRecipients,
   type OutreachCampaign,
 } from "@/lib/outreach/investor-outreach";
-import { getOutreachAutomationEnabled, setOutreachAutomationEnabled } from "@/lib/settings/platform-settings";
+import {
+  getOutreachAutomationEnabled,
+  setOutreachAutomationEnabled,
+  getInvestorMatchConfig,
+  setInvestorMatchConfig,
+  DEFAULT_MATCH_CONFIG,
+  type InvestorMatchConfig,
+} from "@/lib/settings/platform-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -81,19 +88,36 @@ export async function GET(): Promise<Response> {
     }),
   );
 
-  return NextResponse.json({ campaigns: summaries, liveSend: await getOutreachAutomationEnabled() });
+  const [liveSend, matchConfig] = await Promise.all([getOutreachAutomationEnabled(), getInvestorMatchConfig()]);
+  return NextResponse.json({ campaigns: summaries, liveSend, matchConfig });
 }
 
-// PATCH — flip the outreach automation master switch on/off (admin-controlled).
+// PATCH — automation switch, or the match/qualification control config.
 export async function PATCH(req: Request): Promise<Response> {
   const gate = await requireStaff();
   if ("error" in gate) return gate.error;
 
-  const body = (await req.json().catch(() => null)) as { action?: string; enabled?: unknown } | null;
-  if (body?.action !== "set_automation" || typeof body.enabled !== "boolean") {
-    return NextResponse.json({ error: "Expected { action: 'set_automation', enabled: boolean }." }, { status: 400 });
+  const body = (await req.json().catch(() => null)) as
+    | { action?: string; enabled?: unknown; config?: unknown }
+    | null;
+
+  if (body?.action === "set_automation" && typeof body.enabled === "boolean") {
+    const ok = await setOutreachAutomationEnabled(body.enabled, gate.userId);
+    return NextResponse.json({ ok, liveSend: body.enabled });
   }
 
-  const ok = await setOutreachAutomationEnabled(body.enabled, gate.userId);
-  return NextResponse.json({ ok, liveSend: body.enabled });
+  if (body?.action === "set_match_config" && body.config && typeof body.config === "object") {
+    const c = body.config as Partial<InvestorMatchConfig>;
+    const clampScore = (n: unknown, d: number) => (typeof n === "number" && n >= 0 && n <= 100 ? Math.round(n) : d);
+    const config: InvestorMatchConfig = {
+      requiredFields: { ...DEFAULT_MATCH_CONFIG.requiredFields, ...(c.requiredFields ?? {}), industry: true },
+      minMatch: clampScore(c.minMatch, DEFAULT_MATCH_CONFIG.minMatch),
+      minInvestorScore: clampScore(c.minInvestorScore, DEFAULT_MATCH_CONFIG.minInvestorScore),
+      requireRated: typeof c.requireRated === "boolean" ? c.requireRated : DEFAULT_MATCH_CONFIG.requireRated,
+    };
+    const ok = await setInvestorMatchConfig(config, gate.userId);
+    return NextResponse.json({ ok, matchConfig: config });
+  }
+
+  return NextResponse.json({ error: "Unknown action." }, { status: 400 });
 }

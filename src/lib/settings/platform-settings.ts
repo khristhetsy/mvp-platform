@@ -57,3 +57,62 @@ export async function getOutreachAutomationEnabled(): Promise<boolean> {
 export async function setOutreachAutomationEnabled(enabled: boolean, updatedBy: string | null): Promise<boolean> {
   return setBoolSetting(AUTOMATION_KEY, enabled, updatedBy);
 }
+
+/**
+ * Investor match & outreach-qualification rules (admin Control Features).
+ * `requiredFields` — a field flagged here must match or the investor is excluded
+ * from matches entirely (industry is always required). Thresholds gate who is
+ * queued for automated outreach.
+ */
+export type InvestorMatchConfig = {
+  requiredFields: {
+    industry: boolean;
+    checkSize: boolean;
+    revenueStage: boolean;
+    useOfFunds: boolean;
+    geography: boolean;
+    activeRating: boolean;
+  };
+  minMatch: number;
+  minInvestorScore: number;
+  /** When true, unrated ("New") investors don't qualify for outreach. */
+  requireRated: boolean;
+};
+
+export const DEFAULT_MATCH_CONFIG: InvestorMatchConfig = {
+  requiredFields: { industry: true, checkSize: false, revenueStage: false, useOfFunds: false, geography: false, activeRating: false },
+  minMatch: 60,
+  minInvestorScore: 50,
+  requireRated: false,
+};
+
+const MATCH_CONFIG_KEY = "investor_match_config";
+
+export async function getInvestorMatchConfig(): Promise<InvestorMatchConfig> {
+  try {
+    const { data } = await db().from("platform_settings").select("value").eq("key", MATCH_CONFIG_KEY).maybeSingle();
+    const v = (data as { value?: Partial<InvestorMatchConfig> } | null)?.value;
+    if (!v) return DEFAULT_MATCH_CONFIG;
+    return {
+      minMatch: typeof v.minMatch === "number" ? v.minMatch : DEFAULT_MATCH_CONFIG.minMatch,
+      minInvestorScore: typeof v.minInvestorScore === "number" ? v.minInvestorScore : DEFAULT_MATCH_CONFIG.minInvestorScore,
+      requireRated: typeof v.requireRated === "boolean" ? v.requireRated : DEFAULT_MATCH_CONFIG.requireRated,
+      // Industry is always required (locked on).
+      requiredFields: { ...DEFAULT_MATCH_CONFIG.requiredFields, ...(v.requiredFields ?? {}), industry: true },
+    };
+  } catch {
+    return DEFAULT_MATCH_CONFIG;
+  }
+}
+
+export async function setInvestorMatchConfig(cfg: InvestorMatchConfig, updatedBy: string | null): Promise<boolean> {
+  try {
+    const value: InvestorMatchConfig = { ...cfg, requiredFields: { ...cfg.requiredFields, industry: true } };
+    const { error } = await db()
+      .from("platform_settings")
+      .upsert({ key: MATCH_CONFIG_KEY, value, updated_by: updatedBy, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    return !error;
+  } catch {
+    return false;
+  }
+}

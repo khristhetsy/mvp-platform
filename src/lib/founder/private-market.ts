@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Company } from "@/lib/supabase/types";
 import { loadInvestorContacts } from "@/lib/investors/load-investor-matches";
+import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 import { TIER_LABELS, type PartnerScore } from "@/lib/investor-rating/types";
@@ -95,7 +96,13 @@ export async function loadFounderInvestorBoard(
     useOfFunds: company.use_of_funds ?? null,
     industry: company.industry ?? null,
   };
-  const scored = (await loadInvestorContacts({ scoreAgainst, investorsOnly: true, limit: 3000 })).slice(0, limit);
+  const matchConfig = await getInvestorMatchConfig();
+  const scored = (await loadInvestorContacts({
+    scoreAgainst,
+    investorsOnly: true,
+    requireIndustryMatch: matchConfig.requiredFields.industry,
+    limit: 3000,
+  })).slice(0, limit);
 
   const admin = createServiceRoleClient();
   const rawAdmin = admin as unknown as SupabaseClient;

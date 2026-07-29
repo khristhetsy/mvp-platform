@@ -4,7 +4,8 @@ import { loadInvestorContacts } from "@/lib/investors/load-investor-matches";
 import { sendEmail } from "@/lib/email/send-email";
 import { renderIntroEmail } from "@/lib/outreach/intro-template";
 import { buildUnsubscribeUrl, filterUnsubscribed } from "@/lib/outreach/unsubscribe";
-import { getOutreachAutomationEnabled } from "@/lib/settings/platform-settings";
+import { getOutreachAutomationEnabled, getInvestorMatchConfig } from "@/lib/settings/platform-settings";
+import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 
 /** Formats a raise amount as a compact "~$2M" / "~$500K" string. */
 function formatRaise(amount: number | null | undefined): string | null {
@@ -14,10 +15,7 @@ function formatRaise(amount: number | null | undefined): string | null {
   return `~$${amount}`;
 }
 
-// Automated outreach targets in-industry investors: a 50+ match whose sector
-// aligns with the company. (Was a blanket 70+ — lowered so sector-aligned
-// "Moderate" matches qualify, while off-sector investors are still excluded.)
-const OUTREACH_MATCH_THRESHOLD = 50;
+// Match/qualification thresholds are admin-controlled (getInvestorMatchConfig).
 const DEFAULT_WEEKLY_CAP = 10;
 const MAX_AUDIENCE = 50;
 
@@ -102,15 +100,40 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
   if (!comp) return { created: false };
   const c = comp as { funding_amount: number | null; revenue_stage: string | null; use_of_funds: string | null; industry: string | null };
 
+  // Admin match/qualification rules (industry required, thresholds).
+  const config = await getInvestorMatchConfig();
+
   // Score every investor's live structured profile against the company (same
-  // engine as the founder board). Enroll the top matches that have an email.
+  // engine as the founder board), with industry required if configured.
   const scored = await loadInvestorContacts({
     scoreAgainst: { fundingAmount: c.funding_amount, revenue: null, revenueStage: c.revenue_stage, useOfFunds: c.use_of_funds, industry: c.industry },
     investorsOnly: true,
+    requireIndustryMatch: config.requiredFields.industry,
     limit: 3000,
   });
-  const ranked = scored
-    .filter((s) => (s.match?.score ?? 0) >= OUTREACH_MATCH_THRESHOLD && (s.email ?? "").trim())
+  const candidates = scored.filter((s) => (s.match?.score ?? 0) >= config.minMatch && (s.email ?? "").trim());
+
+  // Investor-score qualification: bridge email → platform account → partner score.
+  const emails = [...new Set(candidates.map((s) => s.email!.trim().toLowerCase()))];
+  const profileByEmail = new Map<string, string>();
+  if (emails.length > 0) {
+    const { data: profs } = await db.from("profiles").select("id, email").in("email", emails);
+    for (const p of (profs ?? []) as Array<{ id: string; email: string | null }>) {
+      if (p.email) profileByEmail.set(p.email.trim().toLowerCase(), p.id);
+    }
+  }
+  const profileIds = [...new Set([...profileByEmail.values()])];
+  const scoreByProfile = profileIds.length > 0 ? await loadPartnerScoresBatch(db, profileIds) : new Map();
+
+  const ranked = candidates
+    .filter((s) => {
+      const pid = profileByEmail.get(s.email!.trim().toLowerCase());
+      const ps = pid ? scoreByProfile.get(pid) : undefined;
+      const rated = ps?.status === "rated" && typeof ps.score === "number";
+      // Rated → must clear the score minimum; unrated ("New") → passes unless
+      // the admin requires a rated score.
+      return rated ? (ps!.score as number) >= config.minInvestorScore : !config.requireRated;
+    })
     .slice(0, MAX_AUDIENCE);
   if (ranked.length === 0) return { created: false };
 

@@ -6,6 +6,21 @@ import type { OutreachCampaignSummary } from "@/app/api/admin/investor-outreach/
 
 type CampaignAction = "approve" | "pause" | "resume" | "cap";
 
+type MatchConfig = {
+  requiredFields: { industry: boolean; checkSize: boolean; revenueStage: boolean; useOfFunds: boolean; geography: boolean; activeRating: boolean };
+  minMatch: number;
+  minInvestorScore: number;
+  requireRated: boolean;
+};
+const MATCH_FIELD_LABELS: [keyof MatchConfig["requiredFields"], string][] = [
+  ["industry", "Industry / sector"],
+  ["checkSize", "Check size vs. raise"],
+  ["revenueStage", "Revenue stage"],
+  ["useOfFunds", "Use of funds"],
+  ["geography", "Geography"],
+  ["activeRating", "Active investor rating"],
+];
+
 const STATUS_BADGE: Record<
   OutreachCampaignSummary["status"],
   { label: string; className: string }
@@ -346,6 +361,8 @@ export function InvestorOutreachManager() {
   const [campaigns, setCampaigns] = useState<OutreachCampaignSummary[]>([]);
   const [liveSend, setLiveSend] = useState<boolean>(false);
   const [savingAuto, setSavingAuto] = useState(false);
+  const [matchConfig, setMatchConfig] = useState<MatchConfig | null>(null);
+  const [savingMatch, setSavingMatch] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -356,9 +373,10 @@ export function InvestorOutreachManager() {
         setError("Failed to load campaigns.");
         return;
       }
-      const data = (await res.json()) as { campaigns: OutreachCampaignSummary[]; liveSend?: boolean };
+      const data = (await res.json()) as { campaigns: OutreachCampaignSummary[]; liveSend?: boolean; matchConfig?: MatchConfig };
       setCampaigns(data.campaigns);
       setLiveSend(Boolean(data.liveSend));
+      if (data.matchConfig) setMatchConfig(data.matchConfig);
       setError(null);
     } catch {
       setError("Network error loading campaigns.");
@@ -399,6 +417,23 @@ export function InvestorOutreachManager() {
       setSavingAuto(false);
     }
   }, [liveSend, savingAuto, load]);
+
+  const saveMatchConfig = useCallback(async (next: MatchConfig) => {
+    setMatchConfig(next); // optimistic
+    setSavingMatch(true);
+    try {
+      const res = await fetch("/api/admin/investor-outreach", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_match_config", config: next }),
+      });
+      if (!res.ok) setError("Couldn't save match settings. Please try again.");
+    } catch {
+      setError("Network error saving match settings.");
+    } finally {
+      setSavingMatch(false);
+    }
+  }, []);
 
   const handleAction = useCallback(
     async (id: string, action: CampaignAction, cap?: number) => {
@@ -459,6 +494,74 @@ export function InvestorOutreachManager() {
           </button>
         </div>
       </div>
+
+      {matchConfig ? (
+        <div className="rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+          <div className="text-sm font-semibold text-slate-900">Match &amp; qualification</div>
+          <p className="mt-0.5 text-xs leading-5 text-slate-500">
+            A <span className="font-medium">required</span> field must match or the investor is excluded from founder
+            matches entirely. Thresholds gate who is queued for automated outreach.
+          </p>
+
+          <div className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Required match fields</div>
+          <div className="mt-2 grid gap-x-6 gap-y-2 sm:grid-cols-2">
+            {MATCH_FIELD_LABELS.map(([key, label]) => {
+              const on = matchConfig.requiredFields[key];
+              const locked = key === "industry";
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  disabled={locked || savingMatch}
+                  onClick={() => saveMatchConfig({ ...matchConfig, requiredFields: { ...matchConfig.requiredFields, [key]: !on } })}
+                  className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-left disabled:cursor-not-allowed disabled:opacity-90"
+                >
+                  <span className="text-[13px] text-slate-700">{label}</span>
+                  <span className="flex items-center gap-2">
+                    <span className={`text-[10px] font-semibold ${on ? "text-indigo-700" : "text-slate-400"}`}>
+                      {on ? "Required" : "Optional"}{locked ? " · locked" : ""}
+                    </span>
+                    <span className={`relative inline-flex h-5 w-9 items-center rounded-full ${on ? "bg-emerald-600" : "bg-slate-300"}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${on ? "translate-x-4" : "translate-x-1"}`} />
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <label className="text-[13px] text-slate-700">
+              Minimum match score
+              <input
+                type="number" min={0} max={100} value={matchConfig.minMatch}
+                onChange={(e) => setMatchConfig({ ...matchConfig, minMatch: Number(e.target.value) })}
+                onBlur={() => saveMatchConfig(matchConfig)}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="text-[13px] text-slate-700">
+              Minimum investor score
+              <input
+                type="number" min={0} max={100} value={matchConfig.minInvestorScore}
+                onChange={(e) => setMatchConfig({ ...matchConfig, minInvestorScore: Number(e.target.value) })}
+                onBlur={() => saveMatchConfig(matchConfig)}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+
+          <label className="mt-3 flex items-center gap-2 text-[13px] text-slate-700">
+            <input
+              type="checkbox" checked={matchConfig.requireRated}
+              onChange={(e) => saveMatchConfig({ ...matchConfig, requireRated: e.target.checked })}
+              className="h-4 w-4"
+            />
+            Require a rated investor score (exclude unrated &ldquo;New&rdquo; investors)
+          </label>
+          {savingMatch ? <p className="mt-2 text-[11px] text-slate-400">Saving…</p> : null}
+        </div>
+      ) : null}
 
       <FlowStepper />
 
