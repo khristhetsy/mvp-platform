@@ -109,6 +109,7 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
     scoreAgainst: { fundingAmount: c.funding_amount, revenue: null, revenueStage: c.revenue_stage, useOfFunds: c.use_of_funds, industry: c.industry },
     investorsOnly: true,
     requireIndustryMatch: config.requiredFields.industry,
+    weights: config.weights,
     limit: 3000,
   });
   const candidates = scored.filter((s) => (s.match?.score ?? 0) >= config.minMatch && (s.email ?? "").trim());

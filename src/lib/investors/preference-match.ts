@@ -61,73 +61,75 @@ function tokens(s: string | null): string[] {
   return (s ?? "").toLowerCase().split(/[^a-z]+/).filter(Boolean);
 }
 
+/** Weights for each match factor (admin-adjustable). Sum is the denominator. */
+export type MatchWeights = { sector: number; specificity: number; stage: number; checkSize: number; activity: number };
+export const DEFAULT_WEIGHTS: MatchWeights = { sector: 35, specificity: 15, stage: 20, checkSize: 15, activity: 15 };
+
+/**
+ * Graded match: compares the founder's company profile against the investor's
+ * profile and returns a 0–100 score with reasons. Unlike a yes/no match, sector
+ * fit is scored by POSITION (primary sector > secondary) and SPECIFICITY (a
+ * focused 1–2 sector investor > a generalist), so investors spread out instead
+ * of all pegging to 100. Stage, check size and activity add graded points.
+ */
 export function scoreInvestorPreferenceMatch(
   company: CompanyMatchInput,
   pref: InvestorPreferences,
+  weights: MatchWeights = DEFAULT_WEIGHTS,
 ): PreferenceMatch {
+  const W = weights;
+  const total = W.sector + W.specificity + W.stage + W.checkSize + W.activity;
+  if (total <= 0) return { score: 50, reasons: [] };
+
   let points = 0;
-  let possible = 0;
   const reasons: string[] = [];
 
-  // Sector / industry focus vs. the company (weight 35). This is usually the
-  // field that actually varies between investors, so it drives real spread.
-  if (pref.sectors.length > 0 && company.industry) {
-    possible += 35;
-    const ind = company.industry.toLowerCase();
-    const hit = pref.sectors.some((s) => {
-      const sl = s.toLowerCase();
+  // Sector fit by POSITION — the company industry earlier in the investor's list
+  // (their primary focus) scores higher than a secondary/tertiary tag.
+  if (company.industry && pref.sectors.length > 0) {
+    const ind = company.industry.trim().toLowerCase();
+    const pos = pref.sectors.findIndex((s) => {
+      const sl = s.trim().toLowerCase();
       return sl.includes(ind) || ind.includes(sl);
     });
-    if (hit) {
-      points += 35;
-      reasons.push("Sector focus matches");
+    if (pos >= 0) {
+      const fit = Math.max(0, 1 - pos * 0.25); // primary=1.0, 2nd=0.75, 3rd=0.5, 4th=0.25
+      points += W.sector * fit;
+      reasons.push(pos === 0 ? "Primary sector match" : "Secondary sector match");
     }
   }
 
-  // Check size vs. raise (weight 35).
-  if (pref.investmentSize.length > 0) {
-    possible += 35;
-    if (company.fundingAmount != null && inAnyBand(company.fundingAmount, pref.investmentSize)) {
-      points += 35;
-      reasons.push("Check size fits the raise");
-    }
+  // Specificity — a focused investor (few sectors) fits better than a generalist.
+  if (pref.sectors.length > 0) {
+    points += W.specificity * (1 / pref.sectors.length);
+    if (pref.sectors.length <= 2) reasons.push("Focused investor");
   }
 
-  // Revenue band vs. company revenue (weight 20).
-  if (pref.revenueRange.length > 0 && company.revenue != null) {
-    possible += 20;
-    if (inAnyBand(company.revenue, pref.revenueRange)) {
-      points += 20;
-      reasons.push("Revenue band matches");
-    }
-  }
-
-  // Use-of-funds / stage overlap (weight 30).
+  // Stage / use-of-funds overlap.
   if (pref.useOfFunds.length > 0) {
-    possible += 30;
     const stageWords = new Set([
       ...(company.revenueStage ? STAGE_WORDS[company.revenueStage] ?? [] : []),
       ...tokens(company.useOfFunds),
       ...tokens(company.industry),
     ]);
-    const hit = pref.useOfFunds.some((u) => tokens(u).some((w) => stageWords.has(w)));
-    if (hit) {
-      points += 30;
+    if (pref.useOfFunds.some((u) => tokens(u).some((w) => stageWords.has(w)))) {
+      points += W.stage;
       reasons.push("Use-of-funds / stage fit");
     }
   }
 
-  // Active-investor rating quality (weight 15).
+  // Check size vs. the raise.
+  if (pref.investmentSize.length > 0 && company.fundingAmount != null && inAnyBand(company.fundingAmount, pref.investmentSize)) {
+    points += W.checkSize;
+    reasons.push("Check size fits the raise");
+  }
+
+  // Active-investor rating quality (graded by the 1–5 rating).
   const rating = activeRatingScore(pref);
   if (rating != null) {
-    possible += 15;
-    const r = Math.round((rating / 5) * 15);
-    points += r;
+    points += W.activity * (rating / 5);
     if (rating >= 4) reasons.push("Highly active investor");
   }
 
-  // No structured preferences set → neutral 50 so they're not falsely excluded.
-  if (possible === 0) return { score: 50, reasons: ["No stated preferences — neutral fit"] };
-
-  return { score: Math.round((points / possible) * 100), reasons };
+  return { score: Math.round((points / total) * 100), reasons };
 }

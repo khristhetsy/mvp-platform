@@ -117,11 +117,20 @@ export async function PATCH(req: Request): Promise<Response> {
   if (body?.action === "set_match_config" && body.config && typeof body.config === "object") {
     const c = body.config as Partial<InvestorMatchConfig>;
     const clampScore = (n: unknown, d: number) => (typeof n === "number" && n >= 0 && n <= 100 ? Math.round(n) : d);
+    const w = (c.weights ?? {}) as Partial<InvestorMatchConfig["weights"]>;
+    const dw = DEFAULT_MATCH_CONFIG.weights;
     const config: InvestorMatchConfig = {
       requiredFields: { ...DEFAULT_MATCH_CONFIG.requiredFields, ...(c.requiredFields ?? {}), industry: true },
       minMatch: clampScore(c.minMatch, DEFAULT_MATCH_CONFIG.minMatch),
       minInvestorScore: clampScore(c.minInvestorScore, DEFAULT_MATCH_CONFIG.minInvestorScore),
       requireRated: typeof c.requireRated === "boolean" ? c.requireRated : DEFAULT_MATCH_CONFIG.requireRated,
+      weights: {
+        sector: clampScore(w.sector, dw.sector),
+        specificity: clampScore(w.specificity, dw.specificity),
+        stage: clampScore(w.stage, dw.stage),
+        checkSize: clampScore(w.checkSize, dw.checkSize),
+        activity: clampScore(w.activity, dw.activity),
+      },
     };
     const ok = await setInvestorMatchConfig(config, gate.userId);
     return NextResponse.json({ ok, matchConfig: config });

@@ -8,6 +8,7 @@ import {
   scoreInvestorPreferenceMatch,
   type CompanyMatchInput,
   type PreferenceMatch,
+  type MatchWeights,
 } from "./preference-match";
 
 /**
@@ -206,6 +207,8 @@ export async function loadInvestorContacts(opts?: {
   /** Hard filter: drop investors whose sector focus doesn't match the company
    *  industry (admin "Industry required" control). */
   requireIndustryMatch?: boolean;
+  /** Graded-match factor weights (admin-adjustable); defaults when omitted. */
+  weights?: MatchWeights;
 }): Promise<ScoredInvestorContact[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceRoleClient() as any;
@@ -265,7 +268,7 @@ export async function loadInvestorContacts(opts?: {
   if (opts?.scoreAgainst) {
     const informative = computeInformativeFields(filtered.map((r) => r.preferences));
     for (const r of filtered) {
-      r.match = scoreInvestorPreferenceMatch(opts.scoreAgainst, maskPreferences(r.preferences, informative));
+      r.match = scoreInvestorPreferenceMatch(opts.scoreAgainst, maskPreferences(r.preferences, informative), opts.weights);
     }
     filtered.sort((a, b) => (b.match?.score ?? 0) - (a.match?.score ?? 0));
   }

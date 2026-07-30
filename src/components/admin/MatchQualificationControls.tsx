@@ -2,12 +2,22 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+type MatchWeights = { sector: number; specificity: number; stage: number; checkSize: number; activity: number };
 type MatchConfig = {
   requiredFields: { industry: boolean; checkSize: boolean; revenueStage: boolean; useOfFunds: boolean; geography: boolean; activeRating: boolean };
   minMatch: number;
   minInvestorScore: number;
   requireRated: boolean;
+  weights: MatchWeights;
 };
+
+const WEIGHT_LABELS: [keyof MatchWeights, string][] = [
+  ["sector", "Sector fit"],
+  ["specificity", "Sector focus / specificity"],
+  ["stage", "Stage / use of funds"],
+  ["checkSize", "Check size vs. raise"],
+  ["activity", "Investor activity / rating"],
+];
 
 const FIELD_LABELS: [keyof MatchConfig["requiredFields"], string][] = [
   ["industry", "Industry / sector"],
@@ -121,6 +131,26 @@ export function MatchQualificationControls() {
         />
         Require a rated investor score (exclude unrated &ldquo;New&rdquo; investors)
       </label>
+
+      <div className="mt-4 flex items-center justify-between">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Match factor weights</div>
+        <div className="text-[11px] text-slate-500">Total {WEIGHT_LABELS.reduce((a, [k]) => a + (config.weights[k] || 0), 0)}</div>
+      </div>
+      <p className="mt-1 text-[11px] leading-5 text-slate-500">How much each factor contributes to the graded match score. Sector fit and specificity spread investors apart; the total is the denominator.</p>
+      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+        {WEIGHT_LABELS.map(([key, label]) => (
+          <label key={key} className="flex items-center justify-between gap-2 text-[13px] text-slate-700">
+            <span>{label}</span>
+            <input
+              type="number" min={0} max={100} value={config.weights[key]}
+              onChange={(e) => setConfig({ ...config, weights: { ...config.weights, [key]: Number(e.target.value) } })}
+              onBlur={() => save(config)}
+              className="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+            />
+          </label>
+        ))}
+      </div>
+
       <div className="mt-2 flex items-center gap-3 text-[11px]">
         {saving ? <span className="text-slate-400">Saving…</span> : null}
         {error ? <span className="text-red-600">{error}</span> : null}

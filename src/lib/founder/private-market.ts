@@ -104,6 +104,7 @@ export async function loadFounderInvestorBoard(
     scoreAgainst,
     investorsOnly: true,
     requireIndustryMatch: matchConfig.requiredFields.industry,
+    weights: matchConfig.weights,
     limit: 3000,
   })).slice(0, limit);
 

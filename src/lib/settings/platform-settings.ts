@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { DEFAULT_WEIGHTS, type MatchWeights } from "@/lib/investors/preference-match";
 
 /**
  * Small key-value store for platform-level settings that admins toggle at
@@ -77,6 +78,8 @@ export type InvestorMatchConfig = {
   minInvestorScore: number;
   /** When true, unrated ("New") investors don't qualify for outreach. */
   requireRated: boolean;
+  /** Weight of each graded match factor (sum is the score denominator). */
+  weights: MatchWeights;
 };
 
 export const DEFAULT_MATCH_CONFIG: InvestorMatchConfig = {
@@ -84,6 +87,7 @@ export const DEFAULT_MATCH_CONFIG: InvestorMatchConfig = {
   minMatch: 60,
   minInvestorScore: 50,
   requireRated: false,
+  weights: DEFAULT_WEIGHTS,
 };
 
 const MATCH_CONFIG_KEY = "investor_match_config";
@@ -97,6 +101,7 @@ export async function getInvestorMatchConfig(): Promise<InvestorMatchConfig> {
       minMatch: typeof v.minMatch === "number" ? v.minMatch : DEFAULT_MATCH_CONFIG.minMatch,
       minInvestorScore: typeof v.minInvestorScore === "number" ? v.minInvestorScore : DEFAULT_MATCH_CONFIG.minInvestorScore,
       requireRated: typeof v.requireRated === "boolean" ? v.requireRated : DEFAULT_MATCH_CONFIG.requireRated,
+      weights: { ...DEFAULT_WEIGHTS, ...(v.weights ?? {}) },
       // Industry is always required (locked on).
       requiredFields: { ...DEFAULT_MATCH_CONFIG.requiredFields, ...(v.requiredFields ?? {}), industry: true },
     };
