@@ -633,6 +633,19 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                       <div key={sec.title} style={{ marginTop: 14 }}>
                         <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>{sec.title}</p>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 28px" }}>
+                          {sec.title.toLowerCase().includes("information") && (
+                            <>
+                              <RoRow label="Full name">{contact.name || null}</RoRow>
+                              <RoRow label="Job position">{contact.job_position || null}</RoRow>
+                              <RoRow label="Company">{contact.company || null}</RoRow>
+                              <RoRow label="Email">{contact.email ? <a href={`mailto:${contact.email}`} style={{ color: "#185FA5", textDecoration: "none" }}>{contact.email}</a> : null}</RoRow>
+                              <RoRow label="Phone">{contact.phone || null}</RoRow>
+                              <RoRow label="Phone 2">{contact.phone2 || null}</RoRow>
+                              <RoRow label="Website">{contact.website ? <a href={contact.website} target="_blank" rel="noopener noreferrer" style={{ color: "#185FA5", textDecoration: "none" }}>{contact.website}</a> : null}</RoRow>
+                              <RoRow label="Location">{address}</RoRow>
+                              <RoRow label="Language">{contact.language || null}</RoRow>
+                            </>
+                          )}
                           {sec.fields.map((f) => (
                             <EditablePrefRow
                               key={f.saveKey}
