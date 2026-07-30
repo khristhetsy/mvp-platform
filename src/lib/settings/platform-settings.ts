@@ -116,3 +116,44 @@ export async function setInvestorMatchConfig(cfg: InvestorMatchConfig, updatedBy
     return false;
   }
 }
+
+/**
+ * Editable outreach message (admin). Subject / intro / closing are admin-edited
+ * copy with {{company}} / {{investor}} / {{stage}} / {{sector}} merge fields; the
+ * one-pager card and the legal disclaimer are fixed and added at render time.
+ */
+export type OutreachMessage = { subject: string; intro: string; closing: string };
+
+export const DEFAULT_OUTREACH_MESSAGE: OutreachMessage = {
+  subject: "{{company}} — a Founder Preview that fits your focus",
+  intro: "Hi {{investor}},\n\nOur fit scoring matched {{company}} to your stated preferences. Here's their Founder Preview — no obligation.",
+  closing: "If it's a fit, simply reply and we'll make the introduction. If not, no action is needed.",
+};
+
+const OUTREACH_MESSAGE_KEY = "investor_outreach_message";
+
+export async function getOutreachMessage(): Promise<OutreachMessage> {
+  try {
+    const { data } = await db().from("platform_settings").select("value").eq("key", OUTREACH_MESSAGE_KEY).maybeSingle();
+    const v = (data as { value?: Partial<OutreachMessage> } | null)?.value;
+    if (!v) return DEFAULT_OUTREACH_MESSAGE;
+    return {
+      subject: typeof v.subject === "string" && v.subject.trim() ? v.subject : DEFAULT_OUTREACH_MESSAGE.subject,
+      intro: typeof v.intro === "string" && v.intro.trim() ? v.intro : DEFAULT_OUTREACH_MESSAGE.intro,
+      closing: typeof v.closing === "string" ? v.closing : DEFAULT_OUTREACH_MESSAGE.closing,
+    };
+  } catch {
+    return DEFAULT_OUTREACH_MESSAGE;
+  }
+}
+
+export async function setOutreachMessage(msg: OutreachMessage, updatedBy: string | null): Promise<boolean> {
+  try {
+    const { error } = await db()
+      .from("platform_settings")
+      .upsert({ key: OUTREACH_MESSAGE_KEY, value: msg, updated_by: updatedBy, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    return !error;
+  } catch {
+    return false;
+  }
+}

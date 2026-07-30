@@ -14,6 +14,10 @@ import {
   setInvestorMatchConfig,
   DEFAULT_MATCH_CONFIG,
   type InvestorMatchConfig,
+  getOutreachMessage,
+  setOutreachMessage,
+  DEFAULT_OUTREACH_MESSAGE,
+  type OutreachMessage,
 } from "@/lib/settings/platform-settings";
 
 export const dynamic = "force-dynamic";
@@ -88,8 +92,12 @@ export async function GET(): Promise<Response> {
     }),
   );
 
-  const [liveSend, matchConfig] = await Promise.all([getOutreachAutomationEnabled(), getInvestorMatchConfig()]);
-  return NextResponse.json({ campaigns: summaries, liveSend, matchConfig });
+  const [liveSend, matchConfig, message] = await Promise.all([
+    getOutreachAutomationEnabled(),
+    getInvestorMatchConfig(),
+    getOutreachMessage(),
+  ]);
+  return NextResponse.json({ campaigns: summaries, liveSend, matchConfig, message });
 }
 
 // PATCH — automation switch, or the match/qualification control config.
@@ -117,6 +125,18 @@ export async function PATCH(req: Request): Promise<Response> {
     };
     const ok = await setInvestorMatchConfig(config, gate.userId);
     return NextResponse.json({ ok, matchConfig: config });
+  }
+
+  if (body?.action === "set_message" && body.config && typeof body.config === "object") {
+    const m = body.config as Partial<OutreachMessage>;
+    const str = (v: unknown, d: string, max = 4000) => (typeof v === "string" ? v.slice(0, max) : d);
+    const message: OutreachMessage = {
+      subject: str(m.subject, DEFAULT_OUTREACH_MESSAGE.subject, 300).trim() || DEFAULT_OUTREACH_MESSAGE.subject,
+      intro: str(m.intro, DEFAULT_OUTREACH_MESSAGE.intro),
+      closing: str(m.closing, DEFAULT_OUTREACH_MESSAGE.closing),
+    };
+    const ok = await setOutreachMessage(message, gate.userId);
+    return NextResponse.json({ ok, message });
   }
 
   return NextResponse.json({ error: "Unknown action." }, { status: 400 });

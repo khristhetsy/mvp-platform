@@ -1,31 +1,8 @@
-import { AppShell } from "@/components/AppShell";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
-import { InvestorOutreachManager } from "@/components/admin/matching/InvestorOutreachManager";
-import { requireRole } from "@/lib/supabase/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
+// Outreach Approvals moved into Admin → Feature Controls.
 export default async function AdminInvestorOutreachPage() {
-  const profile = await requireRole(["admin", "analyst"]);
-
-  return (
-    <AppShell
-      role="ADMIN"
-      workspace="admin"
-      profileName={profile.full_name ?? profile.email ?? "Admin"}
-      profileSubtitle={profile.role}
-      profileEmail={profile.email ?? undefined}
-    >
-      <WorkspacePageContainer>
-        <PageHeader
-          eyebrow="Matching"
-          title="Investor outreach approvals"
-          description="AI-matched introductions to strong-fit investors. Each investor receives the founder's published one-pager. Flip Automation on to auto-approve and send on the weekly pass, capped per week; suppression and unsubscribe always apply."
-        />
-
-        <InvestorOutreachManager />
-      </WorkspacePageContainer>
-    </AppShell>
-  );
+  redirect("/admin/feature-controls");
 }

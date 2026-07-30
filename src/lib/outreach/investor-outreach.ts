@@ -4,7 +4,7 @@ import { loadInvestorContacts } from "@/lib/investors/load-investor-matches";
 import { sendEmail } from "@/lib/email/send-email";
 import { renderIntroEmail } from "@/lib/outreach/intro-template";
 import { buildUnsubscribeUrl, filterUnsubscribed } from "@/lib/outreach/unsubscribe";
-import { getOutreachAutomationEnabled, getInvestorMatchConfig } from "@/lib/settings/platform-settings";
+import { getOutreachAutomationEnabled, getInvestorMatchConfig, getOutreachMessage } from "@/lib/settings/platform-settings";
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 
 /** Formats a raise amount as a compact "~$2M" / "~$500K" string. */
@@ -259,6 +259,7 @@ export async function setCampaignWeeklyCap(campaignId: string, cap: number): Pro
 export async function processApprovedOutreach(): Promise<{ campaignsRun: number; recipientsSent: number; liveSend: boolean }> {
   const db = client();
   const live = await getOutreachAutomationEnabled();
+  const outreachMessage = live ? await getOutreachMessage() : null;
   const sixDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString();
 
   // Admin automation ON = fully automatic: auto-approve any drafts still pending
@@ -375,6 +376,7 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
           tagline,
           raise,
           location,
+          message: outreachMessage ?? undefined,
         });
         const ok = await sendEmail({ to: email, subject, html, text });
         if (ok) {

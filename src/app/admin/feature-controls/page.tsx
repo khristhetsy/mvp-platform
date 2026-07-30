@@ -2,6 +2,7 @@ import { AppShell } from "@/components/AppShell";
 import { getTranslations } from "next-intl/server";
 import { DepartmentsControls } from "@/components/admin/DepartmentsControls";
 import { MatchQualificationControls } from "@/components/admin/MatchQualificationControls";
+import { InvestorOutreachManager } from "@/components/admin/matching/InvestorOutreachManager";
 import { requirePermissionPage } from "@/lib/api/permissions";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ export default async function AdminFeatureControlsPage() {
     >
       <div className="space-y-6">
         <MatchQualificationControls />
+        <InvestorOutreachManager />
         <DepartmentsControls />
       </div>
     </AppShell>

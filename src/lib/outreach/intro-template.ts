@@ -25,6 +25,15 @@ export type IntroTemplateFields = {
   raise?: string | null;
   /** City / region, e.g. "New York". */
   location?: string | null;
+  /** Admin-edited copy (subject / intro / closing) with {{company}} /
+   *  {{investor}} / {{stage}} / {{sector}} merge fields. Defaults when absent. */
+  message?: { subject: string; intro: string; closing: string };
+};
+
+const DEFAULT_MESSAGE = {
+  subject: "{{company}} — a Founder Preview that fits your focus",
+  intro: "Hi {{investor}},\n\nOur fit scoring matched {{company}} to your stated preferences. Here's their Founder Preview — no obligation.",
+  closing: "If it's a fit, simply reply and we'll make the introduction. If not, no action is needed.",
 };
 
 function escapeHtml(value: string): string {
@@ -46,11 +55,23 @@ export function renderIntroEmail(f: IntroTemplateFields): { subject: string; htm
   const company = escapeHtml(companyRaw);
   const sector = escapeHtml((f.sector ?? "").trim() || "its sector");
   const stage = escapeHtml((f.stage ?? "").trim() || "an early");
-  const name = escapeHtml((f.investorFirstName ?? "").trim() || "there");
   const unsub = f.unsubscribeUrl ? escapeHtml(f.unsubscribeUrl) : "#";
   const previewUrl = f.previewUrl ? escapeHtml(f.previewUrl) : null;
 
-  const subject = `${companyRaw} — a Founder Preview that fits your focus`;
+  // Admin-edited copy with merge fields; values substituted per recipient.
+  const message = f.message ?? DEFAULT_MESSAGE;
+  const mergeValues: Record<string, string> = {
+    company: companyRaw,
+    investor: (f.investorFirstName ?? "").trim() || "there",
+    stage: (f.stage ?? "").trim(),
+    sector: (f.sector ?? "").trim(),
+  };
+  const subst = (s: string) => s.replace(/\{\{\s*(company|investor|stage|sector)\s*\}\}/gi, (_, k: string) => mergeValues[k.toLowerCase()] ?? "");
+  const toParas = (s: string) => subst(s).split(/\n{2,}/).map((p) => `<p>${escapeHtml(p).replace(/\n/g, "<br/>")}</p>`).join("");
+
+  const subject = subst(message.subject).trim() || `${companyRaw} — a Founder Preview`;
+  const introHtml = toParas(message.intro);
+  const closingHtml = toParas(message.closing);
 
   const tagline = f.tagline ? escapeHtml(f.tagline.trim()) : null;
   const raise = f.raise ? escapeHtml(f.raise.trim()) : null;
@@ -79,20 +100,18 @@ export function renderIntroEmail(f: IntroTemplateFields): { subject: string; htm
   const previewTextLine = f.previewUrl ? `\nView the full one-pager: ${f.previewUrl}\n` : "";
 
   const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#22304a;max-width:560px">
-  <p>Hello ${name},</p>
-  <p>Our fit scoring matched <strong>${company}</strong> to your stated preferences. Here's their <strong>Founder Preview</strong> — no obligation.</p>
+  ${introHtml}
   ${cardHtml}
-  <p>If it's a fit, simply reply and we'll make the introduction. If not, no action is needed.</p>
+  ${closingHtml}
   <p>Warm regards,<br/>The iCapOS Introductions Team</p>
   <hr style="border:none;border-top:1px solid #e6e9f0;margin:20px 0 12px" />
   <p style="font-size:11px;color:#8a93a5">${LOCKED_DISCLAIMER} To stop receiving introductions, <a href="${unsub}" style="color:#8a93a5">unsubscribe</a>.</p>
 </div>`;
 
-  const text = `Hello ${name},
-
-Our fit scoring matched ${companyRaw}${f.tagline ? ` — ${f.tagline.trim()}` : ""} to your stated preferences. Here's their Founder Preview one-pager — no obligation.
+  const plain = (s: string) => subst(s);
+  const text = `${plain(message.intro)}
 ${previewTextLine}
-If it's a fit, simply reply and we'll make the introduction. If not, no action is needed.
+${plain(message.closing)}
 
 Warm regards,
 The iCapOS Introductions Team

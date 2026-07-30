@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { OutreachRecipient } from "@/lib/outreach/investor-outreach";
 import type { OutreachCampaignSummary } from "@/app/api/admin/investor-outreach/route";
+import { OutreachMessageEditor } from "@/components/admin/OutreachMessageEditor";
 
 type CampaignAction = "approve" | "pause" | "resume" | "cap";
 
@@ -101,67 +102,6 @@ function FlowStepper() {
             </div>
           );
         })}
-      </div>
-    </div>
-  );
-}
-
-function OnePagerEmailPreview() {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-5">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-900">What the investor receives</h3>
-        <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
-          Founder One-Pager
-        </span>
-      </div>
-      <p className="mt-1 text-xs text-slate-500">
-        Pulled live from the founder&apos;s published one-pager — company, tagline, raise, and stage
-        stay in sync. Sends only when the founder has published their preview.
-      </p>
-      <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700">
-        <p className="text-[11px] text-slate-400">Subject</p>
-        <p className="font-medium text-slate-900">Docuverse — a Founder Preview that fits your focus</p>
-        <p className="mt-3">Hi there,</p>
-        <p className="mt-2">
-          Our fit scoring matched <span className="font-medium">Docuverse</span> to your stated
-          preferences. Here&apos;s their Founder Preview — no obligation.
-        </p>
-        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/70 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 font-semibold text-indigo-800">
-              D
-            </div>
-            <div>
-              <div className="font-semibold text-slate-900">Docuverse</div>
-              <div className="text-xs text-slate-500">AI document workflows for legal teams</div>
-            </div>
-          </div>
-          <div className="mt-3 flex gap-6 text-xs">
-            <div>
-              <div className="text-slate-400">Raising</div>
-              <div className="font-semibold text-slate-800">~$2M</div>
-            </div>
-            <div>
-              <div className="text-slate-400">Stage</div>
-              <div className="font-semibold text-slate-800">Seed · Legal tech</div>
-            </div>
-            <div>
-              <div className="text-slate-400">Location</div>
-              <div className="font-semibold text-slate-800">New York</div>
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white">
-              View full one-pager →
-            </span>
-          </div>
-        </div>
-        <p className="mt-3">If it&apos;s a fit, simply reply and we&apos;ll make the introduction.</p>
-        <p className="mt-4 border-t border-slate-200 pt-3 text-[11px] leading-5 text-slate-400">
-          Introduction generated from platform fit scoring — not investment advice, an offer, or a
-          solicitation to buy or sell any security. Every send includes an unsubscribe link.
-        </p>
       </div>
     </div>
   );
@@ -462,7 +402,7 @@ export function InvestorOutreachManager() {
 
       <FlowStepper />
 
-      <OnePagerEmailPreview />
+      <OutreachMessageEditor />
 
       {loading ? (
         <p className="text-sm text-slate-500">Loading campaigns…</p>
