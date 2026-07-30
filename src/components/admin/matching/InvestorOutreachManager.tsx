@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { OutreachRecipient } from "@/lib/outreach/investor-outreach";
 import type { OutreachCampaignSummary } from "@/app/api/admin/investor-outreach/route";
 import { OutreachMessageEditor } from "@/components/admin/OutreachMessageEditor";
+import { FounderOverrideEditor } from "@/components/admin/matching/FounderOverrideEditor";
 
 type CampaignAction = "approve" | "pause" | "resume" | "cap";
 
@@ -176,6 +177,7 @@ function CampaignCard({
   const [capValue, setCapValue] = useState<number>(campaign.weekly_cap);
   const [busy, setBusy] = useState(false);
   const [showLog, setShowLog] = useState(false);
+  const [showOverride, setShowOverride] = useState(false);
 
   async function run(action: CampaignAction, cap?: number) {
     if (busy) return;
@@ -266,12 +268,24 @@ function CampaignCard({
 
         <button
           type="button"
+          onClick={() => setShowOverride((v) => !v)}
+          className="ml-auto rounded-lg border border-indigo-200 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+        >
+          {showOverride ? "Hide customize" : "Customize"}
+        </button>
+
+        <button
+          type="button"
           onClick={() => setShowLog((v) => !v)}
-          className="ml-auto rounded-lg px-3 py-2 text-sm font-medium text-slate-500 hover:text-slate-800"
+          className="rounded-lg px-3 py-2 text-sm font-medium text-slate-500 hover:text-slate-800"
         >
           {showLog ? "Hide send log" : "View send log"}
         </button>
       </div>
+
+      {showOverride ? (
+        <FounderOverrideEditor companyId={campaign.company_id} companyName={campaign.companyName} onClose={() => setShowOverride(false)} />
+      ) : null}
 
       {showLog ? (
         <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50/40">
