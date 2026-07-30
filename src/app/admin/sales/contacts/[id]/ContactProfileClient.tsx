@@ -244,6 +244,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
   const [leadSaving, setLeadSaving] = useState(false);
   const [leadMsg, setLeadMsg] = useState<string | null>(null);
   const [form, setForm] = useState({
+    name: initialContact.name ?? "",
     lead_status: initialContact.lead_status ?? "new",
     email: initialContact.email ?? "", company: initialContact.company ?? "",
     phone: initialContact.phone ?? "", phone2: initialContact.phone2 ?? "",
@@ -287,6 +288,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
     setBusy(true);
     try {
       const body = {
+        name: form.name.trim() || contact.name,
         lead_status: form.lead_status,
         email: form.email || null, company: form.company || null,
         phone: form.phone || null, phone2: form.phone2 || null,
@@ -448,6 +450,10 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
         {editing ? (
           <div style={{ padding: "14px 16px" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 24px" }}>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Name</label>
+                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full name" style={{ ...inp, width: "100%", marginTop: 4 }} />
+              </div>
               <div>
                 <label style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Lead status</label>
                 <select value={form.lead_status} onChange={(e) => setForm({ ...form, lead_status: e.target.value })} style={{ ...inp, width: "100%", marginTop: 4 }}>

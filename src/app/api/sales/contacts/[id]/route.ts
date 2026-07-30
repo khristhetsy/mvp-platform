@@ -8,6 +8,7 @@ import { isSuperAdmin } from "@/lib/rbac/effective-permissions";
 export const dynamic = "force-dynamic";
 
 const patchSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
   lead_status: z.string().max(40).nullable().optional(),
   phone: z.string().max(60).nullable().optional(),
   email: z.string().max(200).nullable().optional(),

@@ -130,7 +130,7 @@ export async function getContactProfile(id: string): Promise<{ contact: ContactP
 }
 
 export type ContactPatch = {
-  lead_status?: string | null; phone?: string | null; email?: string | null; company?: string | null;
+  name?: string; lead_status?: string | null; phone?: string | null; email?: string | null; company?: string | null;
   website?: string | null; owner?: string | null; owner_id?: string | null; assignee_ids?: string[] | null; tags?: string[];
   phone2?: string | null; lead_source?: string | null; membership?: string | null; job_position?: string | null;
   language?: string | null; street?: string | null; street2?: string | null; city?: string | null;
@@ -147,6 +147,7 @@ const OVERRIDE_KEYS = ["phone2", "lead_source", "membership", "job_position", "l
 // re-sync of `raw` won't clobber them; top-level columns are written directly.
 export async function updateContact(id: string, patch: ContactPatch, actorId?: string | null): Promise<void> {
   const update: Record<string, unknown> = {};
+  if (patch.name !== undefined && patch.name.trim()) update.name = patch.name.trim();
   if (patch.lead_status !== undefined) update.lead_status = patch.lead_status || "new";
   if (patch.phone !== undefined) update.phone = patch.phone || null;
   if (patch.email !== undefined) update.email = patch.email || null;
