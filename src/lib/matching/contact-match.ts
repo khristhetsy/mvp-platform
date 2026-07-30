@@ -1,5 +1,6 @@
 import type { ScoredInvestorContact } from "@/lib/investors/load-investor-matches";
 import { parseMoneyBand } from "@/lib/investors/preference-match";
+import { activeRatingScore } from "@/lib/investors/preferences";
 import {
   matchInvestorToCompany,
   type CompanyMatchProfile,
@@ -60,6 +61,8 @@ export function investorProfileFromContact(s: ScoredInvestorContact): InvestorMa
     preferred_geographies: [],
     preferred_stages: s.preferences.useOfFunds,
     approval_status: "approved",
+    capitalTypes: s.capitalTypes,
+    activeRating: activeRatingScore(s.preferences),
   };
 }
 

@@ -29,6 +29,10 @@ export type CompanyMatchProfile = {
   isPublished: boolean;
   marketplaceVisible: boolean;
   publishedAt: string | null;
+  /** Founder's sought investor types / capital types (from Seeking). Optional —
+   *  absent means the factor simply drops out of the score. */
+  soughtInvestorTypes?: string[];
+  soughtCapitalTypes?: string[];
 };
 
 export type InvestorMatchProfile = Pick<
@@ -41,7 +45,11 @@ export type InvestorMatchProfile = Pick<
   | "preferred_geographies"
   | "preferred_stages"
   | "approval_status"
->;
+> & {
+  /** Extras for the added factors (absent for platform investors → factor drops out). */
+  capitalTypes?: string[];
+  activeRating?: number | null;
+};
 
 export type InvestorCompanyMatchResult = {
   companyId: string;
@@ -52,8 +60,24 @@ export type InvestorCompanyMatchResult = {
 
 /** Admin-tunable weights for the four investor-fit factors. Readiness and
  *  marketplace are small fixed bonuses, not tunable. */
-export type EngineWeights = { sector: number; stage: number; checkSize: number; geography: number };
-export const DEFAULT_ENGINE_WEIGHTS: EngineWeights = { sector: 30, stage: 25, checkSize: 20, geography: 15 };
+export type EngineWeights = {
+  sector: number;
+  stage: number;
+  checkSize: number;
+  geography: number;
+  investorType: number;
+  capitalType: number;
+  activeRating: number;
+};
+export const DEFAULT_ENGINE_WEIGHTS: EngineWeights = {
+  sector: 25,
+  stage: 20,
+  checkSize: 15,
+  geography: 10,
+  investorType: 10,
+  capitalType: 10,
+  activeRating: 10,
+};
 
 const READINESS_BONUS = 5;
 const MARKETPLACE_BONUS = 5;
@@ -137,6 +161,43 @@ function scoreCheckSize(investor: InvestorMatchProfile, company: CompanyMatchPro
   return { points: 0, weight, evaluated: true, reason: null, missing: "Target raise outside investor check size range" };
 }
 
+function listsOverlap(a: string[], b: string[]): boolean {
+  const bt = b;
+  return a.some((x) => bt.some((y) => x.includes(y) || y.includes(x)));
+}
+
+function scoreInvestorType(investor: InvestorMatchProfile, company: CompanyMatchProfile, weight: number): FactorResult {
+  const sought = tokenizeList(company.soughtInvestorTypes ?? []);
+  if (sought.length === 0 || !investor.investor_type?.trim()) {
+    return { points: 0, weight, evaluated: false, reason: null, missing: null };
+  }
+  if (tokensOverlap(sought, investor.investor_type)) {
+    return { points: weight, weight, evaluated: true, reason: "Investor type match", missing: null };
+  }
+  return { points: 0, weight, evaluated: true, reason: null, missing: "Investor type not among those sought" };
+}
+
+function scoreCapitalType(investor: InvestorMatchProfile, company: CompanyMatchProfile, weight: number): FactorResult {
+  const sought = tokenizeList(company.soughtCapitalTypes ?? []);
+  const offered = tokenizeList(investor.capitalTypes ?? []);
+  if (sought.length === 0 || offered.length === 0) {
+    return { points: 0, weight, evaluated: false, reason: null, missing: null };
+  }
+  if (listsOverlap(sought, offered)) {
+    return { points: weight, weight, evaluated: true, reason: "Capital type match", missing: null };
+  }
+  return { points: 0, weight, evaluated: true, reason: null, missing: "Capital type not offered" };
+}
+
+function scoreActiveRating(investor: InvestorMatchProfile, weight: number): FactorResult {
+  const rating = investor.activeRating;
+  if (rating == null || rating <= 0) {
+    return { points: 0, weight, evaluated: false, reason: null, missing: null };
+  }
+  const fit = Math.min(1, rating / 5);
+  return { points: Math.round(weight * fit), weight, evaluated: true, reason: rating >= 4 ? "Highly active investor" : null, missing: null };
+}
+
 /** Readiness + marketplace are additive bonuses — they only ever add, and being
  *  absent never subtracts (so a founder is never penalized for them). */
 function scoreReadiness(company: CompanyMatchProfile): { points: number; reason: string | null } {
@@ -170,14 +231,18 @@ export function matchInvestorToCompany(
   const stage = scoreStage(investor, company, weights.stage);
   const geography = scoreGeography(investor, company, weights.geography);
   const checkSize = scoreCheckSize(investor, company, weights.checkSize);
+  const investorType = scoreInvestorType(investor, company, weights.investorType);
+  const capitalType = scoreCapitalType(investor, company, weights.capitalType);
+  const activeRating = scoreActiveRating(investor, weights.activeRating);
 
   // Normalize over ONLY the factors we could actually evaluate. A blank field
   // (no investor preference, or no company value) drops out of the denominator
   // instead of costing points — missing data never penalizes the founder. A
   // field that IS set but doesn't fit still counts as a real 0.
+  const factors = [sector, stage, geography, checkSize, investorType, capitalType, activeRating];
   let earned = 0;
   let possible = 0;
-  for (const f of [sector, stage, geography, checkSize]) {
+  for (const f of factors) {
     if (f.evaluated) {
       earned += f.points;
       possible += f.weight;
@@ -190,12 +255,12 @@ export function matchInvestorToCompany(
   const base = possible > 0 ? (earned / possible) * 100 : 0;
   const matchScore = Math.min(100, Math.max(0, Math.round(base + readiness.points + marketplace.points)));
 
-  const matchReasons = [sector, stage, geography, checkSize]
+  const matchReasons = factors
     .map((item) => item.reason)
     .concat([readiness.reason, marketplace.reason])
     .filter((value): value is string => Boolean(value));
 
-  const missingFitReasons = [sector, stage, geography, checkSize]
+  const missingFitReasons = factors
     .map((item) => item.missing)
     .filter((value): value is string => Boolean(value));
 
