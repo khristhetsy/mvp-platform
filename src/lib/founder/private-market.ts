@@ -123,7 +123,7 @@ export async function loadFounderInvestorBoard(
   // marketplace — so scores spread by real fit instead of pegging to 100.
   const companyProfile = buildCompanyMatchProfile(company);
   const matchOf = new Map<string, InvestorCompanyMatchResult>();
-  for (const s of scored) matchOf.set(s.id, scoreContactAgainstCompany(s, companyProfile));
+  for (const s of scored) matchOf.set(s.id, scoreContactAgainstCompany(s, companyProfile, matchConfig.engineWeights));
 
   const admin = createServiceRoleClient();
   const rawAdmin = admin as unknown as SupabaseClient;

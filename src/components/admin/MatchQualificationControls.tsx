@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 
 type MatchWeights = { sector: number; specificity: number; stage: number; checkSize: number; revenue: number; activity: number };
+type EngineWeights = { sector: number; stage: number; checkSize: number; geography: number };
 type MatchConfig = {
   requiredFields: { industry: boolean; checkSize: boolean; revenueStage: boolean; useOfFunds: boolean; geography: boolean; activeRating: boolean; investorType: boolean; capitalType: boolean };
   minMatch: number;
   minInvestorScore: number;
   requireRated: boolean;
   weights: MatchWeights;
+  engineWeights: EngineWeights;
 };
 type AutomationConfig = {
   monthlyByPlan: { basic: number; professional: number };
@@ -17,13 +19,11 @@ type AutomationConfig = {
   pause: { enabled: boolean; until: string | null };
 };
 
-const WEIGHT_LABELS: [keyof MatchWeights, string][] = [
+const WEIGHT_LABELS: [keyof EngineWeights, string][] = [
   ["sector", "Sector fit"],
-  ["specificity", "Sector focus / specificity"],
   ["stage", "Stage / use of funds"],
   ["checkSize", "Check size vs. raise"],
-  ["revenue", "Revenue range fit"],
-  ["activity", "Investor activity / rating"],
+  ["geography", "Geography fit"],
 ];
 
 const FIELD_LABELS: [keyof MatchConfig["requiredFields"], string][] = [
@@ -220,16 +220,16 @@ export function MatchQualificationControls() {
 
       <div className="mt-4 flex items-center justify-between">
         <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Match factor weights</div>
-        <div className="text-[11px] text-slate-500">Total {WEIGHT_LABELS.reduce((a, [k]) => a + (config.weights[k] || 0), 0)}</div>
+        <div className="text-[11px] text-slate-500">Total {WEIGHT_LABELS.reduce((a, [k]) => a + (config.engineWeights[k] || 0), 0)}</div>
       </div>
-      <p className="mt-1 text-[11px] leading-5 text-slate-500">How much each factor contributes to the graded match score. Sector fit and specificity spread investors apart; the total is the denominator.</p>
+      <p className="mt-1 text-[11px] leading-5 text-slate-500">How much each investor-fit factor contributes to the match score. A factor with no data on either side drops out (it never penalizes); readiness and marketplace add small fixed bonuses on top.</p>
       <div className="mt-2 grid gap-3 sm:grid-cols-2">
         {WEIGHT_LABELS.map(([key, label]) => (
           <label key={key} className="flex items-center justify-between gap-2 text-[13px] text-slate-700">
             <span>{label}</span>
             <input
-              type="number" min={0} max={100} value={config.weights[key]}
-              onChange={(e) => setConfig({ ...config, weights: { ...config.weights, [key]: Number(e.target.value) } })}
+              type="number" min={0} max={100} value={config.engineWeights[key]}
+              onChange={(e) => setConfig({ ...config, engineWeights: { ...config.engineWeights, [key]: Number(e.target.value) } })}
               onBlur={() => save(config)}
               className="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
             />

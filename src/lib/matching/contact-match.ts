@@ -5,6 +5,7 @@ import {
   type CompanyMatchProfile,
   type InvestorMatchProfile,
   type InvestorCompanyMatchResult,
+  type EngineWeights,
 } from "@/lib/matching/investor-company-matching";
 
 /**
@@ -66,6 +67,7 @@ export function investorProfileFromContact(s: ScoredInvestorContact): InvestorMa
 export function scoreContactAgainstCompany(
   s: ScoredInvestorContact,
   company: CompanyMatchProfile,
+  weights?: EngineWeights,
 ): InvestorCompanyMatchResult {
-  return matchInvestorToCompany(investorProfileFromContact(s), company);
+  return matchInvestorToCompany(investorProfileFromContact(s), company, weights);
 }

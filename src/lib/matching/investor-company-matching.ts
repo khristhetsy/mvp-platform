@@ -50,14 +50,13 @@ export type InvestorCompanyMatchResult = {
   missingFitReasons: string[];
 };
 
-const WEIGHTS = {
-  sector: 30,
-  stage: 25,
-  checkSize: 20,
-  geography: 15,
-  readiness: 5,
-  marketplace: 5,
-} as const;
+/** Admin-tunable weights for the four investor-fit factors. Readiness and
+ *  marketplace are small fixed bonuses, not tunable. */
+export type EngineWeights = { sector: number; stage: number; checkSize: number; geography: number };
+export const DEFAULT_ENGINE_WEIGHTS: EngineWeights = { sector: 30, stage: 25, checkSize: 20, geography: 15 };
+
+const READINESS_BONUS = 5;
+const MARKETPLACE_BONUS = 5;
 
 function normalizeToken(value: string) {
   return value.trim().toLowerCase();
@@ -81,127 +80,82 @@ function tokensOverlap(needles: string[], haystack: string | null) {
   return needles.some((needle) => hay.includes(needle) || needle.includes(hay));
 }
 
-function scoreSector(investor: InvestorMatchProfile, company: CompanyMatchProfile) {
+/** A single factor's outcome. `evaluated` = both sides had data, so it counts
+ *  toward the denominator; when false the factor drops out entirely (no penalty). */
+type FactorResult = { points: number; weight: number; evaluated: boolean; reason: string | null; missing: string | null };
+
+function scoreSector(investor: InvestorMatchProfile, company: CompanyMatchProfile, weight: number): FactorResult {
   const sectors = tokenizeList(investor.preferred_sectors);
-  if (sectors.length === 0) {
-    return { points: 0, matched: false, reason: null, missing: "Investor sector preferences not set" };
+  if (sectors.length === 0 || !company.industry?.trim()) {
+    return { points: 0, weight, evaluated: false, reason: null, missing: sectors.length === 0 ? "Investor sector preferences not set" : null };
   }
-
   if (tokensOverlap(sectors, company.industry)) {
-    return { points: WEIGHTS.sector, matched: true, reason: "Sector alignment", missing: null };
+    return { points: weight, weight, evaluated: true, reason: "Sector alignment", missing: null };
   }
-
-  return {
-    points: 0,
-    matched: false,
-    reason: null,
-    missing: "Sector not in investor preferences",
-  };
+  return { points: 0, weight, evaluated: true, reason: null, missing: "Sector not in investor preferences" };
 }
 
-function scoreStage(investor: InvestorMatchProfile, company: CompanyMatchProfile) {
+function scoreStage(investor: InvestorMatchProfile, company: CompanyMatchProfile, weight: number): FactorResult {
   const stages = tokenizeList(investor.preferred_stages);
-  if (stages.length === 0) {
-    return { points: 0, matched: false, reason: null, missing: "Investor stage preferences not set" };
+  if (stages.length === 0 || !company.stage?.trim()) {
+    return { points: 0, weight, evaluated: false, reason: null, missing: null };
   }
-
   if (tokensOverlap(stages, company.stage)) {
-    return { points: WEIGHTS.stage, matched: true, reason: "Stage alignment", missing: null };
+    return { points: weight, weight, evaluated: true, reason: "Stage alignment", missing: null };
   }
-
-  return {
-    points: 0,
-    matched: false,
-    reason: null,
-    missing: "Funding stage outside investor preferences",
-  };
+  return { points: 0, weight, evaluated: true, reason: null, missing: "Funding stage outside investor preferences" };
 }
 
-function scoreGeography(investor: InvestorMatchProfile, company: CompanyMatchProfile) {
+function scoreGeography(investor: InvestorMatchProfile, company: CompanyMatchProfile, weight: number): FactorResult {
   const geos = tokenizeList(investor.preferred_geographies);
-  if (geos.length === 0) {
-    return { points: 0, matched: false, reason: null, missing: "Investor geography preferences not set" };
+  if (geos.length === 0 || !company.geography?.trim()) {
+    return { points: 0, weight, evaluated: false, reason: null, missing: null };
   }
-
   if (tokensOverlap(geos, company.geography)) {
-    return { points: WEIGHTS.geography, matched: true, reason: "Geography alignment", missing: null };
+    return { points: weight, weight, evaluated: true, reason: "Geography alignment", missing: null };
   }
-
-  return {
-    points: 0,
-    matched: false,
-    reason: null,
-    missing: "Geography outside investor preferences",
-  };
+  return { points: 0, weight, evaluated: true, reason: null, missing: "Geography outside investor preferences" };
 }
 
-function scoreCheckSize(investor: InvestorMatchProfile, company: CompanyMatchProfile) {
+function scoreCheckSize(investor: InvestorMatchProfile, company: CompanyMatchProfile, weight: number): FactorResult {
   const min = investor.check_size_min;
   const max = investor.check_size_max;
   const target = company.fundingAmount;
-
-  if (min == null && max == null) {
-    return { points: 0, matched: false, reason: null, missing: "Investor check size range not set" };
+  if ((min == null && max == null) || target == null || target <= 0) {
+    return { points: 0, weight, evaluated: false, reason: null, missing: null };
   }
-
-  if (target == null || target <= 0) {
-    return { points: 0, matched: false, reason: null, missing: "Company target raise not set" };
-  }
-
   const lower = min ?? 0;
   const upper = max ?? Number.MAX_SAFE_INTEGER;
-
   if (target >= lower && target <= upper) {
-    return { points: WEIGHTS.checkSize, matched: true, reason: "Check size fit", missing: null };
+    return { points: weight, weight, evaluated: true, reason: "Check size fit", missing: null };
   }
-
   const nearLower = target >= lower * 0.5 && target < lower;
   const nearUpper = target > upper && target <= upper * 1.5;
-
   if (nearLower || nearUpper) {
-    return {
-      points: Math.round(WEIGHTS.checkSize * 0.5),
-      matched: true,
-      reason: "Partial check size overlap",
-      missing: null,
-    };
+    return { points: Math.round(weight * 0.5), weight, evaluated: true, reason: "Partial check size overlap", missing: null };
   }
-
-  return {
-    points: 0,
-    matched: false,
-    reason: null,
-    missing: "Target raise outside investor check size range",
-  };
+  return { points: 0, weight, evaluated: true, reason: null, missing: "Target raise outside investor check size range" };
 }
 
-function scoreReadiness(company: CompanyMatchProfile) {
+/** Readiness + marketplace are additive bonuses — they only ever add, and being
+ *  absent never subtracts (so a founder is never penalized for them). */
+function scoreReadiness(company: CompanyMatchProfile): { points: number; reason: string | null } {
   const score = company.readinessScore ?? 0;
-  if (score <= 0) {
-    return { points: 0, reason: null };
-  }
-
-  const points = Math.min(WEIGHTS.readiness, Math.round(score / 20));
+  if (score <= 0) return { points: 0, reason: null };
+  const points = Math.min(READINESS_BONUS, Math.round(score / 20));
   return { points, reason: points > 0 ? "Readiness score bonus" : null };
 }
 
-function scoreMarketplace(company: CompanyMatchProfile) {
+function scoreMarketplace(company: CompanyMatchProfile): { points: number; reason: string | null } {
   const listed =
-    company.reviewStatus === "approved" &&
-    company.isPublished &&
-    company.marketplaceVisible &&
-    Boolean(company.publishedAt);
-
-  if (!listed) {
-    return { points: 0, reason: null, missing: "Not yet published on marketplace" };
-  }
-
-  return { points: WEIGHTS.marketplace, reason: "Marketplace listed", missing: null };
+    company.reviewStatus === "approved" && company.isPublished && company.marketplaceVisible && Boolean(company.publishedAt);
+  return listed ? { points: MARKETPLACE_BONUS, reason: "Marketplace listed" } : { points: 0, reason: null };
 }
 
 export function matchInvestorToCompany(
   investor: InvestorMatchProfile,
   company: CompanyMatchProfile,
+  weights: EngineWeights = DEFAULT_ENGINE_WEIGHTS,
 ): InvestorCompanyMatchResult {
   if (investor.approval_status !== "approved") {
     return {
@@ -212,32 +166,42 @@ export function matchInvestorToCompany(
     };
   }
 
-  const sector = scoreSector(investor, company);
-  const stage = scoreStage(investor, company);
-  const geography = scoreGeography(investor, company);
-  const checkSize = scoreCheckSize(investor, company);
+  const sector = scoreSector(investor, company, weights.sector);
+  const stage = scoreStage(investor, company, weights.stage);
+  const geography = scoreGeography(investor, company, weights.geography);
+  const checkSize = scoreCheckSize(investor, company, weights.checkSize);
+
+  // Normalize over ONLY the factors we could actually evaluate. A blank field
+  // (no investor preference, or no company value) drops out of the denominator
+  // instead of costing points — missing data never penalizes the founder. A
+  // field that IS set but doesn't fit still counts as a real 0.
+  let earned = 0;
+  let possible = 0;
+  for (const f of [sector, stage, geography, checkSize]) {
+    if (f.evaluated) {
+      earned += f.points;
+      possible += f.weight;
+    }
+  }
+
   const readiness = scoreReadiness(company);
   const marketplace = scoreMarketplace(company);
 
-  const matchReasons = [sector, stage, geography, checkSize, readiness, marketplace]
+  const base = possible > 0 ? (earned / possible) * 100 : 0;
+  const matchScore = Math.min(100, Math.max(0, Math.round(base + readiness.points + marketplace.points)));
+
+  const matchReasons = [sector, stage, geography, checkSize]
     .map((item) => item.reason)
+    .concat([readiness.reason, marketplace.reason])
     .filter((value): value is string => Boolean(value));
 
-  const missingFitReasons = [sector, stage, geography, checkSize, marketplace]
+  const missingFitReasons = [sector, stage, geography, checkSize]
     .map((item) => item.missing)
     .filter((value): value is string => Boolean(value));
 
-  const rawScore =
-    sector.points +
-    stage.points +
-    geography.points +
-    checkSize.points +
-    readiness.points +
-    marketplace.points;
-
   return {
     companyId: company.id,
-    matchScore: Math.min(100, Math.max(0, rawScore)),
+    matchScore,
     matchReasons,
     missingFitReasons,
   };
@@ -247,9 +211,10 @@ export function rankCompaniesForInvestor(
   investor: InvestorMatchProfile,
   companies: CompanyMatchProfile[],
   limit = 12,
+  weights?: EngineWeights,
 ) {
   return companies
-    .map((company) => ({ company, match: matchInvestorToCompany(investor, company) }))
+    .map((company) => ({ company, match: matchInvestorToCompany(investor, company, weights) }))
     .sort((a, b) => b.match.matchScore - a.match.matchScore)
     .slice(0, limit);
 }
@@ -258,10 +223,11 @@ export function rankInvestorsForCompany(
   company: CompanyMatchProfile,
   investors: InvestorMatchProfile[],
   limit = 10,
+  weights?: EngineWeights,
 ) {
   return investors
     .filter((investor) => investor.approval_status === "approved")
-    .map((investor) => ({ investor, match: matchInvestorToCompany(investor, company) }))
+    .map((investor) => ({ investor, match: matchInvestorToCompany(investor, company, weights) }))
     .sort((a, b) => b.match.matchScore - a.match.matchScore)
     .slice(0, limit);
 }

@@ -150,6 +150,8 @@ export async function PATCH(req: Request): Promise<Response> {
     const clampScore = (n: unknown, d: number) => (typeof n === "number" && n >= 0 && n <= 100 ? Math.round(n) : d);
     const w = (c.weights ?? {}) as Partial<InvestorMatchConfig["weights"]>;
     const dw = DEFAULT_MATCH_CONFIG.weights;
+    const ew = (c.engineWeights ?? {}) as Partial<InvestorMatchConfig["engineWeights"]>;
+    const dew = DEFAULT_MATCH_CONFIG.engineWeights;
     const config: InvestorMatchConfig = {
       requiredFields: { ...DEFAULT_MATCH_CONFIG.requiredFields, ...(c.requiredFields ?? {}), industry: true },
       minMatch: clampScore(c.minMatch, DEFAULT_MATCH_CONFIG.minMatch),
@@ -162,6 +164,12 @@ export async function PATCH(req: Request): Promise<Response> {
         checkSize: clampScore(w.checkSize, dw.checkSize),
         revenue: clampScore(w.revenue, dw.revenue),
         activity: clampScore(w.activity, dw.activity),
+      },
+      engineWeights: {
+        sector: clampScore(ew.sector, dew.sector),
+        stage: clampScore(ew.stage, dew.stage),
+        checkSize: clampScore(ew.checkSize, dew.checkSize),
+        geography: clampScore(ew.geography, dew.geography),
       },
     };
     const ok = await setInvestorMatchConfig(config, gate.userId);

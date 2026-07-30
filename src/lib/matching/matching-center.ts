@@ -4,7 +4,9 @@ import {
   rankInvestorsForCompany,
   type CompanyMatchProfile,
   type InvestorMatchProfile,
+  type EngineWeights,
 } from "@/lib/matching/investor-company-matching";
+import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
 import {
   loadAdminCompanyMatchProfiles,
   loadApprovedInvestorMatchProfiles,
@@ -137,8 +139,9 @@ function buildPairRow(
   investor: InvestorMatchProfile,
   company: CompanyMatchProfile,
   investorName: string,
+  weights?: EngineWeights,
 ): MatchingCenterPairRow {
-  const match = matchInvestorToCompany(investor, company);
+  const match = matchInvestorToCompany(investor, company, weights);
 
   return {
     investorId: investor.profile_id,
@@ -159,11 +162,13 @@ function buildPairRow(
 }
 
 export async function loadAdminMatchingCenterSnapshot(): Promise<AdminMatchingCenterSnapshot> {
-  const [companies, memberInvestors, prospects] = await Promise.all([
+  const [companies, memberInvestors, prospects, matchConfig] = await Promise.all([
     loadAdminCompanyMatchProfiles(),
     loadApprovedInvestorMatchProfiles(),
     loadProspectInvestorMatchProfiles(),
+    getInvestorMatchConfig(),
   ]);
+  const engineWeights = matchConfig.engineWeights;
 
   // Admin snapshot ranks members + internal prospect investors together.
   // Prospect names are pre-suffixed (" · prospect") so they read as unverified.
@@ -190,7 +195,7 @@ export async function loadAdminMatchingCenterSnapshot(): Promise<AdminMatchingCe
 
   for (const company of marketplaceCompanies) {
     for (const investor of investors) {
-      const row = buildPairRow(investor, company, nameById.get(investor.profile_id) ?? "Platform investor");
+      const row = buildPairRow(investor, company, nameById.get(investor.profile_id) ?? "Platform investor", engineWeights);
       totalPairs += 1;
       scoreSum += row.matchScore;
       distributionCounts[scoreBucket(row.matchScore)] += 1;
@@ -296,15 +301,16 @@ function formatCheckSize(min: number | null, max: number | null) {
 export { formatCheckSize as formatMatchingCheckSize };
 
 export async function loadFounderMatchingCenter(company: Company): Promise<FounderMatchingCenterSnapshot> {
-  const [investors, fitContext] = await Promise.all([
+  const [investors, fitContext, matchConfig] = await Promise.all([
     loadApprovedInvestorMatchProfiles(),
     loadFounderCompanyMatchContext(company),
+    getInvestorMatchConfig(),
   ]);
 
   const companyProfile = fitContext.companyProfile;
   const investorIds = investors.map((row) => row.profile_id);
   const nameById = await loadInvestorDisplayNames(investorIds);
-  const ranked = rankInvestorsForCompany(companyProfile, investors, 100);
+  const ranked = rankInvestorsForCompany(companyProfile, investors, 100, matchConfig.engineWeights);
 
   const matches: FounderMatchingCenterRow[] = ranked.map((row) => ({
     investorId: row.investor.profile_id,

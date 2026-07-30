@@ -123,7 +123,7 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
   });
   const companyProfile = buildCompanyMatchProfile({ id: companyId, ...c });
   const matchOf = new Map<string, number>();
-  for (const s of scored) matchOf.set(s.id, scoreContactAgainstCompany(s, companyProfile).matchScore);
+  for (const s of scored) matchOf.set(s.id, scoreContactAgainstCompany(s, companyProfile, config.engineWeights).matchScore);
   const candidates = scored.filter((s) => (matchOf.get(s.id) ?? 0) >= config.minMatch && (s.email ?? "").trim());
 
   // Investor-score qualification: bridge email → platform account → partner score.
