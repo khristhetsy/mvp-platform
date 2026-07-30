@@ -162,3 +162,63 @@ export async function setOutreachMessage(msg: OutreachMessage, updatedBy: string
     return false;
   }
 }
+
+/**
+ * Founder outreach automation (admin). Monthly send caps come from each founder's
+ * subscription plan; the schedule + pause apply platform-wide. Per-founder
+ * overrides layer on top of this via founder_outreach_overrides.
+ */
+export type SendCadence = "weekly" | "daily";
+export type AutomationConfig = {
+  /** Monthly introduction cap per subscription tier. */
+  monthlyByPlan: { basic: number; professional: number };
+  /** Nothing sends before this date (ISO yyyy-mm-dd); null = start immediately. */
+  startDate: string | null;
+  cadence: SendCadence;
+  /** Soft, time-boxed halt of ALL founder sends (distinct from the master switch). */
+  pause: { enabled: boolean; until: string | null };
+};
+
+export const DEFAULT_AUTOMATION_CONFIG: AutomationConfig = {
+  monthlyByPlan: { basic: 25, professional: 100 },
+  startDate: null,
+  cadence: "weekly",
+  pause: { enabled: false, until: null },
+};
+
+const AUTOMATION_CONFIG_KEY = "investor_automation_config";
+
+export async function getAutomationConfig(): Promise<AutomationConfig> {
+  try {
+    const { data } = await db().from("platform_settings").select("value").eq("key", AUTOMATION_CONFIG_KEY).maybeSingle();
+    const v = (data as { value?: Partial<AutomationConfig> } | null)?.value;
+    if (!v) return DEFAULT_AUTOMATION_CONFIG;
+    const mbp = (v.monthlyByPlan ?? {}) as Partial<AutomationConfig["monthlyByPlan"]>;
+    const pause = (v.pause ?? {}) as Partial<AutomationConfig["pause"]>;
+    return {
+      monthlyByPlan: {
+        basic: typeof mbp.basic === "number" ? mbp.basic : DEFAULT_AUTOMATION_CONFIG.monthlyByPlan.basic,
+        professional: typeof mbp.professional === "number" ? mbp.professional : DEFAULT_AUTOMATION_CONFIG.monthlyByPlan.professional,
+      },
+      startDate: typeof v.startDate === "string" && v.startDate ? v.startDate : null,
+      cadence: v.cadence === "daily" ? "daily" : "weekly",
+      pause: {
+        enabled: typeof pause.enabled === "boolean" ? pause.enabled : false,
+        until: typeof pause.until === "string" && pause.until ? pause.until : null,
+      },
+    };
+  } catch {
+    return DEFAULT_AUTOMATION_CONFIG;
+  }
+}
+
+export async function setAutomationConfig(cfg: AutomationConfig, updatedBy: string | null): Promise<boolean> {
+  try {
+    const { error } = await db()
+      .from("platform_settings")
+      .upsert({ key: AUTOMATION_CONFIG_KEY, value: cfg, updated_by: updatedBy, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    return !error;
+  } catch {
+    return false;
+  }
+}
