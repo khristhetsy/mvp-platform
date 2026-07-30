@@ -18,6 +18,10 @@ import {
   setOutreachMessage,
   DEFAULT_OUTREACH_MESSAGE,
   type OutreachMessage,
+  getAutomationConfig,
+  setAutomationConfig,
+  DEFAULT_AUTOMATION_CONFIG,
+  type AutomationConfig,
 } from "@/lib/settings/platform-settings";
 
 export const dynamic = "force-dynamic";
@@ -92,12 +96,13 @@ export async function GET(): Promise<Response> {
     }),
   );
 
-  const [liveSend, matchConfig, message] = await Promise.all([
+  const [liveSend, matchConfig, message, automation] = await Promise.all([
     getOutreachAutomationEnabled(),
     getInvestorMatchConfig(),
     getOutreachMessage(),
+    getAutomationConfig(),
   ]);
-  return NextResponse.json({ campaigns: summaries, liveSend, matchConfig, message });
+  return NextResponse.json({ campaigns: summaries, liveSend, matchConfig, message, automation });
 }
 
 // PATCH — automation switch, or the match/qualification control config.
@@ -135,6 +140,25 @@ export async function PATCH(req: Request): Promise<Response> {
     };
     const ok = await setInvestorMatchConfig(config, gate.userId);
     return NextResponse.json({ ok, matchConfig: config });
+  }
+
+  if (body?.action === "set_automation_config" && body.config && typeof body.config === "object") {
+    const c = body.config as Partial<AutomationConfig>;
+    const clampCap = (n: unknown, d: number) => (typeof n === "number" && n >= 0 && n <= 100000 ? Math.round(n) : d);
+    const isoDate = (v: unknown): string | null => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+    const mbp = (c.monthlyByPlan ?? {}) as Partial<AutomationConfig["monthlyByPlan"]>;
+    const pause = (c.pause ?? {}) as Partial<AutomationConfig["pause"]>;
+    const config: AutomationConfig = {
+      monthlyByPlan: {
+        basic: clampCap(mbp.basic, DEFAULT_AUTOMATION_CONFIG.monthlyByPlan.basic),
+        professional: clampCap(mbp.professional, DEFAULT_AUTOMATION_CONFIG.monthlyByPlan.professional),
+      },
+      startDate: isoDate(c.startDate),
+      cadence: c.cadence === "daily" ? "daily" : "weekly",
+      pause: { enabled: pause.enabled === true, until: isoDate(pause.until) },
+    };
+    const ok = await setAutomationConfig(config, gate.userId);
+    return NextResponse.json({ ok, automation: config });
   }
 
   if (body?.action === "set_message" && body.config && typeof body.config === "object") {
