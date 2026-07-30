@@ -7,6 +7,7 @@ import { buildUnsubscribeUrl, filterUnsubscribed } from "@/lib/outreach/unsubscr
 import { getOutreachAutomationEnabled, getInvestorMatchConfig, getOutreachMessage } from "@/lib/settings/platform-settings";
 import { resolveFounderOutreachConfig, type EffectiveOutreachConfig } from "@/lib/outreach/founder-overrides";
 import { getDoNotContactList, matchesDoNotContact } from "@/lib/founder/deploy-preferences";
+import { buildCompanyMatchProfile, scoreContactAgainstCompany } from "@/lib/matching/contact-match";
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 
 /** Formats a raise amount as a compact "~$2M" / "~$500K" string. */
@@ -96,17 +97,23 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
 
   const { data: comp } = await db
     .from("companies")
-    .select("funding_amount, revenue_stage, use_of_funds, industry")
+    .select("company_name, slug, funding_amount, revenue_stage, use_of_funds, industry, state, country, review_status, is_published, marketplace_visible, published_at")
     .eq("id", companyId)
     .maybeSingle();
   if (!comp) return { created: false };
-  const c = comp as { funding_amount: number | null; revenue_stage: string | null; use_of_funds: string | null; industry: string | null };
+  const c = comp as {
+    company_name: string | null; slug: string | null;
+    funding_amount: number | null; revenue_stage: string | null; use_of_funds: string | null; industry: string | null;
+    state: string | null; country: string | null; review_status: string | null;
+    is_published: boolean | null; marketplace_visible: boolean | null; published_at: string | null;
+  };
 
   // Admin match/qualification rules (industry required, thresholds).
   const config = await getInvestorMatchConfig();
 
-  // Score every investor's live structured profile against the company (same
-  // engine as the founder board), with industry required if configured.
+  // Load investor contacts (industry-filtered), then score each with the SAME
+  // additive engine the founder board uses, so who gets emailed matches what the
+  // founder sees.
   const scored = await loadInvestorContacts({
     scoreAgainst: { fundingAmount: c.funding_amount, revenue: null, revenueStage: c.revenue_stage, useOfFunds: c.use_of_funds, industry: c.industry },
     investorsOnly: true,
@@ -114,7 +121,10 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
     weights: config.weights,
     limit: 3000,
   });
-  const candidates = scored.filter((s) => (s.match?.score ?? 0) >= config.minMatch && (s.email ?? "").trim());
+  const companyProfile = buildCompanyMatchProfile({ id: companyId, ...c });
+  const matchOf = new Map<string, number>();
+  for (const s of scored) matchOf.set(s.id, scoreContactAgainstCompany(s, companyProfile).matchScore);
+  const candidates = scored.filter((s) => (matchOf.get(s.id) ?? 0) >= config.minMatch && (s.email ?? "").trim());
 
   // Investor-score qualification: bridge email → platform account → partner score.
   const emails = [...new Set(candidates.map((s) => s.email!.trim().toLowerCase()))];
@@ -152,7 +162,7 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
     investor_ref: s.id, // crm_contact id
     investor_name: s.name,
     email: s.email,
-    match_score: s.match?.score ?? 0,
+    match_score: matchOf.get(s.id) ?? 0,
     status: "queued",
   }));
   await db.from("investor_outreach_recipients").upsert(rows, { onConflict: "campaign_id,investor_ref", ignoreDuplicates: true });

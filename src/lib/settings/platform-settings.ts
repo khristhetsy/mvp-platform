@@ -86,7 +86,7 @@ export type InvestorMatchConfig = {
 
 export const DEFAULT_MATCH_CONFIG: InvestorMatchConfig = {
   requiredFields: { industry: true, checkSize: false, revenueStage: false, useOfFunds: false, geography: false, activeRating: false, investorType: false, capitalType: false },
-  minMatch: 60,
+  minMatch: 30,
   minInvestorScore: 50,
   requireRated: false,
   weights: DEFAULT_WEIGHTS,
