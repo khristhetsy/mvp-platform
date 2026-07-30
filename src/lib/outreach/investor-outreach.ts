@@ -5,7 +5,7 @@ import { sendEmail } from "@/lib/email/send-email";
 import { renderIntroEmail } from "@/lib/outreach/intro-template";
 import { buildUnsubscribeUrl, filterUnsubscribed } from "@/lib/outreach/unsubscribe";
 import { getOutreachAutomationEnabled, getInvestorMatchConfig, getOutreachMessage } from "@/lib/settings/platform-settings";
-import { resolveFounderOutreachConfig, type EffectiveOutreachConfig } from "@/lib/outreach/founder-overrides";
+import { resolveFounderOutreachConfig, loadOutreachGlobals, type EffectiveOutreachConfig } from "@/lib/outreach/founder-overrides";
 import { getDoNotContactList, matchesDoNotContact } from "@/lib/founder/deploy-preferences";
 import { buildCompanyMatchProfile, scoreContactAgainstCompany } from "@/lib/matching/contact-match";
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
@@ -118,7 +118,7 @@ export async function createDraftFromMatch(companyId: string): Promise<{ created
     scoreAgainst: { fundingAmount: c.funding_amount, revenue: null, revenueStage: c.revenue_stage, useOfFunds: c.use_of_funds, industry: c.industry },
     investorsOnly: true,
     requireIndustryMatch: config.requiredFields.industry,
-    weights: config.weights,
+    score: false,
     limit: 3000,
   });
   const companyProfile = buildCompanyMatchProfile({ id: companyId, ...c });
@@ -298,6 +298,8 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
 
   const todayIso = new Date().toISOString().slice(0, 10);
   const monthStart = (() => { const d = new Date(); d.setUTCDate(1); d.setUTCHours(0, 0, 0, 0); return d.toISOString(); })();
+  // Global config rows are identical for every campaign — load once for the pass.
+  const globals = await loadOutreachGlobals();
 
   for (const campaign of list) {
     const now = new Date().toISOString();
@@ -308,7 +310,7 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
     {
       const { data: cRow } = await db.from("companies").select("founder_id").eq("id", campaign.company_id).maybeSingle();
       const founderId = (cRow as { founder_id?: string } | null)?.founder_id ?? null;
-      if (founderId) eff = await resolveFounderOutreachConfig({ id: campaign.company_id, founder_id: founderId });
+      if (founderId) eff = await resolveFounderOutreachConfig({ id: campaign.company_id, founder_id: founderId }, globals);
     }
 
     // Gate BEFORE claiming so we don't burn last_run_at: automation pause (global

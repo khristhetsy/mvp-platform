@@ -1,8 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Company } from "@/lib/supabase/types";
 import { loadInvestorContacts } from "@/lib/investors/load-investor-matches";
-import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
-import { resolveFounderOutreachConfig } from "@/lib/outreach/founder-overrides";
+import { getInvestorMatchConfig, getAutomationConfig } from "@/lib/settings/platform-settings";
+import { getFounderOverride } from "@/lib/outreach/founder-overrides";
 import { type InvestorCompanyMatchResult } from "@/lib/matching/investor-company-matching";
 import { buildCompanyMatchProfile, scoreContactAgainstCompany } from "@/lib/matching/contact-match";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -110,20 +110,26 @@ export async function loadFounderInvestorBoard(
     industry: company.industry ?? null,
   };
   const matchConfig = await getInvestorMatchConfig();
-  const scored = (await loadInvestorContacts({
+  // Load + industry-filter only — no legacy preference scoring pass (we re-score
+  // with the matching engine below, so scoring here would be wasted work).
+  const candidates = await loadInvestorContacts({
     scoreAgainst,
     investorsOnly: true,
     requireIndustryMatch: matchConfig.requiredFields.industry,
-    weights: matchConfig.weights,
+    score: false,
     limit: 3000,
-  })).slice(0, limit);
+  });
 
   // Score each investor with the platform's additive matching engine (the same
-  // one behind /admin/matching) — sector + stage + check-size + geography +
-  // marketplace — so scores spread by real fit instead of pegging to 100.
+  // one behind /admin/matching), then rank by that score and take the top N — so
+  // the shown investors are genuinely the best matches, not the best under a
+  // scorer we don't display.
   const companyProfile = buildCompanyMatchProfile(company);
   const matchOf = new Map<string, InvestorCompanyMatchResult>();
-  for (const s of scored) matchOf.set(s.id, scoreContactAgainstCompany(s, companyProfile, matchConfig.engineWeights));
+  for (const s of candidates) matchOf.set(s.id, scoreContactAgainstCompany(s, companyProfile, matchConfig.engineWeights));
+  const scored = [...candidates]
+    .sort((a, b) => (matchOf.get(b.id)?.matchScore ?? 0) - (matchOf.get(a.id)?.matchScore ?? 0))
+    .slice(0, limit);
 
   const admin = createServiceRoleClient();
   const rawAdmin = admin as unknown as SupabaseClient;
@@ -236,9 +242,15 @@ export async function loadFounderInvestorBoard(
 
   // Whether queued introductions are currently held: the founder's campaign is
   // paused, or automation is paused (global default or per-founder override).
-  const eff = await resolveFounderOutreachConfig({ id: company.id, founder_id: company.founder_id });
+  // Only the effective pause is needed here, so read it directly (2 queries)
+  // rather than resolving the full effective config.
+  const [automationCfg, founderOverride] = await Promise.all([
+    getAutomationConfig(),
+    getFounderOverride(company.id),
+  ]);
+  const effPause = founderOverride?.automation?.pause ?? automationCfg.pause;
   const todayIso = new Date().toISOString().slice(0, 10);
-  const automationPaused = eff.pause.enabled && (!eff.pause.until || eff.pause.until >= todayIso);
+  const automationPaused = effPause.enabled && (!effPause.until || effPause.until >= todayIso);
   const boardPaused = campaignPaused || automationPaused;
 
   const rows: FounderInvestorRow[] = scored.map((s, index) => {

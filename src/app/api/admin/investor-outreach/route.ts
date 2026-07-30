@@ -23,7 +23,7 @@ import {
   DEFAULT_AUTOMATION_CONFIG,
   type AutomationConfig,
 } from "@/lib/settings/platform-settings";
-import { resolveFounderOutreachConfig } from "@/lib/outreach/founder-overrides";
+import { resolveFounderOutreachConfig, loadOutreachGlobals } from "@/lib/outreach/founder-overrides";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +82,8 @@ export async function GET(): Promise<Response> {
   const admin = createServiceRoleClient() as unknown as SupabaseClient;
 
   const monthStart = (() => { const d = new Date(); d.setUTCDate(1); d.setUTCHours(0, 0, 0, 0); return d.toISOString(); })();
+  // Global config rows are identical for every campaign — load once, reuse.
+  const globals = await loadOutreachGlobals();
 
   const summaries = await Promise.all(
     campaigns.map(async (campaign): Promise<OutreachCampaignSummary> => {
@@ -102,7 +104,7 @@ export async function GET(): Promise<Response> {
       let monthlyCap = 0;
       let customized = false;
       if (comp?.founder_id) {
-        const eff = await resolveFounderOutreachConfig({ id: campaign.company_id, founder_id: comp.founder_id });
+        const eff = await resolveFounderOutreachConfig({ id: campaign.company_id, founder_id: comp.founder_id }, globals);
         planType = eff.planType;
         monthlyCap = eff.monthlyCap;
         customized = eff.customized.match || eff.customized.automation || eff.customized.message;

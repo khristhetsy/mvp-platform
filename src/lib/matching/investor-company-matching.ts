@@ -162,8 +162,7 @@ function scoreCheckSize(investor: InvestorMatchProfile, company: CompanyMatchPro
 }
 
 function listsOverlap(a: string[], b: string[]): boolean {
-  const bt = b;
-  return a.some((x) => bt.some((y) => x.includes(y) || y.includes(x)));
+  return a.some((x) => b.some((y) => x.includes(y) || y.includes(x)));
 }
 
 function scoreInvestorType(investor: InvestorMatchProfile, company: CompanyMatchProfile, weight: number): FactorResult {

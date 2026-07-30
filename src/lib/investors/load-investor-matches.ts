@@ -210,6 +210,10 @@ export async function loadInvestorContacts(opts?: {
   requireIndustryMatch?: boolean;
   /** Graded-match factor weights (admin-adjustable); defaults when omitted. */
   weights?: MatchWeights;
+  /** When false, load + industry-filter only and skip the (legacy) preference
+   *  scoring + sort. Callers that re-score with the matching engine pass false to
+   *  avoid a wasted scoring pass. Defaults true for the admin sales-match pages. */
+  score?: boolean;
 }): Promise<ScoredInvestorContact[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceRoleClient() as any;
@@ -267,7 +271,8 @@ export async function loadInvestorContacts(opts?: {
 
   // Score only on fields that actually discriminate between investors, so
   // non-discriminating data (everyone identical) doesn't peg every match to 100%.
-  if (opts?.scoreAgainst) {
+  // Skipped when `score: false` (board/enrollment re-score with the match engine).
+  if (opts?.scoreAgainst && opts.score !== false) {
     const informative = computeInformativeFields(filtered.map((r) => r.preferences));
     for (const r of filtered) {
       r.match = scoreInvestorPreferenceMatch(opts.scoreAgainst, maskPreferences(r.preferences, informative), opts.weights);

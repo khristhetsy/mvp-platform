@@ -112,17 +112,37 @@ function hasKeys(o: object | undefined | null): boolean {
  * Resolve the EFFECTIVE outreach config for one founder: global defaults + plan
  * cap + per-founder override. Match/industry stays locked-required regardless.
  */
-export async function resolveFounderOutreachConfig(company: {
-  id: string;
-  founder_id: string;
-}): Promise<EffectiveOutreachConfig> {
-  const [globalMatch, globalMessage, automation, override, plan] = await Promise.all([
+/** The global (identical-for-everyone) config rows. Load once and reuse across
+ *  many founders instead of re-fetching them per campaign. */
+export type OutreachGlobals = {
+  match: InvestorMatchConfig;
+  message: OutreachMessage;
+  automation: AutomationConfig;
+};
+
+export async function loadOutreachGlobals(): Promise<OutreachGlobals> {
+  const [match, message, automation] = await Promise.all([
     getInvestorMatchConfig(),
     getOutreachMessage(),
     getAutomationConfig(),
+  ]);
+  return { match, message, automation };
+}
+
+export async function resolveFounderOutreachConfig(
+  company: { id: string; founder_id: string },
+  globals?: OutreachGlobals,
+): Promise<EffectiveOutreachConfig> {
+  // The three global rows are identical for every founder — accept them
+  // pre-loaded so a caller iterating many campaigns fetches them just once.
+  const g = globals ?? (await loadOutreachGlobals());
+  const [override, plan] = await Promise.all([
     getFounderOverride(company.id),
     getUserPlan(company.founder_id).catch(() => null),
   ]);
+  const globalMatch = g.match;
+  const globalMessage = g.message;
+  const automation = g.automation;
 
   const om = override?.match;
   const match: InvestorMatchConfig = {
@@ -151,17 +171,4 @@ export async function resolveFounderOutreachConfig(company: {
     planType: plan,
     customized: { match: hasKeys(om), automation: hasKeys(oa), message: hasKeys(override?.message) },
   };
-}
-
-/** Batch resolver for the campaign list — one config per company. */
-export async function resolveFounderOutreachConfigs(
-  companies: Array<{ id: string; founder_id: string }>,
-): Promise<Map<string, EffectiveOutreachConfig>> {
-  const out = new Map<string, EffectiveOutreachConfig>();
-  await Promise.all(
-    companies.map(async (c) => {
-      out.set(c.id, await resolveFounderOutreachConfig(c));
-    }),
-  );
-  return out;
 }
