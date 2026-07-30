@@ -1,9 +1,16 @@
 import type { FounderInvestorRow } from "@/lib/founder/private-market";
 
+/** Abbreviate a display name to "F. Last" (first initial + surname). */
+function abbreviateName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return name.trim();
+  return `${parts[0][0].toUpperCase()}. ${parts.slice(1).join(" ")}`;
+}
+
 /**
- * Scrolling strip of the founder's real ranked investors — handle, focus, match,
- * and check size. Real data only (identities stay anonymized); no fabricated
- * activity. CSS-only animation. Renders nothing when there are no investors.
+ * Scrolling strip of the founder's real ranked investors — abbreviated name,
+ * firm, focus sector, and match. Real data only; no fabricated activity.
+ * CSS-only animation. Renders nothing when there are no investors.
  */
 export function FounderPrivateMarketTicker({ rows }: Readonly<{ rows: FounderInvestorRow[] }>) {
   if (rows.length === 0) return null;
@@ -17,16 +24,16 @@ export function FounderPrivateMarketTicker({ rows }: Readonly<{ rows: FounderInv
           Live
         </span>
         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-white to-transparent" aria-hidden />
-        <div className="cap-marquee flex w-max items-center whitespace-nowrap">
+        <div className="cap-marquee flex w-max items-center whitespace-nowrap" style={{ animationDuration: "34s" }}>
           {loop.map((r, i) => (
             <span
               key={`${r.symbol}-${i}`}
               className="flex h-5 items-center gap-2 border-r border-slate-200 px-5 text-[12.5px]"
             >
-              <span className="font-mono text-[12px] font-semibold text-[var(--navy)]">{r.symbol}</span>
+              <span className="text-[12px] font-semibold text-[var(--navy)]">{abbreviateName(r.name)}</span>
+              {r.company ? <span className="text-[11px] text-slate-400">{r.company}</span> : null}
               {r.sectors[0] ? <span className="font-mono text-[11px] text-slate-400">{r.sectors[0]}</span> : null}
               <span className="font-mono text-[11px] font-semibold text-[var(--indigo)]">match {r.matchScore}</span>
-              <span className="font-mono text-[11px] text-slate-500">{r.checkSize}</span>
             </span>
           ))}
         </div>

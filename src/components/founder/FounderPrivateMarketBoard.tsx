@@ -107,7 +107,7 @@ function OutreachPill({ status }: { status: OutreachStatus }) {
   );
 }
 
-const COLS = "sm:grid-cols-[1.7fr_0.7fr_1.1fr_1fr]";
+const COLS = "sm:grid-cols-[1.5fr_0.9fr_0.9fr_0.6fr_1.1fr_0.9fr]";
 
 function ProfileModal({ r, onClose }: { r: FounderInvestorRow; onClose: () => void }) {
   const advice = buildAdvice(r);
@@ -215,6 +215,8 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
 
       <div className={`hidden gap-3 border-b border-slate-200 bg-slate-50 px-5 py-2.5 font-mono text-[9.5px] uppercase tracking-wide text-slate-400 sm:grid ${COLS}`}>
         <div>{t("investor")}</div>
+        <div>Type of investor(s)</div>
+        <div>Industry / sector</div>
         <div className="text-right">{t("match")}</div>
         <div className="text-center">Outreach</div>
         <div className="text-center">Investor score</div>
@@ -239,15 +241,22 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
               </span>
               <div className="min-w-0">
                 <div className="text-[13.5px] font-semibold text-[var(--navy)]">{r.name}</div>
-                <div className="text-[11.5px] text-slate-400">{r.label}</div>
-                {r.sectors.length ? (
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {r.sectors.map((s) => (
-                      <span key={s} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">{s}</span>
-                    ))}
-                  </div>
-                ) : null}
+                {r.company ? <div className="text-[11px] text-slate-400">{r.company}</div> : null}
               </div>
+            </div>
+
+            <div className="flex items-center text-[11.5px] text-slate-600 sm:justify-start">
+              <span className="sm:hidden mr-1 font-mono text-[9px] uppercase tracking-wide text-slate-400">Type:</span>
+              {r.label || "—"}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="sm:hidden mr-1 font-mono text-[9px] uppercase tracking-wide text-slate-400">Sector:</span>
+              {r.sectors.length ? (
+                r.sectors.map((s) => (
+                  <span key={s} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">{s}</span>
+                ))
+              ) : <span className="text-slate-300">—</span>}
             </div>
 
             <div className="text-right">

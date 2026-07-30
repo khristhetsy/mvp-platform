@@ -15,7 +15,7 @@ export function FounderPrivateMarketSummaryCards({
   const cards: { key: CardKey; icon: LucideIcon; label: string; value: string; sub: string; tint: string; bg: string }[] = [
     { key: "contacts", icon: Users, label: "Total investor contacts", value: summary.totalContacts.toLocaleString(), sub: "in the iCapOS network", tint: "var(--indigo)", bg: "var(--indigo-soft)" },
     { key: "reached", icon: Send, label: "Reached out", value: String(summary.reachedOut), sub: `of ${summary.investorUniverse} contacted`, tint: "var(--teal)", bg: "var(--teal-muted)" },
-    { key: "score", icon: Gauge, label: "Avg investor score", value: summary.avgScore != null ? String(summary.avgScore) : "—", sub: "across rated investors", tint: "var(--navy)", bg: "var(--navy-muted)" },
+    { key: "score", icon: Gauge, label: "Avg match score", value: summary.avgMatch != null ? String(summary.avgMatch) : "—", sub: `across your ${rankedCount} matches`, tint: "var(--navy)", bg: "var(--navy-muted)" },
   ];
 
   const detail: Record<CardKey, { title: string; sub: string; rows: [string, string][]; advice: string[] }> = {
@@ -46,13 +46,17 @@ export function FounderPrivateMarketSummaryCards({
       ],
     },
     score: {
-      title: "Avg investor score",
-      sub: "Platform partner-quality rating",
-      rows: [["Average", summary.avgScore != null ? String(summary.avgScore) : "— (insufficient data)"]],
+      title: "Avg match score",
+      sub: "Rules-based fit to your company profile",
+      rows: [
+        ["Average match", summary.avgMatch != null ? String(summary.avgMatch) : "— (no matches yet)"],
+        ["Strong fits (75+)", String(summary.strongCount)],
+        ["Ranked to you", String(rankedCount)],
+      ],
       advice: [
-        summary.avgScore == null
-          ? "Investor scores need engagement history (pledges, deal rooms, responsiveness). Your ranked investors have little yet, so scores read “insufficient data” — they populate as they engage."
-          : "A higher average means more active, responsive partners in your ranking — prioritize the highest-scored for outreach.",
+        summary.avgMatch == null
+          ? "No matches scored yet. Set your industry, raise amount, stage, and use of funds so investors can be scored against your profile."
+          : "Your average match reflects sector fit, check size, stage, and revenue alignment. Sharpen your profile and raise details to lift lower-scoring matches.",
       ],
     },
   };

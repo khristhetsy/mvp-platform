@@ -287,14 +287,6 @@ export default async function FounderDeployPage() {
         ) : null}
         <FounderPrivateMarketTicker rows={board.rows} />
         <FounderPrivateMarketSummaryCards summary={board.summary} rankedCount={board.rows.length} />
-        <div className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-600">
-          <span aria-hidden="true">ⓘ</span>
-          <span>
-            <b className="text-slate-800">Information display only.</b> Match scores reflect rules-based fit to your
-            company profile. Contact details are hidden and introductions run through iCapOS. Nothing here is investment
-            advice, a solicitation, or a guarantee of funding.
-          </span>
-        </div>
         <FounderPrivateMarketBoard rows={board.rows} />
       </>
     ) : (

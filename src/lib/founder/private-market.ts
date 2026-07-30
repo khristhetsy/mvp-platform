@@ -15,6 +15,8 @@ export type FounderInvestorRow = {
   symbol: string;
   /** Investor display name (members from profiles, prospects from CRM). */
   name: string;
+  /** Investor's firm / company from the CRM, when present. */
+  company: string | null;
   label: string;
   matchScore: number;
   /** Per-factor fit for the profile popup (0 / 50 / 100). */
@@ -254,6 +256,7 @@ export async function loadFounderInvestorBoard(
     return {
       symbol: `INV·${code}`,
       name: s.name,
+      company: s.company ?? null,
       label: type,
       matchScore,
       fitSector: 0,
