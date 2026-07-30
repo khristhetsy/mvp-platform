@@ -1,8 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Company } from "@/lib/supabase/types";
-import { loadInvestorContacts } from "@/lib/investors/load-investor-matches";
+import { loadInvestorContacts, type ScoredInvestorContact } from "@/lib/investors/load-investor-matches";
 import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
 import { resolveFounderOutreachConfig } from "@/lib/outreach/founder-overrides";
+import { matchInvestorToCompany, type CompanyMatchProfile, type InvestorMatchProfile, type InvestorCompanyMatchResult } from "@/lib/matching/investor-company-matching";
+import { parseMoneyBand } from "@/lib/investors/preference-match";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 import { TIER_LABELS, type PartnerScore } from "@/lib/investor-rating/types";
@@ -115,6 +117,40 @@ export async function loadFounderInvestorBoard(
     weights: matchConfig.weights,
     limit: 3000,
   })).slice(0, limit);
+
+  // Score each investor with the platform's additive matching engine (the same
+  // one behind /admin/matching) — sector + stage + check-size + geography +
+  // marketplace — so scores spread by real fit instead of pegging to 100.
+  const companyProfile: CompanyMatchProfile = {
+    id: company.id,
+    companyName: company.company_name,
+    slug: company.slug ?? null,
+    industry: company.industry ?? null,
+    stage: company.revenue_stage ?? null,
+    geography: [company.state, company.country].filter(Boolean).join(", ") || null,
+    fundingAmount: company.funding_amount ?? null,
+    readinessScore: null,
+    onboardingPercent: 100,
+    reviewStatus: company.review_status ?? null,
+    isPublished: Boolean(company.is_published),
+    marketplaceVisible: Boolean(company.marketplace_visible),
+    publishedAt: company.published_at ?? null,
+  };
+  const invProfileFromContact = (s: ScoredInvestorContact): InvestorMatchProfile => {
+    const band = s.preferences.investmentSize[0] ? parseMoneyBand(s.preferences.investmentSize[0]) : null;
+    return {
+      profile_id: s.id,
+      investor_type: s.investorType,
+      check_size_min: band ? band.min : null,
+      check_size_max: band && Number.isFinite(band.max) ? band.max : null,
+      preferred_sectors: s.sectors,
+      preferred_geographies: [],
+      preferred_stages: s.preferences.useOfFunds,
+      approval_status: "approved",
+    };
+  };
+  const matchOf = new Map<string, InvestorCompanyMatchResult>();
+  for (const s of scored) matchOf.set(s.id, matchInvestorToCompany(invProfileFromContact(s), companyProfile));
 
   const admin = createServiceRoleClient();
   const rawAdmin = admin as unknown as SupabaseClient;
@@ -234,8 +270,9 @@ export async function loadFounderInvestorBoard(
 
   const rows: FounderInvestorRow[] = scored.map((s, index) => {
     const pid = pidOf(s.email);
-    const reasons = new Set(s.match?.reasons ?? []);
-    const matchScore = s.match?.score ?? 50;
+    const result = matchOf.get(s.id);
+    const reasons = new Set(result?.matchReasons ?? []);
+    const matchScore = result?.matchScore ?? 0;
     const sectors = s.sectors; // full list — shown as chips so nothing is cut off
     const type = s.investorType ?? "Investor";
     const code = String(s.id).replace(/[^a-z0-9]/gi, "").slice(-4).toUpperCase() || String(index + 1).padStart(4, "0");
@@ -261,10 +298,10 @@ export async function loadFounderInvestorBoard(
       company: s.company ?? null,
       label: type,
       matchScore,
-      fitSector: 0,
-      fitStage: reasons.has("Use-of-funds / stage fit") ? 100 : 0,
-      fitCheck: reasons.has("Check size fits the raise") ? 100 : 0,
-      fitGeo: 0,
+      fitSector: reasons.has("Sector alignment") ? 100 : 0,
+      fitStage: reasons.has("Stage alignment") ? 100 : 0,
+      fitCheck: reasons.has("Check size fit") || reasons.has("Partial check size overlap") ? 100 : 0,
+      fitGeo: reasons.has("Geography alignment") ? 100 : 0,
       stages: [],
       geographies: [],
       band: matchBand(matchScore),
@@ -296,7 +333,7 @@ export async function loadFounderInvestorBoard(
     return bt - at;
   });
 
-  const shownScores = scored.map((s) => s.match?.score ?? 50);
+  const shownScores = scored.map((s) => matchOf.get(s.id)?.matchScore ?? 0);
   const ratedScores = rows.map((r) => r.investorScore).filter((s): s is number => s != null);
   const summary: FounderPrivateMarketSummary = {
     investorUniverse: totalContacts,
