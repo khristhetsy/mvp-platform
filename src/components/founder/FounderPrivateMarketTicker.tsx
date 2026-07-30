@@ -24,7 +24,7 @@ export function FounderPrivateMarketTicker({ rows }: Readonly<{ rows: FounderInv
           Live
         </span>
         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-white to-transparent" aria-hidden />
-        <div className="cap-marquee flex w-max items-center whitespace-nowrap" style={{ animationDuration: "34s" }}>
+        <div className="cap-marquee flex w-max items-center whitespace-nowrap" style={{ animationDuration: "72s" }}>
           {loop.map((r, i) => (
             <span
               key={`${r.symbol}-${i}`}

@@ -12,7 +12,7 @@ import { buildProfileCompletion } from "@/lib/data/founder-readiness";
 import { evaluateFounderJourney } from "@/lib/founder-journey/evaluate";
 import { loadFounderInvestorHub } from "@/lib/founder-crm/load-founder-investor-hub";
 import { ManualOutreachBuilder } from "@/components/founder/ManualOutreachBuilder";
-import { ensureFounderAutomatedOutreach, getFounderOutreachStatus } from "@/lib/outreach/investor-outreach";
+import { ensureFounderAutomatedOutreach } from "@/lib/outreach/investor-outreach";
 import { FounderAppShell } from "@/components/FounderAppShell";
 import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { FounderJourneyGate } from "@/components/founder/FounderJourneyGate";
@@ -123,8 +123,6 @@ export default async function FounderDeployPage() {
   let board: Awaited<ReturnType<typeof loadFounderInvestorBoard>> | null = null;
   let hub: Awaited<ReturnType<typeof loadFounderInvestorHub>> | null = null;
   let investableScore = 0;
-  let outreachPaused = false;
-  let outreachActive = false;
 
   if (company) {
     const supabase = await createServerSupabaseClient();
@@ -162,9 +160,6 @@ export default async function FounderDeployPage() {
     if (investableScore >= OUTREACH_THRESHOLD) {
       try {
         await ensureFounderAutomatedOutreach(company.id, profile.id);
-        const status = await getFounderOutreachStatus(company.id);
-        outreachActive = status.exists;
-        outreachPaused = status.paused;
       } catch {
         // Non-fatal.
       }
@@ -268,23 +263,6 @@ export default async function FounderDeployPage() {
   const automatedNode =
     company && board ? (
       <>
-        {investableScore >= OUTREACH_THRESHOLD ? (
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-900">Automated outreach</p>
-              <p className="text-xs text-slate-500">
-                {!outreachActive
-                  ? "On — waiting for a strong-fit investor. It starts automatically as soon as one appears."
-                  : outreachPaused
-                    ? "Paused by an administrator. It will resume when the iCapOS team re-enables it."
-                    : "Running — your Founder Preview is being shared with matched investors."}
-              </p>
-            </div>
-            <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
-              🔒 View only · Managed by iCapOS
-            </span>
-          </div>
-        ) : null}
         <FounderPrivateMarketTicker rows={board.rows} />
         <FounderPrivateMarketSummaryCards summary={board.summary} rankedCount={board.rows.length} />
         <FounderPrivateMarketBoard rows={board.rows} />
