@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Company } from "@/lib/supabase/types";
 import { loadInvestorContacts } from "@/lib/investors/load-investor-matches";
 import { getInvestorMatchConfig } from "@/lib/settings/platform-settings";
+import { resolveFounderOutreachConfig } from "@/lib/outreach/founder-overrides";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 import { TIER_LABELS, type PartnerScore } from "@/lib/investor-rating/types";
@@ -42,6 +43,9 @@ export type FounderInvestorRow = {
   /** For queued investors: the projected send date (ISO) from the weekly pass +
    *  cap ordering. Null for non-queued statuses. */
   scheduledSendAt: string | null;
+  /** Queued but held: the campaign is paused (founder off-switch) or automation
+   *  is paused (global / per-founder), so nothing sends until it resumes. */
+  paused: boolean;
   /** Platform partner score (0–100), null when the investor is unrated ("New"). */
   investorScore: number | null;
   scoreTier: string | null;
@@ -155,16 +159,18 @@ export async function loadFounderInvestorBoard(
   >();
   let campaignLastRun: string | null = null;
   let campaignCap = 10;
+  let campaignPaused = false;
   {
     const { data: campaign } = await rawAdmin
       .from("investor_outreach_campaigns")
-      .select("id, last_run_at, weekly_cap")
+      .select("id, last_run_at, weekly_cap, paused")
       .eq("company_id", company.id)
       .maybeSingle();
-    const campMeta = campaign as { id: string; last_run_at: string | null; weekly_cap: number | null } | null;
+    const campMeta = campaign as { id: string; last_run_at: string | null; weekly_cap: number | null; paused: boolean | null } | null;
     const campaignId = campMeta?.id ?? null;
     campaignLastRun = campMeta?.last_run_at ?? null;
     campaignCap = campMeta?.weekly_cap ?? 10;
+    campaignPaused = Boolean(campMeta?.paused);
     if (campaignId) {
       const { data: recips } = await rawAdmin
         .from("investor_outreach_recipients")
@@ -215,6 +221,13 @@ export async function loadFounderInvestorBoard(
     }
   }
 
+  // Whether queued introductions are currently held: the founder's campaign is
+  // paused, or automation is paused (global default or per-founder override).
+  const eff = await resolveFounderOutreachConfig({ id: company.id, founder_id: company.founder_id });
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const automationPaused = eff.pause.enabled && (!eff.pause.until || eff.pause.until >= todayIso);
+  const boardPaused = campaignPaused || automationPaused;
+
   const rows: FounderInvestorRow[] = scored.map((s, index) => {
     const pid = pidOf(s.email);
     const reasons = new Set(s.match?.reasons ?? []);
@@ -259,9 +272,10 @@ export async function loadFounderInvestorBoard(
       trend: null,
       outreach,
       outreachActivityAt: oe?.clickedAt ?? oe?.openedAt ?? oe?.sentAt ?? null,
-      scheduledSendAt: oe?.status === "queued"
+      scheduledSendAt: oe?.status === "queued" && !boardPaused
         ? new Date(nextRunMs + Math.floor((queuedRank.get(s.id) ?? 0) / cap) * WEEK_MS).toISOString()
         : null,
+      paused: outreach === "queued" ? boardPaused : false,
       investorScore: ps?.score ?? null,
       scoreTier: ps ? TIER_LABELS[ps.tier] : null,
       scoreRated: ps?.status === "rated",
