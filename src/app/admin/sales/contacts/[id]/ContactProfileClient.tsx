@@ -632,6 +632,19 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                     return (
                       <div key={sec.title} style={{ marginTop: 14 }}>
                         <p style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "#4338CA", margin: "0 0 5px", paddingBottom: 4, borderBottom: "0.5px solid #eef1f5" }}>{sec.title}</p>
+                        {sec.title === "Highlights" ? (
+                          (() => {
+                            const text = sec.fields.flatMap((f) => f.values).join(" ").trim();
+                            return text ? (
+                              <details style={{ fontSize: 12.5, color: "var(--foreground)", lineHeight: 1.6 }}>
+                                <summary style={{ cursor: "pointer", color: "#4338CA", fontSize: 11.5 }}>Show full highlights</summary>
+                                <p style={{ marginTop: 6, whiteSpace: "pre-wrap" }}>{text}</p>
+                              </details>
+                            ) : (
+                              <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: 0 }}>—</p>
+                            );
+                          })()
+                        ) : (
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 28px" }}>
                           {sec.title.toLowerCase().includes("information") && (
                             <>
@@ -662,6 +675,7 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                             />
                           ))}
                         </div>
+                        )}
                       </div>
                     );
                   })}

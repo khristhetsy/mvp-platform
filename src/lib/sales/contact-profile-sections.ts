@@ -43,9 +43,27 @@ const FOUNDER_SCHEMA: SectionDef[] = [
     title: "Seeking",
     fields: [
       { display: "Type of investor(s)", match: "type of investor", odoo: "Entrepreneur seeking type of investor(s)?" },
-      { display: "Type(s) of capital", match: "type", odoo: "Entrepreneur seeking type(s) of capital?" },
+      { display: "Type(s) of capital", match: "seeking type(s) of capital", odoo: "Entrepreneur seeking type(s) of capital?" },
       { display: "Amount of capital", match: "amount", odoo: "Entrepreneur seeking amount of capital?" },
       { display: "Use of funds", match: "use of funds", odoo: "Entrepreneur use of funds?" },
+      { display: "Business entity", match: "business entity", odoo: "Entrepreneur type(s) of business entity?" },
+      { display: "Active investor preference", match: "preferences for active", odoo: "Entrepreneur preferences for active investor?" },
+    ],
+  },
+  {
+    title: "Company & stage",
+    fields: [
+      { display: "Funding stage", match: "funding stage", odoo: "Entrepreneur funding stage?" },
+      { display: "Operating stage", match: "operating stage", odoo: "Entrepreneur operating stage?" },
+      { display: "Annual revenue size", match: "annual revenue size", odoo: "Entrepreneur annual revenue size?" },
+      { display: "Annual EBITDA", match: "ebitda", odoo: "Entrepreneur annual EBITDA?" },
+      { display: "Management team", match: "management team experience", odoo: "Entrepreneur management team experience?" },
+    ],
+  },
+  {
+    title: "Highlights",
+    fields: [
+      { display: "Five key highlights", match: "five key highlights", odoo: "Entrepreneur five key highlights" },
     ],
   },
   {
