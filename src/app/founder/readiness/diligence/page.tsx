@@ -5,6 +5,7 @@ import { FounderFeatureGate } from "@/components/FounderFeatureGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { WorkspacePageContainer } from "@/components/ui/workspace-layout";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
+import { DiligenceReportPreview } from "@/components/founder/DiligenceReportPreview";
 import { listCompanyDocuments } from "@/lib/data/documents";
 import {
   buildDocumentChecklist,
@@ -98,28 +99,15 @@ export default async function FounderReadinessDiligencePage() {
                     </p>
                     {reviewNotes ? <p className="mt-2 text-sm leading-6 text-slate-600">{reviewNotes}</p> : null}
                   </div>
-                  <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 p-4 ring-1 ring-indigo-100">
-                    <p className="text-sm font-medium text-indigo-700">{t("ai_diligence_report")}</p>
-                    {diligenceReport ? (
-                      <>
-                        <p className="mt-1 text-lg font-semibold text-slate-950">
-                          Score {diligenceReport.readiness_score ?? readinessScore}/100
-                        </p>
-                        {diligenceReport.executive_summary ? (
-                          <p className="mt-2 text-sm leading-6 text-slate-600">{diligenceReport.executive_summary}</p>
-                        ) : null}
-                      </>
-                    ) : (
+                  {diligenceReport ? (
+                    <DiligenceReportPreview report={diligenceReport} readinessScore={readinessScore} />
+                  ) : (
+                    <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 p-4 ring-1 ring-indigo-100">
+                      <p className="text-sm font-medium text-indigo-700">{t("ai_diligence_report")}</p>
                       <p className="mt-2 text-sm text-slate-600">{t("no_ai_diligence_report_generated_yet")}</p>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
-                <Link
-                  href="/founder/report"
-                  className="mt-4 inline-flex rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800"
-                >
-                  View diligence report
-                </Link>
               </WorkspacePanel>
             </section>
           )}

@@ -140,10 +140,12 @@ export async function notifyCompanyFounder(
 
 export async function listUserNotifications(userId: string, limit = 50) {
   const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase
-    .from("notifications")
+  // Archived notifications are hidden from the main list.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from("notifications") as any)
     .select("*")
     .eq("recipient_user_id", userId)
+    .is("archived_at", null)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -156,17 +158,42 @@ export async function listUserNotifications(userId: string, limit = 50) {
 
 export async function countUnreadNotifications(userId: string) {
   const supabase = await createServerSupabaseClient();
-  const { count, error } = await supabase
-    .from("notifications")
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { count, error } = await (supabase.from("notifications") as any)
     .select("id", { count: "exact", head: true })
     .eq("recipient_user_id", userId)
-    .eq("is_read", false);
+    .eq("is_read", false)
+    .is("archived_at", null);
 
   if (error) {
     throw new Error(`Failed to count notifications: ${error.message}`);
   }
 
   return count ?? 0;
+}
+
+/** Bulk mark a set of the user's own notifications as read. */
+export async function markNotificationsRead(ids: string[], userId: string) {
+  if (ids.length === 0) return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin = createServiceRoleClient() as any;
+  await admin.from("notifications").update({ is_read: true }).in("id", ids).eq("recipient_user_id", userId);
+}
+
+/** Archive a set of the user's own notifications (hides them from the main list). */
+export async function archiveNotifications(ids: string[], userId: string) {
+  if (ids.length === 0) return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin = createServiceRoleClient() as any;
+  await admin.from("notifications").update({ archived_at: new Date().toISOString() }).in("id", ids).eq("recipient_user_id", userId);
+}
+
+/** Permanently delete a set of the user's own notifications. */
+export async function deleteNotifications(ids: string[], userId: string) {
+  if (ids.length === 0) return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const admin = createServiceRoleClient() as any;
+  await admin.from("notifications").delete().in("id", ids).eq("recipient_user_id", userId);
 }
 
 export async function markNotificationRead(notificationId: string, userId: string) {

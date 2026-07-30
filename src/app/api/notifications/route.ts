@@ -4,6 +4,9 @@ import {
   countUnreadNotifications,
   listUserNotifications,
   markAllNotificationsRead,
+  markNotificationsRead,
+  archiveNotifications,
+  deleteNotifications,
 } from "@/lib/notifications/notifications";
 
 export async function GET(request: Request) {
@@ -33,7 +36,9 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST() {
+// POST — bulk actions: { action: "read" | "archive" | "delete", ids: string[] }.
+// With no body it marks all read (back-compat).
+export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
@@ -44,11 +49,21 @@ export async function POST() {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
 
+  const body = (await request.json().catch(() => null)) as { action?: string; ids?: string[] } | null;
+
   try {
+    if (body?.action && Array.isArray(body.ids) && body.ids.length > 0) {
+      const ids = body.ids.filter((v) => typeof v === "string").slice(0, 500);
+      if (body.action === "read") await markNotificationsRead(ids, user.id);
+      else if (body.action === "archive") await archiveNotifications(ids, user.id);
+      else if (body.action === "delete") await deleteNotifications(ids, user.id);
+      else return NextResponse.json({ error: "Unknown action." }, { status: 400 });
+      return NextResponse.json({ success: true });
+    }
     await markAllNotificationsRead(user.id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to mark notifications read.";
+    const message = error instanceof Error ? error.message : "Unable to update notifications.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

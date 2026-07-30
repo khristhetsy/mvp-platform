@@ -248,7 +248,6 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
     items: [
       { href: "/founder/journey", label: "My Progress" },
       { href: "/founder/actions", label: "Action Center" },
-      { href: "/founder/tasks", label: "Tasks", minStage: "qualify" },
     ],
   },
   {
@@ -341,6 +340,7 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
           { href: "/founder/schedule", label: "Scheduling" },
         ],
       },
+      { href: "/founder/tasks", label: "Tasks", minStage: "qualify" },
       { href: "/notifications", label: "Notifications", minStage: "qualify" },
     ],
   },
