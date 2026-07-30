@@ -23,6 +23,7 @@ import {
   DEFAULT_AUTOMATION_CONFIG,
   type AutomationConfig,
 } from "@/lib/settings/platform-settings";
+import { resolveFounderOutreachConfig } from "@/lib/outreach/founder-overrides";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,14 @@ export type OutreachCampaignSummary = OutreachCampaign & {
   audienceCount: number;
   queuedCount: number;
   sentCount: number;
+  /** Founder's subscription plan (e.g. "founder_professional") or null. */
+  planType: string | null;
+  /** Effective monthly send cap (plan-derived or per-founder override). */
+  monthlyCap: number;
+  /** Introductions sent to this campaign so far this calendar month. */
+  sentThisMonth: number;
+  /** Whether this founder has any per-founder override. */
+  customized: boolean;
 };
 
 // GET — list all outreach campaigns enriched with company name + recipient counts.
@@ -72,19 +81,32 @@ export async function GET(): Promise<Response> {
   const campaigns = await listOutreachCampaigns();
   const admin = createServiceRoleClient() as unknown as SupabaseClient;
 
+  const monthStart = (() => { const d = new Date(); d.setUTCDate(1); d.setUTCHours(0, 0, 0, 0); return d.toISOString(); })();
+
   const summaries = await Promise.all(
     campaigns.map(async (campaign): Promise<OutreachCampaignSummary> => {
       const recipients = await getCampaignRecipients(campaign.id);
       const queuedCount = recipients.filter((r) => r.status === "queued").length;
       const sentCount = recipients.filter((r) => r.status === "sent").length;
+      const sentThisMonth = recipients.filter((r) => r.status === "sent" && r.sent_at && r.sent_at >= monthStart).length;
 
       const { data: company } = await admin
         .from("companies")
-        .select("company_name")
+        .select("company_name, founder_id")
         .eq("id", campaign.company_id)
         .maybeSingle();
-      const companyName =
-        (company as { company_name?: string | null } | null)?.company_name ?? "Unknown company";
+      const comp = company as { company_name?: string | null; founder_id?: string | null } | null;
+      const companyName = comp?.company_name ?? "Unknown company";
+
+      let planType: string | null = null;
+      let monthlyCap = 0;
+      let customized = false;
+      if (comp?.founder_id) {
+        const eff = await resolveFounderOutreachConfig({ id: campaign.company_id, founder_id: comp.founder_id });
+        planType = eff.planType;
+        monthlyCap = eff.monthlyCap;
+        customized = eff.customized.match || eff.customized.automation || eff.customized.message;
+      }
 
       return {
         ...campaign,
@@ -92,6 +114,10 @@ export async function GET(): Promise<Response> {
         audienceCount: recipients.length,
         queuedCount,
         sentCount,
+        planType,
+        monthlyCap,
+        sentThisMonth,
+        customized,
       };
     }),
   );

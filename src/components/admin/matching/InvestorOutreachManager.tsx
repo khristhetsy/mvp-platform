@@ -8,6 +8,13 @@ import { FounderOverrideEditor } from "@/components/admin/matching/FounderOverri
 
 type CampaignAction = "approve" | "pause" | "resume" | "cap";
 
+function planLabel(plan: string): string {
+  if (plan === "founder_professional") return "Professional";
+  if (plan === "founder_basic") return "Basic";
+  if (plan === "founder_trial") return "Trial";
+  return plan.replace("founder_", "");
+}
+
 const STATUS_BADGE: Record<
   OutreachCampaignSummary["status"],
   { label: string; className: string }
@@ -193,7 +200,17 @@ function CampaignCard({
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-base font-semibold text-slate-900">{campaign.companyName}</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-semibold text-slate-900">{campaign.companyName}</h3>
+            {campaign.planType ? (
+              <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${campaign.planType === "founder_professional" ? "bg-indigo-50 text-indigo-700" : "bg-slate-100 text-slate-600"}`}>
+                {planLabel(campaign.planType)}
+              </span>
+            ) : null}
+            <span className={`rounded px-2 py-0.5 text-[9px] font-semibold ${campaign.customized ? "bg-indigo-50 text-indigo-700" : "bg-slate-100 text-slate-500"}`}>
+              {campaign.customized ? "Custom" : "Inherited"}
+            </span>
+          </div>
           <p className="mt-0.5 text-xs text-slate-500">
             Template <span className="font-mono">{campaign.template_key}</span> · last run{" "}
             {formatDate(campaign.last_run_at)}
@@ -202,7 +219,7 @@ function CampaignCard({
         <StatusBadge campaign={campaign} />
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+      <div className="mt-4 grid grid-cols-4 gap-3 text-center">
         <div className="rounded-lg bg-slate-50 px-3 py-2">
           <div className="text-lg font-semibold text-slate-900">{campaign.audienceCount}</div>
           <div className="text-[11px] uppercase tracking-wide text-slate-500">Audience</div>
@@ -212,10 +229,26 @@ function CampaignCard({
           <div className="text-[11px] uppercase tracking-wide text-slate-500">Queued</div>
         </div>
         <div className="rounded-lg bg-slate-50 px-3 py-2">
-          <div className="text-lg font-semibold text-slate-900">{campaign.sentCount}</div>
-          <div className="text-[11px] uppercase tracking-wide text-slate-500">Sent</div>
+          <div className="text-lg font-semibold text-slate-900">{campaign.sentThisMonth}</div>
+          <div className="text-[11px] uppercase tracking-wide text-slate-500">Sent · month</div>
+        </div>
+        <div className="rounded-lg bg-slate-50 px-3 py-2">
+          <div className="text-lg font-semibold text-slate-900">{campaign.monthlyCap || "—"}</div>
+          <div className="text-[11px] uppercase tracking-wide text-slate-500">Cap / mo</div>
         </div>
       </div>
+
+      {campaign.monthlyCap > 0 ? (
+        <div className="mt-3">
+          <div className="flex items-center justify-between text-[11px] text-slate-500">
+            <span>This month · {campaign.sentThisMonth} / {campaign.monthlyCap}</span>
+            <span>{campaign.customized ? "custom cap" : "from plan"}</span>
+          </div>
+          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(100, Math.round((campaign.sentThisMonth / campaign.monthlyCap) * 100))}%` }} />
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4">
         {campaign.status === "pending_approval" ? (
