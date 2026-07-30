@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 /**
  * Deploy step-menu workflow (founder-facing).
@@ -155,6 +155,8 @@ function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; labe
   );
 }
 
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+
 function SettingsPanel() {
   const [state, setState] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
@@ -162,6 +164,44 @@ function SettingsPanel() {
     return initial;
   });
   const [doNotContact, setDoNotContact] = useState("");
+  const [status, setStatus] = useState<SaveStatus>("idle");
+  const [dirty, setDirty] = useState(false);
+
+  // Load the founder's saved preferences (falls back to the defaults above).
+  useEffect(() => {
+    let active = true;
+    fetch("/api/founder/deploy-preferences")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!active || !d?.prefs) return;
+        const n = d.prefs.notifications as Record<string, boolean> | undefined;
+        if (n) setState((s) => ({ ...s, ...n }));
+        if (Array.isArray(d.prefs.doNotContact)) setDoNotContact((d.prefs.doNotContact as string[]).join("\n"));
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  const save = useCallback(async () => {
+    setStatus("saving");
+    try {
+      const res = await fetch("/api/founder/deploy-preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notifications: state,
+          doNotContact: doNotContact.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean),
+        }),
+      });
+      if (!res.ok) throw new Error("save failed");
+      setStatus("saved");
+      setDirty(false);
+    } catch {
+      setStatus("error");
+    }
+  }, [state, doNotContact]);
+
+  const toggle = (key: string) => { setState((s) => ({ ...s, [key]: !s[key] })); setDirty(true); setStatus("idle"); };
 
   return (
     <div className="space-y-5">
@@ -181,7 +221,7 @@ function SettingsPanel() {
                 <Toggle
                   on={state[i.key]}
                   label={i.label}
-                  onClick={() => setState((s) => ({ ...s, [i.key]: !s[i.key] }))}
+                  onClick={() => toggle(i.key)}
                 />
               </div>
             ))}
@@ -196,16 +236,35 @@ function SettingsPanel() {
         </p>
         <textarea
           value={doNotContact}
-          onChange={(e) => setDoNotContact(e.target.value)}
+          onChange={(e) => { setDoNotContact(e.target.value); setDirty(true); setStatus("idle"); }}
           rows={3}
           placeholder="competitor.com&#10;someone@example.com"
           className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-400"
         />
       </div>
 
-      <p className="text-xs text-slate-400">
-        Preferences control how iCapOS notifies you. Suppression lists are always honored across every send.
-      </p>
+      <div className="sticky bottom-0 flex items-center gap-3 rounded-xl border border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
+        <p className="text-xs text-slate-400">
+          Preferences control how iCapOS notifies you. Do-not-contact entries are suppressed across every send.
+        </p>
+        <div className="ml-auto flex items-center gap-3">
+          {status === "saved" && !dirty ? (
+            <span className="flex items-center gap-1 text-xs font-medium text-emerald-600"><span aria-hidden>✓</span> Saved</span>
+          ) : status === "error" ? (
+            <span className="text-xs font-medium text-red-600">Couldn&apos;t save — retry</span>
+          ) : dirty ? (
+            <span className="text-xs text-slate-400">Unsaved changes</span>
+          ) : null}
+          <button
+            type="button"
+            onClick={save}
+            disabled={status === "saving" || (!dirty && status !== "error")}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+          >
+            {status === "saving" ? "Saving…" : "Save changes"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { renderIntroEmail } from "@/lib/outreach/intro-template";
 import { buildUnsubscribeUrl, filterUnsubscribed } from "@/lib/outreach/unsubscribe";
 import { getOutreachAutomationEnabled, getInvestorMatchConfig, getOutreachMessage } from "@/lib/settings/platform-settings";
 import { resolveFounderOutreachConfig, type EffectiveOutreachConfig } from "@/lib/outreach/founder-overrides";
+import { getDoNotContactList, matchesDoNotContact } from "@/lib/founder/deploy-preferences";
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 
 /** Formats a raise amount as a compact "~$2M" / "~$500K" string. */
@@ -396,11 +397,14 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
       // recipient at enroll time (the matched investor's CRM email).
       const emails = batch.map((r) => r.email).filter((e): e is string => Boolean(e));
       const suppressed = await filterUnsubscribed(emails);
+      // The founder's own do-not-contact list (emails or domains) suppresses on
+      // top of the global unsubscribe list.
+      const doNotContact = await getDoNotContactList(campaign.company_id);
 
       for (const r of batch) {
         const email = r.email;
-        // No email or suppressed (unsubscribed) → terminal skip.
-        if (!email || suppressed.has(email.trim().toLowerCase())) {
+        // No email, globally unsubscribed, or on the founder's do-not-contact → terminal skip.
+        if (!email || suppressed.has(email.trim().toLowerCase()) || matchesDoNotContact(email, doNotContact)) {
           await db.from("investor_outreach_recipients").update({ status: "skipped" }).eq("id", r.id);
           continue;
         }
