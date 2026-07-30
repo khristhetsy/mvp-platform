@@ -12,7 +12,7 @@ export default async function FounderInboxPage() {
   await assertFeatureEnabled("founder", "inbox", "/founder/dashboard");
   return (
     <FounderAppShell profileName={profile.full_name ?? profile.email ?? "Founder"} profileSubtitle={t("inbox")}>
-      <InboxTabs />
+      <InboxTabs gmailOnly />
     </FounderAppShell>
   );
 }

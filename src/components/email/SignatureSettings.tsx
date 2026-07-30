@@ -28,6 +28,7 @@ export function SignatureSettings() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [hasTemplate, setHasTemplate] = useState(false);
   const defaultRef = useRef<string>("");
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export function SignatureSettings() {
         const data = await res.json();
         const sig: string = data.signature ?? "";
         defaultRef.current = typeof data.default === "string" ? data.default : "";
+        if (active) setHasTemplate(Boolean(defaultRef.current));
         // The editor div is always mounted now, so ref.current is available here.
         // When nothing is saved yet, pre-fill with the iCFO template so it's visible.
         const initial = sig ? (looksHtml(sig) ? sig : textToHtml(sig)) : defaultRef.current;
@@ -180,9 +182,11 @@ export function SignatureSettings() {
             <button type="button" onClick={() => void save()} disabled={saving || loading} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50">
               <Check className="h-4 w-4" /> {saving ? "Saving…" : "Save signature"}
             </button>
-            <button type="button" onClick={loadTemplate} disabled={loading} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
-              Load iCFO template
-            </button>
+            {hasTemplate ? (
+              <button type="button" onClick={loadTemplate} disabled={loading} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                Load iCFO template
+              </button>
+            ) : null}
             {loading ? <span className="text-xs text-slate-400">{t("loading_2")}</span> : null}
             {msg ? <span className={`text-xs ${msg.ok ? "text-emerald-700" : "text-red-700"}`}>{msg.text}</span> : null}
           </div>

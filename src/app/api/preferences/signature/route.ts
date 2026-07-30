@@ -12,13 +12,16 @@ export async function GET(): Promise<Response> {
   // Service-role read keyed by the authenticated profile id (avoids RLS edge cases).
   const db = createServiceRoleClient();
   const signature = await loadSignature(db, auth.profile.id);
+  // Founders and investors get NO iCFO template: their signature defaults blank
+  // and compose never falls back to the template. Staff/admin keep the template.
+  const noTemplate = auth.profile.role === "founder" || auth.profile.role === "investor";
   // `signature` = what the user saved (may be empty). `effective` = what compose
-  // should actually show, falling back to the iCFO default. `default` lets the
-  // settings editor offer a one-click reset to the template.
+  // should show (falls back to the iCFO default for staff only). `default` lets
+  // the settings editor offer a one-click reset to the template (staff only).
   return NextResponse.json({
     signature,
-    effective: effectiveSignature(signature),
-    default: DEFAULT_ICFO_SIGNATURE,
+    effective: noTemplate ? signature : effectiveSignature(signature),
+    default: noTemplate ? "" : DEFAULT_ICFO_SIGNATURE,
   });
 }
 

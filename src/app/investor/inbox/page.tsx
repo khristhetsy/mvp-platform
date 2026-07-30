@@ -17,7 +17,7 @@ export default async function InvestorInboxPage() {
       profileName={profile.full_name ?? profile.email ?? "Investor"}
       profileSubtitle={t("inbox")}
     >
-      <InboxTabs />
+      <InboxTabs gmailOnly />
     </AppShell>
   );
 }
