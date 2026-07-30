@@ -5,6 +5,7 @@ import { sendEmail } from "@/lib/email/send-email";
 import { renderIntroEmail } from "@/lib/outreach/intro-template";
 import { buildUnsubscribeUrl, filterUnsubscribed } from "@/lib/outreach/unsubscribe";
 import { getOutreachAutomationEnabled, getInvestorMatchConfig, getOutreachMessage } from "@/lib/settings/platform-settings";
+import { resolveFounderOutreachConfig, type EffectiveOutreachConfig } from "@/lib/outreach/founder-overrides";
 import { loadPartnerScoresBatch } from "@/lib/investor-rating/snapshot";
 
 /** Formats a raise amount as a compact "~$2M" / "~$500K" string. */
@@ -284,8 +285,28 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
   let campaignsRun = 0;
   let recipientsSent = 0;
 
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const monthStart = (() => { const d = new Date(); d.setUTCDate(1); d.setUTCHours(0, 0, 0, 0); return d.toISOString(); })();
+
   for (const campaign of list) {
     const now = new Date().toISOString();
+
+    // Resolve this founder's EFFECTIVE config (global defaults + plan cap +
+    // per-founder override): the monthly cap, schedule, pause, and message.
+    let eff: EffectiveOutreachConfig | null = null;
+    {
+      const { data: cRow } = await db.from("companies").select("founder_id").eq("id", campaign.company_id).maybeSingle();
+      const founderId = (cRow as { founder_id?: string } | null)?.founder_id ?? null;
+      if (founderId) eff = await resolveFounderOutreachConfig({ id: campaign.company_id, founder_id: founderId });
+    }
+
+    // Gate BEFORE claiming so we don't burn last_run_at: automation pause (global
+    // or per-founder, until its resume date) and a not-yet-reached start date both
+    // hold the whole campaign.
+    if (eff) {
+      if (eff.pause.enabled && (!eff.pause.until || eff.pause.until >= todayIso)) continue;
+      if (eff.startDate && todayIso < eff.startDate) continue;
+    }
 
     // Atomically claim this campaign for this run by advancing last_run_at under
     // the same freshness guard. A concurrent run's identical update won't match
@@ -300,13 +321,30 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
       .select("id");
     if (!claimed || (claimed as Array<{ id: string }>).length === 0) continue;
 
+    // Per-run slice = the campaign weekly cap, further clamped by how much of the
+    // founder's MONTHLY plan cap is still left this calendar month.
+    let batchLimit = campaign.weekly_cap;
+    if (eff) {
+      const { count } = await db
+        .from("investor_outreach_recipients")
+        .select("id", { count: "exact", head: true })
+        .eq("campaign_id", campaign.id)
+        .eq("status", "sent")
+        .gte("sent_at", monthStart);
+      const sentThisMonth = typeof count === "number" ? count : 0;
+      const remaining = Math.max(0, eff.monthlyCap - sentThisMonth);
+      batchLimit = Math.max(0, Math.min(campaign.weekly_cap, remaining));
+    }
+    // Monthly cap reached — send nothing this run; it resumes next month.
+    if (batchLimit === 0) continue;
+
     const { data: queued } = await db
       .from("investor_outreach_recipients")
       .select("id, investor_ref, investor_name, email")
       .eq("campaign_id", campaign.id)
       .eq("status", "queued")
       .order("match_score", { ascending: false })
-      .limit(campaign.weekly_cap);
+      .limit(batchLimit);
 
     const batch = (queued ?? []) as Array<{ id: string; investor_ref: string; investor_name: string; email: string | null }>;
     if (batch.length === 0) {
@@ -377,7 +415,7 @@ export async function processApprovedOutreach(): Promise<{ campaignsRun: number;
           tagline,
           raise,
           location,
-          message: outreachMessage ?? undefined,
+          message: eff?.message ?? outreachMessage ?? undefined,
         });
         const ok = await sendEmail({ to: email, subject, html, text });
         if (ok) {
