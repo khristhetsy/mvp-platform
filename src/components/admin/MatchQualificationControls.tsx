@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-type MatchWeights = { sector: number; specificity: number; stage: number; checkSize: number; activity: number };
+type MatchWeights = { sector: number; specificity: number; stage: number; checkSize: number; revenue: number; activity: number };
 type MatchConfig = {
   requiredFields: { industry: boolean; checkSize: boolean; revenueStage: boolean; useOfFunds: boolean; geography: boolean; activeRating: boolean };
   minMatch: number;
@@ -16,6 +16,7 @@ const WEIGHT_LABELS: [keyof MatchWeights, string][] = [
   ["specificity", "Sector focus / specificity"],
   ["stage", "Stage / use of funds"],
   ["checkSize", "Check size vs. raise"],
+  ["revenue", "Revenue range fit"],
   ["activity", "Investor activity / rating"],
 ];
 

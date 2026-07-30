@@ -62,8 +62,18 @@ function tokens(s: string | null): string[] {
 }
 
 /** Weights for each match factor (admin-adjustable). Sum is the denominator. */
-export type MatchWeights = { sector: number; specificity: number; stage: number; checkSize: number; activity: number };
-export const DEFAULT_WEIGHTS: MatchWeights = { sector: 35, specificity: 15, stage: 20, checkSize: 15, activity: 15 };
+export type MatchWeights = { sector: number; specificity: number; stage: number; checkSize: number; revenue: number; activity: number };
+export const DEFAULT_WEIGHTS: MatchWeights = { sector: 30, specificity: 10, stage: 20, checkSize: 15, revenue: 10, activity: 15 };
+
+/** Rough annual-revenue band (USD) implied by the founder's revenue stage, used
+ *  to score against the investor's preferred revenue range when no exact figure
+ *  is on file. */
+const STAGE_REVENUE_BANDS: Record<string, { min: number; max: number }> = {
+  pre_revenue: { min: 0, max: 0 },
+  early_revenue: { min: 1, max: 500_000 },
+  growing: { min: 500_000, max: 5_000_000 },
+  scaling: { min: 5_000_000, max: Number.POSITIVE_INFINITY },
+};
 
 /**
  * Graded match: compares the founder's company profile against the investor's
@@ -78,7 +88,7 @@ export function scoreInvestorPreferenceMatch(
   weights: MatchWeights = DEFAULT_WEIGHTS,
 ): PreferenceMatch {
   const W = weights;
-  const total = W.sector + W.specificity + W.stage + W.checkSize + W.activity;
+  const total = W.sector + W.specificity + W.stage + W.checkSize + W.revenue + W.activity;
   if (total <= 0) return { score: 50, reasons: [] };
 
   let points = 0;
@@ -118,10 +128,39 @@ export function scoreInvestorPreferenceMatch(
     }
   }
 
-  // Check size vs. the raise.
-  if (pref.investmentSize.length > 0 && company.fundingAmount != null && inAnyBand(company.fundingAmount, pref.investmentSize)) {
-    points += W.checkSize;
-    reasons.push("Check size fits the raise");
+  // Check size vs. the raise (graded). Full credit when the whole raise sits
+  // inside the investor's check band; partial when their typical check is a
+  // plausible slice of a larger round (they can still participate).
+  if (pref.investmentSize.length > 0 && company.fundingAmount != null) {
+    const raise = company.fundingAmount;
+    if (inAnyBand(raise, pref.investmentSize)) {
+      points += W.checkSize;
+      reasons.push("Check size fits the raise");
+    } else if (pref.investmentSize.some((b) => { const r = parseMoneyBand(b); return r != null && r.min <= raise; })) {
+      points += W.checkSize * 0.6;
+      reasons.push("Check fits as part of the round");
+    }
+  }
+
+  // Revenue-range fit — the founder's revenue (exact if known, else the band
+  // implied by their revenue stage) inside the investor's preferred range.
+  if (pref.revenueRange.length > 0) {
+    const band =
+      company.revenue != null
+        ? { min: company.revenue, max: company.revenue }
+        : company.revenueStage
+          ? STAGE_REVENUE_BANDS[company.revenueStage] ?? null
+          : null;
+    if (band) {
+      const overlaps = pref.revenueRange.some((b) => {
+        const r = parseMoneyBand(b);
+        return r != null && r.min <= band.max && band.min <= r.max;
+      });
+      if (overlaps) {
+        points += W.revenue;
+        reasons.push("Revenue in preferred range");
+      }
+    }
   }
 
   // Active-investor rating quality (graded by the 1–5 rating).

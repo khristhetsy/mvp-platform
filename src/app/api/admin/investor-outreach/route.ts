@@ -129,6 +129,7 @@ export async function PATCH(req: Request): Promise<Response> {
         specificity: clampScore(w.specificity, dw.specificity),
         stage: clampScore(w.stage, dw.stage),
         checkSize: clampScore(w.checkSize, dw.checkSize),
+        revenue: clampScore(w.revenue, dw.revenue),
         activity: clampScore(w.activity, dw.activity),
       },
     };
