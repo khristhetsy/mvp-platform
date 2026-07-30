@@ -250,7 +250,12 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
 
             <div className="flex flex-col items-start gap-1 sm:items-center">
               <OutreachPill status={r.outreach} />
-              {r.outreachActivityAt ? (
+              {r.outreach === "queued" && r.scheduledSendAt ? (
+                <span className="inline-flex items-center gap-1 font-mono text-[10px] text-slate-500">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round"/></svg>
+                  Sends {formatActivityDate(r.scheduledSendAt)}
+                </span>
+              ) : r.outreachActivityAt ? (
                 <span className="font-mono text-[10px] text-slate-400">{formatActivityDate(r.outreachActivityAt)}</span>
               ) : null}
             </div>

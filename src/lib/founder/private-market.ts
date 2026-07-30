@@ -39,6 +39,9 @@ export type FounderInvestorRow = {
   outreach: OutreachStatus;
   /** When this investor was last contacted by the campaign (ISO), or null. */
   outreachActivityAt: string | null;
+  /** For queued investors: the projected send date (ISO) from the weekly pass +
+   *  cap ordering. Null for non-queued statuses. */
+  scheduledSendAt: string | null;
   /** Platform partner score (0–100), null when the investor is unrated ("New"). */
   investorScore: number | null;
   scoreTier: string | null;
@@ -149,13 +152,18 @@ export async function loadFounderInvestorBoard(
     string,
     { status: string; sentAt: string | null; openedAt: string | null; clickedAt: string | null }
   >();
+  let campaignLastRun: string | null = null;
+  let campaignCap = 10;
   {
     const { data: campaign } = await rawAdmin
       .from("investor_outreach_campaigns")
-      .select("id")
+      .select("id, last_run_at, weekly_cap")
       .eq("company_id", company.id)
       .maybeSingle();
-    const campaignId = (campaign as { id: string } | null)?.id ?? null;
+    const campMeta = campaign as { id: string; last_run_at: string | null; weekly_cap: number | null } | null;
+    const campaignId = campMeta?.id ?? null;
+    campaignLastRun = campMeta?.last_run_at ?? null;
+    campaignCap = campMeta?.weekly_cap ?? 10;
     if (campaignId) {
       const { data: recips } = await rawAdmin
         .from("investor_outreach_recipients")
@@ -189,6 +197,23 @@ export async function loadFounderInvestorBoard(
   }
 
   const now = Date.now();
+
+  // Scheduled send date per queued investor: the weekly pass sends up to
+  // `weekly_cap` (highest match first), so batch N goes out ~N weeks after the
+  // next run. Next run = last run + ~6 days (the pass cadence), or now if unrun.
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  const lastRunMs = campaignLastRun ? new Date(campaignLastRun).getTime() : null;
+  const nextRunMs = lastRunMs ? Math.max(now, lastRunMs + 6 * 24 * 60 * 60 * 1000) : now;
+  const cap = Math.max(1, campaignCap);
+  const queuedRank = new Map<string, number>();
+  let qi = 0;
+  for (const s of scored) {
+    if (outreachByInvestor.get(s.id)?.status === "queued") {
+      queuedRank.set(s.id, qi);
+      qi += 1;
+    }
+  }
+
   const rows: FounderInvestorRow[] = scored.map((s, index) => {
     const pid = pidOf(s.email);
     const reasons = new Set(s.match?.reasons ?? []);
@@ -233,6 +258,9 @@ export async function loadFounderInvestorBoard(
       trend: null,
       outreach,
       outreachActivityAt: oe?.clickedAt ?? oe?.openedAt ?? oe?.sentAt ?? null,
+      scheduledSendAt: oe?.status === "queued"
+        ? new Date(nextRunMs + Math.floor((queuedRank.get(s.id) ?? 0) / cap) * WEEK_MS).toISOString()
+        : null,
       investorScore: ps?.score ?? null,
       scoreTier: ps ? TIER_LABELS[ps.tier] : null,
       scoreRated: ps?.status === "rated",
