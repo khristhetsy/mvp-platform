@@ -148,6 +148,8 @@ function ProfileModal({ r, onClose }: { r: FounderInvestorRow; onClose: () => vo
                 )) : <span className="text-slate-400">—</span>}
               </dd>
             </div>
+            <div className="flex justify-between border-b border-slate-100 py-2"><dt className="text-slate-500">Type of investor(s)</dt><dd className="font-medium text-slate-800">{r.label || "—"}</dd></div>
+            <div className="flex justify-between border-b border-slate-100 py-2"><dt className="text-slate-500">Type(s) of capital</dt><dd className="font-medium text-slate-800">{r.capitalTypes.length ? r.capitalTypes.join(", ") : "—"}</dd></div>
             <div className="flex justify-between border-b border-slate-100 py-2"><dt className="text-slate-500">Preferred stages</dt><dd className="font-medium text-slate-800">{r.stages.length ? r.stages.join(", ") : "—"}</dd></div>
             <div className="flex justify-between border-b border-slate-100 py-2"><dt className="text-slate-500">Check size</dt><dd className="font-medium text-slate-800">{r.checkSize}</dd></div>
             <div className="flex justify-between border-b border-slate-100 py-2"><dt className="text-slate-500">Geography</dt><dd className="font-medium text-slate-800">{r.geographies.length ? r.geographies.join(", ") : "—"}</dd></div>

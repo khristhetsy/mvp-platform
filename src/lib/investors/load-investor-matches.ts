@@ -26,6 +26,7 @@ export type ScoredInvestorContact = {
   company: string | null;
   /** Display helpers from the Odoo profile (not part of scoring). */
   investorType: string | null;
+  capitalTypes: string[];
   sectors: string[];
   preferences: InvestorPreferences;
   /** Present only when scored against a company. */
@@ -250,6 +251,7 @@ export async function loadInvestorContacts(opts?: {
       email: (c.email as string) ?? null,
       company: (c.company as string) ?? null,
       investorType: asList(prof?.investorTypes)[0] ?? null,
+      capitalTypes: asList(prof?.capitalTypes),
       sectors,
       preferences,
       match: null,

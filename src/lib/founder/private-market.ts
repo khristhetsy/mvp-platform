@@ -30,6 +30,8 @@ export type FounderInvestorRow = {
   band: "high" | "mid" | "low";
   checkSize: string;
   sectors: string[];
+  /** Investor's type(s) of capital from their profile (may be empty). */
+  capitalTypes: string[];
   /** Real pledge activity by this investor across the platform. */
   pledgeCount: number;
   indicated: number;
@@ -268,6 +270,7 @@ export async function loadFounderInvestorBoard(
       band: matchBand(matchScore),
       checkSize: s.preferences.investmentSize[0] ?? "—",
       sectors,
+      capitalTypes: s.capitalTypes,
       pledgeCount: agg?.count ?? 0,
       indicated: agg?.sum ?? 0,
       lastActiveLabel: lastMs != null ? relativeShort(lastMs) : null,
