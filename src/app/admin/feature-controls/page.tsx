@@ -1,8 +1,6 @@
 import { AppShell } from "@/components/AppShell";
 import { getTranslations } from "next-intl/server";
 import { DepartmentsControls } from "@/components/admin/DepartmentsControls";
-import { MatchQualificationControls } from "@/components/admin/MatchQualificationControls";
-import { InvestorOutreachManager } from "@/components/admin/matching/InvestorOutreachManager";
 import { requirePermissionPage } from "@/lib/api/permissions";
 
 export const dynamic = "force-dynamic";
@@ -18,11 +16,7 @@ export default async function AdminFeatureControlsPage() {
       profileName={profile.full_name ?? profile.email ?? "Admin"}
       profileSubtitle={t("featureControls")}
     >
-      <div className="space-y-6">
-        <MatchQualificationControls />
-        <InvestorOutreachManager />
-        <DepartmentsControls />
-      </div>
+      <DepartmentsControls />
     </AppShell>
   );
 }
