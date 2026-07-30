@@ -218,7 +218,7 @@ export async function loadFounderInvestorBoard(
     const pid = pidOf(s.email);
     const reasons = new Set(s.match?.reasons ?? []);
     const matchScore = s.match?.score ?? 50;
-    const sectors = s.sectors.slice(0, 3);
+    const sectors = s.sectors; // full list — shown as chips so nothing is cut off
     const type = s.investorType ?? "Investor";
     const code = String(s.id).replace(/[^a-z0-9]/gi, "").slice(-4).toUpperCase() || String(index + 1).padStart(4, "0");
     const agg = pid ? activity.get(pid) : undefined;
@@ -240,7 +240,7 @@ export async function loadFounderInvestorBoard(
     return {
       symbol: `INV·${code}`,
       name: s.name,
-      label: sectors.length ? `${type} · ${sectors.slice(0, 2).join(", ")} focus` : type,
+      label: type,
       matchScore,
       fitSector: 0,
       fitStage: reasons.has("Use-of-funds / stage fit") ? 100 : 0,

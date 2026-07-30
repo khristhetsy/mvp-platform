@@ -238,8 +238,15 @@ export function FounderPrivateMarketBoard({ rows }: Readonly<{ rows: FounderInve
                 {initials(r.name)}
               </span>
               <div className="min-w-0">
-                <div className="truncate text-[13.5px] font-semibold text-[var(--navy)]">{r.name}</div>
-                <div className="truncate text-[11.5px] text-slate-400">{r.label}</div>
+                <div className="text-[13.5px] font-semibold text-[var(--navy)]">{r.name}</div>
+                <div className="text-[11.5px] text-slate-400">{r.label}</div>
+                {r.sectors.length ? (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {r.sectors.map((s) => (
+                      <span key={s} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">{s}</span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </div>
 
