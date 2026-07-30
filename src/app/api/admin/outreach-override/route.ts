@@ -67,6 +67,8 @@ function sanitize(raw: unknown): FounderOverride {
         useOfFunds: rf.useOfFunds === true,
         geography: rf.geography === true,
         activeRating: rf.activeRating === true,
+        investorType: rf.investorType === true,
+        capitalType: rf.capitalType === true,
       };
     }
     const num = (v: unknown) => (typeof v === "number" && v >= 0 && v <= 100 ? Math.round(v) : undefined);

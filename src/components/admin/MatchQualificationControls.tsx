@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 type MatchWeights = { sector: number; specificity: number; stage: number; checkSize: number; revenue: number; activity: number };
 type MatchConfig = {
-  requiredFields: { industry: boolean; checkSize: boolean; revenueStage: boolean; useOfFunds: boolean; geography: boolean; activeRating: boolean };
+  requiredFields: { industry: boolean; checkSize: boolean; revenueStage: boolean; useOfFunds: boolean; geography: boolean; activeRating: boolean; investorType: boolean; capitalType: boolean };
   minMatch: number;
   minInvestorScore: number;
   requireRated: boolean;
@@ -33,6 +33,8 @@ const FIELD_LABELS: [keyof MatchConfig["requiredFields"], string][] = [
   ["useOfFunds", "Use of funds"],
   ["geography", "Geography"],
   ["activeRating", "Active investor rating"],
+  ["investorType", "Type of investor(s)"],
+  ["capitalType", "Type(s) of capital"],
 ];
 
 /**

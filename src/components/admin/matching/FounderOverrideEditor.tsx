@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from "react";
  * override — anything left Inherited falls through to the global defaults.
  */
 
-type ReqFields = { industry: boolean; checkSize: boolean; revenueStage: boolean; useOfFunds: boolean; geography: boolean; activeRating: boolean };
+type ReqFields = { industry: boolean; checkSize: boolean; revenueStage: boolean; useOfFunds: boolean; geography: boolean; activeRating: boolean; investorType: boolean; capitalType: boolean };
 
 type Ov = {
   match?: { requiredFields?: ReqFields; minMatch?: number; minInvestorScore?: number; requireRated?: boolean };
@@ -32,6 +32,8 @@ const REQ_LABELS: [keyof ReqFields, string][] = [
   ["useOfFunds", "Use of funds"],
   ["geography", "Geography"],
   ["activeRating", "Active investor rating"],
+  ["investorType", "Type of investor(s)"],
+  ["capitalType", "Type(s) of capital"],
 ];
 
 function Badge({ custom }: { custom: boolean }) {
