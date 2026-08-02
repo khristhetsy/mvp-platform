@@ -101,6 +101,11 @@ export function SiteAssistant() {
 
           <div ref={logRef} role="log" aria-live="polite" className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
             <div className="rounded-xl bg-site-paper px-3 py-2.5 text-[13px] leading-6 text-site-ink">{GREETING}</div>
+            {messages.length === 0 && chips.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {chips.map((c) => (<button key={c} type="button" onClick={() => send(c)} className="rounded-full border border-site-line bg-white px-3 py-1 text-[12px] text-site-ink transition-colors hover:border-site-blue-hi hover:text-site-blue-hi">{c}</button>))}
+              </div>
+            ) : null}
             {messages.map((m, i) => (
               <div key={i} className={m.role === "user" ? "ml-auto max-w-[85%] rounded-xl bg-site-blue px-3 py-2 text-[13px] leading-6 text-white" : "max-w-[90%] rounded-xl bg-site-paper px-3 py-2.5 text-[13px] leading-6 text-site-ink"}>{m.content}</div>
             ))}
@@ -108,7 +113,7 @@ export function SiteAssistant() {
             {note ? <div className="rounded-xl bg-site-amber/10 px-3 py-2 text-[12px] text-site-amber" role="status">{note}</div> : null}
           </div>
 
-          {chips.length > 0 ? (
+          {messages.length > 0 && chips.length > 0 ? (
             <div className="flex flex-wrap gap-1.5 px-4 pb-2">
               {chips.map((c) => (<button key={c} type="button" onClick={() => send(c)} className="rounded-full border border-site-line bg-white px-3 py-1 text-[12px] text-site-ink transition-colors hover:border-site-blue-hi hover:text-site-blue-hi">{c}</button>))}
             </div>
