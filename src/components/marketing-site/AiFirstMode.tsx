@@ -18,8 +18,7 @@ type Card = "none" | "readiness" | "pricing" | "demo" | "events" | "match" | "fo
 const OPENERS = [
   "I'm a founder raising a seed round",
   "I'm an investor looking for climate deals",
-  "How does the readiness rating work?",
-  "What do the two plans cost?",
+  "How does it work?",
   "Can I book a demo?",
 ];
 

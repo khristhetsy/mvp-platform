@@ -15,9 +15,8 @@ type Msg = { role: "user" | "assistant"; content: string };
 const GREETING =
   "Hi — I can explain how matching works, what's in each plan, how the readiness rating is scored, or what happens at an iCFO event. What would you like to know?";
 const STARTERS = [
+  "How does it work?",
   "Can I book a demo?",
-  "What's the difference between the two plans?",
-  "How does the readiness rating work?",
   "Do you guarantee I'll raise money?",
 ];
 
