@@ -130,6 +130,24 @@ export function AiFirstMode() {
 
   if (!open) return null;
   const meta = card !== "none" ? CARD_META[card] : null;
+  const empty = messages.length === 0;
+
+  // Chips + input + disclaimer, shared by both layouts. Centered in the empty
+  // state, left-aligned once a conversation is underway.
+  const inputBlock = (
+    <>
+      {chips.length > 0 ? (
+        <div className={`mb-3 flex flex-wrap gap-2 ${empty ? "justify-center" : ""}`}>
+          {chips.map((c) => (<button key={c} type="button" onClick={() => send(c)} className="rounded-full border border-white/15 bg-white/[0.04] px-3.5 py-1.5 text-[13px] text-white/85 transition-colors hover:border-site-blue-lt hover:text-white">{c}</button>))}
+        </div>
+      ) : null}
+      <form onSubmit={(e) => { e.preventDefault(); const input = e.currentTarget.elements.namedItem("q") as HTMLInputElement; send(input.value); input.value = ""; }} className="flex gap-2">
+        <input name="q" autoFocus autoComplete="off" placeholder="Type what you're trying to do…" className="flex-1 rounded-xl border border-white/15 bg-white/[0.06] px-4 py-3 text-sm text-white placeholder-white/40 outline-none focus:border-site-blue-lt" />
+        <button type="submit" disabled={busy} className="rounded-xl bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi disabled:opacity-60">Send</button>
+      </form>
+      <p className={`mt-3 font-site-mono text-[10px] leading-4 text-white/40 ${empty ? "text-center" : ""}`}>iCapOS does not offer or sell securities, provide investment advice, or process transactions. Answers are informational and may be imperfect.</p>
+    </>
+  );
 
   return (
     <div className="fixed inset-0 z-[70] flex flex-col bg-gradient-to-b from-site-navy via-site-navy-2 to-site-navy-3 text-white" role="dialog" aria-modal="true" aria-label="AI-first mode">
@@ -138,44 +156,41 @@ export function AiFirstMode() {
         <button type="button" onClick={close} className="rounded-lg border border-white/20 px-3 py-1.5 text-sm font-medium text-white/80 transition-colors hover:border-white/40 hover:text-white">Browse the site instead</button>
       </div>
 
-      <div ref={logRef} role="log" aria-live="polite" className="mx-auto w-full max-w-3xl flex-1 space-y-4 overflow-y-auto px-6 pb-4">
-        {messages.length === 0 ? (
-          <div className="pt-6 text-center">
+      {empty ? (
+        /* Empty state: intro + prompts + input grouped and vertically centered. */
+        <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-8 px-6 pb-10">
+          <div className="text-center">
             <h2 className="font-site-display text-3xl font-extrabold tracking-tight sm:text-4xl">What are you trying to do?</h2>
             <p className="mx-auto mt-3 max-w-md text-white/65">Tell me whether you&apos;re raising or investing and I&apos;ll take you to the right place. Nothing here offers or sells securities.</p>
           </div>
-        ) : null}
-        {messages.map((m, i) => (
-          <div key={i} className={m.role === "user" ? "ml-auto max-w-[85%] rounded-2xl bg-site-blue px-4 py-2.5 text-[14px] leading-6 text-white" : "max-w-[90%] rounded-2xl bg-white/[0.06] px-4 py-3 text-[14px] leading-7 text-white/90"}>{m.content}</div>
-        ))}
-        {busy ? <div className="font-site-mono text-[12px] text-white/50" role="status">Thinking…</div> : null}
-        {note ? <div className="rounded-xl bg-site-amber/15 px-4 py-2.5 text-[13px] text-site-amber" role="status">{note}</div> : null}
+          <div className="w-full">{inputBlock}</div>
+        </div>
+      ) : (
+        /* Conversation: messages scroll in the growing area, input docked below. */
+        <>
+          <div ref={logRef} role="log" aria-live="polite" className="mx-auto w-full max-w-3xl flex-1 space-y-4 overflow-y-auto px-6 pb-4">
+            {messages.map((m, i) => (
+              <div key={i} className={m.role === "user" ? "ml-auto max-w-[85%] rounded-2xl bg-site-blue px-4 py-2.5 text-[14px] leading-6 text-white" : "max-w-[90%] rounded-2xl bg-white/[0.06] px-4 py-3 text-[14px] leading-7 text-white/90"}>{m.content}</div>
+            ))}
+            {busy ? <div className="font-site-mono text-[12px] text-white/50" role="status">Thinking…</div> : null}
+            {note ? <div className="rounded-xl bg-site-amber/15 px-4 py-2.5 text-[13px] text-site-amber" role="status">{note}</div> : null}
 
-        {meta ? (
-          <div className="rounded-2xl border border-site-blue-lt/25 bg-site-blue/10 p-5" role="status">
-            <div className="font-site-display text-lg font-bold">{meta.title}</div>
-            <p className="mt-1 text-[14px] leading-6 text-white/75">{meta.body}</p>
-            {meta.demo ? (
-              <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("icapos:open-demo"))} className="mt-4 inline-block rounded-lg bg-site-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{meta.cta}</button>
-            ) : (
-              <Link href={meta.href!} onClick={close} className="mt-4 inline-block rounded-lg bg-site-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{meta.cta} →</Link>
-            )}
+            {meta ? (
+              <div className="rounded-2xl border border-site-blue-lt/25 bg-site-blue/10 p-5" role="status">
+                <div className="font-site-display text-lg font-bold">{meta.title}</div>
+                <p className="mt-1 text-[14px] leading-6 text-white/75">{meta.body}</p>
+                {meta.demo ? (
+                  <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("icapos:open-demo"))} className="mt-4 inline-block rounded-lg bg-site-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{meta.cta}</button>
+                ) : (
+                  <Link href={meta.href!} onClick={close} className="mt-4 inline-block rounded-lg bg-site-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{meta.cta} →</Link>
+                )}
+              </div>
+            ) : null}
           </div>
-        ) : null}
-      </div>
 
-      <div className="mx-auto w-full max-w-3xl px-6 pb-6">
-        {chips.length > 0 ? (
-          <div className="mb-3 flex flex-wrap gap-2">
-            {chips.map((c) => (<button key={c} type="button" onClick={() => send(c)} className="rounded-full border border-white/15 bg-white/[0.04] px-3.5 py-1.5 text-[13px] text-white/85 transition-colors hover:border-site-blue-lt hover:text-white">{c}</button>))}
-          </div>
-        ) : null}
-        <form onSubmit={(e) => { e.preventDefault(); const input = e.currentTarget.elements.namedItem("q") as HTMLInputElement; send(input.value); input.value = ""; }} className="flex gap-2">
-          <input name="q" autoFocus autoComplete="off" placeholder="Type what you're trying to do…" className="flex-1 rounded-xl border border-white/15 bg-white/[0.06] px-4 py-3 text-sm text-white placeholder-white/40 outline-none focus:border-site-blue-lt" />
-          <button type="submit" disabled={busy} className="rounded-xl bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi disabled:opacity-60">Send</button>
-        </form>
-        <p className="mt-3 font-site-mono text-[10px] leading-4 text-white/40">iCapOS does not offer or sell securities, provide investment advice, or process transactions. Answers are informational and may be imperfect.</p>
-      </div>
+          <div className="mx-auto w-full max-w-3xl px-6 pb-6">{inputBlock}</div>
+        </>
+      )}
     </div>
   );
 }
