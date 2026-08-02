@@ -134,7 +134,7 @@ export function DemoDialog() {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="demo-title">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="demo-title">
       <div className="absolute inset-0 bg-site-navy/60 backdrop-blur-sm" onClick={() => setOpen(false)} aria-hidden="true" />
       <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-site-line bg-white shadow-2xl">
         <div className="flex items-center justify-between bg-site-navy px-5 py-4 text-white">
