@@ -3,10 +3,23 @@
 -- attached RLS policies to them. Undo those policies so nothing pre-existing is
 -- exposed, and give the marketing SITE its own namespaced tables.
 
-drop policy if exists "anon_read_marketing_events" on public.marketing_events;
-drop policy if exists "anon_read_client_logos" on public.client_logos;
-drop policy if exists "staff_read_demo_bookings" on public.demo_bookings;
-drop policy if exists "staff_read_marketing_leads" on public.marketing_leads;
+-- Guard each drop: DROP POLICY IF EXISTS still errors if the TABLE is absent,
+-- and these pre-existing tables may not exist on every environment.
+do $$
+begin
+  if to_regclass('public.marketing_events') is not null then
+    drop policy if exists "anon_read_marketing_events" on public.marketing_events;
+  end if;
+  if to_regclass('public.client_logos') is not null then
+    drop policy if exists "anon_read_client_logos" on public.client_logos;
+  end if;
+  if to_regclass('public.demo_bookings') is not null then
+    drop policy if exists "staff_read_demo_bookings" on public.demo_bookings;
+  end if;
+  if to_regclass('public.marketing_leads') is not null then
+    drop policy if exists "staff_read_marketing_leads" on public.marketing_leads;
+  end if;
+end $$;
 
 create table if not exists public.marketing_site_events (
   id uuid primary key default gen_random_uuid(),
