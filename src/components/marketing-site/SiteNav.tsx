@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { SiteWordmark } from "@/components/marketing-site/SiteWordmark";
 
 /**
  * Public marketing-site top nav (spec §3). Client component for the dropdowns +
@@ -40,8 +41,8 @@ export function SiteNav({ onAskAi }: { onAskAi?: () => void }) {
   return (
     <header className="sticky top-0 z-40 border-b border-site-line bg-white/90 backdrop-blur font-site-body">
       <nav className="mx-auto flex h-16 max-w-6xl items-center gap-1 px-6" aria-label="Primary">
-        <Link href="/" className="mr-4 font-site-display text-lg font-extrabold tracking-tight text-site-navy" aria-current={pathname === "/" ? "page" : undefined}>
-          iCap<span className="text-site-blue-hi">OS</span>
+        <Link href="/" className="mr-4" aria-current={pathname === "/" ? "page" : undefined}>
+          <SiteWordmark variant="light" />
         </Link>
 
         <div className="hidden items-center md:flex">

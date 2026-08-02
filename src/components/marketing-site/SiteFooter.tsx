@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SiteWordmark } from "@/components/marketing-site/SiteWordmark";
 
 /**
  * Public marketing-site footer (spec §5, §13). Server component. Content ported
@@ -36,9 +37,7 @@ export function SiteFooter() {
     <footer className="bg-site-navy text-white/80 font-site-body">
       <div className="mx-auto grid max-w-6xl gap-10 px-6 py-14 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <div className="font-site-display text-lg font-extrabold tracking-tight text-white">
-            iCap<span className="text-site-blue-lt">OS</span>
-          </div>
+          <SiteWordmark variant="dark" />
           <p className="mt-3 max-w-xs text-sm leading-6 text-white/60">
             Investor relations, run as software. A product of iCFO Capital Global, Inc.
           </p>
