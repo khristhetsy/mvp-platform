@@ -5,16 +5,24 @@
  *   - per session: 40 / session
  *   - global:      env-configurable daily call ceiling → friendly "AI is resting"
  *
- * PRODUCTION NOTE: the default store here is in-memory, which is correct for dev
- * and unit tests but does NOT share state across edge invocations. Before launch,
- * back `hit()` with Upstash Redis / Vercel KV (INCR + EXPIRE) — the interface is
- * isolated to `hit()` so only that function changes.
+ * Two backends behind one shape (`HitResult`):
+ *   - DURABLE (production): Upstash Redis REST (INCR + EXPIRE NX + PTTL in one
+ *     pipeline). Edge-safe — plain fetch, no SDK. Enabled when both
+ *     UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are set. This is what
+ *     actually holds across edge invocations.
+ *   - IN-MEMORY (dev / unit tests / Redis outage): per-isolate Map. Used when
+ *     Upstash isn't configured, and as a fail-safe if a Redis call throws.
+ *
+ * `checkRateLimit` stays synchronous (in-memory) for the unit tests; the route
+ * calls the async `checkRateLimitAsync`, which uses Redis when configured.
  */
+
+type HitResult = { ok: boolean; remaining: number; resetAt: number };
 
 type Bucket = { count: number; resetAt: number };
 const store = new Map<string, Bucket>();
 
-function hit(key: string, limit: number, windowMs: number): { ok: boolean; remaining: number; resetAt: number } {
+function hit(key: string, limit: number, windowMs: number): HitResult {
   const now = Date.now();
   const b = store.get(key);
   if (!b || b.resetAt <= now) {
@@ -29,6 +37,35 @@ function hit(key: string, limit: number, windowMs: number): { ok: boolean; remai
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 
+function upstashConfigured(): boolean {
+  return Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+}
+
+/** Durable INCR+EXPIRE(NX)+PTTL via Upstash REST pipeline; falls back to the
+ *  in-memory bucket on any error so a Redis blip never fails the request open. */
+async function hitDurable(key: string, limit: number, windowMs: number): Promise<HitResult> {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return hit(key, limit, windowMs);
+  const windowSec = Math.ceil(windowMs / 1000);
+  try {
+    const res = await fetch(`${url}/pipeline`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify([["INCR", key], ["EXPIRE", key, windowSec, "NX"], ["PTTL", key]]),
+    });
+    if (!res.ok) throw new Error(`upstash ${res.status}`);
+    const data = (await res.json()) as Array<{ result?: unknown }>;
+    const count = Number(data?.[0]?.result ?? 0);
+    let ttl = Number(data?.[2]?.result ?? windowMs);
+    if (!Number.isFinite(ttl) || ttl < 0) ttl = windowMs;
+    if (!Number.isFinite(count) || count <= 0) throw new Error("upstash bad count");
+    return { ok: count <= limit, remaining: Math.max(0, limit - count), resetAt: Date.now() + ttl };
+  } catch {
+    return hit(key, limit, windowMs);
+  }
+}
+
 export type RateResult = { ok: true } | { ok: false; retryAfterSec: number; reason: "rate" | "resting" };
 
 /** Env-configurable global daily ceiling; 0/unset disables the circuit breaker. */
@@ -37,6 +74,11 @@ function dailyCeiling(): number {
   return Number.isFinite(raw) && raw > 0 ? raw : 0;
 }
 
+function rate(h: HitResult, reason: "rate" | "resting"): RateResult {
+  return { ok: false, retryAfterSec: Math.ceil((h.resetAt - Date.now()) / 1000), reason };
+}
+
+/** Synchronous, in-memory only. Kept for the unit tests. */
 export function checkRateLimit(input: { ip: string; sessionId?: string | null }): RateResult {
   const dayKey = new Date().toISOString().slice(0, 10);
 
@@ -44,18 +86,44 @@ export function checkRateLimit(input: { ip: string; sessionId?: string | null })
   const ceiling = dailyCeiling();
   if (ceiling > 0) {
     const g = hit(`ai:global:${dayKey}`, ceiling, DAY);
-    if (!g.ok) return { ok: false, retryAfterSec: Math.ceil((g.resetAt - Date.now()) / 1000), reason: "resting" };
+    if (!g.ok) return rate(g, "resting");
   }
 
   const perHour = hit(`ai:ip:h:${input.ip}:${dayKey}:${new Date().getUTCHours()}`, 20, HOUR);
-  if (!perHour.ok) return { ok: false, retryAfterSec: Math.ceil((perHour.resetAt - Date.now()) / 1000), reason: "rate" };
+  if (!perHour.ok) return rate(perHour, "rate");
 
   const perDay = hit(`ai:ip:d:${input.ip}:${dayKey}`, 60, DAY);
-  if (!perDay.ok) return { ok: false, retryAfterSec: Math.ceil((perDay.resetAt - Date.now()) / 1000), reason: "rate" };
+  if (!perDay.ok) return rate(perDay, "rate");
 
   if (input.sessionId) {
     const perSession = hit(`ai:sess:${input.sessionId}`, 40, DAY);
-    if (!perSession.ok) return { ok: false, retryAfterSec: Math.ceil((perSession.resetAt - Date.now()) / 1000), reason: "rate" };
+    if (!perSession.ok) return rate(perSession, "rate");
+  }
+
+  return { ok: true };
+}
+
+/** Durable (Upstash when configured, else in-memory). Called by the route. Same
+ *  limit sequence as checkRateLimit; global ceiling is checked first. */
+export async function checkRateLimitAsync(input: { ip: string; sessionId?: string | null }): Promise<RateResult> {
+  if (!upstashConfigured()) return checkRateLimit(input);
+  const dayKey = new Date().toISOString().slice(0, 10);
+
+  const ceiling = dailyCeiling();
+  if (ceiling > 0) {
+    const g = await hitDurable(`ai:global:${dayKey}`, ceiling, DAY);
+    if (!g.ok) return rate(g, "resting");
+  }
+
+  const perHour = await hitDurable(`ai:ip:h:${input.ip}:${dayKey}:${new Date().getUTCHours()}`, 20, HOUR);
+  if (!perHour.ok) return rate(perHour, "rate");
+
+  const perDay = await hitDurable(`ai:ip:d:${input.ip}:${dayKey}`, 60, DAY);
+  if (!perDay.ok) return rate(perDay, "rate");
+
+  if (input.sessionId) {
+    const perSession = await hitDurable(`ai:sess:${input.sessionId}`, 40, DAY);
+    if (!perSession.ok) return rate(perSession, "rate");
   }
 
   return { ok: true };

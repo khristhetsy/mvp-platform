@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requestSchema, MAX_TOKENS, JSON_OUTPUT, type AiTask } from "@/lib/ai-site/tasks";
 import { systemPromptFor } from "@/lib/ai-site/prompts";
 import { violatesGuardrails, GUARDRAIL_FALLBACK } from "@/lib/ai-site/guardrails";
-import { checkRateLimit } from "@/lib/ai-site/ratelimit";
+import { checkRateLimitAsync } from "@/lib/ai-site/ratelimit";
 
 export const runtime = "edge";
 
@@ -45,7 +45,7 @@ export async function POST(req: Request): Promise<Response> {
   // Rate limit (spec §7.2).
   const ip = (req.headers.get("x-forwarded-for")?.split(",")[0] ?? req.headers.get("x-real-ip") ?? "0.0.0.0").trim();
   const sessionId = (context?.sessionId as string | undefined) ?? req.headers.get("x-ai-session") ?? null;
-  const limit = checkRateLimit({ ip, sessionId });
+  const limit = await checkRateLimitAsync({ ip, sessionId });
   if (!limit.ok) {
     const msg = limit.reason === "resting"
       ? "Our AI is resting for now — please try again a little later."
