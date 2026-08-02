@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { LogoMarquee } from "@/components/marketing-site/LogoMarquee";
 
 /**
  * Client-logo strip (spec §6, §16). Data-driven from marketing_site_logos
@@ -30,16 +31,7 @@ export async function LogoStrip({ heading, caption }: { heading: string; caption
     <section className="border-b border-site-line bg-white px-6 py-12">
       <div className="mx-auto max-w-6xl text-center">
         <p className="font-site-mono text-xs uppercase tracking-wider text-site-muted">{heading}</p>
-        {logos.length > 0 ? (
-          <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-6">
-            {logos.map((l) => (
-              <li key={l.id} className="flex items-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={l.logo_url} alt={l.name} height={28} className="h-7 w-auto opacity-60 grayscale transition hover:opacity-100 hover:grayscale-0" loading="lazy" />
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        {logos.length > 0 ? <LogoMarquee logos={logos} /> : null}
         <p className="mx-auto mt-4 max-w-3xl text-[11px] leading-5 text-site-muted/80">{caption}</p>
       </div>
     </section>

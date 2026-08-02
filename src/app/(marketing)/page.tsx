@@ -5,6 +5,7 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { ORGANIZATION_JSONLD } from "@/lib/seo/structured-data";
 import { AiModeLauncher } from "@/components/marketing-site/AiModeLauncher";
 import { LogoStrip } from "@/components/marketing-site/LogoStrip";
+import { Reveal } from "@/components/marketing-site/Reveal";
 
 // ISR: statically rendered, refreshed hourly so newly-seeded client logos appear.
 export const revalidate = 3600;
@@ -77,7 +78,7 @@ export default function MarketingHomePage() {
           <Eyebrow>{h.howItWorks.eyebrow}</Eyebrow>
           <h2 className="mt-3 font-site-display text-3xl font-extrabold tracking-tight text-site-navy sm:text-4xl">{h.howItWorks.title}</h2>
           <p className="mt-4 max-w-2xl text-lg leading-8 text-site-muted">{h.howItWorks.sub}</p>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
+          <Reveal className="mt-10 grid gap-6 md:grid-cols-3">
             {h.howItWorks.steps.map((s) => (
               <div key={s.n} className="rounded-2xl border border-site-line bg-white p-6">
                 <div className="font-site-mono text-2xl font-semibold text-site-blue">{s.n}</div>
@@ -85,7 +86,7 @@ export default function MarketingHomePage() {
                 <p className="mt-2 text-sm leading-6 text-site-muted">{s.p}</p>
               </div>
             ))}
-          </div>
+          </Reveal>
           <p className="mt-8 rounded-xl border border-site-line bg-white px-5 py-4 text-[13px] leading-6 text-site-muted"><span className="font-medium text-site-navy">{h.howItWorks.outreachNote.split(".")[0]}.</span>{h.howItWorks.outreachNote.slice(h.howItWorks.outreachNote.indexOf(".") + 1)}</p>
         </div>
       </section>
@@ -96,14 +97,14 @@ export default function MarketingHomePage() {
           <Eyebrow onDark>{h.funnel.eyebrow}</Eyebrow>
           <h2 className="mt-3 font-site-display text-3xl font-extrabold tracking-tight sm:text-4xl">{h.funnel.title}</h2>
           <p className="mt-4 max-w-2xl text-lg leading-8 text-white/70">{h.funnel.sub}</p>
-          <div className="mt-10 space-y-3">
+          <Reveal className="mt-10 space-y-3">
             {h.funnel.stages.map((s) => (
               <div key={s.h} className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-4">
                 <div><div className="text-sm font-medium text-white">{s.h}</div><div className="text-[12px] text-white/55">{s.p}</div></div>
                 <span className="font-site-mono text-sm font-semibold text-site-blue-lt">{s.range}</span>
               </div>
             ))}
-          </div>
+          </Reveal>
           <div className="mt-8 flex flex-wrap items-baseline gap-4 rounded-2xl border border-site-blue-lt/30 bg-site-blue/10 px-6 py-6">
             <span className="font-site-display text-5xl font-extrabold text-site-blue-lt">{h.funnel.closeRate}</span>
             <span className="max-w-md text-sm leading-6 text-white/70">{h.funnel.closeLabel}</span>
