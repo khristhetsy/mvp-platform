@@ -79,6 +79,28 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* iCapOS public marketing site palette (spec §4). Namespaced `site-*` so it
+     stays isolated from the authenticated app's palette. Values are verified
+     against the live app CSS — do not invent new ones. */
+  --color-site-navy: #0a1a40;
+  --color-site-navy-2: #0f2555;
+  --color-site-navy-3: #16336b;
+  --color-site-blue: #1a6ce4;
+  --color-site-blue-hi: #2e78f5;
+  --color-site-blue-lt: #4f94ff;
+  --color-site-blue-pale: #eaf1fe;
+  --color-site-steel: #185fa5;
+  --color-site-amber: #f2a93b;
+  --color-site-paper: #f5f7fb;
+  --color-site-ink: #0c1526;
+  --color-site-muted: #5b6b85;
+  --color-site-line: #dce3ef;
+
+  /* Marketing display / body / mono font families (spec §4). */
+  --font-site-display: var(--font-site-archivo);
+  --font-site-body: var(--font-site-inter);
+  --font-site-mono: var(--font-site-plex-mono);
 }
 
 body {
