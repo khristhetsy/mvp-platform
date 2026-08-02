@@ -29,7 +29,7 @@ async function loadEvents(): Promise<MarketingEvent[]> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const admin = createServiceRoleClient() as any;
     const { data } = await admin
-      .from("marketing_events")
+      .from("marketing_site_events")
       .select("id, title, kind, city, starts_at, ends_at, registration_open, banner_url")
       .order("sort_order", { ascending: true })
       .order("starts_at", { ascending: true });
