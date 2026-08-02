@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { pricing } from "@/content/pricing";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { BookDemoButton } from "@/components/marketing-site/BookDemoButton";
 
 export const metadata: Metadata = {
   title: "Pricing — iCapOS",
@@ -94,6 +95,10 @@ export default function PricingPage() {
                 <p className="mt-3 text-sm leading-6 text-site-muted">{i.a}</p>
               </details>
             ))}
+          </div>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <span className="text-sm text-site-muted">Prefer a walkthrough first?</span>
+            <BookDemoButton variant="outline" />
           </div>
         </div>
       </section>

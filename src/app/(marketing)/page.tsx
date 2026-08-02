@@ -3,6 +3,11 @@ import Link from "next/link";
 import { home } from "@/content/home";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { ORGANIZATION_JSONLD } from "@/lib/seo/structured-data";
+import { AiModeLauncher } from "@/components/marketing-site/AiModeLauncher";
+import { LogoStrip } from "@/components/marketing-site/LogoStrip";
+
+// ISR: statically rendered, refreshed hourly so newly-seeded client logos appear.
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: { absolute: "iCapOS — Get your company in front of investors whose mandate fits" },
@@ -32,6 +37,7 @@ export default function MarketingHomePage() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href={h.hero.primaryCta.href} className="rounded-lg bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{h.hero.primaryCta.label}</Link>
               <Link href={h.hero.secondaryCta.href} className="rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-site-blue-lt hover:text-site-blue-lt">{h.hero.secondaryCta.label}</Link>
+              <AiModeLauncher />
             </div>
             <p className="mt-8 max-w-xl font-site-mono text-[11px] leading-5 text-white/45">{h.hero.compliance}</p>
           </div>
@@ -62,13 +68,8 @@ export default function MarketingHomePage() {
         </div>
       </section>
 
-      {/* Client logo strip (curated from client_logos — §6; seed to populate) */}
-      <section className="border-b border-site-line bg-white px-6 py-12">
-        <div className="mx-auto max-w-6xl text-center">
-          <p className="font-site-mono text-xs uppercase tracking-wider text-site-muted">{h.logos.heading}</p>
-          <p className="mx-auto mt-4 max-w-3xl text-[11px] leading-5 text-site-muted/80">{h.logos.caption}</p>
-        </div>
-      </section>
+      {/* Client logo strip — data-driven from marketing_site_logos (§6, §16) */}
+      <LogoStrip heading={h.logos.heading} caption={h.logos.caption} />
 
       {/* How it works */}
       <section className="bg-site-paper px-6 py-20">

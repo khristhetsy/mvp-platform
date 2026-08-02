@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { investors } from "@/content/investors";
+import { MandateExplorer } from "@/components/marketing-site/MandateExplorer";
 
 export const metadata: Metadata = {
   title: "For investors — iCapOS",
@@ -90,29 +91,19 @@ export default function InvestorsPage() {
         </div>
       </section>
 
-      {/* Mandate parser + match explorer (interactive/AI-wired in a later step) */}
+      {/* Mandate parser + live match explorer (§5, §7 — fictional samples only) */}
       <section className="bg-white px-6 py-20">
         <div className="mx-auto max-w-4xl">
           <Eyebrow>{v.explorer.eyebrow}</Eyebrow>
           <h2 className="mt-3 font-site-display text-3xl font-extrabold tracking-tight text-site-navy sm:text-4xl">{v.explorer.title}</h2>
           <p className="mt-4 max-w-2xl text-lg leading-8 text-site-muted">{v.explorer.sub}</p>
-          <div className="mt-8 rounded-2xl border border-site-line bg-site-paper p-6">
-            <label className="text-sm font-medium text-site-navy">{v.explorer.parseLabel}</label>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {v.explorer.parseChips.map((c) => (<span key={c} className="rounded-full border border-site-line bg-white px-3 py-1 text-[13px] text-site-ink">{c}</span>))}
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              {v.explorer.filters.map((fl) => (
-                <label key={fl.label} className="text-[13px] text-site-muted">{fl.label}
-                  <select className="mt-1 w-full rounded-lg border border-site-line bg-white px-3 py-2 text-sm text-site-ink">
-                    {fl.options.map((o) => (<option key={o}>{o}</option>))}
-                  </select>
-                </label>
-              ))}
-            </div>
-            <button type="button" className="mt-4 rounded-lg bg-site-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{v.explorer.parseCta}</button>
-            <p className="mt-4 font-site-mono text-[11px] text-site-muted/70">{v.explorer.note}</p>
-          </div>
+          <MandateExplorer
+            parseLabel={v.explorer.parseLabel}
+            parseChips={v.explorer.parseChips}
+            parseCta={v.explorer.parseCta}
+            filters={v.explorer.filters}
+            note={v.explorer.note}
+          />
         </div>
       </section>
 

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { founders } from "@/content/founders";
+import { BookDemoButton } from "@/components/marketing-site/BookDemoButton";
+import { OnePagerDrafter } from "@/components/marketing-site/OnePagerDrafter";
 
 export const metadata: Metadata = {
   title: "For founders — iCapOS",
@@ -26,6 +28,7 @@ export default function FoundersPage() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href={f.hero.primaryCta.href} className="rounded-lg bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{f.hero.primaryCta.label}</Link>
             <Link href={f.hero.secondaryCta.href} className="rounded-lg border border-white/20 px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-site-blue-lt hover:text-site-blue-lt">{f.hero.secondaryCta.label}</Link>
+            <BookDemoButton variant="onDark" />
           </div>
         </div>
       </section>
@@ -119,14 +122,18 @@ export default function FoundersPage() {
         </div>
       </section>
 
-      {/* AI drafting (OnePagerDrafter wires here in the AI build step) */}
+      {/* AI drafting — shapes the founder's own inputs into a starting one-pager (§5, §7) */}
       <section className="bg-white px-6 py-20">
-        <div className="mx-auto max-w-3xl text-center">
-          <Eyebrow>{f.drafting.eyebrow}</Eyebrow>
-          <h2 className="mt-3 font-site-display text-3xl font-extrabold tracking-tight text-site-navy sm:text-4xl">{f.drafting.title}</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-site-muted">{f.drafting.sub}</p>
-          <button type="button" className="mt-6 rounded-lg bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{f.drafting.cta}</button>
-          <p className="mx-auto mt-4 max-w-xl text-[12px] leading-5 text-site-muted/80">{f.drafting.disclaimer}</p>
+        <div className="mx-auto max-w-4xl">
+          <div className="text-center">
+            <Eyebrow>{f.drafting.eyebrow}</Eyebrow>
+            <h2 className="mt-3 font-site-display text-3xl font-extrabold tracking-tight text-site-navy sm:text-4xl">{f.drafting.title}</h2>
+            <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-site-muted">{f.drafting.sub}</p>
+          </div>
+          <div className="mt-8">
+            <OnePagerDrafter />
+          </div>
+          <p className="mx-auto mt-4 max-w-xl text-center text-[12px] leading-5 text-site-muted/80">{f.drafting.disclaimer}</p>
         </div>
       </section>
 

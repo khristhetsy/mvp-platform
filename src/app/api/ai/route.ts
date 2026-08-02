@@ -68,11 +68,14 @@ export async function POST(req: Request): Promise<Response> {
       const json = extractJson(text);
       const valid = json ? contract.safeParse(json) : null;
       if (valid?.success) {
-        // Guardrail the user-facing text field where present.
+        // Guardrail EVERY user-facing free-text field (backstop — never trust the
+        // prompt alone). Covers assistant.say, analyze_readiness.summary,
+        // parse_mandate.read; each is replaced independently if it trips.
         const data = valid.data as Record<string, unknown>;
-        const say = typeof data.say === "string" ? data.say : null;
-        if (say && violatesGuardrails(say)) {
-          return NextResponse.json({ ok: true, data: { ...data, say: GUARDRAIL_FALLBACK } });
+        for (const field of ["say", "summary", "read"]) {
+          if (typeof data[field] === "string" && violatesGuardrails(data[field] as string)) {
+            data[field] = GUARDRAIL_FALLBACK;
+          }
         }
         return NextResponse.json({ ok: true, data });
       }

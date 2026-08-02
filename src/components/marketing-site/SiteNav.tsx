@@ -73,7 +73,10 @@ export function SiteNav({ onAskAi }: { onAskAi?: () => void }) {
         <div className="ml-auto flex items-center gap-2">
           <button
             type="button"
-            onClick={onAskAi}
+            onClick={() => {
+              if (onAskAi) onAskAi();
+              else if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("icapos:open-assistant"));
+            }}
             className="rounded-lg px-3 py-2 text-sm font-medium text-site-ink transition-colors hover:text-site-blue-hi"
           >
             Ask AI

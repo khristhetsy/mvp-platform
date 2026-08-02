@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { readiness } from "@/content/readiness";
+import { ReadinessEstimator } from "@/components/marketing-site/ReadinessEstimator";
+import { ReadinessAnalyzer } from "@/components/marketing-site/ReadinessAnalyzer";
 
 export const metadata: Metadata = {
   title: "Capital Readiness Rating — iCapOS",
@@ -47,17 +49,13 @@ export default function ReadinessPage() {
         </div>
       </section>
 
-      {/* AI analyzer (ReadinessAnalyzer wires here in the AI step) */}
+      {/* AI analyzer — free text → indicative dimension scores + fixes (§5, §7) */}
       <section className="bg-white px-6 py-20">
         <div className="mx-auto max-w-3xl text-center">
           <Eyebrow>{r.analyzer.eyebrow}</Eyebrow>
           <H2>{r.analyzer.title}</H2>
           <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-site-muted">{r.analyzer.sub}</p>
-          <div className="mt-6 flex flex-wrap justify-center gap-2">
-            {r.analyzer.chips.map((c) => (<span key={c} className="rounded-full border border-site-line bg-site-paper px-3 py-1 text-[13px] text-site-ink">{c}</span>))}
-          </div>
-          <button type="button" className="mt-5 rounded-lg bg-site-blue px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{r.analyzer.cta}</button>
-          <p className="mx-auto mt-4 max-w-xl text-[12px] leading-5 text-site-muted/80">{r.analyzer.disclaimer}</p>
+          <ReadinessAnalyzer chips={r.analyzer.chips} cta={r.analyzer.cta} disclaimer={r.analyzer.disclaimer} />
         </div>
       </section>
 
@@ -67,25 +65,14 @@ export default function ReadinessPage() {
           <Eyebrow>{r.estimator.eyebrow}</Eyebrow>
           <H2>{r.estimator.title}</H2>
           <p className="mt-4 max-w-2xl text-lg leading-8 text-site-muted">{r.estimator.sub}</p>
-          <div className="mt-8 grid gap-8 md:grid-cols-[2fr_1fr]">
-            <div className="space-y-5">
-              {r.estimator.dimensions.map((d) => (
-                <div key={d.label}>
-                  <div className="flex items-center justify-between text-[13px]"><span className="font-medium text-site-navy">{d.label} <span className="font-site-mono text-site-muted">Weight {d.weight}%</span></span><span className="font-site-mono text-site-blue">{d.value}</span></div>
-                  <div className="mt-1 text-[12px] text-site-muted">{d.desc}</div>
-                  <div className="mt-2 h-1.5 rounded-full bg-site-line"><div className="h-full rounded-full bg-site-blue" style={{ width: `${d.value}%` }} /></div>
-                </div>
-              ))}
-            </div>
-            <div className="rounded-2xl border border-site-line bg-white p-6 text-center">
-              <div className="font-site-mono text-xs uppercase tracking-wider text-site-muted">Estimated rating</div>
-              <div className="mt-2 font-site-display text-5xl font-extrabold text-site-blue">{r.estimator.estimated}<span className="text-lg text-site-muted">/100</span></div>
-              <div className="text-sm text-site-muted">{r.estimator.band}</div>
-              <div className="mt-4 font-site-mono text-[11px] uppercase tracking-wider text-site-muted">{r.estimator.workOn}</div>
-              <Link href={r.estimator.cta.href} className="mt-4 block rounded-lg bg-site-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{r.estimator.cta.label}</Link>
-            </div>
+          <div className="mt-8">
+            <ReadinessEstimator
+              dimensions={r.estimator.dimensions}
+              cta={r.estimator.cta}
+              workOn={r.estimator.workOn}
+              disclaimer={r.estimator.disclaimer}
+            />
           </div>
-          <p className="mt-4 font-site-mono text-[11px] text-site-muted/80">{r.estimator.disclaimer}</p>
         </div>
       </section>
 
