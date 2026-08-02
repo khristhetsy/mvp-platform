@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 /**
@@ -34,6 +35,7 @@ const CARD_META: Record<Exclude<Card, "none">, { title: string; body: string; hr
 };
 
 export function AiFirstMode() {
+  const pathname = usePathname() ?? "/";
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [chips, setChips] = useState<string[]>(OPENERS);
@@ -50,17 +52,45 @@ export function AiFirstMode() {
     return () => window.removeEventListener("icapos:open-ai-first", openHandler);
   }, []);
 
+  // Open by default at "/" unless ?pages=1 or the visitor already chose to browse
+  // this session (§3). The full home is server-rendered beneath, so crawlers and
+  // no-JS visitors are unaffected (§10).
+  useEffect(() => {
+    if (pathname !== "/") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("pages") === "1") return;
+    if (sessionStorage.getItem("icapos-aifirst-dismissed") === "1") return;
+    const id = requestAnimationFrame(() => setOpen(true));
+    return () => cancelAnimationFrame(id);
+  }, [pathname]);
+
   useEffect(() => {
     if (!open) return;
     document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
     window.addEventListener("keydown", onKey);
     return () => { document.body.style.overflow = ""; window.removeEventListener("keydown", onKey); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [messages, card]);
+
+  /** Dismiss AI-first: remember the choice for the session and, on home, reflect
+   *  it in the URL (?pages=1) so reloads/deep-links go straight to the pages.
+   *  pushState is guarded (§15) so origin-less/sandboxed frames don't throw. */
+  function close() {
+    setOpen(false);
+    try { sessionStorage.setItem("icapos-aifirst-dismissed", "1"); } catch { /* ignore */ }
+    if (pathname === "/") {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set("pages", "1");
+        window.history.pushState(null, "", url);
+      } catch { /* origin-less frame — ignore */ }
+    }
+  }
 
   async function send(text: string) {
     const clean = text.trim();
@@ -105,7 +135,7 @@ export function AiFirstMode() {
     <div className="fixed inset-0 z-[70] flex flex-col bg-gradient-to-b from-site-navy via-site-navy-2 to-site-navy-3 text-white" role="dialog" aria-modal="true" aria-label="AI-first mode">
       <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-6 py-5">
         <div className="font-site-display text-lg font-extrabold tracking-tight">iCap<span className="text-site-blue-lt">OS</span> <span className="ml-2 align-middle font-site-mono text-[11px] font-medium uppercase tracking-wider text-white/50">AI mode</span></div>
-        <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-white/20 px-3 py-1.5 text-sm font-medium text-white/80 transition-colors hover:border-white/40 hover:text-white">Browse the site instead</button>
+        <button type="button" onClick={close} className="rounded-lg border border-white/20 px-3 py-1.5 text-sm font-medium text-white/80 transition-colors hover:border-white/40 hover:text-white">Browse the site instead</button>
       </div>
 
       <div ref={logRef} role="log" aria-live="polite" className="mx-auto w-full max-w-3xl flex-1 space-y-4 overflow-y-auto px-6 pb-4">
@@ -128,7 +158,7 @@ export function AiFirstMode() {
             {meta.demo ? (
               <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("icapos:open-demo"))} className="mt-4 inline-block rounded-lg bg-site-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{meta.cta}</button>
             ) : (
-              <Link href={meta.href!} onClick={() => setOpen(false)} className="mt-4 inline-block rounded-lg bg-site-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{meta.cta} →</Link>
+              <Link href={meta.href!} onClick={close} className="mt-4 inline-block rounded-lg bg-site-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-site-blue-hi">{meta.cta} →</Link>
             )}
           </div>
         ) : null}
