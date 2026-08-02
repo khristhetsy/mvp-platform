@@ -8,10 +8,11 @@ import { SiteWordmark } from "@/components/marketing-site/SiteWordmark";
 /**
  * Public marketing-site top nav (spec §3). Client component for the dropdowns +
  * active-state. Structure is fixed:
- *   Home · Founders ▾ · Investors · Pricing · Events · About ▾
- *   Founders ▾ : How it works · Readiness Rating · Pricing
+ *   Home · Founders ▾ · Investors · Events · About ▾
+ *   Founders ▾ : How it works · Readiness Rating · Pricing  (Pricing lives here only)
  *   About ▾    : About us · Disclosures
- *   Right side : Ask AI · Sign in · Get started
+ *   Right side : AI Mode · Sign in · Get started
+ * AI Mode opens the full-screen AI-first surface (icapos:open-ai-first).
  * Readiness Rating stays under Founders (§3) — do not move to About.
  *
  * Logo: the real vector lockup is a known launch gap (§4, §17). This renders a
@@ -30,7 +31,7 @@ const ABOUT: Item[] = [
   { href: "/disclosures", label: "Disclosures" },
 ];
 
-export function SiteNav({ onAskAi }: { onAskAi?: () => void }) {
+export function SiteNav() {
   const pathname = usePathname() ?? "/";
   const [open, setOpen] = useState<"founders" | "about" | null>(null);
 
@@ -58,7 +59,6 @@ export function SiteNav({ onAskAi }: { onAskAi?: () => void }) {
           />
 
           <Link href="/investors" className={linkClass("/investors")} aria-current={isActive("/investors") ? "page" : undefined}>Investors</Link>
-          <Link href="/pricing" className={linkClass("/pricing")} aria-current={isActive("/pricing") ? "page" : undefined}>Pricing</Link>
           <Link href="/events" className={linkClass("/events")} aria-current={isActive("/events") ? "page" : undefined}>Events</Link>
 
           <Dropdown
@@ -74,13 +74,10 @@ export function SiteNav({ onAskAi }: { onAskAi?: () => void }) {
         <div className="ml-auto flex items-center gap-2">
           <button
             type="button"
-            onClick={() => {
-              if (onAskAi) onAskAi();
-              else if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("icapos:open-assistant"));
-            }}
+            onClick={() => window.dispatchEvent(new CustomEvent("icapos:open-ai-first"))}
             className="rounded-lg px-3 py-2 text-sm font-medium text-site-ink transition-colors hover:text-site-blue-hi"
           >
-            Ask AI
+            AI Mode
           </button>
           <Link href="/auth/sign-in" className="rounded-lg px-3 py-2 text-sm font-medium text-site-ink transition-colors hover:text-site-blue-hi">
             Sign in

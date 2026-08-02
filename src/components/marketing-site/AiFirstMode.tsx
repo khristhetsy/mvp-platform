@@ -127,7 +127,20 @@ export function AiFirstMode() {
     }
   }
 
-  if (!open) return null;
+  // When closed, a persistent bottom-right launcher reopens the full-screen mode
+  // (the single AI surface — there is no separate compact panel).
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Open AI mode"
+        className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full bg-site-blue px-5 py-3 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-site-blue-hi"
+      >
+        <span aria-hidden="true">✦</span> AI Mode
+      </button>
+    );
+  }
   const meta = card !== "none" ? CARD_META[card] : null;
   const empty = messages.length === 0;
 
