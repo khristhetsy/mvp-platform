@@ -6,6 +6,7 @@ import { ORGANIZATION_JSONLD } from "@/lib/seo/structured-data";
 import { AiModeLauncher } from "@/components/marketing-site/AiModeLauncher";
 import { LogoStrip } from "@/components/marketing-site/LogoStrip";
 import { Reveal } from "@/components/marketing-site/Reveal";
+import { EventGallery } from "@/components/marketing-site/EventGallery";
 
 // ISR: statically rendered, refreshed hourly so newly-seeded client logos appear.
 export const revalidate = 3600;
@@ -202,7 +203,7 @@ export default function MarketingHomePage() {
               <div key={f.h} className="rounded-2xl border border-site-line bg-white p-6"><h3 className="font-site-display text-base font-bold text-site-navy">{f.h}</h3><p className="mt-2 text-sm leading-6 text-site-muted">{f.p}</p></div>
             ))}
           </div>
-          <p className="mt-4 font-site-mono text-[11px] text-site-muted/70">{h.events.caption}</p>
+          <EventGallery caption={h.events.caption} />
           <div className="mt-8 flex flex-wrap items-center gap-4 rounded-2xl border border-site-blue/30 bg-white px-6 py-6">
             <div>
               <span className="font-site-mono text-xs uppercase tracking-wider text-site-blue">{h.events.nextEvent.label}</span>
