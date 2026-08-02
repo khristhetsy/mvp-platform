@@ -3,7 +3,6 @@ import { SiteNav } from "@/components/marketing-site/SiteNav";
 import { SiteFooter } from "@/components/marketing-site/SiteFooter";
 import { SiteAssistant } from "@/components/marketing-site/SiteAssistant";
 import { DemoDialog } from "@/components/marketing-site/DemoDialog";
-import { PageNudge } from "@/components/marketing-site/PageNudge";
 import { AiFirstMode } from "@/components/marketing-site/AiFirstMode";
 import { siteFontVariables } from "@/lib/marketing-site/fonts";
 
@@ -27,7 +26,6 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
       <SiteFooter />
       <SiteAssistant />
       <DemoDialog />
-      <PageNudge />
       <AiFirstMode />
     </div>
   );
