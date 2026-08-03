@@ -63,6 +63,8 @@ export default function PricingPage() {
           ))}
         </div>
         <p className="mx-auto mt-8 max-w-2xl text-center font-site-mono text-[11px] leading-5 text-white/45">{p.investorNote}</p>
+        {/* Non-refundable policy, framed on services-rendered-immediately (§13). Binding terms live in /terms (counsel). */}
+        <p className="mx-auto mt-4 max-w-3xl text-center font-site-mono text-[11px] leading-5 text-white/45">{p.billingNote}</p>
       </section>
 
       {/* Side-by-side comparison */}

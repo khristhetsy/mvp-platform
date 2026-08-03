@@ -42,6 +42,8 @@ export const pricing = {
   ],
   investorNote:
     "Investor accounts are free. Investors are never charged, and iCapOS takes no fee from either side of an introduction.",
+  billingNote:
+    "Billing & refunds. Your plan begins delivering the moment you subscribe — AI due diligence reporting and updates, and distribution of your materials to matched investors in the iCFO network. Because these services are rendered immediately, subscriptions are billed monthly and are non-refundable, including partial periods. Cancel any time to stop future billing; access continues through the end of the paid period. The free Capital Readiness Rating lets you see how iCapOS works before you pay.",
   comparison: {
     title: "Side by side",
     sub: "The only difference is reach and stage time.",
@@ -66,6 +68,7 @@ export const pricing = {
       { q: "Does iCapOS make introductions?", a: "No. iCapOS distributes your materials to matched investors and passes along introduction requests. It does not introduce, recommend, or vouch for anyone." },
       { q: "Do you take a percentage of what I raise?", a: "Never. The subscription is the entire commercial relationship." },
       { q: "Can I cancel?", a: "Any time, from your account settings. Your rating and materials stay accessible through the end of the paid period." },
+      { q: "Can I get a refund?", a: "Subscriptions are non-refundable. Your plan starts delivering the moment you subscribe — AI due diligence reporting and updates, and distribution of your materials to matched investors — so the services are rendered immediately. You can cancel any time to stop future charges, and access continues through the end of the paid period. The Capital Readiness Rating is free, so you can see how iCapOS works before you pay." },
       { q: "What material do I need to have ready?", a: "Nothing. No deck, no model, no cap table, no investor list. The platform builds each of those with you — readiness is what iCapOS produces, not what it requires. Run the free rating with whatever you have today." },
     ],
   },
