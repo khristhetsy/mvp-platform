@@ -164,15 +164,21 @@ export default function MarketingHomePage() {
               <p className="mt-4 font-site-mono text-[10px] text-site-muted/70">{h.readiness.cardNote}</p>
             </div>
           </div>
-          <div className="mt-12 grid gap-6 sm:grid-cols-3">
-            {h.readiness.metrics.map((m) => (
-              <div key={m.value} className="rounded-2xl border border-site-line bg-white p-6">
-                <div className="font-site-display text-3xl font-extrabold text-site-blue">{m.value}</div>
-                <p className="mt-2 text-[13px] leading-6 text-site-muted">{m.label}</p>
-              </div>
-            ))}
+          {/* Targets, not results — methodology sits immediately above the figures
+              so nothing below contradicts them (brief Step 3). Ranges + the
+              engagement-traction line are unchanged (in modeledNote). */}
+          <div className="mt-12">
+            <p className="font-site-mono text-xs font-semibold uppercase tracking-[0.16em] text-site-blue">What we&apos;re building toward</p>
+            <p className="mt-3 max-w-3xl text-[12px] leading-5 text-site-muted/80">{h.readiness.modeledNote}</p>
+            <div className="mt-6 grid gap-6 sm:grid-cols-3">
+              {h.readiness.metrics.map((m) => (
+                <div key={m.value} className="rounded-2xl border border-site-line bg-white p-6">
+                  <div className="font-site-display text-3xl font-extrabold text-site-blue">{m.value}</div>
+                  <p className="mt-2 text-[13px] leading-6 text-site-muted">{m.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <p className="mt-6 max-w-3xl text-[12px] leading-5 text-site-muted/80">{h.readiness.modeledNote}</p>
         </div>
       </section>
 
