@@ -29,9 +29,17 @@ export function WorkflowDependencyPanel({
             <p className="mt-1 text-xs text-slate-600">{dep.dependency}</p>
             <p className="mt-1 text-xs font-medium text-amber-950">Next: {dep.nextRequiredStep}</p>
             {dep.href ? (
-              <Link href={dep.href} className="mt-1 inline-block text-xs font-semibold text-indigo-700 hover:underline">
-                Open related workflow
-              </Link>
+              dep.href.startsWith("#") ? (
+                // Same-page tab deep link — a plain anchor fires hashchange, which
+                // the workspace listens for to switch tabs.
+                <a href={dep.href} className="mt-1 inline-block text-xs font-semibold text-indigo-700 hover:underline">
+                  Open related workflow
+                </a>
+              ) : (
+                <Link href={dep.href} className="mt-1 inline-block text-xs font-semibold text-indigo-700 hover:underline">
+                  Open related workflow
+                </Link>
+              )
             ) : null}
           </li>
         ))}

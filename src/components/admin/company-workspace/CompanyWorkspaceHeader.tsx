@@ -129,39 +129,43 @@ export function CompanyWorkspaceMetrics({ data }: Readonly<{ data: AdminCompanyW
   const { company, readiness } = data;
   const companyId = company.id;
 
+  // In-workspace cards deep-link to a tab via the URL hash; the workspace listens
+  // for hashchange and switches tabs (no reload). External cards keep their href.
+  const drill = (tabKey: string, card: React.ReactElement) => (
+    <a href={`#${tabKey}`} className="block cursor-pointer">{card}</a>
+  );
+
   return (
     <MetricGrid>
-      <MetricCard
-        label={t("readiness_score")}
-        value={readiness.latestScore != null ? String(readiness.latestScore) : "—"}
-        detail={readiness.milestoneLabel}
-        accent="indigo"
-        href={`/admin/companies/${companyId}`}
-      />
-      <MetricCard
-        label="Investable Readiness"
-        value={
-          data.investable
-            ? String(data.investable.effectiveScore ?? data.investable.totalScore)
-            : "—"
-        }
-        detail={
-          data.investable
-            ? `${data.investable.isOverridden ? "Adjusted · " : ""}13-factor model`
-            : "Not yet scored"
-        }
-        accent="blue"
-        status={data.investable ? "info" : "neutral"}
-        href={`/admin/companies/${companyId}#investable-readiness`}
-      />
-      <MetricCard
-        label={t("open_remediation")}
-        value={String(readiness.remediation.active)}
-        detail={`${readiness.remediation.highPriorityOpen} high priority`}
-        accent="violet"
-        status={readiness.remediation.active > 0 ? "warning" : "success"}
-        href={buildCompanyFilteredHref("/admin/companies", companyId, { queue: "remediation" })}
-      />
+      {drill(
+        "qualify",
+        <MetricCard
+          label={t("readiness_score")}
+          value={readiness.latestScore != null ? String(readiness.latestScore) : "—"}
+          detail={readiness.milestoneLabel}
+          accent="indigo"
+        />,
+      )}
+      {drill(
+        "deploy",
+        <MetricCard
+          label="Investable Readiness"
+          value={data.investable ? String(data.investable.effectiveScore ?? data.investable.totalScore) : "—"}
+          detail={data.investable ? `${data.investable.isOverridden ? "Adjusted · " : ""}13-factor model` : "Not yet scored"}
+          accent="blue"
+          status={data.investable ? "info" : "neutral"}
+        />,
+      )}
+      {drill(
+        "qualify",
+        <MetricCard
+          label={t("open_remediation")}
+          value={String(readiness.remediation.active)}
+          detail={`${readiness.remediation.highPriorityOpen} high priority`}
+          accent="violet"
+          status={readiness.remediation.active > 0 ? "warning" : "success"}
+        />,
+      )}
       <MetricCard
         label={t("investor_interests_2")}
         value={String(data.investorActivity.interests)}

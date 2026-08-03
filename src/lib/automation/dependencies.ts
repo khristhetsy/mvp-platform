@@ -49,7 +49,7 @@ export async function resolveCompanyDependencies(
       entityType: "company",
       entityId: companyId,
       resolved: false,
-      href: `/admin/companies/${companyId}`,
+      href: `#qualify`,
     });
   }
 
@@ -66,7 +66,7 @@ export async function resolveCompanyDependencies(
       entityType: "company",
       entityId: companyId,
       resolved: false,
-      href: `/founder/documents`,
+      href: `#qualify`,
     });
   }
 
@@ -95,7 +95,7 @@ export async function resolveCompanyDependencies(
       entityType: "company",
       entityId: companyId,
       resolved: false,
-      href: `/admin/companies/${companyId}`,
+      href: `#qualify`,
     });
   }
 
@@ -109,7 +109,7 @@ export async function resolveCompanyDependencies(
       entityType: "company",
       entityId: companyId,
       resolved: false,
-      href: `/admin/companies/${companyId}`,
+      href: `#review`,
     });
   }
 

@@ -5,7 +5,18 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import { QUEUE_TYPE_LABELS, formatQueueAge, formatQueueStatus } from "@/lib/queues/queue-display";
 import type { AdminQueueItem, AdminQueueType } from "@/lib/queues/admin-queues";
-import { getAdminCompanyWorkspaceHref } from "@/lib/admin/company-workspace-types";
+
+// Route each queue item to the workspace tab where it's actioned (hash → the
+// workspace switches tabs on hashchange). Unmapped types fall back to the queues
+// console below.
+const QUEUE_TAB_HASH: Partial<Record<AdminQueueType, string>> = {
+  company_reviews: "#review",
+  compliance_escalations: "#qualify",
+  founder_remediation: "#qualify",
+  spv_blockers: "#deploy",
+  investor_documents: "#deploy",
+  investor_approvals: "#deploy",
+};
 
 export function CompanyQueuesPanel({
   items,
@@ -23,12 +34,21 @@ export function CompanyQueuesPanel({
         />
       ) : (
         <ul className="divide-y divide-slate-100">
-          {items.map((item) => (
+          {items.map((item) => {
+            const tabHash = QUEUE_TAB_HASH[item.queue_type as AdminQueueType];
+            return (
             <li key={item.id} className="py-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
-                <Link href={getAdminCompanyWorkspaceHref(companyId)} className="font-medium text-indigo-700 hover:text-indigo-900">
-                  {item.title}
-                </Link>
+                {tabHash ? (
+                  // Same-page tab deep link — plain anchor fires hashchange.
+                  <a href={tabHash} className="font-medium text-indigo-700 hover:text-indigo-900">
+                    {item.title}
+                  </a>
+                ) : (
+                  <Link href={`/admin/queues?company=${companyId}`} className="font-medium text-indigo-700 hover:text-indigo-900">
+                    {item.title}
+                  </Link>
+                )}
                 <StatusBadge
                   label={QUEUE_TYPE_LABELS[item.queue_type as AdminQueueType] ?? item.queue_type}
                   status="info"
@@ -40,7 +60,8 @@ export function CompanyQueuesPanel({
                 {item.next_action_label} · {formatQueueAge(item.created_at)}
               </p>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
       <p className="mt-4 text-xs text-slate-500">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { AdminCompanyCard } from "@/components/AdminCompanyCard";
@@ -62,6 +62,24 @@ export function AdminCompanyWorkspace({
   const t = useTranslations("adminCmp");
   const [tab, setTab] = useState<TabKey>("initialize");
 
+  // Tabs are URL-hash addressable (#qualify, #deploy, …) so metric cards, workflow
+  // blockers, and queue items can deep-link to a tab. Plain-anchor hash links fire
+  // `hashchange`, which we listen for; tab clicks update the hash.
+  useEffect(() => {
+    const apply = () => {
+      const key = window.location.hash.replace("#", "");
+      if (TABS.some((tb) => tb.key === key)) setTab(key as TabKey);
+    };
+    const id = requestAnimationFrame(apply);
+    window.addEventListener("hashchange", apply);
+    return () => { cancelAnimationFrame(id); window.removeEventListener("hashchange", apply); };
+  }, []);
+
+  const selectTab = (key: TabKey) => {
+    setTab(key);
+    try { window.history.replaceState(null, "", `#${key}`); } catch { /* ignore */ }
+  };
+
   const reviewMarketplace = (
     <PageSection
       title={t("review_marketplace_actions")}
@@ -116,7 +134,7 @@ export function AdminCompanyWorkspace({
               <button
                 key={tabItem.key}
                 type="button"
-                onClick={() => setTab(tabItem.key)}
+                onClick={() => selectTab(tabItem.key)}
                 className={`relative whitespace-nowrap px-3.5 py-3 text-sm font-semibold transition ${
                   active ? "text-indigo-600" : "text-slate-500 hover:text-slate-800"
                 }`}
