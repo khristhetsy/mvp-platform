@@ -3,6 +3,7 @@ import { SiteNav } from "@/components/marketing-site/SiteNav";
 import { SiteFooter } from "@/components/marketing-site/SiteFooter";
 import { DemoDialog } from "@/components/marketing-site/DemoDialog";
 import { AiFirstMode } from "@/components/marketing-site/AiFirstMode";
+import { loadNextEvent } from "@/lib/marketing-site/next-event";
 import { siteFontVariables } from "@/lib/marketing-site/fonts";
 
 /**
@@ -12,7 +13,8 @@ import { siteFontVariables } from "@/lib/marketing-site/fonts";
  * demo dialog, and the full-screen AI-first mode — the single AI surface, opened
  * by the nav "AI Mode" button, its bottom-right launcher, or by default on "/".
  */
-export default function MarketingLayout({ children }: { children: ReactNode }) {
+export default async function MarketingLayout({ children }: { children: ReactNode }) {
+  const nextEvent = await loadNextEvent();
   return (
     <div className={`${siteFontVariables} min-h-screen bg-white font-site-body text-site-ink antialiased`}>
       <a
@@ -25,7 +27,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
       <main id="main">{children}</main>
       <SiteFooter />
       <DemoDialog />
-      <AiFirstMode />
+      <AiFirstMode nextEvent={nextEvent} />
     </div>
   );
 }
