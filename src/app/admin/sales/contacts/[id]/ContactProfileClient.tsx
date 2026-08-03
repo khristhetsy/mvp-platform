@@ -645,6 +645,10 @@ export function ContactProfileClient({ contact: initialContact, opportunities, s
                     </div>
                   )}
                   {profile.sections.map((sec) => {
+                    // The linked-company section above now carries Seeking +
+                    // Company & stage from onboarding, so hide the legacy
+                    // CRM-import duplicates when a company is linked.
+                    if (company && (sec.title === "Seeking" || sec.title === "Company & stage")) return null;
                     const rating = sec.title.toLowerCase().includes("rating");
                     return (
                       <div key={sec.title} style={{ marginTop: 14 }}>
