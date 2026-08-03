@@ -28,13 +28,19 @@ function findTKTK(value: unknown, at: string, hits: string[]): void {
   }
 }
 
-export function loadNetworkStats(): NetworkStats {
+/** Throws (failing the build) if any "TKTK" placeholder remains in `value`.
+ *  Shared by every data-file loader so nothing ships with placeholders. */
+export function assertNoTKTK(value: unknown, name: string): void {
   const hits: string[] = [];
-  findTKTK(raw, "network-stats", hits);
+  findTKTK(value, name, hits);
   if (hits.length > 0) {
     throw new Error(
-      `[network-stats] Unpopulated TKTK placeholders — populate data/network-stats.json before building:\n  ${hits.join("\n  ")}`,
+      `[${name}] Unpopulated TKTK placeholders — populate the data file before building:\n  ${hits.join("\n  ")}`,
     );
   }
+}
+
+export function loadNetworkStats(): NetworkStats {
+  assertNoTKTK(raw, "network-stats");
   return raw as unknown as NetworkStats;
 }
