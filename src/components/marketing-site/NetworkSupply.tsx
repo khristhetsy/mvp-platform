@@ -32,6 +32,7 @@ function BarGroup({ title, rows }: { title: string; rows: MixRow[] }) {
 
 export function NetworkSupply() {
   const s = loadNetworkStats();
+  if (!s) return null; // figures still TKTK — omit the section until populated
   return (
     <section className="bg-site-paper px-6 py-16">
       <div className="mx-auto max-w-6xl">

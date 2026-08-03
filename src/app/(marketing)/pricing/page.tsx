@@ -35,10 +35,12 @@ export default function PricingPage() {
           <p className="font-site-mono text-xs font-semibold uppercase tracking-[0.16em] text-site-blue-lt">{p.eyebrow}</p>
           <h1 className="mt-3 font-site-display text-4xl font-extrabold tracking-tight sm:text-5xl">{p.title}</h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-white/70">{p.sub}</p>
-          {/* Price anchor — the alternative cost of outreach (brief Step 5). Figures from data/price-anchor.json (TKTK); no competitor names. */}
-          <p className="mx-auto mt-6 max-w-2xl text-[13px] leading-6 text-white/55">
-            For comparison, a dedicated IR retainer runs {anchor.ir_retainer}, a purchased investor list {anchor.list_purchase}, and a placement agent typically takes {anchor.placement_pct} of the round.
-          </p>
+          {/* Price anchor — the alternative cost of outreach (brief Step 5). Figures from data/price-anchor.json; omitted until populated; no competitor names. */}
+          {anchor ? (
+            <p className="mx-auto mt-6 max-w-2xl text-[13px] leading-6 text-white/55">
+              For comparison, a dedicated IR retainer runs {anchor.ir_retainer}, a purchased investor list {anchor.list_purchase}, and a placement agent typically takes {anchor.placement_pct} of the round.
+            </p>
+          ) : null}
         </div>
         <div className="mx-auto mt-10 grid max-w-4xl gap-6 md:grid-cols-2">
           {p.tiers.map((t) => (

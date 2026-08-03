@@ -120,16 +120,18 @@ export default function MarketingHomePage() {
           <p className="mt-5 max-w-3xl font-site-mono text-[11px] leading-5 text-white/45">{h.funnel.footnote}</p>
 
           {/* The iCapOS delta — where the two FIXABLE causes move the number.
-              Visually distinct from the benchmark stages; modeled, not measured;
-              range from data/funnel-delta.json (brief Step 4). Ends the section. */}
-          <div className="mt-8 rounded-2xl border-2 border-site-blue-lt bg-site-blue/20 px-6 py-7">
-            <div className="font-site-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-site-blue-lt">The iCapOS delta · modeled, not measured</div>
-            <div className="mt-3 flex flex-wrap items-baseline gap-4">
-              <span className="font-site-display text-5xl font-extrabold text-white">{delta.delta_range}</span>
-              <span className="max-w-md text-sm leading-6 text-white/80">where addressing the two fixable causes — thesis mismatch and readiness failures — moves the end-to-end number.</span>
+              Visually distinct; modeled, not measured; range from
+              data/funnel-delta.json (brief Step 4). Omitted until populated. */}
+          {delta ? (
+            <div className="mt-8 rounded-2xl border-2 border-site-blue-lt bg-site-blue/20 px-6 py-7">
+              <div className="font-site-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-site-blue-lt">The iCapOS delta · modeled, not measured</div>
+              <div className="mt-3 flex flex-wrap items-baseline gap-4">
+                <span className="font-site-display text-5xl font-extrabold text-white">{delta.delta_range}</span>
+                <span className="max-w-md text-sm leading-6 text-white/80">where addressing the two fixable causes — thesis mismatch and readiness failures — moves the end-to-end number.</span>
+              </div>
+              <p className="mt-4 font-site-mono text-[11px] leading-5 text-white/55">Assumption: {delta.assumption}</p>
             </div>
-            <p className="mt-4 font-site-mono text-[11px] leading-5 text-white/55">Assumption: {delta.assumption}</p>
-          </div>
+          ) : null}
         </div>
       </section>
 
