@@ -7,6 +7,7 @@ import { AiModeLauncher } from "@/components/marketing-site/AiModeLauncher";
 import { LogoStrip } from "@/components/marketing-site/LogoStrip";
 import { Reveal } from "@/components/marketing-site/Reveal";
 import { EventGallery } from "@/components/marketing-site/EventGallery";
+import { NetworkSupply } from "@/components/marketing-site/NetworkSupply";
 
 // ISR: statically rendered, refreshed hourly so newly-seeded client logos appear.
 export const revalidate = 3600;
@@ -69,6 +70,9 @@ export default function MarketingHomePage() {
           </div>
         </div>
       </section>
+
+      {/* Network supply — verifiable aggregate figures, above the illustrative cards (brief Step 1) */}
+      <NetworkSupply />
 
       {/* Client logo strip — data-driven from marketing_site_logos (§6, §16) */}
       <LogoStrip heading={h.logos.heading} caption={h.logos.caption} />

@@ -1,0 +1,20 @@
+{
+  "last_updated": "TKTK",
+  "active_mandates": "TKTK",
+  "stage_mix": [
+    { "label": "Pre-seed", "pct": "TKTK" },
+    { "label": "Seed", "pct": "TKTK" },
+    { "label": "Series A", "pct": "TKTK" },
+    { "label": "Series B+", "pct": "TKTK" }
+  ],
+  "sector_mix": [
+    { "label": "TKTK", "pct": "TKTK" },
+    { "label": "TKTK", "pct": "TKTK" },
+    { "label": "TKTK", "pct": "TKTK" }
+  ],
+  "geography_mix": [
+    { "label": "TKTK", "pct": "TKTK" },
+    { "label": "TKTK", "pct": "TKTK" }
+  ],
+  "median_monthly_cap": "TKTK"
+}
