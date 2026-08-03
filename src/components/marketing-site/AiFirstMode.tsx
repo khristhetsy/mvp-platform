@@ -36,7 +36,7 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
     sub: "Tell me whether you're raising or investing and I'll take you to the right place. Nothing here offers or sells securities.",
     placeholder: "Type what you're trying to do…",
     openers: ["I'm a founder raising a seed round", "I'm an investor looking for climate deals", "How does it work?", "How do I get started?"],
-    card: { eyebrow: "Start free · no card", title: "Create your iCapOS account", body: "Run the free Capital Readiness Rating and see where you stand — no card required.", cta: "Get started", href: START },
+    card: { eyebrow: "Start free · no card", title: "Create your iCapOS account", body: "Run the free Capital Readiness Rating and see where you stand — no card required.", cta: "Run the free rating", href: START },
   },
   events: {
     label: "events",
@@ -51,7 +51,7 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
     sub: "Ask how readiness, matching, and distribution work — then start free. No polished deck required, and nothing here offers or sells securities.",
     placeholder: "Ask about getting investor-ready…",
     openers: ["How does iCapOS work for founders?", "How do you build my investor list?", "How is my readiness scored?", "How do I get started?"],
-    card: { eyebrow: "Start free · no card", title: "Run your Capital Readiness Rating", body: "Create your account, score your company on the five dimensions investors screen on, and see what to fix.", cta: "Create your account", href: START },
+    card: { eyebrow: "Start free · no card", title: "Run your Capital Readiness Rating", body: "Create your account, score your company on the five dimensions investors screen on, and see what to fix.", cta: "Run the free rating", href: START },
   },
   investors: {
     label: "investors",
@@ -59,7 +59,7 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
     sub: "Ask how mandates, matching, and the volume cap work. Free investor accounts — nothing here offers or sells securities.",
     placeholder: "Ask about deal flow and mandates…",
     openers: ["How does matching work?", "How do I set my mandate?", "What's the volume cap?", "How do I get started?"],
-    card: { eyebrow: "Free · your mandate", title: "Create your free investor account", body: "Set a mandate and a monthly cap, and see rated, diligence-ready companies that fit.", cta: "Create your account", href: START },
+    card: { eyebrow: "Free · your mandate", title: "Create your free investor account", body: "Set a mandate and a monthly cap, and see rated, diligence-ready companies that fit.", cta: "Create your free account", href: START },
   },
   pricing: {
     label: "pricing",
@@ -67,7 +67,7 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
     sub: "Ask what's included or how self-serve works. The readiness rating is free — you only choose a plan when you're ready to distribute.",
     placeholder: "Ask about plans and what's included…",
     openers: ["What's the difference between the plans?", "Is it really self-serve?", "Can I book a demo?", "How do I get started?"],
-    card: { eyebrow: "Start free", title: "Create your account", body: "The Capital Readiness Rating is free with no card — choose a plan only when you're ready to distribute.", cta: "Get started", href: START },
+    card: { eyebrow: "Start free", title: "Create your account", body: "The Capital Readiness Rating is free with no card — choose a plan only when you're ready to distribute.", cta: "Run the free rating", href: START },
   },
   readiness: {
     label: "readiness",
@@ -75,7 +75,7 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
     sub: "Ask what the rating measures and how to run it. It's free, and it's what iCapOS produces — not what it requires.",
     placeholder: "Ask about the readiness rating…",
     openers: ["What does the rating measure?", "How is it scored?", "How long does it take?", "How do I get started?"],
-    card: { eyebrow: "Free · no card", title: "Run your Capital Readiness Rating", body: "Create your account and get a structured score with an ordered list of what to fix.", cta: "Create your account", href: START },
+    card: { eyebrow: "Free · no card", title: "Run your Capital Readiness Rating", body: "Create your account and get a structured score with an ordered list of what to fix.", cta: "Run the free rating", href: START },
   },
   about: {
     label: "about",
@@ -83,7 +83,7 @@ const CONTEXTS: Record<Ctx, CtxConfig> = {
     sub: "Ask about the iCFO network, the conference series, and sixteen years of investor relations. Nothing here offers or sells securities.",
     placeholder: "Ask about iCapOS and iCFO…",
     openers: ["What is the iCFO network?", "How do the conferences work?", "How does iCapOS make money?", "How do I get started?"],
-    card: { eyebrow: "Start free · no card", title: "Create your iCapOS account", body: "Run the free readiness rating and see where you stand — no card required.", cta: "Get started", href: START },
+    card: { eyebrow: "Start free · no card", title: "Create your iCapOS account", body: "Run the free readiness rating and see where you stand — no card required.", cta: "Run the free rating", href: START },
   },
 };
 
