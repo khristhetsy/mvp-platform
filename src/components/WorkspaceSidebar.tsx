@@ -9,7 +9,7 @@ import { useLocale } from "next-intl";
 import type { InternalPermission } from "@/lib/rbac/constants";
 import { JOURNEY_STAGES, type JourneyStage } from "@/lib/founder-journey/types";
 import type { WorkspaceId, WorkspaceNavItem } from "@/lib/workspace-nav";
-import { getAdminWorkspaceNavSections, getFounderWorkspaceNavSections, getInvestorWorkspaceNavSections, getWorkspaceNav, workspaceLabel } from "@/lib/workspace-nav";
+import { getAdminWorkspaceNavSections, getFounderWorkspaceNavSections, getInvestorWorkspaceNavSections, getWorkspaceNav, workspaceLabel, isFounderNavV2Enabled } from "@/lib/workspace-nav";
 import { getWorkspaceNavIcon } from "@/lib/ui/nav-icons";
 import { useToast } from "@/components/ui/ToastProvider";
 import { IcapOSLogo } from "@/components/IcapOSLogo";
@@ -334,7 +334,10 @@ export function WorkspaceSidebar({
     return NAV_ES[label] ?? label;
   }
   // Admin-controlled feature visibility — hrefs to hide for this user's role.
+  // Same fetch carries the runtime 4-step-nav toggle (founderNavV2); the build
+  // flag is the initial/SSR default until the fetch resolves.
   const [disabledHrefs, setDisabledHrefs] = useState<string[]>([]);
+  const [founderNavV2, setFounderNavV2] = useState<boolean>(isFounderNavV2Enabled());
   useEffect(() => {
     let active = true;
     void (async () => {
@@ -342,7 +345,10 @@ export function WorkspaceSidebar({
         const res = await fetch("/api/feature-controls");
         if (!res.ok) return;
         const data = await res.json();
-        if (active) setDisabledHrefs(data.disabledHrefs ?? []);
+        if (active) {
+          setDisabledHrefs(data.disabledHrefs ?? []);
+          if (typeof data.founderNavV2 === "boolean") setFounderNavV2(data.founderNavV2);
+        }
       } catch {
         // ignore — show everything
       }
@@ -405,7 +411,7 @@ export function WorkspaceSidebar({
       workspace === "admin"
         ? getAdminWorkspaceNavSections()
         : workspace === "founder"
-          ? getFounderWorkspaceNavSections()
+          ? getFounderWorkspaceNavSections(founderNavV2)
           : getInvestorWorkspaceNavSections();
     if (!source) return null;
     const hidden = new Set(disabledHrefs);
@@ -424,7 +430,7 @@ export function WorkspaceSidebar({
           }),
       }))
       .filter((section) => section.items.length > 0);
-  }, [canShowNavItem, deptAllows, workspace, disabledHrefs, points.enabled]);
+  }, [canShowNavItem, deptAllows, workspace, disabledHrefs, points.enabled, founderNavV2]);
 
   const label = workspaceLabel(workspace);
 

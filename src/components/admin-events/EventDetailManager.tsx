@@ -223,6 +223,11 @@ function SessionLiveControls({
           >
             {busy ? t("starting") : t("start")}
           </button>
+          <p className="w-full text-xs text-[var(--text-muted)]">
+            Vimeo, YouTube, and Whereby links embed and play inline (on the Talk Show too). Vimeo:
+            paste <code>vimeo.com/123…</code> or a live <code>vimeo.com/event/…</code> link. Zoom and Google
+            Meet can&apos;t be embedded, so they show a &ldquo;Join&rdquo; button instead.
+          </p>
         </div>
       )}
 

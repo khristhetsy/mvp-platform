@@ -61,6 +61,40 @@ export async function setOutreachAutomationEnabled(enabled: boolean, updatedBy: 
 }
 
 /**
+ * Founder 4-step nav (V2) cohort rollout — percentage of founders (0–100)
+ * bucketed into the new nav when no explicit `founder:nav_v2` master switch is
+ * set. Bucketing is deterministic per founder (see the feature-controls API), so
+ * a founder never flips back and forth. 0 = off (build-flag fallback applies).
+ */
+const NAV_V2_ROLLOUT_KEY = "founder_nav_v2_rollout";
+
+export async function getFounderNavV2RolloutPct(): Promise<number> {
+  try {
+    const { data } = await db().from("platform_settings").select("value").eq("key", NAV_V2_ROLLOUT_KEY).maybeSingle();
+    const pct = (data as { value?: { pct?: number } } | null)?.value?.pct;
+    if (typeof pct !== "number" || Number.isNaN(pct)) return 0;
+    return Math.max(0, Math.min(100, Math.round(pct)));
+  } catch {
+    return 0;
+  }
+}
+
+export async function setFounderNavV2RolloutPct(pct: number, updatedBy: string | null): Promise<boolean> {
+  const clamped = Math.max(0, Math.min(100, Math.round(Number.isFinite(pct) ? pct : 0)));
+  try {
+    const { error } = await db()
+      .from("platform_settings")
+      .upsert(
+        { key: NAV_V2_ROLLOUT_KEY, value: { pct: clamped }, updated_by: updatedBy, updated_at: new Date().toISOString() },
+        { onConflict: "key" },
+      );
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Investor match & outreach-qualification rules (admin Control Features).
  * `requiredFields` — a field flagged here must match or the investor is excluded
  * from matches entirely (industry is always required). Thresholds gate who is

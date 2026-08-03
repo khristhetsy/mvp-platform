@@ -24,7 +24,7 @@ import { confirmDialog } from "@/components/ui/ConfirmDialog";
 import { NotificationBellDropdown } from "@/components/NotificationBellDropdown";
 import { WorkspaceBreadcrumbs } from "@/components/ui/WorkspaceBreadcrumbs";
 import type { WorkspaceId } from "@/lib/workspace-nav";
-import { workspaceLabel } from "@/lib/workspace-nav";
+import { workspaceLabel, isFounderNavV2Enabled } from "@/lib/workspace-nav";
 import type { InternalPermission } from "@/lib/rbac/constants";
 
 type Props = {
@@ -40,8 +40,24 @@ type MenuItem =
   | { kind: "divider" }
   | { kind: "signout" };
 
-function menuItemsForWorkspace(workspace: WorkspaceId): MenuItem[] {
+function menuItemsForWorkspace(workspace: WorkspaceId, founderNavV2: boolean): MenuItem[] {
   if (workspace === "founder") {
+    // 4-step nav (V2): the avatar menu holds all the account plumbing so the
+    // rail can stay focused on the raise. V1 keeps its original menu unchanged.
+    if (founderNavV2) {
+      return [
+        { kind: "link", label: "Company profile", href: "/founder/settings", icon: <Building2 className="h-4 w-4" /> },
+        { kind: "link", label: "Team", href: "/founder/settings/team", icon: <User className="h-4 w-4" /> },
+        { kind: "link", label: "Billing & subscription", href: "/founder/settings/billing", icon: <CreditCard className="h-4 w-4" /> },
+        { kind: "link", label: "Integrations", href: "/founder/settings/integrations", icon: <Settings className="h-4 w-4" /> },
+        { kind: "link", label: "iCFO Points", href: "/credits", icon: <PieChart className="h-4 w-4" /> },
+        { kind: "link", label: "Feedback", href: "/founder/settings/feedback", icon: <Terminal className="h-4 w-4" /> },
+        { kind: "divider" },
+        { kind: "link", label: "Help & support", href: "https://docs.icapos.com", icon: <HelpCircle className="h-4 w-4" /> },
+        { kind: "divider" },
+        { kind: "signout" },
+      ];
+    }
     return [
       { kind: "link", label: "Settings", href: "/founder/settings", icon: <Settings className="h-4 w-4" /> },
       { kind: "link", label: "Company onboarding", href: "/founder/onboarding", icon: <Building2 className="h-4 w-4" /> },
@@ -169,8 +185,20 @@ function ProfileDropdown({
     }
   }
 
+  // Runtime 4-step-nav toggle (build flag is the default until the fetch lands).
+  const [founderNavV2, setFounderNavV2] = useState<boolean>(isFounderNavV2Enabled());
+  useEffect(() => {
+    if (workspace !== "founder") return;
+    let alive = true;
+    fetch("/api/feature-controls")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (alive && d && typeof d.founderNavV2 === "boolean") setFounderNavV2(d.founderNavV2); })
+      .catch(() => { /* keep build-flag default */ });
+    return () => { alive = false; };
+  }, [workspace]);
+
   const canShow = useAdminMenuAccess(workspace);
-  const items = tidyDividers(menuItemsForWorkspace(workspace).filter(canShow));
+  const items = tidyDividers(menuItemsForWorkspace(workspace, founderNavV2).filter(canShow));
 
   return (
     <div ref={ref} className="relative">

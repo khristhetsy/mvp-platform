@@ -16,6 +16,8 @@ import { loadSegments } from "@/lib/icfo-events/segments";
 import { EventPresenceProvider } from "@/components/events/EventPresenceProvider";
 import { EventVenueHeader } from "@/components/events/EventVenueHeader";
 import { TalkShowCouch } from "@/components/events/TalkShowCouch";
+import { LiveStagePlayer } from "@/components/events/LiveStagePlayer";
+import { LiveViewerCount } from "@/components/events/LiveViewerCount";
 import { SegmentRunOfShow } from "@/components/events/SegmentRunOfShow";
 import { CallInBar } from "@/components/events/CallInBar";
 import { GuestRoster } from "@/components/events/GuestRoster";
@@ -52,6 +54,13 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
 
   const stage = pickTalkShowSession(event.sessions);
   const isLive = stage?.status === "live";
+
+  // A live session streamed via a pasted link (Vimeo/YouTube/Zoom/Meet) or a
+  // Whereby room is a "watch party": render the video player as the stage
+  // surface instead of the couch. Everything else keeps the avatar couch.
+  const isWatchEmbed = Boolean(
+    isLive && stage?.videoRef && (stage.videoProvider === "external" || stage.videoProvider === "whereby"),
+  );
 
   const [questions, chat, queue] =
     profile && stage && isLive
@@ -100,14 +109,23 @@ export default async function TalkShowPage({ params }: { params: Promise<{ slug:
               <div className="mt-4 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
                 <div>
                   {stage ? (
-                    <TalkShowCouch
-                      sessionId={stage.id}
-                      presenceRoom={PRESENCE_ROOM}
-                      segmentTitle={stage.abstract ? stage.abstract.slice(0, 70) : isLive ? "On air now" : "Up next"}
-                      initialSegments={segments}
-                      runOfShow={runOfShow}
-                      isLive={Boolean(isLive)}
-                    />
+                    isWatchEmbed ? (
+                      <LiveStagePlayer
+                        session={stage}
+                        badge="ON AIR"
+                        viewerSlot={<LiveViewerCount room={PRESENCE_ROOM} />}
+                        caption={stage.abstract ? stage.abstract.slice(0, 90) : subtitle}
+                      />
+                    ) : (
+                      <TalkShowCouch
+                        sessionId={stage.id}
+                        presenceRoom={PRESENCE_ROOM}
+                        segmentTitle={stage.abstract ? stage.abstract.slice(0, 70) : isLive ? "On air now" : "Up next"}
+                        initialSegments={segments}
+                        runOfShow={runOfShow}
+                        isLive={Boolean(isLive)}
+                      />
+                    )
                   ) : (
                     <div className="rounded-2xl px-6 py-12 text-center text-sm" style={{ background: "#0a1422", color: "#8e9bb0" }}>
                       No talk show has been scheduled for this event yet.

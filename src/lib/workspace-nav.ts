@@ -136,6 +136,7 @@ export const adminWorkspaceNavSections: WorkspaceNavSection[] = [
       { href: "/admin/tasks",            label: "Tasks",           requiredPermission: "view_admin_dashboard" },
       { href: "/admin/portfolio",        label: "Portfolio",       requiredPermission: "view_admin_dashboard" },
       { href: "/admin/readiness",        label: "Readiness Scores",requiredPermission: "manage_companies"    },
+      { href: "/admin/founders-stuck",   label: "Stuck founders",  requiredPermission: "manage_companies"    },
       { href: "/admin/data-room",         label: "Diligence Tracker",requiredPermission: "manage_companies"   },
       {
         href: "/admin/learning",
@@ -388,8 +389,115 @@ export const founderWorkspaceNavSections: WorkspaceNavSection[] = [
 
 export const founderWorkspaceNav: WorkspaceNavItem[] = founderWorkspaceNavSections.flatMap((section) => section.items);
 
-export function getFounderWorkspaceNavSections(): WorkspaceNavSection[] {
-  return founderWorkspaceNavSections;
+/**
+ * V2 — the 4-step founder navigation (Rate → Ready → Match → Raise), gated by
+ * NEXT_PUBLIC_FOUNDER_NAV_V2. This is a pure re-home of existing pages: every
+ * href already resolves; nothing new is built. The current V1 nav above is left
+ * intact and served whenever the flag is off, so this is fully reversible.
+ *
+ * Locking reuses the existing minStage mechanism (deferred stage rename): steps
+ * dim + lock until the founder reaches the mapped journey stage. Utility pages
+ * that aren't part of the raise sit in a quiet "Account" group.
+ */
+export const founderWorkspaceNavSectionsV2: WorkspaceNavSection[] = [
+  {
+    title: "Your raise",
+    items: [
+      {
+        href: "/founder",
+        label: "1 · Rate",
+        children: [
+          { href: "/founder", label: "Dashboard" },
+          { href: "/founder/journey", label: "My Progress" },
+          { href: "/founder/actions", label: "Action Center" },
+          { href: "/founder/readiness/wizard", label: "Your score", minStage: "qualify" },
+          { href: "/founder/report", label: "AI diligence report", minStage: "deploy" },
+        ],
+      },
+      {
+        href: "/founder/readiness",
+        label: "2 · Ready",
+        minStage: "qualify",
+        children: [
+          { href: "/founder/readiness", label: "Readiness checklist", minStage: "qualify" },
+          { href: "/founder/readiness/data-room", label: "Data room", minStage: "qualify" },
+          { href: "/founder/documents", label: "Documents", minStage: "qualify" },
+          { href: "/founder/business-plan", label: "Business plan", minStage: "qualify" },
+          { href: "/founder/pitch-deck", label: "Pitch deck", minStage: "qualify" },
+          { href: "/founder/financial-model", label: "Financial model", minStage: "qualify" },
+          { href: "/founder/cap-table", label: "Cap table", minStage: "qualify" },
+          { href: "/founder/readiness/diligence", label: "Diligence & review", minStage: "deploy" },
+          { href: "/founder/pitch-practice", label: "Prep & practice", minStage: "qualify" },
+          { href: "/founder/learning", label: "Learning", minStage: "qualify" },
+        ],
+      },
+      {
+        href: "/founder/investors",
+        label: "3 · Match",
+        minStage: "deploy",
+        children: [
+          { href: "/founder/matching", label: "Automated outreach", minStage: "deploy" },
+          { href: "/founder/investor-pipeline", label: "Manual outreach", minStage: "deploy" },
+          { href: "/founder/matches", label: "Investor matches", minStage: "deploy" },
+          { href: "/founder/private-market", label: "Marketplace", minStage: "deploy", requiresRegCf: true },
+          { href: "/events", label: "Events", minStage: "qualify" },
+        ],
+      },
+      {
+        href: "/founder/deal-room",
+        label: "4 · Raise",
+        minStage: "deploy",
+        children: [
+          { href: "/founder/deal-room", label: "Deal Room", minStage: "deploy" },
+          { href: "/founder/capital-raise", label: "Capital Raise", minStage: "deploy" },
+          { href: "/founder/spvs", label: "SPVs & closings" },
+          { href: "/founder/offering-type", label: "Offering type", minStage: "deploy" },
+          { href: "/founder/investor-update", label: "Investor update builder", minStage: "deploy" },
+          { href: "/founder/milestones", label: "Milestones", minStage: "optimize" },
+          { href: "/founder/analytics", label: "Analytics", minStage: "optimize" },
+        ],
+      },
+    ],
+  },
+  {
+    // Working areas that aren't raise steps but don't belong in a dropdown.
+    // Settings, Team, Billing, Integrations, iCFO Points, and Feedback live
+    // behind the top-bar avatar menu (WorkspaceHeader), not here.
+    title: "Workspace",
+    items: [
+      {
+        href: "/founder/inbox",
+        label: "Communications",
+        children: [
+          { href: "/founder/inbox", label: "Inbox" },
+          { href: "/founder/messages", label: "Messages", minStage: "deploy" },
+          { href: "/founder/updates", label: "Investor Updates", minStage: "deploy" },
+        ],
+      },
+      {
+        href: "/founder/calendar",
+        label: "Calendar",
+        children: [
+          { href: "/founder/calendar", label: "Calendar" },
+          { href: "/founder/schedule", label: "Scheduling" },
+        ],
+      },
+      { href: "/founder/tasks", label: "Tasks", minStage: "qualify" },
+    ],
+  },
+];
+
+/** Build-time flag: serve the 4-step founder nav. Off by default → V1 unchanged.
+ *  Used as the default/SSR value; the runtime toggle (feature_flags via
+ *  /api/feature-controls) can override it per request without a redeploy. */
+export function isFounderNavV2Enabled(): boolean {
+  return process.env.NEXT_PUBLIC_FOUNDER_NAV_V2 === "on";
+}
+
+/** Pass `forceV2` (from the runtime toggle) to override the build flag. */
+export function getFounderWorkspaceNavSections(forceV2?: boolean): WorkspaceNavSection[] {
+  const v2 = forceV2 ?? isFounderNavV2Enabled();
+  return v2 ? founderWorkspaceNavSectionsV2 : founderWorkspaceNavSections;
 }
 
 // Investor menu mirrors the four-stage journey: Onboard → Verify → Access → Manage.

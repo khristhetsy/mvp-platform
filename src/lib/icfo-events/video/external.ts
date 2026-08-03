@@ -30,9 +30,20 @@ export function embeddableLiveUrl(url: string): string | null {
     if (host.endsWith("whereby.com")) {
       return url.includes("?") ? `${url}&embed` : `${url}?embed`;
     }
+    if (host === "player.vimeo.com") {
+      // Already a player embed URL — use as-is.
+      return url;
+    }
     if (host.endsWith("vimeo.com")) {
-      const id = u.pathname.split("/").filter(Boolean)[0];
-      if (id && /^\d+$/.test(id)) return `https://player.vimeo.com/video/${id}`;
+      const parts = u.pathname.split("/").filter(Boolean);
+      // Live event / premiere: vimeo.com/event/{id}  →  /event/{id}/embed
+      if (parts[0] === "event" && parts[1]) {
+        return `https://vimeo.com/event/${parts[1]}/embed`;
+      }
+      // Standard on-demand video: vimeo.com/{numericId}
+      if (parts[0] && /^\d+$/.test(parts[0])) {
+        return `https://player.vimeo.com/video/${parts[0]}`;
+      }
     }
     return null;
   } catch {
