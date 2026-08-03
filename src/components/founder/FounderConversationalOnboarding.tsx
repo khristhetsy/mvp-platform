@@ -33,6 +33,15 @@ const TIMELINES = [
   { id: "exploring", label: "Just exploring",  sub: "Learning the process" },
 ];
 
+// "Raise & stage" step (step 7). Investor types + funding stage use the platform
+// taxonomy; the rest are the agreed proposed sets.
+const INVESTOR_TYPE_OPTS = ["Individual angel", "Angel group / syndicate", "Family office", "Venture fund", "Corporate / strategic", "Other"];
+const CAPITAL_TYPE_OPTS = ["Equity", "SAFE", "Convertible note", "Venture debt", "Revenue-based"];
+const INVESTOR_PREF_OPTS = ["Lead investor", "Follow-on / co-invest", "Hands-on / operator", "Passive", "No preference"];
+const BUSINESS_ENTITY_OPTS = ["Delaware C-Corp", "LLC", "S-Corp", "Public benefit corp", "Not yet incorporated"];
+const FUNDING_STAGE_OPTS = ["Pre-seed", "Seed", "Series A", "Series B", "Growth", "Other"];
+const OPERATING_STAGE_OPTS = ["Idea", "Building / MVP", "Pre-revenue", "Revenue", "Scaling"];
+
 /* ─────────────────────────── helpers ──────────────────────── */
 
 function raiseHint(stage: string | null): string {
@@ -218,8 +227,8 @@ function ScoreRing({ score }: { score: number }) {
 
 /* ─────────────────────────── main ─────────────────────────── */
 
-type StepNum = 1 | 2 | 3 | 4 | 5 | 6 | 7;
-const TOTAL = 6;
+type StepNum = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+const TOTAL = 7;
 
 export function FounderConversationalOnboarding({
   company,
@@ -254,11 +263,27 @@ export function FounderConversationalOnboarding({
   const [companyState, setCompanyState] = useState(company.state ?? "");
   const [jurisdiction, setJurisdiction] = useState(company.incorporation_jurisdiction ?? "");
 
+  // Seeking + Company & stage (columns added in migration 20260803002; not yet in
+  // the generated Company type, so read via a Record view).
+  const cx = company as unknown as Record<string, unknown>;
+  const splitCsv = (v: unknown): string[] =>
+    typeof v === "string" && v.trim() ? v.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  const [invTypes, setInvTypes]       = useState<string[]>(splitCsv(cx.seeking_investor_types));
+  const [capTypes, setCapTypes]       = useState<string[]>(splitCsv(cx.seeking_capital_types));
+  const [invPref, setInvPref]         = useState<string[]>(splitCsv(cx.active_investor_preference));
+  const [fundingStage, setFundingStage] = useState<string[]>(splitCsv(cx.funding_stage));
+  const [opStage, setOpStage]         = useState<string[]>(splitCsv(cx.operating_stage));
+  const [bizEntity, setBizEntity]     = useState<string | null>(typeof cx.business_entity === "string" ? cx.business_entity : null);
+  const [ebitda, setEbitda]           = useState(typeof cx.annual_ebitda === "string" ? cx.annual_ebitda : "");
+  const [mgmtTeam, setMgmtTeam]       = useState(typeof cx.management_team === "string" ? cx.management_team : "");
+
   function toggleFund(label: string) {
     setUseOfFunds((prev) =>
       prev.includes(label) ? prev.filter((x) => x !== label) : [...prev, label],
     );
   }
+  const toggleIn = (setter: React.Dispatch<React.SetStateAction<string[]>>, val: string) =>
+    setter((prev) => (prev.includes(val) ? prev.filter((x) => x !== val) : [...prev, val]));
 
   function canAdvance(): boolean {
     switch (step) {
@@ -268,6 +293,12 @@ export function FounderConversationalOnboarding({
       case 4: return Number(amount) > 0;
       case 5: return description.trim().length >= 20;
       case 6: return true;
+      case 7:
+        return (
+          invTypes.length > 0 && capTypes.length > 0 && invPref.length > 0 &&
+          Boolean(bizEntity) && fundingStage.length > 0 && opStage.length > 0 &&
+          ebitda.trim().length > 0 && mgmtTeam.trim().length > 0
+        );
       default: return true;
     }
   }
@@ -306,11 +337,20 @@ export function FounderConversationalOnboarding({
           funding_amount: Number(amount) || 0,
           revenue_stage: stage ?? "",
           use_of_funds: useOfFunds.join(", "),
+          // Seeking + Company & stage (step 7)
+          seeking_investor_types: invTypes.join(", "),
+          seeking_capital_types: capTypes.join(", "),
+          active_investor_preference: invPref.join(", "),
+          funding_stage: fundingStage.join(", "),
+          operating_stage: opStage.join(", "),
+          business_entity: bizEntity ?? "",
+          annual_ebitda: ebitda.trim(),
+          management_team: mgmtTeam.trim(),
         }),
       });
       if (!r2.ok) throw new Error("Could not save funding information.");
 
-      setStep(7);
+      setStep(8);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -323,7 +363,7 @@ export function FounderConversationalOnboarding({
   const score      = computeScore({ name: companyName, industry, stage, amount, description, useOfFunds });
 
   /* ─── Done screen ─── */
-  if (step === 7) {
+  if (step === 8) {
     return (
       <>
         <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}`}</style>
@@ -614,6 +654,65 @@ export function FounderConversationalOnboarding({
               </div>
               <ContextCard>
                 Founders who start 6+ months before their target close date are 2× more likely to successfully close a round. The earlier you build pipeline, the more leverage you have in negotiations.
+              </ContextCard>
+            </>
+          ) : step === 7 ? (
+            <>
+              <p className="text-2xl font-semibold tracking-tight text-slate-900">
+                Who you&apos;re raising from, and where you are
+              </p>
+              <p className="mt-1 text-sm text-slate-500">Select all that apply. This sharpens your investor matches and your readiness score.</p>
+
+              <p className="mt-6 mb-2 text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Seeking</p>
+              <label className="block text-sm font-medium text-slate-700">Type of investor(s) <span className="text-rose-600">*</span></label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {INVESTOR_TYPE_OPTS.map((o) => (<Chip key={o} selected={invTypes.includes(o)} onClick={() => toggleIn(setInvTypes, o)}>{o}</Chip>))}
+              </div>
+              <label className="mt-4 block text-sm font-medium text-slate-700">Type(s) of capital <span className="text-rose-600">*</span></label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {CAPITAL_TYPE_OPTS.map((o) => (<Chip key={o} selected={capTypes.includes(o)} onClick={() => toggleIn(setCapTypes, o)}>{o}</Chip>))}
+              </div>
+              <label className="mt-4 block text-sm font-medium text-slate-700">Active investor preference <span className="text-rose-600">*</span></label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {INVESTOR_PREF_OPTS.map((o) => (<Chip key={o} selected={invPref.includes(o)} onClick={() => toggleIn(setInvPref, o)}>{o}</Chip>))}
+              </div>
+              <label className="mt-4 block text-sm font-medium text-slate-700">Business entity <span className="text-rose-600">*</span> <span className="font-normal text-slate-400">(pick one)</span></label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {BUSINESS_ENTITY_OPTS.map((o) => (<Chip key={o} selected={bizEntity === o} onClick={() => setBizEntity(o)}>{o}</Chip>))}
+              </div>
+
+              <p className="mt-7 mb-2 text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Company &amp; stage</p>
+              <label className="block text-sm font-medium text-slate-700">Funding stage <span className="text-rose-600">*</span></label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {FUNDING_STAGE_OPTS.map((o) => (<Chip key={o} selected={fundingStage.includes(o)} onClick={() => toggleIn(setFundingStage, o)}>{o}</Chip>))}
+              </div>
+              <label className="mt-4 block text-sm font-medium text-slate-700">Operating stage <span className="text-rose-600">*</span></label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {OPERATING_STAGE_OPTS.map((o) => (<Chip key={o} selected={opStage.includes(o)} onClick={() => toggleIn(setOpStage, o)}>{o}</Chip>))}
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Annual EBITDA <span className="text-rose-600">*</span></label>
+                  <input
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                    placeholder="e.g. -$120,000 (0 if pre-revenue)"
+                    value={ebitda}
+                    onChange={(e) => setEbitda(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Management team <span className="text-rose-600">*</span></label>
+                  <input
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base font-medium text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                    placeholder="e.g. 2 co-founders, 3 full-time"
+                    value={mgmtTeam}
+                    onChange={(e) => setMgmtTeam(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <ContextCard>
+                Investors filter hard on these. Getting your capital type, stage, and entity right means we only surface investors whose mandate actually fits — fewer, better conversations.
               </ContextCard>
             </>
           ) : null}
