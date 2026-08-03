@@ -42,7 +42,11 @@ export default function PricingPage() {
         </div>
         <div className="mx-auto mt-10 grid max-w-4xl gap-6 md:grid-cols-2">
           {p.tiers.map((t) => (
-            <div key={t.name} className={`rounded-2xl p-7 ${t.featured ? "border-2 border-site-blue-lt bg-white/[0.06]" : "border border-white/12 bg-white/[0.03]"}`}>
+            <div key={t.name} className={`relative rounded-2xl p-7 ${t.featured ? "order-first border-2 border-site-blue-lt bg-white/[0.07] ring-1 ring-site-blue-lt/25 md:order-none" : "border border-white/12 bg-white/[0.03]"}`}>
+              {/* Professional primacy tag; Professional is order-first on mobile (brief Step 6). */}
+              {t.featured ? (
+                <div className="absolute -top-3 left-6 rounded-full bg-site-blue px-3 py-1 font-site-mono text-[10px] font-semibold uppercase tracking-wider text-white">Most founders start here</div>
+              ) : null}
               <div className="flex items-center justify-between">
                 <h2 className="font-site-display text-xl font-bold">{t.name}</h2>
                 {"badge" in t && t.badge ? <span className="rounded-full bg-site-blue/25 px-2.5 py-0.5 font-site-mono text-[10px] font-medium text-site-blue-lt">{t.badge}</span> : null}
