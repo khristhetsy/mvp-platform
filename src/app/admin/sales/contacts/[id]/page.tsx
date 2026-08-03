@@ -38,12 +38,13 @@ export default async function ContactProfilePage({ params }: { params: Promise<{
     if (prof?.id) {
       const { data: comp } = await admin
         .from("companies")
-        .select("slug, is_published, company_name, industry, revenue_stage, funding_amount, business_description, website, country, state, use_of_funds")
+        .select("id, slug, is_published, company_name, industry, revenue_stage, funding_amount, business_description, website, country, state, use_of_funds")
         .eq("founder_id", prof.id)
         .maybeSingle();
       if (comp) {
         onePager = { slug: comp.slug ?? null, published: Boolean(comp.is_published), companyName: comp.company_name ?? null };
         linkedCompany = {
+          id: comp.id,
           companyName: comp.company_name ?? null,
           industry: comp.industry ?? null,
           revenueStage: comp.revenue_stage ?? null,

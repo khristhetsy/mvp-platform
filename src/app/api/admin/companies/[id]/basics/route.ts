@@ -7,13 +7,34 @@ import { writeAuditLog } from "@/lib/data/audit";
 
 export const REVENUE_STAGES = ["pre_revenue", "early_revenue", "growing", "scaling"] as const;
 
+const OPTIONAL_TEXT = z.string().trim().max(2000).nullable().optional();
+
 const patchSchema = z.object({
   company_name: z.string().trim().min(2, "Company name must be at least 2 characters.").max(120),
   industry: z.string().trim().min(2, "Industry must be at least 2 characters.").max(80),
   business_description: z.string().trim().max(2000).nullable().optional(),
   revenue_stage: z.enum(REVENUE_STAGES).nullable().optional(),
   funding_amount: z.number().nonnegative().nullable().optional(),
+  // Founder-profile fields (nullable text; multi-selects are comma-separated).
+  website: z.string().trim().max(500).nullable().optional(),
+  country: z.string().trim().max(120).nullable().optional(),
+  state: z.string().trim().max(120).nullable().optional(),
+  use_of_funds: OPTIONAL_TEXT,
+  funding_stage: OPTIONAL_TEXT,
+  operating_stage: OPTIONAL_TEXT,
+  business_entity: z.string().trim().max(120).nullable().optional(),
+  annual_ebitda: z.string().trim().max(120).nullable().optional(),
+  management_team: OPTIONAL_TEXT,
+  seeking_investor_types: OPTIONAL_TEXT,
+  seeking_capital_types: OPTIONAL_TEXT,
+  active_investor_preference: OPTIONAL_TEXT,
 });
+
+const OPTIONAL_COLS = [
+  "website", "country", "state", "use_of_funds", "funding_stage", "operating_stage",
+  "business_entity", "annual_ebitda", "management_team", "seeking_investor_types",
+  "seeking_capital_types", "active_investor_preference",
+] as const;
 
 /** Read the editable company basics. Staff only. */
 export async function GET(_req: Request, { params }: Readonly<{ params: Promise<{ id: string }> }>) {
@@ -69,6 +90,10 @@ export async function PATCH(request: Request, { params }: Readonly<{ params: Pro
   if (parsed.data.business_description !== undefined) patch.business_description = parsed.data.business_description;
   if (parsed.data.revenue_stage !== undefined) patch.revenue_stage = parsed.data.revenue_stage;
   if (parsed.data.funding_amount !== undefined) patch.funding_amount = parsed.data.funding_amount;
+  for (const col of OPTIONAL_COLS) {
+    const v = (parsed.data as Record<string, unknown>)[col];
+    if (v !== undefined) patch[col] = v;
+  }
 
   const db = auth.supabase as unknown as SupabaseClient;
   const { data, error } = await db
